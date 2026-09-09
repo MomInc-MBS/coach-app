@@ -5,7 +5,7 @@ The hosted app preserves the existing containment pod, custom creature, eight ex
 ## Implemented
 
 - Installable PWA with home-screen icons, a service worker and an explicit update action.
-- 338 pre-rendered clear robot voice clips (about 39 MB), plus phone speech for other text. No PC speech endpoint is used in production.
+- 339 pre-rendered clear robot voice clips (about 39 MB), plus phone speech for other text. No PC speech endpoint is used in production.
 - Food-101 photo suggestions using the Apache-2.0 Swin model through Transformers.js. Inference runs on the device, with no photo upload. The model downloads only after the user requests recognition. Users confirm names and portions; optional nutrition is entered from labels or recipes, never inferred as an exact value from the photo.
 - Account identity through Sites' ChatGPT sign-in; user-owned D1 meal history, workout tickets, progress, reminders and appearance snapshots.
 - Server-calculated workout levels and unlocks. Ember at 4 sets, Arc at 16, Frost at 36, coach shield damage at 196 sets (level 50). Rest taps never earn XP. This is recreational progress, not a remotely verified fitness competition.
@@ -27,6 +27,7 @@ MOM INC. website completion eligibility and the prior plan's two friend invitati
 Local sign-in uses the Sites plugin's isolated mock account. Production only uses dispatcher-provided identity. Migrations are generated from `db/schema.ts`; do not change an already-applied migration.
 
 The production directory is `dist/`, with the Worker at `dist/server/index.js` and browser assets at `dist/client/`. `.openai/hosting.json` preserves the registered Site. Runtime signing secrets live in Sites environment settings, never in source or this document.
+The two existing creature models are build dependencies fetched from a fixed MOM INC. GitHub revision. `scripts/assets.mjs` verifies their exact Git blob hashes before including them in the hosted bundle. The large binaries are not stored in the Sites source repository.
 
 ## Model and licenses
 
