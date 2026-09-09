@@ -1,13 +1,14 @@
-import {WEBSITE,EXERCISES} from './onboarding-domain.mjs';
+import {officeEncouragement} from './office-domain.mjs';
+import {EXERCISES} from './onboarding-domain.mjs';
 const gate=document.createElement('dialog');gate.id='coachSetupGate';gate.setAttribute('aria-label','Coach activation');gate.addEventListener('cancel',e=>e.preventDefault());gate.style.cssText='position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;z-index:2147483646;background:#17111ef5;display:grid;place-content:center;padding:28px;color:#f5e4ba;font:18px/1.6 Arial;text-align:center';
 gate.innerHTML='<h1>Your coach is connecting.</h1><p>Checking your saved setup…</p><a href="/onboarding.html" style="color:#b8e9cf">Continue coach setup</a>';document.body.append(gate);gate.showModal();
 let applied='',restored=false;
 window.coachPersonalCue=personalCue;
 const get=k=>{try{return localStorage.getItem(k);}catch{return null;}};
-export function clearCoachAccount(){window.coachPlan=null;restored=false;applied='';gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Your coach is waiting.';gate.querySelector('p').textContent='Sign in to restore your coach, or finish Coach Armie to unlock the app.';gate.querySelector('a').href='/onboarding.html';}
+export function clearCoachAccount(){window.coachPlan=null;restored=false;applied='';gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Your coach is waiting.';gate.querySelector('p').textContent='Got Coach from a friend? Play the character games or fill out the office form to build your own coach.';gate.querySelector('a').href='/onboarding.html';gate.querySelector('a').textContent='Choose games or paperwork';}
 export function applyCoachAccount(account){
  const o=account.onboarding;
- if(!o){gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Your coach needs its final setup.';gate.querySelector('p').textContent='Finish Coach Armie and customize your coach. Complete the missing answers, then your app unlocks here.';gate.querySelector('a').href=WEBSITE+'/tv/?ch=armie';gate.querySelector('a').textContent='Continue Coach Armie';return;}
+ if(!o){gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Your coach needs its final setup.';gate.querySelector('p').textContent='Choose the character games or our gloriously dull office form. Both collect your answers and build your coach.';gate.querySelector('a').href='/onboarding.html';gate.querySelector('a').textContent='Choose games or paperwork';return;}
  gate.close();gate.hidden=true;gate.style.display='none';window.coachPlan=o;
  if(!restored){const owner=get('myr5-coach-owner'),baseline=get('myr5-synced-appearance'),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1'];const current=JSON.stringify(Object.fromEntries(keys.map(k=>[k,get(k)]).filter(([,v])=>v!=null)));const dirty=owner===account.user.id&&baseline&&baseline!==current;
   if(!dirty){for(const key of keys){const v=account.profile[key];if(v!=null){localStorage.setItem(key,v);window.dispatchEvent(new StorageEvent('storage',{key,newValue:v}));}else if(owner&&owner!==account.user.id)localStorage.removeItem(key);}window.dispatchEvent(new Event('mominc-avatar-change'));localStorage.setItem('myr5-synced-appearance',JSON.stringify(Object.fromEntries(keys.map(k=>[k,get(k)]).filter(([,v])=>v!=null))));}localStorage.setItem('myr5-coach-owner',account.user.id);restored=true;
@@ -19,7 +20,7 @@ export function applyCoachAccount(account){
 }
 export function personalCue(text,key){const p=window.coachPlan?.data?.profile;if(!p)return text;if(p.guidance==='Quiet'&&['encouragement','time'].includes(key)&&!/^\d/.test(text))return null;if(key!=='encouragement')return text;
  const lines={supportive:'You are making progress. One comfortable movement at a time.',direct:'Stay with the next movement. Keep control.',analytical:'Keep your movement consistent. Notice the control in each repetition.',playful:'One tiny quest at a time. You have this.',calm:'Breathe. Move at your own pace.',mom:'MOM Inc. has recorded your effort. Please proceed comfortably.'};
- const tips={'Controlled reps':'Move with control.','Gradual progression':'One small step today.','Technique first':'Make the next movement smooth.'};let result=(text.startsWith('Halfway')?'Halfway. ':'')+lines[p.coach];if(p.guidance==='Detailed')result+=' '+tips[p.trainingStyle];
+ const tips={'Controlled reps':'Move with control.','Gradual progression':'One small step today.','Technique first':'Make the next movement smooth.'};let result=(text.startsWith('Halfway')?'Halfway. ':'')+(officeEncouragement(window.coachPlan.data,window.coachPlan.targets.day)||lines[p.coach]);if(p.guidance==='Detailed')result+=' '+tips[p.trainingStyle];
  // Respect explicitly listed words/phrases the visitor does not want to hear.
  const blocked=window.coachPlan.data.answers?.djscratch?.q3||'';if(blocked.split(/[,;\n]/).some(s=>s.trim().length>=3&&!/^none\.?$/i.test(s.trim())&&result.toLowerCase().includes(s.trim().toLowerCase())))return null;return result;
 }

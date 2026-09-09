@@ -1,0 +1,46 @@
+import test,{before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {Miniflare} from 'miniflare';
+import {readFile,readdir} from 'node:fs/promises';
+import worker from '../server/worker.mjs';
+import {FIELDS,SITE_QUESTIONS,missingFields,validateOnboarding,encodeHandoff,decodeHandoff} from '../onboarding-domain.mjs';
+import {createOfficeDraft,officeBanterAllowed,officeLine,officeEncouragement} from '../office-domain.mjs';
+import {completeCoach} from './onboarding-fixture.mjs';
+function office(){const d=createOfficeDraft('America/Los_Angeles'),filled=completeCoach();d.profile=filled.profile;d.answers=filled.answers;d.customizationConfirmed=true;return d;}
+test('office is a real alternate route, not a forged Armie completion',()=>{
+ const d=office(),saved=validateOnboarding(d);assert.deepEqual(missingFields(d),[]);assert.equal(saved.entryRoute,'office');assert.equal(saved.armieCompleted,false);assert.equal(saved.appearance['myr5-recipe-v1'].eye,'sleepy');assert.equal(saved.officeBanter,true);
+ assert.equal(validateOnboarding(completeCoach()).entryRoute,'games');
+ const games=completeCoach();games.armieCompleted=false;assert.throws(()=>validateOnboarding(games),/Finish Coach Armie/);
+ d.entryRoute='skip';assert.throws(()=>validateOnboarding(d),/Choose games or the office form/);
+});
+test('office requires every coach field and answer, a movement and approved appearance',()=>{
+ assert(missingFields(createOfficeDraft('America/Los_Angeles')).length>30);
+ for(const f of FIELDS){const d=office();delete d.profile[f.key];assert.throws(()=>validateOnboarding(d),undefined,f.key);}
+ for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++){const d=office();d.answers[group.id]['q'+(i+1)]=' ';assert.throws(()=>validateOnboarding(d));}
+ for(const change of [d=>d.profile.exercises=[],d=>d.customizationConfirmed=false,d=>delete d.appearance['myr5-recipe-v1'],d=>delete d.officeBanter]){const d=office();change(d);assert.throws(()=>validateOnboarding(d));}
+});
+test('office answers, customization and mute choice survive storage/sign-in serialization',()=>{
+ const d=office();d.profile.name='Zoë';d.answers.djscratch.q1='Music 🎵';d.officeBanter=false;d.appearance['myr5-recipe-v1'].styles.body=19;
+ const restored=JSON.parse(JSON.stringify(d));assert.deepEqual(validateOnboarding(restored),validateOnboarding(d));assert.deepEqual(decodeHandoff(encodeHandoff(d)),d);
+});
+test('paperwork jokes change with progress and respect mute, quiet guidance and boundaries',()=>{
+ const d=office();d.profile.guidance='Balanced';assert.equal(officeBanterAllowed(d),true);assert.notEqual(officeLine(d,0),officeLine(d,3));assert.match(officeLine(d,4),/approved/);assert.match(officeEncouragement(d,1),/paperwork/);
+ d.officeBanter=false;assert.equal(officeEncouragement(d),null);assert.doesNotMatch(officeLine(d),/stapler|boss battles/);
+ d.officeBanter=true;d.profile.guidance='Quiet';assert.equal(officeEncouragement(d),null);
+ d.profile.guidance='Balanced';for(const boundary of ['No teasing','Do not mock me','Never roast me',"Don't make jokes about paperwork"]){d.answers.djscratch.q3=boundary;assert.equal(officeEncouragement(d),null);}
+ d.answers.djscratch.q3='stapler';assert.doesNotMatch(officeLine(d,2),/stapler/);d.answers.djscratch.q3='None';assert.equal(officeEncouragement(completeCoach()),null);
+});
+let mf,env;
+before(async()=>{mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB']});env={DB:await mf.getD1Database('DB')};for(const f of (await readdir('drizzle')).filter(f=>f.endsWith('.sql')).sort()){await env.DB.batch((await readFile('drizzle/'+f,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>env.DB.prepare(s)));}});
+after(async()=>mf?.dispose());
+async function call(path,{user='office-alice',method='GET',data}={}){const r=await worker.fetch(new Request('https://coach.test'+path,{method,headers:{...(user?{'oai-authenticated-user-id':user}:{}),Origin:'https://coach.test','Content-Type':'application/json'},body:data?JSON.stringify(data):undefined}),env);return {status:r.status,data:await r.json()};}
+test('a shared-link recipient can activate via office, privately save answers, and start the same day-one plan',async()=>{
+ const d=office();assert.equal((await call('/api/onboarding',{user:null,method:'PUT',data:{data:d,revision:0}})).status,401);
+ const missing=office();missing.answers.armie.q3='';assert.equal((await call('/api/onboarding',{method:'PUT',data:{data:missing,revision:0}})).status,400);
+ assert.equal((await call('/api/workouts/start',{method:'POST',data:{mode:'squat',goal:3}})).status,403);
+ assert.equal((await call('/api/onboarding',{method:'PUT',data:{data:d,revision:0}})).status,200);
+ const a=(await call('/api/account')).data;assert.equal(a.onboarding.data.armieCompleted,false);assert.deepEqual(a.onboarding.data.answers,d.answers);assert.equal(a.onboarding.targets.reps,3);assert.equal(a.onboarding.targets.holdSeconds,9);assert.equal(a.onboarding.targets.waterOz,100);assert.equal(a.onboarding.targets.proteinGrams,100);
+ assert.equal((await call('/api/account',{user:'office-bob'})).data.onboarding,null);
+ assert.equal((await call('/api/workouts/start',{method:'POST',data:{mode:'tree',goal:9}})).status,200);
+ d.officeBanter=false;d.profile.coach='calm';const updated=await call('/api/onboarding',{method:'PUT',data:{data:d,revision:a.onboarding.revision}});assert.equal(updated.status,200);assert.equal(updated.data.onboarding.startDay,a.onboarding.startDay);assert.equal(updated.data.onboarding.completedAt,a.onboarding.completedAt);assert.equal(updated.data.onboarding.data.officeBanter,false);assert.equal(JSON.parse((await call('/api/account')).data.profile['myr5-recipe-v1']).coach,'calm');
+});

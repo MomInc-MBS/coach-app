@@ -32,7 +32,9 @@ export function missingFields(v){
  for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++)if(!validText(v.answers?.[group.id]?.['q'+(i+1)],2000))missing.push(group.questions[i]);
  if(!validRecipe(v.appearance?.['myr5-recipe-v1']))missing.push('Save your customized coach');
  if(v.customizationConfirmed!==true)missing.push('Confirm your coach appearance');
- if(v.armieCompleted!==true)missing.push('Finish Coach Armie');
+ if(!['games','office'].includes(v.entryRoute??'games'))missing.push('Choose games or the office form');
+ if((v.entryRoute??'games')==='games'&&v.armieCompleted!==true)missing.push('Finish Coach Armie');
+ if(v.entryRoute==='office'&&typeof v.officeBanter!=='boolean')missing.push('Choose your paperwork banter setting');
  return missing;
 }
 export function validateOnboarding(v){
@@ -43,7 +45,8 @@ export function validateOnboarding(v){
  const appearance={};for(const k of ['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1'])if(v.appearance[k]!=null){if(!object(v.appearance[k])||JSON.stringify(v.appearance[k]).length>30000)throw Object.assign(Error('Choose a valid saved appearance.'),{status:400});appearance[k]=v.appearance[k];}
  appearance['myr5-recipe-v1'].coach=profile.coach;
  const context=object(v.siteChoices)?v.siteChoices:{};if(JSON.stringify(context).length>20000)throw Object.assign(Error('The website choices are too large.'),{status:400});
- return {version:1,profile,answers,appearance,siteChoices:context,armieCompleted:true,customizationConfirmed:true};
+ const entryRoute=v.entryRoute??'games';
+ return {version:1,profile,answers,appearance,siteChoices:context,entryRoute,officeBanter:entryRoute==='office'&&v.officeBanter===true,armieCompleted:entryRoute==='games',customizationConfirmed:true};
 }
 export function calendarDay(now,timezone){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(now)).map(x=>[x.type,x.value]));return `${p.year}-${p.month}-${p.day}`;}
 export function dailyTargets(profile,startDay,now=Date.now()){
