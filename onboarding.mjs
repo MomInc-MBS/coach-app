@@ -1,4 +1,5 @@
 import {receiveCoach} from './receive-coach.mjs';
+import {readIncomingCoach,saveIncomingCoach,clearIncomingCoach} from './pending-coach.mjs';
 import {decodeHandoff,missingFields,WEBSITE} from './onboarding-domain.mjs?v=office-short-v1';
 import {mountProfileForm} from './onboarding-form.mjs?v=office-short-v1';
 import {createOfficeDraft} from './office-domain.mjs?v=office-short-v1';
@@ -32,22 +33,22 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
  if(office&&!edit){const nav=document.createElement('div');nav.className='office-exit';link('Rescue my coach — play the games',WEBSITE+'/tv/?ch=mominc',nav);host.append(nav);}
  if(!account){const p=document.createElement('p');p.textContent='Fill this out first, then sign in to save your own coach. Your answers stay in this tab during sign-in.';host.append(p);link('Sign in first',signIn(office?'/onboarding.html?route=office':location.pathname+location.search));}
  host.append(formHost,notice);
- function remember(value){if(edit)return;try{sessionStorage.setItem(draftKey,JSON.stringify(value));notice.textContent='Draft saved in this tab.';}catch{notice.textContent='Your browser cannot save a draft. Keep this page open and sign in before completing the form.';}}
+ function remember(value){if(edit)return;try{if(office)sessionStorage.setItem(draftKey,JSON.stringify(value));else saveIncomingCoach(value);notice.textContent=office?'Draft saved in this tab.':'Your coach setup is saved in this browser.';}catch{notice.textContent='Your browser cannot save a draft. Keep this page open and sign in before completing the form.';}}
  async function save(value){
   if(!account){try{sessionStorage.setItem(draftKey,JSON.stringify(value));}catch{throw Error('Your browser blocked draft storage. Allow storage for Coach before signing in so your answers can come with you.');}location.assign(signIn(office?'/onboarding.html?route=office&submit=1':location.pathname+location.search));return;}
   const result=await api('/api/onboarding','PUT',{data:value,revision:account.onboarding?.revision||0});
   try{restore(result.appearance);localStorage.setItem('myr5-coach-owner',account.user.id);}catch{}
-  removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
+  clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
  }
  if(autoSave&&!missingFields(data).length){status.textContent=office?'Filing your completed application and waking your coach…':'Saving your website choices and customized coach…';try{await save(data);return;}catch(e){status.textContent=e.message;}}
  mountProfileForm(formHost,data,{save,label:edit?'Save coach settings':office?'File application & unlock Coach':'Unlock my Coach app',changed:remember,fullSettings:edit});
  if(edit)link('Back to Coach','/pose.html');
 }
 try{
- let incoming=readDraft(KEY);
+ let incoming=readIncomingCoach();
  const raw=new URLSearchParams(location.hash.slice(1)).get('coach');
- if(raw){incoming=decodeHandoff(raw);sessionStorage.setItem(KEY,JSON.stringify(incoming));history.replaceState(null,'',location.pathname+location.search);}
- if(params.get('receive')==='1'&&!incoming){status.textContent='Bringing your saved website choices aboard…';incoming=await receiveCoach(raw=>sessionStorage.setItem(KEY,raw));}
+ if(raw){incoming=saveIncomingCoach(decodeHandoff(raw));history.replaceState(null,'',location.pathname+location.search);}
+ if(params.get('receive')==='1'&&!incoming){status.textContent='Bringing your saved website choices aboard…';incoming=await receiveCoach(raw=>saveIncomingCoach(raw));}
  try{account=await api('/api/account');}catch(e){if(e.status!==401)throw e;}
  const edit=params.get('edit')==='1',office=params.get('route')==='office';
  if(edit){

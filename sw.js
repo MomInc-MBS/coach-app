@@ -1,4 +1,4 @@
-const SHELL='myr5-shell-office-short-v9',VOICE='myr5-voice-v1';
+const SHELL='myr5-shell-install-v10',VOICE='myr5-voice-v1';
 const FILES=['/office-quick-form.mjs','/office-domain.mjs','/office-form.mjs','/onboarding-domain.mjs','/onboarding-questions.mjs','/coach-profile.mjs','/pose.html','/manifest.webmanifest','/menu.css','/launch.css','/launch.mjs','/launch-shell.mjs','/flip-display.mjs','/flip-display.css','/achievements.mjs','/app.mjs','/coach.mjs','/robot-audio.mjs','/camera.mjs','/menu.mjs','/movement-engine.mjs','/pod/pod.mjs','/pod/pod.css','/pod/set-flow.mjs','/pod/identity.mjs','/pod/encouragement.mjs','/pod/gala-avatar.js','/icons/coach-192.png','/icons/coach-512.png'];
 FILES.push('/pocket-hardware.css','/reminder-settings.mjs','/reminder-controls.mjs','/meal-scanner.mjs','/food-worker.mjs','/icons/coach-install-qr.png','/pod/hardware.css','/pod/hardware.mjs','/hardware-launch.css','/pod/whiteboard.css','/pod/fonts/hand-0.woff2','/pod/fonts/hand-2.woff2','/pod/fonts/hand-6.woff2');
 self.addEventListener('install',event=>event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(FILES))));
