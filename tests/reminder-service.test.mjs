@@ -33,6 +33,16 @@ test('saved reminders migrate once and remain deleted across migration retries',
   await local.DB.prepare('DELETE FROM system WHERE key=?').bind('reminders_remote:alice').run();
   assert.equal((await request('/api/reminders')).data.items.length,0);
 });
+test('reminder switches persist, validate booleans, and refuse another account',async()=>{
+ const r=reminder();await request('/api/reminders',{method:'POST',data:r});
+ assert.equal((await request('/api/reminders/'+r.id,{method:'PATCH',user:'bob',data:{enabled:false}})).status,404);
+ assert.equal((await request('/api/reminders/'+r.id,{method:'PATCH',data:{enabled:'false'}})).status,400);
+ assert.equal((await request('/api/reminders/'+r.id,{method:'PATCH',data:{enabled:false}})).status,200);
+ assert.equal((await request('/api/reminders')).data.items.find(x=>x.id===r.id).enabled,0);
+ await request('/api/reminders/'+r.id,{method:'PATCH',data:{enabled:true}});
+ assert.equal((await request('/api/reminders')).data.items.find(x=>x.id===r.id).enabled,1);
+ await request('/api/reminders/'+r.id,{method:'DELETE'});
+});
 test('remote reminder changes and export remain isolated by the signed-in account',async()=>{
   const r=reminder();assert.equal((await request('/api/reminders',{method:'POST',data:r})).status,200);
   await request('/api/reminders',{method:'POST',data:r});

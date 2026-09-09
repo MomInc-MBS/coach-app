@@ -3,6 +3,7 @@ import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
 import {initPod} from './pod/pod.mjs';
+import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
@@ -48,6 +49,7 @@ function resetMovement(){
   const timed=['pace','steps','jumps'].includes(config.kind);$('roundControl').hidden=!timed;
   session=new MovementSession(mode,{duration:config.kind==='pace'?(pod?.goal()||60):0});
   state.motion=session.snapshot();$('hint').textContent=config.hint;renderMotion(state.motion);
+  window.dispatchEvent(new Event('myr5:movement-configured'));
   status(state.phase==='tracking'?config.hint:'Your coach is ready. Begin when you are.');
 }
 function renderMotion(m){
@@ -137,8 +139,9 @@ $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset.
 $('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
 $('movement').addEventListener('change',()=>{const active=state.phase==='tracking';resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
 $('duration').addEventListener('change',()=>{resetMovement();voice.say(Number($('duration').value)?$('duration').value+' second round.':'Open timer.',{interrupt:true});});
-$('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);$('toggleVoice').textContent=voice.enabled?'Voice on':'Voice off';$('toggleVoice').setAttribute('aria-pressed',String(voice.enabled));voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
-$('testVoice').addEventListener('click',()=>{voice.setEnabled(true);$('toggleVoice').textContent='Voice on';$('toggleVoice').setAttribute('aria-pressed','true');voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
+function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
+$('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
+$('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
 $('camera').addEventListener('change',()=>{voice.say('Camera selected.',{interrupt:true});if(state.phase==='tracking')start();});
 $('widest').addEventListener('click',async()=>{
   const track=stream?.getVideoTracks()[0];if(!track)return;$('widest').disabled=true;
@@ -149,6 +152,7 @@ $('widest').addEventListener('click',async()=>{
 window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused while the page was hidden. Tap Start for a new session.');});
 pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:()=>library.introduce()});
 resetMovement();
+initHardware();soundSwitch();
 const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:async()=>{const outcome=await cinematics.play('pre',{name:MOVEMENTS[$('movement').value].name});if(outcome!=='cancelled'&&!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 
 const cinematics=initCinematics({voice});
