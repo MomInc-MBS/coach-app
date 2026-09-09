@@ -1,7 +1,7 @@
 import {receiveCoach} from './receive-coach.mjs';
-import {decodeHandoff,missingFields,WEBSITE} from './onboarding-domain.mjs?v=office-v1';
-import {mountProfileForm} from './onboarding-form.mjs?v=office-v1';
-import {createOfficeDraft} from './office-domain.mjs';
+import {decodeHandoff,missingFields,WEBSITE} from './onboarding-domain.mjs?v=office-short-v1';
+import {mountProfileForm} from './onboarding-form.mjs?v=office-short-v1';
+import {createOfficeDraft} from './office-domain.mjs?v=office-short-v1';
 const status=document.getElementById('setupStatus'),host=document.getElementById('setupBody'),title=document.querySelector('h1');
 const KEY='myr5-incoming-coach-v1',OFFICE_KEY='myr5-office-draft-v1',params=new URLSearchParams(location.search);
 let account=null;
@@ -13,11 +13,11 @@ function restore(appearance){for(const [key,v] of Object.entries(appearance||{})
 function signIn(returnTo){return '/signin-with-chatgpt?return_to='+encodeURIComponent(returnTo);}
 function chooseRoute(){
  title.textContent='Someone sent you a coach. Make it yours.';
- status.textContent='Same coach questions. Two very different ways to answer them. Pick your introduction.';
+ status.textContent='Play the character games, or answer six essentials and start your coach.';
  const choices=document.createElement('div');choices.className='setup-route-choices';
  for(const route of [
   {theme:'games',heading:'Play the character games',description:'Meet the crew, answer as you play, then finish Coach Armie and customize your coach. Your choices come with you.',label:'Take the fun route',href:WEBSITE+'/tv/?ch=mominc'},
-  {theme:'office',heading:'Request the office form',description:'Complete Form 03-B: Coach Acquisition. Every question, zero boss battles. Your bored coach will roast your devotion to paperwork.',label:readDraft(OFFICE_KEY)?'Resume my paperwork':'I choose paperwork',href:'/onboarding.html?route=office'}
+  {theme:'office',heading:'Request the office form',description:'Complete Form 03-B: Coach Acquisition. Six quick answers, zero boss battles. Your bored coach will roast your devotion to paperwork.',label:readDraft(OFFICE_KEY)?'Resume my paperwork':'I choose paperwork',href:'/onboarding.html?route=office'}
  ]){const card=document.createElement('section');card.className='setup-route '+route.theme;const h=document.createElement('h2'),p=document.createElement('p');h.textContent=route.heading;p.textContent=route.description;card.append(h,p);link(route.label,route.href,card);choices.append(card);}
  host.replaceChildren(choices);
  if(!account)link('Already have a coach? Sign in',signIn('/onboarding.html'));
@@ -26,7 +26,7 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
  const office=data.entryRoute==='office',draftKey=office?OFFICE_KEY:KEY;
  document.body.classList.toggle('office-mode',office);
  title.textContent=office?'Form 03-B: Coach Acquisition':edit?'Your coach settings':'Your coach is coming aboard.';
- status.textContent=office?'DEPARTMENT OF PERSONAL IMPROVEMENT / All sections required. Please resist the urge to have fun.':edit?'Adjust your coach and training preferences. Your starting date and earned progress stay with you.':'Finish the missing answers to unlock your coach.';
+ status.textContent=office?'DEPARTMENT OF PERSONAL IMPROVEMENT / Six answers required. Excess paperwork has been discontinued.':edit?'Adjust your coach and training preferences. Your starting date and earned progress stay with you.':'Finish the missing answers to unlock your coach.';
  const formHost=document.createElement('div'),notice=document.createElement('p');notice.role='status';notice.className='draft-notice';
  host.replaceChildren();
  if(office&&!edit){const nav=document.createElement('div');nav.className='office-exit';link('Rescue my coach — play the games',WEBSITE+'/tv/?ch=mominc',nav);host.append(nav);}
@@ -40,7 +40,7 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
   removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
  }
  if(autoSave&&!missingFields(data).length){status.textContent=office?'Filing your completed application and waking your coach…':'Saving your website choices and customized coach…';try{await save(data);return;}catch(e){status.textContent=e.message;}}
- mountProfileForm(formHost,data,{save,label:edit?'Save coach settings':office?'File application & unlock Coach':'Unlock my Coach app',changed:remember});
+ mountProfileForm(formHost,data,{save,label:edit?'Save coach settings':office?'File application & unlock Coach':'Unlock my Coach app',changed:remember,fullSettings:edit});
  if(edit)link('Back to Coach','/pose.html');
 }
 try{

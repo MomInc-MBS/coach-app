@@ -1,4 +1,4 @@
-import {officeEncouragement} from './office-domain.mjs';
+import {officeEncouragement} from './office-domain.mjs?v=office-short-v1';
 import {EXERCISES} from './onboarding-domain.mjs';
 const gate=document.createElement('dialog');gate.id='coachSetupGate';gate.setAttribute('aria-label','Coach activation');gate.addEventListener('cancel',e=>e.preventDefault());gate.style.cssText='position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;z-index:2147483646;background:#17111ef5;display:grid;place-content:center;padding:28px;color:#f5e4ba;font:18px/1.6 Arial;text-align:center';
 gate.innerHTML='<h1>Your coach is connecting.</h1><p>Checking your saved setup…</p><a href="/onboarding.html" style="color:#b8e9cf">Continue coach setup</a>';document.body.append(gate);gate.showModal();

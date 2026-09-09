@@ -1,4 +1,5 @@
 import {SITE_QUESTIONS} from './onboarding-questions.mjs';
+import {OFFICE_REQUIRED_FIELDS,withOfficeDefaults} from './office-domain.mjs?v=office-short-v1';
 export {SITE_QUESTIONS};
 export const WEBSITE='https://mominc-mbs.github.io';
 export const COACH_APP='https://myr5-coach.ianmyersrocks97.chatgpt.site';
@@ -25,23 +26,25 @@ const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const validText=(v,max=600)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 export function validRecipe(r){return object(r)&&r.version===1&&object(r.styles)&&['head','eye','collar','body','arms','feet'].every(k=>Number.isInteger(r.styles[k])&&r.styles[k]>=0&&r.styles[k]<20)&&COACHES.includes(r.coach)&&['open','sleepy','wide'].includes(r.eye)&&Number.isFinite(r.fur)&&r.fur>=.65&&r.fur<=1.4&&Number.isFinite(r.iris)&&r.iris>=.7&&r.iris<=1.25&&['round','vertical','horizontal','oval','diamond','star','heart','cross'].includes(r.pupil??'round')&&Number.isFinite(r.pupilSize??1)&&(r.pupilSize??1)>=.6&&(r.pupilSize??1)<=1.15&&Number.isFinite(r.detail??1)&&(r.detail??1)>=.5&&(r.detail??1)<=1.5&&Number.isInteger(r.fingers??4)&&(r.fingers??4)>=2&&(r.fingers??4)<=6&&Number.isInteger(r.toes??3)&&(r.toes??3)>=1&&(r.toes??3)<=6&&['single','horizontal','vertical','frontBack','triangle','around','spider','square'].includes(r.eyeLayout??'single');}
 export function missingFields(v){
- const missing=[];if(!object(v))return ['Complete your coach setup'];const p=v.profile||{};
- for(const f of FIELDS){const a=p[f.key];if(f.type==='number'?typeof a!=='number'||!Number.isFinite(a)||a<f.min||a>f.max:f.options?!f.options.includes(String(a)):f.type==='time'?!/^([01]\d|2[0-3]):[0-5]\d$/.test(a||''):!validText(a,f.max||160))missing.push(f.label);}
+ const missing=[];if(!object(v))return ['Complete your coach setup'];if(!['games','office'].includes(v.entryRoute??'games'))return ['Choose games or the office form'];const office=v.entryRoute==='office';
+ if(office){if(v.profile!=null&&!object(v.profile)||v.answers!=null&&!object(v.answers)||v.appearance!=null&&!object(v.appearance))return ['Choose a valid coach profile'];v=withOfficeDefaults(v);}
+ const p=v.profile||{};
+ for(const f of FIELDS){const a=p[f.key];if(office&&!OFFICE_REQUIRED_FIELDS.includes(f.key)&&(a==null||typeof a==='string'&&!a.trim()))continue;if(f.type==='number'?typeof a!=='number'||!Number.isFinite(a)||a<f.min||a>f.max:f.options?!f.options.includes(String(a)):f.type==='time'?!/^([01]\d|2[0-3]):[0-5]\d$/.test(a||''):!validText(a,f.max||160))missing.push(f.label);}
  try{if(!p.timezone)throw Error();new Intl.DateTimeFormat('en',{timeZone:p.timezone}).format();}catch{if(!missing.includes('Time zone'))missing.push('Time zone');}
  if(!Array.isArray(p.exercises)||!p.exercises.length||p.exercises.some(k=>!Object.hasOwn(EXERCISES,k)))missing.push('Choose at least one movement');
- for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++)if(!validText(v.answers?.[group.id]?.['q'+(i+1)],2000))missing.push(group.questions[i]);
+ for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++){const a=v.answers?.[group.id]?.['q'+(i+1)],required=!office||group.id==='armie'&&i===2;if(!required&&(a==null||typeof a==='string'&&!a.trim()))continue;if(!validText(a,2000))missing.push(group.questions[i]);}
  if(!validRecipe(v.appearance?.['myr5-recipe-v1']))missing.push('Save your customized coach');
  if(v.customizationConfirmed!==true)missing.push('Confirm your coach appearance');
- if(!['games','office'].includes(v.entryRoute??'games'))missing.push('Choose games or the office form');
  if((v.entryRoute??'games')==='games'&&v.armieCompleted!==true)missing.push('Finish Coach Armie');
  if(v.entryRoute==='office'&&typeof v.officeBanter!=='boolean')missing.push('Choose your paperwork banter setting');
  return missing;
 }
 export function validateOnboarding(v){
  const missing=missingFields(v);if(missing.length)throw Object.assign(Error('Complete your coach setup: '+missing[0]),{status:400,missing});
+ if(v.entryRoute==='office')v=withOfficeDefaults(v);
  const profile=Object.fromEntries(FIELDS.map(f=>[f.key,typeof v.profile[f.key]==='string'?v.profile[f.key].trim():v.profile[f.key]]));
  profile.exercises=[...new Set(v.profile.exercises)];
- const answers=Object.fromEntries(SITE_QUESTIONS.map(g=>[g.id,Object.fromEntries(g.questions.map((_,i)=>['q'+(i+1),v.answers[g.id]['q'+(i+1)].trim()]))]));
+ const answers=Object.fromEntries(SITE_QUESTIONS.map(g=>[g.id,Object.fromEntries(g.questions.map((_,i)=>['q'+(i+1),(v.answers?.[g.id]?.['q'+(i+1)]??'').trim()]))]));
  const appearance={};for(const k of ['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1'])if(v.appearance[k]!=null){if(!object(v.appearance[k])||JSON.stringify(v.appearance[k]).length>30000)throw Object.assign(Error('Choose a valid saved appearance.'),{status:400});appearance[k]=v.appearance[k];}
  appearance['myr5-recipe-v1'].coach=profile.coach;
  const context=object(v.siteChoices)?v.siteChoices:{};if(JSON.stringify(context).length>20000)throw Object.assign(Error('The website choices are too large.'),{status:400});

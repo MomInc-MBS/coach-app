@@ -1,7 +1,19 @@
 export const OFFICE_STYLES=['Original MYR5','Verdant','Mycelial','Chitin','Reptilian','Abyssal','Coral','Skeletal','Spectral','Infernal','Celestial','Voidborn','Eldritch','Stone Golem','Crystal','Magma','Glacial','Stormcharged','Clockwork','Neon Synth'];
 export const OFFICE_SECTIONS={fuel:'B. Caffeine & supplements',goon:'C. Support & accountability',lilboyfriend:'D. Premises & equipment',djscratch:'E. Motivation & communication',corgi:'F. Sleep & stress',girlfriend:'G. Advice & sources',armie:'H. Movement history & limits'};
+export const OFFICE_REQUIRED_FIELDS=['goal','goalWeightLbs','experience','sessionMinutes','coach'];
+export function withOfficeDefaults(data){
+ const value=structuredClone(data),profile=value.profile??={};
+ const defaults={name:'You',trainingStyle:'Gradual progression',guidance:'Balanced',restSeconds:'60',trainingTime:'17:00',timezone:'UTC',reminderTone:'gentle',reminderDays:'3'};
+ for(const [key,fallback] of Object.entries(defaults))if(profile[key]==null||typeof profile[key]==='string'&&!profile[key].trim())profile[key]=fallback;
+ if(profile.exercises==null||Array.isArray(profile.exercises)&&!profile.exercises.length)profile.exercises=['squat','pushup','tree','warrior','horse','boxing','jogging','jumping'];
+ value.appearance??={};value.appearance['myr5-recipe-v1']??={version:1,styles:{head:0,eye:0,collar:0,body:0,arms:0,feet:0},eye:'sleepy',fur:1,iris:1,pupil:'round',pupilSize:1,detail:1,coach:'supportive',fingers:4,toes:3,eyeLayout:'single'};
+ value.answers??={};value.siteChoices??={};value.officeBanter??=true;
+ // Submitting the office form accepts its current/default appearance; games keep their explicit studio gate.
+ value.customizationConfirmed=true;value.armieCompleted=false;
+ return value;
+}
 export function createOfficeDraft(timezone){
- return {version:1,entryRoute:'office',officeBanter:true,armieCompleted:false,customizationConfirmed:false,profile:{timezone,exercises:[]},answers:{},siteChoices:{},appearance:{'myr5-recipe-v1':{version:1,styles:{head:0,eye:0,collar:0,body:0,arms:0,feet:0},eye:'sleepy',fur:1,iris:1,pupil:'round',pupilSize:1,detail:1,coach:'supportive',fingers:4,toes:3,eyeLayout:'single'}}};
+ return withOfficeDefaults({version:1,entryRoute:'office',profile:{timezone},answers:{}});
 }
 export function officeBanterAllowed(data){
  if(data?.entryRoute!=='office'||data.officeBanter!==true||data.profile?.guidance==='Quiet')return false;
