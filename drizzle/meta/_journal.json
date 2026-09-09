@@ -15,6 +15,13 @@
       "when": 1788987027951,
       "tag": "0001_careful_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788988831094,
+      "tag": "0002_peaceful_living_lightning",
+      "breakpoints": true
     }
   ]
 }

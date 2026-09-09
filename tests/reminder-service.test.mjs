@@ -1,3 +1,5 @@
+import {saveOnboarding} from '../server/onboarding.mjs';
+import {completeCoach} from './onboarding-fixture.mjs';
 import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {Miniflare} from 'miniflare';
@@ -11,6 +13,7 @@ before(async()=>{
   local={DB:await mf.getD1Database('LOCAL'),REMINDER_SERVICE_ORIGIN:'https://reminders.test',REMINDER_SERVICE_TOKEN:'test-service-token'};
   remote={DB:await mf.getD1Database('REMOTE'),REMINDER_SERVICE_TOKEN:'test-service-token',VAPID_PUBLIC_KEY:'public-key'};
   for(const env of [local,remote])for(const f of (await readdir('drizzle')).filter(f=>f.endsWith('.sql')).sort())await env.DB.batch((await readFile(`drizzle/${f}`,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>env.DB.prepare(s)));
+  for(const user of ['alice','bob','tuning','stranger'])await saveOnboarding(local.DB,user,{data:completeCoach(),revision:0});
   originalFetch=globalThis.fetch;
   globalThis.fetch=(url,options)=>{assert.equal(new URL(url).origin,'https://reminders.test');return service.fetch(new Request(url,options),remote);};
 });

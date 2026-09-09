@@ -40,6 +40,7 @@ export class CoachVoice {
  setEnabled(enabled){this.enabled=enabled;if(!enabled)this.cancel();}
  cancel(){this.epoch++;clearTimeout(this.current?.timer);this.robot.stop();globalThis.speechSynthesis?.cancel();this.current?.resolve();this.current=null;this.queue.splice(0).forEach(item=>item.resolve());myr5VoiceState('idle');}
  say(text,{key='guide',interrupt=false}={}){
+  if(typeof window!=='undefined'&&window.coachPersonalCue){text=window.coachPersonalCue(text,key);if(text==null)return Promise.resolve();}
   // Encouragement can follow a short count, but never queue behind instructions.
   if(key==='encouragement'&&this.current&&this.current.key!=='count')return Promise.resolve();
   if(interrupt||(key==='count'&&this.current?.key==='guide')||(key!=='encouragement'&&this.current?.key==='encouragement'))this.cancel();this.caption(text);

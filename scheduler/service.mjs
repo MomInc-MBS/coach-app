@@ -51,7 +51,7 @@ export default {
       // Identity is supplied only by Coach's authenticated server. The public
       // endpoint never accepts an unverified browser account header.
       const headers=new Headers({'Origin':url.origin,'Content-Type':request.headers.get('Content-Type')||'','oai-authenticated-user-id':user});
-      return coach.fetch(new Request(request,{headers}), {...env,REMINDER_SERVICE_ORIGIN:undefined});
+      return coach.fetch(new Request(request,{headers}), {...env,REMINDER_SERVICE_ORIGIN:undefined,REMINDER_INTERNAL:true});
     } catch(e) { return json({error:e.status?e.message:'Could not complete the reminder request.'},e.status||500); }
   },
   async scheduled(event,env,ctx) {

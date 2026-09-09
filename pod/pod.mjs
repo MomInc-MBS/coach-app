@@ -7,6 +7,7 @@ const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 export function initPod({voice,movements,onStop,onNext}){
  const flow=new SetFlow(null),encourage=new SetEncouragement();let currentMode=null,card=null,observedCard=null,restTimer=0,hitTimer=0,lastSpoken=-Infinity,restCalled=false,look;
+ window.addEventListener('myr5:coach-plan',()=>{if(flow.phase==='set')return;const mode=currentMode||'squat';currentMode=null;configure(mode);if(window.coachPlan?.data?.profile?.restSeconds)$('restDuration').value=window.coachPlan.data.profile.restSeconds;});
  const avatar=window.GalaAvatar;let storageAvailable=true;
  const store=(key,value)=>{try{localStorage.setItem(key,value);return true;}catch{storageAvailable=false;return false;}};
  function updateProgress(){const level=String(flow.level).padStart(2,'0');$('levelBadge').textContent='WORKOUT LV. '+level;$('restLevel').textContent='LV. '+level;$('setNumber').textContent='SET '+String(flow.progress.completedSets+1).padStart(2,'0');}
@@ -29,8 +30,9 @@ export function initPod({voice,movements,onStop,onNext}){
  const observer=new MutationObserver(moveCoach);observer.observe($('view'),{childList:true,subtree:true});moveCoach();
  function configure(mode){
   if(mode!==currentMode){currentMode=mode;const kind=movements[mode].kind,unit=kind==='hold'||kind==='pace'?'seconds':kind==='steps'?'steps':kind==='jumps'?'jumps':'reps';
-   const values=kind==='hold'?[15,20,30,45,60]:kind==='pace'?[30,60,90,120,180]:kind==='steps'?[20,40,60,100]:[5,10,15,20];
-   $('goal').replaceChildren(...values.map(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' '+unit;return o;}));$('goal').value=DEFAULT_GOALS[mode];
+   const planned=window.coachPlan?.targets?.goals[mode]||DEFAULT_GOALS[mode];
+   const values=[...new Set([1,2,3,5,9,10,15,20,30,45,60,90,120,180,planned,Math.max(1,planned-1),planned+1])].sort((a,b)=>a-b);
+   $('goal').replaceChildren(...values.map(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' '+unit;return o;}));$('goal').value=planned;
   }
   encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();
  }

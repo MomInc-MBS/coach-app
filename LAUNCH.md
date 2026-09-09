@@ -20,7 +20,11 @@ Deployment needs Cloudflare authorization, a D1 binding in `scheduler/wrangler.j
 
 Real phone installation, camera performance, food inference in mobile WebAssembly, push permission and locked-screen delivery are physical device acceptance checks; automated Node checks do not prove those results.
 
-MOM INC. website completion eligibility and the prior plan's two friend invitations are not implemented by this app's workout unlocks. The current public website stores completion in the browser; a trusted account-linked completion service is needed for secure game-based entry. No website completion is fabricated or granted by this build.
+Coach activation now requires a valid customized creature, a complete coach profile, all 21 website coach answers and the static website's Armie completion attestation. The app validates those inputs server-side and saves them with an account-owned start date. The static game's attestation is not cryptographic proof of playing a game and must not be reused as a paid entitlement. Friend invitations are not part of this activation flow.
+
+Website choices transfer through an origin- and source-checked postMessage exchange, never in the URL. They are retained in session storage across sign-in. Appearance loads automatically on a new device. Changing coach preferences preserves the original training start date and earned progress. Day one starts at 3 reps and 9-second holds (also a 9-second air-boxing round); every local calendar day adds one. Protein grams and water ounces each equal goal weight in pounds. Other nutrition and workout progress are not incremented by this schedule.
+
+The public website's companion change is in /coach-setup and the Armie creature television. Publish those together with public visitor access to this Site; it is currently owner-only. Account APIs still require sign-in. Existing reminder-service credentials and deployment are retained. The reminder service's internal authenticated forwarding path is exempt from re-checking the separate app onboarding database.
 
 ## Development
 

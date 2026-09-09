@@ -1,6 +1,6 @@
 // Workout progress is earned by completed tracked sets. Rest taps never earn XP.
 export const DAMAGE_LEVEL=50,XP_PER_SET=25,XP_PER_LEVEL=100;
-export const DEFAULT_GOALS={squat:10,pushup:10,tree:30,warrior:30,horse:30,boxing:60,jogging:40,jumping:10};
+export const DEFAULT_GOALS={squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
 export const valueOf=m=>m.kind==='hold'?m.totalHold:m.kind==='pace'?m.elapsed:m.count;
 export function readProgress(raw){
  try{const p=typeof raw==='string'?JSON.parse(raw):raw;if(p?.version===1&&Number.isSafeInteger(p.completedSets)&&p.completedSets>=0)return {version:1,completedSets:Math.min(p.completedSets,1000000)};}catch{}
@@ -13,7 +13,7 @@ export class SetFlow {
  get attackDamage(){return this.level<DAMAGE_LEVEL?0:1+Math.floor((this.level-DAMAGE_LEVEL)/5);}
  start(mode,goal=DEFAULT_GOALS[mode],restSeconds=60){
   if(!Object.hasOwn(DEFAULT_GOALS,mode))throw new Error('Unknown exercise');
-  this.active={id:++this.sequence,mode,goal:Math.max(1,Math.min(600,Number(goal)||DEFAULT_GOALS[mode])),restSeconds:Math.max(15,Math.min(180,Number(restSeconds)||60))};this.phase='set';this.preview=false;return this.active;
+  this.active={id:++this.sequence,mode,goal:Math.max(1,Number(goal)||DEFAULT_GOALS[mode]),restSeconds:Math.max(15,Math.min(180,Number(restSeconds)||60))};this.phase='set';this.preview=false;return this.active;
  }
  consume(m,now){
   if(this.phase!=='set'||!this.active||m.mode!==this.active.mode)return null;
