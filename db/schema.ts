@@ -7,3 +7,5 @@ export const subscriptions=sqliteTable('subscriptions',{endpoint:text('endpoint'
 export const deliveries=sqliteTable('deliveries',{reminderId:text('reminder_id').notNull(),day:text('day').notNull(),endpoint:text('endpoint').notNull(),status:text('status').notNull(),updatedAt:integer('updated_at').notNull()},t=>[primaryKey({columns:[t.reminderId,t.day,t.endpoint]})]);
 export const system=sqliteTable('system',{key:text('key').primaryKey(),value:text('value').notNull()});
 export const onboarding=sqliteTable('onboarding',{userId:text('user_id').primaryKey(),data:text('data').notNull(),startDay:text('start_day').notNull(),completedAt:integer('completed_at').notNull(),updatedAt:integer('updated_at').notNull(),revision:integer('revision').notNull().default(1),writeToken:text('write_token').notNull()});
+
+export const installDrafts=sqliteTable('install_drafts',{tokenHash:text('token_hash').primaryKey(),data:text('data').notNull(),creator:text('creator').notNull(),expiresAt:integer('expires_at').notNull()},t=>[index('install_drafts_expiry').on(t.expiresAt),index('install_drafts_creator').on(t.creator)]);

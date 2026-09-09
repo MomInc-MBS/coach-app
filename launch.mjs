@@ -1,5 +1,5 @@
-import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs';
-import {mountLaunch} from './launch-shell.mjs';
+import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs?v=quick-install-v1';
+import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {renderAchievements} from './achievements.mjs';
 import {mountMealScanner} from './meal-scanner.mjs';
 import {mountReminderControls} from './reminder-controls.mjs';
@@ -69,7 +69,7 @@ $('deleteAccount').onclick=async()=>{try{await api('/api/account','DELETE',{conf
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installApp').hidden=false;set('installStatus','Coach is ready to install on your home screen.');});window.addEventListener('appinstalled',()=>{set('installStatus','Coach is installed.');$('installApp').hidden=true;});
 set('installStatus',matchMedia('(display-mode: standalone)').matches?'Coach is running as an installed app.':'Install Coach for a full-screen training pod.');
 $('installApp').onclick=async()=>{if(installPrompt){await installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installApp').hidden=true;}};
-$('copyInstallLink').onclick=async()=>{try{await navigator.clipboard.writeText($('installLink').value);set('installShareStatus','Coach link copied. Your friend can choose games or paperwork.');}catch{$('installLink').focus();$('installLink').select();set('installShareStatus','Link selected. Use Copy to share it.');}};
+$('copyInstallLink').onclick=async()=>{try{await navigator.clipboard.writeText($('installLink').value);set('installShareStatus','Coach link copied. Your friend can install Coach, then answer three quick questions.');}catch{$('installLink').focus();$('installLink').select();set('installShareStatus','Link selected. Use Copy to share it.');}};
 $('voiceStyle').value=localStorage.getItem('myr5-voice-style')||'robot';$('voiceStyle').onchange=()=>localStorage.setItem('myr5-voice-style',$('voiceStyle').value);
 $('downloadVoice').onclick=async()=>{const b=$('downloadVoice');b.disabled=true;try{const manifest=await(await fetch('/voice/manifest.json')).json(),urls=Object.values(manifest.phrases),cache=await caches.open('myr5-voice-v1');let i=0;await cache.add('/voice/manifest.json');for(const url of urls){if(!await cache.match(url)){const response=await fetch(url);if(!response.ok)throw Error('Download interrupted. Tap again to resume.');await cache.put(url,response);}set('downloadStatus',`Downloaded ${++i} of ${urls.length} voice clips.`);}set('downloadStatus','Robot voice pack is available offline on this device.');}catch(e){set('downloadStatus',e.message);}finally{b.disabled=false;}};
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js').then(reg=>{registration=reg;syncDeviceSwitch();const update=()=>{if(reg.waiting){$('applyUpdate').hidden=false;$('applyUpdate').onclick=()=>{reg.waiting.postMessage({type:'SKIP_WAITING'});};}};update();reg.addEventListener('updatefound',()=>reg.installing?.addEventListener('statechange',update));navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());}).catch(()=>set('installStatus','Installation could not initialize. Refresh Coach and try again.'));}
