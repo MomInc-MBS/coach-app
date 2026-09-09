@@ -21,8 +21,8 @@ async function importExisting(request, env, user) {
   if (await database.prepare('SELECT value FROM system WHERE key=?').bind(key).first()) return json({imported:true});
   const statements=[];
   for(const row of input.reminders) {
-    const r=reminderInput({id:row.id,kind:row.kind,time:row.time,timezone:row.timezone,enabled:!!row.enabled,quietStart:row.quiet_start,quietEnd:row.quiet_end});
-    statements.push(database.prepare('INSERT INTO reminders(id,user_id,kind,time,timezone,enabled,quiet_start,quiet_end) SELECT ?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM system WHERE key=?) ON CONFLICT(id) DO NOTHING').bind(r.id,user,r.kind,r.time,r.timezone,r.enabled,r.quietStart,r.quietEnd,key));
+    const r=reminderInput({id:row.id,kind:row.kind,time:row.time,timezone:row.timezone,enabled:!!row.enabled,quietStart:row.quiet_start,quietEnd:row.quiet_end,tone:row.tone,daysPerWeek:row.days_per_week});
+    statements.push(database.prepare('INSERT INTO reminders(id,user_id,kind,time,timezone,enabled,quiet_start,quiet_end,tone,days_per_week) SELECT ?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM system WHERE key=?) ON CONFLICT(id) DO NOTHING').bind(r.id,user,r.kind,r.time,r.timezone,r.enabled,r.quietStart,r.quietEnd,r.tone,r.daysPerWeek,key));
   }
   for(const item of input.subscriptions) {
     const s=subscriptionInput(item);

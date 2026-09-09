@@ -20,6 +20,25 @@ async function request(path,{method='GET',user='alice',data,origin='https://coac
   return {status:response.status,data:await response.json()};
 }
 const reminder=(kind='water')=>({id:crypto.randomUUID(),kind,time:'09:00',timezone:'America/Los_Angeles',enabled:true,quietStart:'22:00',quietEnd:'07:00'});
+test('tone and schedule persist through the service, edits respect ownership, and invalid changes preserve settings',async()=>{
+ const user='tuning',data={...reminder(),tone:'gentle',daysPerWeek:3};
+ assert.equal((await request('/api/reminders',{user,method:'POST',data})).status,200);
+ const read=async()=>(await request('/api/reminders',{user})).data.items[0];
+ assert.equal((await read()).tone,'gentle');assert.equal((await read()).days_per_week,3);
+ const update={...data,tone:'cheeky',daysPerWeek:5,time:'18:30'};
+ assert.equal((await request('/api/reminders/'+data.id,{user:'stranger',method:'PUT',data:update})).status,404);
+ assert.equal((await read()).tone,'gentle');
+ assert.equal((await request('/api/reminders/'+data.id,{user,method:'PUT',data:update})).status,200);
+ for(const invalid of [{tone:'mean'},{daysPerWeek:2},{daysPerWeek:'3'}])assert.equal((await request('/api/reminders/'+data.id,{user,method:'PUT',data:{...update,...invalid}})).status,400);
+ const saved=await read();assert.equal(saved.tone,'cheeky');assert.equal(saved.days_per_week,5);assert.equal(saved.time,'18:30');
+ await request('/api/reminders/'+data.id,{user,method:'DELETE'});
+});
+test('legacy reminders import as direct and daily while customized reminders keep their settings',async()=>{
+ const user='import-tuning';
+ for(const [tone,days] of [['direct',7],['gentle',1]])await local.DB.prepare('INSERT INTO reminders(id,user_id,kind,time,timezone,enabled,quiet_start,quiet_end,tone,days_per_week) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),user,'water','09:00','America/Los_Angeles',1,'22:00','07:00',tone,days).run();
+ const rows=(await request('/api/reminders',{user})).data.items;
+ assert.deepEqual(rows.map(r=>[r.tone,r.days_per_week]).sort(),[['direct',7],['gentle',1]]);
+});
 test('public reminder service refuses forged account headers and unrelated API routes',async()=>{
   for(const headers of [{'oai-authenticated-user-id':'alice'},{'Authorization':'Bearer wrong','X-Coach-User':'alice'}])assert.equal((await service.fetch(new Request('https://reminders.test/api/reminders',{headers}),remote)).status,401);
   assert.equal((await service.fetch(new Request('https://reminders.test/api/meals',{headers:{Authorization:'Bearer test-service-token','X-Coach-User':'alice'}}),remote)).status,404);
