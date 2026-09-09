@@ -17,6 +17,7 @@
 <link id="coach-cinematics-style" rel="stylesheet" href="/creature/cinematics.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="/pod/pod.css">
+<link rel="stylesheet" href="/flip-display.css">
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
  <div class="deck-strip"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div>
@@ -31,7 +32,7 @@
  <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">I am here. We start when you are ready.</p></div>
  <section id="controls" class="workout-console" aria-label="Your set">
   <div class="set-heading"><label for="movement">NEXT MOVEMENT</label><select id="movement" aria-label="Movement"></select><button id="openLibrary" aria-label="Open movement library">Examples ↗</button></div>
-  <div id="hud" class="simple-counter"><div><small id="setNumber">SET 01</small><div class="counter-number"><span id="primary">0</span><span class="goal-divider">/</span><span id="goalValue">10</span></div><span id="primaryLabel">reps</span></div><div class="set-actions"><button id="start" class="primary-action">Begin set <span>→</span></button><button id="stop" disabled>Stop</button></div></div>
+  <div id="hud" class="simple-counter"><div class="counter-readout"><small id="setNumber">SET 01</small><span id="primary">00</span><div class="counter-target"><span id="primaryLabel">reps</span><span class="target-divider" aria-hidden="true"></span><span>Goal <span id="goalValue">10</span></span></div></div><div class="set-actions"><button id="start" class="primary-action">Begin set <span>→</span></button><button id="stop" disabled>Stop</button></div></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
   <p id="status" role="status">Choose your movement. Your coach is ready.</p>
   <span id="movementName" hidden>Squats</span><span id="secondary" hidden></span><span id="countState" hidden></span>

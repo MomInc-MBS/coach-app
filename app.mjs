@@ -3,6 +3,7 @@ import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
 import {initPod} from './pod/pod.mjs';
+import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
@@ -51,8 +52,9 @@ function resetMovement(){
 }
 function renderMotion(m){
   $('movementName').textContent=m.name;
-  $('primary').textContent=m.kind==='hold'?clock(m.hold):m.kind==='pace'?clock(m.elapsed):m.count;
-  $('primaryLabel').textContent=m.kind==='hold'?'current hold':m.kind==='pace'?'round time':m.kind==='steps'?'steps':m.kind==='jumps'?'jumps':'reps';
+  const label=m.kind==='hold'?'hold time':m.kind==='pace'?'round time':m.kind==='steps'?'steps':m.kind==='jumps'?'jumps':'reps';
+  setFlipValue($('primary'),m.kind==='hold'?clockDigits(m.totalHold):m.kind==='pace'?clockDigits(m.elapsed):countDigits(m.count),label);
+  $('primaryLabel').textContent=label;
   const time=m.remaining===null?`Session ${clock(m.elapsed)}`:`Remaining ${clock(m.remaining)}`;
   $('secondary').textContent=m.kind==='hold'?`Best ${clock(m.bestHold)} · Total ${clock(m.totalHold)}`:m.kind==='pace'?`Moving ${clock(m.active)} · Hand pace ${m.speed.toFixed(1)}×`:(m.kind==='steps'||m.kind==='jumps')?`${time} · ${Math.round(m.cadence)}/${m.kind==='steps'?'min':'min'}`:time;
   $('activity').style.width=`${Math.round(m.progress*100)}%`;

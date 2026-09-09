@@ -1,5 +1,6 @@
 import {SetFlow,DEFAULT_GOALS,DAMAGE_LEVEL,valueOf} from './set-flow.mjs';
 import {SetEncouragement} from './encouragement.mjs';
+import {setFlipValue,clockDigits} from '../flip-display.mjs';
 import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
 const $=id=>document.getElementById(id),PROGRESS='myr5-workout-progress-v1';
 const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -34,10 +35,10 @@ export function initPod({voice,movements,onStop,onNext}){
   encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();
  }
  async function beginSet(mode){configure(mode);if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
- function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';if(m.kind==='hold'){$('primary').textContent=time(m.totalHold);$('primaryLabel').textContent='hold time';}}
+ function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';}
  function power(){const p=$('coachPower').value;document.body.dataset.power=p;$('powerName').textContent=POWERS[p].name.toUpperCase()+' ACTIVE';store('myr5-pod-power-v1',p);}
  $('coachPower').value=loadPower({getItem:safeRead});power();
- function tick(){if(flow.phase!=='rest')return;const remaining=flow.remaining(Date.now());$('restTime').textContent=time(remaining);$('nextSet').disabled=remaining>0;$('nextSet').textContent=remaining?'Recovering…':'Next set →';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest timer complete. Continue when you are ready.',{interrupt:true});}}
+ function tick(){if(flow.phase!=='rest')return;const remaining=flow.remaining(Date.now());setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0;$('nextSet').textContent=remaining?'Recovering…':'Next set →';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest timer complete. Continue when you are ready.',{interrupt:true});}}
  function enterRest(result=null){
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
   document.body.dataset.screen='rest';$('homeScreen').hidden=true;$('restScreen').hidden=false;

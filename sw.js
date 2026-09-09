@@ -1,5 +1,5 @@
-const SHELL='myr5-shell-opening-doors-v3',VOICE='myr5-voice-v1';
-const FILES=['/pose.html','/manifest.webmanifest','/menu.css','/launch.css','/launch.mjs','/launch-shell.mjs','/app.mjs','/coach.mjs','/robot-audio.mjs','/camera.mjs','/menu.mjs','/movement-engine.mjs','/pod/pod.mjs','/pod/pod.css','/pod/set-flow.mjs','/pod/identity.mjs','/pod/encouragement.mjs','/pod/gala-avatar.js','/icons/coach-192.png','/icons/coach-512.png'];
+const SHELL='myr5-shell-flip-records-v4',VOICE='myr5-voice-v1';
+const FILES=['/pose.html','/manifest.webmanifest','/menu.css','/launch.css','/launch.mjs','/launch-shell.mjs','/flip-display.mjs','/flip-display.css','/achievements.mjs','/app.mjs','/coach.mjs','/robot-audio.mjs','/camera.mjs','/menu.mjs','/movement-engine.mjs','/pod/pod.mjs','/pod/pod.css','/pod/set-flow.mjs','/pod/identity.mjs','/pod/encouragement.mjs','/pod/gala-avatar.js','/icons/coach-192.png','/icons/coach-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('myr5-shell-')&&key!==SHELL)await caches.delete(key);await self.clients.claim();})()));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
