@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Pixel test adapted from Ian's MYR5 pose.html in the Barehands project.
+     Barehands copyright (c) 2026 Jared Rhodenizer; AGPL-3.0-or-later.
+     Source and license: /pose.html and /LICENSE. Camera frames stay in this browser. -->
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MYR5 · Training pod</title>
+<meta name="theme-color" content="#21172f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MYR5 Coach">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/coach-192.png">
+<link rel="stylesheet" href="/launch.css">
+<link rel="stylesheet" href="/menu.css">
+<link rel="stylesheet" href="/creature/phone.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<link rel="stylesheet" href="/pod/pod.css">
+<header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
+<main id="homeScreen" class="pod-page">
+ <div class="deck-strip"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div>
+ <section id="view" class="containment-pod" aria-label="Your coach's containment pod">
+  <div class="pod-rim rim-left" aria-hidden="true"></div><div class="pod-rim rim-right" aria-hidden="true"></div>
+  <div class="pod-inscription" aria-hidden="true">M Y R 5</div>
+  <div id="coachMount" class="coach-mount"><p id="coachLoading">Your coach is waking up.</p></div>
+  <div class="pod-floor" aria-hidden="true"></div>
+  <div class="pod-nameplate"><span>YOUR COACH</span><a href="/creature/index.html">Customize ↗</a></div>
+  <div id="cameraPreview" class="camera-preview"><video id="v" playsinline muted></video><canvas id="c"></canvas><span id="previewLabel">CAMERA OFF</span></div>
+ </section>
+ <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">I am here. We start when you are ready.</p></div>
+ <section id="controls" class="workout-console" aria-label="Your set">
+  <div class="set-heading"><label for="movement">NEXT MOVEMENT</label><select id="movement" aria-label="Movement"></select><button id="openLibrary" aria-label="Open movement library">Examples ↗</button></div>
+  <div id="hud" class="simple-counter"><div><small id="setNumber">SET 01</small><div class="counter-number"><span id="primary">0</span><span class="goal-divider">/</span><span id="goalValue">10</span></div><span id="primaryLabel">reps</span></div><div class="set-actions"><button id="start" class="primary-action">Begin set <span>→</span></button><button id="stop" disabled>Stop</button></div></div>
+  <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
+  <p id="status" role="status">Choose your movement. Your coach is ready.</p>
+  <span id="movementName" hidden>Squats</span><span id="secondary" hidden></span><span id="countState" hidden></span>
+ </section>
+ <footer class="crew-footer"><button id="openIdentity"><canvas id="miniAvatar" width="64" height="96" aria-hidden="true"></canvas><span id="guestLabel">Bring your Gala character</span><span>↗</span></button><span>MAKING YOU READY.</span></footer>
+</main>
+<main id="restScreen" class="rest-page" hidden aria-labelledby="restHeading">
+ <div class="rest-heading"><div><p class="eyebrow" id="restEyebrow">SET COMPLETE</p><h1 id="restHeading" tabindex="-1">Catch your breath.</h1></div><button id="leaveRest" class="icon-button" aria-label="Return to the pod">↗</button></div>
+ <div class="rest-receipt"><span id="setReceipt">Your effort has been recorded.</span><span id="earnedXp">+25 XP</span></div>
+ <section class="encounter" aria-label="Rest encounter with your custom coach">
+  <div class="encounter-orbit" aria-hidden="true"></div><div class="encounter-grid" aria-hidden="true"></div>
+  <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><div class="boss-health"><i id="bossHealth"></i></div></div>
+  <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Your coach is waking up.</p></div>
+  <button id="attackCoach" class="attack-target" aria-label="Tap your coach to attack"><span>TAP YOUR COACH</span></button>
+  <div id="attackFlash" class="attack-flash" aria-hidden="true"></div><div id="projectile" class="projectile" aria-hidden="true"></div>
+  <div id="damageFloat" class="damage-float" aria-hidden="true"></div>
+  <div class="player-platform"><div class="platform-top"></div><div class="platform-edge"></div><div class="platform-thruster"></div><canvas id="restAvatar" width="64" height="96" role="img" aria-label="Your Gala character on the floating platform"></canvas></div>
+  <div class="player-name"><span id="restGuest">Gala guest</span><span id="restLevel">LV. 01</span></div>
+ </section>
+ <p id="restFeedback" class="rest-feedback" role="status">A very large coach. A very ambitious guest.</p>
+ <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">Rest another 30 seconds</button></div></div>
+ <p id="shieldNote" class="shield-note">Shield intact. Damage unlocks at workout level 50.</p>
+</main>
+<dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Pod controls</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
+ <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
+ <div class="voice-row"><button id="toggleVoice" aria-pressed="true">Voice on</button><button id="testVoice">Test voice</button><span id="voiceType">Robot voice · gentle pace</span></div>
+ <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Visit rest chamber</button></div>
+ <details><summary>Camera & tracking</summary><p id="lensInfo">The camera opens when you begin a set.</p><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Feet are optional. Movement estimates, not technique grades.</p></details>
+ <div id="roundControl" hidden><select id="duration" aria-label="Legacy round duration"><option value="0">Open timer</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option></select></div>
+</dialog>
+<dialog id="identity" class="pod-dialog" aria-labelledby="identityTitle"><header><h2 id="identityTitle">Your Gala character</h2><button id="closeIdentity">Close</button></header><canvas id="identityAvatar" width="64" height="96" role="img" aria-label="Your saved Gala appearance"></canvas><p id="identityName">Gala guest</p><p>Bring the character you made at Join Gala. Export your look there, then choose that file here.</p><label class="primary-action file-label">Import Gala look<input id="importGala" type="file" accept="application/json,.json"></label><a href="https://mominc-mbs.github.io/gala/" target="_blank" rel="noopener noreferrer">Open Join Gala ↗</a><p id="identityStatus" role="status">Your appearance is saved on this device.</p></dialog>
+
+<dialog id="library" aria-labelledby="libraryTitle">
+  <video id="handVideo" playsinline muted hidden></video>
+  <div class="glass-shell">
+    <header class="library-header"><div><small>MYR5 / MOVEMENT LAB</small><h1 id="libraryTitle">Choose your movement</h1></div><button id="closeLibrary" data-hand aria-label="Close library">Close</button></header>
+    <section id="movementCards" class="movement-cards" aria-label="Movement library"></section>
+    <nav id="libraryPages" class="library-pages" aria-label="Movement pages"><button id="previousPage" data-hand>Previous</button><span id="pageNumber">1 / 2</span><button id="nextPage" data-hand>Next</button></nav>
+    <section id="hologramPanel" hidden>
+      <div class="holo-heading"><button id="backLibrary" data-hand>Back</button><h2 id="holoName">Squat hologram</h2></div>
+      <div id="holoStage" role="img" aria-label="Interactive exercise hologram. Drag to rotate; pinch or use buttons to zoom."><p id="holoStatus" role="status">Loading hologram…</p></div>
+      <div class="holo-tools"><button id="holoPlay" data-hand>Pause animation</button><button id="holoReset" data-hand>Reset view</button><button id="zoomOut" data-hand aria-label="Zoom out">−</button><button id="zoomIn" data-hand aria-label="Zoom in">+</button></div>
+      <p class="library-caption">Drag the hologram to change your view. The menu stays in place.</p>
+      <p id="introCue" class="intro-cue" hidden></p>
+      <button id="useHologram" data-hand class="use-movement">Use this movement</button>
+    </section>
+    <footer class="library-footer">
+      <button id="startFromLibrary" data-hand class="use-movement">Start Squats</button>
+      <div id="gestureArea"><div class="hand-row"><button id="toggleHands" aria-pressed="false">Enable exercise gestures</button><span id="handState" role="status">Touch controls ready</span></div>
+      <progress id="confirmProgress" max="1" value="0" aria-label="Thumbs-up confirmation"></progress>
+      <details id="handHelp"><summary>Exercise gestures · hold thumbs up to confirm</summary><p>Push-ups: raise one arm and point at its upper arm with your other index finger. Squats: hands on hips. Tree: hands together overhead. Warrior: arms out in a T. Horse: hands together at your chest. Boxing: two fists near your shoulders. Jogging: pump your arms alternately four times. Jumping: hands raised apart.</p><p>After the spoken suggestion, hold a thumbs-up for 1.4 seconds. Let go to reset the hold. Suggestions expire after 12 seconds.</p></details></div>
+      <p class="library-caption">Opening the library stops the workout. Choose a movement and start when ready.</p>
+    </footer>
+  </div>
+  <div id="handCursor" hidden aria-hidden="true"></div>
+</dialog>
+<script src="/pod/gala-avatar.js"></script>
+<script type="module" src="/app.mjs"></script>
+<script type="module" src="/launch.mjs"></script>
+<script type="module" src="/creature/assets/phone.js"></script>
+</html>
+

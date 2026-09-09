@@ -1,0 +1,8 @@
+{
+  "name": "myr5-coach-reminders",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-05-15",
+  "triggers": {"crons": ["* * * * *"]},
+  "vars": {"COACH_ORIGIN": "https://myr5-coach.ianmyersrocks97.chatgpt.site"},
+  "observability": {"enabled": true}
+}
