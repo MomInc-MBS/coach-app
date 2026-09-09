@@ -14,7 +14,9 @@ The hosted app preserves the existing containment pod, custom creature, eight ex
 
 ## Activation still required
 
-The separate `scheduler/` Worker uses Cloudflare's free plan and calls the hosted Coach reminder endpoint every minute. It needs the user's Cloudflare account sign-in and deployment with the matching `CRON_SECRET`. The origin must allow the scheduler to reach that endpoint. A private Sites audience blocks external scheduler requests before they reach this code. Public site access with authenticated user APIs (or a separate first-party backend) is required for that sender.
+The separate `scheduler/service.mjs` Worker runs in the user's Cloudflare account with its own D1 reminder database. A cron trigger runs it every minute without contacting the private Site. Coach forwards authenticated reminder operations over a server-only service credential; the reminder service rejects direct browser requests and unrelated routes. The Site stays private. Pre-existing reminder records migrate once, and later deletion or import retries cannot restore them. Account export and deletion cover both databases. The app only enables device subscription when the sender reports a recent cron heartbeat.
+
+Deployment needs Cloudflare authorization, a D1 binding in `scheduler/wrangler.jsonc`, and `REMINDER_SERVICE_TOKEN`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY` runtime secrets. Sites receives the matching service token and `REMINDER_SERVICE_ORIGIN`. Never store these secrets in source. The existing `/api/cron` route refuses to run a second sender after remote activation.
 
 Real phone installation, camera performance, food inference in mobile WebAssembly, push permission and locked-screen delivery are physical device acceptance checks; automated Node checks do not prove those results.
 

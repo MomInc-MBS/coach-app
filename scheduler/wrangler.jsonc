@@ -1,8 +1,26 @@
 {
-  "name": "myr5-coach-reminders",
-  "main": "worker.mjs",
-  "compatibility_date": "2026-05-15",
-  "triggers": {"crons": ["* * * * *"]},
-  "vars": {"COACH_ORIGIN": "https://myr5-coach.ianmyersrocks97.chatgpt.site"},
-  "observability": {"enabled": true}
+	"name": "myr5-coach-reminders",
+	"main": "service.mjs",
+	"compatibility_date": "2026-05-15",
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	"vars": {
+		"VAPID_SUBJECT": "https://myr5-coach.ianmyersrocks97.chatgpt.site"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"account_id": "f35c131b47d223ae301a8b577d6e2d59",
+	"workers_dev": true,
+	"preview_urls": false,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "myr5-coach-reminders",
+			"database_id": "3edf94f0-2175-41d1-9b4f-98e9cfe95945"
+		}
+	]
 }

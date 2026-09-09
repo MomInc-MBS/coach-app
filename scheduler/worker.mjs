@@ -1,2 +1,2 @@
-// Cloudflare Cron runs this independently of the user's computer or app.
-export default {async scheduled(event,env,ctx){ctx.waitUntil((async()=>{const response=await fetch(`${env.COACH_ORIGIN}/api/cron`,{method:'POST',headers:{Authorization:`Bearer ${env.CRON_SECRET}`},redirect:'error',signal:AbortSignal.timeout(25000)});if(!response.ok)throw new Error(`Coach reminders failed (${response.status})`);const result=await response.json();if(result.failed)throw new Error(`${result.failed} reminder deliveries failed`);})());},fetch(){return new Response('MYR5 reminder scheduler',{headers:{'Content-Type':'text/plain'}});}};
+// Kept as the stable scheduler entry point for older setup instructions.
+export {default} from './service.mjs';

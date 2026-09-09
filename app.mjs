@@ -1,3 +1,4 @@
+import {initCinematics} from './creature/cinematics.js';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
@@ -120,7 +121,7 @@ function loop(run){
       const cueMotion=state.motion.kind==='hold'?{...state.motion,remaining:Math.max(0,pod.goal()-state.motion.totalHold)}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
-      if(pod.consume(state.motion,Date.now())){renderMotion(state.motion);return;}
+      if(pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
       if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
       if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
@@ -146,4 +147,7 @@ $('widest').addEventListener('click',async()=>{
 window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused while the page was hidden. Tap Start for a new session.');});
 pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:()=>library.introduce()});
 resetMovement();
-const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:start,camera:()=>$('camera').value,movement:()=>$('movement').value});
+const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:async()=>{const outcome=await cinematics.play('pre',{name:MOVEMENTS[$('movement').value].name});if(outcome!=='cancelled'&&!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+
+const cinematics=initCinematics({voice});
+window.myr5Cinematics=cinematics;

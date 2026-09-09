@@ -5,3 +5,5 @@ dist/
 .wrangler/
 *.log
 creature/models/*.glb
+
+!creature/models/hands-v2.glb
