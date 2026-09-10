@@ -3,7 +3,7 @@ const FILES=['/scoreboard.mjs','/scoreboard-domain.mjs','/scoreboard.css','/move
 FILES.push('/pocket-hardware.css','/reminder-settings.mjs','/reminder-controls.mjs','/meal-scanner.mjs','/food-worker.mjs','/icons/coach-install-qr.png','/pod/hardware.css','/pod/hardware.mjs','/hardware-launch.css','/pod/whiteboard.css','/pod/fonts/hand-0.woff2','/pod/fonts/hand-2.woff2','/pod/fonts/hand-6.woff2');
 FILES.push('/pod/retro-rooms.css','/pod/worlds/great-wall.png','/gala-handoff.mjs','/install-context.mjs','/pod/gala-weapons.js','/pod/dj-identity.js','/pod/rest-arena.mjs','/pod/rest-arena.css','/meditation.mjs','/meditation.css','/arcade/tub-flight/engine.mjs','/arcade/tub-flight/game.mjs','/arcade/tub-flight/style.css');
 FILES.push('/pod/weapon-evolution.mjs','/pod/weapon-animator.mjs','/pod/weapon-abilities.css');
-FILES.push('/update-policy.mjs','/release-build.mjs');
+FILES.push('/update-policy.mjs','/release-build.mjs','/launch-bootstrap.mjs','/launch-runtime.mjs','/app-runtime.mjs');
 FILES.push('/weapon-training.mjs','/workout-tracks.js','/weapon-rewards.mjs');
 FILES.push('/breathing.mjs','/combat.mjs');
 FILES.push('/coach-hub.mjs','/coach-hub.css','/reminder-plan.mjs');

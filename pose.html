@@ -68,7 +68,7 @@
  <section class="encounter" aria-label="Rest encounter with your custom coach">
   <div class="rest-world-backdrop" aria-hidden="true"></div><div class="rest-world-floor" aria-hidden="true"></div>
   <div class="encounter-orbit" aria-hidden="true"></div><div class="encounter-grid" aria-hidden="true"></div>
-  <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><div class="boss-health"><i id="bossHealth"></i></div></div>
+  <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><span id="coachHealth">1,000,000,000 HP</span><div class="boss-health" role="progressbar" aria-label="Coach health" aria-valuemin="0" aria-valuemax="1000000000" aria-valuenow="1000000000"><i id="bossHealth"></i></div></div>
   <div class="coach-battle-platform" aria-hidden="true"></div><span id="restWeaponName" class="rest-weapon-name"></span>
   <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Loading…</p></div>
   <button id="attackCoach" class="attack-target" aria-label="Attack the coach with Helping Hand"><span>TAP TO STRIKE</span></button>
@@ -135,7 +135,7 @@
   <div id="handCursor" hidden aria-hidden="true"></div>
 </dialog>
 <script src="/workout-tracks.js"></script><script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/gala-performer.js"></script><script src="/pod/dj-identity.js"></script>
-<script type="module" src="/app.mjs"></script>
-<script type="module" src="/launch.mjs?v=quick-install-v1"></script>
+<script type="module" src="/app-runtime.mjs?v=rest-flow-1"></script>
+<script type="module" src="/launch-bootstrap.mjs?v=startup-recovery-1"></script>
 <script type="module" src="/creature/assets/phone.js"></script>
 </html>
