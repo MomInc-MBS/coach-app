@@ -1,5 +1,5 @@
 export const GALA_KEY='mominc-avatar-v1';
-export const LIVE_GALA='https://mominc-mbs.github.io/gala/';
+export const LIVE_GALA='https://mominc.online/gala/';
 export function loadGala(storage,avatar){
  try{const raw=storage.getItem(GALA_KEY);if(raw)return {look:avatar.normalize(JSON.parse(raw)),linked:true};}catch{}
  return {look:structuredClone(avatar.defaultLook),linked:false};

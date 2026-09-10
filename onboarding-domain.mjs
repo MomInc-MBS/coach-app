@@ -2,8 +2,8 @@ import {SITE_QUESTIONS} from './onboarding-questions.mjs';
 import {OFFICE_REQUIRED_FIELDS,withOfficeDefaults} from './office-domain.mjs?v=office-short-v1';
 import {QUICK_REQUIRED_FIELDS,withQuickDefaults} from './quick-setup.mjs';
 export {SITE_QUESTIONS};
-export const WEBSITE='https://mominc-mbs.github.io';
-export const COACH_APP='https://myr5-coach.ianmyersrocks97.chatgpt.site';
+export const WEBSITE='https://mominc.online';
+export const COACH_APP='https://myr5.mominc.online';
 export const COACHES=['supportive','direct','analytical','playful','calm','mom'];
 export const EXERCISES={squat:'Squats',pushup:'Push-ups',tree:'Tree pose',warrior:'Warrior II',horse:'Horse stance',boxing:'Air boxing',jogging:'Jogging in place',jumping:'Jumps'};
 export const FIELDS=[
