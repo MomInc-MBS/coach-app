@@ -19,7 +19,7 @@ const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,
 window.myr5TestState=state;
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-function controls(busy){$('start').disabled=busy;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -152,7 +152,7 @@ $('widest').addEventListener('click',async()=>{
   finally{$('widest').disabled=state.phase!=='tracking';}
 });
 window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused while the page was hidden. Tap Start for a new session.');});
-pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:()=>library.introduce()});
+pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
 resetMovement();
 initHardware();soundSwitch();
 const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});

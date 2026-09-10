@@ -1,5 +1,6 @@
 // Every spoken cue uses the approved voice pack, including compound sentences.
-export const VOICE_MANIFEST='/voice/manifest.json?v=approved-v2';
+import {BUILD_ID} from './release-build.mjs';
+export const VOICE_MANIFEST='/voice/manifest.json?v='+BUILD_ID;
 export const VOICE_CACHE='myr5-voice-approved-v2';
 export function voicePhrases(text,phrases){
  text=text.trim();if(phrases[text])return [text];

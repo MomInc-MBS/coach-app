@@ -6,6 +6,7 @@ FILES.push('/pod/weapon-evolution.mjs','/pod/weapon-animator.mjs','/pod/weapon-a
 FILES.push('/update-policy.mjs','/release-build.mjs','/launch-bootstrap.mjs','/launch-runtime.mjs','/app-runtime.mjs');
 FILES.push('/weapon-training.mjs','/workout-tracks.js','/weapon-rewards.mjs');
 FILES.push('/breathing.mjs','/combat.mjs');
+FILES.push('/workout-route.mjs','/workout-route-ui.mjs');
 FILES.push('/coach-hub.mjs','/coach-hub.css','/reminder-plan.mjs');
 FILES.push('/pod/home-character.mjs','/pod/home-character.css','/pod/gala-performer.js');
 self.addEventListener('install',event=>event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(FILES))));
