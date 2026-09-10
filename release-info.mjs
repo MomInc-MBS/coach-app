@@ -4,5 +4,5 @@ export const RELEASE=Object.freeze({id:'2026-09-10-coach-fixes-'+BUILD_ID,title:
  'Your Gala character stays while choosing exercises; the counter appears during a set.',
  'Coach customization zooms to the part you select, and your coach comes closer to the pod glass.',
  'Idle coaches cycle through their animations every eight seconds, with workout cues taking priority.',
- 'Reminder connection recovery and clearer loading status.'
+ 'Fixed reminder connections and notification delivery, with clearer loading status.'
 ]});

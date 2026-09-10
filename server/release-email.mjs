@@ -11,7 +11,7 @@ function link(env,action,value){return new URL(`/api/updates/${action}?token=${v
 async function mail(env,email,subject,text,html,unsubscribe){
  const content={subject,text,html,...(unsubscribe?{headers:{'List-Unsubscribe':`<${unsubscribe}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}}:{})};
  if(env.EMAIL?.send)return env.EMAIL.send({from:{email:env.RELEASE_EMAIL_FROM,name:'MOM Dispatch'},to:email,...content});
- const response=await fetch('https://api.resend.com/emails',{method:'POST',redirect:'error',signal:AbortSignal.timeout(15000),headers:{'Authorization':`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`coach-${await hash(email+subject+text)}`},body:JSON.stringify({from:`MOM Dispatch <${env.RELEASE_EMAIL_FROM}>`,to:[email],...content})});
+ const response=await fetch('https://api.resend.com/emails',{method:'POST',redirect:'manual',signal:AbortSignal.timeout(15000),headers:{'Authorization':`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`coach-${await hash(email+subject+text)}`},body:JSON.stringify({from:`MOM Dispatch <${env.RELEASE_EMAIL_FROM}>`,to:[email],...content})});
  if(!response.ok)throw new Error('Email provider did not accept the message.');
  const result=await response.json();if(!result.id)throw new Error('Email provider returned no message ID.');return {messageId:result.id};
 }
@@ -53,7 +53,7 @@ export function emailLinkPage(action,value,message){
 export async function runReleaseEmails(env,now=Date.now()){
  if(!emailConfigured(env))return {configured:false,sent:0,failed:0};
  // Deploying the sender ahead of the app must never announce an unpublished build.
- const live=await fetch(new URL('/api/releases/current',env.RELEASE_ORIGIN),{redirect:'error',signal:AbortSignal.timeout(10000),headers:{'Cache-Control':'no-cache'}});
+ const live=await fetch(new URL('/api/releases/current',env.RELEASE_ORIGIN),{redirect:'manual',signal:AbortSignal.timeout(10000),headers:{'Cache-Control':'no-cache'}});
  if(!live.ok||(await live.json()).id!==RELEASE.id)return {sent:0,failed:0,waitingForPublication:true};
  const rows=(await env.DB.prepare('SELECT * FROM release_subscribers s WHERE enabled=1 AND confirmed_at IS NOT NULL AND (last_release IS NULL OR last_release!=?) AND NOT EXISTS (SELECT 1 FROM release_deliveries d WHERE d.user_id=s.user_id AND d.release_id=?) LIMIT 10').bind(RELEASE.id,RELEASE.id).all()).results;
  let sent=0,failed=0;

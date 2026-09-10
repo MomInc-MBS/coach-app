@@ -13,9 +13,11 @@ export async function reminderService(env, user, path, method = 'GET', data) {
       method,
       headers: {'Authorization': `Bearer ${env.REMINDER_SERVICE_TOKEN}`, 'X-Coach-User': user, 'Content-Type': 'application/json'},
       body: data === undefined ? undefined : JSON.stringify(data),
-      redirect: 'error', signal: AbortSignal.timeout(25000)
+      redirect: 'manual', signal: AbortSignal.timeout(25000)
     });
   } catch(error) { console.error('Reminder connection failed',String(error?.message||'Network error'));fail('The reminder service is temporarily unavailable. Please try again.', 503); }
+  // Workers returns redirects for manual mode. Never forward the service token.
+  if(response.status>=300&&response.status<400)fail('The reminder service returned an unexpected redirect.',503);
   if (!response.headers.get('content-type')?.includes('application/json')) {console.error('Reminder connection returned a non-JSON response',response.status,response.headers.get('content-type'));fail('The reminder service is temporarily unavailable.', 503);}
   const result = await response.json();
   if (!response.ok) fail(result.error || 'Could not save your reminder. Please try again.', response.status);
