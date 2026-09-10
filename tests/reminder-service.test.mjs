@@ -76,7 +76,7 @@ test('remote reminder changes and export remain isolated by the signed-in accoun
 });
 test('scheduler runs independently and account reports a real recent heartbeat',async()=>{
   assert.equal((await request('/api/account')).data.push.schedulerActive,false);
-  let scheduled;await service.scheduled({},remote,{waitUntil:p=>{scheduled=p;}});await scheduled;
+  const scheduled=[];await service.scheduled({},remote,{waitUntil:p=>scheduled.push(p)});await Promise.all(scheduled);
   assert.equal((await request('/api/account')).data.push.schedulerActive,true);
   await remote.DB.prepare("UPDATE system SET value=? WHERE key='scheduler_tick'").bind(String(Date.now()-600000)).run();
   assert.equal((await request('/api/account')).data.push.schedulerActive,false);

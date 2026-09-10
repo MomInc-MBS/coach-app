@@ -4,8 +4,9 @@ import {safeToUpdate,releaseNotice,requestActivation} from './update-policy.mjs'
 export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) {
  const panel=document.getElementById('installPanel'),section=document.createElement('details');
  section.className='release-settings';
- section.innerHTML='<summary>App updates</summary><p id="releaseVersion"></p><ul id="releaseNotes"></ul><button id="checkAppUpdate">Check for updates</button><p id="releaseStatus" role="status"></p><form id="releaseEmailForm"><label>Email me when an update is ready<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label><button type="submit" disabled>Email me updates</button><button id="stopReleaseEmails" type="button" hidden>Stop update emails</button><p id="releaseEmailStatus" role="status">Optional. Confirm your email first; unsubscribe any time.</p></form>';
+ section.innerHTML='<summary>App updates</summary><p>Turn on notifications in Reminders to get a download alert for every new app update.</p><p id="releaseVersion"></p><ul id="releaseNotes"></ul><button id="checkAppUpdate">Check for updates</button><p id="releaseStatus" role="status"></p><form id="releaseEmailForm"><label>Email me when an update is ready<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label><button type="submit" disabled>Email me updates</button><button id="stopReleaseEmails" type="button" hidden>Stop update emails</button><p id="releaseEmailStatus" role="status">Optional. Confirm your email first; unsubscribe any time.</p></form>';
  panel.append(section);
+ section.open=new URLSearchParams(location.search).has('update');
  const $=id=>document.getElementById(id),banner=document.createElement('aside');
  banner.className='app-update-banner';banner.setAttribute('role','status');banner.hidden=true;
  banner.innerHTML='<span>A Coach update is ready.</span><button type="button" data-update>Update now</button><button type="button" data-notes>What’s new</button><button type="button" data-later aria-label="Dismiss update notice">Later</button>';
@@ -38,6 +39,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  applyButton.onclick=()=>apply(false);banner.querySelector('[data-update]').onclick=()=>apply(false);
  banner.querySelector('[data-later]').onclick=()=>{if(ready())dismissed=true;else notice.dismiss();paint();};
  banner.querySelector('[data-notes]').onclick=()=>{notice.dismiss();if(!panel.open)panel.showModal();section.open=true;section.scrollIntoView({block:'start'});paint();};
+ function openDownload(){if(!panel.open)panel.showModal();section.open=true;section.scrollIntoView({block:'start'});void check();}
  async function check(){
   if(checking)return;checking=true;
   try{
@@ -75,6 +77,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
    else {applying=false;paint();}
   });
   navigator.serviceWorker.addEventListener('message',async event=>{
+   if(event.data?.type==='APP_UPDATE_AVAILABLE'){openDownload();return;}
    if(event.data?.type!=='UPDATE_SAFETY_CHECK')return;
    let approved=safe(false,true);
    if(approved)try{await onBeforeUpdate?.();approved=safe(false,true);}catch{approved=false;}

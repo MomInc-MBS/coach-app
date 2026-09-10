@@ -71,6 +71,13 @@
       "when": 1789026398058,
       "tag": "0009_uneven_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789057331946,
+      "tag": "0010_fixed_wrecker",
+      "breakpoints": true
     }
   ]
 }

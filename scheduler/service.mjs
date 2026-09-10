@@ -3,6 +3,7 @@ import {runReminders, subscriptionInput} from '../server/push.mjs';
 import {reminderInput, fail} from '../server/domain.mjs';
 import {emailSubscription,emailLinkAction,runReleaseEmails} from '../server/release-email.mjs';
 import {syncTrainingStatus} from '../server/reminder-plan.mjs';
+import {runReleasePush} from '../server/release-push.mjs';
 
 const json = (data, status=200) => new Response(JSON.stringify(data), {status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 async function authorized(request, env) {
@@ -64,5 +65,6 @@ export default {
   async scheduled(event,env,ctx) {
     ctx.waitUntil((async()=>{const result=await runReminders(env);if(result.failed)throw new Error(`${result.failed} reminder deliveries failed`);})());
     ctx.waitUntil((async()=>{const result=await runReleaseEmails(env);if(result.failed)throw new Error(`${result.failed} release email deliveries failed`);})());
+    ctx.waitUntil((async()=>{const result=await runReleasePush(env);if(result.failed)throw new Error(`${result.failed} update notification deliveries failed`);})());
   }
 };

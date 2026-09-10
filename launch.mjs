@@ -74,7 +74,7 @@ async function syncDeviceSwitch(){
   $('notificationSwitch').setAttribute('aria-checked',String(on));set('notificationSwitch',on?'ON':'OFF');
   $('notificationSwitch').disabled=!account||!supported||(!on&&!account.push.configured);$('testPush').disabled=!on;
   if(on&&account?.push.configured)await deviceBinding.verify(account,sub);else deviceBinding.forget();
-  set('pushStatus',!supported?'Install Coach to enable notifications.':!account?'Sign in to enable reminders.':Notification.permission==='denied'?'Allow notifications for Coach in your browser or phone settings.':!account.push.configured?'Notification service is reconnecting.':!account.push.schedulerActive?'Reconnecting… Reminders saved.':on?'Reminders on':'Turn on reminders for this device.');
+  set('pushStatus',!supported?'Install Coach to enable notifications.':!account?'Sign in to enable reminders.':Notification.permission==='denied'?'Allow notifications for Coach in your browser or phone settings.':!account.push.configured?'Notification service is reconnecting.':!account.push.schedulerActive?'Reconnecting… Reminders saved.':on?'Reminders and app update notifications on':'Turn on reminders and app updates for this device.');
   liveReminders.render();
  }catch{deviceBinding.forget();$('testPush').disabled=true;set('pushStatus','Reconnecting…');liveReminders.render();}
 }
