@@ -6,7 +6,8 @@ import {isInstalled,setupAllowed} from './install-context.mjs';
 import {prepareInstall} from './install-transfer.mjs';
 const button=document.getElementById('installCoach'),status=document.getElementById('installStatus'),saved=document.getElementById('coachSaved');
 const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/i.test(navigator.userAgent);
-let prompt=null,ready=false;
+let prompt=null,ready=false,installShowing=false;
+navigator.serviceWorker?.addEventListener('message',event=>{if(event.data?.type==='UPDATE_SAFETY_CHECK')event.ports[0]?.postMessage({safe:ready&&!installShowing});});
 function guide(){
  const steps=ios?['Tap Share, then Add to Home Screen.','Leave Open as Web App on if shown, then tap Add.','Open the MYR5 icon on your home screen.']:android?['Open the ⋮ menu and tap Install app or Add to Home screen.','Confirm, then open MYR5 from your home screen.']:['Use your browser’s install icon beside the address bar, or its Install app menu item.','Open MYR5 from your apps.'];
  const list=document.getElementById('installSteps');list.replaceChildren(...steps.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
@@ -16,7 +17,7 @@ function guide(){
 function installed(){prompt=null;button.hidden=true;document.getElementById('installGuide').hidden=true;status.textContent='Installed. Open MYR5 to start.';}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();prompt=event;if(ready){button.textContent='Install Coach';status.textContent='Ready to install';}});
 window.addEventListener('appinstalled',installed);
-button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();return;}const current=prompt;prompt=null;try{await current.prompt();const choice=await current.userChoice;if(choice.outcome==='accepted')installed();else{status.textContent='Install cancelled';}}catch{guide();}};
+button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();return;}const current=prompt;prompt=null;try{installShowing=true;await current.prompt();const choice=await current.userChoice;if(choice.outcome==='accepted')installed();else{status.textContent='Install cancelled';}}catch{guide();}finally{installShowing=false;}};
 async function prepare(){
  button.disabled=true;
  try{
