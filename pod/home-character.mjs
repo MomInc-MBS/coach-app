@@ -35,8 +35,7 @@ export function mountHomeCharacter(){
   if(index<0)return;
   origin=performance.now()-performer.scenes.slice(0,index).reduce((sum,scene)=>sum+scene.duration,0);sync();
  }
- const observer=new MutationObserver(sync);observer.observe(document.body,{attributes:true,attributeFilter:['data-tracking','data-screen']});
- document.querySelectorAll('dialog').forEach(dialog=>observer.observe(dialog,{attributes:true,attributeFilter:['open']}));
+ const observer=new MutationObserver(sync);observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-tracking','data-screen','open']});
  const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});intersection.observe(host);
  const storage=event=>{if(event.key===GALA_KEY)load();};
  window.addEventListener('myr5:exercise-selected',choose);window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
