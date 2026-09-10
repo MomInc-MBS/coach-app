@@ -56,7 +56,7 @@ try{
  try{account=await api('/api/account');}catch(e){if(e.status!==401)throw e;}
  const edit=params.get('edit')==='1',office=params.get('route')==='office';
  if(!edit&&!setupAllowed()&&!account?.onboarding){location.replace('/install.html'+(office?'?route=office':''));}else{
- if(setupAllowed()&&!edit)incoming=await restoreInstall()||incoming;
+ if(setupAllowed()&&!edit&&!raw)incoming=await restoreInstall()||incoming;
  if(edit){
   if(!account){status.textContent='Sign in to edit your coach settings.';link('Sign in to Coach',signIn('/onboarding.html?edit=1'));}
   else if(!account.onboarding)chooseRoute();
