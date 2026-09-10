@@ -1,3 +1,4 @@
+import {initHandCompanion} from '../hand-companion.mjs';
 import {SetFlow,DEFAULT_GOALS,DAMAGE_LEVEL,valueOf} from './set-flow.mjs';
 import {SetEncouragement} from './encouragement.mjs';
 import {setFlipValue,clockDigits} from '../flip-display.mjs';
@@ -6,6 +7,7 @@ const $=id=>document.getElementById(id),PROGRESS='myr5-workout-progress-v1';
 const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 export function initPod({voice,movements,onStop,onNext}){
+ const hand=initHandCompanion();
  const flow=new SetFlow(null),encourage=new SetEncouragement();let currentMode=null,card=null,observedCard=null,restTimer=0,hitTimer=0,lastSpoken=-Infinity,restCalled=false,look;
  window.addEventListener('myr5:coach-plan',()=>{if(flow.phase==='set')return;const mode=currentMode||'squat';currentMode=null;configure(mode);if(window.coachPlan?.data?.profile?.restSeconds)$('restDuration').value=window.coachPlan.data.profile.restSeconds;});
  const avatar=window.GalaAvatar;let storageAvailable=true;
@@ -48,19 +50,20 @@ export function initPod({voice,movements,onStop,onNext}){
   $('setReceipt').textContent=result?`${result.name} · ${Math.round(result.value)} ${movements[result.mode].kind==='hold'||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps'}`:'Practice attacks. Workout progress stays the same.';
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent='0 DAMAGE';$('bossHealth').style.width='100%';
   $('shieldNote').textContent=flow.level<DAMAGE_LEVEL?`Shield intact. Damage unlocks at workout level ${DAMAGE_LEVEL}.`:`Workout level ${flow.level}. Your attacks can now deal damage.`;
-  $('restFeedback').textContent='A very large coach. A very ambitious guest.';restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
+  $('restFeedback').textContent='You and Helping Hand versus the coach. Every third tap is a team strike.';hand.enter();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
   clearInterval(restTimer);restTimer=setInterval(tick,250);tick();$('restHeading').focus();
   history.replaceState(null,'','#rest');window.myr5Creature?.play(result?'celebrate':'rest');
-  voice.say(result?'Set complete. Take a breath. Your Gala guest can try the shield while you rest.':'Rest chamber. Tap your coach to practice. Your workout progress stays the same.',{interrupt:true});
+  voice.say(result?'Set complete. Take a breath. Your hand is on your team. Try the shield together while you rest.':'Rest chamber. Tap your coach to strike with your hand. Your workout progress stays the same.',{interrupt:true});
  }
  function consume(m,now){const result=flow.consume(m,now);if(!result)return false;const id=flow.active?.cloudId;store(PROGRESS,JSON.stringify(flow.progress));if(result.earned&&id)window.coachAccount.complete({id,value:result.value,active:m.active||0}).catch(()=>{$('setReceipt').textContent+=' · Waiting to sync.';});onStop();enterRest(result);if(!storageAvailable)$('setReceipt').textContent+=' · Progress could not be saved on this device.';return true;}
- function leave(){clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').focus();}
+ function leave(){hand.leave();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').focus();}
  $('attackCoach').addEventListener('click',()=>{
-  const now=Date.now(),hit=flow.tap(now);if(!hit)return;
-  $('damageTotal').textContent=hit.totalDamage+' DAMAGE';$('bossHealth').style.width=Math.max(0,100-hit.totalDamage/100)+'%';$('damageFloat').textContent=hit.blocked?'BLOCKED · 0':'−'+hit.damage;
+  const now=Date.now(),hit=flow.tap(now,true);if(!hit)return;
+  hand.hit(hit);window.myr5Creature?.play(hit.assisted?'encourage':hit.blocked?'agree':'rest');
+  $('damageTotal').textContent=hit.totalDamage+' DAMAGE';$('bossHealth').style.width=Math.max(0,100-hit.totalDamage/100)+'%';$('damageFloat').textContent=hit.blocked?(hit.assisted?'TEAM STRIKE · BLOCKED':'BLOCKED · 0'):(hit.assisted?'TEAM −':'−')+hit.damage;
   const scene=document.querySelector('.encounter');scene.classList.remove('hit');void scene.offsetWidth;scene.classList.add('hit');clearTimeout(hitTimer);hitTimer=setTimeout(()=>scene.classList.remove('hit'),650);
-  $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.hits} hits. ${hit.totalDamage} damage.`;
-  if(now-lastSpoken>10000){lastSpoken=now;window.myr5Creature?.play(hit.blocked?'agree':'encourage');voice.say(hit.blocked?'Shield intact. Your strength comes from completed workouts.':'That one connected. Your workouts are showing.',{key:'rest'});}
+  $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.assisted?'Helping Hand lands a team strike! ':''}${hit.hits} hits. ${hit.totalDamage} damage.`;
+  if(now-lastSpoken>10000){lastSpoken=now;window.myr5Creature?.play(hit.blocked?'agree':'encourage');voice.say(hit.blocked?'Nice teamwork. My shield is still intact. Keep training.':'You and that hand make quite a team. That one connected.',{key:'rest'});}
  });
  $('leaveRest').addEventListener('click',leave);$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
  $('nextSet').addEventListener('click',()=>{if(flow.remaining(Date.now())>0)return;leave();onNext();});
@@ -72,9 +75,10 @@ export function initPod({voice,movements,onStop,onNext}){
  $('importGala').addEventListener('change',async event=>{const f=event.target.files?.[0];if(!f)return;try{if(f.size>30000)throw Error('Choose your exported Gala look file.');const imported=importGala(await f.text(),avatar);if(!store(GALA_KEY,JSON.stringify(imported)))throw Error('Could not save this appearance on your device.');paintGuest();$('identityStatus').textContent='Your Gala character is aboard.';voice.say('Your Gala character is aboard.',{interrupt:true});}catch(error){$('identityStatus').textContent=error instanceof SyntaxError?'That file is not a Gala look.':error.message;}finally{event.target.value='';}});
  window.addEventListener('storage',e=>{if(e.key===GALA_KEY)paintGuest();});window.addEventListener('mominc-avatar-change',paintGuest);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)voice.cancel();else tick();});
- window.addEventListener('pagehide',()=>{clearInterval(restTimer);clearTimeout(hitTimer);observer.disconnect();});
+ window.addEventListener('pagehide',()=>{hand.dispose();clearInterval(restTimer);clearTimeout(hitTimer);observer.disconnect();});
  document.querySelector('.mom-brand').addEventListener('click',event=>{event.preventDefault();if(flow.phase==='rest')leave();});
  paintGuest();updateProgress();document.body.dataset.screen='pod';
+ const requestedPanel=new URLSearchParams(location.search).get('panel');if(['avatar','hand'].includes(requestedPanel)){$('identity').showModal();if(requestedPanel==='hand')hand.edit();}
  window.addEventListener('myr5:account-progress',({detail:p})=>{flow.progress.completedSets=p.completedSets;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
  return {flow,configure,beginSet,consume,render,encouragement:(m,now,events)=>flow.phase==='set'?encourage.update(m,flow.active.goal,now,events):null,stopped:()=>{if(flow.phase==='set')flow.leave();},goal:()=>Number($('goal').value)};
 }

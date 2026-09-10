@@ -28,6 +28,6 @@ export class SetFlow {
  previewRest(now,seconds=60){this.phase='rest';this.preview=true;this.restUntil=now+seconds*1000;this.hits=0;this.damage=0;this.lastTap=-Infinity;}
  remaining(now){return Math.max(0,Math.ceil((this.restUntil-now)/1000));}
  extend(seconds=30,now=Date.now()){if(this.phase==='rest')this.restUntil=Math.max(this.restUntil,now)+seconds*1000;}
- tap(now){if(this.phase!=='rest'||now-this.lastTap<180)return null;this.lastTap=now;this.hits++;this.damage+=this.attackDamage;return {hits:this.hits,damage:this.attackDamage,totalDamage:this.damage,blocked:this.attackDamage===0};}
+ tap(now,withHand=false){if(this.phase!=='rest'||now-this.lastTap<180)return null;this.lastTap=now;this.hits++;const assisted=withHand&&this.hits%3===0,damage=this.attackDamage*(assisted?2:1);this.damage+=damage;return {hits:this.hits,damage,totalDamage:this.damage,blocked:damage===0,assisted,charge:withHand?this.hits%3:0};}
  leave(){this.phase='pod';this.active=null;}
 }

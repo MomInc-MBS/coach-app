@@ -25,7 +25,7 @@ export function mountLaunch(){document.body.insertAdjacentHTML('beforeend',`
   <section class="unlock-board" aria-labelledby="unlockTitle"><h3 id="unlockTitle">Game unlocks</h3><ul id="rewardList"></ul></section>
  </div>
  <details class="account-settings"><summary>Account & appearance</summary><p id="accountName"></p><p id="accountStatus" class="hint" role="status"></p>
-  <div id="accountSettingsContent" hidden><p class="hint">Save your coach and Gala look, then restore it on another device.</p><div class="actions"><button id="saveProfile">Save appearance</button><button id="restoreProfile">Restore appearance</button></div>
+  <div id="accountSettingsContent" hidden><p class="hint">Save your coach, Gala avatar and Helping Hand, then restore them on another device.</p><div class="actions"><button id="saveProfile">Save appearance</button><button id="restoreProfile">Restore appearance</button></div>
    <h3>Your data</h3><div class="actions"><button id="exportData">Download my data</button><a id="signOut" class="action-link" href="/signout-with-chatgpt?return_to=%2Fpose.html" target="_top">Sign out</a></div>
    <details><summary>Delete Coach data</summary><p>This deletes your Coach progress, meals, reminders and saved appearance from this account.</p><label>Type DELETE<input id="deleteConfirm" autocomplete="off"></label><button id="deleteAccount" class="danger">Delete Coach data</button></details>
   </div><p class="hint"><a href="/privacy.html">Privacy</a> · <a href="/source.json" download>App source</a> · <a href="/LICENSE">License</a></p>

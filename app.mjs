@@ -74,6 +74,7 @@ function stop(message='Stopped. Your results stay here until the next start.'){
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
 async function start(){
   const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
+  $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
   state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Opening the camera. Get into your starting position.',{interrupt:true});$('detail').textContent='Waiting for video';
   try{
     await pod.beginSet(session.mode);

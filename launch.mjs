@@ -15,7 +15,7 @@ const mealNutrition=mountMealNutrition();
 const reminderControls=mountReminderControls();
 window.addEventListener('myr5:reminder-defaults',e=>reminderControls.load(e.detail.tone,e.detail.days));
 let editingReminder=null;
-const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1'];
+const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4'];
 let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false;
 const deviceBinding=notificationBinding(api);
 const liveReminders=mountLiveReminders({refresh,read:reminders,getAccount:()=>account,deviceReady:()=>deviceBinding.ready(account?.user.id)});

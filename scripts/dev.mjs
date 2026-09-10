@@ -2,6 +2,8 @@ import {createServer} from 'vite';
 import {sites} from '@openai/sites-vite-plugin';
 import {Miniflare} from 'miniflare';
 import {readFile,readdir} from 'node:fs/promises';
+import {ensureHandAssets} from './assets.mjs';
+await ensureHandAssets();
 const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB'],d1Persist:'.wrangler/local-db'});
 const DB=await mf.getD1Database('DB');
 await DB.prepare('CREATE TABLE IF NOT EXISTS _local_migrations (name TEXT PRIMARY KEY)').run();
