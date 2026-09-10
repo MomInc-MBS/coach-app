@@ -2,8 +2,9 @@ import {arrangeEyes} from './anatomy';
 import {EYE_LAYOUTS} from './eye-layouts';
 import {pupilGeometry} from './pupils';
 import {getCoach} from './coaching';
-import {applySurfaceStyle,growSurfaceDetails} from './surface-styles';
 import {prepareEyeMesh,conformEyeMesh} from './eye-surface';
+import {sculptMaterial,growMaterial} from './material-language';
+import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
 
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -38,7 +39,7 @@ export async function assembleCreature(d:Design,assetBase:string){
     if(o.name==='Iris'&&o.userData.irisType!==d.pupil){o.geometry.dispose();o.geometry=pupilGeometry(d.pupil);o.geometry.scale(1.48,1.48,1);o.userData.basePosition=new THREE.Vector3(.04,2.1475,1.133);o.userData.baseScale=new THREE.Vector3(1,1,1);o.userData.irisType=d.pupil;}
     if(/^Iris.fiber/.test(o.name))o.visible=d.pupil==='round';
     if(/^Crown.scale/.test(o.name))o.visible=d.styles[region]===0;
-    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else applySurfaceStyle(o,d.styles[region],region,d.detail);
+    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible&&style.id!==0)sculptMaterial(o,style,1,d.detail);
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
    });
   }
@@ -46,7 +47,15 @@ export async function assembleCreature(d:Design,assetBase:string){
   if(d.eyeLayout!=='single'){e.eyeCopies=arrangeEyes(e.eyeTemplate,d.eyeLayout);e.regions.eye.add(e.eyeCopies);e.eyeTemplate.visible=false;}
   const key=JSON.stringify([d.styles,d.detail,d.eyeLayout,d.fingers,d.toes,hologram,parts]);e.details.userData.key=key;
   e.details.children.slice().forEach(o=>{o.traverse(c=>{if(c instanceof THREE.Mesh){c.geometry.dispose();(c.material as THREE.Material).dispose();}});e.details.remove(o);});
-  for(const region of REGIONS){const growth=growSurfaceDetails(e.regions[region],d.styles[region],region,hologram,d.detail);growth.userData.region=region;growth.position.copy(e.regions[region].position);e.details.add(growth);}
+  for(const region of REGIONS){
+   const style=STYLES[d.styles[region]],original=e.regions[region];
+   if(style.id===7&&region!=='head'&&region!=='eye'){original.visible=false;e.details.add(skeletalStructure(region,d));continue;}
+   if(style.id===18&&['body','arms','feet'].includes(region)){original.visible=false;e.details.add(robotStructure(region,d));continue;}
+   let surface=original;
+   if(region==='collar'&&style.id!==0&&style.id!==20){original.visible=false;surface=materialCollar(style.id);e.details.add(surface);}
+   e.details.add(growMaterial(surface,style,region,1,d.detail));
+  }
+  if(d.styles.head===7){e.regions.eye.visible=false;e.details.add(boneSockets(d));}
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
  root.userData.recipe=JSON.parse(JSON.stringify(d));
  return {root,dispose(){const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),gltf.scene,anatomy.scene,hands.scene])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());}};
