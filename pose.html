@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="/focus-library.css">
 <link rel="stylesheet" href="/arcade/tub-flight/style.css">
 <link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
+<link rel="stylesheet" href="/personal-tracker.css"><link rel="stylesheet" href="/scoreboard.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -107,6 +108,11 @@
     <section id="hologramPanel" hidden>
       <div class="holo-heading"><button id="backLibrary" data-hand>Back</button><h2 id="holoName">Squat hologram</h2></div>
       <div id="holoStage" role="img" aria-label="Interactive exercise hologram. Drag to rotate; pinch or use buttons to zoom."><p id="holoStatus" role="status">Loading hologram…</p></div>
+      <aside class="holo-setup" aria-label="Camera setup for this exercise">
+        <div class="holo-setup-block"><h3>01 / Camera position</h3><p id="holoCameraPosition" class="holo-position"></p><p id="holoCameraPlacement"></p></div>
+        <div class="holo-setup-block"><h3>02 / Keep visible</h3><ul id="holoVisibleJoints" class="holo-joints"></ul><p id="holoFrameNote"></p></div>
+        <p class="holo-no-feet">Feet and ankles are not tracked.</p>
+      </aside>
       <div class="holo-tools"><button id="holoPlay" data-hand>Pause animation</button><button id="holoReset" data-hand>Reset view</button><button id="zoomOut" data-hand aria-label="Zoom out">−</button><button id="zoomIn" data-hand aria-label="Zoom in">+</button></div>
       <p class="library-caption">Drag the hologram to change your view. The menu stays in place.</p>
       <p id="introCue" class="intro-cue" hidden></p>

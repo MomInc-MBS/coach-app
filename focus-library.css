@@ -13,13 +13,23 @@
 .library-filter{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
 .library-filter select{font:16px Arial,sans-serif;max-width:65%;padding:12px;color:#eefcf9;background:#21332f;border:1px solid #9ac7b9;border-radius:8px}
 #library [hidden]{display:none!important}
-#library[data-preview=true] .library-header,#library[data-preview=true] .library-filter,#library[data-preview=true] #libraryCount,#library[data-preview=true] .library-footer,#library[data-preview=true] .holo-tools,#library[data-preview=true] .holo-heading h2,#library[data-preview=true] #hologramPanel>.library-caption{display:none}
+#library[data-preview=true] .library-header,#library[data-preview=true] .library-filter,#library[data-preview=true] #libraryCount,#library[data-preview=true] .library-footer,#library[data-preview=true] .holo-tools,#library[data-preview=true] #hologramPanel>.library-caption{display:none}
 #library[data-preview=true] .glass-shell{min-height:100dvh;padding:16px;gap:0}
 #library[data-preview=true] #hologramPanel{min-height:calc(100dvh - 32px);gap:12px;position:relative}
-#library[data-preview=true] .holo-heading{position:absolute;top:10px;left:10px;z-index:3}
+#library[data-preview=true] .holo-heading{position:relative;z-index:3;gap:14px}
+#library[data-preview=true] .holo-heading h2{margin:0;font:700 22px/1.3 Arial,sans-serif;color:#f2fff8}
 #library[data-preview=true] #backLibrary{min-width:44px;min-height:44px;padding:6px 12px;background:#112922d9}
-#library[data-preview=true] #holoStage{min-height:260px;max-height:none;flex:1;border-radius:18px}
+#library[data-preview=true] #holoStage{min-height:240px;max-height:340px;flex:1 0 240px;border-radius:18px}
 #library[data-preview=true] #useHologram{min-height:62px;font-size:20px;flex:none}
+.holo-setup{background:#fff0c9;color:#2c2533;border:2px solid #e0b778;border-radius:12px;padding:18px;font:16px/1.45 Arial,sans-serif;box-shadow:0 4px 0 #55384e}
+.holo-setup-block+.holo-setup-block{margin-top:18px;padding-top:16px;border-top:1px solid #a9916d}
+#library .holo-setup h3{font:700 13px/1.4 Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;color:#61475c;margin:0 0 8px}
+#library .holo-setup p{margin:6px 0;color:#352a36}
+#library .holo-setup .holo-position{font-size:22px;line-height:1.25;font-weight:700}
+.holo-joints{display:flex;gap:7px;flex-wrap:wrap;padding:0;margin:10px 0;list-style:none}
+.holo-joints li{background:#412f4d;color:#fff2d8;border-radius:5px;padding:7px 10px;font-size:17px;font-weight:700}
+#library .holo-setup .holo-no-feet{border-top:1px solid #a9916d;padding-top:12px;margin-top:16px;font-weight:700;color:#31644d}
+@media(min-width:720px){#library[data-preview=true] #hologramPanel{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto 1fr auto;gap:18px;align-content:center}.holo-heading{grid-column:1/-1}#library[data-preview=true] #holoStage{grid-column:1;grid-row:2/4;min-height:420px;max-height:none}#library[data-preview=true] .holo-setup{grid-column:2;grid-row:2;align-self:center}#library[data-preview=true] #useHologram{grid-column:2;grid-row:3}}
 #library .card-kind,#library .card-number,#library .holo-link,#libraryCount{font-size:13px!important}
 #library .movement-cards{align-content:start}
 @media(max-width:370px){.exercise-dial{width:68px;height:68px}.dial-controls{gap:5px}.dial-controls button{min-width:29px}.difficulty-control #variationName{font-size:17px}}

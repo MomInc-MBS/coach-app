@@ -57,6 +57,13 @@
       "when": 1789015990548,
       "tag": "0007_tan_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789017138908,
+      "tag": "0008_giant_charles_xavier",
+      "breakpoints": true
     }
   ]
 }

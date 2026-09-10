@@ -1,5 +1,6 @@
 // Fixed glass library with spoken proposals and a hologram before every start.
 import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,EXERCISE_COUNT,focusFor} from './exercise-library.mjs';
+import {movementSetup} from './movement-setup.mjs';
 const $=id=>document.getElementById(id);
 export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs';
@@ -25,6 +26,11 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  $('libraryFocus').value=filter;paginate();
  async function showModel(id){
   if(id==='jumping')id='jumping-jack';
+  const setup=movementSetup(EXERCISES[id]);
+  $('holoCameraPosition').textContent=setup.position;$('holoCameraPlacement').textContent=setup.placement;
+  $('holoFrameNote').textContent=setup.framing;
+  $('holoVisibleJoints').replaceChildren(...setup.joints.map(name=>{const li=document.createElement('li');li.textContent=name;return li;}));
+  $('holoStage').setAttribute('aria-label',`${movements[id].name} example. ${setup.position}. Drag to rotate.`);
   dialog.dataset.preview='true';stopHands();releaseViewer();const run=viewerGeneration;selection(id);onSelect(id);$('movementCards').hidden=true;$('libraryPages').hidden=true;$('startFromLibrary').hidden=true;$('gestureArea').hidden=true;$('hologramPanel').hidden=false;$('holoName').textContent=movements[id].name;$('holoStatus').hidden=false;$('holoStatus').textContent='Loading hologram…';$('holoPlay').textContent='Pause animation';$('useHologram').disabled=false;$('useHologram').textContent='Begin';dialog.scrollTop=0;
   try{const {createHologram}=await import('./hologram.mjs');if(run!==viewerGeneration||!dialog.open)return false;
    const instance=await createHologram($('holoStage'),id);if(run!==viewerGeneration||!dialog.open){instance.dispose();return false;}viewer=instance;$('holoStatus').hidden=true;$('useHologram').disabled=false;return true;

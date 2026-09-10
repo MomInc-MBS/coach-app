@@ -1,3 +1,4 @@
+import {renderPersonalTracker,updateTrackerProgress} from './personal-tracker.mjs';
 import {officeEncouragement} from './office-domain.mjs?v=office-short-v1';
 import {EXERCISES} from './onboarding-domain.mjs?v=quick-install-v1';
 import {setupAllowed} from './install-context.mjs';
@@ -6,6 +7,7 @@ const gate=document.createElement('dialog');gate.id='coachSetupGate';gate.setAtt
 gate.innerHTML='<h1>Your coach is connecting.</h1><p>Checking your saved setup…</p><a href="/onboarding.html" style="color:#b8e9cf">Continue coach setup</a>';document.body.append(gate);gate.showModal();
 let applied='',restored=false;
 window.coachPersonalCue=personalCue;
+window.addEventListener('myr5:account-progress',event=>updateTrackerProgress(event.detail));
 const get=k=>{try{return localStorage.getItem(k);}catch{return null;}};
 function showIncomingCoach(){if(!readIncomingCoach())return;gate.querySelector('h1').textContent='Your saved coach is here.';gate.querySelector('p').textContent='Continue with the coach and answers you brought from the website.';gate.querySelector('a').textContent='Continue with my coach';gate.querySelector('a').href='/onboarding.html?from=install';}
 function beginSetup(){location.replace(setupAllowed()?'/onboarding.html?from=install':'/install.html');}
@@ -17,8 +19,8 @@ export function applyCoachAccount(account){
  if(!restored){const owner=get('myr5-coach-owner'),baseline=get('myr5-synced-appearance'),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];const current=JSON.stringify(Object.fromEntries(keys.map(k=>[k,get(k)]).filter(([,v])=>v!=null)));const dirty=owner===account.user.id&&baseline&&baseline!==current;
   if(!dirty){for(const key of keys){const v=account.profile[key];if(v!=null){localStorage.setItem(key,v);window.dispatchEvent(new StorageEvent('storage',{key,newValue:v}));}else if(owner&&owner!==account.user.id)localStorage.removeItem(key);}window.dispatchEvent(new Event('mominc-avatar-change'));localStorage.setItem('myr5-synced-appearance',JSON.stringify(Object.fromEntries(keys.map(k=>[k,get(k)]).filter(([,v])=>v!=null))));}localStorage.setItem('myr5-coach-owner',account.user.id);restored=true;
  }
- let plate=document.getElementById('dailyCoachPlan');if(!plate){plate=document.createElement('section');plate.id='dailyCoachPlan';plate.style.cssText='margin:10px 0;padding:12px 16px;border:2px solid #837354;border-radius:10px;background:#eee8d6;color:#262134;font:14px/1.5 Arial;box-shadow:inset 0 2px 6px #0003';const anchor=document.querySelector('.crew-footer');anchor.before(plate);}
- const p=o.data.profile,t=o.targets;plate.replaceChildren();const title=document.createElement('strong');title.textContent=p.name+' · DAY '+t.day;const description=document.createElement('div');description.textContent=`${t.reps} reps · ${t.holdSeconds}-second holds`+(t.proteinGrams?` · ${t.proteinGrams} g protein · ${t.waterOz} oz water`:'');const plan=document.createElement('div');plan.textContent=p.exercises.map(k=>EXERCISES[k]).join(' · ');const edit=document.createElement('a');edit.href='/onboarding.html?edit=1';edit.textContent='Coach settings';edit.style.color='#3e3467';plate.append(title,description,plan,edit);
+ let plate=document.getElementById('dailyCoachPlan');if(!plate){plate=document.createElement('section');plate.id='dailyCoachPlan';document.querySelector('.crew-footer').before(plate);}
+ const p=o.data.profile,t=o.targets;renderPersonalTracker(plate,p,t,EXERCISES,account.progress);
  let nutrition=document.getElementById('coachNutritionTargets');if(!nutrition){nutrition=document.createElement('p');nutrition.id='coachNutritionTargets';document.getElementById('mealForm').before(nutrition);}nutrition.textContent=t.proteinGrams?`Daily targets: ${t.proteinGrams} g protein · ${t.waterOz} oz water, based on your ${p.goalWeightLbs} lb goal weight.`:'Add a goal weight in Coach settings if you want weight-based targets.';
  const signature=o.revision+':'+t.date;if(applied!==signature){const first=!applied;applied=signature;const movement=document.getElementById('movement');if(first&&movement&&p.exercises.includes(p.exercises[0])){movement.value=p.exercises[0];movement.dispatchEvent(new Event('change',{bubbles:true}));}window.dispatchEvent(new Event('myr5:coach-plan'));const reminder=document.getElementById('reminderForm');if(first&&reminder){reminder.elements.time.value=p.trainingTime;reminder.elements.timezone.value=p.timezone;window.dispatchEvent(new CustomEvent('myr5:reminder-defaults',{detail:{tone:p.reminderTone,days:Number(p.reminderDays)}}));}}
 }
