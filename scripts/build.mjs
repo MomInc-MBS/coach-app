@@ -2,7 +2,9 @@ import {build} from 'vite';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile} from 'node:fs/promises';
 import {ensureAssets} from './assets.mjs';
+import {build as bundleEditor} from 'esbuild';
 await ensureAssets();
+await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js'});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
