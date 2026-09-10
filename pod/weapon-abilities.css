@@ -1,0 +1,11 @@
+#restWeaponFx{position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;image-rendering:pixelated}
+#restScreen .weapon-evolution .projectile,#restScreen .weapon-evolution .attack-flash{display:none}
+#restScreen .weapon-ability{position:absolute;z-index:13;left:50%;bottom:calc(157px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(320px,calc(100% - 36px));padding:0;background:#181425ed;border:2px solid #87c9c1}
+#restScreen .weapon-ability button{display:block;width:100%;min-height:44px;margin:0;border:0;color:#c2fff1;background:#233e44;box-shadow:none;font:700 13px/1.35 var(--room-pixel);padding:10px}
+#restScreen .weapon-ability button:disabled{opacity:1;background:#232c3c;color:#98aebf;cursor:default}
+#restScreen .weapon-ability button:focus-visible{outline:3px solid #fff1c8;outline-offset:3px}
+#restScreen .weapon-ability progress{width:100%;height:4px;display:block;border:0;background:#203044;accent-color:#9af5df}
+#restScreen .weapon-ability progress::-webkit-progress-bar{background:#203044}
+#restScreen .weapon-ability progress::-webkit-progress-value{background:#9af5df}
+@media(min-width:760px){#restScreen .weapon-ability{left:auto;right:25px;bottom:calc(149px + env(safe-area-inset-bottom));transform:none;width:245px}}
+@media(max-height:600px){#restScreen .weapon-ability{left:auto;right:12px;bottom:120px;transform:none;width:min(215px,45vw)}#restScreen .weapon-ability button{font-size:11px}}

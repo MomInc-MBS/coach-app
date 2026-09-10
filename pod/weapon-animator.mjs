@@ -29,10 +29,10 @@ export function drawAnimatedWeapon(ctx, value, {
   x = 90, y = 90, scale = 1, now = 0, action = null, reducedMotion = false,
 } = {}) {
   const p = evolution(value);
-  const duration = action?.special ? (p.ability?.animationMs || 1100) : p.attackMs;
+  const duration = action?.special && p.ability ? p.ability.animationMs : p.attackMs;
   const age = action ? (now - action.startedAt) / duration : -1;
   const active = age >= 0 && age < 1;
-  const a = clamp(age), special = active && action.special;
+  const a = clamp(age), special = active && action.special && !!p.ability;
   const pulse = active ? Math.sin(a * Math.PI) : 0;
   const windup = active ? Math.sin(clamp(a / .23) * Math.PI / 2) : 0;
   const power = (special ? 1.5 + p.stage * .11 : 1) * pulse;

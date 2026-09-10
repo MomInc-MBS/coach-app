@@ -35,6 +35,7 @@ function update() {
 }
 
 function attack(special = false) {
+  if(!special&&action?.special&&performance.now()-action.startedAt<(abilityFor(selected)?.animationMs||0))return;
   if (special) {
     const result = cooldown.activate(selected, {progress, inRest: true, catalog: weapons});
     if (!result.ok) return;
@@ -47,18 +48,18 @@ function attack(special = false) {
 
 function updateCooldown() {
   const ability = abilityFor(selected), remaining = cooldown.remaining();
+  $('attack').disabled=!!(action?.special&&performance.now()-action.startedAt<(ability?.animationMs||0));
   $('special').disabled = !ability || remaining > 0;
   $('special').textContent = !ability ? 'Unlocks at tier 4' : remaining ? `${ability.name} · ${(remaining / 1000).toFixed(1)}s` : `${ability.name} · Ready`;
   // A shared clock may belong to another weapon, so its progress is measured
   // against the last activated duration rather than the selected tier's timer.
-  const duration = cooldown.readyAt - (cooldownActivatedAt || cooldown.readyAt);
+  const duration = cooldown.durationMs;
   $('cooldown').value = remaining ? Math.max(0, 1 - remaining / Math.max(1, duration)) : 1;
   $('cooldown').setAttribute('aria-label', remaining ? 'Special ability cooling down' : 'Special ability ready');
   if (cooling && remaining === 0) { cooling = false; $('status').textContent = 'Special ready'; }
 }
-let cooldownActivatedAt = 0;
 $('attack').addEventListener('click', () => attack());
-$('special').addEventListener('click', () => { cooldownActivatedAt = Date.now(); attack(true); });
+$('special').addEventListener('click', () => attack(true));
 $('tier').addEventListener('input', event => { selected = {...selected, tier: Number(event.target.value)}; action = null; update(); });
 $('autoplay').addEventListener('click', () => { autoplay = !autoplay; $('autoplay').setAttribute('aria-pressed', String(autoplay)); if (autoplay) attack(); });
 
@@ -80,11 +81,11 @@ function render(now) {
     lastFrame = now;
     if (autoplay && now - lastAuto > 2300) attack();
     platform(ctx, canvas.width, canvas.height);
-    drawAnimatedWeapon(ctx, selected, {weapons, x: 185, y: 181, scale: 1.8, now, action, reducedMotion: reduced.matches});
+    drawAnimatedWeapon(ctx, selected, {weapons, x: 185, y: 190, scale: 1.45, now, action, reducedMotion: reduced.matches});
     const tiers = [0, Math.max(0, selected.tier - 1), selected.tier];
     comparison.forEach((card, index) => {
       const context = card.getContext('2d'); platform(context, card.width, card.height);
-      drawAnimatedWeapon(context, {...selected, tier: tiers[index]}, {weapons, x: 92, y: 83, scale: .84, now, action, reducedMotion: reduced.matches});
+      drawAnimatedWeapon(context, {...selected, tier: tiers[index]}, {weapons, x: 92, y: 88, scale: .65, now, action, reducedMotion: reduced.matches});
     });
     updateCooldown();
   }

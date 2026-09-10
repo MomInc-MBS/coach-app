@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
 <link rel="stylesheet" href="/personal-tracker.css"><link rel="stylesheet" href="/scoreboard.css">
 <link rel="stylesheet" href="/pod/retro-rooms.css">
+<link rel="stylesheet" href="/pod/weapon-abilities.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -72,11 +73,13 @@
   <div id="attackFlash" class="attack-flash" aria-hidden="true"></div><div id="projectile" class="projectile" aria-hidden="true"></div>
   <div id="damageFloat" class="damage-float" aria-hidden="true"></div>
   <div class="player-platform"><div class="platform-top"></div><div class="platform-edge"></div><div class="platform-thruster"></div><canvas id="restAvatar" width="64" height="96" role="img" aria-label="Your Gala character on the floating platform"></canvas></div>
+  <canvas id="restWeaponFx" width="640" height="360" aria-hidden="true"></canvas>
   <div class="rest-hand"><div id="restHandMount"></div><img id="restHandFallback" src="/handborne/previews/family-11.png?v=5" alt="Your Helping Hand" hidden></div>
   <div class="player-name"><span id="restGuest">Gala guest</span><span id="restLevel">LV. 01</span></div>
  </section>
  <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand ready</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
  <p id="restFeedback" class="rest-feedback" role="status"></p>
+ <div class="weapon-ability"><button id="weaponSpecial" disabled>Special · tier 4</button><progress id="weaponCooldown" max="1" value="1" aria-label="Special ability cooldown"></progress></div>
  <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">+30 seconds</button></div></div>
  <p id="shieldNote" class="shield-note">Damage unlocks at level 50.</p>
 </main>

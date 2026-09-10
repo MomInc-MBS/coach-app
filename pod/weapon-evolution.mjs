@@ -85,10 +85,13 @@ export function abilityFor(value) {
 export class AbilityCooldown {
   constructor(saved = null, now = Date.now()) {
     if (!Number.isFinite(now) || now < 0) throw new Error('Invalid cooldown clock.');
+    if (typeof saved === 'string') { try { saved = JSON.parse(saved); } catch { saved = null; } }
     this.lastNow = now;
     this.readyAt = now;
+    this.durationMs = 0;
     if (saved?.version === 1 && Number.isFinite(saved.readyAt)) {
       this.readyAt = Math.max(now, Math.min(now + MAX_COOLDOWN_MS, saved.readyAt));
+      this.durationMs = Math.max(this.readyAt - now, Math.min(MAX_COOLDOWN_MS, Number(saved.durationMs) || 0));
     }
   }
 
@@ -110,8 +113,10 @@ export class AbilityCooldown {
     const remainingMs = this.remaining(at);
     if (remainingMs > 0) return {ok: false, reason: 'cooldown', remainingMs};
     this.readyAt = at + ability.cooldownMs;
+    this.durationMs = ability.cooldownMs;
     return {ok: true, ability, readyAt: this.readyAt};
   }
 
-  snapshot() { return {version: 1, readyAt: this.readyAt}; }
+  snapshot() { return {version: 1, readyAt: this.readyAt, durationMs: this.durationMs}; }
+  merge(saved,now=Date.now()) { const incoming=new AbilityCooldown(saved,this.clock(now));if(incoming.readyAt>this.readyAt){this.readyAt=incoming.readyAt;this.durationMs=incoming.durationMs;}return this.remaining(now); }
 }
