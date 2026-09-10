@@ -1,27 +1,25 @@
 // Fixed glass library with spoken proposals and a hologram before every start.
-import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,EXERCISE_COUNT,focusFor} from './exercise-library.mjs';
+import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,focusFor} from './exercise-library.mjs';
 import {movementSetup} from './movement-setup.mjs';
 const $=id=>document.getElementById(id);
 export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs';
  for(const g of FOCUS_GROUPS){const o=document.createElement('option');o.value=g.id;o.textContent=g.name;$('libraryFocus').append(o);}
  $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();});
- const kind={reps:'Count repetitions',hold:'Estimate your hold',pace:'Time & hand pace',steps:'Knee lifts & cadence',jumps:'Estimated jumps'};
  const speak=(text,options={})=>voice.say(text,options);
  function cancelIntro(){introGeneration++;introducing=false;clearTimeout(introTimer);resolveWait?.();resolveWait=null;voice.cancel();$('introCue').hidden=true;}
  function releaseViewer(){viewerGeneration++;viewer?.dispose();viewer=null;}
  function stopHands(message='Touch controls ready'){handGeneration++;hands?.stop();hands=null;$('toggleHands').disabled=false;$('toggleHands').textContent='Enable exercise gestures';$('toggleHands').setAttribute('aria-pressed','false');$('handState').textContent=message;$('confirmProgress').value=0;}
  function selection(id){if(id==='jumping')id='jumping-jack';selected=id;$('startFromLibrary').textContent='Start '+movements[id].name;for(const button of $('movementCards').querySelectorAll('[data-movement]'))button.setAttribute('aria-pressed',String(button.dataset.movement===id));}
- function home(){dialog.dataset.preview='false';filter=focusFor(selected);$('libraryFocus').value=filter;page=Math.max(0,Math.floor(GROUP_EXERCISES[filter].findIndex(m=>m.id===selected)/4));paginate();cancelIntro();releaseViewer();$('movementCards').hidden=false;$('libraryPages').hidden=false;$('startFromLibrary').hidden=false;$('hologramPanel').hidden=true;$('gestureArea').hidden=false;dialog.scrollTop=0;}
- function choose(id){if(id==='jumping')id='jumping-jack';selection(id);onSelect(id);if(!$('hologramPanel').hidden)home();speak(movements[id].name+' selected.',{interrupt:true});}
- for(const [i,[id,m]] of Object.entries(EXERCISES).entries()){
+ function home(){dialog.dataset.preview='false';filter=focusFor(selected);$('libraryFocus').value=filter;page=Math.max(0,Math.floor(GROUP_EXERCISES[filter].findIndex(m=>m.id===selected)/4));paginate();cancelIntro();releaseViewer();$('movementCards').hidden=false;$('startFromLibrary').hidden=true;$('hologramPanel').hidden=true;$('gestureArea').hidden=false;dialog.scrollTop=0;if(dialog.open)$('movementCards').querySelector(`[data-movement="${selected}"]`)?.focus();}
+ for(const [id,m] of Object.entries(EXERCISES)){
   const card=document.createElement('article');card.className='movement-card';card.dataset.group=focusFor(id);
   const button=document.createElement('button');button.className='card-select';button.dataset.movement=id;button.setAttribute('aria-pressed','false');
-  button.innerHTML=`<span class="card-number">${String(i+1).padStart(2,'0')}</span><span class="card-title">${m.name}</span><span class="card-kind">${kind[m.kind]}</span>`;
-  button.addEventListener('click',()=>choose(id));card.append(button);
-  const holo=document.createElement('button');holo.className='holo-link';holo.textContent='View hologram';holo.setAttribute('aria-label',`View ${m.name.toLowerCase()} hologram`);holo.addEventListener('click',()=>{cancelIntro();showModel(id);speak(m.name+' example.',{interrupt:true});});card.append(holo);$('movementCards').append(card);
+  button.setAttribute('aria-label',m.name);button.title=m.name;
+  const poster=document.createElement('img');poster.src=`/models/previews/${id}.png`;poster.alt='';poster.width=512;poster.height=512;poster.loading='lazy';poster.decoding='async';button.append(poster);
+  button.addEventListener('click',()=>{cancelIntro();showModel(id);speak(m.name,{interrupt:true});});card.append(button);$('movementCards').append(card);
  }
- function paginate(){const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryCount').textContent=EXERCISE_COUNT+' variations · '+cards.length+' in this focus group';}
+ function paginate(){const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;}
  $('previousPage').addEventListener('click',()=>{page--;paginate();});$('nextPage').addEventListener('click',()=>{page++;paginate();});
  $('libraryFocus').value=filter;paginate();
  async function showModel(id){
@@ -32,6 +30,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   $('holoVisibleJoints').replaceChildren(...setup.joints.map(name=>{const li=document.createElement('li');li.textContent=name;return li;}));
   $('holoStage').setAttribute('aria-label',`${movements[id].name} example. ${setup.position}. Drag to rotate.`);
   dialog.dataset.preview='true';stopHands();releaseViewer();const run=viewerGeneration;selection(id);onSelect(id);$('movementCards').hidden=true;$('libraryPages').hidden=true;$('startFromLibrary').hidden=true;$('gestureArea').hidden=true;$('hologramPanel').hidden=false;$('holoName').textContent=movements[id].name;$('holoStatus').hidden=false;$('holoStatus').textContent='Loading hologram…';$('holoPlay').textContent='Pause animation';$('useHologram').disabled=false;$('useHologram').textContent='Begin';dialog.scrollTop=0;
+  $('backLibrary').focus();
   try{const {createHologram}=await import('./hologram.mjs');if(run!==viewerGeneration||!dialog.open)return false;
    const instance=await createHologram($('holoStage'),id);if(run!==viewerGeneration||!dialog.open){instance.dispose();return false;}viewer=instance;$('holoStatus').hidden=true;$('useHologram').disabled=false;return true;
   }catch(error){if(run===viewerGeneration){$('holoStatus').textContent='Hologram could not load. '+error.message;$('useHologram').textContent='Begin';$('useHologram').disabled=false;}return false;}

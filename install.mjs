@@ -13,18 +13,18 @@ function guide(){
  document.getElementById('installHelp').hidden=!ios;document.getElementById('installGuide').hidden=false;
  status.textContent=ios?'Add Coach, then open its home-screen icon.':'Install Coach, then open it from your apps. If installation is unavailable, use Chrome or Edge.';
 }
-function installed(){prompt=null;button.hidden=true;document.getElementById('installGuide').hidden=true;status.textContent='Installed. Open the MYR5 icon to finish your three-question setup.';}
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();prompt=event;if(ready){button.textContent='Install Coach';status.textContent='Ready to add Coach to your home screen.';}});
+function installed(){prompt=null;button.hidden=true;document.getElementById('installGuide').hidden=true;status.textContent='Installed. Open MYR5 to start.';}
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();prompt=event;if(ready){button.textContent='Install Coach';status.textContent='Ready to install';}});
 window.addEventListener('appinstalled',installed);
-button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();return;}const current=prompt;prompt=null;try{await current.prompt();const choice=await current.userChoice;if(choice.outcome==='accepted')installed();else{status.textContent='Installation was cancelled. Tap Install Coach when you’re ready.';}}catch{guide();}};
+button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();return;}const current=prompt;prompt=null;try{await current.prompt();const choice=await current.userChoice;if(choice.outcome==='accepted')installed();else{status.textContent='Install cancelled';}}catch{guide();}};
 async function prepare(){
  button.disabled=true;
  try{
   try{await prepareGalaInstall();}catch{mountGalaReturn();}
   const raw=new URLSearchParams(location.hash.slice(1)).get('coach'),incoming=raw?saveIncomingCoach(decodeHandoff(raw)):readIncomingCoach();
-  if(incoming){await prepareInstall(incoming);saved.textContent='Your saved coach is ready to come with you.';}
+  if(incoming){await prepareInstall(incoming);saved.textContent='Coach saved';}
   if(raw)history.replaceState(null,'',location.pathname+location.search);
-  ready=true;button.disabled=false;button.textContent=ios?'Add Coach to Home Screen':'Install Coach';status.textContent='Install now. Setup comes after you open the app.';
+  ready=true;button.disabled=false;button.textContent=ios?'Add Coach to Home Screen':'Install Coach';status.textContent='';
   if(ios)guide();
  }catch(error){status.textContent=error.message;button.textContent='Retry';button.disabled=false;}
 }

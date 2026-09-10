@@ -50,7 +50,7 @@ function resetMovement(){
   session=new MovementSession(mode);
   state.motion=session.snapshot();$('hint').textContent=config.hint;renderMotion(state.motion);
   window.dispatchEvent(new Event('myr5:movement-configured'));
-  status(state.phase==='tracking'?config.hint:'Your coach is ready. Begin when you are.');
+  status(state.phase==='tracking'?config.hint:'Ready');
 }
 function renderMotion(m){
   $('movementName').textContent=m.name;
@@ -75,7 +75,7 @@ function timeout(promise,ms,message){let timer;return Promise.race([promise,new 
 async function start(){
   const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
   $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
-  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Opening the camera. Get into your starting position.',{interrupt:true});$('detail').textContent='Waiting for video';
+  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Get into position.',{interrupt:true});$('detail').textContent='Waiting for video';
   try{
     await pod.beginSet(session.mode);
     if(run!==generation)return;
@@ -89,7 +89,7 @@ async function start(){
     state.camera=cameraFacing(stream.getVideoTracks()[0],selected);
     v.style.transform=c.style.transform=state.camera==='user'?'scaleX(-1)':'none';
     await showLensInfo(stream.getVideoTracks()[0]);if(run!==generation)return;
-    status('Camera ready. Loading movement tracker…');$('detail').textContent=`Video ${v.videoWidth} × ${v.videoHeight}`;state.phase='model';
+    status('Loading tracker…');$('detail').textContent=`Video ${v.videoWidth} × ${v.videoHeight}`;state.phase='model';
     api=api||await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Tracker library did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
     files=files||await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
@@ -135,7 +135,7 @@ function loop(run){
   }catch(error){generation++;release();controls(false);pod.stopped();voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
 }
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
-$('start').addEventListener('click',()=>library.introduce());$('stop').addEventListener('click',()=>{stop();voice.say('Stopped. Your results are here.',{interrupt:true});});
+$('start').addEventListener('click',()=>library.introduce());$('stop').addEventListener('click',()=>{stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
 $('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
 $('movement').addEventListener('change',()=>{const active=state.phase==='tracking';resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});

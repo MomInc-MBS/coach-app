@@ -5,10 +5,10 @@ export function mountQuickSetup(host,initial,{save,label='Start my coach',change
  const data=withQuickDefaults(initial),form=node('form');form.className='setup-form quick-setup';
  const controls={};
  for(const key of ['goal','sessionMinutes','limits']){
-  const field=FIELDS.find(f=>f.key===key),label=node('label',key==='goal'?'What’s your main goal?':key==='sessionMinutes'?'How many minutes per session?':'Any injuries or movement limits?');let input;
+  const field=FIELDS.find(f=>f.key===key),label=node('label',key==='goal'?'Goal':key==='sessionMinutes'?'Minutes per session':'Any injuries or movement limits?');let input;
   if(key==='goal'){input=node('select');input.append(new Option('Choose your goal',''));for(const value of field.options)input.append(new Option(value,value));}
   else if(key==='sessionMinutes'){input=node('input');input.type='number';input.min=1;input.max=180;input.step=1;input.inputMode='numeric';}
-  else{input=node('textarea');input.rows=2;input.maxLength=2000;input.placeholder='Write “none” if there are none.';}
+  else{input=node('textarea');input.rows=2;input.maxLength=2000;input.placeholder='None, or describe your limits.';}
   input.name=key;input.required=true;input.value=key==='limits'?data.answers.armie?.q3||'':data.profile[key]??'';controls[key]=input;label.append(input);form.append(label);
  }
  const status=node('p');status.role='status';const button=node('button',label);button.type='submit';button.className='setup-submit';form.append(status,button);host.replaceChildren(form);

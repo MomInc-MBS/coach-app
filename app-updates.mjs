@@ -1,9 +1,9 @@
 import {RELEASE} from './release-info.mjs';
 
 export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) {
- const panel=document.getElementById('installPanel'),section=document.createElement('section');
+ const panel=document.getElementById('installPanel'),section=document.createElement('details');
  section.className='release-settings';
- section.innerHTML='<h3>App updates</h3><p id="releaseVersion"></p><ul id="releaseNotes"></ul><button id="checkAppUpdate">Check for updates</button><p id="releaseStatus" role="status"></p><form id="releaseEmailForm"><label>Email me when an update is ready<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label><button type="submit" disabled>Email me updates</button><button id="stopReleaseEmails" type="button" hidden>Stop update emails</button><p id="releaseEmailStatus" role="status">Optional. Confirm your email first; unsubscribe any time.</p></form>';
+ section.innerHTML='<summary>App updates</summary><p id="releaseVersion"></p><ul id="releaseNotes"></ul><button id="checkAppUpdate">Check for updates</button><p id="releaseStatus" role="status"></p><form id="releaseEmailForm"><label>Email me when an update is ready<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label><button type="submit" disabled>Email me updates</button><button id="stopReleaseEmails" type="button" hidden>Stop update emails</button><p id="releaseEmailStatus" role="status">Optional. Confirm your email first; unsubscribe any time.</p></form>';
  panel.append(section);
  const $=id=>document.getElementById(id),banner=document.createElement('aside');
  banner.className='app-update-banner';banner.setAttribute('role','status');banner.hidden=true;
@@ -18,7 +18,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
   applyButton.hidden=!ready();banner.hidden=!ready()||dismissed;
   const b=banner.querySelector('[data-update]');b.disabled=busy()||applying;applyButton.disabled=b.disabled;
   b.textContent=busy()?'Finish set first':applying?'Updating…':'Update now';
-  $('releaseStatus').textContent=error||(ready()?'Update ready. Your saved progress stays with your account.':latest.id!==RELEASE.id?'Downloading the update. Keep Coach open.':'You have the current version.');
+  $('releaseStatus').textContent=error||(ready()?'Update ready':latest.id!==RELEASE.id?'Downloading the update. Keep Coach open.':'Up to date');
  }
  async function apply(){
   if(busy()||applying||!ready())return;
@@ -32,7 +32,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  }
  applyButton.onclick=apply;banner.querySelector('[data-update]').onclick=apply;
  banner.querySelector('[data-later]').onclick=()=>{dismissed=true;paint();};
- banner.querySelector('[data-notes]').onclick=()=>{if(!panel.open)panel.showModal();section.scrollIntoView({block:'start'});};
+ banner.querySelector('[data-notes]').onclick=()=>{if(!panel.open)panel.showModal();section.open=true;section.scrollIntoView({block:'start'});};
  async function check(){
   try{
    const value=await api('/api/releases/current');

@@ -1,0 +1,58 @@
+/* The original pixel world, with the current coach, Gala equipment and Helping Hand. */
+:root{--room-world:url('/pod/worlds/great-wall.png');--room-pixel:ui-monospace,SFMono-Regular,Consolas,monospace}
+body[data-screen=rest]{overflow:hidden;max-width:none}
+body[data-screen=rest]>.ship-header,body[data-screen=rest]>.coach-dock,body[data-screen=rest]>.sync-badge{display:none}
+#restScreen{position:fixed;inset:0;z-index:30;min-height:0;padding:0;overflow:hidden;display:block;background:#211b32;font-family:var(--room-pixel)}
+#restScreen .encounter{position:absolute;inset:0;margin:0;width:100%;height:100%;min-height:0;max-height:none;border:0;border-radius:0;isolation:isolate;background:#413251}
+.rest-world-backdrop,.rest-world-floor{position:absolute;inset:0;background:var(--room-world) center/100% 100% no-repeat;image-rendering:pixelated;pointer-events:none}
+.rest-world-backdrop{z-index:0}
+.rest-world-floor{z-index:4;clip-path:inset(79% 0 0)}
+#restScreen .encounter-grid,#restScreen .encounter-orbit{display:none}
+#restScreen .rest-coach-mount{position:absolute;inset:4% -6% auto;width:112%;height:76%;z-index:3;pointer-events:none}
+#restScreen .rest-coach-mount canvas{image-rendering:pixelated}
+#restScreen .coach-battle-platform{left:12%;right:12%;bottom:21%;height:34px;z-index:2;border-radius:0;border:0;clip-path:polygon(0 0,100% 0,96% 75%,72% 100%,28% 100%,4% 75%);background:var(--room-world) center bottom/100% auto;box-shadow:0 5px #171327}
+#restScreen .attack-target{inset:18% 0 23%;width:100%;z-index:8;border-radius:0;background:none!important;box-shadow:none!important}
+#restScreen .attack-target span{bottom:18%;font:700 14px/1.4 var(--room-pixel);color:#fff4c9;text-shadow:2px 2px #201329,-2px -2px #201329}
+#restScreen .player-platform{left:50%;bottom:15%;width:clamp(220px,60vw,580px);height:28px;z-index:6;transform:translateX(-50%)}
+#restScreen .platform-top{border-radius:0;clip-path:polygon(3% 0,97% 0,100% 100%,0 100%);border:3px solid #cad1ab;background:var(--room-world) center bottom/100% auto;box-shadow:0 -4px #e2d7a6}
+#restScreen .platform-edge{inset:12px 0 -18px;border-radius:0;clip-path:polygon(0 0,100% 0,88% 85%,65% 100%,35% 100%,12% 85%);border-color:#b0a69c;background:linear-gradient(#5a5263,#211c30);box-shadow:none}
+#restScreen .platform-thruster{display:none}
+#restScreen #restAvatar{left:calc(50% - 58px);bottom:8px;width:116px;height:122px;image-rendering:pixelated;filter:drop-shadow(3px 3px #211b31aa)}
+#restScreen .rest-hand{left:auto;right:4%;bottom:17%;width:clamp(110px,24vw,210px);height:clamp(125px,29vw,230px);z-index:7;pointer-events:none}
+#restScreen .player-name{bottom:10.5%;z-index:9;left:0;right:0;font:14px/1.3 var(--room-pixel);color:#fff5dc;text-shadow:2px 2px #211329;background:#1a152a88;padding:5px}
+#restScreen .rest-weapon-name{left:12px;bottom:24%;z-index:9;font:14px/1.3 var(--room-pixel);text-shadow:2px 2px #211329}
+#restScreen .rest-heading{position:absolute;z-index:12;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 16px 12px;background:linear-gradient(#171023ee,#17102390,transparent)}
+#restScreen .rest-heading h1{font:700 22px/1.2 var(--room-pixel);letter-spacing:0;color:#fff1cf}
+#restScreen .eyebrow{font:12px/1.4 var(--room-pixel)}
+#restScreen button{font-family:var(--room-pixel);border-radius:2px;box-shadow:3px 3px #110d1c;min-height:44px}
+#restScreen .boss-status{top:calc(88px + env(safe-area-inset-top));left:16px;right:16px;z-index:10;background:#201832b3;border:2px solid #cab7ce;border-radius:0;font:14px/1.3 var(--room-pixel)}
+#restScreen .boss-health{border-radius:0;height:10px}
+#restScreen .rest-receipt{position:absolute;z-index:12;top:calc(146px + env(safe-area-inset-top));left:16px;right:16px;padding:6px 10px;background:#211830aa;font:14px/1.3 var(--room-pixel);color:#fff0dc}
+#restScreen .rest-bottom{position:absolute;bottom:0;left:0;right:0;z-index:12;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:2px solid #b19bb8;background:#1a152af2}
+#restScreen .rest-bottom>div:last-child{display:flex;align-items:center;gap:10px}
+#restScreen .rest-bottom button{font-size:14px;white-space:nowrap}
+#restScreen .rest-clock small{font-size:12px}
+#restScreen .rest-clock strong{font:700 26px/1.1 var(--room-pixel)}
+#restScreen .hand-team{position:absolute;z-index:11;left:16px;bottom:calc(96px + env(safe-area-inset-bottom));margin:0;max-width:60%;background:#211830dd;padding:8px;border:1px solid #b2d2b3;border-radius:0;font:12px/1.3 var(--room-pixel)}
+#restScreen .hand-team #handTeamStatus{display:none}
+#restScreen .hand-team small{font-size:12px}
+#restScreen .rest-feedback{position:absolute;left:16px;right:16px;top:calc(185px + env(safe-area-inset-top));z-index:11;margin:0;min-height:0;text-align:center;font:14px/1.4 var(--room-pixel);text-shadow:2px 2px #211329;color:#fff5da;pointer-events:none}
+#restScreen .shield-note{position:absolute;right:16px;bottom:calc(97px + env(safe-area-inset-bottom));z-index:11;max-width:35%;margin:0;text-align:right;font:12px/1.3 var(--room-pixel);text-shadow:2px 2px #211329;color:#fff5da}
+#restScreen .damage-float{z-index:11;top:40%;font:900 clamp(26px,7vw,48px)/1 var(--room-pixel);text-shadow:3px 3px #341630}
+#restScreen .attack-flash{z-index:7;top:36%;left:47%}
+
+.meditation-panel{width:min(900px,100vw)!important;max-width:100vw;max-height:100dvh;padding:16px!important;border:3px solid #b2a0bb!important;border-radius:0!important;background:#201b32!important;font-family:var(--room-pixel)}
+.meditation-panel header h2,.meditation-entry strong{font:700 20px/1.3 var(--room-pixel)}
+.meditation-panel header button,.meditation-panel [data-breath-pause],.meditation-entry{border-radius:2px!important;font-family:var(--room-pixel);box-shadow:3px 3px #110d1c}
+.meditation-stage{height:clamp(320px,58dvh,620px);margin-top:14px;overflow:hidden;border:3px solid #99889f;background:var(--room-world) center/100% 100% no-repeat;image-rendering:pixelated}
+.meditation-stage::after{content:'';position:absolute;inset:0;background:#1b164122;z-index:0;pointer-events:none}
+.meditation-character{position:absolute!important;bottom:15%;left:calc(50% - 64px);width:128px;height:192px;z-index:3;padding:0!important;image-rendering:pixelated}
+.meditation-character canvas{width:128px;height:192px;max-width:none;image-rendering:pixelated}
+.meditation-platform{position:absolute;left:20%;right:20%;bottom:14%;height:24px;z-index:2;border-top:5px solid #e1d3ab;border-bottom:8px solid #352b43;background:var(--room-world) center bottom/100% auto;clip-path:polygon(3% 0,97% 0,100% 55%,85% 100%,15% 100%,0 55%)}
+.meditation-panel .breathing-ring{bottom:12%;left:calc(50% - 120px);width:240px;height:240px;z-index:1;border:3px solid #c2f0c5;box-shadow:0 0 0 4px #26344e,0 0 0 7px #b8e8c455;animation-timing-function:steps(24)}
+.meditation-speech{min-height:28px;margin:14px 0;font:16px/1.5 var(--room-pixel);color:#fff0cf}
+.meditation-panel [data-breath-pause]{display:block;margin:auto;min-width:110px;min-height:44px;font-size:14px}
+.meditation-panel .meditation-can{top:auto;bottom:25%;border-radius:0;box-shadow:3px 3px #221a36}
+@media(min-width:760px){#restScreen .rest-coach-mount{left:12%;width:76%;height:82%;top:-2%}#restScreen .rest-heading,#restScreen .rest-bottom{padding-left:max(24px,calc((100vw - 1000px)/2));padding-right:max(24px,calc((100vw - 1000px)/2))}.meditation-stage{background-size:100% 130%;background-position:center bottom}}
+@media(max-height:600px){#restScreen .rest-heading{padding-top:8px}#restScreen .eyebrow,#restScreen .rest-receipt,#restScreen .rest-feedback{display:none}#restScreen .boss-status{top:64px}#restScreen .rest-coach-mount{height:83%;top:-5%}#restScreen .player-platform{bottom:24%}#restScreen #restAvatar{width:90px;height:95px;left:calc(50% - 45px)}#restScreen .player-name{bottom:18%}#restScreen .hand-team{bottom:84px}#restScreen .shield-note{bottom:86px}#restScreen .rest-hand{bottom:23%;height:140px;width:130px}}
+@media(max-width:370px){#restScreen .rest-bottom{padding-left:10px;padding-right:10px;gap:7px}#restScreen .rest-bottom>div:last-child{gap:6px}#restScreen .rest-bottom button{font-size:13px;padding:8px}#restScreen .hand-team{max-width:56%}}

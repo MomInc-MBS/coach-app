@@ -28,61 +28,63 @@
 <link rel="stylesheet" href="/arcade/tub-flight/style.css">
 <link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
 <link rel="stylesheet" href="/personal-tracker.css"><link rel="stylesheet" href="/scoreboard.css">
+<link rel="stylesheet" href="/pod/retro-rooms.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
-<header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
+<header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
  <div class="deck-strip"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div>
  <div id="trainingView" class="training-view">
- <div class="containment-bay"><div class="bay-label">CAUTION / UNREASONABLY SUPPORTIVE</div>
+ <div class="containment-bay">
  <section id="view" class="containment-pod" aria-label="Your coach's containment pod">
   <i class="frame-bolt tl" aria-hidden="true"></i><i class="frame-bolt tr" aria-hidden="true"></i><i class="frame-bolt bl" aria-hidden="true"></i><i class="frame-bolt br" aria-hidden="true"></i><div class="pod-top-vent" aria-hidden="true"></div>
   <div class="pod-rim rim-left" aria-hidden="true"></div><div class="pod-rim rim-right" aria-hidden="true"></div>
   <div class="pod-inscription" aria-hidden="true">M Y R 5</div>
-  <div id="coachMount" class="coach-mount"><p id="coachLoading">Your coach is waking up.</p></div>
+  <div id="coachMount" class="coach-mount"><p id="coachLoading">Loading…</p></div>
   <div class="pod-floor" aria-hidden="true"></div>
   <div class="pod-nameplate"><span>YOUR COACH</span><a href="/creature/index.html">Customize ↗</a></div>
   <div id="cameraPreview" class="camera-preview"><video id="v" playsinline muted></video><canvas id="c"></canvas><span id="previewLabel">CAMERA OFF</span></div>
  </section></div>
   <div id="hud" class="simple-counter"><div class="counter-readout"><small id="setNumber">SET 01</small><span id="primary">00</span><div class="counter-target"><span id="primaryLabel">reps</span><span class="target-divider" aria-hidden="true"></span><span>Goal <span id="goalValue">3</span></span></div></div></div>
  </div>
- <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">I am here. We start when you are ready.</p></div>
+ <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">Ready when you are.</p></div>
  <section id="controls" class="workout-console" aria-label="Your set">
-  <div class="panel-heading"><span>MOM INC. / FIELD UNIT 005</span><strong>COACH CALIBRATION</strong><small>Love, with a control panel.</small></div>
-  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">01 / FOCUS GROUP</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">FIELD MANUAL ↗</button></div>
-  <div class="signal-control"><label>02 / MOM AUDIO</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button><small>Love has a volume.</small></div></div>
-  <div class="goal-control difficulty-control"><div><label for="difficultySlider">03 / DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><strong id="variationName" aria-live="polite">Knee push-up</strong><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>SUGGESTED ORDER</span><span>HARDER</span></div><p id="variationHint"></p><details class="movement-scope"><summary>What gets tracked</summary><p id="trackingScope"></p></details></div>
-  <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>PREVIEW & BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
+
+  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">MOVEMENTS ↗</button></div>
+  <div class="signal-control"><label>SOUND</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div></div>
+  <div class="goal-control difficulty-control"><div><label for="difficultySlider">DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><strong id="variationName" aria-live="polite">Knee push-up</strong><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
+  <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
-  <p id="status" role="status">Choose your movement. Your coach is ready.</p>
+  <p id="status" role="status">Ready</p>
   <span id="movementName" hidden>Squats</span><span id="secondary" hidden></span><span id="countState" hidden></span>
  </section>
- <footer class="crew-footer"><button id="openIdentity"><canvas id="miniAvatar" width="64" height="96" aria-hidden="true"></canvas><span id="guestLabel">Bring your Gala character</span><span>↗</span></button><span>MAKING YOU READY.</span></footer>
+ <footer class="crew-footer"><button id="openIdentity"><canvas id="miniAvatar" width="64" height="96" aria-hidden="true"></canvas><span id="guestLabel">Your avatar</span><span>↗</span></button></footer>
 </main>
 <main id="restScreen" class="rest-page" hidden aria-labelledby="restHeading">
- <div class="rest-heading"><div><p class="eyebrow" id="restEyebrow">SET COMPLETE</p><h1 id="restHeading" tabindex="-1">Catch your breath.</h1></div><button id="leaveRest" class="icon-button" aria-label="Return to the pod">↗</button></div>
- <div class="rest-receipt"><span id="setReceipt">Your effort has been recorded.</span><span id="earnedXp">+25 XP</span></div>
+ <div class="rest-heading"><div><p class="eyebrow" id="restEyebrow">SET COMPLETE</p><h1 id="restHeading" tabindex="-1">Rest</h1></div><button id="leaveRest" class="icon-button" aria-label="Return to the pod">↗</button></div>
+ <div class="rest-receipt"><span id="setReceipt">Set saved</span><span id="earnedXp">+25 XP</span></div>
  <section class="encounter" aria-label="Rest encounter with your custom coach">
+  <div class="rest-world-backdrop" aria-hidden="true"></div><div class="rest-world-floor" aria-hidden="true"></div>
   <div class="encounter-orbit" aria-hidden="true"></div><div class="encounter-grid" aria-hidden="true"></div>
   <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><div class="boss-health"><i id="bossHealth"></i></div></div>
   <div class="coach-battle-platform" aria-hidden="true"></div><span id="restWeaponName" class="rest-weapon-name"></span>
-  <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Your coach is waking up.</p></div>
-  <button id="attackCoach" class="attack-target" aria-label="Attack the coach with Helping Hand"><span>TAP TO STRIKE TOGETHER</span></button>
+  <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Loading…</p></div>
+  <button id="attackCoach" class="attack-target" aria-label="Attack the coach with Helping Hand"><span>TAP TO STRIKE</span></button>
   <div id="attackFlash" class="attack-flash" aria-hidden="true"></div><div id="projectile" class="projectile" aria-hidden="true"></div>
   <div id="damageFloat" class="damage-float" aria-hidden="true"></div>
   <div class="player-platform"><div class="platform-top"></div><div class="platform-edge"></div><div class="platform-thruster"></div><canvas id="restAvatar" width="64" height="96" role="img" aria-label="Your Gala character on the floating platform"></canvas></div>
   <div class="rest-hand"><div id="restHandMount"></div><img id="restHandFallback" src="/handborne/previews/family-11.png?v=5" alt="Your Helping Hand" hidden></div>
   <div class="player-name"><span id="restGuest">Gala guest</span><span id="restLevel">LV. 01</span></div>
  </section>
- <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand is on your team.</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
- <p id="restFeedback" class="rest-feedback" role="status">A very large coach. A very ambitious guest.</p>
- <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">Rest another 30 seconds</button></div></div>
- <p id="shieldNote" class="shield-note">Shield intact. Damage unlocks at workout level 50.</p>
+ <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand ready</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
+ <p id="restFeedback" class="rest-feedback" role="status"></p>
+ <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">+30 seconds</button></div></div>
+ <p id="shieldNote" class="shield-note">Damage unlocks at level 50.</p>
 </main>
-<dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Pod controls</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
+<dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Settings</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
  <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
-   <div class="goal-control"><div><label for="goalSlider" id="goalLabel">SET YOUR GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span>SET TARGET</span><span id="goalMax">20</span></div></div>
- <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice · gentle pace</span></div>
- <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Visit rest chamber</button></div>
+   <div class="goal-control"><div><label for="goalSlider" id="goalLabel">GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span id="goalMax">20</span></div></div>
+ <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice</span></div>
+ <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Rest room</button></div>
  <details><summary>Camera & tracking</summary><p id="lensInfo">The camera opens when you begin a set.</p><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Keep the joints requested for your selected exercise in view. Movement estimates, not technique grades.</p></details>
  <div id="roundControl" hidden><select id="duration" aria-label="Legacy round duration"><option value="0">Open timer</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option></select></div>
 </dialog>
@@ -90,40 +92,39 @@
  <header><h2 id="identityTitle">Your Gala avatar</h2><button id="closeIdentity">Close</button></header>
  <div id="identitySummary">
   <canvas id="identityAvatar" width="64" height="96" role="img" aria-label="Your saved Gala appearance"></canvas><p id="identityName">Gala guest</p>
-  <details class="gala-import"><summary>Change your Gala look</summary><p>Import the look you made at Join Gala.</p><label class="primary-action file-label">Import Gala look<input id="importGala" type="file" accept="application/json,.json"></label><a href="https://mominc.online/gala/" target="_blank" rel="noopener noreferrer">Open Join Gala ↗</a></details>
-  <p id="identityStatus" role="status">Your appearance is saved on this device.</p>
-  <section class="weapon-subsection" aria-labelledby="weaponHeading"><h3 id="weaponHeading">Rest-battle weapon</h3><label>Weapon<select id="weaponType"></select></label><label>Upgrade<select id="weaponTier"></select></label><p id="weaponStatus" role="status"></p><p>Workout days and strength unlock upgrades. Rest attacks earn no workout XP.</p></section>
-  <section class="hand-subsection" aria-labelledby="handTitle"><img id="identityHandPreview" src="/handborne/previews/family-11.png?v=5" alt="Helping Hand creature family preview"><div><small>YOUR COMPANION</small><h3 id="handTitle">Helping Hand</h3><p>Teams up with you against the coach while you rest.</p><button id="customizeHand" class="primary-action">Customize hand →</button></div></section>
+  <details class="gala-import"><summary>Change your Gala look</summary><label class="primary-action file-label">Import Gala look<input id="importGala" type="file" accept="application/json,.json"></label><a href="https://mominc.online/gala/" target="_blank" rel="noopener noreferrer">Open Join Gala ↗</a></details>
+  <p id="identityStatus" role="status">Saved on this device</p>
+  <section class="weapon-subsection" aria-labelledby="weaponHeading"><h3 id="weaponHeading">Weapon</h3><label>Weapon<select id="weaponType"></select></label><label>Upgrade<select id="weaponTier"></select></label><p id="weaponStatus" role="status"></p><details><summary>Upgrades</summary><p>Training unlocks upgrades. Rest attacks earn no XP.</p></details></section>
+  <section class="hand-subsection" aria-labelledby="handTitle"><img id="identityHandPreview" src="/handborne/previews/family-11.png?v=5" alt="Helping Hand creature family preview"><div><h3 id="handTitle">Helping Hand</h3><button id="customizeHand" class="primary-action">Customize hand →</button></div></section>
  </div>
- <section id="handEditorPanel" hidden aria-label="Customize your companion"><div class="hand-editor-bar"><button id="backToAvatar">← Your Gala avatar</button><span>Edits save as you go</span></div><iframe id="handEditorFrame" title="Helping Hand customizer with live preview" allow="clipboard-write"></iframe></section>
+ <section id="handEditorPanel" hidden aria-label="Customize your companion"><div class="hand-editor-bar"><button id="backToAvatar">← Your Gala avatar</button><span>Autosaved</span></div><iframe id="handEditorFrame" title="Helping Hand customizer with live preview" allow="clipboard-write"></iframe></section>
 </dialog>
 
 <dialog id="library" aria-labelledby="libraryTitle">
   <video id="handVideo" playsinline muted hidden></video>
   <div class="glass-shell">
-    <header class="library-header"><div><small>MYR5 / MOVEMENT LAB</small><h1 id="libraryTitle">Choose your movement</h1></div><button id="closeLibrary" data-hand aria-label="Close library">Close</button></header>
-    <label class="library-filter" for="libraryFocus">Focus group<select id="libraryFocus"></select></label><p id="libraryCount" class="library-caption"></p>
+    <header class="library-header"><div><h1 id="libraryTitle">Movements</h1></div><button id="closeLibrary" data-hand aria-label="Close library">Close</button></header>
+    <label class="library-filter" for="libraryFocus">Focus<select id="libraryFocus"></select></label>
     <section id="movementCards" class="movement-cards" aria-label="Movement library"></section>
     <nav id="libraryPages" class="library-pages" aria-label="Movement pages"><button id="previousPage" data-hand>Previous</button><span id="pageNumber">1 / 2</span><button id="nextPage" data-hand>Next</button></nav>
     <section id="hologramPanel" hidden>
       <div class="holo-heading"><button id="backLibrary" data-hand>Back</button><h2 id="holoName">Squat hologram</h2></div>
       <div id="holoStage" role="img" aria-label="Interactive exercise hologram. Drag to rotate; pinch or use buttons to zoom."><p id="holoStatus" role="status">Loading hologram…</p></div>
       <aside class="holo-setup" aria-label="Camera setup for this exercise">
-        <div class="holo-setup-block"><h3>01 / Camera position</h3><p id="holoCameraPosition" class="holo-position"></p><p id="holoCameraPlacement"></p></div>
-        <div class="holo-setup-block"><h3>02 / Keep visible</h3><ul id="holoVisibleJoints" class="holo-joints"></ul><p id="holoFrameNote"></p></div>
-        <p class="holo-no-feet">Feet and ankles are not tracked.</p>
+        <div class="holo-setup-block"><h3>Camera</h3><p id="holoCameraPosition" class="holo-position"></p><p id="holoCameraPlacement"></p></div>
+        <div class="holo-setup-block"><h3>Keep visible</h3><ul id="holoVisibleJoints" class="holo-joints"></ul><p id="holoFrameNote"></p></div>
+        <p class="holo-no-feet">No foot or ankle tracking.</p>
       </aside>
       <div class="holo-tools"><button id="holoPlay" data-hand>Pause animation</button><button id="holoReset" data-hand>Reset view</button><button id="zoomOut" data-hand aria-label="Zoom out">−</button><button id="zoomIn" data-hand aria-label="Zoom in">+</button></div>
-      <p class="library-caption">Drag the hologram to change your view. The menu stays in place.</p>
+
       <p id="introCue" class="intro-cue" hidden></p>
       <button id="useHologram" data-hand class="use-movement">Begin</button>
     </section>
     <footer class="library-footer">
       <button id="startFromLibrary" data-hand class="use-movement">Start Squats</button>
-      <div id="gestureArea"><div class="hand-row"><button id="toggleHands" aria-pressed="false">Enable exercise gestures</button><span id="handState" role="status">Touch controls ready</span></div>
+      <details id="gestureArea"><summary>Gestures</summary><div class="hand-row"><button id="toggleHands" aria-pressed="false">Enable exercise gestures</button><span id="handState" role="status">Touch controls ready</span></div>
       <progress id="confirmProgress" max="1" value="0" aria-label="Thumbs-up confirmation"></progress>
-      <details id="handHelp"><summary>Exercise gestures · hold thumbs up to confirm</summary><p>Push-ups: raise one arm and point at its upper arm with your other index finger. Squats: hands on hips. Tree: hands together overhead. Warrior: arms out in a T. Horse: hands together at your chest. Boxing: two fists near your shoulders. Jogging: pump your arms alternately four times. Jumping: hands raised apart.</p><p>After the spoken suggestion, hold a thumbs-up for 1.4 seconds. Let go to reset the hold. Suggestions expire after 12 seconds.</p></details></div>
-      <p class="library-caption">Opening the library stops the workout. Choose a movement and start when ready.</p>
+      <details id="handHelp"><summary>Gesture guide</summary><p>Push-ups: raise one arm and point at its upper arm with your other index finger. Squats: hands on hips. Tree: hands together overhead. Warrior: arms out in a T. Horse: hands together at your chest. Boxing: two fists near your shoulders. Jogging: pump your arms alternately four times. Jumping: hands raised apart.</p><p>Hold thumbs up to confirm.</p></details></details>
     </footer>
   </div>
   <div id="handCursor" hidden aria-hidden="true"></div>
@@ -133,4 +134,3 @@
 <script type="module" src="/launch.mjs?v=quick-install-v1"></script>
 <script type="module" src="/creature/assets/phone.js"></script>
 </html>
-

@@ -18,12 +18,12 @@ function removeDraft(key){try{sessionStorage.removeItem(key);}catch{}}
 function restore(appearance){for(const [key,v] of Object.entries(appearance||{}))if(['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1'].includes(key))localStorage.setItem(key,typeof v==='string'?v:JSON.stringify(v));}
 function signIn(returnTo){return signInPath(returnTo);}
 function chooseRoute(){
- title.textContent='Someone sent you a coach. Make it yours.';
- status.textContent='Play the character games, or answer three quick questions.';
+ title.textContent='Set up Coach';
+ status.textContent='Choose your route.';
  const choices=document.createElement('div');choices.className='setup-route-choices';
  for(const route of [
-  {theme:'games',heading:'Play the character games',description:'Meet the crew, answer as you play, then finish Coach Armie and customize your coach. Your choices come with you.',label:'Take the fun route',href:WEBSITE+'/tv/?ch=mominc'},
-  {theme:'office',heading:'Request the office form',description:'Your goal, session length, and movement limits. Then you’re ready.',label:readDraft(OFFICE_KEY)?'Resume my paperwork':'I choose paperwork',href:'/onboarding.html?route=office'}
+  {theme:'games',heading:'Play the character games',description:'Meet the crew. Build your coach.',label:'Take the fun route',href:WEBSITE+'/tv/?ch=mominc'},
+  {theme:'office',heading:'Quick setup',description:'Three questions.',label:readDraft(OFFICE_KEY)?'Resume my paperwork':'Start setup',href:'/onboarding.html?route=office'}
  ]){const card=document.createElement('section');card.className='setup-route '+route.theme;const h=document.createElement('h2'),p=document.createElement('p');h.textContent=route.heading;p.textContent=route.description;card.append(h,p);link(route.label,route.href,card);choices.append(card);}
  host.replaceChildren(choices);
  if(!account)link('Already have a coach? Sign in',signIn('/onboarding.html'));
@@ -32,8 +32,8 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
  if(!edit)data=withQuickDefaults(data);
  const office=data.entryRoute==='office',draftKey=office?OFFICE_KEY:KEY;
  document.body.classList.toggle('office-mode',office&&edit);document.body.classList.toggle('quick-mode',!edit);
- title.textContent=edit?'Your coach settings':'Three things, then we start.';
- status.textContent=edit?'Change any setting when you need it.':office?'Everything else can wait.':'Your saved coach and game answers are already included.';
+ title.textContent=edit?'Settings':'Set up Coach';
+ status.textContent=edit?'':office?'':'';
  const formHost=document.createElement('div'),notice=document.createElement('p');notice.role='status';notice.className='draft-notice';
  host.replaceChildren();
 
@@ -46,8 +46,8 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
   try{restore(result.appearance);localStorage.setItem('myr5-coach-owner',account.user.id);}catch{}
   clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
  }
- if(autoSave&&!missingFields(withQuickDefaults(data)).length){status.textContent=office?'Filing your completed application and waking your coach…':'Saving your website choices and customized coach…';try{await save(data);return;}catch(e){status.textContent=e.message;}}
- mountProfileForm(formHost,data,{save,label:edit?'Save coach settings':account?'Start my coach':'Sign in & start Coach',changed:remember,fullSettings:edit});
+ if(autoSave&&!missingFields(withQuickDefaults(data)).length){status.textContent=office?'Saving…':'Saving…';try{await save(data);return;}catch(e){status.textContent=e.message;}}
+ mountProfileForm(formHost,data,{save,label:edit?'Save settings':account?'Start my coach':'Sign in & start Coach',changed:remember,fullSettings:edit});
  if(edit)link('Back to Coach','/pose.html');
 }
 try{

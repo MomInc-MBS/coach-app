@@ -32,6 +32,22 @@
 @media(min-width:720px){#library[data-preview=true] #hologramPanel{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto 1fr auto;gap:18px;align-content:center}.holo-heading{grid-column:1/-1}#library[data-preview=true] #holoStage{grid-column:1;grid-row:2/4;min-height:420px;max-height:none}#library[data-preview=true] .holo-setup{grid-column:2;grid-row:2;align-self:center}#library[data-preview=true] #useHologram{grid-column:2;grid-row:3}}
 #library .card-kind,#library .card-number,#library .holo-link,#libraryCount{font-size:13px!important}
 #library .movement-cards{align-content:start}
+#library .movement-cards{flex:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#library .movement-card{padding:0;overflow:visible;border:0;background:none;box-shadow:none;backdrop-filter:none}
+#library .card-select{display:block;position:relative;padding:0!important;aspect-ratio:1;border:1px solid #aaf8e94d!important;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 50% 85%,#69f9dd20,transparent 65%),#0c1720!important}
+#library .card-select img{display:block;width:100%;height:100%;object-fit:contain}
+#library .card-select[aria-pressed=true]{border-color:#9fffe8!important;box-shadow:inset 0 0 0 2px #9fffe8!important}
+#library .card-select:focus-visible{outline:3px solid #aaffef;outline-offset:3px}
+#library .library-header h1{margin:0}
+#library #gestureArea>summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;font:14px/1.4 Arial,sans-serif}
+#library #gestureArea>summary::before{content:'+';font-size:20px}
+#library #gestureArea[open]>summary::before{content:'−'}
+#library .holo-setup{padding:14px;font-size:14px}
+#library .holo-setup-block+.holo-setup-block{margin-top:12px;padding-top:12px}
+#library .holo-setup .holo-position{font-size:20px}
+#library .holo-joints li{font-size:14px;padding:6px 8px}
+#library .holo-no-feet{font-size:14px}
+.workout-console #status:empty,.launch-panel p:empty,.setup-shell p:empty,.install-card p:empty,.rest-feedback:empty{display:none}
 @media(max-width:370px){.exercise-dial{width:68px;height:68px}.dial-controls{gap:5px}.dial-controls button{min-width:29px}.difficulty-control #variationName{font-size:17px}}
 
 .app-update-banner{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:12px;right:12px;z-index:9999;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px;background:#163e34;color:#eefff5;border:2px solid #a6d4bb;border-radius:12px;box-shadow:0 8px 30px #0009;font:16px/1.4 Arial,sans-serif}.app-update-banner[hidden]{display:none}.app-update-banner button{font:14px Arial,sans-serif;min-height:44px;padding:10px}.release-settings{margin-top:20px;border-top:1px solid #917885;padding-top:8px;font:16px/1.5 Arial,sans-serif}.release-settings li{margin:8px 0}.release-settings input{width:100%;padding:12px;font-size:16px}.release-settings button{min-height:44px;margin:8px 8px 8px 0}

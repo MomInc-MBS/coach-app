@@ -35,7 +35,7 @@ export class CueEvents {
  }
 }
 export class CoachVoice {
- constructor(caption,onMode=()=>{}){this.caption=caption;this.onMode=onMode;this.enabled=true;this.queue=[];this.current=null;this.epoch=0;this.robot=new RobotAudio(onMode);this.available=!!(globalThis.AudioContext||globalThis.webkitAudioContext||globalThis.speechSynthesis);}
+ constructor(caption,onMode=()=>{}){this.caption=caption;this.onMode=onMode;this.enabled=true;this.queue=[];this.current=null;this.epoch=0;this.robot=new RobotAudio(onMode);this.available=!!(globalThis.AudioContext||globalThis.webkitAudioContext);}
  unlock(){return this.robot.unlock();}
  setEnabled(enabled){this.enabled=enabled;if(!enabled)this.cancel();}
  cancel(){this.epoch++;clearTimeout(this.current?.timer);this.robot.stop();globalThis.speechSynthesis?.cancel();this.current?.resolve();this.current=null;this.queue.splice(0).forEach(item=>item.resolve());myr5VoiceState('idle');}
@@ -56,17 +56,9 @@ export class CoachVoice {
   const item=this.queue.shift(),epoch=this.epoch;this.current=item;
   this.caption(item.text);myr5VoiceState('speaking');let finished=false;
   const finish=()=>{clearTimeout(item.timer);if(finished||epoch!==this.epoch)return;finished=true;this.current=null;item.resolve();myr5VoiceState('idle');this.pump();};
-  const fallback=()=>{
-   if(epoch!==this.epoch)return;
-   if(!globalThis.speechSynthesis){finish();return;}
-   this.onMode('Phone voice fallback · slow');
-   const utterance=new SpeechSynthesisUtterance(item.text),voices=speechSynthesis.getVoices();
-   utterance.voice=voices.find(v=>v.localService&&/^en/i.test(v.lang))||voices.find(v=>/^en/i.test(v.lang))||null;
-   utterance.lang='en-US';utterance.rate=.82;utterance.pitch=1;
-   utterance.onend=finish;utterance.onerror=finish;speechSynthesis.speak(utterance);
-  };
+  const unavailable=()=>{if(epoch!==this.epoch)return;this.onMode('Voice unavailable · captions on');finish();};
   item.timer=setTimeout(()=>{if(epoch===this.epoch){this.robot.stop();globalThis.speechSynthesis?.cancel();finish();}},Math.max(10000,5000+item.text.length*220));
-  if(this.robot.unlock())this.robot.play(item.text).then(played=>{if(epoch===this.epoch){if(played)finish();else fallback();}},fallback);
-  else fallback();
+  if(this.robot.unlock())this.robot.play(item.text).then(played=>{if(epoch===this.epoch){if(played)finish();else unavailable();}},unavailable);
+  else unavailable();
  }
 }

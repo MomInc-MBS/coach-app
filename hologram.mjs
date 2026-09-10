@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {demoPose,DEMO_BONES} from './demo-poses.mjs';
-export async function createHologram(host,name){
+export async function createHologram(host,name,{still=false}={}){
   let renderer,controls,frame=0,observer,mixer,model,animateDemo=null,demoTime=0,disposed=false,playing=true;
   const scene=new THREE.Scene(),pivot=new THREE.Group();scene.add(pivot);
   function disposeObject(object){object.traverse(node=>{node.geometry?.dispose();if(node.material)for(const mat of [node.material].flat()){for(const value of Object.values(mat))if(value?.isTexture)value.dispose();mat.dispose();}});}
@@ -32,7 +32,7 @@ export async function createHologram(host,name){
     function reset(){pivot.rotation.set(0,['boxing','jogging'].includes(name)?-.45:0,0);camera.position.set(0,.15,Math.max(4.8,3.6/(host.clientWidth/Math.max(host.clientHeight,1))));controls.target.set(0,0,0);controls.update();}
     function resize(){const r=host.getBoundingClientRect();renderer.setSize(Math.max(r.width,1),Math.max(r.height,1),false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();}
     observer=new ResizeObserver(resize);observer.observe(host);reset();resize();let last=performance.now();
-    function draw(now){if(disposed)return;const dt=Math.min((now-last)/1000,.06);last=now;if(playing){mixer?.update(dt);demoTime+=dt;animateDemo?.(demoTime);}controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}frame=requestAnimationFrame(draw);
-    return {dispose,reset,toggle:()=>playing=!playing,zoom:factor=>{camera.position.sub(controls.target).multiplyScalar(factor).clampLength(controls.minDistance,controls.maxDistance).add(controls.target);controls.update();},rotate:(x,y)=>{pivot.rotation.y+=x;pivot.rotation.x=THREE.MathUtils.clamp(pivot.rotation.x+y,-1.2,1.2);}};
+    function draw(now){if(disposed)return;const dt=Math.min((now-last)/1000,.06);last=now;if(playing){mixer?.update(dt);demoTime+=dt;animateDemo?.(demoTime);}controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}if(!still)frame=requestAnimationFrame(draw);
+    return {dispose,reset,capturePose:async time=>{mixer?.setTime(time);animateDemo?.(time);controls.update();renderer.render(scene,camera);return new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));},toggle:()=>playing=!playing,zoom:factor=>{camera.position.sub(controls.target).multiplyScalar(factor).clampLength(controls.minDistance,controls.maxDistance).add(controls.target);controls.update();},rotate:(x,y)=>{pivot.rotation.y+=x;pivot.rotation.x=THREE.MathUtils.clamp(pivot.rotation.x+y,-1.2,1.2);}};
   }catch(error){dispose();throw error;}
 }

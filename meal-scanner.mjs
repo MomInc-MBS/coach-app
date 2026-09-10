@@ -38,7 +38,7 @@ export function mountMealScanner(){
     else if(data.type==='result'){
      stopClock();$('scanProgress').hidden=true;
      const best=data.items[0];phase('result',data.uncertain?'CHECK THE MATCHES':'SCAN COMPLETE',best?`${best.label} · ${(best.score*100).toFixed(1)}% match score`:'No clear food match');
-     stage.hidden=true;trigger.hidden=!data.uncertain;status(data.uncertain?'Check the possible food match and portion below.':'Confirm the food and portion below.');
+     stage.hidden=true;trigger.hidden=!data.uncertain;status(data.uncertain?'Check the match & portion':'Check food & portion');
      notify('myr5:food-selected',{name:best?.label||''});
      $('foodSuggestions').hidden=!data.uncertain;
      $('foodSuggestions').replaceChildren(...data.items.map(item=>{const b=document.createElement('button');b.type='button';b.textContent=`${item.label} · ${(item.score*100).toFixed(1)}%`;b.setAttribute('aria-label',`${item.label}, ${(item.score*100).toFixed(1)} percent model match score`);b.onclick=()=>{notify('myr5:food-selected',{name:item.label});};return b;}));
