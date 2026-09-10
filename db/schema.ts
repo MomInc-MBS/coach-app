@@ -9,3 +9,5 @@ export const system=sqliteTable('system',{key:text('key').primaryKey(),value:tex
 export const onboarding=sqliteTable('onboarding',{userId:text('user_id').primaryKey(),data:text('data').notNull(),startDay:text('start_day').notNull(),completedAt:integer('completed_at').notNull(),updatedAt:integer('updated_at').notNull(),revision:integer('revision').notNull().default(1),writeToken:text('write_token').notNull()});
 
 export const installDrafts=sqliteTable('install_drafts',{tokenHash:text('token_hash').primaryKey(),data:text('data').notNull(),creator:text('creator').notNull(),expiresAt:integer('expires_at').notNull()},t=>[index('install_drafts_expiry').on(t.expiresAt),index('install_drafts_creator').on(t.creator)]);
+
+export const accountIdentities=sqliteTable('account_identities',{clerkId:text('clerk_id').primaryKey(),ownerId:text('owner_id').notNull().unique(),createdAt:integer('created_at').notNull()});

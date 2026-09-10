@@ -1,3 +1,5 @@
+import {signInPath} from './auth-paths.mjs';
+import {authFetch} from './auth-client.mjs';
 import {setupAllowed} from './install-context.mjs';
 import {restoreInstall} from './install-transfer.mjs';
 import {withQuickDefaults} from './quick-setup.mjs';
@@ -9,12 +11,12 @@ import {createOfficeDraft} from './office-domain.mjs?v=office-short-v1';
 const status=document.getElementById('setupStatus'),host=document.getElementById('setupBody'),title=document.querySelector('h1');
 const KEY='myr5-incoming-coach-v1',OFFICE_KEY='myr5-office-draft-v1',params=new URLSearchParams(location.search);
 let account=null;
-async function api(path,method='GET',data){const r=await fetch(path,{method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Object.assign(Error('Sign in to save your coach.'),{status:401});const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'Could not save. Please retry.'),{status:r.status});return value;}
+async function api(path,method='GET',data){const r=await authFetch(path,{method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Object.assign(Error('Sign in to save your coach.'),{status:401});const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'Could not save. Please retry.'),{status:r.status});return value;}
 function link(text,href,parent=host){const a=document.createElement('a');a.className='setup-action';a.textContent=text;a.href=href;a.target='_top';parent.append(a);return a;}
 function readDraft(key){try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}}
 function removeDraft(key){try{sessionStorage.removeItem(key);}catch{}}
 function restore(appearance){for(const [key,v] of Object.entries(appearance||{}))if(['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1'].includes(key))localStorage.setItem(key,typeof v==='string'?v:JSON.stringify(v));}
-function signIn(returnTo){return '/signin-with-chatgpt?return_to='+encodeURIComponent(returnTo);}
+function signIn(returnTo){return signInPath(returnTo);}
 function chooseRoute(){
  title.textContent='Someone sent you a coach. Make it yours.';
  status.textContent='Play the character games, or answer three quick questions.';
