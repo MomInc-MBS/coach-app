@@ -1,6 +1,6 @@
 import {build} from 'vite';
 import {sites} from '@openai/sites-vite-plugin';
-import {mkdir,cp,readdir,readFile,writeFile} from 'node:fs/promises';
+import {mkdir,cp,readdir,readFile,writeFile,unlink} from 'node:fs/promises';
 import {ensureAssets,ensureHandAssets} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 await ensureAssets();
@@ -9,7 +9,13 @@ await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,form
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
-for(const folder of ['pod','creature','models','voice','icons','handborne','arcade'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+for(const folder of ['pod','creature','models','icons','handborne','arcade'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+// Publish only the current voice pack, excluding obsolete clips and source masters.
+const voiceManifest=JSON.parse(await readFile('voice/manifest.json','utf8'));
+await mkdir('dist/client/voice',{recursive:true});
+for(const entry of await readdir('dist/client/voice',{withFileTypes:true}))if(entry.isFile()&&/\.(wav|mp3|json)$/.test(entry.name))await unlink('dist/client/voice/'+entry.name);
+await cp('voice/manifest.json','dist/client/voice/manifest.json');
+for(const url of new Set(Object.values(voiceManifest.phrases)))await cp('.'+url,'dist/client'+url);
 await cp('pose.html','dist/client/index.html');await cp('LICENSE','dist/client/LICENSE');
 await cp('sw.js','dist/client/sw.js');
 // The AGPL source offer travels with the app, with no runtime secrets or user records.
