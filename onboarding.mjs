@@ -1,6 +1,6 @@
 import {signInPath} from './auth-paths.mjs';
 import {authFetch} from './auth-client.mjs';
-import {setupAllowed} from './install-context.mjs?v=browser-entry-1';
+import {setupAllowed} from './install-context.mjs';
 import {restoreInstall} from './install-transfer.mjs';
 import {withQuickDefaults} from './quick-setup.mjs';
 import {receiveCoach} from './receive-coach.mjs';

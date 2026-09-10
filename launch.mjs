@@ -5,7 +5,7 @@ import {authFetch,signOut} from './auth-client.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
-import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs?v=browser-entry-1';
+import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs?v=quick-install-v1';
 import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {mountScoreboard} from './scoreboard.mjs';
 import {mountMealNutrition} from './meal-nutrition.mjs';

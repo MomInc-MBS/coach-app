@@ -9,7 +9,7 @@ import {createOfficeDraft} from '../office-domain.mjs';
 import {missingFields,validateOnboarding,dailyTargets} from '../onboarding-domain.mjs';
 import {prepareInstall,restoreInstall} from '../install-transfer.mjs';
 import {readIncomingCoach} from '../pending-coach.mjs';
-import {setupAllowed,isInstalled} from '../install-context.mjs';
+import {setupAllowed} from '../install-context.mjs';
 const storage=()=>{const map=new Map();return {getItem:key=>map.get(key)||null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)};};
 function quick(){const data=completeCoach();data.profile={};data.answers={};return withQuickDefaults(data);}
 function answered(){const data=quick();data.profile.goal='Build a routine';data.profile.sessionMinutes=10;data.answers.armie={q3:'Avoid jumping'};return data;}
@@ -26,11 +26,10 @@ test('short setup preserves every supplied answer and appearance without inventi
  const initial=completeCoach(),saved=validateOnboarding(withQuickDefaults(initial));assert.deepEqual(saved.answers,initial.answers);assert.deepEqual(saved.appearance,initial.appearance);assert.equal(saved.profile.goalWeightLbs,100);assert.equal(initial.setupMode,undefined);
  const data=answered();const savedMinimal=validateOnboarding(data);assert.equal(savedMinimal.profile.coach,data.appearance['myr5-recipe-v1'].coach);assert.equal(savedMinimal.answers.armie.q3,'Avoid jumping');assert.deepEqual(missingFields(JSON.parse(JSON.stringify(savedMinimal))),[]);
 });
-test('browser setup is available without claiming an app installation',()=>{
- const win={matchMedia:()=>({matches:false}),navigator:{},sessionStorage:{getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}}};
- assert.equal(setupAllowed(win),true);assert.equal(isInstalled(win),false);
- win.navigator.standalone=true;assert.equal(setupAllowed(win),true);assert.equal(isInstalled(win),true);
- win.navigator.standalone=false;win.matchMedia=()=>({matches:true});assert.equal(setupAllowed(win),true);assert.equal(isInstalled(win),true);
+test('a browser does not unlock setup; standalone mode enables it and survives an in-app sign-in return',()=>{
+ const session=storage(),win={matchMedia:()=>({matches:false}),navigator:{},sessionStorage:session};assert.equal(setupAllowed(win),false);
+ win.navigator.standalone=true;assert.equal(setupAllowed(win),true);win.navigator.standalone=false;assert.equal(setupAllowed(win),true);
+ win.sessionStorage=storage();assert.equal(setupAllowed(win),false);win.matchMedia=()=>({matches:true});assert.equal(setupAllowed(win),true);
 });
 let mf,env;
 before(async()=>{mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB']});env={DB:await mf.getD1Database('DB')};for(const name of (await readdir('drizzle')).filter(n=>n.endsWith('.sql')).sort())await env.DB.batch((await readFile('drizzle/'+name,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>env.DB.prepare(s)));});
