@@ -1,4 +1,6 @@
 import {decodeHandoff} from './onboarding-domain.mjs';
+import {captureGala,mountGalaReturn,saveInstalledRun,prepareGalaInstall} from './gala-handoff.mjs';
+try{captureGala();mountGalaReturn();}catch{}
 import {readIncomingCoach,saveIncomingCoach} from './pending-coach.mjs';
 import {isInstalled,setupAllowed} from './install-context.mjs';
 import {prepareInstall} from './install-transfer.mjs';
@@ -18,6 +20,7 @@ button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();
 async function prepare(){
  button.disabled=true;
  try{
+  try{await prepareGalaInstall();}catch{mountGalaReturn();}
   const raw=new URLSearchParams(location.hash.slice(1)).get('coach'),incoming=raw?saveIncomingCoach(decodeHandoff(raw)):readIncomingCoach();
   if(incoming){await prepareInstall(incoming);saved.textContent='Your saved coach is ready to come with you.';}
   if(raw)history.replaceState(null,'',location.pathname+location.search);
@@ -25,5 +28,5 @@ async function prepare(){
   if(ios)guide();
  }catch(error){status.textContent=error.message;button.textContent='Retry';button.disabled=false;}
 }
-if(isInstalled()){setupAllowed();location.replace('/onboarding.html?from=install'+location.hash);}else await prepare();
+if(isInstalled()){await saveInstalledRun().catch(()=>{});setupAllowed();location.replace('/onboarding.html?from=install'+location.hash);}else await prepare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(reg=>{reg.waiting?.postMessage({type:'SKIP_WAITING'});reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage({type:'SKIP_WAITING'});});});}).catch(()=>{});

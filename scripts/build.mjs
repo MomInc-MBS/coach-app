@@ -9,7 +9,7 @@ await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,form
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
-for(const folder of ['pod','creature','models','voice','icons','handborne'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+for(const folder of ['pod','creature','models','voice','icons','handborne','arcade'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 await cp('pose.html','dist/client/index.html');await cp('LICENSE','dist/client/LICENSE');
 await cp('sw.js','dist/client/sw.js');
 // The AGPL source offer travels with the app, with no runtime secrets or user records.

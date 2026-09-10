@@ -25,6 +25,8 @@
 <link rel="stylesheet" href="/pocket-hardware.css">
 <link rel="stylesheet" href="/hand-companion.css">
 <link rel="stylesheet" href="/focus-library.css">
+<link rel="stylesheet" href="/arcade/tub-flight/style.css">
+<link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -61,6 +63,7 @@
  <section class="encounter" aria-label="Rest encounter with your custom coach">
   <div class="encounter-orbit" aria-hidden="true"></div><div class="encounter-grid" aria-hidden="true"></div>
   <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><div class="boss-health"><i id="bossHealth"></i></div></div>
+  <div class="coach-battle-platform" aria-hidden="true"></div><span id="restWeaponName" class="rest-weapon-name"></span>
   <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Your coach is waking up.</p></div>
   <button id="attackCoach" class="attack-target" aria-label="Attack the coach with Helping Hand"><span>TAP TO STRIKE TOGETHER</span></button>
   <div id="attackFlash" class="attack-flash" aria-hidden="true"></div><div id="projectile" class="projectile" aria-hidden="true"></div>
@@ -88,6 +91,7 @@
   <canvas id="identityAvatar" width="64" height="96" role="img" aria-label="Your saved Gala appearance"></canvas><p id="identityName">Gala guest</p>
   <details class="gala-import"><summary>Change your Gala look</summary><p>Import the look you made at Join Gala.</p><label class="primary-action file-label">Import Gala look<input id="importGala" type="file" accept="application/json,.json"></label><a href="https://mominc.online/gala/" target="_blank" rel="noopener noreferrer">Open Join Gala ↗</a></details>
   <p id="identityStatus" role="status">Your appearance is saved on this device.</p>
+  <section class="weapon-subsection" aria-labelledby="weaponHeading"><h3 id="weaponHeading">Rest-battle weapon</h3><label>Weapon<select id="weaponType"></select></label><label>Upgrade<select id="weaponTier"></select></label><p id="weaponStatus" role="status"></p><p>Workout days and strength unlock upgrades. Rest attacks earn no workout XP.</p></section>
   <section class="hand-subsection" aria-labelledby="handTitle"><img id="identityHandPreview" src="/handborne/previews/family-11.png?v=5" alt="Helping Hand creature family preview"><div><small>YOUR COMPANION</small><h3 id="handTitle">Helping Hand</h3><p>Teams up with you against the coach while you rest.</p><button id="customizeHand" class="primary-action">Customize hand →</button></div></section>
  </div>
  <section id="handEditorPanel" hidden aria-label="Customize your companion"><div class="hand-editor-bar"><button id="backToAvatar">← Your Gala avatar</button><span>Edits save as you go</span></div><iframe id="handEditorFrame" title="Helping Hand customizer with live preview" allow="clipboard-write"></iframe></section>
@@ -118,7 +122,7 @@
   </div>
   <div id="handCursor" hidden aria-hidden="true"></div>
 </dialog>
-<script src="/pod/gala-avatar.js"></script>
+<script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/dj-identity.js"></script>
 <script type="module" src="/app.mjs"></script>
 <script type="module" src="/launch.mjs?v=quick-install-v1"></script>
 <script type="module" src="/creature/assets/phone.js"></script>

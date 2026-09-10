@@ -1,5 +1,8 @@
 import {initAppUpdates} from './app-updates.mjs';
 import {authFetch,signOut} from './auth-client.mjs';
+
+import {mountGalaReturn} from './gala-handoff.mjs';
+import {mountMeditation} from './meditation.mjs';
 import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs?v=quick-install-v1';
 import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {renderAchievements} from './achievements.mjs';
@@ -11,12 +14,14 @@ import {mountMealScanner} from './meal-scanner.mjs';
 import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
 mountLaunch();
+mountGalaReturn();
+mountMeditation();
 mountMealScanner();
 const mealNutrition=mountMealNutrition();
 const reminderControls=mountReminderControls();
 window.addEventListener('myr5:reminder-defaults',e=>reminderControls.load(e.detail.tone,e.detail.days));
 let editingReminder=null;
-const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4'];
+const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];
 let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false;
 const deviceBinding=notificationBinding(api);
 const liveReminders=mountLiveReminders({refresh,read:reminders,getAccount:()=>account,deviceReady:()=>deviceBinding.ready(account?.user.id)});
