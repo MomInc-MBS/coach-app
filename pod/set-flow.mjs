@@ -1,7 +1,8 @@
 // Workout progress is earned by completed tracked sets. Rest taps never earn XP.
 export const DAMAGE_LEVEL=50,XP_PER_SET=25,XP_PER_LEVEL=100;
-export const DEFAULT_GOALS={squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
-export const valueOf=m=>m.kind==='hold'?m.totalHold:m.kind==='pace'?m.elapsed:m.count;
+import {EXERCISES} from '../exercise-library.mjs';
+export const DEFAULT_GOALS={...Object.fromEntries(Object.values(EXERCISES).map(m=>[m.id,m.defaultGoal])),squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
+export const valueOf=m=>m.kind==='hold'?m.totalHold:m.kind==='pace'?(m.active??0):m.count;
 export function readProgress(raw){
  try{const p=typeof raw==='string'?JSON.parse(raw):raw;if(p?.version===1&&Number.isSafeInteger(p.completedSets)&&p.completedSets>=0)return {version:1,completedSets:Math.min(p.completedSets,1000000)};}catch{}
  return {version:1,completedSets:0};

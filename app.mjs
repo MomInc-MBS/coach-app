@@ -31,7 +31,7 @@ async function showLensInfo(track){
   const zoom=await widestZoom(track);if(!stream||!stream.getTracks().includes(track))return;
   const report=cameraReport(track,cameras,zoom);
   const actualId=track.getSettings().deviceId;if(cameras.some(d=>d.id===actualId))$('camera').value=deviceChoice(actualId);
-  $('lensInfo').textContent=report.label+' · '+(zoom.applied?`widest exposed zoom ${zoom.zoom}×`:zoom.supported?'Wider zoom could not be applied.':'This lens exposes no zoom control.')+' Feet are optional.';
+  $('lensInfo').textContent=report.label+' · '+(zoom.applied?`widest exposed zoom ${zoom.zoom}×`:zoom.supported?'Wider zoom could not be applied.':'This lens exposes no zoom control.')+' Follow the camera cue for your exercise.';
   $('cameraDetails').textContent=JSON.stringify(report,null,2);
   // Send only the camera availability/settings shown above to the local test PC.
   // No camera images, body coordinates, or exercise history are sent.
@@ -47,15 +47,15 @@ function resetMovement(){
   const mode=$('movement').value,config=MOVEMENTS[mode];
   pod?.configure(mode);
   const timed=['pace','steps','jumps'].includes(config.kind);$('roundControl').hidden=!timed;
-  session=new MovementSession(mode,{duration:config.kind==='pace'?(pod?.goal()||60):0});
+  session=new MovementSession(mode);
   state.motion=session.snapshot();$('hint').textContent=config.hint;renderMotion(state.motion);
   window.dispatchEvent(new Event('myr5:movement-configured'));
   status(state.phase==='tracking'?config.hint:'Your coach is ready. Begin when you are.');
 }
 function renderMotion(m){
   $('movementName').textContent=m.name;
-  const label=m.kind==='hold'?'hold time':m.kind==='pace'?'round time':m.kind==='steps'?'steps':m.kind==='jumps'?'jumps':'reps';
-  setFlipValue($('primary'),m.kind==='hold'?clockDigits(m.totalHold):m.kind==='pace'?clockDigits(m.elapsed):countDigits(m.count),label);
+  const label=m.kind==='hold'?'hold time':m.kind==='pace'?'active time':m.kind==='steps'?'steps':m.kind==='jumps'?'jumps':'reps';
+  setFlipValue($('primary'),m.kind==='hold'?clockDigits(m.totalHold):m.kind==='pace'?clockDigits(m.active):countDigits(m.count),label);
   $('primaryLabel').textContent=label;
   const time=m.remaining===null?`Session ${clock(m.elapsed)}`:`Remaining ${clock(m.remaining)}`;
   $('secondary').textContent=m.kind==='hold'?`Best ${clock(m.bestHold)} · Total ${clock(m.totalHold)}`:m.kind==='pace'?`Moving ${clock(m.active)} · Hand pace ${m.speed.toFixed(1)}×`:(m.kind==='steps'||m.kind==='jumps')?`${time} · ${Math.round(m.cadence)}/${m.kind==='steps'?'min':'min'}`:time;
@@ -120,10 +120,10 @@ function loop(run){
       g.clearRect(0,0,c.width,c.height);
       const before=performance.now(),result=tracker.detectForVideo(v,now),elapsed=performance.now()-before;
       state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;
-      const p=result.landmarks[0];
-      if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS,{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
+      const p=result.landmarks[0]?.slice(0,27);
+      if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
-      const cueMotion=state.motion.kind==='hold'?{...state.motion,remaining:Math.max(0,pod.goal()-state.motion.totalHold)}:state.motion;
+      const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
       if(pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
@@ -154,7 +154,7 @@ window.addEventListener('pagehide',()=>stop());document.addEventListener('visibi
 pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:()=>library.introduce()});
 resetMovement();
 initHardware();soundSwitch();
-const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:async()=>{const outcome=await cinematics.play('pre',{name:MOVEMENTS[$('movement').value].name});if(outcome!=='cancelled'&&!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 
 const cinematics=initCinematics({voice});
 window.myr5Cinematics=cinematics;

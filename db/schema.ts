@@ -11,3 +11,6 @@ export const onboarding=sqliteTable('onboarding',{userId:text('user_id').primary
 export const installDrafts=sqliteTable('install_drafts',{tokenHash:text('token_hash').primaryKey(),data:text('data').notNull(),creator:text('creator').notNull(),expiresAt:integer('expires_at').notNull()},t=>[index('install_drafts_expiry').on(t.expiresAt),index('install_drafts_creator').on(t.creator)]);
 
 export const accountIdentities=sqliteTable('account_identities',{clerkId:text('clerk_id').primaryKey(),ownerId:text('owner_id').notNull().unique(),createdAt:integer('created_at').notNull()});
+
+export const releaseSubscribers=sqliteTable('release_subscribers',{userId:text('user_id').primaryKey(),email:text('email').notNull(),enabled:integer('enabled').notNull().default(0),confirmHash:text('confirm_hash'),expiresAt:integer('expires_at'),unsubscribeToken:text('unsubscribe_token').notNull().unique(),updatedAt:integer('updated_at').notNull(),confirmedAt:integer('confirmed_at'),lastRelease:text('last_release')},t=>[index('release_subscribers_confirmation').on(t.confirmHash)]);
+export const releaseDeliveries=sqliteTable('release_deliveries',{userId:text('user_id').notNull(),releaseId:text('release_id').notNull(),status:text('status').notNull(),updatedAt:integer('updated_at').notNull()},t=>[primaryKey({columns:[t.userId,t.releaseId]})]);

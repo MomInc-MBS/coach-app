@@ -43,6 +43,13 @@
       "when": 1789004382220,
       "tag": "0005_nice_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789014708507,
+      "tag": "0006_flawless_slayback",
+      "breakpoints": true
     }
   ]
 }

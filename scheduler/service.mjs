@@ -1,6 +1,7 @@
 import coach from '../server/worker.mjs';
 import {runReminders, subscriptionInput} from '../server/push.mjs';
 import {reminderInput, fail} from '../server/domain.mjs';
+import {emailSubscription,emailLinkAction,runReleaseEmails} from '../server/release-email.mjs';
 
 const json = (data, status=200) => new Response(JSON.stringify(data), {status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 async function authorized(request, env) {
@@ -45,6 +46,10 @@ export default {
       }
       const user=request.headers.get('X-Coach-User');
       if(!user || user.length>200 || /[\r\n]/.test(user)) return json({error:'Missing account.'},401);
+      if(path.startsWith('/internal/release-email/')&&request.method==='POST'){
+        const input=await request.json();return json(await emailLinkAction(env,path.split('/').at(-1),input.token));
+      }
+      if(path==='/api/updates/subscription')return json(await emailSubscription(env,user,request.method,request.method==='POST'?await request.json():{}));
       if(path==='/internal/import' && request.method==='POST') return await importExisting(request,env,user);
       const allowed = path==='/api/reminders' || /^\/api\/reminders\/[a-f0-9-]{36}$/.test(path) || /^\/api\/push\/(subscribe|unsubscribe|test)$/.test(path) || (path==='/api/export'&&request.method==='GET') || (path==='/api/account'&&request.method==='DELETE');
       if(!allowed) return json({error:'Not found.'},404);
@@ -56,5 +61,6 @@ export default {
   },
   async scheduled(event,env,ctx) {
     ctx.waitUntil((async()=>{const result=await runReminders(env);if(result.failed)throw new Error(`${result.failed} reminder deliveries failed`);})());
+    ctx.waitUntil((async()=>{const result=await runReleaseEmails(env);if(result.failed)throw new Error(`${result.failed} release email deliveries failed`);})());
   }
 };

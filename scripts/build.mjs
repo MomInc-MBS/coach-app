@@ -13,7 +13,7 @@ for(const folder of ['pod','creature','models','voice','icons','handborne'])awai
 await cp('pose.html','dist/client/index.html');await cp('LICENSE','dist/client/LICENSE');
 await cp('sw.js','dist/client/sw.js');
 // The AGPL source offer travels with the app, with no runtime secrets or user records.
-const sources={};for(const folder of ['server','db','scripts','scheduler'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
+const sources={};for(const folder of ['server','db','scripts','scheduler','pod'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
 for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry))sources[entry]=await readFile(entry,'utf8');
 await writeFile('dist/client/source.json',JSON.stringify(sources));
 console.log('Coach build ready.');

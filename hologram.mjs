@@ -10,7 +10,7 @@ export async function createHologram(host,name){
   function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);disposeObject(scene);renderer?.dispose();renderer?.forceContextLoss();renderer?.domElement.remove();}
   try{
     renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);host.append(renderer.domElement);
-    const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=7;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;
+    const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=12;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;
     if(['squat','pushup'].includes(name)){
     const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),20000);let bytes;
     try{const response=await fetch('/models/'+name+'.glb',{signal:abort.signal});if(!response.ok)throw new Error('Model file unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
@@ -29,7 +29,7 @@ export async function createHologram(host,name){
       animateDemo=t=>{const points=demoPose(name,t);for(const [key,joint] of Object.entries(joints))joint.position.fromArray(points[key]);DEMO_BONES.forEach(([from,to],i)=>{a.fromArray(points[from]);b.fromArray(points[to]);const mesh=bones[i];direction.subVectors(b,a);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.scale.y=direction.length();mesh.quaternion.setFromUnitVectors(up,direction.normalize());});};animateDemo(0);
     }
     const ring=new THREE.Mesh(new THREE.RingGeometry(1.02,1.035,64),new THREE.MeshBasicMaterial({color:0x8cf6e0,transparent:true,opacity:.35,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-1.05;scene.add(ring);
-    function reset(){pivot.rotation.set(0,['boxing','jogging'].includes(name)?-.45:0,0);camera.position.set(0,.15,4.2);controls.target.set(0,0,0);controls.update();}
+    function reset(){pivot.rotation.set(0,['boxing','jogging'].includes(name)?-.45:0,0);camera.position.set(0,.15,Math.max(4.8,3.6/(host.clientWidth/Math.max(host.clientHeight,1))));controls.target.set(0,0,0);controls.update();}
     function resize(){const r=host.getBoundingClientRect();renderer.setSize(Math.max(r.width,1),Math.max(r.height,1),false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();}
     observer=new ResizeObserver(resize);observer.observe(host);reset();resize();let last=performance.now();
     function draw(now){if(disposed)return;const dt=Math.min((now-last)/1000,.06);last=now;if(playing){mixer?.update(dt);demoTime+=dt;animateDemo?.(demoTime);}controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}frame=requestAnimationFrame(draw);

@@ -8,7 +8,9 @@
 		]
 	},
 	"vars": {
-		"VAPID_SUBJECT": "https://myr5-coach.ianmyersrocks97.chatgpt.site"
+		"VAPID_SUBJECT": "https://myr5-coach.ianmyersrocks97.chatgpt.site",
+		"RELEASE_ORIGIN": "https://myr5.mominc.online",
+		"RELEASE_EMAIL_FROM": "dispatch@mominc.online"
 	},
 	"observability": {
 		"enabled": true

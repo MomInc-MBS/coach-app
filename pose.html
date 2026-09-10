@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="/pod/whiteboard.css">
 <link rel="stylesheet" href="/pocket-hardware.css">
 <link rel="stylesheet" href="/hand-companion.css">
+<link rel="stylesheet" href="/focus-library.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">PERSONAL CONTAINMENT<small>MYR5 / TRAINING DECK</small></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -44,10 +45,10 @@
  <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">I am here. We start when you are ready.</p></div>
  <section id="controls" class="workout-console" aria-label="Your set">
   <div class="panel-heading"><span>MOM INC. / FIELD UNIT 005</span><strong>COACH CALIBRATION</strong><small>Love, with a control panel.</small></div>
-  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">01 / SELECT EXERCISE</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous exercise">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next exercise">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">FIELD MANUAL ↗</button></div>
+  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">01 / FOCUS GROUP</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">FIELD MANUAL ↗</button></div>
   <div class="signal-control"><label>02 / MOM AUDIO</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button><small>Love has a volume.</small></div></div>
-  <div class="goal-control"><div><label for="goalSlider" id="goalLabel">03 / SET YOUR GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span>MAKE IT COUNT, DARLING.</span><span id="goalMax">20</span></div></div>
-  <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><small>MOM IS READY.</small><strong>BEGIN SET</strong><span>PRESS TO BECOME A PROBLEM →</span></button><button id="stop" disabled>STOP</button></div>
+  <div class="goal-control difficulty-control"><div><label for="difficultySlider">03 / DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><strong id="variationName" aria-live="polite">Knee push-up</strong><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>SUGGESTED ORDER</span><span>HARDER</span></div><p id="variationHint"></p><details class="movement-scope"><summary>What gets tracked</summary><p id="trackingScope"></p></details></div>
+  <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>PREVIEW & BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
   <p id="status" role="status">Choose your movement. Your coach is ready.</p>
   <span id="movementName" hidden>Squats</span><span id="secondary" hidden></span><span id="countState" hidden></span>
@@ -75,9 +76,10 @@
 </main>
 <dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Pod controls</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
  <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
+   <div class="goal-control"><div><label for="goalSlider" id="goalLabel">SET YOUR GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span>SET TARGET</span><span id="goalMax">20</span></div></div>
  <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice · gentle pace</span></div>
  <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Visit rest chamber</button></div>
- <details><summary>Camera & tracking</summary><p id="lensInfo">The camera opens when you begin a set.</p><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Feet are optional. Movement estimates, not technique grades.</p></details>
+ <details><summary>Camera & tracking</summary><p id="lensInfo">The camera opens when you begin a set.</p><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Keep the joints requested for your selected exercise in view. Movement estimates, not technique grades.</p></details>
  <div id="roundControl" hidden><select id="duration" aria-label="Legacy round duration"><option value="0">Open timer</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option></select></div>
 </dialog>
 <dialog id="identity" class="pod-dialog avatar-dialog" aria-labelledby="identityTitle">
@@ -95,6 +97,7 @@
   <video id="handVideo" playsinline muted hidden></video>
   <div class="glass-shell">
     <header class="library-header"><div><small>MYR5 / MOVEMENT LAB</small><h1 id="libraryTitle">Choose your movement</h1></div><button id="closeLibrary" data-hand aria-label="Close library">Close</button></header>
+    <label class="library-filter" for="libraryFocus">Focus group<select id="libraryFocus"></select></label><p id="libraryCount" class="library-caption"></p>
     <section id="movementCards" class="movement-cards" aria-label="Movement library"></section>
     <nav id="libraryPages" class="library-pages" aria-label="Movement pages"><button id="previousPage" data-hand>Previous</button><span id="pageNumber">1 / 2</span><button id="nextPage" data-hand>Next</button></nav>
     <section id="hologramPanel" hidden>
@@ -103,7 +106,7 @@
       <div class="holo-tools"><button id="holoPlay" data-hand>Pause animation</button><button id="holoReset" data-hand>Reset view</button><button id="zoomOut" data-hand aria-label="Zoom out">−</button><button id="zoomIn" data-hand aria-label="Zoom in">+</button></div>
       <p class="library-caption">Drag the hologram to change your view. The menu stays in place.</p>
       <p id="introCue" class="intro-cue" hidden></p>
-      <button id="useHologram" data-hand class="use-movement">Use this movement</button>
+      <button id="useHologram" data-hand class="use-movement">Begin</button>
     </section>
     <footer class="library-footer">
       <button id="startFromLibrary" data-hand class="use-movement">Start Squats</button>

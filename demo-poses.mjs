@@ -1,4 +1,6 @@
 // Small procedural teaching figures. Coordinates are metres, y points up.
+import {EXERCISES} from './exercise-library.mjs';
+import {applyExerciseDemo} from './exercise-demo.mjs';
 export function demoPose(mode,t=0){
  const p={head:[0,.85,0],neck:[0,.65,0],ls:[-.23,.57,0],rs:[.23,.57,0],le:[-.31,.18,0],re:[.31,.18,0],lw:[-.3,-.13,0],rw:[.3,-.13,0],lh:[-.15,0,0],rh:[.15,0,0],lk:[-.17,-.46,0],rk:[.17,-.46,0],la:[-.17,-.95,0],ra:[.17,-.95,0]};
  const wave=Math.sin(t*4),rise=Math.max(0,Math.sin(t*3.6));
@@ -8,6 +10,6 @@ export function demoPose(mode,t=0){
  if(mode==='boxing'){for(const [side,sign,phase] of [['l',-1,wave],['r',1,-wave]]){const punch=Math.max(0,phase);p[side+'e']=[sign*.28,.37+punch*.16,.2+punch*.22];p[side+'w']=[sign*.2,.55,.25+punch*.65];}p.la=[-.32,-.95,.1];p.ra=[.32,-.95,-.17];}
  if(mode==='jogging'){for(const [side,sign,phase] of [['l',-1,wave],['r',1,-wave]]){const lift=Math.max(0,phase);p[side+'k']=[sign*.17,-.46+lift*.4,lift*.36];p[side+'a']=[sign*.17,-.95+lift*.42,.06];p[side+'e']=[sign*.32,.22,-phase*.18];p[side+'w']=[sign*.27,.42,-phase*.32];}for(const v of Object.values(p))v[1]+=.035*Math.abs(wave);}
  if(mode==='jumping'){for(const v of Object.values(p))v[1]+=.3*rise;p.le[0]-=.1*rise;p.re[0]+=.1*rise;p.lw[1]+=.45*rise;p.rw[1]+=.45*rise;}
- return p;
+ return EXERCISES[mode]?applyExerciseDemo(p,EXERCISES[mode],t):p;
 }
 export const DEMO_BONES=[['head','neck'],['ls','rs'],['neck','lh'],['neck','rh'],['lh','rh'],['ls','le'],['le','lw'],['rs','re'],['re','rw'],['lh','lk'],['lk','la'],['rh','rk'],['rk','ra']];
