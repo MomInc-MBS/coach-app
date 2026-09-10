@@ -14,9 +14,9 @@ test('ranked run requires Gala, DJ, remaining route, and installed app; optional
  assert.equal((await call(base+'/checkpoint','POST',{stage:'armie'},run.token)).status,409);
  assert.equal((await call(base+'/checkpoint','POST',{stage:'djscratch',base:'DJ ECHO 3000',moniker:'X'},run.token)).status,400);
  await call(base+'/checkpoint','POST',{stage:'djscratch',base:'DJ ECHO 3000',moniker:'ABC'},run.token);
- for(const stage of ['lilboyfriend','corgi','hand','armie'])assert.equal((await call(base+'/checkpoint','POST',{stage},run.token)).status,200);
+ for(const stage of ['lilboyfriend','corgi','hand','goon'])assert.equal((await call(base+'/checkpoint','POST',{stage},run.token)).status,200);
  assert.equal((await call(base,'GET',null,run.token)).data.completedAt,null);
- const final=await call(base+'/checkpoint','POST',{stage:'goon'},run.token);assert(final.data.completedAt);assert.equal(final.data.completed.includes('fuel'),false);
+ const final=await call(base+'/checkpoint','POST',{stage:'armie'},run.token);assert(final.data.completedAt);assert.equal(final.data.completed.includes('fuel'),false);
  assert.equal((await call(base+'/join','POST',{confirm:true},run.token)).status,409);
  assert.equal((await call(base+'/install','POST',{installed:true},run.token)).status,403);
  assert.equal((await call(base+'/install','POST',{installed:true},run.token,'https://coach.test')).status,200);
@@ -34,4 +34,25 @@ test('run tokens isolate private progress and CORS remains confined to the websi
  const preflight=await call('/runs','OPTIONS');assert.equal(preflight.status,204);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),'https://mominc.online');
  assert.equal((await call('/runs','OPTIONS',null,null,'https://evil.test')).status,403);
  const privateRun=await call(base,'GET',null,run.token);assert(!('token_hash' in privateRun.data));assert(!('creator' in privateRun.data));
+});
+
+test('installation transfer is first-party, cookie-backed and token-checked',async()=>{
+ const {data:run}=await call('/runs','POST',{});
+ assert.equal((await call('/install-draft','POST',run)).status,403);
+ const saved=await call('/install-draft','POST',run,null,'https://coach.test');assert.equal(saved.status,200);
+ const cookie=saved.headers.get('set-cookie');assert.match(cookie,/HttpOnly/);assert.match(cookie,/SameSite=Lax/);assert.match(cookie,/Secure/);
+ const restored=await worker.fetch(new Request('https://coach.test/api/gala/install-draft',{headers:{Cookie:cookie.split(';')[0]}}),env);assert.equal(restored.status,200);assert.equal((await restored.json()).data.token,run.token);assert.equal(restored.headers.get('Access-Control-Allow-Origin'),null);
+ const invalid=await call('/install-draft','POST',{id:run.id,token:'f'.repeat(64)},null,'https://coach.test');assert.equal(invalid.status,404);
+});
+test('duplicate public DJ names can change moniker without changing completion time',async()=>{
+ const {data:run}=await call('/runs','POST',{}),base='/runs/'+run.id;
+ await call(base+'/checkpoint','POST',{stage:'djscratch',base:'DJ ECHO 3000',moniker:'ABC'},run.token);
+ for(const stage of ['goon','lilboyfriend','corgi','hand','armie'])await call(base+'/checkpoint','POST',{stage},run.token);
+ await call(base+'/install','POST',{installed:true},run.token,'https://coach.test');
+ const original=(await call(base,'GET',null,run.token)).data;
+ assert.equal((await call(base+'/join','POST',{confirm:true},run.token)).status,409);
+ assert.equal((await call(base+'/moniker','POST',{moniker:'XY'},run.token)).status,400);
+ const changed=await call(base+'/moniker','POST',{moniker:'XYZ'},run.token);assert.equal(changed.status,200);assert.equal(changed.data.durationMs,original.durationMs);
+ const joined=await call(base+'/join','POST',{confirm:true},run.token);assert.equal(joined.status,200);assert.equal(joined.data.djName,'DJ ECHO 3000 · XYZ');
+ assert.equal((await call(base+'/moniker','POST',{moniker:'NEW'},run.token)).status,409);
 });
