@@ -15,8 +15,8 @@ export async function reminderService(env, user, path, method = 'GET', data) {
       body: data === undefined ? undefined : JSON.stringify(data),
       redirect: 'error', signal: AbortSignal.timeout(25000)
     });
-  } catch { fail('The reminder service is temporarily unavailable. Please try again.', 503); }
-  if (!response.headers.get('content-type')?.includes('application/json')) fail('The reminder service is temporarily unavailable.', 503);
+  } catch(error) { console.error('Reminder connection failed',String(error?.message||'Network error'));fail('The reminder service is temporarily unavailable. Please try again.', 503); }
+  if (!response.headers.get('content-type')?.includes('application/json')) {console.error('Reminder connection returned a non-JSON response',response.status,response.headers.get('content-type'));fail('The reminder service is temporarily unavailable.', 503);}
   const result = await response.json();
   if (!response.ok) fail(result.error || 'Could not save your reminder. Please try again.', response.status);
   return result;

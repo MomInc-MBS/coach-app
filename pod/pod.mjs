@@ -24,12 +24,12 @@ export function initPod({voice,movements,onStop,onNext}){
  }
  function moveCoach(){
   card??=document.querySelector('.myr5-companion-card');if(!card)return;
-  if(observedCard!==card){observer.observe(card,{childList:true,subtree:true});observedCard=card;}
+  if(observedCard!==card){observer.observe(card,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ready']});observedCard=card;}
   const mount=flow.phase==='rest'?$('restCoachMount'):$('coachMount');if(card.parentElement!==mount)mount.append(card);
+  if(window.myr5Creature?.stats().stage!==(flow.phase==='rest'?'encounter':'pod'))window.myr5Creature?.stage(flow.phase==='rest'?'encounter':'pod');
   const label=card.querySelector('.myr5-companion-status')?.textContent||'';
   // Errors from the finished companion still need a visible place in the new shell.
-  const failed=/unavailable|failed|error|import|not |could/i.test(label);
-  for(const id of ['coachLoading','restCoachLoading']){const loading=$(id);loading.hidden=!failed&&!!card.querySelector('canvas');if(failed&&loading.textContent!==label)loading.textContent=label;}
+  for(const id of ['coachLoading','restCoachLoading']){const loading=$(id);loading.hidden=card.dataset.ready==='true';if(!loading.hidden&&loading.textContent!==label)loading.textContent=label;}
  }
  const observer=new MutationObserver(moveCoach);observer.observe($('view'),{childList:true,subtree:true});moveCoach();
  function configure(mode){
