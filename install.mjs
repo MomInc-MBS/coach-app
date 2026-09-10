@@ -29,4 +29,4 @@ async function prepare(){
  }catch(error){status.textContent=error.message;button.textContent='Retry';button.disabled=false;}
 }
 if(isInstalled()){await saveInstalledRun().catch(()=>{});setupAllowed();location.replace('/onboarding.html?from=install'+location.hash);}else await prepare();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(reg=>{reg.waiting?.postMessage({type:'SKIP_WAITING'});reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage({type:'SKIP_WAITING'});});});}).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});

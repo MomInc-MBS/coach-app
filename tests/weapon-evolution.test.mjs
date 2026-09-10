@@ -6,9 +6,10 @@ import {WEAPON_FAMILIES, evolution, abilityFor, AbilityCooldown} from '../pod/we
 import {SetFlow} from '../pod/set-flow.mjs';
 
 const context = {window: {}};
+vm.runInNewContext(readFileSync(new URL('../workout-tracks.js',import.meta.url),'utf8'),context);
 vm.runInNewContext(readFileSync(new URL('../pod/gala-weapons.js', import.meta.url), 'utf8'), context);
 const catalog = context.window.GalaWeapons;
-const earned = {activeDays: 365, totalXp: 36500, strength: 75};
+const earned = {trainingVersion:1,training:Object.fromEntries(Object.keys(context.MYR5Training.TRAINING_TRACKS).map(id=>[id,{activeDays:365,completedSets:365}]))};
 const weapon = {type: 'rapier', tier: 4};
 
 test('all saved families and tiers have increasing presentation profiles', () => {
@@ -40,10 +41,10 @@ test('special attacks need an earned tier and a rest session', () => {
   const clock = new AbilityCooldown(null, 1000);
   assert.equal(clock.activate(weapon, {now: 1000, progress: earned, catalog}).reason, 'not-rest');
   assert.equal(clock.activate({...weapon, tier: 0}, {now: 1000, inRest: true, progress: earned, catalog}).reason, 'tier');
-  const noDays = {...earned, activeDays: 0};
+  const noDays = {...earned, training:{}};
   assert.equal(clock.activate(weapon, {now: 1000, inRest: true, progress: noDays, catalog}).reason, 'locked');
   assert.equal(clock.activate(weapon, {now: 1000, inRest: true, progress: earned, catalog}).ok, true);
-  assert.deepEqual(earned, {activeDays: 365, totalXp: 36500, strength: 75});
+  assert.equal(earned.training.boxing.activeDays,365);
 });
 
 test('cooldown cannot be bypassed by switching family, tier, or rest phase', () => {
@@ -71,16 +72,17 @@ test('cooldown restores across reload and never shortens on a clock rollback', (
   assert.throws(() => evolution({...weapon, tier: 21}));
 });
 
-test('special damage keeps the workout level gate and never awards XP',()=>{
+test('special damage uses the same streak formula at every workout level and never awards XP',()=>{
   for(const sets of [0,192,196,220]){
     const flow=new SetFlow({version:1,completedSets:sets},{now:0});
+    flow.combat={day:0,loginStreak:3,breathingCompleted:true};
     const options={now:1000,progress:earned,catalog};
     assert.equal(flow.special(weapon,options).reason,'not-rest');
     flow.previewRest(0);
     const hit=flow.special(weapon,options);
     assert.equal(hit.ok,true);
-    assert.equal(hit.damage,flow.attackDamage*hit.ability.damageMultiplier);
-    assert.equal(hit.blocked,sets<196);
+    assert.equal(hit.damage,10*3*(weapon.tier+1)*100);
+    assert.equal(hit.blocked,false);
     assert.equal(flow.xp,sets*25);
     assert.equal(flow.progress.completedSets,sets);
     assert.equal(flow.special(weapon,options).reason,'cooldown');

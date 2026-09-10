@@ -1,7 +1,7 @@
 import {initRestArena} from './rest-arena.mjs';
 import {abilityFor} from './weapon-evolution.mjs';
 import {initHandCompanion} from '../hand-companion.mjs';
-import {SetFlow,DEFAULT_GOALS,DAMAGE_LEVEL,valueOf} from './set-flow.mjs';
+import {SetFlow,DEFAULT_GOALS,valueOf} from './set-flow.mjs';
 import {SetEncouragement} from './encouragement.mjs';
 import {setFlipValue,clockDigits} from '../flip-display.mjs';
 import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
@@ -43,7 +43,8 @@ export function initPod({voice,movements,onStop,onNext}){
  async function beginSet(mode){configure(mode);if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
  function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';}
  function power(){const p=$('coachPower').value;document.body.dataset.power=p;$('powerName').textContent=POWERS[p].name.toUpperCase()+' ACTIVE';store('myr5-pod-power-v1',p);}
- function specialControls(){const weapon=arena.weapon,ability=abilityFor(weapon),remaining=flow.abilities.remaining(),button=$('weaponSpecial');button.disabled=flow.phase!=='rest'||!ability||remaining>0;button.textContent=!ability?'Special · tier 4':remaining?`${ability.name} · ${Math.ceil(remaining/1000)}s`:ability.name;$('weaponCooldown').value=remaining?Math.max(0,1-remaining/Math.max(1,flow.abilities.durationMs)):1;}
+ function syncCombat(){flow.weapon=arena.weapon;const p=flow.combat;$('shieldNote').textContent=p?`${p.loginStreak} login days × weapon level ${arena.weapon.tier+1}${p.breathingCompleted?' ×100 breathing':''} · ${flow.attackDamage} damage`:`BASE POWER · ${flow.attackDamage} damage`;}
+ function specialControls(){syncCombat();const weapon=arena.weapon,ability=abilityFor(weapon),remaining=flow.abilities.remaining(),button=$('weaponSpecial');button.disabled=flow.phase!=='rest'||!ability||remaining>0;button.textContent=!ability?'Special · tier 4':remaining?`${ability.name} · ${Math.ceil(remaining/1000)}s`:ability.name;$('weaponCooldown').value=remaining?Math.max(0,1-remaining/Math.max(1,flow.abilities.durationMs)):1;}
  $('coachPower').value=loadPower({getItem:safeRead});power();
  function tick(){if(flow.phase!=='rest')return;specialControls();const remaining=flow.remaining(Date.now());setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0;$('nextSet').textContent=remaining?'Recovering…':'Next set →';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest timer complete. Continue when you are ready.',{interrupt:true});}}
  function enterRest(result=null){
@@ -52,7 +53,7 @@ export function initPod({voice,movements,onStop,onNext}){
   $('restEyebrow').textContent=result?'SET COMPLETE':'REST PRACTICE';$('restHeading').textContent='Rest';
   $('setReceipt').textContent=result?`${result.name} · ${Math.round(result.value)} ${movements[result.mode].kind==='hold'||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps'}`:'Practice';
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent='0 DAMAGE';$('bossHealth').style.width='100%';
-  $('shieldNote').textContent=flow.level<DAMAGE_LEVEL?`Damage unlocks at level ${DAMAGE_LEVEL}.`:`Damage unlocked`;
+  syncCombat();
   $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
   clearInterval(restTimer);restTimer=setInterval(tick,250);tick();$('restHeading').focus();
   history.replaceState(null,'','#rest');window.myr5Creature?.play(result?'celebrate':'rest');
@@ -61,7 +62,7 @@ export function initPod({voice,movements,onStop,onNext}){
  function consume(m,now){const result=flow.consume(m,now);if(!result)return false;const id=flow.active?.cloudId;store(PROGRESS,JSON.stringify(flow.progress));if(result.earned&&id)window.coachAccount.complete({id,value:result.value,active:m.active||0}).catch(()=>{$('setReceipt').textContent+=' · Waiting to sync.';});onStop();enterRest(result);if(!storageAvailable)$('setReceipt').textContent+=' · Progress could not be saved on this device.';return true;}
  function leave(){hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').focus();}
  $('attackCoach').addEventListener('click',()=>{
-  const now=Date.now(),hit=flow.tap(now,true);if(!hit)return;
+  syncCombat();const now=Date.now(),hit=flow.tap(now,true);if(!hit)return;
   hand.hit(hit);arena.attack(hit);window.myr5Creature?.play(hit.assisted?'encourage':hit.blocked?'agree':'rest');
   $('damageTotal').textContent=hit.totalDamage+' DAMAGE';$('bossHealth').style.width=Math.max(0,100-hit.totalDamage/100)+'%';$('damageFloat').textContent=hit.blocked?(hit.assisted?'TEAM STRIKE · BLOCKED':'BLOCKED · 0'):(hit.assisted?'TEAM −':'−')+hit.damage;
   const scene=document.querySelector('.encounter');scene.classList.remove('hit');void scene.offsetWidth;scene.classList.add('hit');clearTimeout(hitTimer);hitTimer=setTimeout(()=>scene.classList.remove('hit'),650);
@@ -70,7 +71,7 @@ export function initPod({voice,movements,onStop,onNext}){
  });
  $('leaveRest').addEventListener('click',leave);$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
  $('weaponSpecial').addEventListener('click',async()=>{
-  const activate=()=>{flow.abilities.merge(safeRead(COOLDOWN));const result=flow.special(arena.weapon,{now:Date.now(),progress:arena.progress,catalog:window.GalaWeapons});if(result.ok)store(COOLDOWN,JSON.stringify(flow.abilities.snapshot()));return result;};
+  const activate=()=>{syncCombat();flow.abilities.merge(safeRead(COOLDOWN));const result=flow.special(arena.weapon,{now:Date.now(),progress:arena.progress,catalog:window.GalaWeapons});if(result.ok)store(COOLDOWN,JSON.stringify(flow.abilities.snapshot()));return result;};
   const hit=navigator.locks?.request?await navigator.locks.request('myr5-weapon-special',activate):activate();if(!hit.ok){specialControls();return;}
   arena.attack(hit);window.myr5Creature?.play(hit.blocked?'agree':'rest');
   $('damageTotal').textContent=hit.totalDamage+' DAMAGE';$('bossHealth').style.width=Math.max(0,100-hit.totalDamage/100)+'%';
@@ -91,6 +92,6 @@ export function initPod({voice,movements,onStop,onNext}){
  document.querySelector('.mom-brand').addEventListener('click',event=>{event.preventDefault();if(flow.phase==='rest')leave();});
  paintGuest();updateProgress();document.body.dataset.screen='pod';
  const requestedPanel=new URLSearchParams(location.search).get('panel');if(['avatar','hand'].includes(requestedPanel)){$('identity').showModal();if(requestedPanel==='hand')hand.edit();}
- window.addEventListener('myr5:account-progress',({detail:p})=>{flow.progress.completedSets=p.completedSets;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
+ window.addEventListener('myr5:account-progress',({detail:p})=>{flow.combat=p.combat;flow.progress.completedSets=p.completedSets;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
  return {flow,configure,beginSet,consume,render,encouragement:(m,now,events)=>flow.phase==='set'?encourage.update(m,flow.active.goal,now,events):null,stopped:()=>{if(flow.phase==='set')flow.leave();},goal:()=>Number($('goal').value)};
 }

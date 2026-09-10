@@ -2,7 +2,7 @@ import {AbilityCooldown, abilityFor, evolution} from './weapon-evolution.mjs';
 import {drawAnimatedWeapon} from './weapon-animator.mjs';
 
 const $ = id => document.getElementById(id), weapons = window.GalaWeapons;
-const progress = {activeDays: 365, totalXp: 36500, strength: 75};
+const progress = {trainingVersion:1,training:Object.fromEntries(Object.keys(globalThis.MYR5Training.TRAINING_TRACKS).map(id=>[id,{activeDays:365,completedSets:365}]))};
 // Review-only progress and cooldown: never read or write account/localStorage.
 const cooldown = new AbilityCooldown();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -28,7 +28,7 @@ function update() {
   $('tierOutput').value = selected.tier;
   $('previousLabel').textContent = `${weapons.tiers[Math.max(0, selected.tier - 1)]} · tier ${Math.max(0, selected.tier - 1)}`;
   $('currentLabel').textContent = `${weapons.tiers[selected.tier]} · tier ${selected.tier}`;
-  $('unlock').textContent = selected.tier ? `${required.days} workout days · strength ${required.strength}` : 'Available from the start';
+  $('unlock').textContent = selected.tier ? `${required.xp} ${required.label} XP · ${required.days} completed days` : 'Available from the start';
   $('abilityInfo').textContent = ability ? `Rank ${ability.rank} · ${ability.cooldownMs / 1000}s cooldown` : 'Special unlocks at tier 4';
   for (const button of $('families').children) button.setAttribute('aria-pressed', String(button.dataset.type === selected.type));
   updateCooldown();

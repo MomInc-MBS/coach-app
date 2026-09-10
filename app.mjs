@@ -3,6 +3,7 @@ import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
 import {initPod} from './pod/pod.mjs';
+import {mountHomeCharacter} from './pod/home-character.mjs';
 import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
@@ -138,7 +139,7 @@ for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.create
 $('start').addEventListener('click',()=>library.introduce());$('stop').addEventListener('click',()=>{stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
 $('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
-$('movement').addEventListener('change',()=>{const active=state.phase==='tracking';resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
+$('movement').addEventListener('change',()=>{const active=state.phase==='tracking';window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
 $('duration').addEventListener('change',()=>{resetMovement();voice.say(Number($('duration').value)?$('duration').value+' second round.':'Open timer.',{interrupt:true});});
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
@@ -154,7 +155,9 @@ window.addEventListener('pagehide',()=>stop());document.addEventListener('visibi
 pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:()=>library.introduce()});
 resetMovement();
 initHardware();soundSwitch();
-const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+$('variationName').addEventListener('click',()=>library.introduce($('movement').value));
+mountHomeCharacter();
 
 const cinematics=initCinematics({voice});
 window.myr5Cinematics=cinematics;

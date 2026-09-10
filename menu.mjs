@@ -1,11 +1,13 @@
 // Fixed glass library with spoken proposals and a hologram before every start.
 import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,focusFor} from './exercise-library.mjs';
 import {movementSetup} from './movement-setup.mjs';
+import {mountWeaponRewards} from './weapon-rewards.mjs';
 const $=id=>document.getElementById(id);
 export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs';
+ const rewards=mountWeaponRewards($('libraryFocus').closest('label'),()=>filter);
  for(const g of FOCUS_GROUPS){const o=document.createElement('option');o.value=g.id;o.textContent=g.name;$('libraryFocus').append(o);}
- $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();});
+ $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();rewards.paint();});
  const speak=(text,options={})=>voice.say(text,options);
  function cancelIntro(){introGeneration++;introducing=false;clearTimeout(introTimer);resolveWait?.();resolveWait=null;voice.cancel();$('introCue').hidden=true;}
  function releaseViewer(){viewerGeneration++;viewer?.dispose();viewer=null;}
@@ -19,7 +21,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   const poster=document.createElement('img');poster.src=`/models/previews/${id}.png`;poster.alt='';poster.width=512;poster.height=512;poster.loading='lazy';poster.decoding='async';button.append(poster);
   button.addEventListener('click',()=>{cancelIntro();showModel(id);speak(m.name,{interrupt:true});});card.append(button);$('movementCards').append(card);
  }
- function paginate(){const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;}
+ function paginate(){rewards.paint();const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;}
  $('previousPage').addEventListener('click',()=>{page--;paginate();});$('nextPage').addEventListener('click',()=>{page++;paginate();});
  $('libraryFocus').value=filter;paginate();
  async function showModel(id){

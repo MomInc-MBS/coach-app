@@ -19,7 +19,7 @@ export function initHardware(){
   const target=$('goalSlider');target.max=Math.max(0,goal.options.length-1);target.value=goal.selectedIndex;
   const chosen=goal.selectedOptions[0];if(chosen){target.setAttribute('aria-valuetext',chosen.textContent);$('goalSetting').textContent=chosen.textContent;$('goalMin').textContent=goal.options[0].value;$('goalMax').textContent=goal.options[goal.options.length-1].value;target.style.setProperty('--fill',`${100*goal.selectedIndex/Math.max(1,goal.options.length-1)}%`);}
  }
- function selectExercise(id){if(goal.disabled)return;if(id!==select.value){select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));}sync();}
+ function selectExercise(id){if(goal.disabled)return;window.dispatchEvent(new Event('myr5:exercise-selected'));if(id!==select.value){select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));}sync();}
  function choose(index){if(goal.disabled)return;const next=FOCUS_GROUPS[clamp(index,0,FOCUS_GROUPS.length-1)].id;selectExercise(exerciseAt(next,remembered.get(next)??0).id);}
  function position(e){const r=dial.getBoundingClientRect(),angle=Math.atan2(e.clientX-r.left-r.width/2,-(e.clientY-r.top-r.height/2))*180/Math.PI;return Math.round((clamp(angle,-135,135)+135)/270*(FOCUS_GROUPS.length-1));}
  dial.addEventListener('pointerdown',e=>{if(goal.disabled)return;e.preventDefault();dial.focus({preventScroll:true});pointer=e.pointerId;dial.setPointerCapture(pointer);pending=position(e);draw(pending);});

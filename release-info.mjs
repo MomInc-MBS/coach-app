@@ -1,6 +1,9 @@
-export const RELEASE=Object.freeze({id:'2026-09-10-weapons-1',title:'Your weapons evolve.',date:'2026-09-10',url:'https://myr5.mominc.online/pose.html',notes:[
- '20 weapon types. Bigger animations with every upgrade.',
- 'Earn special abilities at tiers 4, 8, 12, 16 and 20.',
- 'Use your special, then let it recharge.',
- 'Matching weapons in the Gala and War Room.'
+import {BUILD_ID} from './release-build.mjs';
+export const RELEASE=Object.freeze({id:'2026-09-10-training-1-'+BUILD_ID,title:'Your arsenal. Your daily orders.',date:'2026-09-10',url:'https://myr5.mominc.online/pose.html',notes:[
+ 'Your Gala character and equipped weapon now animate beneath Coach.',
+ 'Each completed category day earns 100 category XP for its weapons.',
+ 'Damage starts at 10. Login streak × weapon level; full breathing adds ×100 today.',
+ 'Arm up to three daily reminders. MOM gets firmer after missed training days.',
+ 'Tabbed How to play, terminal settings, movement previews, and a left-side Special button.',
+ 'Future updates install when you’re idle and announce themselves here.'
 ]});

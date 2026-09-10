@@ -1,5 +1,6 @@
 /* Focus dial and one exercise slider; the set target lives in Pod controls. */
 .difficulty-control #variationName{display:block;margin:12px 0 4px;color:#ffe0a6;font:700 19px/1.4 var(--pixel-font);overflow-wrap:anywhere}
+.difficulty-control button#variationName{padding:6px 0;background:none;border:0;border-radius:0;text-align:left;text-decoration:underline;text-decoration-color:#ffe0a666;text-underline-offset:5px;min-height:44px;cursor:pointer}
 .difficulty-control label,.difficulty-control output{font-size:14px}
 .difficulty-control input{height:44px;margin:6px 0}
 .difficulty-control .slider-scale{font:12px/1.4 Arial,sans-serif}
@@ -51,3 +52,6 @@
 @media(max-width:370px){.exercise-dial{width:68px;height:68px}.dial-controls{gap:5px}.dial-controls button{min-width:29px}.difficulty-control #variationName{font-size:17px}}
 
 .app-update-banner{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:12px;right:12px;z-index:9999;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px;background:#163e34;color:#eefff5;border:2px solid #a6d4bb;border-radius:12px;box-shadow:0 8px 30px #0009;font:16px/1.4 Arial,sans-serif}.app-update-banner[hidden]{display:none}.app-update-banner button{font:14px Arial,sans-serif;min-height:44px;padding:10px}.release-settings{margin-top:20px;border-top:1px solid #917885;padding-top:8px;font:16px/1.5 Arial,sans-serif}.release-settings li{margin:8px 0}.release-settings input{width:100%;padding:12px;font-size:16px}.release-settings button{min-height:44px;margin:8px 8px 8px 0}
+.training-rewards{padding:10px 12px;margin:8px 0 12px;border:1px solid #729b9a;background:#14282dcc;color:#e5fff6}.training-rewards p{margin:0;font-size:1rem}.training-reward-weapons{display:flex;gap:20px;flex-wrap:wrap}.training-reward-weapons>div{display:flex;align-items:center;gap:8px;min-width:130px;font-size:.875rem}.training-reward-weapons canvas{width:30px;height:54px;image-rendering:pixelated}.training-rewards small{font-size:.875rem;color:#bcd7d3}
+
+#variationName{display:block;min-height:44px;padding:6px 0;border:0;border-radius:0;background:none;color:inherit;text-align:left;text-decoration:underline;text-decoration-color:#a8cab5;text-underline-offset:5px;font:inherit;font-weight:700;cursor:pointer}

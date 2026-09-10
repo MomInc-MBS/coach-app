@@ -1,0 +1,19 @@
+import {reminderInput,fail} from './domain.mjs';
+export async function readCoachPlan(database,user){const row=await database.prepare('SELECT value FROM system WHERE key=?').bind('coach-plan:'+user).first();if(!row)return {enabled:false,count:3,times:['09:00','14:00','19:00'],tone:'cheeky',ids:[]};try{return JSON.parse(row.value);}catch{return {enabled:false,count:3,times:['09:00','14:00','19:00'],tone:'cheeky',ids:[]};}}
+export async function saveCoachPlan(database,user,input){
+ if(!Number.isInteger(input.count)||input.count<1||input.count>3||!Array.isArray(input.times)||input.times.length!==input.count||new Set(input.times).size!==input.count)fail('Choose one to three different reminder times.');
+ const prior=await readCoachPlan(database,user),ids=Array.from({length:input.count},(_,i)=>prior.ids?.[i]||crypto.randomUUID());
+ const rows=input.times.map((time,index)=>reminderInput({id:ids[index],kind:'workout',time,timezone:input.timezone,enabled:input.enabled===true,quietStart:input.quietStart||'22:00',quietEnd:input.quietEnd||'07:00',tone:input.tone||'cheeky',daysPerWeek:input.daysPerWeek??7}));
+ const plan={enabled:input.enabled===true,count:rows.length,times:rows.map(r=>r.time),timezone:rows[0].timezone,quietStart:rows[0].quietStart,quietEnd:rows[0].quietEnd,tone:rows[0].tone,daysPerWeek:rows[0].daysPerWeek,ids};
+ const statements=(prior.ids||[]).filter(id=>!ids.includes(id)).map(id=>database.prepare('DELETE FROM reminders WHERE id=? AND user_id=?').bind(id,user));
+ for(const r of rows)statements.push(database.prepare('INSERT INTO reminders(id,user_id,kind,time,timezone,enabled,quiet_start,quiet_end,tone,days_per_week) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET time=excluded.time,timezone=excluded.timezone,enabled=excluded.enabled,quiet_start=excluded.quiet_start,quiet_end=excluded.quiet_end,tone=excluded.tone,days_per_week=excluded.days_per_week WHERE reminders.user_id=excluded.user_id').bind(r.id,user,r.kind,r.time,r.timezone,r.enabled,r.quietStart,r.quietEnd,r.tone,r.daysPerWeek));
+ statements.push(database.prepare('INSERT INTO system(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind('coach-plan:'+user,JSON.stringify(plan)));await database.batch(statements);return plan;
+}
+export async function syncTrainingStatus(database,user,input,now=Date.now()){
+ const today=Math.floor(now/86400000);if(!Number.isSafeInteger(input.startedDay)||input.startedDay<0||input.startedDay>today||(input.lastCompletedDay!=null&&(!Number.isSafeInteger(input.lastCompletedDay)||input.lastCompletedDay<input.startedDay||input.lastCompletedDay>today)))fail('Invalid training status.');
+ await database.prepare("INSERT INTO system(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=json_object('startedDay',min(json_extract(system.value,'$.startedDay'),json_extract(excluded.value,'$.startedDay')),'lastCompletedDay',nullif(max(coalesce(json_extract(system.value,'$.lastCompletedDay'),-1),coalesce(json_extract(excluded.value,'$.lastCompletedDay'),-1)),-1),'syncedAt',max(json_extract(system.value,'$.syncedAt'),json_extract(excluded.value,'$.syncedAt')))").bind('training:'+user,JSON.stringify({startedDay:input.startedDay,lastCompletedDay:input.lastCompletedDay??null,syncedAt:now})).run();return {synced:true};
+}
+export async function claimNotificationSlot(database,user,day,reminder){
+ const key=`notify-budget:${user}:${day}`;
+ return !!await database.prepare("INSERT INTO system(key,value) VALUES(?,json_array(?)) ON CONFLICT(key) DO UPDATE SET value=CASE WHEN EXISTS(SELECT 1 FROM json_each(system.value) WHERE value=?) THEN system.value ELSE json_insert(system.value,'$[#]',?) END WHERE json_array_length(system.value)<3 OR EXISTS(SELECT 1 FROM json_each(system.value) WHERE value=?) RETURNING key").bind(key,reminder,reminder,reminder,reminder).first();
+}

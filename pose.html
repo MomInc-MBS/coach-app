@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="/personal-tracker.css"><link rel="stylesheet" href="/scoreboard.css">
 <link rel="stylesheet" href="/pod/retro-rooms.css">
 <link rel="stylesheet" href="/pod/weapon-abilities.css">
+<link rel="stylesheet" href="/coach-hub.css"><link rel="stylesheet" href="/pod/home-character.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark.png" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -45,6 +46,7 @@
   <div class="pod-nameplate"><span>YOUR COACH</span><a href="/creature/index.html">Customize ↗</a></div>
   <div id="cameraPreview" class="camera-preview"><video id="v" playsinline muted></video><canvas id="c"></canvas><span id="previewLabel">CAMERA OFF</span></div>
  </section></div>
+  <section id="homeCharacter" class="home-character" aria-label="Your Gala character" hidden><button type="button" aria-label="Play your equipped weapon attack"><canvas width="160" height="168" role="img" aria-label="Your Gala character"></canvas><span data-weapon></span></button></section>
   <div id="hud" class="simple-counter"><div class="counter-readout"><small id="setNumber">SET 01</small><span id="primary">00</span><div class="counter-target"><span id="primaryLabel">reps</span><span class="target-divider" aria-hidden="true"></span><span>Goal <span id="goalValue">3</span></span></div></div></div>
  </div>
  <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">Ready when you are.</p></div>
@@ -52,7 +54,7 @@
 
   <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">MOVEMENTS ↗</button></div>
   <div class="signal-control"><label>SOUND</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div></div>
-  <div class="goal-control difficulty-control"><div><label for="difficultySlider">DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><strong id="variationName" aria-live="polite">Knee push-up</strong><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
+  <div class="goal-control difficulty-control"><div><label for="difficultySlider">DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><button type="button" id="variationName" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement">Knee push-up</button><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
   <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
   <p id="status" role="status">Ready</p>
@@ -74,14 +76,14 @@
   <div id="damageFloat" class="damage-float" aria-hidden="true"></div>
   <div class="player-platform"><div class="platform-top"></div><div class="platform-edge"></div><div class="platform-thruster"></div><canvas id="restAvatar" width="64" height="96" role="img" aria-label="Your Gala character on the floating platform"></canvas></div>
   <canvas id="restWeaponFx" width="640" height="360" aria-hidden="true"></canvas>
+  <div class="weapon-ability"><button id="weaponSpecial" disabled>Special · tier 4</button><progress id="weaponCooldown" max="1" value="1" aria-label="Special ability cooldown"></progress></div>
   <div class="rest-hand"><div id="restHandMount"></div><img id="restHandFallback" src="/handborne/previews/family-11.png?v=5" alt="Your Helping Hand" hidden></div>
   <div class="player-name"><span id="restGuest">Gala guest</span><span id="restLevel">LV. 01</span></div>
  </section>
  <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand ready</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
  <p id="restFeedback" class="rest-feedback" role="status"></p>
- <div class="weapon-ability"><button id="weaponSpecial" disabled>Special · tier 4</button><progress id="weaponCooldown" max="1" value="1" aria-label="Special ability cooldown"></progress></div>
  <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">+30 seconds</button></div></div>
- <p id="shieldNote" class="shield-note">Damage unlocks at level 50.</p>
+ <p id="shieldNote" class="shield-note">Sign in to power your weapon.</p>
 </main>
 <dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Settings</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
  <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
@@ -132,7 +134,7 @@
   </div>
   <div id="handCursor" hidden aria-hidden="true"></div>
 </dialog>
-<script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/dj-identity.js"></script>
+<script src="/workout-tracks.js"></script><script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/gala-performer.js"></script><script src="/pod/dj-identity.js"></script>
 <script type="module" src="/app.mjs"></script>
 <script type="module" src="/launch.mjs?v=quick-install-v1"></script>
 <script type="module" src="/creature/assets/phone.js"></script>

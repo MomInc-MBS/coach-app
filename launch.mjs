@@ -1,5 +1,6 @@
 import {VOICE_MANIFEST,VOICE_CACHE} from './robot-audio.mjs';
 import {initAppUpdates} from './app-updates.mjs';
+import {mountCoachHub} from './coach-hub.mjs';
 import {authFetch,signOut} from './auth-client.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
@@ -15,8 +16,9 @@ import {mountMealScanner} from './meal-scanner.mjs';
 import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
 mountLaunch();
+mountCoachHub({api});
 mountGalaReturn();
-mountMeditation();
+mountMeditation({api,onComplete:refresh});
 mountMealScanner();
 const mealNutrition=mountMealNutrition();
 const reminderControls=mountReminderControls();
@@ -32,7 +34,7 @@ export async function api(path,method='GET',data){const response=await authFetch
 const button=(text,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.onclick=fn;return b;};
 function download(data,name,type='application/json'){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 function publishProgress(p){window.dispatchEvent(new CustomEvent('myr5:account-progress',{detail:p}));set('accountLevel',`Level ${p.level}`);set('accountSets',`${p.completedSets} completed sets`);$('rewardList').replaceChildren();for(const [label,key,sets] of [['Ember','ember',4],['Arc','arc',16],['Frost','frost',36],['Shield break','shieldBreak',196]]){const row=document.createElement('li');row.className='unlock-row';row.dataset.unlocked=String(p.unlocks[key]);const name=document.createElement('span'),state=document.createElement('span');name.textContent=label;state.textContent=p.unlocks[key]?'✓ Unlocked':`${Math.max(0,sets-p.completedSets)} sets left`;row.append(name,state);$('rewardList').append(row);}}
-async function refresh(){try{const value=await api('/api/account');account=value;revision=value.revision;applyCoachAccount(value);$('signIn').hidden=true;$('accountContent').hidden=false;$('accountSettingsContent').hidden=false;set('accountName',value.user.provider==='clerk'?(window.Clerk?.user?.primaryEmailAddress?.emailAddress||value.user.email):value.user.email);publishProgress(value.progress);set('accountStatus','Progress synced');set('syncBadge','Synced');set('pushStatus',value.push.schedulerActive?'Online reminder sender is running. Enable notifications on each device.':'The reminder sender is connecting or temporarily unavailable. Try again shortly.');await syncDeviceSwitch();await flushSets();return value;}catch(e){if(e.status===401){account=null;scoreboard.clear();clearCoachAccount();$('signIn').hidden=false;$('accountContent').hidden=true;$('accountSettingsContent').hidden=true;$('workoutList').replaceChildren();$('mealList').replaceChildren();$('reminderList').replaceChildren();reminderSnapshot=null;liveReminders.update([]);await syncDeviceSwitch();set('accountName','Sign in to sync');set('syncBadge','Sign in to save progress');}else {if(account)account.push={...account.push,schedulerActive:false};liveReminders.render();set('syncBadge',navigator.onLine?e.message:'Offline · reconnect to sync');if(!account){clearCoachAccount();const gate=document.getElementById('coachSetupGate');gate.querySelector('p').textContent=navigator.onLine?'Your account could not connect. Retry coach setup.':'Connect to the internet to verify your saved coach setup.';}}return null;}}
+async function refresh(){try{const value=await api('/api/account');account=value;revision=value.revision;applyCoachAccount(value);$('signIn').hidden=true;$('accountContent').hidden=false;$('accountSettingsContent').hidden=false;set('accountName',value.user.provider==='clerk'?(window.Clerk?.user?.primaryEmailAddress?.emailAddress||value.user.email):value.user.email);publishProgress(value.progress);set('accountStatus','Progress synced');set('syncBadge','Synced');set('pushStatus',value.push.environment==='preview'?'Local preview · open the live app to connect notifications.':value.push.schedulerActive?'Online reminder sender is running. Enable notifications on each device.':'The reminder sender is connecting or temporarily unavailable. Try again shortly.');await syncDeviceSwitch();await flushSets();return value;}catch(e){if(e.status===401){account=null;scoreboard.clear();clearCoachAccount();$('signIn').hidden=false;$('accountContent').hidden=true;$('accountSettingsContent').hidden=true;$('workoutList').replaceChildren();$('mealList').replaceChildren();$('reminderList').replaceChildren();reminderSnapshot=null;liveReminders.update([]);await syncDeviceSwitch();set('accountName','Sign in to sync');set('syncBadge','Sign in to save progress');}else {if(account)account.push={...account.push,schedulerActive:false};liveReminders.render();set('syncBadge',navigator.onLine?e.message:'Offline · reconnect to sync');if(!account){clearCoachAccount();const gate=document.getElementById('coachSetupGate');gate.querySelector('p').textContent=navigator.onLine?'Your account could not connect. Retry coach setup.':'Connect to the internet to verify your saved coach setup.';}}return null;}}
 const pendingKey=user=>`myr5-pending-sets:${user}`;
 function pending(user){try{return JSON.parse(localStorage.getItem(pendingKey(user))||'[]');}catch{return [];}}
 async function flushSets(){if(!account)return;const user=account.user.id,queue=pending(user);for(const item of queue){try{const r=await api('/api/workouts/complete','POST',item);const rest=pending(user).filter(x=>x.id!==item.id);localStorage.setItem(pendingKey(user),JSON.stringify(rest));publishProgress(r.progress);}catch(e){set('syncBadge',`Set waiting to sync: ${e.message}`);break;}}}
@@ -82,7 +84,7 @@ $('notificationSwitch').onclick=async()=>{
   if(!('Notification'in window)||!('PushManager'in window))throw Error('Install Coach on your home screen and use a browser that supports notifications.');
   if(turnOff){const reg=registration||await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub){await api('/api/push/unsubscribe','POST',{endpoint:sub.endpoint});await sub.unsubscribe();}set('pushStatus','Reminders are off on this device.');}
   else{
-   if(!account?.push.configured)throw Error('The notification service is not configured yet.');
+   if(account?.push.environment==='preview')throw Error('Notifications connect in the live app: myr5.mominc.online.');if(!account?.push.configured)throw Error('The notification sender could not connect. Retry while online.');
    if(await Notification.requestPermission()!=='granted')throw Error('Notifications were not allowed. Enable them in your phone settings.');
    const reg=registration||await navigator.serviceWorker.ready,existing=await reg.pushManager.getSubscription(),sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:fromBase64(account.push.publicKey)});
    try{await api('/api/push/subscribe','POST',sub.toJSON());}catch(e){if(!existing)await sub.unsubscribe();throw e;}

@@ -2,7 +2,7 @@ import {GALA_KEY,loadGala} from './identity.mjs';
 import {abilityFor,evolution} from './weapon-evolution.mjs';
 import {drawAnimatedWeapon} from './weapon-animator.mjs';
 export const MELEE=new Set(['rapier','greatsword','dagger','spear','trident','scythe','gauntlets']);
-export function equipmentProgress(value={}){return {activeDays:Math.max(0,Number(value.activeDays)||0),totalXp:Math.max(0,Number(value.activeDays)||0)*100,strength:1+Math.floor(Math.max(0,Number(value.completedSets)||0)/4)};}
+export function equipmentProgress(value={}){return {activeDays:Math.max(0,Number(value.activeDays)||0),totalXp:Math.max(0,Number(value.activeDays)||0)*100,strength:1+Math.floor(Math.max(0,Number(value.completedSets)||0)/4),...(value.trainingVersion===1?{trainingVersion:1,training:value.training}:{})};}
 
 export function initRestArena(){
  const A=window.GalaAvatar,W=window.GalaWeapons,canvas=document.getElementById('restAvatar'),scene=document.querySelector('.encounter');
@@ -12,7 +12,7 @@ export function initRestArena(){
  let anchor={x:0,y:0,scale:1},lastWeapon='';
  canvas.width=160;canvas.height=168;
  window.GalaProgress={read:()=>progress};
- for(const item of W.types){const option=document.createElement('option');option.value=item.id;option.textContent=item.name;type.append(option);}
+ for(const item of W.types){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+W.requirements({type:item.id,tier:0}).label;type.append(option);}
  function measure(){
   const bounds=scene.getBoundingClientRect(),avatar=canvas.getBoundingClientRect();
   if(!bounds.width||!bounds.height)return;
@@ -26,9 +26,10 @@ export function initRestArena(){
   equipped=W.unlocked(selected,progress)?selected:{type:selected.type,tier:0};
   const key=equipped.type+':'+equipped.tier;if(lastWeapon!==key){action=null;queued=false;lastWeapon=key;}
   A.draw(body,look,{base:false,weapon:false,prop:false});type.value=selected.type;tier.replaceChildren();
-  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=document.createElement('option'),r=W.requirements(item);option.value=i;option.disabled=!W.unlocked(item,progress);option.textContent=W.tiers[i]+(option.disabled?` · ${r.days} days / strength ${r.strength}`:'');tier.append(option);}
+  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=document.createElement('option'),r=W.requirements(item);option.value=i;option.disabled=!W.unlocked(item,progress);option.textContent=W.tiers[i]+(option.disabled?` · ${r.xp} ${r.label} XP`:'');tier.append(option);}
   tier.value=equipped.tier;const ability=abilityFor(equipped);
-  note.textContent=ability?`${ability.name} · ${ability.cooldownMs/1000}s cooldown`:'Special unlocks at tier 4.';
+  const track=W.requirements(equipped),earned=W.trainingProgress(equipped,progress);
+  note.textContent=`${track.label} · ${earned.totalXp} XP · `+(ability?`${ability.name} · ${ability.cooldownMs/1000}s`:'Special at tier 4');
   if(selected.tier!==equipped.tier)note.textContent+=' Upgrade not yet earned.';
   document.getElementById('restWeaponName').textContent=W.types.find(w=>w.id===equipped.type).name;
   scene.dataset.weapon=MELEE.has(equipped.type)?'melee':'ranged';scene.classList.add('weapon-evolution');
@@ -36,7 +37,7 @@ export function initRestArena(){
   measure();draw(performance.now());
  }
  function equip(){try{const next={type:type.value,tier:Number(tier.value)};if(!W.unlocked(next,progress))return;localStorage.setItem(GALA_KEY,JSON.stringify({...look,weapon:next}));window.dispatchEvent(new Event('mominc-avatar-change'));}catch{note.textContent='Could not save this weapon.';}}
- type.addEventListener('change',equip);tier.addEventListener('change',equip);
+ type.addEventListener('change',()=>{if(!W.unlocked({type:type.value,tier:Number(tier.value)},progress))tier.value='0';equip();});tier.addEventListener('change',equip);
  function duration(){return action?.special?abilityFor(equipped)?.animationMs||1100:evolution(equipped).attackMs;}
  function draw(now){
   if(action&&now-action.startedAt>=duration()){action=queued?{startedAt:now,special:false}:null;queued=false;}
