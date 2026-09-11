@@ -7,6 +7,10 @@ import {setFlipValue,clockDigits} from '../flip-display.mjs';
 import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
 import {mountWorkoutRoute} from '../workout-route-ui.mjs';
 import {ROUTE_LINES,exerciseFamily} from '../workout-route.mjs';
+import {VOICE_MANIFEST} from '../robot-audio.mjs';
+let voiceManifest=null;
+// Fetch the clips this set will say while the camera opens; sw.js stores /voice/* in the voice cache, so RobotAudio's later fetch is a hit.
+function warmVoice(goal){try{voiceManifest??=fetch(VOICE_MANIFEST).then(r=>r.json()).catch(()=>{voiceManifest=null;return null;});voiceManifest.then(m=>{if(!m)return;const say=['Get into position.',...Array.from({length:Math.min(60,Number(goal)||0)},(_,i)=>String(i+1))];for(const p of say){const u=m.phrases[p];if(u)fetch(u,{priority:'low'}).catch(()=>{});}});}catch{}}
 const $=id=>document.getElementById(id),PROGRESS='myr5-workout-progress-v1',COOLDOWN='myr5-special-cooldown-v1';
 const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
@@ -45,7 +49,7 @@ export function initPod({voice,movements,onStop,onNext}){
   }
   encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();route.render();if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(mode);
  }
- async function beginSet(mode){configure(mode);if(!route.canStart(mode))throw Error(awaitingRound?'Save the previous round before starting another. Reconnect to sync.':'Five rounds completed for this exercise family today. Choose another family.');if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
+ async function beginSet(mode){configure(mode);if(!route.canStart(mode))throw Error(awaitingRound?'Save the previous round before starting another. Reconnect to sync.':'Five rounds completed for this exercise family today. Choose another family.');if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));warmVoice($('goal').value);flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
  function setGoal(goal){if(![...$('goal').options].some(o=>Number(o.value)===goal)){const option=document.createElement('option');option.value=goal;option.textContent=goal+' '+(['hold','pace'].includes(movements[currentMode].kind)?'seconds':movements[currentMode].kind==='steps'?'steps':'reps');$('goal').append(option);}$('goal').value=goal;$('goal').dispatchEvent(new Event('change',{bubbles:true}));}
  function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';}
  function power(){const p=$('coachPower').value;document.body.dataset.power=p;$('powerName').textContent=POWERS[p].name.toUpperCase()+' ACTIVE';store('myr5-pod-power-v1',p);}
