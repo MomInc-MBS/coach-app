@@ -40,3 +40,23 @@ body[data-power=ember]{--power:#ff9d66}body[data-power=arc]{--power:#a4caff}body
 .set-actions .primary-action{gap:8px;padding:10px 11px;white-space:nowrap}
 .coach-line #coachCaption{color:#e8d5b3}
 body:has(#library[open]) .myr5-companion-card{display:none!important}
+/* Phase 1 · header carries the deck readouts */
+.ship-header .deck-readout{display:flex;gap:10px;margin-left:12px;font:9px ui-monospace,monospace;letter-spacing:1.4px;color:#b8a6c8;white-space:nowrap;align-items:center}
+.ship-header .deck-readout .status-light{margin-right:4px}
+@media(max-width:420px){.ship-header .deck-readout{font-size:8px;gap:6px;margin-left:6px}}
+/* Phase 1 · BEGIN stays in reach on phones (fixed above the dock; static on desktop) */
+.set-summary{display:none}
+@media(max-width:899px){
+ body[data-screen="pod"] .set-actions{position:fixed;left:13px;right:13px;bottom:calc(112px + env(safe-area-inset-bottom));z-index:12;margin:0;padding:6px 0 0;display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;min-width:0;background:linear-gradient(#23192d00,#23192d 45%)}
+ body[data-screen="pod"][data-tracking="true"] .set-actions{bottom:calc(10px + env(safe-area-inset-bottom))}
+ body[data-screen="pod"] .set-actions #start{flex:1 1 auto}
+ body[data-screen="pod"] .set-actions #stop{flex:0 0 auto;min-width:64px}
+ body[data-screen="pod"] .set-summary{display:block;flex-basis:100%;margin:0;text-align:center;font:600 12px ui-monospace,monospace;letter-spacing:.08em;color:#ffd36e}
+ body[data-screen="pod"] .workout-console{padding-bottom:96px}
+}
+/* Phase 1 · counter is compact until a set starts */
+body:not([data-tracking="true"]) #hud{padding-top:4px}
+body:not([data-tracking="true"]) #hud .counter-readout{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+body:not([data-tracking="true"]) #primary,body:not([data-tracking="true"]) .workout-console #primary{--tile-width:14px;--tile-height:22px;--digit-size:18px}
+/* Phase 1 · the home character replaces the footer link when it is showing */
+body:has(#homeCharacter:not([hidden])) .crew-footer{display:none}

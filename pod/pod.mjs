@@ -47,6 +47,7 @@ export function initPod({voice,movements,onStop,onNext}){
    const values=[...new Set([1,2,3,5,9,10,15,20,30,45,60,90,120,180,planned,Math.max(1,planned-1),planned+1])].sort((a,b)=>a-b);
    $('goal').replaceChildren(...values.map(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' '+unit;return o;}));$('goal').value=planned;
   }
+  {const k=movements[mode].kind,u=k==='hold'||k==='pace'?'seconds':k==='steps'?'steps':k==='jumps'?'jumps':'reps';$('setSummary').textContent=movements[mode].name+' · '+$('goal').value+' '+u;}
   encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();route.render();if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(mode);
  }
  async function beginSet(mode){configure(mode);if(!route.canStart(mode))throw Error(awaitingRound?'Save the previous round before starting another. Reconnect to sync.':'Five rounds completed for this exercise family today. Choose another family.');if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));warmVoice($('goal').value);flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
