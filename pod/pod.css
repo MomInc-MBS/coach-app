@@ -62,3 +62,6 @@ body:not([data-tracking="true"]) #primary,body:not([data-tracking="true"]) .work
 body:has(#homeCharacter:not([hidden])) .crew-footer{display:none}
 /* Phase 3 · the slider is the one goal control; #goal stays as the value store */
 .settings-fields label:has(#goal){display:none}
+/* Phase 3b · condense the rest screen */
+.boss-status-row{display:grid;grid-template-columns:1fr auto;gap:8px;width:100%}
+#restWeaponName,#shieldNote:empty{display:none}

@@ -61,7 +61,6 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
    if(run!==handGeneration||!dialog.open){control.stop();return;}$('toggleHands').disabled=false;$('toggleHands').textContent='Disable exercise gestures';$('toggleHands').setAttribute('aria-pressed','true');
   }catch(error){if(run===handGeneration){stopHands(error.message);speak('Gesture tracking unavailable. Touch controls are ready.',{interrupt:true});}}
  });
- $('openLibrary').addEventListener('click',()=>{onOpen();selection(movement());home();dialog.showModal();speak('Choose your movement.',{interrupt:true});});
  $('startFromLibrary').addEventListener('click',()=>introduce(selected));
  $('closeLibrary').addEventListener('click',()=>{cancelIntro();dialog.close();speak('Library closed.',{interrupt:true});});
  $('backLibrary').addEventListener('click',()=>{home();speak('Movements.',{interrupt:true});});
@@ -69,7 +68,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  $('holoReset').addEventListener('click',()=>{viewer?.reset();if(!introducing)speak('View reset.');});$('zoomIn').addEventListener('click',()=>{viewer?.zoom(.85);if(!introducing)speak('Closer.');});$('zoomOut').addEventListener('click',()=>{viewer?.zoom(1.18);if(!introducing)speak('Further away.');});
  $('holoPlay').addEventListener('click',()=>{if(viewer){if(introducing)cancelIntro();const playing=viewer.toggle();$('holoPlay').textContent=playing?'Pause animation':'Play animation';$('useHologram').textContent='Begin';speak(playing?'Example playing.':'Example paused.');}});
  dialog.addEventListener('cancel',cancelIntro);
- dialog.addEventListener('close',()=>{stopHands();releaseViewer();$('openLibrary').focus();});
+ dialog.addEventListener('close',()=>{stopHands();releaseViewer();$('movementRow').focus();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&dialog.open){cancelIntro();stopHands('Gestures paused');releaseViewer();home();}});
  window.addEventListener('pagehide',()=>{cancelIntro();stopHands();releaseViewer();});
  return {introduce};

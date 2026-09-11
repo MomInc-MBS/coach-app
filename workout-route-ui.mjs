@@ -2,18 +2,20 @@ import {exerciseFamily,nextChallenge,routeDay,ROUTE_LINES} from './workout-route
 
 export function mountWorkoutRoute({mode,busy,pending,onNext}){
  const card=document.createElement('section');card.className='workout-route';card.setAttribute('aria-label','Your exercise route');
- card.innerHTML='<small>NEXT</small><p data-next role="status">Loading…</p><p data-rounds></p><button type="button" data-follow>Next level ›</button><details><summary>Levels</summary><ol data-path></ol></details>';
- document.querySelector('.difficulty-control').after(card);
+ card.innerHTML='<p data-next role="status">Loading…</p><button type="button" data-follow>Next level ›</button>';
+ document.querySelector('.difficulty-control .slider-scale').after(card);
+ const levels=document.createElement('details');levels.className='workout-route';levels.innerHTML='<summary>Easy-to-hard route</summary><ol data-path></ol>';
+ document.querySelector('#movementCards').before(levels);
  const rest=document.createElement('section');rest.className='workout-route rest-challenge';rest.hidden=true;rest.setAttribute('aria-label','Next round challenge');rest.innerHTML='<p data-line></p><strong data-next></strong><p data-rounds></p>';
  document.querySelector('.rest-receipt').after(rest);
  function current(){const route=window.coachProgress?.exerciseRoute;return route&&route.day===routeDay(Date.now(),route.timezone)?route:null;}
  function suggestion(){return pending()?null:nextChallenge(current(),mode());}
  function render(){
   const route=current(),group=route?.groups?.[exerciseFamily(mode())],next=suggestion(),waiting=pending();
-  card.querySelector('[data-next]').textContent=waiting?'Saving…':next?`${next.name} · ${next.goal} ${next.unit}`:group?'Done for today.':'Loading…';
-  card.querySelector('[data-rounds]').textContent=group?`${group.name} · round ${group.today} of ${route.limit}${group.mastered?' · top level':''}${next?.changedFamily?' · next: '+route.groups[next.group].name:''}`:'';
+  const roundsText=group?`${group.name} · round ${group.today} of ${route.limit}${group.mastered?' · top level':''}${next?.changedFamily?' · next: '+route.groups[next.group].name:''}`:'';
+  card.querySelector('[data-next]').textContent=waiting?'Saving…':next?`${next.name} · ${next.goal} ${next.unit}${roundsText?' · '+roundsText:''}`:group?`Done for today.${roundsText?' · '+roundsText:''}`:'Loading…';
   const button=card.querySelector('[data-follow]');button.disabled=busy()||!next;button.textContent=next?.changedFamily?'Next focus ›':group?.mastered?'One more ›':'Next level ›';
-  const path=card.querySelector('[data-path]');path.replaceChildren(...(group?.steps||[]).map(step=>{const li=document.createElement('li');li.textContent=`${step.complete?'✓ ':''}${step.level}. ${step.name}`;if(step.mode===next?.mode)li.setAttribute('aria-current','step');return li;}));
+  levels.querySelector('[data-path]').replaceChildren(...(group?.steps||[]).map(step=>{const li=document.createElement('li');li.textContent=`${step.complete?'✓ ':''}${step.level}. ${step.name}`;if(step.mode===next?.mode)li.setAttribute('aria-current','step');return li;}));
   if(!rest.hidden){rest.querySelector('[data-line]').textContent=waiting?'Reconnect to save this round.':next?.line||ROUTE_LINES.limit;rest.querySelector('[data-next]').textContent=next?`${next.name} · ${next.goal} ${next.unit}`:'Finished for today';rest.querySelector('[data-rounds]').textContent=next?`Round ${next.round} of ${route.limit} · Level ${next.level} of ${next.maxLevel}`:'';}
  }
  card.querySelector('[data-follow]').onclick=()=>{const next=suggestion();if(next&&!busy())onNext(next);};
