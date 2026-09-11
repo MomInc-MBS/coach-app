@@ -27,8 +27,8 @@ export function initPod({voice,movements,onStop,onNext}){
   if(!avatar)return;
   try{look=loadGala(localStorage,avatar);}catch{look={look:structuredClone(avatar.defaultLook),linked:false};}
   for(const id of ['miniAvatar','identityAvatar'])avatar.draw($(id),look.look,{base:id!=='restAvatar'});
-  const name=window.MBS_DJ?.display()||(look.linked?(look.look.name||'Gala guest'):'Guest preview');arena.load();$('guestLabel').textContent=look.linked?name:'Your avatar';$('restGuest').textContent=name;$('identityName').textContent=name;
-  $('restAvatar').setAttribute('aria-label',name+' on the floating platform');$('identityStatus').textContent=look.linked?'Appearance saved':'Guest appearance';
+  const name=window.MBS_DJ?.display()||(look.linked?(look.look.name||'Guest'):'Guest');arena.load();$('guestLabel').textContent=look.linked?name:'Gala look';$('restGuest').textContent=name;$('identityName').textContent=name;
+  $('restAvatar').setAttribute('aria-label',name+' on the floating platform');$('identityStatus').textContent=look.linked?'Saved':'Guest';
  }
  function moveCoach(){
   card??=document.querySelector('.myr5-companion-card');if(!card)return;
@@ -50,26 +50,26 @@ export function initPod({voice,movements,onStop,onNext}){
   {const k=movements[mode].kind,u=k==='hold'||k==='pace'?'seconds':k==='steps'?'steps':k==='jumps'?'jumps':'reps';$('setSummary').textContent=movements[mode].name+' · '+$('goal').value+' '+u;}
   encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();route.render();if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(mode);
  }
- async function beginSet(mode){configure(mode);if(!route.canStart(mode))throw Error(awaitingRound?'Save the previous round before starting another. Reconnect to sync.':'Five rounds completed for this exercise family today. Choose another family.');if(!window.coachAccount)throw Error('Your account is still connecting. Try again in a moment.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));warmVoice($('goal').value);flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
+ async function beginSet(mode){configure(mode);if(!route.canStart(mode))throw Error(awaitingRound?'Reconnect to save your last round.':'Five rounds today for this focus. Pick another.');if(!window.coachAccount)throw Error('Connecting… try again.');const ticket=await window.coachAccount.start(mode,Number($('goal').value));flow.start(mode,Number($('goal').value),Number($('restDuration').value));warmVoice($('goal').value);flow.active.cloudId=ticket.id;document.body.dataset.screen='pod';clearInterval(restTimer);}
  function setGoal(goal){if(![...$('goal').options].some(o=>Number(o.value)===goal)){const option=document.createElement('option');option.value=goal;option.textContent=goal+' '+(['hold','pace'].includes(movements[currentMode].kind)?'seconds':movements[currentMode].kind==='steps'?'steps':'reps');$('goal').append(option);}$('goal').value=goal;$('goal').dispatchEvent(new Event('change',{bubbles:true}));}
  function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';}
  function power(){const p=$('coachPower').value;document.body.dataset.power=p;$('powerName').textContent=POWERS[p].name.toUpperCase()+' ACTIVE';store('myr5-pod-power-v1',p);}
- function syncCombat(){flow.weapon=arena.weapon;const p=flow.combat;$('shieldNote').textContent=p?`${p.loginStreak} login days × weapon level ${arena.weapon.tier+1}${p.breathingCompleted?' ×100 breathing':''} · ${flow.attackDamage} damage`:`BASE POWER · ${flow.attackDamage} damage`;}
+ function syncCombat(){flow.weapon=arena.weapon;const p=flow.combat;$('shieldNote').textContent=p?`${flow.attackDamage} dmg / hit · ${p.loginStreak}-day streak${p.breathingCompleted?' · ×100 breath':''}`:`${flow.attackDamage} dmg / hit`;}
  function specialControls(){syncCombat();const weapon=arena.weapon,ability=abilityFor(weapon),remaining=flow.abilities.remaining(),button=$('weaponSpecial');button.disabled=flow.phase!=='rest'||!ability||remaining>0;button.textContent=!ability?'Special · tier 4':remaining?`${ability.name} · ${Math.ceil(remaining/1000)}s`:ability.name;$('weaponCooldown').value=remaining?Math.max(0,1-remaining/Math.max(1,flow.abilities.durationMs)):1;}
  $('coachPower').value=loadPower({getItem:safeRead});power();
- function paintHealth(){const hp=flow.coachHealth;$('coachHealth').textContent=hp.toLocaleString()+' HP';$('bossHealth').style.width=(hp/COACH_HEALTH*100)+'%';$('bossHealth').parentElement.setAttribute('aria-valuenow',String(hp));}
+ function paintHealth(){const hp=flow.coachHealth;$('coachHealth').textContent=(hp>=1e9?(hp/1e9).toFixed(hp%1e9?2:0)+'B':hp.toLocaleString())+' HP';$('bossHealth').style.width=(hp/COACH_HEALTH*100)+'%';$('bossHealth').parentElement.setAttribute('aria-valuenow',String(hp));}
  function speakChallenge(){if(pendingChallenge&&flow.phase==='rest'&&!document.hidden&&!document.body.dataset.cinematic){const text=pendingChallenge;pendingChallenge=null;voice.say(text,{key:'challenge',interrupt:true});}}
  window.addEventListener('myr5:cinematic-end',speakChallenge);
- function tick(){if(flow.phase!=='rest')return;speakChallenge();const now=Date.now();if(flow.shouldEndRest(now)){leave();return;}specialControls();const remaining=flow.remaining(now),next=route.suggestion();setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0||!next;$('nextSet').textContent=remaining?'Recovering…':awaitingRound?'Waiting to sync…':next?'Preview next round →':'Finished for today';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest complete. Keep tapping to stay.',{interrupt:true});}}
+ function tick(){if(flow.phase!=='rest')return;speakChallenge();const now=Date.now();if(flow.shouldEndRest(now)){leave();return;}specialControls();const remaining=flow.remaining(now),next=route.suggestion();setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0||!next;$('nextSet').textContent=remaining?'Recovering…':awaitingRound?'Saving…':next?'Next round →':'Finished for today';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest complete. Keep tapping to stay.',{interrupt:true});}}
  function enterRest(result=null){
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
   document.body.dataset.screen='rest';$('homeScreen').hidden=true;$('restScreen').hidden=false;
-  $('restEyebrow').textContent=result?'SET COMPLETE':'REST PRACTICE';$('restHeading').textContent='Rest';
+  $('restEyebrow').textContent=result?'SET COMPLETE':'PRACTICE';$('restHeading').textContent='Rest';
   if(result)route.showResult();else route.hideResult();
   $('setReceipt').textContent=result?`${result.name} · ${Math.round(result.value)} ${movements[result.mode].kind==='hold'||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps'}`:'Practice';
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent='0 DAMAGE';paintHealth();
   syncCombat();
-  $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
+  $('restFeedback').textContent='';hand.enter();arena.start();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
   clearInterval(restTimer);restTimer=setInterval(tick,250);tick();$('restHeading').focus();
   history.replaceState(null,'','#rest');window.myr5Creature?.play(result?'celebrate':'rest');
   voice.say(result?'Set complete. Take a breath.':'Tap to strike.',{interrupt:true});
@@ -82,7 +82,7 @@ export function initPod({voice,movements,onStop,onNext}){
   hand.hit(hit);arena.attack(hit);window.myr5Creature?.play(hit.assisted?'encourage':hit.blocked?'agree':'rest');
   $('damageTotal').textContent=hit.totalDamage+' DAMAGE';paintHealth();$('damageFloat').textContent=hit.blocked?(hit.assisted?'TEAM STRIKE · BLOCKED':'BLOCKED · 0'):(hit.assisted?'TEAM −':'−')+hit.damage;
   const scene=document.querySelector('.encounter');scene.classList.remove('hit');void scene.offsetWidth;scene.classList.add('hit');clearTimeout(hitTimer);hitTimer=setTimeout(()=>scene.classList.remove('hit'),650);
-  $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.assisted?'Helping Hand lands a team strike! ':''}${hit.hits} hits. ${hit.totalDamage} damage.`;
+  $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.assisted?'Team strike! ':''}${hit.hits} hits · ${hit.totalDamage} dmg`;
   if(now-lastSpoken>10000){lastSpoken=now;window.myr5Creature?.play(hit.blocked?'agree':'encourage');voice.say(hit.blocked?'Nice teamwork. My shield is still intact. Keep training.':'You and that hand make quite a team. That one connected.',{key:'rest'});}
  });
  $('leaveRest').addEventListener('click',leave);$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
@@ -100,7 +100,7 @@ export function initPod({voice,movements,onStop,onNext}){
  $('coachPower').addEventListener('change',()=>{power();voice.say(POWERS[$('coachPower').value].name+' selected.',{interrupt:true});});
  $('restDuration').addEventListener('change',()=>voice.say($('restDuration').value+' seconds between sets.',{interrupt:true}));
  $('openIdentity').addEventListener('click',()=>{paintGuest();$('identity').showModal();voice.say('Your Gala character.',{interrupt:true});});$('closeIdentity').addEventListener('click',()=>$('identity').close());
- $('importGala').addEventListener('change',async event=>{const f=event.target.files?.[0];if(!f)return;try{if(f.size>30000)throw Error('Choose your exported Gala look file.');const imported=importGala(await f.text(),avatar);if(!store(GALA_KEY,JSON.stringify(imported)))throw Error('Could not save this appearance on your device.');paintGuest();$('identityStatus').textContent='Appearance saved';voice.say('Appearance saved',{interrupt:true});}catch(error){$('identityStatus').textContent=error instanceof SyntaxError?'That file is not a Gala look.':error.message;}finally{event.target.value='';}});
+ $('importGala').addEventListener('change',async event=>{const f=event.target.files?.[0];if(!f)return;try{if(f.size>30000)throw Error('Choose your exported Gala look file.');const imported=importGala(await f.text(),avatar);if(!store(GALA_KEY,JSON.stringify(imported)))throw Error('Could not save this appearance on your device.');paintGuest();$('identityStatus').textContent='Saved';voice.say('Saved',{interrupt:true});}catch(error){$('identityStatus').textContent=error instanceof SyntaxError?'That file is not a Gala look.':error.message;}finally{event.target.value='';}});
  window.addEventListener('storage',e=>{if(e.key===GALA_KEY)paintGuest();});window.addEventListener('mominc-avatar-change',paintGuest);
  window.addEventListener('storage',e=>{if(e.key===COOLDOWN){flow.abilities.merge(e.newValue);if(flow.phase==='rest')specialControls();}});
  document.addEventListener('visibilitychange',()=>{if(document.hidden)voice.cancel();else tick();});

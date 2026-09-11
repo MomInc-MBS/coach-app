@@ -67,7 +67,7 @@ function renderMotion(m){
   $('paceNote').hidden=m.kind!=='pace';
   pod?.render(m);
 }
-function stop(message='Stopped. Your results stay here until the next start.'){
+function stop(message='Stopped.'){
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
   pod?.stopped();
@@ -80,27 +80,27 @@ async function start(){
   try{
     await pod.beginSet(session.mode);
     if(run!==generation)return;
-    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open the HTTPS phone test link in Chrome to enable the camera.');
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open Coach over HTTPS to use the camera.');
     const selected=$('camera').value;
     const incoming=await openCamera(selected);
     if(run!==generation){incoming.getTracks().forEach(t=>t.stop());return;}
     stream=incoming;v.srcObject=stream;v.muted=true;
-    await timeout(v.play(),10000,'The camera opened but sent no video. Select the other camera and retry.');
+    await timeout(v.play(),10000,'No video. Try the other camera.');
     if(run!==generation)return;
     state.camera=cameraFacing(stream.getVideoTracks()[0],selected);
     v.style.transform=c.style.transform=state.camera==='user'?'scaleX(-1)':'none';
     await showLensInfo(stream.getVideoTracks()[0]);if(run!==generation)return;
     status('Loading tracker…');$('detail').textContent=`Video ${v.videoWidth} × ${v.videoHeight}`;state.phase='model';
-    api=api||await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Tracker library did not download. Check the phone’s internet connection.');
+    api=api||await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Tracker didn’t download. Check your connection.');
     if(run!==generation)return;
-    files=files||await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
+    files=files||await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Tracker didn’t download. Check your connection.');
     if(run!==generation)return;
     // This Pixel's GPU path lost its WebGL context. CPU is the measured baseline.
     let expired=false;
     const loading=api.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});
     loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
     let created;
-    try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
+    try{created=await timeout(loading,60000,'Tracker took too long. Tap Begin to retry.');}catch(error){expired=true;throw error;}
     if(run!==generation)return;
     tracker=created;draw=new api.DrawingUtils(g);state.delegate='CPU';state.phase='tracking';
     controls(true);
@@ -109,7 +109,7 @@ async function start(){
   }catch(error){
     if(run!==generation)return;
     generation++;release();controls(false);pod.stopped();state.phase='error';state.error=error.message;
-    status(error.name==='NotAllowedError'?'Allow camera access for this page in Chrome, then tap Start.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
+    status(error.name==='NotAllowedError'?'Allow camera access, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
   }
 }
 function loop(run){
@@ -130,7 +130,7 @@ function loop(run){
       if(pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
       if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
-      if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
+      if(state.motion.complete){renderMotion(state.motion);stop('Round complete.');voice.say('Round complete. Well done.',{interrupt:true});return;}
     }
     frame=requestAnimationFrame(()=>loop(run));
   }catch(error){generation++;release();controls(false);pod.stopped();voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
@@ -151,11 +151,11 @@ $('widest').addEventListener('click',async()=>{
   catch(error){$('lensInfo').textContent='Could not change the lens: '+error.message;}
   finally{$('widest').disabled=state.phase!=='tracking';}
 });
-window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused while the page was hidden. Tap Start for a new session.');});
-pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
+window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused. Tap Begin to continue.');});
+pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended.'),onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
 resetMovement();
 initHardware();soundSwitch();
-const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Paused.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
 
