@@ -90,11 +90,13 @@
  <p id="shieldNote" class="shield-note">Sign in to add streak power.</p>
 </main>
 <dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Settings</h2><button id="closeSettings" aria-label="Close pod controls">Close</button></header>
- <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
+ <div class="settings-fields"><h3>SET</h3><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label></div>
    <div class="goal-control"><div><label for="goalSlider" id="goalLabel">GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span id="goalMax">20</span></div></div>
+ <div class="settings-fields"><h3>COACH</h3><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
  <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice</span></div>
+ <div class="settings-fields"><h3>DEVICE</h3><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label></div>
+ <p id="lensInfo">Camera opens when you begin.</p><details id="trackingDiag" hidden><summary>Camera & tracking</summary><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Keep the listed joints in view. Estimates, not form grades.</p></details>
  <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Rest room</button></div>
- <details><summary>Camera & tracking</summary><p id="lensInfo">The camera opens when you begin a set.</p><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Keep the listed joints in view. Estimates, not form grades.</p></details>
  <div id="roundControl" hidden><select id="duration" aria-label="Legacy round duration"><option value="0">Open timer</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option></select></div>
 </dialog>
 <dialog id="identity" class="pod-dialog avatar-dialog" aria-labelledby="identityTitle">
@@ -131,9 +133,8 @@
     </section>
     <footer class="library-footer">
       <button id="startFromLibrary" data-hand class="use-movement">Start Squats</button>
-      <details id="gestureArea"><summary>Gestures</summary><div class="hand-row"><button id="toggleHands" aria-pressed="false">Enable exercise gestures</button><span id="handState" role="status">Touch controls ready</span></div>
-      <progress id="confirmProgress" max="1" value="0" aria-label="Thumbs-up confirmation"></progress>
-      <details id="handHelp"><summary>Gesture guide</summary><p>Push-ups: raise one arm and point at its upper arm with your other index finger. Squats: hands on hips. Tree: hands together overhead. Warrior: arms out in a T. Horse: hands together at your chest. Boxing: two fists near your shoulders. Jogging: pump your arms alternately four times. Jumping: hands raised apart.</p><p>Hold thumbs up to confirm.</p></details></details>
+      <details id="gestureArea"><summary>Gestures</summary><div class="hand-row"><button id="toggleHands" aria-pressed="false">Enable exercise gestures</button><span id="handState" role="status">Hold thumbs up to confirm.</span></div>
+      <progress id="confirmProgress" max="1" value="0" aria-label="Thumbs-up confirmation"></progress></details>
     </footer>
   </div>
   <div id="handCursor" hidden aria-hidden="true"></div>
