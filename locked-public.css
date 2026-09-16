@@ -1,0 +1,80 @@
+/* Public intake state: quiet, paper-like, and deliberately free of optional game surfaces. */
+html[data-public-state="locked"]{color-scheme:light;background:#e8dfcf}
+html[data-public-state="locked"] body{--wall:#e8dfcf;--purple:#315c72;--gold:#b8653c;--cream:#24313a;--muted:#5d6b6d;max-width:760px;background:#e8dfcf;color:#24313a;box-shadow:none;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+html[data-public-state="locked"] .device-bezel{display:none}
+html[data-public-state="locked"] .ship-header{height:auto;min-height:70px;padding:calc(12px + env(safe-area-inset-top)) 20px 12px;background:#f7f1e5;border-bottom:2px solid #c6b9a4;box-shadow:0 2px 0 #fff9;gap:12px}
+html[data-public-state="locked"] .mom-brand{color:#24313a;font-size:16px;letter-spacing:-.3px}
+html[data-public-state="locked"] .mom-brand img{width:30px;height:30px}
+html[data-public-state="locked"] .mom-brand>span>span{font-size:9px;letter-spacing:3px;margin-top:3px}
+html[data-public-state="locked"] .ship-location{color:#5d6b6d;font-size:10px;letter-spacing:.08em}
+html[data-public-state="locked"] .ship-header .deck-readout{color:#5d6b6d;font-size:10px;letter-spacing:.08em}
+html[data-public-state="locked"] .ship-header .status-light{background:#6b9b72;box-shadow:none}
+html[data-public-state="locked"] .ship-header .icon-button{color:#24313a;background:#e4eee8;border:1px solid #9bb9a7;border-radius:6px}
+html[data-public-state="locked"] .pod-page{padding:14px 18px max(104px,env(safe-area-inset-bottom))}
+html[data-public-state="locked"] .containment-bay{margin:0}
+html[data-public-state="locked"] .containment-pod{height:clamp(240px,38dvh,390px);border:2px solid #a9b9ae;border-radius:10px;background:#dcebe2;box-shadow:0 3px 0 #b3a995;overflow:hidden}
+html[data-public-state="locked"] .containment-pod:before,html[data-public-state="locked"] .containment-pod:after,html[data-public-state="locked"] .pod-rim,html[data-public-state="locked"] .pod-floor,html[data-public-state="locked"] .pod-inscription,html[data-public-state="locked"] .frame-bolt,html[data-public-state="locked"] .pod-top-vent{display:none}
+html[data-public-state="locked"] #homeCharacter,html[data-public-state="locked"] .coach-mount canvas,html[data-public-state="locked"] .coach-mount video{display:none!important}
+html[data-public-state="locked"] .coach-mount{inset:18px 16px 42px;background:#f7f1e5;border:1px solid #b7a994;border-radius:6px;box-shadow:inset 0 0 0 5px #f0e7d7}
+html[data-public-state="locked"] .coach-mount>*{visibility:hidden}
+html[data-public-state="locked"] .coach-mount:after{content:"MOM INC. COACH\A Ready for your next comfortable set.";white-space:pre;visibility:visible;position:absolute;inset:0;display:grid;place-content:center;text-align:center;color:#315c72;font-weight:700;line-height:1.55;letter-spacing:.02em}
+html[data-public-state="locked"] .pod-nameplate{left:16px;right:16px;height:34px;padding:0 10px;background:#c7ddcf;border:1px solid #94ab9b;border-radius:5px 5px 0 0;color:#315c72;font-size:9px}
+html[data-public-state="locked"] .pod-nameplate a{display:none}
+html[data-public-state="locked"] .workout-console{padding:14px;background:#f7f1e5;border:2px solid #b7a994;border-radius:10px;box-shadow:0 3px 0 #b3a995;color:#24313a}
+/* Locked intake stays in normal document flow.  The legacy sticky action
+   treatment is useful for the full coach, but it obscures the public focus
+   controls on short mobile viewports. */
+html[data-public-state="locked"] .workout-console .calibration-grid{grid-template-columns:minmax(0,1fr) minmax(72px,88px);gap:10px;align-items:center}
+html[data-public-state="locked"] .workout-console .dial-controls{flex-wrap:nowrap;gap:6px;margin:10px 0 7px}
+html[data-public-state="locked"] .workout-console .dial-controls button{width:40px;min-width:40px;min-height:44px;padding:6px;background:#e4eee8;color:#24313a;border:1px solid #91aa9d;box-shadow:none}
+html[data-public-state="locked"] .workout-console .exercise-dial{width:68px;height:68px;background:repeating-conic-gradient(from 0deg,#9ab7aa 0deg 3deg,#dcebe2 3deg 10deg);box-shadow:0 0 0 3px #f7f1e5,0 0 0 5px #91aa9d}
+html[data-public-state="locked"] .workout-console .exercise-dial:before{background:radial-gradient(circle at 30% 25%,#f7f1e5,#dcebe2 60%,#b7cfc2 90%);box-shadow:inset 1px 2px #fff9,inset -2px -3px #91aa9d}
+html[data-public-state="locked"] .workout-console .exercise-dial i:after{background:#d77c52;border-color:#7d422f;box-shadow:none}
+html[data-public-state="locked"] .workout-console .signal-control .rocker-switch{min-width:58px;width:58px;min-height:58px;padding:8px;background:#e4eee8;color:#24313a;border:1px solid #91aa9d;box-shadow:none;transform:none}
+html[data-public-state="locked"] .workout-console label,html[data-public-state="locked"] .workout-console small,html[data-public-state="locked"] #status,html[data-public-state="locked"] .simple-counter small{color:#5d6b6d}
+html[data-public-state="locked"] .workout-console button,html[data-public-state="locked"] .workout-console select{color:#24313a;background:#e4eee8;border:1px solid #91aa9d;border-radius:6px;box-shadow:none}
+html[data-public-state="locked"] .workout-console .manual-button,html[data-public-state="locked"] .workout-console .movement-scope{color:#24313a;background:#fffaf2;border-color:#b7a994}
+html[data-public-state="locked"] .workout-console .primary-action{background:#d77c52;color:#fffaf2;border-color:#a85335;box-shadow:0 2px 0 #91472e}
+html[data-public-state="locked"] .workout-console .set-actions{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;min-width:0;margin:12px 0 0;padding:0;background:none}
+html[data-public-state="locked"] .workout-console .set-actions .set-summary{display:block;grid-column:1/-1;grid-row:1;margin:0;text-align:center;color:#315c72;font:600 12px/1.4 ui-monospace,monospace}
+html[data-public-state="locked"] .workout-console .set-actions #start,html[data-public-state="locked"] .workout-console .set-actions #stop{grid-row:2;min-height:52px}
+html[data-public-state="locked"] .workout-console .set-actions #start{grid-column:1}
+html[data-public-state="locked"] .workout-console .set-actions #stop{grid-column:2;min-width:72px;padding:8px 12px;color:#24313a;background:#e4eee8;border:1px solid #91aa9d;border-radius:6px;font-size:12px}
+html[data-public-state="locked"] .workout-console .goal-control{border-top:1px solid #c6b9a4}
+html[data-public-state="locked"] .workout-console .goal-control #variationName{color:#315c72}
+html[data-public-state="locked"] .workout-console .movement-scope summary,html[data-public-state="locked"] .workout-console #variationHint,html[data-public-state="locked"] .workout-console #trackingScope{color:#24313a}
+html[data-public-state="locked"] .workout-console .set-track{background:#d8d0c2}
+html[data-public-state="locked"] .coach-line #coachCaption{color:#315c72}
+html[data-public-state="locked"] #primary,html[data-public-state="locked"] #goalValue{color:#315c72}
+html[data-public-state="locked"] .set-track{background:#d8d0c2}html[data-public-state="locked"] #activity{background:#d77c52;transition:none}
+html[data-public-state="locked"] .coach-line{min-height:48px;color:#24313a}html[data-public-state="locked"] .coach-line p{color:#315c72}
+html[data-public-state="locked"] .coach-mission{margin:0 0 12px;padding:12px;background:#f7f1e5;border:2px solid #b7a994;box-shadow:0 3px 0 #b3a995;color:#24313a;border-radius:8px}
+html[data-public-state="locked"] .coach-mission .mission-strip{color:#315c72;background:#e4eee8;border:1px solid #91aa9d;box-shadow:none;border-radius:6px}
+html[data-public-state="locked"] .coach-mission .mission-tag,html[data-public-state="locked"] .coach-mission .mission-readouts,html[data-public-state="locked"] .coach-mission .mission-streak,html[data-public-state="locked"] .coach-mission .mission-head p{color:#4e5e61}
+html[data-public-state="locked"] .meditation-entry{display:none}
+html[data-public-state="locked"] .crew-footer{display:none}
+html[data-public-state="locked"] .coach-dock{background:#f7f1e5;border-top:2px solid #c6b9a4;backdrop-filter:none}
+html[data-public-state="locked"] .coach-dock button{color:#24313a;background:#e4eee8;border:1px solid #91aa9d;border-radius:6px}
+html[data-public-state="locked"] .launch-panel{color:#24313a;background:#f7f1e5;border:2px solid #b7a994;border-radius:10px;box-shadow:0 5px 0 #b3a995}
+html[data-public-state="locked"] .launch-panel h2,html[data-public-state="locked"] .launch-panel h3{color:#315c72}
+html[data-public-state="locked"] .launch-panel button,html[data-public-state="locked"] .launch-panel input,html[data-public-state="locked"] .launch-panel select{color:#24313a;background:#e4eee8;border-color:#91aa9d;border-radius:6px}
+html[data-public-state="locked"] .launch-panel .main-action{color:#fffaf2;background:#d77c52;border-color:#a85335}
+html[data-public-state="locked"] .goals-board{margin:16px 0;padding:14px;background:#f7f1e5;border:2px solid #b7a994;border-radius:8px;box-shadow:0 3px 0 #b3a995}
+html[data-public-state="locked"] .goals-board h3{margin:0 0 5px;color:#315c72}
+html[data-public-state="locked"] .goals-board form{display:grid;gap:9px}
+html[data-public-state="locked"] .goals-board label{display:grid;gap:4px}
+html[data-public-state="locked"] .goals-board textarea{resize:vertical;font:inherit;padding:9px}
+html[data-public-state="locked"] .goal-entry{margin-top:10px;padding:10px;background:#fffaf2;border:1px solid #b7a994;border-left:5px solid #d77c52}
+html[data-public-state="locked"] .goal-entry h4,html[data-public-state="locked"] .goal-entry p{margin:0 0 5px}
+html[data-public-state="locked"] .goal-entry[data-status="completed"]{border-left-color:#6b9b72;opacity:.85}
+html[data-public-state="locked"] .goal-entry[data-status="archived"]{opacity:.6}
+/* The account marker rail overlays the dialog footer. Keep enough scroll room
+   for Goals controls to rise above it on compact desktop and phone screens. */
+html[data-public-state="locked"] #accountContent{padding-bottom:104px}
+html[data-public-state="locked"] .coach-mission .mission-arm{background:#e4eee8;color:#315c72;border-color:#91aa9d;box-shadow:none}
+html[data-public-state="locked"] .workout-console .slider-scale{display:flex;justify-content:space-between;gap:14px;white-space:nowrap}
+html[data-public-state="locked"] .workout-console .slider-scale span{display:block}
+html[data-public-state="locked"] .workout-console .panel-heading{background:#f7f1e5;color:#315c72}
+html[data-public-state="locked"] .launch-panel p,html[data-public-state="locked"] .launch-panel label,html[data-public-state="locked"] .launch-panel .hint{color:#4e5e61}
+html[data-public-state="locked"] *{animation:none!important;transition:none!important}
+@media(max-width:520px){html[data-public-state="locked"] .ship-location{display:none}html[data-public-state="locked"] .ship-header .deck-readout{margin-left:auto}html[data-public-state="locked"] .pod-page{padding-inline:12px}html[data-public-state="locked"] .workout-console{padding:12px}html[data-public-state="locked"] .workout-console .calibration-grid{grid-template-columns:minmax(0,1fr) 72px;gap:8px}html[data-public-state="locked"] .workout-console .dial-controls{gap:4px}html[data-public-state="locked"] .workout-console .dial-controls button{width:34px;min-width:34px;padding-inline:4px}html[data-public-state="locked"] .workout-console .exercise-dial{width:60px;height:60px}}

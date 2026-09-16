@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#081f2b"><title>MYR5 · War Room</title>
+  <script src="/public-entry.mjs" data-entry="/war-room" data-module="/war-room/war-room.mjs"></script>
+</head>
+<body>
+  <main class="war-room" aria-labelledby="title">
+    <header class="room-header"><a href="/pose.html">← Training pod</a><span class="room-mark">MOM // INC.</span><span id="access" role="status">Verifying access…</span></header>
+    <section class="hero"><p class="eyebrow">GALA OPERATIONS</p><h1 id="title">WAR ROOM</h1><p>One shared control surface for your saved run, identity, and ranked time.</p></section>
+    <section class="run-grid" aria-label="Run status">
+      <article class="panel"><h2>Clearance</h2><p id="runStatus" role="status">Loading saved run…</p><dl id="checks" class="checks"></dl></article>
+      <article class="panel"><h2>Identity</h2><p id="identity">No DJ identity attached.</p><p class="muted">Identity edits use the Gala run service. This room never invents a name or local save.</p><button id="identityAction" disabled>Identity service unavailable</button></article>
+    </section>
+    <section class="panel board"><div class="section-heading"><div><p class="eyebrow">PUBLIC RECORD</p><h2>Rankings</h2></div><button id="refresh" type="button">Refresh</button></div><p id="boardStatus" role="status">Loading board…</p><table><thead><tr><th>Rank</th><th>DJ</th><th>Time</th></tr></thead><tbody id="leaderRows"></tbody></table></section>
+    <section class="panel arsenal"><h2>Arsenal</h2><p>Saved loadouts are account-owned. This interim room preserves the existing Gala weapon ids without awarding tiers or loading the deferred 3D station.</p><label>Weapon <select id="weaponType"><option value="rapier">Rapier</option><option value="greatsword">Greatsword</option><option value="dagger">Dagger</option><option value="sabre">Sabre</option><option value="axe">Axe</option><option value="hammer">Hammer</option><option value="mace">Mace</option><option value="flail">Flail</option><option value="spear">Spear</option><option value="trident">Trident</option><option value="halberd">Halberd</option><option value="scythe">Scythe</option><option value="bow">Bow</option><option value="crossbow">Crossbow</option><option value="chakram">Chakram</option><option value="gauntlets">Gauntlets</option><option value="staff">Staff</option><option value="wand">Wand</option><option value="tome">Tome</option><option value="cannon">Cannon</option></select></label><label>Saved tier <input id="weaponTier" type="number" min="0" max="20" step="1"></label><button id="saveLoadout" type="button">Save loadout</button><p id="arsenalStatus" role="status"></p><p class="contract">Legacy local data is not automatically claimed; import is only available after a verified account session.</p></section>
+    <footer><a href="/pose.html">Return to Coach</a><span>War Room is available only after verified Coach Army completion.</span></footer>
+  </main>
+</body>
+</html>

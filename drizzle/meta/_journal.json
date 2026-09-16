@@ -78,6 +78,13 @@
       "when": 1789057331946,
       "tag": "0010_fixed_wrecker",
       "breakpoints": true
-    }
+    },
+    {"idx":11,"version":"6","when":1789060000000,"tag":"0011_coach_army_entitlements","breakpoints":true},
+    {"idx":12,"version":"6","when":1789060100000,"tag":"0012_coach_army_bindings","breakpoints":true},
+    {"idx":13,"version":"6","when":1789060200000,"tag":"0013_account_pack_entitlements","breakpoints":true},
+    {"idx":14,"version":"6","when":1789060300000,"tag":"0014_coach_army_authenticated_runs","breakpoints":true},
+    {"idx":15,"version":"6","when":1789060400000,"tag":"0015_goals","breakpoints":true},
+    {"idx":16,"version":"6","when":1789060500000,"tag":"0016_war_room_arsenal","breakpoints":true},
+    {"idx":17,"version":"6","when":1789060600000,"tag":"0017_coach_army_djscratch_verifier","breakpoints":true}
   ]
 }

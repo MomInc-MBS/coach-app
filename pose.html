@@ -12,23 +12,17 @@
 <link rel="manifest" href="/manifest.webmanifest?v=myr5-alien-v1">
 <link rel="modulepreload" href="/launch-runtime.mjs?v=startup-recovery-1">
 <link rel="modulepreload" href="/app-runtime.mjs?v=rest-flow-1">
-<link rel="modulepreload" href="/creature/assets/phone.js">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
-<link rel="icon" type="image/png" href="/icons/myr5-alien-192.png"><link rel="apple-touch-icon" href="/icons/myr5-alien-apple.png">
+<link rel="icon" type="image/webp" href="/pod/mom-inc-mark-96.webp"><link rel="apple-touch-icon" href="/pod/mom-inc-mark-96.webp">
 <link rel="stylesheet" href="/launch.css">
+<link rel="stylesheet" href="/locked-public.css">
 <link rel="stylesheet" href="/menu.css">
-<link rel="stylesheet" href="/creature/phone.css">
-<link id="coach-cinematics-style" rel="stylesheet" href="/creature/cinematics.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="/pod/pod.css">
 <link rel="stylesheet" href="/flip-display.css">
-<link rel="stylesheet" href="/pod/hardware.css">
-<link rel="stylesheet" href="/hardware-launch.css">
 <link rel="stylesheet" href="/food-live.css">
 <link rel="stylesheet" href="/pod/whiteboard.css">
-<link rel="stylesheet" href="/pocket-hardware.css">
-<link rel="stylesheet" href="/hand-companion.css">
 <link rel="stylesheet" href="/focus-library.css">
 <link rel="stylesheet" href="/arcade/tub-flight/style.css">
 <link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
@@ -36,6 +30,7 @@
 <link rel="stylesheet" href="/pod/retro-rooms.css">
 <link rel="stylesheet" href="/pod/weapon-abilities.css">
 <link rel="stylesheet" href="/coach-hub.css"><link rel="stylesheet" href="/pod/home-character.css">
+<script>document.documentElement.dataset.publicState='locked';</script>
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark-96.webp" width="36" height="36" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><div class="deck-readout"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div><button id="openSettings" class="icon-button" aria-label="Open pod controls">☷</button></header>
 <main id="homeScreen" class="pod-page">
@@ -47,7 +42,7 @@
   <div class="pod-inscription" aria-hidden="true">M Y R 5</div>
   <div id="coachMount" class="coach-mount"><p id="coachLoading">Loading…</p></div>
   <div class="pod-floor" aria-hidden="true"></div>
-  <div class="pod-nameplate"><span>YOUR COACH</span><a href="/creature/index.html">Customize ↗</a></div>
+  <div class="pod-nameplate"><span>YOUR COACH</span><a data-access-route="/creature/index.html" href="/creature/index.html">Customize ↗</a></div>
   <div id="cameraPreview" class="camera-preview"><video id="v" playsinline muted></video><canvas id="c"></canvas><span id="previewLabel">CAMERA OFF</span></div>
  </section></div>
   <section id="homeCharacter" class="home-character" aria-label="Your Gala look" hidden><button type="button" aria-label="Play your equipped weapon attack"><canvas width="160" height="168" role="img" aria-label="Your Gala look"></canvas><span data-weapon></span></button></section>
@@ -80,7 +75,7 @@
   <div class="player-platform"><div class="platform-top"></div><div class="platform-edge"></div><div class="platform-thruster"></div><canvas id="restAvatar" width="64" height="96" role="img" aria-label="Your Gala character on the floating platform"></canvas></div>
   <canvas id="restWeaponFx" width="640" height="360" aria-hidden="true"></canvas>
   <div class="weapon-ability"><button id="weaponSpecial" disabled>Special · tier 4</button><progress id="weaponCooldown" max="1" value="1" aria-label="Special ability cooldown"></progress></div>
-  <div class="rest-hand"><div id="restHandMount"></div><img id="restHandFallback" src="/handborne/previews/family-11.png?v=5" alt="Your Helping Hand" hidden></div>
+  <div class="rest-hand"><div id="restHandMount"></div><img id="restHandFallback" data-optional-src="/handborne/previews/family-11.png?v=5" alt="Your Helping Hand" hidden></div>
   <div class="player-name"><span id="restGuest">Guest</span><span id="restLevel">LV. 01</span></div>
  </section>
  <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand ready</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
@@ -93,7 +88,7 @@
    <div class="goal-control"><div><label for="goalSlider" id="goalLabel">GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span id="goalMax">20</span></div></div>
  <div class="settings-fields"><h3>COACH</h3><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
  <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice</span></div>
- <div class="settings-fields"><h3>DEVICE</h3><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label></div>
+ <div class="settings-fields"><h3>DEVICE</h3><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label></div><div class="settings-fields"><h3>MATERIALS</h3><button id="manageMaterials" type="button">Manage materials</button><p id="materialsStatus" role="status">Materials are available after Coach unlock.</p><section id="materialControls" hidden aria-label="Downloaded materials"><button data-material-download type="button">Download material</button><button data-material-cancel type="button" hidden>Cancel</button><button data-material-equip type="button" disabled>Equip after restart</button><p data-material-status role="status"></p><div id="materialRuntime" aria-label="Active material preview"></div></section></div>
  <p id="lensInfo">Camera opens when you begin.</p><details id="trackingDiag" hidden><summary>Camera & tracking</summary><button id="widest" disabled>Widest view</button><p id="hint"></p><p id="paceNote" hidden></p><p id="detail">Camera off · Tracker closed</p><p id="measurement"></p><p id="jointReadings"></p><pre id="cameraDetails"></pre><p id="note">Keep the listed joints in view. Estimates, not form grades.</p></details>
  <div class="settings-actions"><button id="reset">Reset count</button><button id="visitRest">Rest room</button></div>
  <div id="roundControl" hidden><select id="duration" aria-label="Legacy round duration"><option value="0">Open timer</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option></select></div>
@@ -105,7 +100,7 @@
   <details class="gala-import"><summary>Import a Gala look</summary><label class="primary-action file-label">Choose file<input id="importGala" type="file" accept="application/json,.json"></label><a href="https://mominc.online/gala/" target="_blank" rel="noopener noreferrer">Open Join Gala ↗</a></details>
   <p id="identityStatus" role="status">Saved</p>
   <section class="weapon-subsection" aria-labelledby="weaponHeading"><h3 id="weaponHeading">Weapon</h3><label>Weapon<select id="weaponType"></select></label><label>Upgrade<select id="weaponTier"></select></label><p id="weaponStatus" role="status"></p><details><summary>Upgrades</summary><p>Train to upgrade. Rest taps earn no XP.</p></details></section>
-  <section class="hand-subsection" aria-labelledby="handTitle"><img id="identityHandPreview" src="/handborne/previews/family-11.png?v=5" alt="Helping Hand creature family preview"><div><h3 id="handTitle">Helping Hand</h3><button id="customizeHand" class="primary-action">Customize hand →</button></div></section>
+  <section class="hand-subsection" aria-labelledby="handTitle"><img id="identityHandPreview" data-optional-src="/handborne/previews/family-11.png?v=5" alt="Helping Hand creature family preview"><div><h3 id="handTitle">Helping Hand</h3><button id="customizeHand" data-access-route="/handborne/index.html" class="primary-action">Customize hand →</button></div></section>
  </div>
  <section id="handEditorPanel" hidden aria-label="Customize your companion"><div class="hand-editor-bar"><button id="backToAvatar">← Back</button><span>Autosaved</span></div><iframe id="handEditorFrame" title="Helping Hand customizer with live preview" allow="clipboard-write"></iframe></section>
 </dialog>
@@ -141,5 +136,4 @@
 <script src="/workout-tracks.js"></script><script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/gala-performer.js"></script><script src="/pod/dj-identity.js"></script>
 <script type="module" src="/app-runtime.mjs?v=rest-flow-1"></script>
 <script type="module" src="/launch-bootstrap.mjs?v=startup-recovery-1"></script>
-<script type="module" src="/creature/assets/phone.js"></script>
 </html>

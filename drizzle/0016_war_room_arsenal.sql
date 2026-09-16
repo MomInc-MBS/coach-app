@@ -1,0 +1,1 @@
+CREATE TABLE `war_room_arsenals` (`user_id` text PRIMARY KEY NOT NULL, `loadout` text NOT NULL, `recipes` text NOT NULL DEFAULT '[]', `revision` integer NOT NULL DEFAULT 0, `updated_at` integer NOT NULL);

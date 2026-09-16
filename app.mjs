@@ -1,4 +1,3 @@
-import {initCinematics} from './creature/cinematics.js';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
@@ -113,7 +112,7 @@ async function start(){
     status(error.name==='NotAllowedError'?'Allow camera access, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
   }
 }
-function loop(run){
+async function loop(run){
   if(run!==generation||!tracker)return;
   try{
     const now=performance.now();
@@ -128,7 +127,7 @@ function loop(run){
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
-      if(pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
+      if(await pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
       if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
       if(state.motion.complete){renderMotion(state.motion);stop('Round complete.');voice.say('Round complete. Well done.',{interrupt:true});return;}
@@ -154,11 +153,41 @@ $('widest').addEventListener('click',async()=>{
 });
 window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused. Tap Begin to continue.');});
 pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended.'),onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
+// P13D: optional pack UI may bind this actual owner after user intent; packs are not imported at startup.
+window.myr5WorkoutOwner=pod.workoutOwner;
+window.dispatchEvent(new Event('myr5:workout-owner-ready'));
+window.myr5CreatePackControl=async options=>{
+  const {createIsolatedPackControl}=await import('./packs/isolated-pack-control.mjs');
+  return createIsolatedPackControl({...options,workoutOwner:pod.workoutOwner});
+};
 resetMovement();
-initHardware();soundSwitch();
+initHardware();
+soundSwitch();
 const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Paused.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('movementRow').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
 
-const cinematics=initCinematics({voice});
+let cinematics={play(){}};
+let optionalLoaded=false;
+let materialController=null;
+async function loadUnlockedOptionalMaterials(){
+ if(optionalLoaded||window.myr5VerifiedOptionalAccess!==true)return false;
+ optionalLoaded=true;
+ for(const href of ['/creature/phone.css','/creature/cinematics.css','/pod/hardware.css','/hardware-launch.css','/pocket-hardware.css','/hand-companion.css']){const link=document.createElement('link');link.rel='stylesheet';link.href=href;document.head.append(link);}
+ for(const image of document.querySelectorAll('[data-optional-src]')) image.src=image.dataset.optionalSrc;
+ const {initCinematics}=await import('./creature/cinematics.js');
+ cinematics=initCinematics({voice});
+ window.dispatchEvent(new Event('myr5:optional-materials-ready'));
+ window.myr5Cinematics=cinematics;
+ return true;
+}
+$('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
+$('openIdentity').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
+$('manageMaterials').addEventListener('click',async()=>{
+ const status=$('materialsStatus');
+ if(!await loadUnlockedOptionalMaterials()){status.textContent='Complete Coach setup to unlock materials.';return;}
+ try { const {mountMaterialControls}=await import('./modules/materials/material-controller.mjs'); $('materialControls').hidden=false; materialController??=mountMaterialControls({account:window.myr5AuthenticatedAccount,workoutOwner:pod.workoutOwner}); status.textContent=materialController?'Material controls ready.':'Material controls unavailable.'; }
+ catch(error){status.textContent=error.message;}
+});
 window.myr5Cinematics=cinematics;
+window.addEventListener('pagehide',()=>materialController?.dispose(),{once:true});
