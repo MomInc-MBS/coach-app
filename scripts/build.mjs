@@ -1,6 +1,7 @@
 import {build} from 'vite';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {ensureAssets,ensureHandAssets} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {prepareReleaseBuild} from './release-build.mjs';
@@ -40,6 +41,11 @@ pose=pose.replace('<link rel="manifest"',`<link rel="stylesheet" href="/app.css?
 await writeFile('dist/client/pose.html',pose);await writeFile('dist/client/index.html',pose);await cp('LICENSE','dist/client/LICENSE');
 let sw=(await readFile('sw.js','utf8')).replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${releaseBuild}'`);
 for(const h of cssHrefs)sw=sw.replaceAll(`'${h}',`,'').replaceAll(`,'${h}'`,'');
+// Precache every creature and hologram model (about 110 MB) in its own content-hashed cache.
+const modelPaths=[];for(const dir of ['creature/models','creature/models/roster','models'])for(const name of (await readdir(dir)).sort())if(name.endsWith('.glb'))modelPaths.push(`/${dir}/${name}`);
+const modelHash=createHash('sha1'),modelUrls=[];
+for(const path of modelPaths){const data=await readFile('.'+path);modelHash.update(path).update(data);modelUrls.push(`${path}?v=${createHash('sha1').update(data).digest('hex').slice(0,10)}`);}
+sw=sw.replace(/^const MODEL_CACHE=.*$/m,`const MODEL_CACHE='myr5-models-${modelHash.digest('hex').slice(0,8)}',MODELS=${JSON.stringify(modelUrls)};`);
 sw=sw.replace("'/pose.html',","'/pose.html','/app.css',");
 sw=sw.replace("const CORE=['/pose.html',","const CORE=['/pose.html','/app.css',");
 await writeFile('dist/client/sw.js',sw);

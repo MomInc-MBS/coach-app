@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {EYE_LAYOUTS} from './creator/eye-layouts';
+import {eyePosition} from './creator/anatomy';
 import type {Design} from './creator/design';
 
 export function disposeObject(root:T.Object3D){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();root.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
@@ -24,12 +25,16 @@ export function createRig(source:T.Group,recipe:Design){
  const root=new T.Group();root.name='MYR5';root.userData={rigVersion:1,recipe:JSON.parse(JSON.stringify(recipe))};
  const nodes:Record<string,T.Group>={};
  function pivot(name:string,position:number[],parent=root){const node=new T.Group();node.name=name;node.position.fromArray(position);parent.add(node);nodes[name]=node;return node;}
- const body=pivot('BodyMotion',[0,.8,0]);
- const head=pivot('HeadMotion',[0,.75,0],body);
- pivot('ArmLeft',[-.55,.48,0],body);pivot('ArmRight',[.55,.48,0],body);
- pivot('FootLeft',[-.35,.35,0]);pivot('FootRight',[.35,.35,0]);
+ const fitted=source.userData.pivots as {body:number[];head:number[];arm:number[];foot:number[]}|null|undefined;
+ const P=fitted??{body:[0,.8,0],head:[0,.75,0],arm:[.55,.48,0],foot:[.35,.35,0]};
+ const body=pivot('BodyMotion',P.body);
+ const head=pivot('HeadMotion',P.head,body);
+ pivot('ArmLeft',[-P.arm[0],P.arm[1],P.arm[2]],body);pivot('ArmRight',P.arm,body);
+ pivot('FootLeft',[-P.foot[0],P.foot[1],P.foot[2]]);pivot('FootRight',P.foot);
  const eyes=EYE_LAYOUTS[recipe.eyeLayout].eyes;
- eyes.forEach(([x,y,z],i)=>pivot('EyeBlink'+i,[x,y-1.55,z],head));
+ const eyeOffset=(source.userData.eyeOffset as T.Vector3|undefined)??new T.Vector3();
+ const eyeScale=(source.userData.eyeScale as number|undefined)??1,headY=P.body[1]+P.head[1];
+ eyes.forEach((eye,i)=>{const [x,y,z]=eyePosition(eye,eyeOffset,eyeScale,source.userData.eyeSurfaceZ as number|undefined);pivot('EyeBlink'+i,[x,y-headY,z],head);});
  root.updateMatrixWorld(true);source.updateMatrixWorld(true);
  const buckets=new Map<string,{node:T.Group;material:T.MeshStandardMaterial;geometries:T.BufferGeometry[]}>();
  function add(mesh:T.Mesh,node:T.Group,side=0){
@@ -38,7 +43,7 @@ export function createRig(source:T.Group,recipe:Design){
   geometry.applyMatrix4(node.matrixWorld.clone().invert());
   const mat=mesh.material as T.MeshStandardMaterial;
   const physical=mat as T.MeshPhysicalMaterial;
-  const key=node.name+JSON.stringify([mat.type,mat.color.getHex(),mat.emissive.getHex(),mat.emissiveIntensity,mat.roughness,mat.metalness,mat.opacity,mat.side,mat.map?.uuid,mat.bumpMap?.uuid,mat.roughnessMap?.uuid,mat.emissiveMap?.uuid,mat.bumpScale,physical.transmission,physical.thickness,physical.ior,physical.clearcoat,physical.sheen]);
+  const key=node.name+JSON.stringify([mat.type,mat.color.getHex(),mat.emissive.getHex(),mat.emissiveIntensity,mat.roughness,mat.metalness,mat.opacity,mat.side,mat.map?.uuid,mat.normalMap?.uuid,mat.bumpMap?.uuid,mat.roughnessMap?.uuid,mat.emissiveMap?.uuid,mat.bumpScale,physical.transmission,physical.thickness,physical.ior,physical.clearcoat,physical.sheen]);
   if(!buckets.has(key)){const material=mat.clone();material.vertexColors=true;material.userData={};buckets.set(key,{node,material,geometries:[]});}
   buckets.get(key)!.geometries.push(geometry);
  }
