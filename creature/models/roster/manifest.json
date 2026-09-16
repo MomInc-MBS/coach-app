@@ -1,0 +1,562 @@
+[
+ {
+  "id": "roster/01-seed-pearo--3d_character_model",
+  "label": "Seed \u00b7 Pearo 1",
+  "group": "Seed \u00b7 Pearo",
+  "status": "PASS",
+  "bytes": 1268160,
+  "sha256": "6f14746278db647ccf761880725897d752022473966aaab63b80da448325507e"
+ },
+ {
+  "id": "roster/01-seed-pearo--cute_alien_figure_3d_model",
+  "label": "Seed \u00b7 Pearo 2",
+  "group": "Seed \u00b7 Pearo",
+  "status": "PASS",
+  "bytes": 1155552,
+  "sha256": "49985ecd9a23fbad5f04560e0079b6dd25e7f9e50cbad7ba9e3f74025739f3dd"
+ },
+ {
+  "id": "roster/01-seed-pearo--white_3d_character_model",
+  "label": "Seed \u00b7 Pearo 3",
+  "group": "Seed \u00b7 Pearo",
+  "status": "REVIEW",
+  "bytes": 1205556,
+  "sha256": "b30e359d94fe30785ecb60df1f491b0f181243ed3c4e0224a413ea07eba2359d"
+ },
+ {
+  "id": "roster/01-seed-pearo--blank_humanoid_figure_3d_model",
+  "label": "Seed \u00b7 Pearo 4",
+  "group": "Seed \u00b7 Pearo",
+  "status": "REVIEW",
+  "bytes": 1369432,
+  "sha256": "2f7314ad14412bd9afff0e56c0c85a0438ea7e327d2b555a8997c0d72d87268d"
+ },
+ {
+  "id": "roster/01-seed-pearo--blank_toy_figure_3d_model",
+  "label": "Seed \u00b7 Pearo 5",
+  "group": "Seed \u00b7 Pearo",
+  "status": "REVIEW",
+  "bytes": 1060048,
+  "sha256": "bfe377e02b5324683a43a2659639e8d1b810f6d237f0c0361e4bdc28cbefcd0f"
+ },
+ {
+  "id": "roster/02-taper-tallstalk--3d_humanoid_figure",
+  "label": "Taper \u00b7 Tallstalk 1",
+  "group": "Taper \u00b7 Tallstalk",
+  "status": "REVIEW",
+  "bytes": 1146852,
+  "sha256": "d40507bde2972770f4ba92cdf5c939b2909b77d68c63a4f5f397e0debeee1a99"
+ },
+ {
+  "id": "roster/02-taper-tallstalk--humanoid_robot_3d_model1",
+  "label": "Taper \u00b7 Tallstalk 2",
+  "group": "Taper \u00b7 Tallstalk",
+  "status": "REVIEW",
+  "bytes": 739832,
+  "sha256": "85b045f6ff4ad23d6a5a17074e4412047d465393b5023db96bff81a174809f08"
+ },
+ {
+  "id": "roster/02-taper-tallstalk--white_humanoid_doll_3d_model",
+  "label": "Taper \u00b7 Tallstalk 3",
+  "group": "Taper \u00b7 Tallstalk",
+  "status": "PASS",
+  "bytes": 1511192,
+  "sha256": "24308194976172bc3e523a09c0f1eafc4722e161f73a1636813c235442ca793f"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--abstract_humanoid_3d_model",
+  "label": "Pearl \u00b7 Orb 1",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 1051868,
+  "sha256": "35eca4f9738d14f22f8bb33d1ad7ebdc6703873721d256d73b252f9d82003020"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--circle_center",
+  "label": "Pearl \u00b7 Orb 2",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 949252,
+  "sha256": "d47b82f8f7f06c96db52e4948f19d388a2ab00f1cb511573102841956173f601"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--ringed_humanoid_3d_model",
+  "label": "Pearl \u00b7 Orb 3",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 1313640,
+  "sha256": "1e32a434aa538976cb2598b216ae17175437f19dde938626824c5bcf923ae139"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--robot_3d_model",
+  "label": "Pearl \u00b7 Orb 4",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 397672,
+  "sha256": "8b6dff121c1a752b9688b8cb140be61bdc0d612af3d386296b27b3993aa3faa0"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--stylized_3d_character1",
+  "label": "Pearl \u00b7 Orb 5",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 913016,
+  "sha256": "cc118fd1332b647308d7a7ba49d462da6b9c9c437334cd3179b50fdc48313664"
+ },
+ {
+  "id": "roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model",
+  "label": "Pearl \u00b7 Orb 6",
+  "group": "Pearl \u00b7 Orb",
+  "status": "REVIEW",
+  "bytes": 1677408,
+  "sha256": "c284799cd30c3fa5636559a827ae1a8aa01ff3eabced3be2575822e47e11c968"
+ },
+ {
+  "id": "roster/04-crest-wedge--robot_creature_3d_model",
+  "label": "Crest \u00b7 Wedge 1",
+  "group": "Crest \u00b7 Wedge",
+  "status": "REVIEW",
+  "bytes": 943504,
+  "sha256": "236098d9935147ce4de6087eb17b4cfefac6ff5261931f8730127d98eeade38d"
+ },
+ {
+  "id": "roster/04-crest-wedge--stylized_3d_character",
+  "label": "Crest \u00b7 Wedge 2",
+  "group": "Crest \u00b7 Wedge",
+  "status": "REVIEW",
+  "bytes": 802536,
+  "sha256": "3f798914742d5e8a93746c9b8cd378b8461cd081a2fce2b2e54c43112333e8e8"
+ },
+ {
+  "id": "roster/05-slope-bobble--clay_humanoid_figure_3d_model",
+  "label": "Slope \u00b7 Bobble 1",
+  "group": "Slope \u00b7 Bobble",
+  "status": "REVIEW",
+  "bytes": 409688,
+  "sha256": "47fff716c8cf079f3a2861be8e454f33585ab66aeb8d1c098c0af4a368ed226b"
+ },
+ {
+  "id": "roster/06-ridge-triad--geometric_robot_3d_model1",
+  "label": "Ridge \u00b7 Triad 1",
+  "group": "Ridge \u00b7 Triad",
+  "status": "REVIEW",
+  "bytes": 1172932,
+  "sha256": "ff50e2d6be2ee692bba9c285ae1379ed769a3b01d0a02e309c633b9df96e9a94"
+ },
+ {
+  "id": "roster/06-ridge-triad--robot_3d_model1",
+  "label": "Ridge \u00b7 Triad 2",
+  "group": "Ridge \u00b7 Triad",
+  "status": "REVIEW",
+  "bytes": 1288584,
+  "sha256": "9c23f758fd2d04c1635430cf50723c7d551599e4b4317f7cd20b065442be7555"
+ },
+ {
+  "id": "roster/07-bulb-sphereling--cute_robot_3d_model",
+  "label": "Bulb \u00b7 Sphereling 1",
+  "group": "Bulb \u00b7 Sphereling",
+  "status": "REVIEW",
+  "bytes": 1310520,
+  "sha256": "8fd342cd955e59ced8f73c889ebc5934c3aefe1ed5531cb321fe89dc176aec75"
+ },
+ {
+  "id": "roster/07-bulb-sphereling--humanoid_robot_3d_model",
+  "label": "Bulb \u00b7 Sphereling 2",
+  "group": "Bulb \u00b7 Sphereling",
+  "status": "REVIEW",
+  "bytes": 1365896,
+  "sha256": "5c0741b81a8281d01a98d6244aa5be3a2cff39e05f50d182d801b0bc915f85ca"
+ },
+ {
+  "id": "roster/08-shard-asym--geometric_robot_3d_model",
+  "label": "Shard \u00b7 Asym 1",
+  "group": "Shard \u00b7 Asym",
+  "status": "REVIEW",
+  "bytes": 1089924,
+  "sha256": "e6d0ec623a8aaf07b3e88d845faabde2137d3449c513942411641bc908e92c9f"
+ },
+ {
+  "id": "roster/08-shard-asym--robot_3d_model4",
+  "label": "Shard \u00b7 Asym 2",
+  "group": "Shard \u00b7 Asym",
+  "status": "REVIEW",
+  "bytes": 910596,
+  "sha256": "f2e1f83da490c8c24f533e0a75de537457f801ccf7782dad7569dbecfc0b4d58"
+ },
+ {
+  "id": "roster/08-shard-asym--fantasy_creature_3d_model2",
+  "label": "Shard \u00b7 Asym 3",
+  "group": "Shard \u00b7 Asym",
+  "status": "REVIEW",
+  "bytes": 819588,
+  "sha256": "8889a8962d2c6666e6db39833b1269538ed40eaccc79d78f6b67c01d2f61b1e3"
+ },
+ {
+  "id": "roster/08-shard-asym--stylized_action_figure_3d_model",
+  "label": "Shard \u00b7 Asym 4",
+  "group": "Shard \u00b7 Asym",
+  "status": "REVIEW",
+  "bytes": 1176148,
+  "sha256": "45797349edb2b534de025ba87654244049d6056c2a45ec43fb6548714c6a1db4"
+ },
+ {
+  "id": "roster/09-monolith-tanka--3d_robot_model",
+  "label": "Monolith \u00b7 Tanka 1",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "PASS",
+  "bytes": 1403544,
+  "sha256": "62ec21ce0a13fbd14d25c04850834d5486c0a8b1b94f050603f0f2e87a036157"
+ },
+ {
+  "id": "roster/09-monolith-tanka--boxy_humanoid_3d_model",
+  "label": "Monolith \u00b7 Tanka 2",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "REVIEW",
+  "bytes": 1176604,
+  "sha256": "198d3bc78c470283e8d4947be8e8b22dc4b81f50c7f708fb8e8ea9de0fe5c14f"
+ },
+ {
+  "id": "roster/09-monolith-tanka--mini_robot_3d_model",
+  "label": "Monolith \u00b7 Tanka 3",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "REVIEW",
+  "bytes": 978344,
+  "sha256": "b2a7c9a6c4c2f76e622827d9dc6d8d85a5a94ae3fe20b4868e772cddc2d66039"
+ },
+ {
+  "id": "roster/09-monolith-tanka--robot_3d_model2",
+  "label": "Monolith \u00b7 Tanka 4",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "PASS",
+  "bytes": 1092528,
+  "sha256": "7b1e79e81b7266be36d335a8bea65b91152f427586d53d5d6545f90abc3e795d"
+ },
+ {
+  "id": "roster/09-monolith-tanka--robot_3d_model3",
+  "label": "Monolith \u00b7 Tanka 5",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "REVIEW",
+  "bytes": 639812,
+  "sha256": "4e174889fc91ebcdffb6fd28c1747dbc1b8b6a4c8d68db29981deb8dd6784499"
+ },
+ {
+  "id": "roster/09-monolith-tanka--white_horned_robot_3d_model",
+  "label": "Monolith \u00b7 Tanka 6",
+  "group": "Monolith \u00b7 Tanka",
+  "status": "REVIEW",
+  "bytes": 1177656,
+  "sha256": "f135a2e874ccd388a31842d77b374027cdd38c67f24f4494cc3c83aebf074ca6"
+ },
+ {
+  "id": "roster/10-petal-wisp--stylized_creature_3d_model",
+  "label": "Petal \u00b7 Wisp 1",
+  "group": "Petal \u00b7 Wisp",
+  "status": "REVIEW",
+  "bytes": 1036744,
+  "sha256": "96a1bba31bb3587f61af255ad9b807dbabbd5715528f393a69a6bb0aa152a870"
+ },
+ {
+  "id": "roster/10-petal-wisp--ghost_character_3d_model",
+  "label": "Petal \u00b7 Wisp 2",
+  "group": "Petal \u00b7 Wisp",
+  "status": "REVIEW",
+  "bytes": 965284,
+  "sha256": "db483101b0755c30a2a41f9edd9b3760b8ec10830b40d7832afd065b4edeb50a"
+ },
+ {
+  "id": "roster/10-petal-wisp--fantasy_creature_3d_model4",
+  "label": "Petal \u00b7 Wisp 3",
+  "group": "Petal \u00b7 Wisp",
+  "status": "REVIEW",
+  "bytes": 1266896,
+  "sha256": "34e5de8eef218814b67985a35b80e3fd818d5951458e9ba8d226fdf30bca8eef"
+ },
+ {
+  "id": "roster/11-anvil-cask--clay-style_robot_3d_model",
+  "label": "Anvil \u00b7 Cask 1",
+  "group": "Anvil \u00b7 Cask",
+  "status": "REVIEW",
+  "bytes": 867228,
+  "sha256": "d2797026da4cb563bae6868fc766e99f4ecd9a90d3b915481c428b6eca127d7a"
+ },
+ {
+  "id": "roster/12-seedpod-snailslug--stylized_slug_3d_model",
+  "label": "Seedpod \u00b7 Snailslug 1",
+  "group": "Seedpod \u00b7 Snailslug",
+  "status": "REVIEW",
+  "bytes": 1337688,
+  "sha256": "bd7821a4a794d82f7c2c7e683fea472243a57ede0df7ee2ce15dc4ab06853ed9"
+ },
+ {
+  "id": "roster/12-seedpod-snailslug--stylized_worm_3d_model",
+  "label": "Seedpod \u00b7 Snailslug 2",
+  "group": "Seedpod \u00b7 Snailslug",
+  "status": "REVIEW",
+  "bytes": 1257688,
+  "sha256": "cb57236887d0091be9cf642f3ce920dd36eed194611124cb6e10d0fd70fc5a25"
+ },
+ {
+  "id": "roster/13-fan-split--stylized_3d_character2",
+  "label": "Fan \u00b7 Split 1",
+  "group": "Fan \u00b7 Split",
+  "status": "REVIEW",
+  "bytes": 1184572,
+  "sha256": "caac851bc0d083a5401d7630e432b163364c468d70b9bc5150cf3be261828529"
+ },
+ {
+  "id": "roster/13-fan-split--stylized_toy_3d_model",
+  "label": "Fan \u00b7 Split 2",
+  "group": "Fan \u00b7 Split",
+  "status": "PASS",
+  "bytes": 1113400,
+  "sha256": "1a3cd58c92023e71ae614c1944be1ac464df19961fdd91830b63457137b93ca0"
+ },
+ {
+  "id": "roster/14-chisel-spire--cone_head_3d_model",
+  "label": "Chisel \u00b7 Spire 1",
+  "group": "Chisel \u00b7 Spire",
+  "status": "REVIEW",
+  "bytes": 551724,
+  "sha256": "f5274c1a2b6c0655edb40fbbffdc1494cd9a8d14b9ebfd7c7943253c60015b65"
+ },
+ {
+  "id": "roster/14-chisel-spire--low_poly_robot_3d_model",
+  "label": "Chisel \u00b7 Spire 2",
+  "group": "Chisel \u00b7 Spire",
+  "status": "REVIEW",
+  "bytes": 1149448,
+  "sha256": "134350c0600ddf360256a598b000b68395109c689d252e96023eecd8ea68425e"
+ },
+ {
+  "id": "roster/15-orbital-coili--robot_character_3d_model",
+  "label": "Orbital \u00b7 Coili 1",
+  "group": "Orbital \u00b7 Coili",
+  "status": "REVIEW",
+  "bytes": 1173644,
+  "sha256": "9e0357bea8cdce4b57349480b1eed71052aecbae86ec16c7fb8825ead1fdce7a"
+ },
+ {
+  "id": "roster/16-spade-arch--pyramid_head_figure_3d_model",
+  "label": "Spade \u00b7 Arch 1",
+  "group": "Spade \u00b7 Arch",
+  "status": "REVIEW",
+  "bytes": 1210468,
+  "sha256": "4f4beab075ab542092694b58878a21cb25d35843cf60dbc09df6b352a9775563"
+ },
+ {
+  "id": "roster/16-spade-arch--stylized_humanoid_3d_model",
+  "label": "Spade \u00b7 Arch 2",
+  "group": "Spade \u00b7 Arch",
+  "status": "REVIEW",
+  "bytes": 846680,
+  "sha256": "07e6b5c32ea82dab6272de2ef98eb1b118c37604052a16af5211554101f23335"
+ },
+ {
+  "id": "roster/17-shellcap-manyarm--3d_character_figurine",
+  "label": "Shellcap \u00b7 Manyarm 1",
+  "group": "Shellcap \u00b7 Manyarm",
+  "status": "REVIEW",
+  "bytes": 950740,
+  "sha256": "4fc9344a8a00320864fbc38cff65aad3e624ca37e2c2f84346afa000a9139236"
+ },
+ {
+  "id": "roster/17-shellcap-manyarm--mushroom_creature_3d_model",
+  "label": "Shellcap \u00b7 Manyarm 2",
+  "group": "Shellcap \u00b7 Manyarm",
+  "status": "REVIEW",
+  "bytes": 640472,
+  "sha256": "7d3c5b780e2abad07437e669ff968e072c77ffb3ce31e6fda9f09b122bf12616"
+ },
+ {
+  "id": "roster/17-shellcap-manyarm--mushroom_robot_3d_model",
+  "label": "Shellcap \u00b7 Manyarm 3",
+  "group": "Shellcap \u00b7 Manyarm",
+  "status": "REVIEW",
+  "bytes": 916444,
+  "sha256": "667a8044bd0336e1dd6503425d37cdd1b5ca018ad9ce30c5d5ad635c7623c878"
+ },
+ {
+  "id": "roster/18-quad-all--dragon_creature_3d_model",
+  "label": "Four-legged 1",
+  "group": "Four-legged",
+  "status": "PASS",
+  "bytes": 393988,
+  "sha256": "fa7986a0327fa42d32adc646b177b4618c34afb0bc595e8e5bec535787bc4025"
+ },
+ {
+  "id": "roster/18-quad-all--fantasy_creature_3d_model1",
+  "label": "Four-legged 2",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 1101604,
+  "sha256": "d1db8a5c75f24b47ec8f1f999865653a61aaa0ca6e25b5d7e21c62c09fcbe2c4"
+ },
+ {
+  "id": "roster/18-quad-all--fantasy_creature_3d_model3",
+  "label": "Four-legged 3",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 852444,
+  "sha256": "71153ffef11c0913beff4c3dd0ce5989dd1d669c1ad060d577b1c7e8bc715dad"
+ },
+ {
+  "id": "roster/18-quad-all--four-legged_robot_3d_model",
+  "label": "Four-legged 4",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 429424,
+  "sha256": "8d6e16899a12a681eb881a894b569b025fce16d44d3c8043cf4fe95d48e5aa18"
+ },
+ {
+  "id": "roster/18-quad-all--quadruped_robot_3d_model1",
+  "label": "Four-legged 5",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 896152,
+  "sha256": "78fabcf15ac4bc7310b09813b6b1ef44e122a2d7b3c97a34c2923313ed5c684d"
+ },
+ {
+  "id": "roster/18-quad-all--quadruped_robot_3d_model",
+  "label": "Four-legged 6",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 1083792,
+  "sha256": "31555c5c6feb4b3fa822bf146a4f67c9aeb303a8d80ece4afe0718d4d15c463b"
+ },
+ {
+  "id": "roster/18-quad-all--robotic_dog_3d_model",
+  "label": "Four-legged 7",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 1163368,
+  "sha256": "2d44c01723234401c9dcdc6cfdd48076b61238ccc95bb2f3162c7acafdd1327e"
+ },
+ {
+  "id": "roster/18-quad-all--stylized_quadruped_3d_model",
+  "label": "Four-legged 8",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 628136,
+  "sha256": "de36f55a70200af71fbdeac590e3fe50a374237cd15a67e3273612ed53f7e123"
+ },
+ {
+  "id": "roster/18-quad-all--wooden_four-legged_robot_3d_model",
+  "label": "Four-legged 9",
+  "group": "Four-legged",
+  "status": "PASS",
+  "bytes": 1023004,
+  "sha256": "d0fdc5a15981813ce9466a99b40cea4d0c44500d372426bd36621179aa870f1e"
+ },
+ {
+  "id": "roster/18-quad-all--wooden_robot_3d_model",
+  "label": "Four-legged 10",
+  "group": "Four-legged",
+  "status": "REVIEW",
+  "bytes": 1033420,
+  "sha256": "884191d06c05a20c8582e0c9609f820d3783b3b74bb3cb3e76a0270d56143b8b"
+ },
+ {
+  "id": "roster/19-genie-multi--fantasy_creature_3d_model",
+  "label": "Genie \u00b7 Multi 1",
+  "group": "Genie \u00b7 Multi",
+  "status": "REVIEW",
+  "bytes": 1232872,
+  "sha256": "3fa8801fe1973881cba6f24cfcefb770a01e172b25ed1d6024d62593af80d1a5"
+ },
+ {
+  "id": "roster/19-genie-multi--multi-armed_humanoid_3d_model1",
+  "label": "Genie \u00b7 Multi 2",
+  "group": "Genie \u00b7 Multi",
+  "status": "REVIEW",
+  "bytes": 486020,
+  "sha256": "81516de182e04ccd2aff42982022720305003ae250731818e4c807130f86d7a0"
+ },
+ {
+  "id": "roster/19-genie-multi--multi-armed_humanoid_3d_model",
+  "label": "Genie \u00b7 Multi 3",
+  "group": "Genie \u00b7 Multi",
+  "status": "REVIEW",
+  "bytes": 404608,
+  "sha256": "c45fe5ed594bfe5618875a88b81287d4b78cd88ce4cbfcbfeab524fb199950e6"
+ },
+ {
+  "id": "roster/19-genie-multi--stylized_octopus_3d_model",
+  "label": "Genie \u00b7 Multi 4",
+  "group": "Genie \u00b7 Multi",
+  "status": "REVIEW",
+  "bytes": 1149168,
+  "sha256": "1de1dc93f31ce81ebddba811ba9afc0720cddacf5a71d27d5a6ea3bb5bbefba6"
+ },
+ {
+  "id": "roster/20-lume--robotic_figure_3d_model",
+  "label": "Lume 1",
+  "group": "Lume",
+  "status": "PASS",
+  "bytes": 1128192,
+  "sha256": "52d5d72a96ccd8c4b1ae5edee5bfe133721089f8a103165e338d9ecf4ae51fd8"
+ },
+ {
+  "id": "roster/21-flyer--winged_humanoid_3d_model",
+  "label": "Flyer 1",
+  "group": "Flyer",
+  "status": "REVIEW",
+  "bytes": 970008,
+  "sha256": "ed9bc2771849efd9989db8d345f19fb7c2977a67b7a5f99b539a3d1586af5db6"
+ },
+ {
+  "id": "roster/22-curve--stylized_alien_3d_model",
+  "label": "Curve 1",
+  "group": "Curve",
+  "status": "REVIEW",
+  "bytes": 1066308,
+  "sha256": "79fcc10757118ba9cbe43a104a903767db6ef3c6ba4b74f687b79968d9215f3c"
+ },
+ {
+  "id": "roster/22-curve--stylized_cartoon_figure_3d_model",
+  "label": "Curve 2",
+  "group": "Curve",
+  "status": "REVIEW",
+  "bytes": 408364,
+  "sha256": "29a98f87a59d70162391f46cf84b8d512c3bfa13099ae5c5fba3d04b95eec7d0"
+ },
+ {
+  "id": "roster/23-blob-texture-bodies--blob_creature_3d_model",
+  "label": "Blob 1",
+  "group": "Blob",
+  "status": "REVIEW",
+  "bytes": 1084260,
+  "sha256": "183f2eea968134b0b09e2b73e38457e4fd702f2b2ec7561f2421d563bc27357f"
+ },
+ {
+  "id": "roster/23-blob-texture-bodies--cute_blob_creature_3d_model",
+  "label": "Blob 2",
+  "group": "Blob",
+  "status": "REVIEW",
+  "bytes": 891128,
+  "sha256": "50eb71a62fa688b8a154bb0ee045fba8d0b6a32d5c0870d3f97198716af99543"
+ },
+ {
+  "id": "roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model",
+  "label": "Blob 3",
+  "group": "Blob",
+  "status": "REVIEW",
+  "bytes": 980380,
+  "sha256": "39ab0f0b383a1b030e071973a392ad3d899fdf247f8ccc84c55d26d574aa1181"
+ },
+ {
+  "id": "roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model",
+  "label": "Blob 4",
+  "group": "Blob",
+  "status": "REVIEW",
+  "bytes": 980212,
+  "sha256": "aa15686e1e283593efd3c0f06c54c42bb0678700f4de0e83cce2b132dbf0e0fd"
+ },
+ {
+  "id": "roster/23-blob-texture-bodies--sand_creature_3d_model",
+  "label": "Blob 5",
+  "group": "Blob",
+  "status": "REVIEW",
+  "bytes": 1226672,
+  "sha256": "ef657be035523e56ee1a5f00bdd79816d223355e981463e996154b54bdf95187"
+ }
+]

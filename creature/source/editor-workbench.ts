@@ -1,7 +1,7 @@
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
-import {REGIONS,LABELS,STYLES,PICKER_STYLES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
+import {REGIONS,LABELS,STYLES,PICKER_STYLES,BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region} from './creator/design';
 export {CreatureViewer,GESTURES,importCreature};
@@ -17,7 +17,7 @@ let viewer:CreatureViewer|undefined;
 function tell(text:string){$('creatureStatus').textContent=text;}
 function coachPreview(){const coach=getCoach(recipe.coach);$('coachTone').textContent=coach.tone;$('coachLine').textContent=coach.lines[($('coachSituation') as HTMLSelectElement).value as Situation||'start'];}
 function sync(){
- for(const key of ['eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
+ for(const key of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){b.setAttribute('aria-pressed',String(b.dataset.region===selected));b.querySelector('i')!.style.background=STYLES[recipe.styles[b.dataset.region as Region]].primary;}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-style]'))b.setAttribute('aria-pressed',String(Number(b.dataset.style)===recipe.styles[selected]));
  $('partLabel').textContent=LABELS[selected];$('styleLabel').textContent=STYLES[recipe.styles[selected]].name;
@@ -37,15 +37,19 @@ function commit(next:Design,rangeId:string|null=null){
  if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;render('Coach updated',true);
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
+// Creatures grouped by design family so 70+ bodies stay scannable in a phone picker.
+for(const id of ['body','headFrom','armsFrom','feetFrom']){const groups=new Map<string,HTMLOptGroupElement>();for(const b of BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$(id).append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
 function focusPart(region:Region){selected=region;sync();viewer?.focusRegion(region);}
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
-for(const [id,region] of Object.entries({eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
+for(const [id,region] of Object.entries({body:'body',headFrom:'head',armsFrom:'arms',feetFrom:'feet',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 PICKER_STYLES.forEach(style=>{const index=style.id;const b=document.createElement('button');b.dataset.style=String(index);const img=document.createElement('img');img.src=new URL(`./styles/${String(index).padStart(2,'0')}.png`,location.href).href;img.alt='';img.loading='lazy';const label=document.createElement('span');label.textContent=style.name;b.append(img,label);b.onclick=()=>{focusPart(selected);commit({...recipe,styles:{...recipe.styles,[selected]:index}});};$('styles').append(b);});
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
-for(const id of ['eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement;commit({...recipe,[id]:['fingers','toes'].includes(id)?Number(input.value):input.value});});
+for(const id of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
+ // Choosing a body resets head, arms and legs to that creature; the part pickers then mix and match.
+ commit(id==='body'?{...recipe,body:String(value),headFrom:String(value),armsFrom:String(value),feetFrom:String(value)}:{...recipe,[id]:value});});
 for(const id of ['fur','iris','pupilSize','detail']){
  const input=$(id) as HTMLInputElement;
  input.addEventListener('input',()=>commit({...recipe,[id]:Number(input.value)},id));

@@ -1,4 +1,6 @@
 // Eye centers use the model's Y-up coordinates; yaw faces outward from the crown.
+// Reference point the table is tuned to (myr5's own head front, at the single-eye position).
+export const EYE_REFERENCE={x:0,y:2.1575,z:0.55};
 export const EYE_LAYOUTS = {
  "single":{"label":"One cyclops eye","eyes":[[0,2.1575,0.55,0.605,0]]},
  "horizontal":{"label":"Horizontal pair","eyes":[[-0.34,2.25,0.49,0.32,0],[0.34,2.25,0.49,0.32,0]]},
