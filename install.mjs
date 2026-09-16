@@ -4,6 +4,7 @@ try{captureGala();mountGalaReturn();}catch{}
 import {readIncomingCoach,saveIncomingCoach} from './pending-coach.mjs';
 import {isInstalled,setupAllowed} from './install-context.mjs';
 import {prepareInstall} from './install-transfer.mjs';
+import {prepareOfflineApp} from './offline-install.mjs';
 const button=document.getElementById('installCoach'),status=document.getElementById('installStatus'),saved=document.getElementById('coachSaved');
 const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/i.test(navigator.userAgent);
 let prompt=null,ready=false;
@@ -20,13 +21,14 @@ button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();
 async function prepare(){
  button.disabled=true;
  try{
+  status.textContent='Saving coach artwork on this device…';
   try{await prepareGalaInstall();}catch{mountGalaReturn();}
   const raw=new URLSearchParams(location.hash.slice(1)).get('coach'),incoming=raw?saveIncomingCoach(decodeHandoff(raw)):readIncomingCoach();
   if(incoming){await prepareInstall(incoming);saved.textContent='Coach saved';}
   if(raw)history.replaceState(null,'',location.pathname+location.search);
+  await prepareOfflineApp();
   ready=true;button.disabled=false;button.textContent=ios?'Add Coach to Home Screen':'Install Coach';status.textContent='';
   if(ios)guide();
  }catch(error){status.textContent=error.message;button.textContent='Retry';button.disabled=false;}
 }
 if(isInstalled()){await saveInstalledRun().catch(()=>{});setupAllowed();location.replace('/onboarding.html?from=install'+location.hash);}else await prepare();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});

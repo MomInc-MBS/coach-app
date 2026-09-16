@@ -1,10 +1,10 @@
 import {build} from 'vite';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
 import {ensureAssets,ensureHandAssets} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {prepareReleaseBuild} from './release-build.mjs';
+import {writeOfflineWorker} from './offline-assets.mjs';
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
 if(publicExpansionKey && !(publicExpansionKey.kty==='OKP' && publicExpansionKey.crv==='Ed25519' && typeof publicExpansionKey.x==='string' && /^[A-Za-z0-9_-]{43}$/.test(publicExpansionKey.x) && !/^A+$/.test(publicExpansionKey.x))) throw new Error('PUBLIC_EXPANSION_SIGNING_JWK must be a non-placeholder Ed25519 public JWK');
 await ensureAssets();
@@ -14,7 +14,7 @@ await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,form
 await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js'});
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 const releaseBuild=await prepareReleaseBuild();
-await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['three','three/*','https://*']});
+await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*']});
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs']});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
@@ -39,16 +39,7 @@ await writeFile('dist/client/app.css',(await Promise.all(cssHrefs.map(h=>readFil
 for(const m of cssLinks)pose=pose.replace(m[0],'');
 pose=pose.replace('<link rel="manifest"',`<link rel="stylesheet" href="/app.css?v=${releaseBuild}"><link rel="manifest"`);
 await writeFile('dist/client/pose.html',pose);await writeFile('dist/client/index.html',pose);await cp('LICENSE','dist/client/LICENSE');
-let sw=(await readFile('sw.js','utf8')).replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${releaseBuild}'`);
-for(const h of cssHrefs)sw=sw.replaceAll(`'${h}',`,'').replaceAll(`,'${h}'`,'');
-// Precache every creature and hologram model (about 110 MB) in its own content-hashed cache.
-const modelPaths=[];for(const dir of ['creature/models','creature/models/roster','models'])for(const name of (await readdir(dir)).sort())if(name.endsWith('.glb'))modelPaths.push(`/${dir}/${name}`);
-const modelHash=createHash('sha1'),modelUrls=[];
-for(const path of modelPaths){const data=await readFile('.'+path);modelHash.update(path).update(data);modelUrls.push(`${path}?v=${createHash('sha1').update(data).digest('hex').slice(0,10)}`);}
-sw=sw.replace(/^const MODEL_CACHE=.*$/m,`const MODEL_CACHE='myr5-models-${modelHash.digest('hex').slice(0,8)}',MODELS=${JSON.stringify(modelUrls)};`);
-sw=sw.replace("'/pose.html',","'/pose.html','/app.css',");
-sw=sw.replace("const CORE=['/pose.html',","const CORE=['/pose.html','/app.css',");
-await writeFile('dist/client/sw.js',sw);
+await writeOfflineWorker('dist/client',releaseBuild);
 // The AGPL source offer travels with the app, with no runtime secrets or user records.
 const sources={};for(const folder of ['server','db','scripts','scheduler','pod'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
 for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry))sources[entry]=await readFile(entry,'utf8');
