@@ -15,7 +15,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  const notice=releaseNotice(storage,RELEASE.id);
  let reg=null,latest=RELEASE,applying=false,switched=false,dismissed=false,poll=0,error='',lastInteraction=Date.now(),retryAt=0,checking=false;
  const hadController=!!navigator.serviceWorker?.controller;
- const safe=(automatic=true,background=false)=>safeToUpdate({tracking:document.body.dataset.tracking==='true',rest:document.body.dataset.screen==='rest',dialog:!!document.querySelector('dialog[open]:not(#installPanel)'),editing:!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]'),hidden:document.hidden&&!background,online:navigator.onLine,lastInteraction,automatic});
+ const safe=(automatic=true,background=false)=>safeToUpdate({tracking:document.body.dataset.tracking==='true',rest:document.body.dataset.screen==='rest',dialog:!!document.querySelector('dialog[open]:not(#installPanel):not(#coachSetupGate)'),editing:!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]'),hidden:document.hidden&&!background,online:navigator.onLine,lastInteraction,automatic});
  const ready=()=>!!reg?.waiting||switched||(!('serviceWorker' in navigator)&&latest.id!==RELEASE.id);
  function showNotes(r){$('releaseVersion').textContent=r.title+' · '+r.date;$('releaseNotes').replaceChildren(...r.notes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}
  function paint(){
@@ -77,7 +77,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
    else {applying=false;paint();}
   });
   navigator.serviceWorker.addEventListener('message',async event=>{
-   if(event.data?.type==='APP_UPDATE_AVAILABLE'){openDownload();return;}
+   if(event.data?.type==='APP_UPDATE_AVAILABLE'){openDownload();event.ports[0]?.postMessage({handled:true});return;}
    if(event.data?.type!=='UPDATE_SAFETY_CHECK')return;
    let approved=safe(false,true);
    if(approved)try{await onBeforeUpdate?.();approved=safe(false,true);}catch{approved=false;}
