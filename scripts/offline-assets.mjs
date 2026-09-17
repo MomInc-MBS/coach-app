@@ -20,6 +20,9 @@ export async function offlineAssets(root){
   for(const entry of await readdir(join(root,path),{withFileTypes:true})){
    if(entry.name.startsWith('.')||entry.name==='source')continue;
    const name=path+'/'+entry.name;
+   // The full roster stays available from the customizer, but forcing every
+   // large GLB into the atomic app install exceeds practical mobile quotas.
+   if(entry.isFile()&&name.startsWith('creature/models/roster/')&&name.endsWith('.glb'))continue;
    if(entry.isDirectory())await walk(name);
    else if(entry.isFile()&&runtime.test(entry.name))await add(name);
   }

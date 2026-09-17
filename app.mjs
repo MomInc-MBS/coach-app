@@ -79,7 +79,7 @@ async function start(){
   try{
     await pod.beginSet(session.mode);
     if(run!==generation)return;
-    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open the HTTPS phone test link in Chrome to enable the camera.');
+    if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open this HTTPS site in a browser that supports camera access.');
     const selected=$('camera').value;
     const incoming=await openCamera(selected);
     if(run!==generation){incoming.getTracks().forEach(t=>t.stop());return;}
@@ -108,7 +108,7 @@ async function start(){
   }catch(error){
     if(run!==generation)return;
     generation++;release();controls(false);pod.stopped();state.phase='error';state.error=error.message;
-    status(error.name==='NotAllowedError'?'Allow camera access for this page in Chrome, then tap Start.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
+    status(error.name==='NotAllowedError'?'Allow camera access for this site, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
   }
 }
 async function loop(run){
