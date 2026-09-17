@@ -55,5 +55,3 @@
 .training-rewards{padding:10px 12px;margin:8px 0 12px;border:1px solid #729b9a;background:#14282dcc;color:#e5fff6}.training-rewards p{margin:0;font-size:1rem}.training-reward-weapons{display:flex;gap:20px;flex-wrap:wrap}.training-reward-weapons>div{display:flex;align-items:center;gap:8px;min-width:130px;font-size:.875rem}.training-reward-weapons canvas{width:30px;height:54px;image-rendering:pixelated}.training-rewards small{font-size:.875rem;color:#bcd7d3}
 
 #variationName{display:block;min-height:44px;padding:6px 0;border:0;border-radius:0;background:none;color:inherit;text-align:left;text-decoration:underline;text-decoration-color:#a8cab5;text-underline-offset:5px;font:inherit;font-weight:700;cursor:pointer}
-/* Phase 3 · one scrollable grid instead of pages */
-#movementCards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}

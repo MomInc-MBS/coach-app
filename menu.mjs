@@ -11,7 +11,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  const speak=(text,options={})=>voice.say(text,options);
  function cancelIntro(){introGeneration++;introducing=false;clearTimeout(introTimer);resolveWait?.();resolveWait=null;voice.cancel();$('introCue').hidden=true;}
  function releaseViewer(){viewerGeneration++;viewer?.dispose();viewer=null;}
- function stopHands(message='Hold thumbs up to confirm.'){handGeneration++;hands?.stop();hands=null;$('toggleHands').disabled=false;$('toggleHands').textContent='Enable exercise gestures';$('toggleHands').setAttribute('aria-pressed','false');$('handState').textContent=message;$('confirmProgress').value=0;}
+ function stopHands(message='Touch controls ready'){handGeneration++;hands?.stop();hands=null;$('toggleHands').disabled=false;$('toggleHands').textContent='Enable exercise gestures';$('toggleHands').setAttribute('aria-pressed','false');$('handState').textContent=message;$('confirmProgress').value=0;}
  function selection(id){if(id==='jumping')id='jumping-jack';selected=id;$('startFromLibrary').textContent='Start '+movements[id].name;for(const button of $('movementCards').querySelectorAll('[data-movement]'))button.setAttribute('aria-pressed',String(button.dataset.movement===id));}
  function home(){dialog.dataset.preview='false';filter=focusFor(selected);$('libraryFocus').value=filter;page=Math.max(0,Math.floor(GROUP_EXERCISES[filter].findIndex(m=>m.id===selected)/4));paginate();cancelIntro();releaseViewer();$('movementCards').hidden=false;$('startFromLibrary').hidden=true;$('hologramPanel').hidden=true;$('gestureArea').hidden=false;dialog.scrollTop=0;if(dialog.open)$('movementCards').querySelector(`[data-movement="${selected}"]`)?.focus();}
  for(const [id,m] of Object.entries(EXERCISES)){
@@ -21,15 +21,14 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   const poster=document.createElement('img');poster.src=`/models/previews/${id}.png`;poster.alt='';poster.width=512;poster.height=512;poster.loading='lazy';poster.decoding='async';button.append(poster);
   button.addEventListener('click',()=>{cancelIntro();showModel(id);speak(m.name,{interrupt:true});});card.append(button);$('movementCards').append(card);
  }
- function paginate(){rewards.paint();for(const card of $('movementCards').children)card.hidden=card.dataset.group!==filter;$('libraryPages').hidden=true;}
+ function paginate(){rewards.paint();const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;}
  $('previousPage').addEventListener('click',()=>{page--;paginate();});$('nextPage').addEventListener('click',()=>{page++;paginate();});
  $('libraryFocus').value=filter;paginate();
  async function showModel(id){
   if(id==='jumping')id='jumping-jack';
   const setup=movementSetup(EXERCISES[id]);
   $('holoCameraPosition').textContent=setup.position;$('holoCameraPlacement').textContent=setup.placement;
-  const GESTURE={pushup:'point at your upper arm',squat:'hands on hips',tree:'hands together overhead',warrior:'arms out in a T',horse:'hands at your chest',boxing:'two fists at your shoulders',jogging:'pump arms ×4','jumping-jack':'hands raised apart'};
-  $('holoFrameNote').textContent=setup.framing+(GESTURE[id]?` Gesture: ${GESTURE[id]}.`:'');
+  $('holoFrameNote').textContent=setup.framing;
   $('holoVisibleJoints').replaceChildren(...setup.joints.map(name=>{const li=document.createElement('li');li.textContent=name;return li;}));
   $('holoStage').setAttribute('aria-label',`${movements[id].name} example. ${setup.position}. Drag to rotate.`);
   dialog.dataset.preview='true';stopHands();releaseViewer();const run=viewerGeneration;selection(id);onSelect(id);$('movementCards').hidden=true;$('libraryPages').hidden=true;$('startFromLibrary').hidden=true;$('gestureArea').hidden=true;$('hologramPanel').hidden=false;$('holoName').textContent=movements[id].name;$('holoStatus').hidden=false;$('holoStatus').textContent='Loading hologram…';$('holoPlay').textContent='Pause animation';$('useHologram').disabled=false;$('useHologram').textContent='Begin';dialog.scrollTop=0;
