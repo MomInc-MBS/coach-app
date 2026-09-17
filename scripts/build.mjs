@@ -15,7 +15,8 @@ await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'e
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs'});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
-for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
+for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name)&&entry.name!=='nutrition-data.mjs')await cp(entry.name,`dist/client/${entry.name}`);}
+await unlink('dist/client/nutrition-data.mjs').catch(()=>{});
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 for(const folder of ['pod','creature','models','icons','handborne','arcade'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 // Publish only the current voice pack, excluding obsolete clips and source masters.

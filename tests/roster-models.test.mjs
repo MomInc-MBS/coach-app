@@ -40,6 +40,7 @@ test('all 70 roster models are intact and registered in both Coach builders',asy
 test('roster models stay on demand and do not inflate app installation',()=>{
  assert.doesNotMatch(worker,/creature\/models\/roster/);
  assert.doesNotMatch(worker,/MODELS\.map/);
+ assert.doesNotMatch(worker,/\/nutrition-data\.mjs/);
 });
 
 test('every mandatory install file exists and the payload stays phone-sized',async()=>{
