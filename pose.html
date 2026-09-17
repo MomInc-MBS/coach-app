@@ -31,8 +31,9 @@
 <link rel="stylesheet" href="/coach-hub.css"><link rel="stylesheet" href="/pod/home-character.css">
 <script>document.documentElement.dataset.publicState='locked';</script>
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
-<header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark-96.webp" width="36" height="36" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><div class="deck-readout"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
+<header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark-96.webp" width="36" height="36" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
+ <div class="deck-strip"><span><i class="status-light"></i> POD 005</span><span id="levelBadge">WORKOUT LV. 01</span></div>
  <div id="trainingView" class="training-view">
  <div class="containment-bay">
  <section id="view" class="containment-pod" aria-label="Your coach's containment pod">
@@ -53,7 +54,7 @@
   <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">MOVEMENTS ↗</button></div>
   <div class="signal-control"><label>SOUND</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div></div>
   <div class="goal-control difficulty-control"><div><label for="difficultySlider">DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><button type="button" id="variationName" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement">Knee push-up</button><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
-  <div class="set-actions"><p id="setSummary" class="set-summary" aria-live="polite"></p><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
+  <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
   <p id="status" role="status">Ready</p>
   <span id="movementName" hidden>Squats</span><span id="secondary" hidden></span><span id="countState" hidden></span>

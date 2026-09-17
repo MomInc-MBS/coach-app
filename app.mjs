@@ -16,7 +16,7 @@ let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
-function status(text){if($('status').textContent!==text)$('status').textContent=text;$('status').hidden=text==='Ready';}
+function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
 function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
