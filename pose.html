@@ -50,9 +50,9 @@
  <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">Ready when you are.</p></div>
  <section id="controls" class="workout-console" aria-label="Your set">
 
-  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select></div>
+  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">MOVEMENTS ↗</button></div>
   <div class="signal-control"><label>SOUND</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div></div>
-  <div class="goal-control difficulty-control"><button type="button" id="movementRow" class="manual-button" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement"><span id="variationName">Knee push-up</span><small>level <output id="difficultySetting" for="difficultySlider">1 / 8</output> ›</small></button><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
+  <div class="goal-control difficulty-control"><div><label for="difficultySlider">LEVEL</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><button type="button" id="variationName" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement">Knee push-up</button><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
   <div class="set-actions"><p id="setSummary" class="set-summary" aria-live="polite"></p><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
   <p id="status" role="status">Ready</p>
@@ -61,11 +61,12 @@
  <footer class="crew-footer"><button id="openIdentity"><canvas id="miniAvatar" width="64" height="96" aria-hidden="true"></canvas><span id="guestLabel">Gala look</span><span>↗</span></button></footer>
 </main>
 <main id="restScreen" class="rest-page" hidden aria-labelledby="restHeading">
- <div class="rest-heading"><div><p class="eyebrow" id="restEyebrow">SET COMPLETE</p><h1 id="restHeading" tabindex="-1">Rest</h1><div class="rest-receipt"><span id="setReceipt">Set saved</span><span id="earnedXp">+25 XP</span></div></div><button id="leaveRest" class="icon-button" aria-label="Return to the pod">↗</button></div>
+ <div class="rest-heading"><div><p class="eyebrow" id="restEyebrow">SET COMPLETE</p><h1 id="restHeading" tabindex="-1">Rest</h1></div><button id="leaveRest" class="icon-button" aria-label="Return to the pod">↗</button></div>
+ <div class="rest-receipt"><span id="setReceipt">Set saved</span><span id="earnedXp">+25 XP</span></div>
  <section class="encounter" aria-label="Rest encounter with your custom coach">
   <div class="rest-world-backdrop" aria-hidden="true"></div><div class="rest-world-floor" aria-hidden="true"></div>
   <div class="encounter-orbit" aria-hidden="true"></div><div class="encounter-grid" aria-hidden="true"></div>
-  <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><div class="boss-status-row"><span id="damageTotal">0 DAMAGE</span><span id="coachHealth">1B HP</span></div><div class="boss-health" role="progressbar" aria-label="Coach health" aria-valuemin="0" aria-valuemax="1000000000" aria-valuenow="1000000000"><i id="bossHealth"></i></div></div>
+  <div class="boss-status"><span id="powerName">SHIELD ACTIVE</span><span id="damageTotal">0 DAMAGE</span><span id="coachHealth">1B HP</span><div class="boss-health" role="progressbar" aria-label="Coach health" aria-valuemin="0" aria-valuemax="1000000000" aria-valuenow="1000000000"><i id="bossHealth"></i></div></div>
   <div class="coach-battle-platform" aria-hidden="true"></div><span id="restWeaponName" class="rest-weapon-name"></span>
   <div id="restCoachMount" class="rest-coach-mount"><p id="restCoachLoading">Loading…</p></div>
   <button id="attackCoach" class="attack-target" aria-label="Attack the coach with Helping Hand"><span>TAP TO STRIKE</span></button>
@@ -80,7 +81,7 @@
  <div class="hand-team"><span id="handTeamStatus" role="status">Helping Hand ready</span><button id="retryHand" hidden>Retry hand</button><progress id="handCharge" value="0" max="3" aria-label="Helping Hand team strike charge"></progress><small id="handChargeLabel">Team strike in 3 taps</small></div>
  <p id="restFeedback" class="rest-feedback" role="status"></p>
  <div class="rest-bottom"><div class="rest-clock"><small>RECOVERY</small><strong id="restTime">1:00</strong></div><div><button id="nextSet" class="primary-action" disabled>Next set →</button><button id="moreRest" class="text-button">+30 seconds</button></div></div>
- <p id="shieldNote" class="shield-note"></p>
+ <p id="shieldNote" class="shield-note">Sign in to add streak power.</p>
 </main>
 <dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Settings</h2><button id="closeSettings" aria-label="Close pod controls">Close</button></header>
  <div class="settings-fields"><h3>SET</h3><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label></div>

@@ -164,7 +164,7 @@ resetMovement();
 initHardware();
 soundSwitch();
 const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Paused.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
-$('movementRow').addEventListener('click',()=>library.introduce($('movement').value));
+$('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
 
 let cinematics={play(){}};

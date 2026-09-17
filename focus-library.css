@@ -57,5 +57,3 @@
 #variationName{display:block;min-height:44px;padding:6px 0;border:0;border-radius:0;background:none;color:inherit;text-align:left;text-decoration:underline;text-decoration-color:#a8cab5;text-underline-offset:5px;font:inherit;font-weight:700;cursor:pointer}
 /* Phase 3 · one scrollable grid instead of pages */
 #movementCards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}
-/* Phase 3b · the movement name is a span inside #movementRow, not a standalone button */
-#movementRow #variationName{min-height:0;padding:0;text-decoration:none}
