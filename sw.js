@@ -25,7 +25,10 @@ function offlineResponse(response){
  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 async function downloadAsset(asset){
- const response=await fetch(new Request(new URL(asset.url,self.location.origin),{cache:'reload',integrity:asset.integrity}));
+ // Edge security products can rewrite HTML in transit. Keep integrity strict for
+ // executable and binary assets, but allow those harmless HTML transformations.
+ const html=new URL(asset.url,self.location.origin).pathname.endsWith('.html');
+ const response=await fetch(new Request(new URL(asset.url,self.location.origin),{cache:'reload',...(html?{}:{integrity:asset.integrity})}));
  const destination=response.url?new URL(response.url):null;
  const redirectedElsewhere=response.redirected&&(!destination||destination.origin!==self.location.origin||assetPath(destination.pathname)!==assetPath(asset.url));
  if(!response.ok||redirectedElsewhere)throw Error('Could not save Coach asset: '+asset.url);
@@ -79,7 +82,7 @@ self.addEventListener('message',event=>{
 });
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
- if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname==='/source.json'||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html')return;
+ if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname.startsWith('/source.json')||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html')return;
  if(url.pathname.startsWith('/voice/')){
   event.respondWith((async()=>{const cache=await caches.open(VOICE),cached=await cache.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok&&!response.redirected)await cache.put(request,response.clone());return response;})());return;
  }
@@ -91,7 +94,12 @@ self.addEventListener('fetch',event=>{
  event.respondWith((async()=>{
   const cache=await caches.open(SHELL),cached=await cache.match(path);
   if(cached)return offlineResponse(cached);
-  const response=await downloadAsset(asset);
+  let response;
+  try{response=await downloadAsset(asset);}catch{
+   // A stale worker must never turn an updated app file into a blank page.
+   // Serve the current network response without caching it when SRI disagrees.
+   return fetch(new Request(request,{cache:'no-store'}));
+  }
   try{await cache.put(path,response.clone());}catch{}
   return response;
  })());
