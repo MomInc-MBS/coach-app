@@ -5,7 +5,7 @@ export async function prepareInstall(data,fetcher=fetch){
 }
 export async function restoreInstall(fetcher=fetch,session=sessionStorage,local=localStorage){
  const response=await fetcher('/api/install-draft',{credentials:'same-origin',cache:'no-store'});
- if(!response.ok)throw Error('Could not bring your coach into the app. Check your connection and retry.');
+ if(!response.ok)throw Object.assign(Error('Could not bring your coach into the app. Check your connection and retry.'),{status:response.status});
  const {data}=await response.json();
  if(data){saveIncomingCoach(data,session,local);await fetcher('/api/install-draft',{method:'DELETE',credentials:'same-origin'});return data;}
  return readIncomingCoach(session,local);

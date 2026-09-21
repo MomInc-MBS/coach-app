@@ -12,6 +12,7 @@
 <link rel="manifest" href="/manifest.webmanifest?v=myr5-alien-v1">
 <link rel="modulepreload" href="/launch-runtime.mjs?v=startup-recovery-1">
 <link rel="modulepreload" href="/app-runtime.mjs?v=rest-flow-1">
+<link rel="modulepreload" href="/local-coach-runtime.mjs?v=rest-flow-1">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
 <link rel="icon" type="image/webp" href="/pod/mom-inc-mark-96.webp"><link rel="apple-touch-icon" href="/pod/mom-inc-mark-96.webp">
@@ -83,7 +84,7 @@
  <p id="shieldNote" class="shield-note">Sign in to power your weapon.</p>
 </main>
 <dialog id="settings" class="pod-dialog" aria-labelledby="settingsTitle"><header><h2 id="settingsTitle">Settings</h2><button id="closeSettings" aria-label="Close pod settings">Close</button></header>
- <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
+  <div class="settings-fields"><label>Set goal<select id="goal" aria-label="Set goal"></select></label><label>Rest between sets<select id="restDuration"><option value="30">30 seconds</option><option value="60" selected>60 seconds</option><option value="90">90 seconds</option><option value="120">2 minutes</option></select></label><label>Camera<select id="camera" aria-label="Camera"><option value="user">Front camera</option><option value="environment">Back camera</option><option value="manual">Manual / timer</option></select></label><label>Coach ability<select id="coachPower"><option value="shield">Shield</option><option value="ember">Ember</option><option value="arc">Arc</option><option value="frost">Frost</option></select></label></div>
    <div class="goal-control"><div><label for="goalSlider" id="goalLabel">GOAL</label><output id="goalSetting" for="goalSlider">3 REPS</output></div><input id="goalSlider" type="range" min="0" max="3" step="1" value="1" aria-label="Set goal"><div class="slider-scale" aria-hidden="true"><span id="goalMin">1</span><span id="goalMax">20</span></div></div>
  <div class="voice-row"><button id="testVoice">Test voice</button><span id="voiceType">Robot voice</span></div>
  <div class="settings-fields"><button id="manageMaterials" type="button">Manage materials</button><p id="materialsStatus" role="status">Materials are available after Coach unlock.</p><section id="materialControls" hidden aria-label="Downloaded materials"><button data-material-download type="button">Download material</button><button data-material-cancel type="button" hidden>Cancel</button><button data-material-equip type="button" disabled>Equip after restart</button><p data-material-status role="status"></p><div id="materialRuntime" aria-label="Active material preview"></div></section></div>

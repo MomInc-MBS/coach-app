@@ -1,19 +1,23 @@
 import {renderPersonalTracker,updateTrackerProgress} from './personal-tracker.mjs';
 import {officeEncouragement} from './office-domain.mjs?v=office-short-v1';
-import {EXERCISES} from './onboarding-domain.mjs?v=quick-install-v1';
+import {EXERCISES,dailyTargets} from './onboarding-domain.mjs?v=quick-install-v1';
+import {openLocalCoach} from './local-coach-runtime.mjs';
 import {setupAllowed} from './install-context.mjs';
 import {signInPath} from './auth-paths.mjs';
 import {readIncomingCoach} from './pending-coach.mjs';
 import {nextChallenge} from './workout-route.mjs';
 const gate=document.createElement('dialog');gate.id='coachSetupGate';gate.setAttribute('aria-label','Coach activation');gate.addEventListener('cancel',e=>e.preventDefault());gate.style.cssText='position:fixed;inset:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;z-index:2147483646;background:#17111ef5;display:grid;place-content:center;padding:28px;color:#f5e4ba;font:18px/1.6 Arial;text-align:center';
 gate.innerHTML='<h1>Connecting…</h1><p></p><a href="/pose.html?reconnect=1" style="color:#b8e9cf">Reload Coach</a>';document.body.append(gate);gate.showModal();
-let applied='',restored=false;
+let applied='',restored=false,localPlan=null;
 window.coachPersonalCue=personalCue;
 window.addEventListener('myr5:account-progress',event=>updateTrackerProgress(event.detail));
 const get=k=>{try{return localStorage.getItem(k);}catch{return null;}};
 function showIncomingCoach(){if(!readIncomingCoach())return;gate.querySelector('h1').textContent='Coach ready';gate.querySelector('p').textContent='Saved setup loaded.';gate.querySelector('a').textContent='Continue with my coach';gate.querySelector('a').href='/onboarding.html?from=install';}
 function beginSetup(){return setupAllowed()?'/onboarding.html?from=install':'/install.html';}
-export function clearCoachAccount(){document.documentElement.dataset.publicState='locked';window.coachProgress=null;window.dispatchEvent(new Event('myr5:account-cleared'));window.coachPlan=null;restored=false;applied='';gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Set up Coach';gate.querySelector('p').textContent='Choose games or quick setup.';gate.querySelector('a').href='/onboarding.html';gate.querySelector('a').textContent=setupAllowed()?'Sign in to Coach':'Open installed Coach';gate.querySelector('a').href=setupAllowed()?signInPath('/onboarding.html'):beginSetup();gate.querySelector('p').textContent='Sign in to reconnect your saved coach.';}
+export function clearCoachAccount(){document.documentElement.dataset.publicState='locked';window.coachProgress=null;window.dispatchEvent(new Event('myr5:account-cleared'));window.coachPlan=localPlan;restored=false;applied='';if(localPlan){gate.close();gate.hidden=true;gate.style.display='none';window.dispatchEvent(new Event('myr5:coach-plan'));return;}gate.hidden=false;gate.style.display='grid';if(!gate.open)gate.showModal();gate.querySelector('h1').textContent='Set up Coach';gate.querySelector('p').textContent='Choose games or quick setup.';gate.querySelector('a').href='/onboarding.html';gate.querySelector('a').textContent=setupAllowed()?'Sign in to Coach':'Open installed Coach';gate.querySelector('a').href=setupAllowed()?signInPath('/onboarding.html'):beginSetup();gate.querySelector('p').textContent='Sign in to reconnect your saved coach.';}
+export async function applyLocalCoach(){
+ let repository;try{repository=await openLocalCoach();const scope=repository.forOwner(repository.guestOwnerId),data=await scope.getIntake(),settings=await scope.getSettings();if(!data||!settings?.startDay)return null;const targets=dailyTargets(data.profile,settings.startDay),completedSets=(await scope.listWorkouts()).filter(row=>row.status==='completed').length;localPlan={data,startDay:settings.startDay,completedAt:null,revision:0,targets};window.coachPlan=localPlan;for(const [key,value] of Object.entries(data.appearance||{})){localStorage.setItem(key,JSON.stringify(value));window.dispatchEvent(new StorageEvent('storage',{key,newValue:JSON.stringify(value)}));}window.dispatchEvent(new Event('mominc-avatar-change'));gate.close();gate.hidden=true;gate.style.display='none';let plate=document.getElementById('dailyCoachPlan');if(!plate){plate=document.createElement('section');plate.id='dailyCoachPlan';document.querySelector('.crew-footer').before(plate);}renderPersonalTracker(plate,data.profile,targets,EXERCISES,{completedSets});window.dispatchEvent(new Event('myr5:coach-plan'));return localPlan;}finally{repository?.close();}
+}
 export function applyCoachAccount(account){
  window.coachEntitlements=account.entitlements;window.myr5AuthenticatedAccount=account;window.myr5VerifiedOptionalAccess=account.entitlements?.coachArmy?.status==='completed'&&Number.isSafeInteger(account.entitlements.coachArmy.completedAt);document.documentElement.dataset.publicState=window.myr5VerifiedOptionalAccess?'unlocked':'locked';window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:account}));
  window.coachProgress=account.progress;

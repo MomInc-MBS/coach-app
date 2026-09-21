@@ -10,12 +10,14 @@ const TimestampSchema=z.number().int().nonnegative();
 const OwnerIdSchema=z.string().min(1).max(512).regex(/^(guest|account):\S+$/,'Owner must have a non-empty guest or account scope.');
 const DeviceIdSchema=z.string().min(1).max(128);
 const IdentifierSchema=z.string().min(1).max(128);
+const LeaseTokenSchema=z.string().min(1).max(512);
 const JsonValueSchema=z.lazy(()=>z.union([z.string(),z.number().finite(),z.boolean(),z.null(),z.array(JsonValueSchema),z.record(z.string(),JsonValueSchema)]));
 const JsonObjectSchema=z.record(z.string(),JsonValueSchema).refine(value=>JSON.stringify(value).length<=131072,'JSON object exceeds the 128 KiB local-record limit.');
 const IntakeSchema=z.unknown().transform((value,context)=>{
  try{return validateOnboarding(value);}catch(error){context.addIssue({code:'custom',message:error instanceof Error?error.message:'Invalid coach setup.'});return z.NEVER;}
 });
 const SettingsSchema=JsonObjectSchema;
+const StartDaySchema=z.string().regex(/^\d{4}-\d{2}-\d{2}$/,'Start day must be a local calendar date.');
 const WorkoutStatusSchema=z.enum(['active','paused','completed','interrupted']);
 const ModeSchema=z.string().min(1).max(80);
 const WorkoutStartSchema=z.object({
@@ -137,6 +139,7 @@ export async function openLocalCoach({
 
  const forOwner=ownerValue=>{
   const ownerId=parse(OwnerIdSchema,ownerValue,'Owner identifier');
+  const leaseKey=`workout-lease:${JSON.stringify([ownerId,identity.deviceId])}`;
   const getWorkout=async id=>{
    const row=await db.workouts.get(parse(IdentifierSchema,id,'Workout identifier'));
    if(!row||row.ownerId!==ownerId)return null;
@@ -145,9 +148,11 @@ export async function openLocalCoach({
   const transact=async(operation,tables,fn)=>{
    try{return await db.transaction('rw',...tables,fn);}catch(error){throw classifyLocalCoachError(error,operation);}
   };
+  const assertWorkoutLease=async token=>{if(token===undefined)return;const expected=parse(LeaseTokenSchema,token,'Workout lease token'),row=await db.meta.get(leaseKey),lease=row?parse(MetaRecordSchema,row,'Workout lease record').value:null;if(!lease||lease.token!==expected)throw new LocalCoachStorageError('lease','This workout is active in another tab.',{recoverable:true});};
   return Object.freeze({
    ownerId,
    deviceId:identity.deviceId,
+   async claimWorkoutLease(token){const value={token:parse(LeaseTokenSchema,token,'Workout lease token')};return transact('Workout lease claim',[db.meta],async()=>{const row=parse(MetaRecordSchema,{key:leaseKey,ownerId,value,updatedAt:now(),schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Workout lease record');await db.meta.put(row);return value;});},
    async saveIntake(value){
     const intake=parse(IntakeSchema,value,'Coach intake'),timestamp=now();
     const row=parse(IntakeRecordSchema,{ownerId,deviceId:identity.deviceId,value:intake,updatedAt:timestamp,schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Coach intake record');
@@ -159,30 +164,42 @@ export async function openLocalCoach({
     const row=parse(SettingsRecordSchema,{ownerId,deviceId:identity.deviceId,value:settings,updatedAt:timestamp,schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Coach settings record');
     try{await db.settings.put(row);return row.value;}catch(error){throw classifyLocalCoachError(error,'Coach settings');}
    },
-   async getSettings(){try{const row=await db.settings.get(ownerId);return row?parse(SettingsRecordSchema,row,'Coach settings record').value:null;}catch(error){throw classifyLocalCoachError(error,'Coach settings');}},
-   async startWorkout(input){
+    async getSettings(){try{const row=await db.settings.get(ownerId);return row?parse(SettingsRecordSchema,row,'Coach settings record').value:null;}catch(error){throw classifyLocalCoachError(error,'Coach settings');}},
+    async saveSetup(value,{startDay}={}){
+     const intake=parse(IntakeSchema,value,'Coach intake'),requestedDay=parse(StartDaySchema,startDay,'Coach start day');
+     return transact('Coach setup',[db.intake,db.settings],async()=>{
+      const timestamp=now(),existing=await db.settings.get(ownerId),prior=existing?parse(SettingsRecordSchema,existing,'Coach settings record').value:{};
+      const settings=parse(SettingsSchema,{...prior,startDay:prior.startDay??requestedDay},'Coach settings');
+      const intakeRow=parse(IntakeRecordSchema,{ownerId,deviceId:identity.deviceId,value:intake,updatedAt:timestamp,schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Coach intake record');
+      const settingsRow=parse(SettingsRecordSchema,{ownerId,deviceId:identity.deviceId,value:settings,updatedAt:timestamp,schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Coach settings record');
+      await db.intake.put(intakeRow);await db.settings.put(settingsRow);return {intake:intakeRow.value,settings:settingsRow.value};
+     });
+    },
+   async startWorkout(input,{leaseToken}={}){
     const parsed=parse(WorkoutStartSchema,input,'Workout start');
     if(!modes.has(parsed.mode))throw new LocalCoachStorageError('invalid-record','Workout mode is not supported.',{recoverable:true});
     // The client identifier is the durable local primary key by design. The
     // server receives this same immutable value for idempotent reconciliation.
     const timestamp=now(),id=parsed.clientWorkoutId??createId(cryptoObject);
     const row=parse(WorkoutRecordSchema,{id,clientWorkoutId:id,ownerId,deviceId:identity.deviceId,mode:parsed.mode,goal:parsed.goal,restSeconds:parsed.restSeconds,status:'active',progress:parsed.progress,metadata:parsed.metadata,startedAt:timestamp,updatedAt:timestamp,schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Workout');
-    return transact('Workout start',[db.workouts,db.workoutEvents],async()=>{await db.workouts.add(row);await appendEvent(row,'started',{mode:row.mode,goal:row.goal,restSeconds:row.restSeconds});return row;});
+    return transact('Workout start',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);await db.workouts.add(row);await appendEvent(row,'started',{mode:row.mode,goal:row.goal,restSeconds:row.restSeconds});return row;});
    },
-   async updateWorkout(id,patch){
+   async updateWorkout(id,patch,{leaseToken}={}){
     const parsed=parse(WorkoutPatchSchema,patch,'Workout update');
-    return transact('Workout update',[db.workouts,db.workoutEvents],async()=>{
+    return transact('Workout update',[db.meta,db.workouts,db.workoutEvents],async()=>{
+     await assertWorkoutLease(leaseToken);
      const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});
      if(current.status==='completed')throw new LocalCoachStorageError('already-completed','Completed workouts cannot be changed.',{recoverable:true});
      const updated=parse(WorkoutRecordSchema,{...current,...parsed,updatedAt:now()},'Workout');
      await db.workouts.put(updated);await appendEvent(updated,'updated',parsed);return updated;
     });
    },
-   async pauseWorkout(id){return transact('Workout pause',[db.workouts,db.workoutEvents],async()=>{const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});if(current.status!=='active')return current;const updated=parse(WorkoutRecordSchema,{...current,status:'paused',updatedAt:now()},'Workout');await db.workouts.put(updated);await appendEvent(updated,'paused');return updated;});},
-   async resumeWorkout(id){return transact('Workout resume',[db.workouts,db.workoutEvents],async()=>{const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});if(!['paused','interrupted'].includes(current.status))return current;const {interruptedAt:_interruptedAt,...resumable}=current;const updated=parse(WorkoutRecordSchema,{...resumable,status:'active',updatedAt:now()},'Workout');await db.workouts.put(updated);await appendEvent(updated,'resumed');return updated;});},
-   async completeWorkout(id,completion,{queueForSync=true}={}){
+   async pauseWorkout(id,{leaseToken}={}){return transact('Workout pause',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});if(current.status!=='active')return current;const updated=parse(WorkoutRecordSchema,{...current,status:'paused',updatedAt:now()},'Workout');await db.workouts.put(updated);await appendEvent(updated,'paused');return updated;});},
+   async resumeWorkout(id,{leaseToken}={}){return transact('Workout resume',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});if(!['paused','interrupted'].includes(current.status))return current;const {interruptedAt:_interruptedAt,...resumable}=current;const updated=parse(WorkoutRecordSchema,{...resumable,status:'active',updatedAt:now()},'Workout');await db.workouts.put(updated);await appendEvent(updated,'resumed');return updated;});},
+   async completeWorkout(id,completion,{queueForSync=true,leaseToken}={}){
     const parsed=parse(CompletionSchema,completion,'Workout completion');
-    return transact('Workout completion',[db.workouts,db.workoutEvents,db.outbox],async()=>{
+    return transact('Workout completion',[db.meta,db.workouts,db.workoutEvents,db.outbox],async()=>{
+     await assertWorkoutLease(leaseToken);
      const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});
      if(current.status==='completed'){const existing=await db.outbox.where('workoutId').equals(current.id).first();return {workout:current,outbox:existing?parse(OutboxRecordSchema,existing,'Sync outbox record'):null,duplicate:true};}
      const timestamp=now();
@@ -193,7 +210,9 @@ export async function openLocalCoach({
      return {workout:updated,outbox,duplicate:false};
     });
    },
-   async recoverInterruptedWorkouts(){return transact('Workout recovery',[db.workouts,db.workoutEvents],async()=>{const rows=await db.workouts.where('[ownerId+status]').anyOf([[ownerId,'active'],[ownerId,'paused']]).toArray();const recovered=[];for(const raw of rows){const current=parse(WorkoutRecordSchema,raw,'Workout'),timestamp=now(),updated=parse(WorkoutRecordSchema,{...current,status:'interrupted',interruptedAt:timestamp,updatedAt:timestamp},'Workout');await db.workouts.put(updated);await appendEvent(updated,'interrupted',{previousStatus:current.status});recovered.push(updated);}return recovered;});},
+    async recoverInterruptedWorkouts({leaseToken}={}){return transact('Workout recovery',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);const rows=await db.workouts.where('[ownerId+status]').anyOf([[ownerId,'active'],[ownerId,'paused']]).toArray();const recovered=[];for(const raw of rows){const current=parse(WorkoutRecordSchema,raw,'Workout'),timestamp=now(),updated=parse(WorkoutRecordSchema,{...current,status:'interrupted',interruptedAt:timestamp,updatedAt:timestamp},'Workout');await db.workouts.put(updated);await appendEvent(updated,'interrupted',{previousStatus:current.status});recovered.push(updated);}return recovered;});},
+    async interruptActiveWorkouts({leaseToken}={}){return transact('Active workout recovery',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);const rows=await db.workouts.where('[ownerId+status]').equals([ownerId,'active']).toArray(),recovered=[];for(const raw of rows){const current=parse(WorkoutRecordSchema,raw,'Workout'),timestamp=now(),updated=parse(WorkoutRecordSchema,{...current,status:'interrupted',interruptedAt:timestamp,updatedAt:timestamp},'Workout');await db.workouts.put(updated);await appendEvent(updated,'interrupted',{previousStatus:current.status});recovered.push(updated);}return recovered;});},
+    async interruptWorkout(id,{leaseToken}={}){return transact('Workout interruption',[db.meta,db.workouts,db.workoutEvents],async()=>{await assertWorkoutLease(leaseToken);const current=await getWorkout(id);if(!current)throw new LocalCoachStorageError('not-found','Workout was not found for this owner.',{recoverable:true});if(current.status!=='active')return current;const timestamp=now(),updated=parse(WorkoutRecordSchema,{...current,status:'interrupted',interruptedAt:timestamp,updatedAt:timestamp},'Workout');await db.workouts.put(updated);await appendEvent(updated,'interrupted',{previousStatus:current.status});return updated;});},
    async getWorkout(id){try{return await getWorkout(id);}catch(error){throw classifyLocalCoachError(error,'Workout read');}},
    async listWorkouts(){try{return (await db.workouts.where('ownerId').equals(ownerId).sortBy('startedAt')).map(row=>parse(WorkoutRecordSchema,row,'Workout'));}catch(error){throw classifyLocalCoachError(error,'Workout history');}},
    async listEvents(workoutId){try{return (await db.workoutEvents.where('[ownerId+workoutId]').equals([ownerId,workoutId]).sortBy('sequence')).map(row=>parse(EventRecordSchema,row,'Workout event'));}catch(error){throw classifyLocalCoachError(error,'Workout events');}},

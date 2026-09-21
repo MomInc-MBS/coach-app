@@ -6,6 +6,8 @@ import {mountHomeCharacter} from './pod/home-character.mjs';
 import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
+import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
+import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -13,6 +15,8 @@ document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
 if(!voice.available){$('voiceType').textContent='Speech unavailable in this browser';$('toggleVoice').disabled=true;}
 let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,generation=0;
 let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
+let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
+const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
@@ -38,7 +42,7 @@ async function showLensInfo(track){
   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
-  cancelAnimationFrame(frame);if(tracker){try{tracker.close();}catch{}tracker=null;}draw=null;
+  cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}draw=null;
   stream?.getTracks().forEach(t=>t.stop());stream=null;v.pause();v.srcObject=null;g.clearRect(0,0,c.width,c.height);
   state.camera=null;state.delegate=null;state.rate=0;
 }
@@ -66,19 +70,26 @@ function renderMotion(m){
   $('paceNote').hidden=m.kind!=='pace';
   pod?.render(m);
 }
-function stop(message='Stopped. Your results stay here until the next start.'){
+function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true}={}){
+  const unfinished=interrupt&&['camera','model','tracking'].includes(state.phase);
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
-  pod?.stopped();
+  if(unfinished)workoutTransition=Promise.resolve(pod?.interruptCurrent(state.motion)).catch(error=>{status(error.message);throw error;});
+  return workoutTransition;
 }
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
 async function start(){
+  if(['camera','model','tracking'].includes(state.phase))stop('Switching workout input…');
+  try{await workoutTransition;}catch{return;}
+  if($('camera').value==='manual')return startManual();
   const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
   $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
   state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Get into position.',{interrupt:true});$('detail').textContent='Waiting for video';
+  let settleCameraStart;
+  cameraStartTransition=new Promise(resolve=>{settleCameraStart=resolve;});
   try{
-    await pod.beginSet(session.mode);
-    if(run!==generation)return;
+    await pod.beginSet(session.mode,{manual:false});
+    if(run!==generation){await pod.interruptCurrent(state.motion);return;}
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open this HTTPS site in a browser that supports camera access.');
     const selected=$('camera').value;
     const incoming=await openCamera(selected);
@@ -106,10 +117,10 @@ async function start(){
     lastTime=-1;frames=0;timing=0;windowStart=performance.now();lastUi=0;
     status(MOVEMENTS[session.mode].hint);voice.say(MOVEMENTS[session.mode].hint,{interrupt:true});loop(run);
   }catch(error){
-    if(run!==generation)return;
-    generation++;release();controls(false);pod.stopped();state.phase='error';state.error=error.message;
+    if(run!==generation){await pod.interruptCurrent(state.motion).catch(()=>{});return;}
+    generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;
     status(error.name==='NotAllowedError'?'Allow camera access for this site, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
-  }
+  }finally{settleCameraStart();}
 }
 async function loop(run){
   if(run!==generation||!tracker)return;
@@ -132,10 +143,10 @@ async function loop(run){
       if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
     }
     frame=requestAnimationFrame(()=>loop(run));
-  }catch(error){generation++;release();controls(false);pod.stopped();voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
+  }catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
 }
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
-$('start').addEventListener('click',()=>library.introduce());$('stop').addEventListener('click',()=>{stop();voice.say('Stopped.',{interrupt:true});});
+$('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
 $('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
 $('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
@@ -143,15 +154,17 @@ $('duration').addEventListener('change',()=>{resetMovement();voice.say(Number($(
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
 $('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
-$('camera').addEventListener('change',()=>{voice.say('Camera selected.',{interrupt:true});if(state.phase==='tracking')start();});
+$('camera').addEventListener('change',()=>{if($('camera').value!=='manual')voice.say('Camera selected.',{interrupt:true});if(state.phase==='tracking')start();});
 $('widest').addEventListener('click',async()=>{
   const track=stream?.getVideoTracks()[0];if(!track)return;$('widest').disabled=true;
   try{const cameras=await refreshLenses(),wide=findUltrawide(cameras);if(state.camera!=='user'&&wide&&track.getSettings().deviceId!==wide.id){$('camera').value=deviceChoice(wide.id);await start();}else{await showLensInfo(track);if(state.phase==='tracking')resetMovement();}}
   catch(error){$('lensInfo').textContent='Could not change the lens: '+error.message;}
   finally{$('widest').disabled=state.phase!=='tracking';}
 });
- window.addEventListener('pagehide',()=>stop());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.phase!=='idle')stop('Paused while the page was hidden. Tap Start for a new session.');});
- pod=initPod({voice,movements:MOVEMENTS,onStop:()=>stop('Set ended. Your camera is off.'),onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
+ const workoutReady=openGuestWorkoutAdapter({exerciseKeys:Object.keys(MOVEMENTS)}).then(adapter=>{if(disposed)adapter.close();return adapter;});
+ const workouts={paused:(...args)=>workoutReady.then(value=>value.paused(...args)),start:(...args)=>workoutReady.then(value=>value.start(...args)),update:(...args)=>workoutReady.then(value=>value.update(...args)),pause:(...args)=>workoutReady.then(value=>value.pause(...args)),complete:(...args)=>workoutReady.then(value=>value.complete(...args)),interrupt:(...args)=>workoutReady.then(value=>value.interrupt(...args)),close(){disposed=true;void workoutReady.then(value=>value.close(),()=>{});}};
+ window.addEventListener('pagehide',()=>{if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady().finally(()=>workouts.close());else{const stopped=stop();void Promise.allSettled([stopped,cameraStartTransition]).then(()=>workouts.close());}});document.addEventListener('visibilitychange',()=>{if(!document.hidden||state.phase==='idle')return;if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady();else void stop('Paused while the page was hidden. Tap Start for a new session.');});
+ pod=initPod({voice,movements:MOVEMENTS,workouts,onStop:()=>{if(state.phase==='manual'){generation++;release();controls(false);state.phase='idle';manual=null;}else stop('Set ended. Your camera is off.',{interrupt:false});},onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
 // P13D: optional pack UI may bind this actual owner after user intent; packs are not imported at startup.
 window.myr5WorkoutOwner=pod.workoutOwner;
 window.dispatchEvent(new Event('myr5:workout-owner-ready'));
@@ -190,3 +203,28 @@ $('manageMaterials').addEventListener('click',async()=>{
 });
 window.myr5Cinematics=cinematics;
 window.addEventListener('pagehide',()=>materialController?.dispose(),{once:true});
+
+function manualSnapshot(){
+ if(!manual)return state.motion;
+ const kind=state.motion.kind,elapsed=manual.clock.sample(),value=['hold','pace'].includes(kind)?elapsed:manual.value;
+ state.motion={...state.motion,tracking:true,elapsed,active:kind==='pace'?value:state.motion.active,totalHold:kind==='hold'?value:state.motion.totalHold,count:['reps','steps','jumps'].includes(kind)?value:state.motion.count,remaining:Math.max(0,pod.goal()-value),complete:value>=pod.goal(),message:'Manual workout · '+Math.floor(value)};
+ return state.motion;
+}
+async function manualTick(run){
+ if(run!==generation||state.phase!=='manual'||!manual)return;
+ try{const motion=manualSnapshot();renderMotion(motion);if(await pod.consume(motion,Date.now()))return;if(['hold','pace'].includes(motion.kind)&&performance.now()-manual.savedAt>=1000){await pod.saveManual(motion);manual.savedAt=performance.now();}manualFrame=requestAnimationFrame(()=>manualTick(run));}
+ catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
+}
+function startManual(){
+ const run=++generation;release();state.phase='manual-starting';controls(true);state.error=null;resetMovement();status('Starting manual workout…');$('detail').textContent='No camera · manual counter';
+ return manualStartGate.run(async()=>{let ticket=null;try{ticket=await pod.beginSet(session.mode,{manual:true});if(run!==generation)return;const progress=ticket.progress||{},clock=new ManualActiveClock({now:()=>performance.now(),visible:()=>!document.hidden});clock.start(progress.elapsedSeconds);manual={value:Number(progress.value)||0,clock,savedAt:performance.now()};state.phase='manual';$('previewLabel').textContent='MANUAL';$('primary').tabIndex=0;$('primary').setAttribute('role',['hold','pace'].includes(state.motion.kind)?'timer':'button');$('primary').setAttribute('aria-label',['hold','pace'].includes(state.motion.kind)?'Manual workout timer':'Add one '+(state.motion.kind==='steps'?'step':state.motion.kind==='jumps'?'jump':'rep'));status(['hold','pace'].includes(state.motion.kind)?'Timer running. Stop to pause.':'Tap the counter or press Enter to add each movement.');manualTick(run);}
+ catch(error){if(run!==generation)return;generation++;release();controls(false);if(ticket)await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}});
+}
+async function activateManual(){
+ if(state.phase!=='manual'||!manual||['hold','pace'].includes(state.motion.kind))return;
+ manual.value++;try{const motion=manualSnapshot();await pod.saveManual(motion);renderMotion(motion);await pod.consume(motion,Date.now());}catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
+}
+async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await pod.pauseManual(state.motion);generation++;release();controls(false);state.phase='idle';manual=null;status('Paused. Tap Begin to resume this workout.');$('detail').textContent='Manual workout paused on this device';}catch(error){status(error.message);}}
+function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}
+$('primary').addEventListener('pointerdown',event=>{if(state.phase==='manual'){event.preventDefault();void activateManual();}});
+$('primary').addEventListener('keydown',event=>{if(state.phase==='manual'&&(event.key==='Enter'||event.key===' ')){event.preventDefault();void activateManual();}});

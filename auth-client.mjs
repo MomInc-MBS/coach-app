@@ -1,6 +1,6 @@
 import {safeReturn} from './auth-paths.mjs';
 let settingsPromise,clerkPromise;
-export function authSettings(){return settingsPromise??=fetch('/api/auth/config',{credentials:'same-origin',cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Login could not connect. Please retry.');return r.json();}).catch(e=>{settingsPromise=null;throw e;});}
+export function authSettings(){return settingsPromise??=fetch('/api/auth/config',{credentials:'same-origin',cache:'no-store'}).then(async r=>{if(!r.ok)throw Object.assign(Error('Login could not connect. Please retry.'),{status:r.status,code:'auth-config'});return r.json();}).catch(e=>{settingsPromise=null;throw e;});}
 function script(src,key){return new Promise((resolve,reject)=>{const tag=document.createElement('script');tag.src=src;tag.crossOrigin='anonymous';if(key)tag.dataset.clerkPublishableKey=key;tag.onload=resolve;tag.onerror=()=>reject(Error('Login could not load. Check your connection and retry.'));document.head.append(tag);});}
 export function loadLogin(){return clerkPromise??=(async()=>{const config=await authSettings();if(!config.enabled)return null;const origin=new URL(config.frontend).origin;await script(origin+'/npm/@clerk/ui@1/dist/ui.browser.js');await script(origin+'/npm/@clerk/clerk-js@6/dist/clerk.browser.js',config.publishableKey);await window.Clerk.load({ui:{ClerkUI:window.__internal_ClerkUICtor}});return window.Clerk;})().catch(e=>{clerkPromise=null;throw e;});}
 export async function authFetch(path,options={}){

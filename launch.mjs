@@ -5,7 +5,8 @@ import {authFetch,signOut} from './auth-client.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
-import {applyCoachAccount,clearCoachAccount} from './coach-profile.mjs';
+import {applyCoachAccount,applyLocalCoach,clearCoachAccount} from './coach-profile.mjs';
+import {openLocalCoach} from './local-coach-runtime.mjs';
 import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {mountScoreboard} from './scoreboard.mjs';
 import {mountMealNutrition} from './meal-nutrition.mjs';
@@ -27,6 +28,7 @@ window.addEventListener('myr5:reminder-defaults',e=>reminderControls.load(e.deta
 let editingReminder=null;
 const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];
 let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false,armyComplete=false;
+let localHistoryRepository=null;
 window.addEventListener('myr5:account-progress',()=>{armyComplete=coachArmyComplete(account);});
 let expansionMounted=false;
 async function mountVerifiedExpansion(value){
@@ -114,6 +116,7 @@ $('notificationSwitch').onclick=async()=>{
 };
 $('testPush').onclick=async()=>{try{const reg=registration||await navigator.serviceWorker?.getRegistration(),sub=await reg?.pushManager?.getSubscription();if(!sub)throw Error('Turn reminders on for this device first.');await api('/api/push/test','POST',{endpoint:sub.endpoint});set('pushStatus','The notification service accepted the test. Check your phone.');}catch(e){set('pushStatus',e.message);}};
 async function workouts(){return scoreboard.refresh();}
+async function localHistory(){try{localHistoryRepository??=await openLocalCoach();const scope=localHistoryRepository.forOwner(localHistoryRepository.guestOwnerId),items=(await scope.listWorkouts()).filter(item=>item.status==='completed').sort((a,b)=>(b.completedAt??0)-(a.completedAt??0)),list=$('localHistoryList');list.replaceChildren();set('localHistoryStatus',items.length?`${items.length} completed workout${items.length===1?'':'s'} on this device.`:'No completed workouts on this device yet.');for(const item of items){const row=document.createElement('article'),title=document.createElement('strong'),detail=document.createElement('p');row.className='entry';title.textContent=item.metadata?.name||item.mode;detail.textContent=`${item.completion?.value??0} · ${new Date(item.completedAt).toLocaleString()}`;row.append(title,detail);list.append(row);}}catch(error){set('localHistoryStatus',error.message);}}
 async function goals(){try{const {items}=await api('/api/goals');const list=$('goalList');list.replaceChildren();if(!items.length){list.textContent='No goals yet.';return;}for(const item of items){const row=document.createElement('article');row.className='goal-entry';row.dataset.status=item.status;const title=document.createElement('h4');title.textContent=item.title;row.append(title);if(item.note){const note=document.createElement('p');note.textContent=item.note;row.append(note);}const actions=document.createElement('div');actions.className='actions';if(item.status==='active')actions.append(button('Complete',async()=>{await updateGoal(item,{status:'completed'});}));if(item.status==='completed')actions.append(button('Reopen',async()=>{await updateGoal(item,{status:'active'});}));if(item.status!=='archived')actions.append(button('Archive',async()=>{await updateGoal(item,{status:'archived'});}));row.append(actions);list.append(row);}}catch(e){set('goalStatus',e.message);}}
 async function updateGoal(item,data){try{await api('/api/goals/'+item.id,'PATCH',data);set('goalStatus','Goal saved.');await goals();}catch(e){set('goalStatus','Could not save goal: '+e.message);}}
 $('goalForm').onsubmit=async e=>{e.preventDefault();const form=e.target,submit=form.querySelector('[type=submit]');submit.disabled=true;try{await api('/api/goals','POST',Object.fromEntries(new FormData(form)));form.reset();set('goalStatus','Goal saved.');await goals();}catch(err){set('goalStatus','Could not save goal: '+err.message);}finally{submit.disabled=false;}};
@@ -130,7 +133,8 @@ $('copyInstallLink').onclick=async()=>{try{await navigator.clipboard.writeText($
 try{localStorage.setItem('myr5-voice-style','robot');}catch{}
 $('downloadVoice').onclick=async()=>{const b=$('downloadVoice');b.disabled=true;try{const manifest=await(await fetch(VOICE_MANIFEST)).json(),urls=Object.values(manifest.phrases),cache=await caches.open(VOICE_CACHE);let i=0;await cache.add(VOICE_MANIFEST);for(const url of urls){if(!await cache.match(url)){const response=await fetch(url);if(!response.ok)throw Error('Download interrupted. Tap again to resume.');await cache.put(url,response);}set('downloadStatus',`Downloaded ${++i} of ${urls.length} voice clips.`);}set('downloadStatus','Robot voice pack is available offline on this device.');}catch(e){set('downloadStatus',e.message);}finally{b.disabled=false;}};
 initAppUpdates({api,applyButton:$('applyUpdate'),onRegistration:reg=>{registration=reg;syncDeviceSwitch();},onBeforeUpdate:async()=>{await flushSets();if(account&&pending(account.user.id).length)throw Error('Your set is still syncing. Reconnect before updating.');}});
-for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='meals')await meals();if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
+ for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals')await meals();if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
+ window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>localHistoryRepository?.close(),{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));
 window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-await refresh();const panel=new URLSearchParams(location.search).get('panel');if(['meals','reminders','account','install'].includes(panel))document.querySelector(`[data-panel=${panel}]`).click();
+ await applyLocalCoach();await refresh();const panel=new URLSearchParams(location.search).get('panel');if(['history','meals','reminders','account','install'].includes(panel))document.querySelector(`[data-panel=${panel}]`).click();
