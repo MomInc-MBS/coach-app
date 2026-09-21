@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { ChunkDownloader, DEFAULT_LOCAL_RESOURCE_POLICY, canonicalChunkPayload, memoryChunkStore, sha256Chunk, validateChunkManifest, verifyChunkManifest } from '../../modules/materials/chunk-delivery.mjs';
-import { canonicalPayload as builderCanonicalPayload } from '../../../../tools/pack-builder/package-builder.mjs';
 
 const MiB = 1024 * 1024, TOTAL = 32 * MiB, CHUNK = MiB;
 const generated = (offset, size) => { const out = new Uint8Array(size); for (let i = 0; i < size; i++) out[i] = (offset + i) % 251; return out; };
@@ -40,9 +39,44 @@ test('rejects malformed, reordered, replayed, and untrusted chunk metadata befor
   const denied = new ChunkDownloader({ ...options, ownership: async () => false }); await assert.rejects(() => denied.download(m), /not owned/);
 });
 
-test('builder and client canonicalize the signed chunk list identically', async () => {
-  const { privateKey } = generateKeyPairSync('ed25519'); const manifest = await signedManifest('https://fixture.invalid/', privateKey);
-  assert.equal(builderCanonicalPayload(manifest), canonicalChunkPayload(manifest));
+test('canonical signed chunk payload matches the pinned wire-format vector', () => {
+  const digest = '0'.repeat(64);
+  // Independent expected bytes: do not derive this string through the serializer.
+  // External package-builder parity requires its separately versioned integration.
+  const manifest = {
+    signature: 'not part of the signed payload',
+    version: '1.0.0',
+    packId: 'golden-pack',
+    keyId: 'test-v1',
+    schema: 'mom-material-chunks-v1',
+    assets: [{
+      sha256: digest,
+      path: 'assets/a.bin',
+      bytes: 3,
+      chunks: [
+        {
+          url: 'https://fixture.invalid/a',
+          sha256: digest,
+          offset: 0,
+          index: 0,
+          etag: '"v1"',
+          bytes: 1
+        },
+        {
+          url: 'https://fixture.invalid/a',
+          sha256: digest,
+          offset: 1,
+          index: 1,
+          bytes: 2
+        }
+      ]
+    }]
+  };
+  const expected = String.raw`{"assets":[{"bytes":3,"chunks":[{"bytes":1,"etag":"\"v1\"","index":0,"offset":0,"sha256":"${digest}","url":"https://fixture.invalid/a"},{"bytes":2,"index":1,"offset":1,"sha256":"${digest}","url":"https://fixture.invalid/a"}],"path":"assets/a.bin","sha256":"${digest}"}],"keyId":"test-v1","packId":"golden-pack","schema":"mom-material-chunks-v1","version":"1.0.0"}`;
+  assert.equal(canonicalChunkPayload(manifest), expected);
+  const reordered = structuredClone(manifest);
+  reordered.assets[0].chunks.reverse();
+  assert.notEqual(canonicalChunkPayload(reordered), expected);
 });
 
 test('awaits ownership at verify/activation and isolates an account transition', async () => {

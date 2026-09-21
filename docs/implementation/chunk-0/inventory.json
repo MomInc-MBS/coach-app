@@ -1,0 +1,403 @@
+{
+  "base": "49d25e5cb82deef2a73c731032ad8446ea80b8c1",
+  "branch": "codex/myr5-foundation-49d25e5",
+  "node": "v24.19.0",
+  "packages": [
+    {
+      "path": "package.json",
+      "workingTreeSha256": "a6c360e6c4004ef33d114afcea6b5f1176e9b61e26489c0322e41f1ca86d1c7f",
+      "gitBlobSha1": "0109ef612a342dc185fd6de7ae308a58aae3f5c7"
+    },
+    {
+      "path": "package-lock.json",
+      "workingTreeSha256": "75799afdba581550c0597cc52b96a4a3ac3adc9ccc4c965e897d96a71f00e7d5",
+      "gitBlobSha1": "637e4a48bea820fd24b4c9f7b3ec4abfc5dc73df"
+    }
+  ],
+  "source": {
+    "files": 3353,
+    "gitBlobContentBytes": 417577987,
+    "manifestSha256": "db6ad7ae3f8ab95738ac392e0509c569991eaf8df9a119d355e3d6af7cfd565a",
+    "protected": "All paths in source-manifest.json; no product edits authorized."
+  },
+  "routes": [
+    "arcade/tub-flight/index.html",
+    "creature/index.html",
+    "handborne/index.html",
+    "handborne/source/hand-entry.html",
+    "install.html",
+    "onboarding.html",
+    "pod/weapon-review.html",
+    "pose.html",
+    "privacy.html",
+    "recover.html",
+    "signin.html",
+    "war-room/index.html"
+  ],
+  "hosting": {
+    "projectId": "appgprj_6aa19ed33c4081918b379713cb7fa21c",
+    "logicalD1": "DB",
+    "logicalR2": null,
+    "physicalSitesD1": "unknown",
+    "remoteAppliedMigrations": "unknown"
+  },
+  "scheduler": {
+    "name": "myr5-coach-reminders",
+    "main": "service.mjs",
+    "cron": [
+      "* * * * *"
+    ],
+    "declaredBindings": [
+      {
+        "binding": "DB",
+        "databaseName": "myr5-coach-reminders"
+      }
+    ],
+    "declaredConfigurationNames": [
+      "RELEASE_EMAIL_FROM",
+      "RELEASE_ORIGIN",
+      "VAPID_SUBJECT"
+    ],
+    "remoteAvailability": "unknown"
+  },
+  "referencedEnvironmentNames": [
+    "ASSETS",
+    "CLERK_AUTHORIZED_PARTIES",
+    "CLERK_FRONTEND_URL",
+    "CLERK_JWT_KEY",
+    "CLERK_PUBLISHABLE_KEY",
+    "COACH_ARMY_COMPLETION_SECRET",
+    "COACH_ARMY_ENTITLEMENT_TOKEN",
+    "COACH_ARMY_ENTITLEMENT_URL",
+    "COACH_DEV_PORT",
+    "CRON_SECRET",
+    "DB",
+    "EMAIL",
+    "LOCAL_PREVIEW",
+    "MYR5_FFMPEG",
+    "PUBLIC_EXPANSION_SIGNING_JWK",
+    "RELEASE_EMAIL_FROM",
+    "RELEASE_ORIGIN",
+    "REMINDER_INTERNAL",
+    "REMINDER_SERVICE_ORIGIN",
+    "REMINDER_SERVICE_TOKEN",
+    "RESEND_API_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_SUBJECT"
+  ],
+  "environmentValueAvailability": "unknown; values were not inspected",
+  "migrations": [
+    {
+      "path": "drizzle/0000_new_cammi.sql",
+      "bytes": 1908,
+      "gitBlobSha1": "fd211d27057263b621c5190bdcc86603a6757d60",
+      "affectedTables": [
+        "deliveries",
+        "meals",
+        "profiles",
+        "reminders",
+        "subscriptions",
+        "system",
+        "workouts"
+      ]
+    },
+    {
+      "path": "drizzle/0001_careful_impossible_man.sql",
+      "bytes": 162,
+      "gitBlobSha1": "b247cba98b607890281f807de4e910d4d4d72c34",
+      "affectedTables": [
+        "reminders"
+      ]
+    },
+    {
+      "path": "drizzle/0002_peaceful_living_lightning.sql",
+      "bytes": 255,
+      "gitBlobSha1": "6dc925c661693f7eefe360658eff45a8e3725b0f",
+      "affectedTables": [
+        "onboarding"
+      ]
+    },
+    {
+      "path": "drizzle/0003_dashing_meltdown.sql",
+      "bytes": 348,
+      "gitBlobSha1": "95050fa048197b3ab9b3c2a9128300ebe78a20fb",
+      "affectedTables": [
+        "install_drafts"
+      ]
+    },
+    {
+      "path": "drizzle/0004_burly_boomerang.sql",
+      "bytes": 133,
+      "gitBlobSha1": "6a17f990616b2d3577830a51eddf398fd5e9ddc2",
+      "affectedTables": [
+        "meals"
+      ]
+    },
+    {
+      "path": "drizzle/0005_nice_the_enforcers.sql",
+      "bytes": 255,
+      "gitBlobSha1": "09592ca2f03d9c3d12b4dc0c5aa22e303b2c7796",
+      "affectedTables": [
+        "account_identities"
+      ]
+    },
+    {
+      "path": "drizzle/0006_flawless_slayback.sql",
+      "bytes": 789,
+      "gitBlobSha1": "85dba189e22e11c8bc838fc1c95e058745128ae7",
+      "affectedTables": [
+        "release_deliveries",
+        "release_subscribers"
+      ]
+    },
+    {
+      "path": "drizzle/0007_tan_mesmero.sql",
+      "bytes": 737,
+      "gitBlobSha1": "d6ebc1476901d05b6c18d99fbfdb07b35f786c11",
+      "affectedTables": [
+        "gala_runs"
+      ]
+    },
+    {
+      "path": "drizzle/0008_giant_charles_xavier.sql",
+      "bytes": 764,
+      "gitBlobSha1": "80a384a0c07eeac9feabbf63b103cbf3138f7c18",
+      "affectedTables": [
+        "scoreboard_invites",
+        "scoreboard_links"
+      ]
+    },
+    {
+      "path": "drizzle/0009_uneven_rhino.sql",
+      "bytes": 551,
+      "gitBlobSha1": "57b5e791f693a084bd0341b57b5dd8bdb5f5fd59",
+      "affectedTables": [
+        "breathing_sessions",
+        "login_days"
+      ]
+    },
+    {
+      "path": "drizzle/0010_fixed_wrecker.sql",
+      "bytes": 300,
+      "gitBlobSha1": "d31e3c00a13daf3ac4d5592318d6a2652da6d342",
+      "affectedTables": [
+        "release_push_deliveries"
+      ]
+    },
+    {
+      "path": "drizzle/0011_coach_army_entitlements.sql",
+      "bytes": 523,
+      "gitBlobSha1": "23553d47a6d442085785af000338ae9c0de20bbe",
+      "affectedTables": [
+        "account_entitlements",
+        "coach_army_completions"
+      ]
+    },
+    {
+      "path": "drizzle/0012_coach_army_bindings.sql",
+      "bytes": 437,
+      "gitBlobSha1": "4635642c27ca5b1c2ab5d2661e9ec7b3650a93c9",
+      "affectedTables": [
+        "coach_army_bindings"
+      ]
+    },
+    {
+      "path": "drizzle/0013_account_pack_entitlements.sql",
+      "bytes": 298,
+      "gitBlobSha1": "f2c6808654bbcd9e02934347949bad7e220ff210",
+      "affectedTables": [
+        "account_pack_entitlements"
+      ]
+    },
+    {
+      "path": "drizzle/0014_coach_army_authenticated_runs.sql",
+      "bytes": 1217,
+      "gitBlobSha1": "5da89bdafbd6db22e72d050c9954d389d734de18",
+      "affectedTables": [
+        "coach_army_completion_outbox",
+        "coach_army_run_events",
+        "coach_army_runs"
+      ]
+    },
+    {
+      "path": "drizzle/0015_goals.sql",
+      "bytes": 335,
+      "gitBlobSha1": "fa3f17e5093a3715ade76cc79180fe2fea92600e",
+      "affectedTables": [
+        "goals"
+      ]
+    },
+    {
+      "path": "drizzle/0016_war_room_arsenal.sql",
+      "bytes": 205,
+      "gitBlobSha1": "91eb9c5e7a4e1a7bb1bed5ff5f194be4a4294a21",
+      "affectedTables": [
+        "war_room_arsenals"
+      ]
+    },
+    {
+      "path": "drizzle/0017_coach_army_djscratch_verifier.sql",
+      "bytes": 480,
+      "gitBlobSha1": "bcb1397feb409f17137ad4916c9d4b640d4a633e",
+      "affectedTables": [
+        "coach_army_djscratch_challenges"
+      ]
+    }
+  ],
+  "migrationJournalEntries": 18,
+  "schemaTables": [
+    "account_entitlements",
+    "account_identities",
+    "account_pack_entitlements",
+    "breathing_sessions",
+    "coach_army_completion_outbox",
+    "coach_army_completions",
+    "coach_army_djscratch_challenges",
+    "coach_army_run_events",
+    "coach_army_runs",
+    "deliveries",
+    "gala_runs",
+    "goals",
+    "install_drafts",
+    "login_days",
+    "meals",
+    "onboarding",
+    "profiles",
+    "release_deliveries",
+    "release_push_deliveries",
+    "release_subscribers",
+    "reminders",
+    "scoreboard_invites",
+    "scoreboard_links",
+    "subscriptions",
+    "system",
+    "war_room_arsenals",
+    "workouts"
+  ],
+  "build": {
+    "files": 1704,
+    "clientFiles": 1703,
+    "clientBytes": 292849239,
+    "serverFiles": 1,
+    "serverBytes": 123623,
+    "clientGroups": {
+      "base-shell-candidates": {
+        "files": 143,
+        "bytes": 7459913
+      },
+      "optional-heavy-candidates": {
+        "files": 1433,
+        "bytes": 264482546
+      },
+      "source-and-build-support": {
+        "files": 127,
+        "bytes": 20906780
+      }
+    },
+    "precacheFiles": 298,
+    "precacheBytes": 175466400,
+    "precacheGroups": {
+      "base-shell-candidates": {
+        "files": 135,
+        "bytes": 7355924
+      },
+      "optional-heavy-candidates": {
+        "files": 163,
+        "bytes": 168110476
+      }
+    },
+    "largestClient": [
+      {
+        "path": "handborne/models/family-20.glb",
+        "bytes": 26110648,
+        "sha256": "4960c926f69e7d3197c6ee2f719e814c7e357514d533d15bb0f6424576cc8352",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "creature/models/anatomy.glb",
+        "bytes": 20843540,
+        "sha256": "92f9931143b45c273f3e76ec2e5d7cd0dcd8a47ec461ae56311536814dfc20ef",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "creature/models/myr5.glb",
+        "bytes": 15080128,
+        "sha256": "0b1cdbf6a5d6b618319b43217238a83f0781552eddd799750f940c08d61a7848",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "creature/models/hands-v2.glb",
+        "bytes": 5296052,
+        "sha256": "a30df23771a084a107e1d34fd2ad7908992250a187a001299886dde17c88db80",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-12.glb",
+        "bytes": 4693036,
+        "sha256": "fdbe5cb65c85ca016a728fbfdb58638a06a140d3400919a06667b7f3662ceadf",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "source.json",
+        "bytes": 4536949,
+        "sha256": "a50fc48cc916b1734ca8e3c5285253a5ec3cd42a5e6b3b6122fe4bda1963ed2c",
+        "group": "source-and-build-support"
+      },
+      {
+        "path": "handborne/models/family-06.glb",
+        "bytes": 4292420,
+        "sha256": "39ce724d70d878d64a30c1175dd1c1e945fd6bda7687f6db3a64c6912e4cf0fc",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-02.glb",
+        "bytes": 4271536,
+        "sha256": "5a6ec061e52f3420b8dba5ffdd147d2560e464f2fe36a1d4830e1a2a11b48e24",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-01.glb",
+        "bytes": 4184868,
+        "sha256": "1712bd5447c3d3c6259bf74dcf6d5172184ef7d3fc75e92e0500863a65674972",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-17.glb",
+        "bytes": 4184140,
+        "sha256": "0388a24f7815c444290162a462fafe2ac9d1f809029cec0cbb964bbe95f7c241",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-10.glb",
+        "bytes": 4163552,
+        "sha256": "416a391a78df31a854ebda5f1a5dee3e13c647467279385b726eb8d0fc551cd9",
+        "group": "optional-heavy-candidates"
+      },
+      {
+        "path": "handborne/models/family-19.glb",
+        "bytes": 4088052,
+        "sha256": "9b62d94a43380ce3129baa32c20ace9eb30e2aa94885bacc2da97aca01e006a6",
+        "group": "optional-heavy-candidates"
+      }
+    ],
+    "manifestSha256": "2e702e78649c2e76be22703c4bf31fefcb5f96f0bc7ade9e96b227980783f711",
+    "measurement": "Uncompressed filesystem and manifest bytes; not network transfer.",
+    "classification": "Path-based audit candidates, not a minimal runtime dependency graph.",
+    "provenance": {
+      "observedCommand": "npm run build",
+      "observedExitCode": 0,
+      "observedWallMs": 8108,
+      "observedColdOutput": true,
+      "baselineAnchors": {
+        "dist/client/source.json": "a50fc48cc916b1734ca8e3c5285253a5ec3cd42a5e6b3b6122fe4bda1963ed2c",
+        "dist/client/sw.js": "ae26b889d6eb7eaa59d878d1c8f8d1d3111dd788bc7a68a993c0de46016576ec",
+        "dist/server/index.js": "6e1e7601701d7eea753a9e055f79b50357616e19282e61789190f3c4aba359ea"
+      },
+      "emittedBuildId": "f4e37ccc420eb790ee84",
+      "embeddedSourceEntries": 141,
+      "authoredEmbeddedSourcesMatchBase": true,
+      "limitations": "Anchors identify the observed baseline artifacts. The build identifier is not a Git SHA or attestation; source.json covers only the source subset selected by scripts/build.mjs. No network transfer or deployed-state claim."
+    }
+  }
+}
