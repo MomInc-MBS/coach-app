@@ -1,4 +1,5 @@
-import {sqliteTable,text,integer,real,index,uniqueIndex,primaryKey} from 'drizzle-orm/sqlite-core';
+import {sql} from 'drizzle-orm';
+import {sqliteTable,text,integer,real,index,uniqueIndex,primaryKey,check} from 'drizzle-orm/sqlite-core';
 export const profiles=sqliteTable('profiles',{userId:text('user_id').primaryKey(),data:text('data').notNull().default('{}'),revision:integer('revision').notNull().default(0),updatedAt:integer('updated_at').notNull()});
 export const workouts=sqliteTable('workouts',{id:text('id').primaryKey(),userId:text('user_id').notNull(),mode:text('mode').notNull(),goal:real('goal').notNull(),startedAt:integer('started_at').notNull(),completedAt:integer('completed_at'),value:real('value'),active:real('active')},t=>[index('workouts_user_completed').on(t.userId,t.completedAt)]);
 export const meals=sqliteTable('meals',{id:text('id').primaryKey(),userId:text('user_id').notNull(),name:text('name').notNull(),portion:text('portion').notNull(),calories:real('calories'),protein:real('protein'),carbs:real('carbs'),fat:real('fat'),micros:text('micros').notNull().default('{}'),nutritionSource:text('nutrition_source'),eatenAt:text('eaten_at').notNull(),createdAt:integer('created_at').notNull()},t=>[index('meals_user_date').on(t.userId,t.eatenAt)]);
@@ -29,3 +30,15 @@ export const coachArmyCompletionOutbox=sqliteTable('coach_army_completion_outbox
 export const coachArmyDjscratchChallenges=sqliteTable('coach_army_djscratch_challenges',{id:text('id').primaryKey(),runId:text('run_id').notNull(),accountId:text('account_id').notNull(),expiresAt:integer('expires_at').notNull(),nextStep:integer('next_step').notNull().default(0),status:text('status').notNull().default('active'),createdAt:integer('created_at').notNull(),completedAt:integer('completed_at'),updatedAt:integer('updated_at').notNull()},t=>[index('coach_army_djscratch_challenges_run').on(t.runId,t.accountId,t.status)]);
 export const goals=sqliteTable('goals',{id:text('id').primaryKey(),userId:text('user_id').notNull(),title:text('title').notNull(),note:text('note').notNull().default(''),status:text('status').notNull().default('active'),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()},t=>[index('goals_user_updated').on(t.userId,t.updatedAt)]);
 export const warRoomArsenals=sqliteTable('war_room_arsenals',{userId:text('user_id').primaryKey(),loadout:text('loadout').notNull(),recipes:text('recipes').notNull().default('[]'),revision:integer('revision').notNull().default(0),updatedAt:integer('updated_at').notNull()});
+
+// Retained account generation and deletion receipts fence delayed requests.
+export const accountDataEpochs=sqliteTable('account_data_epochs',{
+ ownerId:text('owner_id').primaryKey().notNull(),
+ epoch:integer('epoch').notNull().default(1),
+ updatedAt:integer('updated_at').notNull(),
+},t=>[check('account_data_epochs_epoch',sql`typeof(${t.epoch}) = 'integer' AND ${t.epoch} BETWEEN 1 AND 9007199254740991`),check('account_data_epochs_updated',sql`typeof(${t.updatedAt}) = 'integer' AND ${t.updatedAt} >= 0`)]);
+export const accountDataDeletions=sqliteTable('account_data_deletions',{
+ ownerId:text('owner_id').notNull().references(()=>accountDataEpochs.ownerId),
+ deletedEpoch:integer('deleted_epoch').notNull(),
+ deletedAt:integer('deleted_at').notNull(),
+},t=>[primaryKey({columns:[t.ownerId,t.deletedEpoch]}),check('account_data_deletions_epoch',sql`typeof(${t.deletedEpoch}) = 'integer' AND ${t.deletedEpoch} BETWEEN 1 AND 9007199254740990`),check('account_data_deletions_time',sql`typeof(${t.deletedAt}) = 'integer' AND ${t.deletedAt} >= 0`)]);
