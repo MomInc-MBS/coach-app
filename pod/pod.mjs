@@ -5,6 +5,7 @@ import {SetEncouragement} from './encouragement.mjs';
 import {setFlipValue,clockDigits} from '../flip-display.mjs';
 import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
 import {mountWorkoutRoute} from '../workout-route-ui.mjs';
+import {mountCircuitUI} from '../circuit-ui.mjs';
 import {ROUTE_LINES,exerciseFamily} from '../workout-route.mjs';
 import {VOICE_MANIFEST} from '../robot-audio.mjs';
 import {WorkoutSessionOwner} from './workout-session-owner.mjs';
@@ -17,7 +18,9 @@ const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 export function initPod({voice,movements,onStop,onNext,workouts}){
  let hand={enter(){},leave(){},hit(){},dispose(){},edit(){}};let handOptionalLoaded=false;const arena=initRestArena();
  window.addEventListener('myr5:optional-materials-ready',async()=>{if(window.myr5VerifiedOptionalAccess!==true||handOptionalLoaded)return;handOptionalLoaded=true;const {initHandCompanion}=await import('../hand-companion.mjs');hand=initHandCompanion();},{once:true});
- const flow=new SetFlow(null,{cooldown:safeRead(COOLDOWN)}),encourage=new SetEncouragement();
+ // safeRead(PROGRESS) restores the last-synced circuit snapshot (and completedSets) so the
+ // circuit meter can render immediately on reopen, before the next account-progress event lands.
+ const flow=new SetFlow(safeRead(PROGRESS),{cooldown:safeRead(COOLDOWN)}),encourage=new SetEncouragement();
  const workoutOwner=new WorkoutSessionOwner({saveProgress:async data=>{
   try{return await workouts.complete(data.id,{value:data.value,activeSeconds:data.activeSeconds,elapsedSeconds:data.elapsedSeconds,earned:data.earned,progress:data.progress});}
   catch(error){return {local:false,reason:error?.message||'Workout progress was not saved on this device.'};}
@@ -25,6 +28,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  let currentMode=null,card=null,observedCard=null,restTimer=0,hitTimer=0,lastSpoken=-Infinity,restCalled=false,look;
  let awaitingRound=null,pendingChallenge=null,pausedLocal=null;
  const route=mountWorkoutRoute({mode:()=>currentMode||'squat',busy:()=>flow.phase!=='pod'||document.body.dataset.tracking==='true',pending:()=>!!awaitingRound,onNext});
+ const circuit=mountCircuitUI({voice,onNext,busy:()=>flow.phase!=='pod'||document.body.dataset.tracking==='true',pending:()=>!!awaitingRound,cached:()=>flow.progress.circuit});
  window.addEventListener('myr5:coach-plan',()=>{if(flow.phase==='set')return;const mode=currentMode||'squat';currentMode=null;configure(mode);if(window.coachPlan?.data?.profile?.restSeconds)$('restDuration').value=window.coachPlan.data.profile.restSeconds;});
  const avatar=window.GalaAvatar;let storageAvailable=true;
  const store=(key,value)=>{try{localStorage.setItem(key,value);return true;}catch{storageAvailable=false;return false;}};
@@ -53,7 +57,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
    const values=[...new Set([1,2,3,5,9,10,15,20,30,45,60,90,120,180,planned,Math.max(1,planned-1),planned+1])].sort((a,b)=>a-b);
    $('goal').replaceChildren(...values.map(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' '+unit;return o;}));$('goal').value=planned;
   }
-  encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();route.render();if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(mode);
+  encourage.reset();$('goalValue').textContent=['hold','pace'].includes(movements[mode].kind)?time(Number($('goal').value)):String($('goal').value);updateProgress();route.render();circuit.render();if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(mode);
  }
  async function beginSet(mode,{manual=false}={}){if(workoutOwner.snapshot().transitioning)throw Error('Coach is updating. Please wait.');configure(mode);pausedLocal=await workouts.paused();if(workoutOwner.snapshot().transitioning)throw Error('Coach is updating. Please wait.');if(pausedLocal&&(!manual||pausedLocal.mode!==mode))throw Error('Resume or complete the paused manual workout first.');if(!pausedLocal&&!workoutOwner.canStart())throw Error('Workout activation is in progress. Try again.');if(!route.canStart(mode))throw Error('Five rounds completed for this exercise family today. Choose another family.');const ownerStarted=!pausedLocal;if(ownerStarted&&!workoutOwner.start())throw Error('Workout activation is in progress. Try again.');let ticket=null;try{const goal=Number($('goal').value),restSeconds=Number($('restDuration').value);ticket=await workouts.start({mode,goal,restSeconds,progress:pausedLocal?.progress??{},metadata:{name:movements[mode].name},control:manual?'manual':'camera'});flow.start(mode,goal,restSeconds);flow.active.localId=ticket.id;flow.active.control=manual?'manual':'camera';flow.active.savedProgress=ticket.progress??{};pausedLocal=null;if(!manual)warmVoice($('goal').value);document.body.dataset.screen='pod';clearInterval(restTimer);return ticket;}catch(error){if(ticket){await workouts.interrupt(ticket.id,ticket.progress??{}).catch(()=>{});if(flow.phase==='set'&&flow.active?.localId===ticket.id)flow.leave();pausedLocal=null;}if(ownerStarted||ticket)workoutOwner.stop();throw error;}}
  function setGoal(goal){if(![...$('goal').options].some(o=>Number(o.value)===goal)){const option=document.createElement('option');option.value=goal;option.textContent=goal+' '+(['hold','pace'].includes(movements[currentMode].kind)?'seconds':movements[currentMode].kind==='steps'?'steps':'reps');$('goal').append(option);}$('goal').value=goal;$('goal').dispatchEvent(new Event('change',{bubbles:true}));}
@@ -82,8 +86,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  async function consume(m,now){const before={...flow.progress},id=flow.active?.localId,manual=flow.active?.control==='manual',result=flow.consume(m,now);if(!result)return false;const saved=await workoutOwner.complete({id,value:result.value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0,earned:result.earned,progress:{...flow.progress,value:result.value}});if(!saved.saved){flow.progress=before;flow.phase='set';throw Error(saved.reason);}window.dispatchEvent(new Event('myr5:local-history-refresh'));onStop();enterRest(result,{silent:manual});if(!storageAvailable)$('setReceipt').textContent+=' · Progress could not be saved on this device.';return true;}
  async function saveManual(m){const id=flow.active?.localId;if(!id)return null;const value=valueOf(m),progress={...flow.progress,value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0};await workouts.update(id,progress);flow.active.savedProgress=progress;return progress;}
  async function pauseManual(m){const id=flow.active?.localId;if(!id)return null;const progress=await saveManual(m),workout=await workouts.pause(id,progress);pausedLocal=workout;flow.leave();return workout;}
- async function interruptCurrent(m){const id=flow.active?.localId;if(id)await workouts.interrupt(id,{...flow.progress,value:m?valueOf(m):0,activeSeconds:m?.active||0,elapsedSeconds:m?.elapsed||0});if(flow.phase==='set')flow.leave();pausedLocal=null;workoutOwner.stop();route.render();}
- function leave(){pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').disabled=!route.canStart(currentMode);route.render();$('start').focus();}
+ async function interruptCurrent(m){const id=flow.active?.localId;if(id)await workouts.interrupt(id,{...flow.progress,value:m?valueOf(m):0,activeSeconds:m?.active||0,elapsedSeconds:m?.elapsed||0});if(flow.phase==='set')flow.leave();pausedLocal=null;workoutOwner.stop();route.render();circuit.render();}
+ function leave(){pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').disabled=!route.canStart(currentMode);route.render();circuit.render();$('start').focus();}
  document.querySelector('.encounter').addEventListener('pointerdown',()=>flow.touchRest(Date.now()),{passive:true});
  $('attackCoach').addEventListener('click',()=>{
   syncCombat();const now=Date.now(),hit=flow.tap(now,true);if(!hit)return;
@@ -116,8 +120,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  document.querySelector('.mom-brand').addEventListener('click',event=>{event.preventDefault();if(flow.phase==='rest')leave();});
  paintGuest();updateProgress();document.body.dataset.screen='pod';
  const requestedPanel=new URLSearchParams(location.search).get('panel');if(['avatar','hand'].includes(requestedPanel)){$('identity').showModal();if(requestedPanel==='hand')hand.edit();}
- window.addEventListener('myr5:account-progress',({detail:p})=>{flow.combat=p.combat;flow.progress.completedSets=p.completedSets;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
- window.addEventListener('myr5:round-rejected',({detail})=>{if(awaitingRound?.id!==detail.id)return;awaitingRound=null;pendingChallenge=null;$('setReceipt').textContent=detail.message;$('earnedXp').textContent='NO XP';route.render();});
+ window.addEventListener('myr5:account-progress',({detail:p})=>{flow.combat=p.combat;flow.progress.completedSets=p.completedSets;flow.progress.circuit=p.circuit||null;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
+ window.addEventListener('myr5:round-rejected',({detail})=>{if(awaitingRound?.id!==detail.id)return;awaitingRound=null;pendingChallenge=null;$('setReceipt').textContent=detail.message;$('earnedXp').textContent='NO XP';route.render();circuit.render();});
  window.addEventListener('myr5:account-progress',({detail:p})=>{if(awaitingRound&&p.lastSyncedWorkoutId===awaitingRound.id){awaitingRound=null;route.render();if(flow.phase==='rest'&&!flow.preview){const next=route.suggestion();pendingChallenge=(next?.line||ROUTE_LINES.limit)+' '+ROUTE_LINES.rest;speakChallenge();}}if(document.body.dataset.tracking!=='true')$('start').disabled=!route.canStart(currentMode);route.render();});
  const hydrationLease=workoutOwner.acquireIdleLease();
  void workouts.paused().then(paused=>{pausedLocal=paused;workoutOwner.releaseIdleLease(hydrationLease);if(paused&&workoutOwner.canStart())workoutOwner.start();route.render();}).catch(()=>workoutOwner.releaseIdleLease(hydrationLease));
