@@ -24,7 +24,7 @@
 import {REJECTED_BODY_IDS} from './design';
 export {REJECTED_BODY_IDS};
 
-export const TRACK_IDS = ['chest', 'quads', 'glutes', 'arms-shoulders', 'yoga', 'martial-arts', 'cardio', 'meditation'] as const;
+export const TRACK_IDS = ['chest', 'quads', 'glutes', 'arms', 'yoga', 'martial-arts', 'cardio', 'meditation'] as const;
 export type TrackId = typeof TRACK_IDS[number];
 
 export type TrackPlacement = {
@@ -68,13 +68,13 @@ const ROWS: readonly Row[] = [
  ['roster/20-lume--robotic_figure_3d_model', 'Lume 1', ['cardio'], false, false, 'cardio'],
 
  // --- Arms + Shoulders ---
- ['roster/02-taper-tallstalk--humanoid_robot_3d_model1', 'Taper · Tallstalk 2', ['arms-shoulders'], false, false],
- ['roster/19-genie-multi--multi-armed_humanoid_3d_model1', 'Genie · Multi 2', ['arms-shoulders'], false, false],
- ['roster/19-genie-multi--multi-armed_humanoid_3d_model', 'Genie · Multi 3', ['arms-shoulders'], false, false],
- ['roster/17-shellcap-manyarm--mushroom_creature_3d_model', 'Shellcap · Manyarm 2', ['arms-shoulders'], false, false],
- ['roster/17-shellcap-manyarm--mushroom_robot_3d_model', 'Shellcap · Manyarm 3', ['arms-shoulders'], false, false], // D6 22 Sept revision: approved, kept
- ['roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model', 'Blob 4', ['arms-shoulders'], false, false],
- ['roster/08-shard-asym--robot_3d_model4', 'Shard · Asym 2', ['arms-shoulders'], false, false, 'arms-shoulders'],
+ ['roster/02-taper-tallstalk--humanoid_robot_3d_model1', 'Taper · Tallstalk 2', ['arms'], false, false],
+ ['roster/19-genie-multi--multi-armed_humanoid_3d_model1', 'Genie · Multi 2', ['arms'], false, false],
+ ['roster/19-genie-multi--multi-armed_humanoid_3d_model', 'Genie · Multi 3', ['arms'], false, false],
+ ['roster/17-shellcap-manyarm--mushroom_creature_3d_model', 'Shellcap · Manyarm 2', ['arms'], false, false],
+ ['roster/17-shellcap-manyarm--mushroom_robot_3d_model', 'Shellcap · Manyarm 3', ['arms'], false, false], // D6 22 Sept revision: approved, kept
+ ['roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model', 'Blob 4', ['arms'], false, false],
+ ['roster/08-shard-asym--robot_3d_model4', 'Shard · Asym 2', ['arms'], false, false, 'arms'],
 
  // --- Chest (Spade · Arch 1 is the intentional dual; its martial-arts placement lives here too) ---
  ['roster/06-ridge-triad--geometric_robot_3d_model1', 'Ridge · Triad 1', ['chest'], false, false],
