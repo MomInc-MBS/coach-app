@@ -11,10 +11,16 @@ export function disposeObject(root:T.Object3D){const geometries=new Set<T.Buffer
 function bake(mesh:T.Mesh,side=0){
  const input=mesh.geometry.clone();input.applyMatrix4(mesh.matrixWorld);
  if(!input.getAttribute('normal'))input.computeVertexNormals();
+ // A flipX mirror (negative-scale ancestor, e.g. assemble.ts's facing correction) reverses handedness:
+ // applyMatrix4 above already re-orients the normal attribute correctly, but triangle winding order is
+ // a vertex-index property it can't touch, so front/back-face culling would go inside-out unless the
+ // winding is reversed here too (swap the last two vertices of every triangle).
+ const mirrored=mesh.matrixWorld.determinant()<0;
  const pos=input.getAttribute('position'),normal=input.getAttribute('normal'),color=input.getAttribute('color'),uv=input.getAttribute('uv');
  const p:number[]=[],n:number[]=[],c:number[]=[],tex:number[]=[],indices:number[]=[],remap=new Map<number,number>();
  const count=input.index?.count??pos.count,vertex=(i:number)=>input.index?input.index.getX(i):i;
  for(let i=0;i<count;i+=3){const triangle=[vertex(i),vertex(i+1),vertex(i+2)],x=triangle.reduce((sum,j)=>sum+pos.getX(j),0)/3;if(side&&((side<0&&x>=0)||(side>0&&x<0)))continue;
+  if(mirrored)[triangle[1],triangle[2]]=[triangle[2],triangle[1]];
   for(const j of triangle){if(!remap.has(j)){remap.set(j,p.length/3);p.push(pos.getX(j),pos.getY(j),pos.getZ(j));n.push(normal.getX(j),normal.getY(j),normal.getZ(j));c.push(color?color.getX(j):1,color?color.getY(j):1,color?color.getZ(j):1);tex.push(uv?uv.getX(j):0,uv?uv.getY(j):0);}indices.push(remap.get(j)!);}
  }
  input.dispose();if(!p.length)return null;
