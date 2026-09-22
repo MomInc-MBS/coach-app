@@ -36,4 +36,3 @@ Exact review records and full logs are in the conductor's adjacent review-packet
 Wire authenticated account GET/DELETE with expected-generation and target assertions. Fence import writes in their transaction and check affected rows (a zero-row write is not success). Provision an untouched account before such guarded writes. Reconcile remote reminders with their own epoch protection; primary D1 cannot make cross-service deletion atomic. Fence old ordinary outbox writes, add local Dexie ledger persistence, and finish import/privacy/device acceptance. Keep production import flags off.
 
 No deployment was performed. This foundation is not full Chunk 3 acceptance. The additive migration can remain unused while callers are developed; do not drop retained epochs or receipts once they become authoritative.
-
