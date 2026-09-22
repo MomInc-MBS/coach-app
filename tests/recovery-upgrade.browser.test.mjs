@@ -6,7 +6,7 @@ import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {RECOVERY_HTML} from '../recovery-page.mjs';
 
-test('repair releases all old clients before upgrade and preserves durable data', {timeout:45000}, async()=>{
+test('repair waits for a legacy client then finishes automatically without closing repair', {timeout:45000}, async()=>{
  const html='<!doctype html><title>Updated Coach fixture</title><p>Updated Coach</p>';
  const asset={url:'/pose.html',integrity:'sha256-'+createHash('sha256').update(html).digest('base64'),bytes:Buffer.byteLength(html)};
  const current=(await readFile('sw.js','utf8')).replace("const SHELL='myr5-shell-22d1026e5a1d6f2441dd'","const SHELL='myr5-shell-upgrade-test'").replace('/* OFFLINE_ASSETS */ []',JSON.stringify([asset]));
@@ -37,16 +37,14 @@ test('repair releases all old clients before upgrade and preserves durable data'
   await old.waitForFunction(()=>!!navigator.serviceWorker.controller);
   upgraded=true;
   const repair=await context.newPage();await repair.goto(base+'/repair-coach');
-  await repair.waitForFunction(()=>document.getElementById('status').textContent.includes('Close ALL Coach windows'));
-  assert.match(await repair.locator('#status').textContent(),/including this repair page/);
+  await repair.waitForFunction(()=>document.getElementById('status').textContent.includes('Waiting for your Coach session'));
+  assert.match(await repair.locator('#status').textContent(),/No browser tabs need to be closed/);
   assert.equal(await repair.locator('#retry').isVisible(),false);
   assert.equal(await repair.locator('#progress').getAttribute('value'),'100');
   assert.equal(await repair.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting),true);
   await old.close();
-  assert.equal(await repair.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting),true,'the repair page itself keeps the old worker alive');
-  await repair.close();
-  const reopened=await context.newPage();await reopened.goto(base+'/pose.html');
-  await reopened.waitForFunction(async()=>{const r=await navigator.serviceWorker.getRegistration();return !!r?.active&&!r.waiting&&!!navigator.serviceWorker.controller;});
+  await repair.waitForURL(/pose.html\?panel=install&update=repaired/);
+  const reopened=repair;
   assert.equal(await reopened.evaluate(()=>localStorage.getItem('saved-progress')),'keep-this');
   const saved=await reopened.evaluate(()=>new Promise((resolve,reject)=>{
    const open=indexedDB.open('upgrade-workout-fixture');open.onerror=()=>reject(open.error);

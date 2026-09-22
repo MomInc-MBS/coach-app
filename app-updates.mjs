@@ -1,5 +1,6 @@
+import {createUpdateParticipant} from './update-session.mjs';
 import {RELEASE} from './release-info.mjs';
-import {safeToUpdate,releaseNotice} from './update-policy.mjs';
+import {safeToUpdate,releaseNotice,requestActivation} from './update-policy.mjs';
 
 // Release notes are optional; a slow or unavailable API must not block the
 // browser's independent check for a new service worker.
@@ -23,27 +24,34 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  const notice=releaseNotice(storage,RELEASE.id);
  let reg=null,latest=RELEASE,applying=false,switched=false,dismissed=false,poll=0,error='',lastInteraction=Date.now(),retryAt=0,checking=false,notesRequest=null;
  const hadController=!!navigator.serviceWorker?.controller;
- const safe=(automatic=true,background=false)=>safeToUpdate({tracking:document.body.dataset.tracking==='true',rest:document.body.dataset.screen==='rest',dialog:!!document.querySelector('dialog[open]:not(#installPanel):not(#coachSetupGate)'),editing:!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]'),hidden:document.hidden&&!background,online:navigator.onLine,lastInteraction,automatic});
+ const safe=(automatic=true,background=false)=>safeToUpdate({tracking:document.body.dataset.tracking==='true',rest:document.body.dataset.screen==='rest',dialog:!!document.querySelector('dialog[open]:not(#installPanel):not(#coachSetupGate):not(#coachUpdateBarrier)'),editing:!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]'),hidden:document.hidden&&!background,online:navigator.onLine,lastInteraction,automatic});
  const ready=()=>!!reg?.waiting||switched||(!('serviceWorker' in navigator)&&latest.id!==RELEASE.id);
  function showNotes(r){$('releaseVersion').textContent=r.title+' · '+r.date;$('releaseNotes').replaceChildren(...r.notes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}
  function paint(){
   applyButton.hidden=!ready();banner.hidden=ready()?dismissed:!notice.visible;
-  banner.querySelector('span').textContent=ready()?'Close all Coach windows to finish updating.':'Updated: '+RELEASE.title;
+  banner.querySelector('span').textContent=ready()?'Coach will update when you are idle.':'Updated: '+RELEASE.title;
   const b=banner.querySelector('[data-update]');b.hidden=!ready();b.disabled=!safe(false)||applying;applyButton.disabled=b.disabled;
-  b.textContent=reg?.waiting?'How to finish':!safe(false)?'Finish what you’re doing':applying?'Updating…':'Update now';
+  b.textContent=!safe(false)?'Finish what you’re doing':applying?'Updating…':'Update now';
   banner.querySelector('[data-later]').textContent=ready()?'Later':'Got it';
-  $('releaseStatus').textContent=error||(ready()?'Update downloaded. Close all Coach windows, then reopen Coach.':latest.id!==RELEASE.id?'Downloading update…':'Automatic updates are on.');
+  $('releaseStatus').textContent=error||(ready()?'Update downloaded. Coach will save and restart when you are idle.':latest.id!==RELEASE.id?'Downloading update…':'Automatic updates are on.');
  }
  async function apply(automatic=false){
   if(!safe(automatic)||applying||!ready())return;
-  if(reg?.waiting){error='Update downloaded. Close all Coach windows, then reopen Coach.';retryAt=Date.now()+300000;paint();return;}
   applying=true;error='';paint();
   try{
+   if(reg?.waiting){await requestActivation(reg.waiting,{timeout:20000});return;}
    await onBeforeUpdate?.();
    if(!safe(automatic)){applying=false;paint();return;}
    location.reload();
   }catch(e){applying=false;retryAt=Date.now()+30000;error=e.message||'Save your progress before updating.';paint();}
  }
+ const participant=createUpdateParticipant({
+  canPrepare:()=>safe(!applying,true),
+  acquire:()=>{const owner=window.myr5WorkoutOwner,lease=owner?.acquireIdleLease();return lease?()=>owner.releaseIdleLease(lease):null;},
+  save:async()=>{await onBeforeUpdate?.();if(!await window.myr5WorkoutOwner.save())throw Error('Progress could not be saved.');},
+  freeze:()=>{const barrier=document.createElement('dialog');barrier.id='coachUpdateBarrier';barrier.textContent='Saving and updating Coach…';barrier.addEventListener('cancel',event=>event.preventDefault());document.body.append(barrier);barrier.showModal();return ()=>barrier.remove();},
+  reload:()=>location.reload()
+ });
  applyButton.onclick=()=>apply(false);banner.querySelector('[data-update]').onclick=()=>apply(false);
  banner.querySelector('[data-later]').onclick=()=>{if(ready())dismissed=true;else notice.dismiss();paint();};
  banner.querySelector('[data-notes]').onclick=()=>{notice.dismiss();if(!panel.open)panel.showModal();section.open=true;section.scrollIntoView({block:'start'});paint();};
@@ -82,14 +90,14 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
   }).catch(()=>{error='Updates could not initialize. Refresh Coach to retry.';paint();});
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
    if(!hadController&&!applying)return;
-   switched=true;
+   switched=true;if(participant.activated())return;
    if(applying&&safe(false))location.reload();
    else {applying=false;paint();}
   });
   navigator.serviceWorker.addEventListener('message',async event=>{
    if(event.data?.type==='APP_UPDATE_AVAILABLE'){openDownload();event.ports[0]?.postMessage({handled:true});return;}
-   if(event.data?.type!=='UPDATE_SAFETY_CHECK')return;
-   event.ports[0]?.postMessage({safe:false});
+   if(!['UPDATE_SAFETY_CHECK','UPDATE_CONFIRM','UPDATE_ABORT'].includes(event.data?.type))return;
+   const result=await participant.message(event.data);event.ports[0]?.postMessage(result);
   });
  }else check();
  showNotes(RELEASE);paint();

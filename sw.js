@@ -86,12 +86,33 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
  }
  await self.clients.claim();
 })()));
+let updateAttempt=null;
+function updateReply(client,type,id){return new Promise(resolve=>{
+ const channel=new MessageChannel();let done=false;
+ const finish=value=>{if(done)return;done=true;clearTimeout(timer);channel.port1.close();resolve(value?.safe===true&&value.protocol===2&&value.id===id);};
+ const timer=setTimeout(()=>finish(null),4000);
+ channel.port1.onmessage=event=>finish(event.data);
+ try{client.postMessage({type,id},[channel.port2]);}catch{finish(null);}
+});}
+async function prepareUpdate(source){
+ const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+ if(!source?.id||!clients.some(client=>client.id===source.id))return {activated:false,reason:'busy'};
+ const id=crypto.randomUUID();let activated=false;
+ try{
+  if(!(await Promise.all(clients.map(client=>updateReply(client,'UPDATE_SAFETY_CHECK',id)))).every(Boolean))return {activated:false,reason:'busy'};
+  if(!(await Promise.all(clients.map(client=>updateReply(client,'UPDATE_CONFIRM',id)))).every(Boolean))return {activated:false,reason:'busy'};
+  // New or navigated windows must take part in their own fresh preparation.
+  const current=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  if(current.length!==clients.length||current.some(client=>!clients.some(old=>old.id===client.id&&old.url===client.url)))return {activated:false,reason:'busy'};
+  await self.skipWaiting();activated=true;return {activated:true};
+ }finally{if(!activated)for(const client of clients)try{client.postMessage({type:'UPDATE_ABORT',id});}catch{}}
+}
 self.addEventListener('message',event=>{
  if(event.data?.type==='OFFLINE_STATUS'){event.source?.postMessage(downloadProgress);return;}
  if(event.data?.type!=='PREPARE_UPDATE')return;
- // Natural activation waits until every old controlled window closes. No
- // snapshot or expiring client lease can make forced activation race-free.
- event.ports[0]?.postMessage({activated:false,reason:'close_clients'});
+ if(updateAttempt){event.ports[0]?.postMessage({activated:false,reason:'busy'});return;}
+ updateAttempt=prepareUpdate(event.source).catch(()=>({activated:false,reason:'busy'}));
+ event.waitUntil(updateAttempt.then(result=>event.ports[0]?.postMessage(result)).finally(()=>{updateAttempt=null;}));
 });
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);

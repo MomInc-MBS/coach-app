@@ -15,8 +15,8 @@ export function requestActivation(worker,{timeout=10000}={}){
  return new Promise((resolve,reject)=>{
   const channel=new MessageChannel();
   const finish=(error)=>{clearTimeout(timer);channel.port1.close();error?reject(error):resolve();};
-  const timer=setTimeout(()=>finish(Error('Keep one Coach window open to finish updating.')),timeout);
-  channel.port1.onmessage=event=>finish(event.data?.activated?null:Error(event.data?.reason==='close_clients'?'Update downloaded. Close all Coach windows, then reopen Coach.':'Update will finish when your other Coach windows are idle.'));
+  const timer=setTimeout(()=>finish(Error('Coach is still preparing the update. It will retry automatically.')),timeout);
+  channel.port1.onmessage=event=>finish(event.data?.activated?null:Error('Coach is waiting for another session to finish saving. It will retry automatically.'));
   try{worker.postMessage({type:'PREPARE_UPDATE'},[channel.port2]);}catch(error){finish(error);}
  });
 }

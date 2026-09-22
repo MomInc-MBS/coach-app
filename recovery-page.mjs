@@ -7,9 +7,12 @@ export const RECOVERY_HTML=String.raw`<!doctype html>
 (()=>{'use strict';
 const status=document.getElementById('status'),retry=document.getElementById('retry'),meter=document.getElementById('progress'),sw=navigator.serviceWorker;
 let currentWorker;
-const closeWindows='Update downloaded. Close ALL Coach windows, including this repair page and any Coach tabs in Chrome, then reopen installed Coach. Your saved progress stays here.';
+const waitingMessage='Update downloaded. Waiting for your Coach session to finish safely. No browser tabs need to be closed.';
+let preparedUpdate=null;
 sw?.addEventListener('message',event=>{
- if(event.data?.type==='UPDATE_SAFETY_CHECK'){event.ports[0]?.postMessage({safe:true});return;}
+ if(event.data?.type==='UPDATE_SAFETY_CHECK'){preparedUpdate=event.data.id;event.ports[0]?.postMessage({safe:true,protocol:2,id:preparedUpdate});return;}
+ if(event.data?.type==='UPDATE_CONFIRM'){event.ports[0]?.postMessage({safe:preparedUpdate===event.data.id,protocol:2,id:preparedUpdate});return;}
+ if(event.data?.type==='UPDATE_ABORT'){if(preparedUpdate===event.data.id)preparedUpdate=null;return;}
  if(event.data?.type!=='OFFLINE_PROGRESS'||event.source!==currentWorker)return;
  const p=event.data;if(!p.totalBytes)return;
  const percent=Math.min(99,Math.floor(100*p.bytes/p.totalBytes));meter.value=percent;
@@ -24,11 +27,11 @@ function state(worker,allowed){return new Promise((resolve,reject)=>{
 function activate(worker){return new Promise((resolve,reject)=>{
  const channel=new MessageChannel();
  const finish=(error,result)=>{clearTimeout(timer);channel.port1.close();error?reject(error):resolve(result);};
- const timer=setTimeout(()=>finish(Error(closeWindows)),10000);
+ const timer=setTimeout(()=>finish(Error(waitingMessage)),10000);
  channel.port1.onmessage=event=>{
   if(event.data?.activated)return finish(null,true);
-  if(event.data?.reason==='close_clients')return finish(null,false);
-  finish(Error(closeWindows));
+  if(['close_clients','busy'].includes(event.data?.reason))return finish(null,false);
+  finish(Error(waitingMessage));
  };
  try{worker.postMessage({type:'PREPARE_UPDATE'},[channel.port2]);}catch(error){finish(error);}
 });}
@@ -44,9 +47,9 @@ async function update(){
   if(reg.waiting){
    status.textContent='Preparing the update…';
    if(!await activate(reg.waiting)){
-    currentWorker=null;meter.value=100;status.textContent=closeWindows;
-    document.getElementById('instructions').textContent='Finish any active workout first. The download is complete. Close this page too so the update can finish. You do not need to clear storage or reinstall.';
-    return;
+    currentWorker=null;meter.value=100;status.textContent=waitingMessage;
+    document.getElementById('instructions').textContent='Finish your workout first. If your installed Coach is an older version, swipe Coach away once from Android Recent apps. Leave this page open; it will finish automatically. Your saved progress stays here.';
+    setTimeout(update,5000);return;
    }
   }
   await state(worker,['activated']);

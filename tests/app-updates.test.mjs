@@ -16,8 +16,8 @@ test('release notices persist dismissal but show the next build and tolerate blo
 });
 test('activation requires worker approval and times out without forcing an update',async()=>{
  const accepted={postMessage(_,[port]){port.postMessage({activated:true});port.close();}};await requestActivation(accepted);
- await assert.rejects(requestActivation({postMessage(_,[port]){port.postMessage({activated:false});port.close();}}),/other Coach windows/);
- await assert.rejects(requestActivation({postMessage(){}},{timeout:10}),/one Coach window/);
+ await assert.rejects(requestActivation({postMessage(_,[port]){port.postMessage({activated:false});port.close();}}),/another session/);
+ await assert.rejects(requestActivation({postMessage(){}},{timeout:10}),/retry automatically/);
 });
 test('every changed app build gets an update identity without manually editing release notes',async()=>{
  const root=await mkdtemp(join(tmpdir(),'coach-release-'));
