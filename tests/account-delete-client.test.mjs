@@ -8,7 +8,7 @@ const source=await readFile(new URL('../launch.mjs',import.meta.url),'utf8');
 const handlerSource=source.split('\n').find(line=>line.startsWith("$('deleteAccount').onclick="));
 function handler({account,api}){
  const elements={deleteAccount:{},deleteConfirm:{value:'DELETE'}},removed=[],errors=[],cleanup=[];
- vm.runInNewContext(handlerSource,{$:id=>elements[id],account,api,accountTransitions:{invalidate(){}},accountWorkoutSync:{forgetDeletedAccount:(...args)=>cleanup.push(args)},validateAccountDeletionReceipt,accountTransitionBusy:false,localStorage:{removeItem:key=>removed.push(key)},pendingKey:user=>'pending:'+user,keys:[],clearCoachAccount(){},location:{reload(){}},set:(key,message)=>errors.push(message),Number});
+ vm.runInNewContext(handlerSource,{$:id=>elements[id],account,api,accountTransitions:{invalidate(){}},packGrantCache:{remove(){}},accountWorkoutSync:{forgetDeletedAccount:(...args)=>cleanup.push(args)},validateAccountDeletionReceipt,accountTransitionBusy:false,localStorage:{removeItem:key=>removed.push(key)},pendingKey:user=>'pending:'+user,keys:[],clearCoachAccount(){},location:{reload(){}},set:(key,message)=>errors.push(message),Number});
  return {run:elements.deleteAccount.onclick,removed,errors,cleanup};
 }
 test('launch delete submits captured account epoch and exact target through api headers',async()=>{

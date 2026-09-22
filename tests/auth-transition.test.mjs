@@ -30,7 +30,7 @@ test('storage read/write, missing channel and postMessage failures fail closed',
 const launch=await readFile(new URL('../launch.mjs',import.meta.url),'utf8');
 const refreshSource=launch.split('\n').find(line=>line.startsWith('async function refresh('));
 function refreshHarness(transitions,api){
- const applied=[],context={account:null,revision:0,accountTransitionBusy:false,accountTransitions:transitions,optionalReadiness:{refresh:async()=>false},api,applyCoachAccount:v=>applied.push(v.user.id),$:()=>({replaceChildren(){}}),set(){},publishProgress(){},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},scoreboard:{clear(){}},clearCoachAccount(){},liveReminders:{update(){},render(){}}};
+ const applied=[],context={account:null,revision:0,accountTransitionBusy:false,accountTransitions:transitions,packGrantCache:{confirm(){},deactivate(){},active(){return null;}},optionalReadiness:{refresh:async()=>false},api,applyCoachAccount:v=>applied.push(v.user.id),$:()=>({replaceChildren(){}}),set(){},publishProgress(){},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},scoreboard:{clear(){}},clearCoachAccount(){},liveReminders:{update(){},render(){}}};
  vm.createContext(context);vm.runInContext(refreshSource+';this.refresh=refresh;',context);return {context,applied};
 }
 const account=id=>({user:{id,provider:'chatgpt',email:id},dataEpoch:1,revision:0,push:{},progress:{}});
@@ -46,8 +46,8 @@ test('transition during refresh blocks success and network failure preserves sta
  const stale=refreshHarness(a,async()=>{throw Error('offline');});stale.context.account=account('A');await stale.context.refresh();assert.equal(stale.context.account.user.id,'A');assert.equal(stale.context.account.stale,true);
 });
 test('cold startup dispatches account refresh without awaiting auth/network',async()=>{
- const line=launch.split('\n').find(value=>value.includes('await applyLocalCoach();void refresh();')),hang=deferred(),events=[];
- const prefix=line.slice(0,line.indexOf('const panel='));await vm.runInNewContext('(async()=>{'+prefix+'this.ready=true;})()',{applyLocalCoach:async()=>events.push('local'),refresh:()=>{events.push('refresh');return hang.promise;}});assert.deepEqual(events,['local','refresh']);
+ const line=launch.split('\n').find(value=>value.includes('await applyLocalCoach();')&&value.includes('void refresh();')),hang=deferred(),events=[];
+ const prefix=line.slice(0,line.indexOf('const panel='));await vm.runInNewContext('(async()=>{'+prefix+'this.ready=true;})()',{applyLocalCoach:async()=>events.push('local'),packGrantCache:{active:()=>null},mountVerifiedExpansion(){},refresh:()=>{events.push('refresh');return hang.promise;}});assert.deepEqual(events,['local','refresh']);
 });
 
 test('ticket binding persists exact server owner/epoch and guarded completion acknowledges only matching scope',async()=>{
@@ -111,7 +111,7 @@ test('signout still revokes Clerk and redirects when coordinator and storage fai
 });
 test('launch signout is not held by remote unsubscribe or local cleanup failures',async()=>{
  const line=launch.split('\n').find(value=>value.startsWith("$('signOut').onclick=")),elements={signOut:{}};let signedOut=0,remoteAttempts=0;
- const context={$:id=>elements[id],account:{user:{id:'A'},dataEpoch:1},accountTransitionBusy:false,accountTransitions:{invalidate(){throw Error();}},registration:{pushManager:{getSubscription:async()=>({endpoint:'endpoint',unsubscribe:async()=>{}})}},api:async()=>{remoteAttempts++;throw Error('offline');},keys:['appearance'],localStorage:{removeItem(){throw Error();}},clearCoachAccount(){throw Error();},signOut:async()=>signedOut++,set(){}};
+ const context={$:id=>elements[id],account:{user:{id:'A'},dataEpoch:1},accountTransitionBusy:false,accountTransitions:{invalidate(){throw Error();}},packGrantCache:{deactivate(){}},registration:{pushManager:{getSubscription:async()=>({endpoint:'endpoint',unsubscribe:async()=>{}})}},api:async()=>{remoteAttempts++;throw Error('offline');},keys:['appearance'],localStorage:{removeItem(){throw Error();}},clearCoachAccount(){throw Error();},signOut:async()=>signedOut++,set(){}};
  vm.runInNewContext(line,context);await elements.signOut.onclick({preventDefault(){}});await new Promise(resolve=>setImmediate(resolve));assert.equal(signedOut,1);assert.equal(remoteAttempts,1);
 });
 test('historical deletion receipt cleans only bound epochs it proves deleted',()=>{

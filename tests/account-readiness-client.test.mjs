@@ -24,7 +24,7 @@ test('optional channel/network failure preserves independent successful observat
 });
 test('actual launch core refresh returns without awaiting optional readiness',async()=>{
  const source=await readFile(new URL('../launch.mjs',import.meta.url),'utf8'),line=source.split('\n').find(s=>s.startsWith('async function refresh(){')),value={...account(),revision:1,profile:{},progress:{}};let started=0;
- const context={account:null,accountTransitionBusy:false,revision:0,accountTransitions:{beginRefresh:()=>({}),isCurrent:()=>true},api:async()=>value,applyCoachAccount(){},$:()=>({}),set(){},publishProgress(){},optionalReadiness:{refresh(){started++;return new Promise(()=>{});}},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},Object};
+ const context={account:null,accountTransitionBusy:false,revision:0,accountTransitions:{beginRefresh:()=>({}),isCurrent:()=>true},packGrantCache:{confirm(){},deactivate(){},active(){return null;}},api:async()=>value,applyCoachAccount(){},$:()=>({}),set(){},publishProgress(){},optionalReadiness:{refresh(){started++;return new Promise(()=>{});}},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},Object};
  const refresh=vm.runInNewContext(line+';refresh',context);assert.equal(await refresh(),value);assert.equal(started,1);assert.equal(context.account,value);
 });
 function clock(){let fire,cleared=0;return {options:{timeoutMs:20,setTimeoutFn:fn=>{fire=fn;return 1;},clearTimeoutFn:()=>cleared++},fire:()=>fire(),cleared:()=>cleared};}

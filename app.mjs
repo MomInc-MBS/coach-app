@@ -8,6 +8,7 @@ import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
 import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
+import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -193,7 +194,7 @@ async function loadUnlockedOptionalMaterials(){
  window.myr5Cinematics=cinematics;
  return true;
 }
-$('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
+$('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();void mountPackLicenses({host:$('packLicenses')});},{once:true});
 $('openIdentity').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
 $('manageMaterials').addEventListener('click',async()=>{
  const status=$('materialsStatus');

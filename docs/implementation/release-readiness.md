@@ -1,6 +1,6 @@
-# Foundation release readiness — 2026-09-21
+# Foundation release readiness - 2026-09-22
 
-Current local integration: chunks 3 and 4 implemented and tested; chunk 5 lifecycle corrections implemented, production catalog work remains; chunk 6 has local privacy/export and migration evidence, with release acceptance still open. No deployment or live import enablement occurred.
+Current release candidate: chunks 3, 4 and 5 are implemented and integrated; chunk 6 has local privacy/export, migration, dependency and build evidence. Physical Pixel 10 acceptance and backup/restore rehearsal remain external release checks. Live workout import remains disabled.
 
 ## Account and guest history
 
@@ -16,17 +16,19 @@ Build enforces an 8 MiB core cache budget; current build is 143 files, 7.7 MiB. 
 
 Updates use native service-worker waiting: users close all controlled Coach windows and reopen. There is no forced activation. This avoids expiring idle-reservation and newly-opened-window races. Real headless Edge cold-offline reopening preserves completed guest history and does not show recovery failure.
 
-## Pack lifecycle and remaining production scope
+## Pack lifecycle and production catalog
 
 Exact saved signed metadata is verified offline against application trust. Restore and activation hold the workout owner's idle lease. Account transitions and revocation invalidate asynchronous work; abandoned runtimes are disposed. HTTP 200 replaces partial bytes; 206 ranges and complete cached hashes are checked. Failed newer candidates do not prevent restoring the last good material.
 
-This does not complete the production catalog contract. Remaining work includes sticky offline grant storage, signed catalog promotion/rollback, exact dependency reference counting, license/attribution aggregation, signing-key rotation/recovery, and measured hosted Range behavior. All pack adapters now use account.entitlements.ownedPacks scoped to the authenticated response owner; achievements and global-owner fallbacks grant no pack bytes. Production trust anchors remain null and fail closed. No production key was generated.
+Owner-scoped last-confirmed grants survive offline reopen without crossing identities. Confirmed empty grants revoke access, sign-out deactivates the local owner, and deletion removes only that owner's retained grant. Signed catalogs promote monotonically, preserve a verified last-good catalog, use higher-generation rollback, reference-count exact dependency identities, and aggregate installed-pack licenses in Settings. All pack adapters use `account.entitlements.ownedPacks`; achievements and global-owner fallbacks grant no pack bytes.
+
+The application ships separate public release and recovery Ed25519 trust anchors. The active private signer is held as a GitHub Actions secret; the recovery signer is encrypted with Windows DPAPI outside the repository. The hosted Range probe returned HTTP 200 with the complete 15,080,128-byte object for a one-megabyte range request, so current hosting does not provide usable resume. Catalog validation therefore caps dependencies at 512 KiB and complete packs at 2 MiB; pack publication remains blocked until the Pixel 10 accepts whole-file retry behavior.
 
 ## Validation evidence
 
-After the canonical-grant correction: 681/681 integrated Node tests passed, including actual D1 migration/API tests and Edge pack/material browser tests. Build passed. Built offline cold-reopening browser test passed. Logs are in the conductor's review-packets/results/final-canonical-integrated-tests.txt, final-canonical-build.txt and final-canonical-offline-browser.txt.
+The 2026-09-22 candidate passed 690/690 integrated Node tests, including actual D1 migration/API tests, grant retention/revocation, signed catalog rotation/rollback, dependency/license handling and Edge pack/material browser tests. Production build passed at 143 offline files and 7.7 MiB. Prior built offline cold-reopening browser evidence remains valid.
 
-Dependency audit remains 12 pre-existing advisories (8 high, 4 moderate). No automatic breaking audit fixes were applied. Release needs an explicit dependency remediation assessment; a passing functional suite is not a security clearance.
+Dependency audit remains 12 pre-existing advisories (8 high, 4 moderate). No automatic breaking audit fixes were applied. The scoped assessment and tested update sequence are recorded in `docs/implementation/chunk-6/dependency-assessment.md`; a passing functional suite is not a security clearance.
 
 ## Rollout and rollback
 
