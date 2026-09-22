@@ -1,5 +1,6 @@
 import {arrangeEyes} from './anatomy';
-import {EYE_LAYOUTS,EYE_REFERENCE} from './eye-layouts';
+import {EYE_LAYOUTS,EYE_REFERENCE,EYE_SCALE_DEFAULT} from './eye-layouts';
+import {EYE_OVERRIDES} from './eye-overrides';
 import {pupilGeometry} from './pupils';
 import {getCoach} from './coaching';
 import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
@@ -54,21 +55,38 @@ export async function assembleCreature(d:Design,assetBase:string){
  // scale it by head width so the layouts keep their proportions on every head.
  const myr5HeadWidth=boxOf(gltf.scene.getObjectByName('head')).getSize(new THREE.Vector3()).x||1;
  const headWidth=headBox.getSize(new THREE.Vector3()).x*fits.head.s;
- const eyeScale=d.headFrom==='myr5'?fits.head.s:clamp(headWidth/myr5HeadWidth,.5,1.2);
+ const baseEyeScale=d.headFrom==='myr5'?fits.head.s:clamp(headWidth/myr5HeadWidth,.5,1.2);
+ const eyeOverride=EYE_OVERRIDES[d.headFrom];
+ // Global eye-scale multiplier (handoff §5, ~0.65) applies to roster heads only: MYR5's own head has eye
+ // sockets carved for its native eye size (see eye-layouts.ts), so it stays at its own fitted scale.
+ const globalEyeScale=d.headFrom==='myr5'?1:EYE_SCALE_DEFAULT;
+ const eyeScale=eyeOverride?.eyeScale??baseEyeScale*globalEyeScale;
  const reference=new THREE.Vector3(EYE_REFERENCE.x,EYE_REFERENCE.y,EYE_REFERENCE.z);
  if(d.headFrom!=='myr5')scene(d.headFrom).updateMatrixWorld(true);
  const anchor=d.headFrom==='myr5'?null:scene(d.headFrom).getObjectByName('eye_anchor');
- const eyeCenter=anchor?anchor.getWorldPosition(new THREE.Vector3()).sub(new THREE.Vector3(0,0,.605*eyeScale)):reference.clone();
+ const anchorWorld=anchor?anchor.getWorldPosition(new THREE.Vector3()):null;
+ // flipX mirrors the head's own geometry (below); the anchor lives outside that node (a root sibling,
+ // per the roster GLB contract) so its X has to be corrected here to keep the eyes on the mirrored side.
+ if(anchorWorld&&eyeOverride?.flipX)anchorWorld.x=-anchorWorld.x;
+ const eyeCenter=anchorWorld?anchorWorld.clone().sub(new THREE.Vector3(0,0,.605*eyeScale)):reference.clone();
  eyeCenter.multiplyScalar(fits.head.s).add(fits.head.t);
  // Roster heads have no carved sockets: remember their front surface so eyes sit on it, not inside it.
- const surfaceZ=anchor?anchor.getWorldPosition(new THREE.Vector3()).z*fits.head.s+fits.head.t.z:undefined;
+ const surfaceZ=anchorWorld?anchorWorld.z*fits.head.s+fits.head.t.z:undefined;
+ // Anchor-derived offset first; a per-variant eyeOffset override (once the owner supplies one from the
+ // before/after renders) nudges it afterward rather than replacing the anchor's own placement.
  const eyeOffset=eyeCenter.sub(reference);
+ if(eyeOverride?.eyeOffset)eyeOffset.add(new THREE.Vector3(...eyeOverride.eyeOffset));
  const eyeMoved=eyeOffset.lengthSq()>1e-8||Math.abs(eyeScale-1)>1e-4;
 
  const root=new THREE.Group(),details=new THREE.Group();details.name='Style ornaments';root.add(details);
  const materials:THREE.MeshStandardMaterial[]=[];
     const regions={} as Record<Region,THREE.Group>;
-   for(const region of REGIONS){const source=scene(from[region]).getObjectByName(region);if(!source){throw Error('A creature section could not load.');}const wrapper=new THREE.Group();wrapper.name=region;root.add(wrapper);wrapper.add(source);regions[region]=wrapper;wrapper.traverse(o=>{if(o instanceof THREE.Mesh){if(region==='eye')prepareEyeMesh(o);o.userData.region=region;o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material=(o.material as THREE.MeshStandardMaterial).clone();const m=o.material as THREE.MeshStandardMaterial;m.userData={baseColor:m.color.clone(),baseRough:m.roughness,baseMetal:m.metalness,name:m.name};materials.push(m);}});}
+   for(const region of REGIONS){const source=scene(from[region]).getObjectByName(region);if(!source){throw Error('A creature section could not load.');}
+    // Facing correction (handoff §5 flipX): mirror this region's own geometry in its local space. The eye
+    // region is excluded — it always comes from MYR5's own template (see `from.eye` above), never the
+    // flagged roster source, and the eye anchor's X is corrected separately above.
+    if(region!=='eye'&&EYE_OVERRIDES[from[region]]?.flipX)source.scale.x*=-1;
+    const wrapper=new THREE.Group();wrapper.name=region;root.add(wrapper);wrapper.add(source);regions[region]=wrapper;wrapper.traverse(o=>{if(o instanceof THREE.Mesh){if(region==='eye')prepareEyeMesh(o);o.userData.region=region;o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material=(o.material as THREE.MeshStandardMaterial).clone();const m=o.material as THREE.MeshStandardMaterial;m.userData={baseColor:m.color.clone(),baseRough:m.roughness,baseMetal:m.metalness,name:m.name};materials.push(m);}});}
    const lid=new THREE.Mesh(new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,.57),new THREE.MeshStandardMaterial({color:STYLES[0].primary,roughness:.58}));lid.position.copy(reference);lid.name='Expression eyelid';lid.userData.region='eye';const eyeTemplate=regions.eye.children[0] as THREE.Group;eyeTemplate.add(lid);
    // MYR5's anatomy variants (eye-socket crowns, finger and toe counts) only apply to regions MYR5 supplies.
    const variants=new Map<string,THREE.Object3D>();if(from.head==='myr5')variants.set('head_single',regions.head.children[0]);variants.set('original_arms',regions.arms.children[0]);variants.set('original_feet',regions.feet.children[0]);

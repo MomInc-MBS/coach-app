@@ -1,6 +1,10 @@
 // Eye centers use the model's Y-up coordinates; yaw faces outward from the crown.
 // Reference point the table is tuned to (myr5's own head front, at the single-eye position).
 export const EYE_REFERENCE={x:0,y:2.1575,z:0.55};
+// Global eye-scale multiplier for roster heads (handoff §5 "Eye scale"). MYR5's own head has eye
+// sockets carved for its native eye size, so it is excluded (see assemble.ts) — this constant only
+// scales down the auto-fitted eyes on the 70 roster heads, which have no carved socket to clash with.
+export const EYE_SCALE_DEFAULT=0.65;
 export const EYE_LAYOUTS = {
  "single":{"label":"One cyclops eye","eyes":[[0,2.1575,0.55,0.605,0]]},
  "horizontal":{"label":"Horizontal pair","eyes":[[-0.34,2.25,0.49,0.32,0],[0.34,2.25,0.49,0.32,0]]},

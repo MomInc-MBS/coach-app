@@ -10,6 +10,21 @@ export const STYLES=[{...HAND_STYLES[0],name:'Original MYR5',primary:'#7946aa',s
 export const PICKER_STYLES=STYLES.filter(style=>![8,11,22].includes(style.id));
 // Every creature model shipped with the app. Roster ids are generated from the Blender pipeline (creator/roster.ts).
 export const BODIES:readonly {id:string;label:string;group:string}[]=[{id:'myr5',label:'Original MYR5',group:'MYR5'},...ROSTER];
+// The review rejects (D6: original 63/7 review wins). Kept in BODIES/roster.ts and fully
+// loadable/renderable (a saved recipe pointing at one still works) — just excluded from user-facing
+// pickers below. Numbering resolved to roster.ts (app) numbering per coordinator decision (D6-numbering).
+// Owner correction during Rank 3: Pearl · Orb 3 & 5 and Shellcap · Manyarm 3 are kept as approved
+// models (per the approved roster board, outputs/visual-boards/01-approved-model-roster.png) — only
+// these 4 are actually hidden.
+export const REJECTED_BODY_IDS=new Set<string>([
+ 'roster/01-seed-pearo--white_3d_character_model', // Seed · Pearo 3
+ 'roster/01-seed-pearo--blank_humanoid_figure_3d_model', // Seed · Pearo 4
+ 'roster/09-monolith-tanka--robot_3d_model2', // Monolith · Tanka 4
+ 'roster/18-quad-all--stylized_quadruped_3d_model', // Four-legged 8
+]);
+// What user-facing pickers (body/head/arms/feet selects) should offer. Do not filter BODIES itself —
+// `known()` below (and any saved recipe) must keep accepting rejected ids.
+export const PICKER_BODIES=BODIES.filter(b=>!REJECTED_BODY_IDS.has(b.id));
 export type BodyId=string;
 // Mix-and-match: each limb region may come from a different creature; unset means "same as body".
 export const PART_SOURCES=['headFrom','armsFrom','feetFrom'] as const;

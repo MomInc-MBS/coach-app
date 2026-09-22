@@ -1,7 +1,7 @@
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
-import {REGIONS,LABELS,STYLES,PICKER_STYLES,BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
+import {REGIONS,LABELS,STYLES,PICKER_STYLES,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region} from './creator/design';
 export {CreatureViewer,GESTURES,importCreature};
@@ -38,7 +38,7 @@ function commit(next:Design,rangeId:string|null=null){
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
 // Creatures grouped by design family so 70+ bodies stay scannable in a phone picker.
-for(const id of ['body','headFrom','armsFrom','feetFrom']){const groups=new Map<string,HTMLOptGroupElement>();for(const b of BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$(id).append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
+for(const id of ['body','headFrom','armsFrom','feetFrom']){const groups=new Map<string,HTMLOptGroupElement>();for(const b of PICKER_BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$(id).append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
