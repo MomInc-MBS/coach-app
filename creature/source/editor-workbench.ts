@@ -3,7 +3,9 @@ import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
 import {REGIONS,LABELS,STYLES,PICKER_STYLES,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
-import type {Design,Region} from './creator/design';
+import type {Design,Region,MaterialChoice} from './creator/design';
+import {TEXTURES,COLORS,PALETTES,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,type TextureDef} from './creator/materials-registry';
+import {texturePreviewDataURL} from './creator/swatches';
 export {CreatureViewer,GESTURES,importCreature};
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
 const $=(id:string)=>document.getElementById(id)!;
@@ -16,11 +18,27 @@ const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBa
 let viewer:CreatureViewer|undefined;
 function tell(text:string){$('creatureStatus').textContent=text;}
 function coachPreview(){const coach=getCoach(recipe.coach);$('coachTone').textContent=coach.tone;$('coachLine').textContent=coach.lines[($('coachSituation') as HTMLSelectElement).value as Situation||'start'];}
+// Rank 4 minimal test controls: a texture/colour/sparkle/metallic override for the selected
+// part, independent of the legacy style grid above. No override -> renders exactly like today.
+const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'default-slate',sparkle:0,metallic:0};
+function materialChoice():MaterialChoice{return recipe.materials?.[selected]??DEFAULT_MATERIAL;}
+function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){commit({...recipe,materials:{...recipe.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
+function syncMaterials(){
+ const mc=materialChoice();
+ ($('textureId') as HTMLSelectElement).value=mc.textureId;
+ const texture=TEXTURES.find(t=>t.id===mc.textureId);
+ ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===mc.colorId));
+ ($('sparkle') as HTMLInputElement).value=String(mc.sparkle);$('sparkleValue').textContent=mc.sparkle.toFixed(2);
+ ($('metallic') as HTMLInputElement).value=String(mc.metallic);$('metallicValue').textContent=mc.metallic.toFixed(2);
+ ($('materialClear') as HTMLButtonElement).disabled=!recipe.materials?.[selected];
+}
 function sync(){
  for(const key of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){b.setAttribute('aria-pressed',String(b.dataset.region===selected));b.querySelector('i')!.style.background=STYLES[recipe.styles[b.dataset.region as Region]].primary;}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-style]'))b.setAttribute('aria-pressed',String(Number(b.dataset.style)===recipe.styles[selected]));
  $('partLabel').textContent=LABELS[selected];$('styleLabel').textContent=STYLES[recipe.styles[selected]].name;
+ syncMaterials();
  ($('undo') as HTMLButtonElement).disabled=!undo.length;($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
 const queue=new LatestPreview<{recipe:Design;message:string}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe))throw Error('Preview was interrupted.');},(job,error)=>{
@@ -46,6 +64,19 @@ function focusPart(region:Region){selected=region;sync();viewer?.focusRegion(reg
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
 for(const [id,region] of Object.entries({body:'body',headFrom:'head',armsFrom:'arms',feetFrom:'feet',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 PICKER_STYLES.forEach(style=>{const index=style.id;const b=document.createElement('button');b.dataset.style=String(index);const img=document.createElement('img');img.src=new URL(`./styles/${String(index).padStart(2,'0')}.png`,location.href).href;img.alt='';img.loading='lazy';const label=document.createElement('span');label.textContent=style.name;b.append(img,label);b.onclick=()=>{focusPart(selected);commit({...recipe,styles:{...recipe.styles,[selected]:index}});};$('styles').append(b);});
+// Rank 4: texture dropdown (registry-driven; battle-pass entries show locked and can't be
+// picked - there are no files behind them yet) and colour/palette swatch grid, separate axes.
+const textureLabel=(t:TextureDef)=>t.displayName+(isTextureUnlocked(t)?'':` (locked — ${t.unlockRule}${t.track?' · '+t.track+' L'+t.passLevel:''})`);
+for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=textureLabel(t);o.disabled=!isTextureUnlocked(t);$('textureId').append(o);}
+$('textureId').addEventListener('change',()=>setMaterial({textureId:($('textureId') as HTMLSelectElement).value}));
+type Swatch={id:string;title:string;background:string;unlocked:boolean};
+const colorSwatches:Swatch[]=[
+ ...COLORS.map(c=>({id:c.id,title:c.displayName+(isColorUnlocked(c)?'':' (locked)'),background:c.primary,unlocked:isColorUnlocked(c)})),
+ ...PALETTES.map(p=>({id:p.id,title:p.displayName+(isPaletteUnlocked(p)?'':` (locked — aura day ${p.unlockAtDay})`),background:`linear-gradient(90deg,${p.colors.join(',')})`,unlocked:isPaletteUnlocked(p)})),
+];
+for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.title;b.style.background=s.background;b.style.height='34px';b.disabled=!s.unlocked;b.onclick=()=>setMaterial({colorId:s.id});$('colorSwatches').append(b);}
+$('materialClear').onclick=()=>{const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
+for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
 for(const id of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
  // Choosing a body resets head, arms and legs to that creature; the part pickers then mix and match.
