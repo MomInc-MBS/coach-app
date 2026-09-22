@@ -16,6 +16,7 @@ import {runReminders} from './push.mjs';
 import {RELEASE} from '../release-info.mjs';
 import {trainingFromDaily} from '../weapon-training.mjs';
 import {combatProgress,startBreathing,completeBreathing} from './combat.mjs';
+import {circuitProgress} from '../circuit.mjs';
 import {syncTrainingStatus} from './reminder-plan.mjs';
 import {emailSubscription,emailLinkAction,emailLinkPage} from './release-email.mjs';
 import {readEntitlements,recordCoachArmyCompletion,createCoachArmyBinding,claimCoachArmyBinding} from './entitlements.mjs';
@@ -25,7 +26,17 @@ import {RECOVERY_HTML} from '../recovery-page.mjs';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 async function body(request){if(!request.headers.get('content-type')?.startsWith('application/json'))fail('Send JSON.',415);const reader=request.body?.getReader();if(!reader)fail('Empty request.');const chunks=[];let size=0;for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>60000){await reader.cancel();fail('Request too large.',413);}chunks.push(value);}const bytes=new Uint8Array(size);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.byteLength;}let v;try{v=JSON.parse(new TextDecoder().decode(bytes));}catch{fail('Invalid request.');}if(!v||typeof v!=='object'||Array.isArray(v))fail('Invalid request.');return v;}
 async function count(database,user){return Number((await database.prepare(`SELECT count(*) AS total FROM workouts WHERE user_id=? AND source='server' AND completed_at IS NOT NULL`).bind(user).first()).total);}
-async function workoutProgress(database,user,now=Date.now(),includeCombat=true,onboarding=null,{recordLogin=true}={}){const rows=(await database.prepare(`SELECT mode,CAST(completed_at/86400000 AS INTEGER) AS day,COUNT(*) AS sets FROM workouts WHERE user_id=? AND source='server' AND completed_at IS NOT NULL GROUP BY mode,day`).bind(user).all()).results;return {exerciseRoute:await readExerciseRoute(database,user,onboarding,now),...progress(rows.reduce((sum,row)=>sum+Number(row.sets),0)),activeDays:new Set(rows.map(row=>row.day)).size,trainingVersion:1,training:trainingFromDaily(rows),trainingStatus:{startedDay:rows.length?rows.reduce((value,r)=>Math.min(value,r.day),Infinity):Math.floor(now/86400000),lastCompletedDay:rows.length?rows.reduce((value,r)=>Math.max(value,r.day),-Infinity):null},...(includeCombat?{combat:await combatProgress(database,user,now,{recordLogin})}:{})};}
+async function workoutProgress(database,user,now=Date.now(),includeCombat=true,onboarding=null,{recordLogin=true}={}){const rows=(await database.prepare(`SELECT mode,CAST(completed_at/86400000 AS INTEGER) AS day,COUNT(*) AS sets FROM workouts WHERE user_id=? AND source='server' AND completed_at IS NOT NULL GROUP BY mode,day`).bind(user).all()).results;return {exerciseRoute:await readExerciseRoute(database,user,onboarding,now),...progress(rows.reduce((sum,row)=>sum+Number(row.sets),0)),activeDays:new Set(rows.map(row=>row.day)).size,trainingVersion:1,training:trainingFromDaily(rows),trainingStatus:{startedDay:rows.length?rows.reduce((value,r)=>Math.min(value,r.day),Infinity):Math.floor(now/86400000),lastCompletedDay:rows.length?rows.reduce((value,r)=>Math.max(value,r.day),-Infinity):null},...(includeCombat?{combat:await combatProgress(database,user,now,{recordLogin}),circuit:await dailyCircuitProgress(database,user,rows,now)}:{})};}
+// Daily circuit (Rank 6, D15): reuses the same mode+day rows already fetched above, plus two
+// small distinct-day scans over breathing_sessions/meals (mirrors combatProgress's breathing
+// query -- UTC day, same as the rest of this file's daily-cap logic).
+async function dailyCircuitProgress(database,user,rows,now){
+ const [breathingDays,mealDays]=await Promise.all([
+  database.prepare(`SELECT DISTINCT CAST(completed_at/86400000 AS INTEGER) AS day FROM breathing_sessions WHERE user_id=? AND completed_at IS NOT NULL`).bind(user).all(),
+  database.prepare(`SELECT DISTINCT CAST(strftime('%s',eaten_at) AS INTEGER)/86400 AS day FROM meals WHERE user_id=?`).bind(user).all(),
+ ]);
+ return circuitProgress(rows,breathingDays.results.map(r=>r.day),mealDays.results.map(r=>r.day),Math.floor(now/86400000));
+}
 async function api(request,env,ctx){const u=new URL(request.url),p=u.pathname,method=request.method;
  if(p==='/api/workouts/import'&&(method!=='POST'||env.WORKOUT_IMPORTS_ENABLED!=='true'))return json({error:'Not found.'},404);
  const database=db(env);

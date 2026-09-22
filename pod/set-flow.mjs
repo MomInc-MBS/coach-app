@@ -7,8 +7,11 @@ import {AbilityCooldown} from './weapon-evolution.mjs';
 export const DEFAULT_GOALS={...Object.fromEntries(Object.values(EXERCISES).map(m=>[m.id,m.defaultGoal])),squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
 export const valueOf=m=>m.kind==='hold'?m.totalHold:m.kind==='pace'?(m.active??0):m.count;
 export function readProgress(raw){
- try{const p=typeof raw==='string'?JSON.parse(raw):raw;if(p?.version===1&&Number.isSafeInteger(p.completedSets)&&p.completedSets>=0)return {version:1,completedSets:Math.min(p.completedSets,1000000)};}catch{}
- return {version:1,completedSets:0};
+ // circuit is a cached mirror of the server-computed daily-circuit payload (circuit.mjs),
+ // kept alongside completedSets so the circuit meter can render on reopen before the next
+ // myr5:account-progress event lands (Rank 6: "progress survives app close/reopen mid-circuit").
+ try{const p=typeof raw==='string'?JSON.parse(raw):raw;if(p?.version===1&&Number.isSafeInteger(p.completedSets)&&p.completedSets>=0)return {version:1,completedSets:Math.min(p.completedSets,1000000),circuit:p.circuit&&typeof p.circuit==='object'?p.circuit:null};}catch{}
+ return {version:1,completedSets:0,circuit:null};
 }
 export class SetFlow {
  constructor(progress=null,{cooldown=null,now=Date.now()}={}){this.progress=readProgress(progress);this.phase='pod';this.sequence=0;this.active=null;this.preview=false;this.restUntil=0;this.hits=0;this.damage=0;this.lastTap=-Infinity;this.lastRestInteraction=-Infinity;this.abilities=new AbilityCooldown(cooldown,now);}
