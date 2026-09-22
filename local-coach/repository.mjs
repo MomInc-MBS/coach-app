@@ -1,8 +1,10 @@
 import Dexie from 'dexie';
 import {z} from 'zod';
+import {IMPORT_LEDGER_STORES,importLedgerTables,readImportLedger,deleteImportLedger,createImportLedger} from './import-ledger.mjs';
 import {EXERCISES,validateOnboarding} from '../onboarding-domain.mjs';
 
 export const LOCAL_COACH_SCHEMA_VERSION=1;
+export const LOCAL_COACH_LAYOUT_VERSION=2;
 export const LOCAL_COACH_EXPORT_VERSION=1;
 export const DEFAULT_LOCAL_COACH_DB='myr5-local-coach';
 
@@ -93,12 +95,14 @@ function createId(cryptoObject){
 
 export async function openLocalCoach({
  name=DEFAULT_LOCAL_COACH_DB,
+ openTimeoutMs=3000,
  indexedDB=globalThis.indexedDB,
  IDBKeyRange=globalThis.IDBKeyRange,
  cryptoObject=globalThis.crypto,
  now=()=>Date.now(),
  exerciseKeys=Object.keys(EXERCISES),
 }={}){
+ if(!Number.isSafeInteger(openTimeoutMs)||openTimeoutMs<1||openTimeoutMs>60000)throw new LocalCoachStorageError('invalid-record','Local storage open timeout must be between 1 and 60000 milliseconds.',{recoverable:true});
  if(!indexedDB||!IDBKeyRange)throw new LocalCoachStorageError('unavailable','Durable local storage is unavailable in this browser.',{recoverable:true});
  const modes=new Set(exerciseKeys);
  const db=new Dexie(name,{indexedDB,IDBKeyRange});
@@ -110,7 +114,16 @@ export async function openLocalCoach({
   workoutEvents:'&id,workoutId,[ownerId+workoutId],[workoutId+sequence],ownerId,createdAt',
   outbox:'&id,&workoutId,ownerId,[ownerId+state],state,updatedAt',
  });
- try{await db.open();}catch(error){db.close();throw classifyLocalCoachError(error,'Local coach database');}
+ db.version(LOCAL_COACH_LAYOUT_VERSION).stores(IMPORT_LEDGER_STORES);
+ let openExpired=false,openTimer;
+ const openDeadlineError=new LocalCoachStorageError('migration','Local storage is taking longer than expected. Retry; close other app tabs if upgrade is blocked.',{recoverable:true});
+ try{
+  await Promise.race([
+   db.open().then(()=>{if(openExpired){db.close({disableAutoOpen:true});throw openDeadlineError;}}),
+   new Promise((resolve,reject)=>{openTimer=setTimeout(()=>{openExpired=true;reject(openDeadlineError);db.close({disableAutoOpen:true});},openTimeoutMs);}),
+  ]);
+ }catch(error){db.close({disableAutoOpen:true});throw classifyLocalCoachError(error,'Local coach database');}
+ finally{clearTimeout(openTimer);}
 
  const readMeta=async key=>{
   const row=await db.meta.get(key);
@@ -150,6 +163,7 @@ export async function openLocalCoach({
   };
   const assertWorkoutLease=async token=>{if(token===undefined)return;const expected=parse(LeaseTokenSchema,token,'Workout lease token'),row=await db.meta.get(leaseKey),lease=row?parse(MetaRecordSchema,row,'Workout lease record').value:null;if(!lease||lease.token!==expected)throw new LocalCoachStorageError('lease','This workout is active in another tab.',{recoverable:true});};
   return Object.freeze({
+   ...createImportLedger({db,ownerId,deviceId:identity.deviceId,getWorkout,transact,StorageError:LocalCoachStorageError,classifyError:classifyLocalCoachError}),
    ownerId,
    deviceId:identity.deviceId,
    async claimWorkoutLease(token){const value={token:parse(LeaseTokenSchema,token,'Workout lease token')};return transact('Workout lease claim',[db.meta],async()=>{const row=parse(MetaRecordSchema,{key:leaseKey,ownerId,value,updatedAt:now(),schemaVersion:LOCAL_COACH_SCHEMA_VERSION},'Workout lease record');await db.meta.put(row);return value;});},
@@ -222,12 +236,12 @@ export async function openLocalCoach({
     return transact('Sync outbox update',[db.outbox],async()=>{const row=await db.outbox.get(id);if(!row||row.ownerId!==ownerId)throw new LocalCoachStorageError('not-found','Sync record was not found for this owner.',{recoverable:true});const updated=parse(OutboxRecordSchema,{...row,state:next,updatedAt:now()},'Sync outbox record');await db.outbox.put(updated);return updated;});
    },
    async exportLocalData(){
-    try{return await db.transaction('r',db.intake,db.settings,db.workouts,db.workoutEvents,db.outbox,async()=>{
+    try{return await db.transaction('r',db.intake,db.settings,db.workouts,db.workoutEvents,db.outbox,...importLedgerTables(db),async()=>{
      const intake=await db.intake.get(ownerId),settings=await db.settings.get(ownerId),workouts=await db.workouts.where('ownerId').equals(ownerId).toArray(),events=await db.workoutEvents.where('ownerId').equals(ownerId).toArray(),outbox=await db.outbox.where('ownerId').equals(ownerId).toArray();
-     return {exportVersion:LOCAL_COACH_EXPORT_VERSION,schemaVersion:LOCAL_COACH_SCHEMA_VERSION,ownerId,deviceId:identity.deviceId,exportedAt:now(),intake:intake?parse(IntakeRecordSchema,intake,'Coach intake record'):null,settings:settings?parse(SettingsRecordSchema,settings,'Coach settings record'):null,workouts:workouts.map(row=>parse(WorkoutRecordSchema,row,'Workout')).sort((a,b)=>a.startedAt-b.startedAt||a.id.localeCompare(b.id)),events:events.map(row=>parse(EventRecordSchema,row,'Workout event')).sort((a,b)=>a.createdAt-b.createdAt||a.id.localeCompare(b.id)),outbox:outbox.map(row=>parse(OutboxRecordSchema,row,'Sync outbox record')).sort((a,b)=>a.createdAt-b.createdAt||a.id.localeCompare(b.id))};
+     return {importAssignments:await readImportLedger(db,ownerId,LocalCoachStorageError),exportVersion:LOCAL_COACH_EXPORT_VERSION,schemaVersion:LOCAL_COACH_SCHEMA_VERSION,ownerId,deviceId:identity.deviceId,exportedAt:now(),intake:intake?parse(IntakeRecordSchema,intake,'Coach intake record'):null,settings:settings?parse(SettingsRecordSchema,settings,'Coach settings record'):null,workouts:workouts.map(row=>parse(WorkoutRecordSchema,row,'Workout')).sort((a,b)=>a.startedAt-b.startedAt||a.id.localeCompare(b.id)),events:events.map(row=>parse(EventRecordSchema,row,'Workout event')).sort((a,b)=>a.createdAt-b.createdAt||a.id.localeCompare(b.id)),outbox:outbox.map(row=>parse(OutboxRecordSchema,row,'Sync outbox record')).sort((a,b)=>a.createdAt-b.createdAt||a.id.localeCompare(b.id))};
     });}catch(error){throw classifyLocalCoachError(error,'Local coach export');}
    },
-   async deleteLocalData(){return transact('Local coach deletion',[db.meta,db.intake,db.settings,db.workouts,db.workoutEvents,db.outbox],async()=>{const metadataKeys=(await db.meta.where('ownerId').equals(ownerId).primaryKeys()).filter(key=>key!=='guest-owner-id');const counts={intake:await db.intake.where('ownerId').equals(ownerId).delete(),settings:await db.settings.where('ownerId').equals(ownerId).delete(),workouts:await db.workouts.where('ownerId').equals(ownerId).delete(),events:await db.workoutEvents.where('ownerId').equals(ownerId).delete(),outbox:await db.outbox.where('ownerId').equals(ownerId).delete(),metadata:metadataKeys.length};if(metadataKeys.length)await db.meta.bulkDelete(metadataKeys);return counts;});},
+   async deleteLocalData(){return transact('Local coach deletion',[db.meta,db.intake,db.settings,db.workouts,db.workoutEvents,db.outbox,...importLedgerTables(db)],async()=>{const metadataKeys=(await db.meta.where('ownerId').equals(ownerId).primaryKeys()).filter(key=>key!=='guest-owner-id');const counts={importAssignments:await deleteImportLedger(db,ownerId),intake:await db.intake.where('ownerId').equals(ownerId).delete(),settings:await db.settings.where('ownerId').equals(ownerId).delete(),workouts:await db.workouts.where('ownerId').equals(ownerId).delete(),events:await db.workoutEvents.where('ownerId').equals(ownerId).delete(),outbox:await db.outbox.where('ownerId').equals(ownerId).delete(),metadata:metadataKeys.length};if(metadataKeys.length)await db.meta.bulkDelete(metadataKeys);return counts;});},
    async importLegacyLocalState(input){
     const legacy=parse(LegacyMigrationSchema,input,'Legacy local state'),markerKey=`legacy:${JSON.stringify([ownerId,legacy.sourceKey])}`;
     return transact('Legacy local migration',[db.meta,db.intake,db.settings,db.outbox],async()=>{
@@ -246,6 +260,7 @@ export async function openLocalCoach({
 
  return Object.freeze({
   schemaVersion:LOCAL_COACH_SCHEMA_VERSION,
+  layoutVersion:LOCAL_COACH_LAYOUT_VERSION,
   deviceId:identity.deviceId,
   guestOwnerId:identity.guestOwnerId,
   forOwner,
