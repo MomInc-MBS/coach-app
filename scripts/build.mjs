@@ -22,6 +22,16 @@ await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+// Keep authoring inputs and debugger-only maps in the open-source repository,
+// but not in the deployable static archive. Runtime code does not request them.
+for(const path of [
+ 'dist/client/creature/models/anatomy.glb',
+ 'dist/client/creature/assets/chunk-2X4UOJKI.js.map',
+ 'dist/client/creature/assets/chunk-FY3X2IKC.js.map',
+ 'dist/client/creature/assets/chunk-QUSSDQTX.js.map',
+ 'dist/client/creature/assets/editor.js.map',
+ 'dist/client/creature/assets/phone.js.map',
+])await unlink(path);
 // The source configuration is intentionally empty. Only a validated public
 // verification JWK may be embedded in a release; signing material is never read.
 const expansionConfigPath='dist/client/modules/new/expansion-config.mjs';
