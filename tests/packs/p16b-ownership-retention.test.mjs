@@ -64,7 +64,7 @@ test('R7: failed replacement preserves persisted active bytes/runtime and expose
 });
 
 test('R8: durable ownedPacks ownership remains after device-byte eviction', async () => {
-  const account = { ownedPacks: [{ packId: 'material', status: 'owned', grantedAt: 1 }] };
+  const account = { user: { id: 'account-a' }, entitlements: { ownedPacks: [{ packId: 'material', status: 'owned', grantedAt: 1 }] } };
   const adapter = authenticatedPackAccount(account);
   const storage = memoryStore();
   const assets = fixtureAssetStore();
@@ -79,15 +79,15 @@ test('R8: durable ownedPacks ownership remains after device-byte eviction', asyn
   assert.deepEqual(adapter.getEntitlements(), [{ packId: 'material', status: 'owned', grantedAt: 1 }]);
   account.rank = 'unranked';
   account.season = 'ended';
-  assert.deepEqual(adapter.getEntitlements(), [{ packId: 'material', status: 'owned', grantedAt: 1 }], 'account progression fields do not revoke immutable ownedPacks records');
+  assert.deepEqual(adapter.getEntitlements(), [{ packId: 'material', status: 'owned', grantedAt: 1 }], 'account progression fields do not revoke confirmed ownedPacks grants');
 });
 
 test('R8: authenticated ownership adapter returns only server-owned record shape', () => {
-  const account = { ownedPacks: [
+  const account = { user: { id: 'account-a' }, entitlements: { ownedPacks: [
     { packId: 'earned', status: 'owned', grantedAt: 1, ignored: 'not returned' },
     { packId: 'candidate', status: 'downloaded', grantedAt: 2 },
     { packId: 'forged', status: 'owned', grantedAt: 'client-time' },
-  ] };
+  ] } };
   assert.deepEqual(authenticatedPackAccount(account).getEntitlements(), [
     { packId: 'earned', status: 'owned', grantedAt: 1, ignored: 'not returned' },
   ]);

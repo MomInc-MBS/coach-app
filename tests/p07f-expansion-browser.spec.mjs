@@ -12,7 +12,7 @@ const canonical=m=>JSON.stringify({packId:m.packId,version:m.version,minAppVersi
 const makeManifest=()=>{const m={packId:'mom-paper-tear',version:'1.0.0',minAppVersion:'1.0.0',sha256:hash,alg:'Ed25519',keyId:'mom-paper-production-v1',assets:[{path:'assets/paper.bin',bytes:asset.length,sha256:hash}]};m.signature=sign(null,Buffer.from(canonical(m)),pair.privateKey).toString('base64');return m;};
 let server,base,requests;
 test.use({channel:'msedge'});
-test.beforeAll(async()=>{await mkdir(evidence,{recursive:true});server=http.createServer(async(req,res)=>{requests.push(new URL(req.url,'http://local').pathname);const path=new URL(req.url,'http://local').pathname;if(path==='/modules/new/manifest.json')return res.end(JSON.stringify(makeManifest()));if(path==='/modules/new/assets/paper.bin')return res.end(asset);if(path==='/blank.html')return res.end('<!doctype html><main id="app"></main>');if(path==='/modules/new/expansion-entry.mjs'||path==='/modules/new/expansion-config.mjs'||path==='/modules/new/expansion.css'||path==='/packs/isolated-pack-control.mjs'||path==='/packs/pack-lifecycle.mjs'||path==='/packs/browser-asset-store.mjs'||path==='/packs/workout-idle-adapter.mjs'||path==='/public-access.mjs'){const body=await readFile(resolve(root,'.'+path));res.writeHead(200,{'Content-Type':path.endsWith('.css')?'text/css':'text/javascript'});return res.end(body);}res.writeHead(404);res.end();});await new Promise(done=>server.listen(0,'127.0.0.1',done));base=`http://127.0.0.1:${server.address().port}`;});
+test.beforeAll(async()=>{await mkdir(evidence,{recursive:true});server=http.createServer(async(req,res)=>{requests.push(new URL(req.url,'http://local').pathname);const path=new URL(req.url,'http://local').pathname;if(path==='/modules/new/manifest.json')return res.end(JSON.stringify(makeManifest()));if(path==='/modules/new/assets/paper.bin')return res.end(asset);if(path==='/blank.html')return res.end('<!doctype html><main id="app"></main>');if(path==='/modules/new/expansion-entry.mjs'||path==='/modules/new/expansion-config.mjs'||path==='/modules/new/expansion.css'||path==='/packs/pack-entitlements.mjs'||path==='/packs/isolated-pack-control.mjs'||path==='/packs/pack-lifecycle.mjs'||path==='/packs/browser-asset-store.mjs'||path==='/packs/workout-idle-adapter.mjs'||path==='/public-access.mjs'){const body=await readFile(resolve(root,'.'+path));res.writeHead(200,{'Content-Type':path.endsWith('.css')?'text/css':'text/javascript'});return res.end(body);}res.writeHead(404);res.end();});await new Promise(done=>server.listen(0,'127.0.0.1',done));base=`http://127.0.0.1:${server.address().port}`;});
 test.afterAll(()=>new Promise(done=>server.close(done)));
 
 for(const [name,viewport] of Object.entries({phone:{width:393,height:873},desktop:{width:1440,height:900}}))test(`signed fixture, downward gesture, cancel, keyboard and reduced motion at ${name}`,async({page})=>{
@@ -29,7 +29,7 @@ test('unlocked mount fetches no asset until download and restores pending pack o
  requests=[];await page.goto(base+'/blank.html');
  const first=await page.evaluate(async trust=>{
   const {mountExpansion}=await import('/modules/new/expansion-entry.mjs');
-  const account={entitlements:{coachArmy:{status:'completed',completedAt:1}}};
+  const account={user:{id:'expansion-test'},entitlements:{ownedPacks:[{packId:'mom-paper-tear',status:'owned',grantedAt:1}]}};
   const mounted=mountExpansion({account,host:document.querySelector('#app'),testTrust:trust,workout:{saveAndConfirmIdle:async()=>({saved:true,idle:true})}});
   await new Promise(resolve=>setTimeout(resolve,40));
   const before=mounted.lifecycle.status('mom-paper-tear').state;
@@ -42,7 +42,7 @@ test('unlocked mount fetches no asset until download and restores pending pack o
  await page.reload();
  const restored=await page.evaluate(async trust=>{
   const {mountExpansion}=await import('/modules/new/expansion-entry.mjs');
-  const mounted=mountExpansion({account:{entitlements:{coachArmy:{status:'completed',completedAt:1}}},host:document.querySelector('#app'),testTrust:trust,workout:{saveAndConfirmIdle:async()=>({saved:true,idle:true})}});
+  const mounted=mountExpansion({account:{user:{id:'expansion-test'},entitlements:{ownedPacks:[{packId:'mom-paper-tear',status:'owned',grantedAt:1}]}},host:document.querySelector('#app'),testTrust:trust,workout:{saveAndConfirmIdle:async()=>({saved:true,idle:true})}});
   await new Promise(resolve=>setTimeout(resolve,80));
   return {state:mounted.lifecycle.status('mom-paper-tear').state,shell:!!mounted.panel.querySelector('.mom-paper-expansion'),pending:mounted.lifecycle.status('mom-paper-tear').pending};
  },trust);

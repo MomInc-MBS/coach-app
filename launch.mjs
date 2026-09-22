@@ -22,6 +22,7 @@ import {mountMealScanner} from './meal-scanner.mjs';
 import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
 import {canEnterPublicRoute,coachArmyComplete} from './public-access.mjs';
+import {hasPackGrant} from './packs/pack-entitlements.mjs';
 const accountTransitions=authTransitions();
 mountLaunch();
 mountCoachHub({api});
@@ -38,7 +39,7 @@ let localHistoryRepository=null,guestHistoryChoice=null,accountTransitionBusy=fa
 window.addEventListener('myr5:account-progress',()=>{armyComplete=coachArmyComplete(account);});
 let expansionMounted=false;
 async function mountVerifiedExpansion(value){
- if(expansionMounted||!coachArmyComplete(value)||!window.myr5WorkoutOwner)return;
+ if(expansionMounted||!hasPackGrant(value,'mom-paper-tear')||!window.myr5WorkoutOwner)return;
  expansionMounted=true;
  try{
   const {mountExpansion}=await import('./modules/new/expansion-entry.mjs');

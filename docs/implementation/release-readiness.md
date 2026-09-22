@@ -20,11 +20,11 @@ Updates use native service-worker waiting: users close all controlled Coach wind
 
 Exact saved signed metadata is verified offline against application trust. Restore and activation hold the workout owner's idle lease. Account transitions and revocation invalidate asynchronous work; abandoned runtimes are disposed. HTTP 200 replaces partial bytes; 206 ranges and complete cached hashes are checked. Failed newer candidates do not prevent restoring the last good material.
 
-This does not complete the production catalog contract. Remaining work includes the approved canonical owner grant path, sticky offline grant storage, signed catalog promotion/rollback, exact dependency reference counting, license/attribution aggregation, signing-key rotation/recovery, and measured hosted Range behavior. Production trust anchors remain null and fail closed. No production key was generated.
+This does not complete the production catalog contract. Remaining work includes sticky offline grant storage, signed catalog promotion/rollback, exact dependency reference counting, license/attribution aggregation, signing-key rotation/recovery, and measured hosted Range behavior. All pack adapters now use account.entitlements.ownedPacks scoped to the authenticated response owner; achievements and global-owner fallbacks grant no pack bytes. Production trust anchors remain null and fail closed. No production key was generated.
 
 ## Validation evidence
 
-Before the final canonical-grant correction: 672/672 integrated Node tests passed, including actual D1 migration/API tests and Edge pack/material browser tests. Build passed. Built offline cold-reopening browser test passed. Logs are in the conductor's review-packets/results/final-integrated-tests.txt, final-integrated-build.txt and final-offline-browser.txt.
+After the canonical-grant correction: 681/681 integrated Node tests passed, including actual D1 migration/API tests and Edge pack/material browser tests. Build passed. Built offline cold-reopening browser test passed. Logs are in the conductor's review-packets/results/final-canonical-integrated-tests.txt, final-canonical-build.txt and final-canonical-offline-browser.txt.
 
 Dependency audit remains 12 pre-existing advisories (8 high, 4 moderate). No automatic breaking audit fixes were applied. Release needs an explicit dependency remediation assessment; a passing functional suite is not a security clearance.
 

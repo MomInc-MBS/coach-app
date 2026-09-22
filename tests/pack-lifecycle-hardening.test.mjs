@@ -106,7 +106,7 @@ test('browser mount restores signed last-good offline, clears UI on account tran
   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/blank`);
   const result=await page.evaluate(async({manifest,testTrust,data})=>{
    const {mountExpansion,verifyExpansionManifest}=await import('/modules/new/expansion-entry.mjs'),{PackLifecycle,fixtureAssetStore,memoryStore}=await import('/packs/pack-lifecycle.mjs');
-   const storage=memoryStore(),assetStore=fixtureAssetStore(),workout={saveAndConfirmIdle:async()=>({saved:true,idle:true,release(){}})},account={user:{id:'a'},dataEpoch:1,entitlements:{coachArmy:{status:'completed',completedAt:1}}};
+   const storage=memoryStore(),assetStore=fixtureAssetStore(),workout={saveAndConfirmIdle:async()=>({saved:true,idle:true,release(){}})},account={user:{id:'a'},dataEpoch:1,entitlements:{ownedPacks:[{packId:'mom-paper-tear',status:'owned',grantedAt:1}]}};
    const seed=new PackLifecycle({account:{getEntitlements:()=>['mom-paper-tear']},storage,assetStore,workout,verifyManifest:m=>verifyExpansionManifest(m,testTrust.publicKey)});seed.manifest(manifest,{'assets/paper.bin':new Uint8Array(data)});await seed.download('mom-paper-tear');await seed.verify('mom-paper-tear');await seed.equipPending('mom-paper-tear');await seed.restart();
    let requests=0;const mounted=mountExpansion({account,host:document.querySelector('#app'),storage,assetStore,workout,testTrust,fetchImpl:async()=>{requests++;throw Error('offline');}});await mounted.ready;
    const restored={state:mounted.lifecycle.status('mom-paper-tear').state,shell:!!mounted.panel.querySelector('.mom-paper-expansion'),requests};

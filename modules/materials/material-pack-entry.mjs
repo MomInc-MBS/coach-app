@@ -1,5 +1,4 @@
-import { coachArmyComplete } from '../../public-access.mjs';
-import { createIsolatedPackControl } from '../../packs/isolated-pack-control.mjs';
+import { createIsolatedPackControl, authenticatedPackAccount } from '../../packs/isolated-pack-control.mjs';
 import { MATERIAL_RUNTIME_POLICY, productionMaterialTrust } from './material-config.mjs';
 import { verifyChunkManifest } from './chunk-delivery.mjs';
 
@@ -22,6 +21,9 @@ export async function resolveMaterialBundle({ fixture = null, testTrust = null }
  if (chunks.packId !== manifest.packId || chunks.version !== manifest.version || chunks.keyId !== manifest.keyId || chunks.assets.length !== manifest.assets.length || chunks.assets.some((asset, i) => asset.path !== manifest.assets[i].path || asset.bytes !== manifest.assets[i].bytes || asset.sha256 !== manifest.assets[i].sha256)) throw new Error('signed material metadata is not bound to signed chunk manifest');
  return { manifest, chunkManifest: chunks, trust };
 }
-export function verifiedMaterialAccount(account) { return Object.freeze({ getEntitlements() { if (!coachArmyComplete(account)) return []; const owned = account?.ownedPacks; return Array.isArray(owned) ? owned.filter(item => item?.status === 'owned' && Number.isSafeInteger(item.grantedAt) && MATERIAL_RUNTIME_POLICY[item.packId]) : []; } }); }
+export function verifiedMaterialAccount(account) {
+ const grants=authenticatedPackAccount(account);
+ return Object.freeze({...grants,getEntitlements:()=>grants.getEntitlements().filter(item=>Object.hasOwn(MATERIAL_RUNTIME_POLICY,item.packId))});
+}
 export async function createMaterialRuntime(id, record, manifest, host) { if (!record?.verifiedAssets || !isSignedMaterialManifest(manifest) || manifest.materialId !== id) throw new Error('verified stored material data is required'); if (manifest.runtimeType !== 'liquid-v1') throw new Error('unknown material runtime'); const asset=record.verifiedAssets[0]; if (!asset?.bytes || asset.bytes.byteLength>64*1024) throw new Error('material declarative config is missing or too large'); let config;try{config=JSON.parse(new TextDecoder().decode(asset.bytes));}catch{throw new Error('material declarative config is invalid')}if(!plain(config)||Object.keys(config).some(key=>!['hue','strength'].includes(key))||Object.values(config).some(value=>typeof value!=='number'||!Number.isFinite(value)))throw new Error('material declarative config is invalid'); const { createLiquidPilotRuntime } = await import('./liquid-runtime.mjs'); return createLiquidPilotRuntime({ host, parameters: {...manifest.parameters,...config} }); }
 export function createMaterialPackControl({ account, host, ...options } = {}) { return createIsolatedPackControl({ account: verifiedMaterialAccount(account), runtimeFactory: (id, record, manifest) => createMaterialRuntime(id, record, manifest, host), ...options }); }

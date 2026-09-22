@@ -8,7 +8,7 @@ import { ChunkDownloader, canonicalChunkPayload, DEFAULT_LOCAL_RESOURCE_POLICY, 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519');
 const testTrust = { purpose: 'test-only-signed-material', publicKey: publicKey.export({format:'jwk'}) };
 const policy = {...DEFAULT_LOCAL_RESOURCE_POLICY, trustedOrigins:['https://cdn.test']};
-const account = () => ({user:{id:'account-a'},entitlements:{coachArmy:{status:'completed',completedAt:1}},ownedPacks:[{packId:'liquid-amethyst',status:'owned',grantedAt:1}]});
+const account = () => ({user:{id:'account-a'},entitlements:{coachArmy:{status:'completed',completedAt:1},ownedPacks:[{packId:'liquid-amethyst',status:'owned',grantedAt:1}]}});
 async function fixture(version='1.0.0',hue=286) {
  const bytes = new TextEncoder().encode(JSON.stringify({hue,strength:.8})),digest=await sha256Chunk(bytes);
  const manifest={schema:'mom-material-pack-v1',packId:'liquid-amethyst',version,minAppVersion:'1.0.0',sha256:digest,alg:'Ed25519',keyId:'mom-material-production-v1',materialId:'liquid-amethyst',runtimeType:'liquid-v1',parameters:{hue:278,strength:.6},assets:[{path:'assets/config.json',bytes:bytes.length,sha256:digest}]};
@@ -61,14 +61,14 @@ test('cached trust keys do not authorize a signed saved bundle',async()=>{
 
 for(const action of ['revoke','dispose','switch','entitlement'])test(`${action} during final asset read prevents activation and stale metadata writes`,async()=>{
  const s=await setup(),get=s.store.get.bind(s.store);let reads=0;
- s.store.get=async key=>{const value=await get(key);if(++reads===2){if(action==='switch')s.a.user.id='account-b';else if(action==='entitlement')s.a.ownedPacks=[];else s.c[action]()}return value};
+ s.store.get=async key=>{const value=await get(key);if(++reads===2){if(action==='switch')s.a.user.id='account-b';else if(action==='entitlement')s.a.entitlements.ownedPacks=[];else s.c[action]()}return value};
  await assert.rejects(s.c.restoreActive({testTrust}),/revoked|changed|disposed/);
  assert.equal(s.c.runtime,null);assert.equal(s.h.created.length,0);assert.equal(s.state().held,false);assert.equal(s.state().releases,1);
  assert.equal(s.state().writes,action==='revoke'?1:0);if(action==='revoke')assert.deepEqual(s.c.record(),{active:null,candidate:null});
 });
 
 for(const action of ['revoke','dispose','switch','entitlement'])test(`${action} during runtime creation disposes the abandoned runtime under the lease`,async()=>{
- const s=await setup();s.h.onReplace=()=>{assert.equal(s.state().held,true);if(action==='switch')s.a.user.id='account-b';else if(action==='entitlement')s.a.ownedPacks=[];else s.c[action]()};
+ const s=await setup();s.h.onReplace=()=>{assert.equal(s.state().held,true);if(action==='switch')s.a.user.id='account-b';else if(action==='entitlement')s.a.entitlements.ownedPacks=[];else s.c[action]()};
  await assert.rejects(s.c.restoreActive({testTrust}),/revoked|changed|disposed/);
  assert.equal(s.h.created.length,1);assert.equal(s.h.created[0].removed,true);assert.equal(s.h.children.length,0);assert.equal(s.c.runtime,null);assert.equal(s.state().held,false);assert.equal(s.state().releases,1);
  assert.equal(s.state().writes,action==='revoke'?1:0);

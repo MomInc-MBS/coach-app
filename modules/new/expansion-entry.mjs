@@ -1,4 +1,4 @@
-import { coachArmyComplete } from '../../public-access.mjs';
+import { hasPackGrant, accountPackGrants, packAccountIdentity } from '../../packs/pack-entitlements.mjs';
 import { createIsolatedPackControl } from '../../packs/isolated-pack-control.mjs';
 import { productionExpansionTrust } from './expansion-config.mjs';
 
@@ -56,12 +56,12 @@ export function createPaperTearShell({document:doc=globalThis.document,onOpen=()
  logo.addEventListener('pointerdown',e=>{try{logo.setPointerCapture?.(e.pointerId);}catch{}start={x:e.clientX,y:e.clientY};shell.classList.add('paper-tearing');status.textContent='Pull down to tear.';});logo.addEventListener('pointermove',e=>{if(start)logo.style.setProperty('--tear-progress',tearProgress(start,{x:e.clientX,y:e.clientY},shell.clientHeight||400));});logo.addEventListener('pointerup',e=>{if(!start)return;const progress=tearProgress(start,{x:e.clientX,y:e.clientY},shell.clientHeight||400);start=null;shell.classList.remove('paper-tearing');logo.style.removeProperty('--tear-progress');if(progress>=.72)open();else cancel();});logo.addEventListener('pointercancel',cancel);shell.querySelector('.paper-reopen').addEventListener('click',()=>{dimension.hidden=true;logo.hidden=false;status.textContent='Paper restored. Pull down to reopen.';});logo.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});return shell;
 }
 export function mountExpansion({account,workoutOwner,workout,storage,assetStore,fetchImpl,fixture,testTrust,events=globalThis.window,host=globalThis.document?.querySelector('.crew-footer')}={}){
- if(!host||!coachArmyComplete(account))return null;
- const doc=host.ownerDocument,panel=doc.createElement('section');panel.className='expansion-control';panel.setAttribute('aria-label','Optional MOM paper expansion');panel.innerHTML='<h2>OPTIONAL PAPER DIMENSION</h2><p data-expansion-copy>Verified Coach Army access. Download the optional expansion when ready.</p><button type="button" data-expansion-download>Download optional expansion</button><p data-expansion-status role="status"></p>';host.before(panel);
+ if(!host||!hasPackGrant(account,EXPANSION_ID))return null;
+ const doc=host.ownerDocument,panel=doc.createElement('section');panel.className='expansion-control';panel.setAttribute('aria-label','Optional MOM paper expansion');panel.innerHTML='<h2>OPTIONAL PAPER DIMENSION</h2><p data-expansion-copy>Verified pack access. Download the optional expansion when ready.</p><button type="button" data-expansion-download>Download optional expansion</button><p data-expansion-status role="status"></p>';host.before(panel);
  const button=panel.querySelector('[data-expansion-download]'),status=panel.querySelector('[data-expansion-status]');
  const trust=testTrust?.purpose==='test-only-signed-expansion'?testTrust.publicKey:(fixture?null:PRODUCTION_EXPANSION_KEY);
  let control=null,shell=null,generation=0,disposed=false,ready;
- const identity=value=>value?.user?.id??value?.id??value;
+ const identity=packAccountIdentity;
  let observedIdentity=identity(account),observedDataEpoch=account?.dataEpoch;
  const paint=v=>{if(!v)return;status.textContent=v.error||`${v.state}${v.receivedBytes?` · ${v.receivedBytes} bytes`:''}`;button.disabled=['downloading','verified','pending-equip','active'].includes(v.state);if(v.state==='active'){panel.querySelector('[data-expansion-copy]').textContent='Verified optional expansion active.';if(shell)shell.hidden=false;}};
  const runtimeFactory=async()=>{
@@ -72,10 +72,10 @@ export function mountExpansion({account,workoutOwner,workout,storage,assetStore,
   const ticket=++generation;
   control?.dispose();
   let life;
-  const current=()=>!disposed&&ticket===generation&&control===life&&coachArmyComplete(account);
+  const current=()=>!disposed&&ticket===generation&&control===life&&hasPackGrant(account,EXPANSION_ID);
   button.disabled=true;status.textContent='Checking signed expansion manifest\u2026';
   try{
-   life=createIsolatedPackControl({account:{getIdentity:()=>identity(account),getGeneration:()=>JSON.stringify([generation,account?.dataEpoch??null]),getEntitlements:()=>!disposed&&coachArmyComplete(account)?[EXPANSION_ID]:[]},workout,workoutOwner,storage,assetStore,runtimeFactory,verifyManifest:manifest=>verifyExpansionManifest(manifest,trust),onChange:value=>{if(ticket===generation&&!disposed)paint(value);}});
+   life=createIsolatedPackControl({account:{getIdentity:()=>identity(account),getGeneration:()=>JSON.stringify([generation,account?.dataEpoch??null]),getEntitlements:()=>!disposed?accountPackGrants(account):[]},workout,workoutOwner,storage,assetStore,runtimeFactory,verifyManifest:manifest=>verifyExpansionManifest(manifest,trust),onChange:value=>{if(ticket===generation&&!disposed)paint(value);}});
    control=life;
    // Restore exact signed metadata and bytes before attempting any network call.
    if(activateAtBoot){
@@ -89,14 +89,14 @@ export function mountExpansion({account,workoutOwner,workout,storage,assetStore,
    if(!current())return;
    life.manifest(entry.manifest,entry.source);paint(life.status(EXPANSION_ID));
   }catch(error){
-   if(disposed||ticket!==generation||!coachArmyComplete(account))return;
+   if(disposed||ticket!==generation||!hasPackGrant(account,EXPANSION_ID))return;
    if(life?.runtime){paint(life.status(EXPANSION_ID));return;}
    status.textContent=error.message||'Production expansion unavailable.';button.disabled=false;
   }
  };
  button.addEventListener('click',async()=>{
   const life=control,ticket=generation;
-  const current=()=>!disposed&&ticket===generation&&life===control&&coachArmyComplete(account);
+  const current=()=>!disposed&&ticket===generation&&life===control&&hasPackGrant(account,EXPANSION_ID);
   if(!life?.manifests.has(EXPANSION_ID)){ready=setup();return ready;}
   button.disabled=true;
   try{
@@ -110,7 +110,7 @@ export function mountExpansion({account,workoutOwner,workout,storage,assetStore,
  const accountReady=event=>{
   const next=event.detail,changed=identity(next)!==observedIdentity||next?.dataEpoch!==observedDataEpoch;
   account=next;observedIdentity=identity(next);observedDataEpoch=next?.dataEpoch;
-  if(!coachArmyComplete(account)){clear();return;}
+  if(!hasPackGrant(account,EXPANSION_ID)){clear();return;}
   panel.hidden=false;
   if(changed||!control){ready=setup({activateAtBoot:true});}
  };
