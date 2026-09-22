@@ -279,3 +279,14 @@ test('arbitrary thrown proxy errors and symbol descriptor traps fail closed', ()
   const snapshot=new Proxy({[symbol]:1},{ownKeys(){return [symbol];}});
   mustFail(()=>claimAssignment(emptyImportAssignmentState(),claim({snapshot})),'invalid-record');
 });
+
+test('prepared metadata is paired, versioned, import-only and immutable across retry',()=>{
+ const input=claim({digestVersion:1,idempotencyKey:'b'.repeat(64)}),first=claimAssignment(emptyImportAssignmentState(),input);
+ assert.equal(first.item.digestVersion,1);assert.equal(first.item.idempotencyKey,'b'.repeat(64));
+ assert.equal(claimAssignment(first.state,input).duplicate,true);
+ mustFail(()=>claimAssignment(first.state,{...input,idempotencyKey:'c'.repeat(64)}),'decision-conflict');
+ for(const changes of [{digestVersion:2},{digestVersion:undefined},{idempotencyKey:undefined}])mustFail(()=>claimAssignment(emptyImportAssignmentState(),{...input,...changes}),'invalid-record');
+ const keep=claim({kind:'keep_local',digestVersion:1,idempotencyKey:'b'.repeat(64)});
+ for(const key of ['targetAccountId','targetDataEpoch','fingerprint','snapshot'])delete keep[key];
+ mustFail(()=>claimAssignment(emptyImportAssignmentState(),keep),'invalid-record');
+});

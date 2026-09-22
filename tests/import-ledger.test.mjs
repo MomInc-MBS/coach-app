@@ -162,3 +162,12 @@ test('slow unblocked open is bounded and late completion cannot provision identi
  const raw=new Dexie(opt.name,{indexedDB,IDBKeyRange});await raw.open();assert.equal(await raw.table('meta').count(),0);raw.close();
  const reopened=await openLocalCoach(opt);assert.equal(reopened.layoutVersion,2);reopened.close();
 });
+
+test('legacy claim API cannot mint prepared digest metadata',async()=>{
+ const repo=await openLocalCoach(options()),scope=repo.forOwner(repo.guestOwnerId);
+ try{
+  const prepared=await completed(scope,'legacy');
+  await assert.rejects(scope.claimImportAssignment({...claim(scope,'legacy'),digestVersion:1,idempotencyKey:'b'.repeat(64)},prepared),e=>e.code==='invalid-record');
+  assert.equal((await scope.listImportAssignments()).items.length,0);
+ }finally{repo.close();}
+});

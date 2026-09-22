@@ -126,13 +126,19 @@ const readClaim = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.completed !== true || !['import', 'keep_local'].includes(raw.kind)) fail('invalid-record');
   const fields = ['decisionId','sourceOwnerId','sourceDeviceId','clientWorkoutId','claimId','itemId','kind','completed'];
   if (raw.kind === 'import') fields.push('targetAccountId','targetDataEpoch','fingerprint','snapshot');
+  const prepared = raw.kind === 'import' && (own(raw,'digestVersion') || own(raw,'idempotencyKey'));
+  if (prepared) {
+    fields.push('digestVersion','idempotencyKey');
+    if (raw.digestVersion !== 1 || typeof raw.idempotencyKey !== 'string' || !/^[0-9a-f]{64}$/.test(raw.idempotencyKey)) fail('invalid-record');
+  }
   if (Object.keys(raw).some(key => !fields.includes(key))) fail('invalid-record', 'unexpected claim field');
-  const base = Object.fromEntries(fields.filter(key => !['completed','targetDataEpoch','fingerprint','snapshot'].includes(key)).map(key => [key, opaque(raw[key], key)]));
+  const base = Object.fromEntries(fields.filter(key => !['completed','targetDataEpoch','fingerprint','snapshot','digestVersion','idempotencyKey'].includes(key)).map(key => [key, opaque(raw[key], key)]));
   if (!/^guest:\S+$/.test(base.sourceOwnerId) || base.claimId === base.itemId) fail('invalid-record');
   if (raw.kind === 'keep_local') return {...base, decision: canonicalJSON(base)};
   if (typeof raw.fingerprint !== 'string' || !/^[0-9a-f]{64}$/.test(raw.fingerprint) || !own(raw, 'snapshot')) fail('invalid-record');
   const normalized = {...base, targetDataEpoch: positive(raw.targetDataEpoch, 'targetDataEpoch'),
-    fingerprint: raw.fingerprint, snapshot: JSON.parse(canonicalJSON(raw.snapshot))};
+    fingerprint: raw.fingerprint, snapshot: JSON.parse(canonicalJSON(raw.snapshot)),
+    ...(prepared ? {digestVersion:raw.digestVersion,idempotencyKey:raw.idempotencyKey} : {})};
   return {...normalized, decision: canonicalJSON(normalized)};
 };
 export const claimAssignment = (state, input) => {

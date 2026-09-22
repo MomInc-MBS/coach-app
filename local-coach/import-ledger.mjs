@@ -1,3 +1,4 @@
+import {createImportPreparation} from './import-preparation.mjs';
 import {ImportAssignmentError,claimAssignment,recordImportOutcome,releaseAssignment,assignmentStatus} from './import-assignment.mjs';
 
 // Layout version is independent of the unchanged v1 workout row schema.
@@ -31,7 +32,7 @@ export function createImportLedger({db,ownerId,deviceId,getWorkout,transact,Stor
  const readOperation=async(label,fn)=>{try{return await fn();}catch(error){throw classifyError(error,label);}};
  const source=async clientWorkoutId=>{
   const workout=await getWorkout(clientWorkoutId);
-  if(!ownerId.startsWith('guest:')||!workout||workout.status!=='completed'||workout.id!==workout.clientWorkoutId||workout.ownerId!==ownerId||workout.deviceId!==deviceId)invalid('Import source must be a completed workout owned by this guest and device.');
+  if(!ownerId.startsWith('guest:')||!workout||workout.status!=='completed'||workout.id!==clientWorkoutId||workout.id!==workout.clientWorkoutId||workout.ownerId!==ownerId||workout.deviceId!==deviceId)invalid('Import source must be a completed workout owned by this guest and device.');
   return workout;
  };
  const persist=async(before,after)=>{
@@ -55,15 +56,17 @@ export function createImportLedger({db,ownerId,deviceId,getWorkout,transact,Stor
   return {item:result.item,duplicate:result.duplicate,status:assignmentStatus(result.state,result.item.claimId)};
  });
  return Object.freeze({
+  ...createImportPreparation({db,ownerId,deviceId,tables,source,persist,transact,read:()=>readImportLedger(db,ownerId,StorageError),policy,invalid,readOperation,StorageError}),
   // Call before any asynchronous hashing. The revision is rechecked inside the
-  // claim transaction. Snapshot/digest derivation belongs to the future trusted
-  // import-preparation adapter; this layer never hashes or starts a upload.
+  // claim transaction. This legacy API cannot create prepared upload metadata;
+  // callers must use prepareImportDecision for codec-bound decisions.
   async prepareImportAssignment(clientWorkoutId){
    return readOperation('Import assignment preparation',()=>db.transaction('r',db.workouts,async()=>{const workout=await source(clientWorkoutId);return {workout,sourceRevision:JSON.stringify(workout)};}));
   },
   async claimImportAssignment(input,{sourceRevision}={}){
    // First capture/validate input through policy, without reading raw accessors.
    const {generation,decision,...captured}=policy(()=>claimAssignment({heads:[],items:[],events:[]},input)).item;
+   if(Object.hasOwn(captured,'digestVersion')||Object.hasOwn(captured,'idempotencyKey'))invalid('Prepared import metadata requires prepareImportDecision.');
    const claim={...captured,completed:true};
    if(claim.sourceOwnerId!==ownerId||claim.sourceDeviceId!==deviceId)invalid('Import source scope does not match.');
    return transact('Import assignment claim',[db.workouts,...tables],async()=>{
