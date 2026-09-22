@@ -1,16 +1,20 @@
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
-import {REGIONS,LABELS,STYLES,PICKER_STYLES,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
+import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region,MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,type TextureDef} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,resolveRegionMaterial,type TextureDef} from './creator/materials-registry';
 import {texturePreviewDataURL} from './creator/swatches';
 export {CreatureViewer,GESTURES,importCreature};
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
 const $=(id:string)=>document.getElementById(id)!;
 const SHORT:Record<Region,string>={head:'Crown',eye:'Eyes',collar:'Collar',body:'Body',arms:'Hands',feet:'Feet'};
-let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='head',ready=false,activeRange:string|null=null;
+// D2 / audit-customizer.md C8: the one mom-approved coach. Finger/toe count and collar fluff
+// (Rank 5, handoff §6) are anatomy controls carved only for this body's own rig.
+const MOM_APPROVED_BODY_ID='myr5';
+const MOM_ONLY_FIELD_IDS=['fingersField','toesField','furField','digitsHelp'];
+let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='body',ready=false,activeRange:string|null=null;
 let settings=motionSettings(null),initialError='';
 try{recipe=loadRecipe(localStorage);settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -18,8 +22,8 @@ const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBa
 let viewer:CreatureViewer|undefined;
 function tell(text:string){$('creatureStatus').textContent=text;}
 function coachPreview(){const coach=getCoach(recipe.coach);$('coachTone').textContent=coach.tone;$('coachLine').textContent=coach.lines[($('coachSituation') as HTMLSelectElement).value as Situation||'start'];}
-// Rank 4 minimal test controls: a texture/colour/sparkle/metallic override for the selected
-// part, independent of the legacy style grid above. No override -> renders exactly like today.
+// Texture/colour/sparkle/metallic override for the selected part (Rank 4 registry, Rank 5 UI).
+// No override -> renders exactly like the legacy `styles[region]` index (old saves keep working).
 const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'default-slate',sparkle:0,metallic:0};
 function materialChoice():MaterialChoice{return recipe.materials?.[selected]??DEFAULT_MATERIAL;}
 function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){commit({...recipe,materials:{...recipe.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
@@ -33,11 +37,15 @@ function syncMaterials(){
  ($('metallic') as HTMLInputElement).value=String(mc.metallic);$('metallicValue').textContent=mc.metallic.toFixed(2);
  ($('materialClear') as HTMLButtonElement).disabled=!recipe.materials?.[selected];
 }
+function syncMomOnly(){
+ const show=recipe.body===MOM_APPROVED_BODY_ID;
+ for(const id of MOM_ONLY_FIELD_IDS){const el=document.getElementById(id);if(el)el.style.display=show?'':'none';}
+}
 function sync(){
- for(const key of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
- for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){b.setAttribute('aria-pressed',String(b.dataset.region===selected));b.querySelector('i')!.style.background=STYLES[recipe.styles[b.dataset.region as Region]].primary;}
- for(const b of document.querySelectorAll<HTMLButtonElement>('[data-style]'))b.setAttribute('aria-pressed',String(Number(b.dataset.style)===recipe.styles[selected]));
- $('partLabel').textContent=LABELS[selected];$('styleLabel').textContent=STYLES[recipe.styles[selected]].name;
+ for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
+ for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){const region=b.dataset.region as Region;b.setAttribute('aria-pressed',String(region===selected));b.querySelector('i')!.style.background=resolveRegionMaterial(recipe.styles[region],recipe.materials?.[region]).primary;}
+ $('partLabel').textContent=LABELS[selected];
+ syncMomOnly();
  syncMaterials();
  ($('undo') as HTMLButtonElement).disabled=!undo.length;($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
@@ -56,14 +64,15 @@ function commit(next:Design,rangeId:string|null=null){
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
 // Creatures grouped by design family so 70+ bodies stay scannable in a phone picker.
-for(const id of ['body','headFrom','armsFrom','feetFrom']){const groups=new Map<string,HTMLOptGroupElement>();for(const b of PICKER_BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$(id).append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
+// Rank 5: body is the only body-family select left — head/arms/legs mixing is gone from the UI
+// (see the 'body' change handler below, which still forces headFrom/armsFrom/feetFrom to match).
+{const groups=new Map<string,HTMLOptGroupElement>();for(const b of PICKER_BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$('body').append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
 function focusPart(region:Region){selected=region;sync();viewer?.focusRegion(region);}
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
-for(const [id,region] of Object.entries({body:'body',headFrom:'head',armsFrom:'arms',feetFrom:'feet',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
-PICKER_STYLES.forEach(style=>{const index=style.id;const b=document.createElement('button');b.dataset.style=String(index);const img=document.createElement('img');img.src=new URL(`./styles/${String(index).padStart(2,'0')}.png`,location.href).href;img.alt='';img.loading='lazy';const label=document.createElement('span');label.textContent=style.name;b.append(img,label);b.onclick=()=>{focusPart(selected);commit({...recipe,styles:{...recipe.styles,[selected]:index}});};$('styles').append(b);});
+for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 // Rank 4: texture dropdown (registry-driven; battle-pass entries show locked and can't be
 // picked - there are no files behind them yet) and colour/palette swatch grid, separate axes.
 const textureLabel=(t:TextureDef)=>t.displayName+(isTextureUnlocked(t)?'':` (locked — ${t.unlockRule}${t.track?' · '+t.track+' L'+t.passLevel:''})`);
@@ -78,8 +87,11 @@ for(const s of colorSwatches){const b=document.createElement('button');b.type='b
 $('materialClear').onclick=()=>{const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
 for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
-for(const id of ['body','headFrom','armsFrom','feetFrom','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
- // Choosing a body resets head, arms and legs to that creature; the part pickers then mix and match.
+for(const id of ['body','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
+ // Choosing a body always resets head, arms and legs to match it — Rank 5 removed the UI that
+ // let them diverge. A recipe saved before this change (with mismatched headFrom/armsFrom/feetFrom)
+ // still loads and renders mixed (assemble.ts/parseRecipe are unchanged); picking a body here just
+ // normalizes it going forward.
  commit(id==='body'?{...recipe,body:String(value),headFrom:String(value),armsFrom:String(value),feetFrom:String(value)}:{...recipe,[id]:value});});
 for(const id of ['fur','iris','pupilSize','detail']){
  const input=$(id) as HTMLInputElement;
@@ -89,7 +101,9 @@ for(const id of ['fur','iris','pupilSize','detail']){
 const tabs=[...document.querySelectorAll<HTMLButtonElement>('[data-menu]')];
 function openMenu(tab:HTMLButtonElement){activeRange=null;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab.dataset.menu==='face')focusPart('eye');else if(tab.dataset.menu==='body')focusPart('body');else if(tab.dataset.menu==='materials')focusPart(selected);(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
 tabs.forEach((b,index)=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{let next=index;if(event.key==='ArrowRight')next=(index+1)%tabs.length;else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();openMenu(tabs[next]);tabs[next].focus();};});
-$('applyAll').onclick=()=>commit({...recipe,styles:Object.fromEntries(REGIONS.map(r=>[r,recipe.styles[selected]])) as Design['styles']});
+// Rank 5: the grid's "apply to all parts" copied a legacy style index; with the grid gone, this
+// copies the selected part's actual texture+colour+sparkle+metallic choice to every part instead.
+$('applyAll').onclick=()=>commit({...recipe,materials:Object.fromEntries(REGIONS.map(r=>[r,materialChoice()])) as Design['materials']});
 $('undo').onclick=()=>{if(!undo.length)return;activeRange=null;redo.push(recipe);recipe=undo.pop()!;render('Undo applied',true);};
 $('redo').onclick=()=>{if(!redo.length)return;activeRange=null;undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
 $('original').onclick=()=>commit(fresh());
