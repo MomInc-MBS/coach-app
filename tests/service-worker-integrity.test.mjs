@@ -53,3 +53,13 @@ test('a runtime integrity failure rejects unverified code without retrying',asyn
  ]);
  assert.equal(puts.length,0,'unverified code must not enter the offline cache');
 });
+
+test('the fetch handler ignores cross-origin requests, leaving optional-pack hosts (Rank 2b) to the network untouched',async()=>{
+ const {listeners}=worker([],async()=>{throw new Error('the service worker must not fetch on the app\'s behalf for a cross-origin request');});
+ let responded=false;
+ listeners.get('fetch')({
+  request:new Request('https://packs.mominc.online/packs/style-chest/1.0.0/manifest.json'),
+  respondWith(){responded=true;},
+ });
+ assert.equal(responded,false,'a cross-origin pack request must fall through to the normal browser fetch, not the SW cache');
+});
