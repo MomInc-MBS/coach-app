@@ -15,17 +15,16 @@ await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,forma
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
-await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs']});
+await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js']});
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs']});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room'])await cp(folder,`dist/client/${folder}`,{recursive:true});
-// Keep authoring inputs and debugger-only maps in the open-source repository,
+// Keep debugger-only maps in the open-source repository,
 // but not in the deployable static archive. Runtime code does not request them.
 for(const path of [
- 'dist/client/creature/models/anatomy.glb',
  'dist/client/creature/assets/chunk-2X4UOJKI.js.map',
  'dist/client/creature/assets/chunk-FY3X2IKC.js.map',
  'dist/client/creature/assets/chunk-QUSSDQTX.js.map',

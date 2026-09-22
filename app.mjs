@@ -182,18 +182,37 @@ mountHomeCharacter();
 
 let cinematics={play(){}};
 let optionalLoaded=false;
+let optionalLoading=null;
 let materialController=null;
+let coachLoading=null;
+async function loadCoachViewer(){
+ if(!coachLoading){
+  const link=document.createElement('link');link.rel='stylesheet';link.href='/creature/phone.css';document.head.append(link);
+  coachLoading=import('./creature/assets/phone.js').catch(error=>{coachLoading=null;throw error;});
+ }
+ await coachLoading;
+}
 async function loadUnlockedOptionalMaterials(){
- if(optionalLoaded||window.myr5VerifiedOptionalAccess!==true)return false;
- optionalLoaded=true;
+ if(window.myr5VerifiedOptionalAccess!==true)return false;
+ if(optionalLoaded)return true;
+ if(optionalLoading)return optionalLoading;
+ optionalLoading=(async()=>{
  for(const href of ['/creature/phone.css','/creature/cinematics.css','/pod/hardware.css','/hardware-launch.css','/pocket-hardware.css','/hand-companion.css']){const link=document.createElement('link');link.rel='stylesheet';link.href=href;document.head.append(link);}
  for(const image of document.querySelectorAll('[data-optional-src]')) image.src=image.dataset.optionalSrc;
+ await loadCoachViewer();
  const {initCinematics}=await import('./creature/cinematics.js');
  cinematics=initCinematics({voice});
  window.dispatchEvent(new Event('myr5:optional-materials-ready'));
  window.myr5Cinematics=cinematics;
+ optionalLoaded=true;
  return true;
+ })();
+ try{return await optionalLoading;}finally{optionalLoading=null;}
 }
+const showCoach=document.createElement('button');showCoach.type='button';showCoach.textContent='Show my coach';
+$('coachMount').append(showCoach);
+for(const id of ['coachLoading','restCoachLoading'])$(id).textContent='Open your coach when you are ready.';
+showCoach.onclick=async()=>{showCoach.disabled=true;try{await loadCoachViewer();showCoach.hidden=true;}catch{ $('coachLoading').textContent='Coach could not load. Check your connection and try again.';}finally{showCoach.disabled=false;}};
 $('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();void mountPackLicenses({host:$('packLicenses')});},{once:true});
 $('openIdentity').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
 $('manageMaterials').addEventListener('click',async()=>{
