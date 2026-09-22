@@ -21,7 +21,7 @@ button.onclick=async()=>{if(!ready){await prepare();return;}if(!prompt){guide();
 async function prepare(){
  button.disabled=true;
  try{
-  status.textContent='Saving coach artwork on this device…';
+  status.textContent='Saving Coach on this device…';
   try{await prepareGalaInstall();}catch{mountGalaReturn();}
   const raw=new URLSearchParams(location.hash.slice(1)).get('coach'),incoming=raw?saveIncomingCoach(decodeHandoff(raw)):readIncomingCoach();
   if(incoming){await prepareInstall(incoming);saved.textContent='Coach saved';}

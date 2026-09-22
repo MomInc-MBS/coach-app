@@ -26,9 +26,9 @@ export function existingWorkoutIdleAdapter({ owner, getWorkoutState, saveWorkout
       if (typeof getWorkoutState !== 'function' || typeof saveWorkout !== 'function') return { saved: false, idle: false, reason: 'workout save/idle integration is not installed' };
       const before = getWorkoutState();
       if (!before || before.phase !== 'idle') return { saved: false, idle: false, reason: 'active workout must not be interrupted' };
-      const saved = await saveWorkout(before);
-      const after = getWorkoutState();
-      return { saved: saved === true, idle: after?.phase === 'idle' };
+      // A state snapshot cannot prevent an idle-active-idle transition while
+      // activation awaits. Legacy callbacks must install the owner lease API.
+      return { saved: false, idle: false, reason: 'workout idle lease integration is not installed' };
     }
   };
 }

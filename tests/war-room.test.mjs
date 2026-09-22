@@ -7,7 +7,7 @@ import worker from '../server/worker.mjs';
 let mf,env;
 before(async()=>{mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB']});env={DB:await mf.getD1Database('DB')};for(const file of(await readdir('drizzle')).filter(file=>file.endsWith('.sql')).sort())await env.DB.batch((await readFile(`drizzle/${file}`,'utf8')).split('--> statement-breakpoint').map(sql=>sql.trim()).filter(Boolean).map(sql=>env.DB.prepare(sql)));});
 after(async()=>mf?.dispose());
-async function call(path,{method='GET',data,user='alice'}={}){const response=await worker.fetch(new Request('https://coach.test'+path,{method,headers:{...(user?{'oai-authenticated-user-id':user}:{}),...(method==='GET'?{}:{Origin:'https://coach.test','Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)}),env);return {status:response.status,data:await response.json()};}
+async function call(path,{method='GET',data,user='alice'}={}){const response=await worker.fetch(new Request('https://coach.test'+path,{method,headers:{...(user?{'oai-authenticated-user-id':user,'X-Target-Account':user,'X-Expected-Data-Epoch':'1'}:{}),...(method==='GET'?{}:{Origin:'https://coach.test','Content-Type':'application/json'})},body:data===undefined?undefined:JSON.stringify(data)}),env);return {status:response.status,data:await response.json()};}
 async function unlock(user){await env.DB.prepare("INSERT INTO account_entitlements(user_id,coach_army_status,coach_army_completed_at,coach_army_event_id,updated_at) VALUES(?, 'completed', ?, 'event', ?) ON CONFLICT(user_id) DO NOTHING").bind(user,1,1).run();}
 
 test('War Room rejects locked and anonymous requests without creating an arsenal',async()=>{

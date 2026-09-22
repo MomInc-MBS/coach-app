@@ -3,13 +3,15 @@ import {createReadStream} from 'node:fs';
 import {readdir,readFile,writeFile,stat} from 'node:fs/promises';
 import {join} from 'node:path';
 
-const folders=['pod','creature','models','icons','handborne','arcade'];
+const folders=['pod','creature','models','icons','handborne','arcade','war-room'];
+export const CORE_OFFLINE_BUDGET=8*1024*1024;
+export const isCoreAsset=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 
-// Inventory the actual shipped files, including large models and every design,
-// so an unvisited screen or a new material is available after installation.
-export async function offlineAssets(root){
+// Built-in optional art stays shipped but never blocks core installation.
+// PackLifecycle bytes are outside both inventories.
+export async function offlineInventory(root){
  const assets=[];
  async function add(path){
   const hash=createHash('sha256');
@@ -20,26 +22,27 @@ export async function offlineAssets(root){
   for(const entry of await readdir(join(root,path),{withFileTypes:true})){
    if(entry.name.startsWith('.')||entry.name==='source')continue;
    const name=path+'/'+entry.name;
-   // The full roster stays available from the customizer, but forcing every
-   // large GLB into the atomic app install exceeds practical mobile quotas.
-   if(entry.isFile()&&name.startsWith('creature/models/roster/')&&name.endsWith('.glb'))continue;
    if(entry.isDirectory())await walk(name);
    else if(entry.isFile()&&runtime.test(entry.name))await add(name);
   }
  }
  for(const entry of await readdir(root,{withFileTypes:true}))if(entry.isFile()&&!excluded.has(entry.name)&&runtime.test(entry.name))await add(entry.name);
- for(const folder of folders)await walk(folder);
- return assets.sort((a,b)=>a.url.localeCompare(b.url));
+ for(const folder of folders)try{await walk(folder);}catch(error){if(error.code!=='ENOENT')throw error;}
+ assets.sort((a,b)=>a.url.localeCompare(b.url));
+ return {core:assets.filter(a=>isCoreAsset(a.url)),optional:assets.filter(a=>!isCoreAsset(a.url))};
 }
 
+export async function offlineAssets(root){return (await offlineInventory(root)).core;}
+
 export async function writeOfflineWorker(root,buildId,template='sw.js'){
- const assets=await offlineAssets(root);
- for(const required of ['/pose.html','/app-runtime.mjs','/launch-bootstrap.mjs','/launch-runtime.mjs','/creature/assets/phone.js','/creature/assets/editor.js','/creature/models/myr5.glb','/creature/models/anatomy.glb','/creature/models/hands-v2.glb','/handborne/models/family-20.glb']){
+ const {core:assets,optional}=await offlineInventory(root);
+ if(assets.reduce((sum,a)=>sum+a.bytes,0)>CORE_OFFLINE_BUDGET)throw Error('Core offline shell exceeds the 8 MiB release budget.');
+ for(const required of ['/pose.html','/app-runtime.mjs','/launch-bootstrap.mjs','/launch-runtime.mjs','/local-coach-runtime.mjs','/onboarding.html','/onboarding.mjs','/workout-tracks.js','/pod/gala-weapons.js','/pod/gala-avatar.js','/pod/gala-performer.js','/pod/dj-identity.js']){
   if(!assets.some(asset=>asset.url===required&&asset.bytes>0))throw Error('Missing offline Coach asset: '+required);
  }
  const source=await readFile(template,'utf8');
  if(!source.includes('/* OFFLINE_ASSETS */ []'))throw Error('Offline worker template is missing its asset marker.');
- await writeFile(join(root,'sw.js'),source.replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${buildId}'`).replace('/* OFFLINE_ASSETS */ []',JSON.stringify(assets)));
+ await writeFile(join(root,'sw.js'),source.replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${buildId}'`).replace('/* OFFLINE_ASSETS */ []',JSON.stringify(assets)).replace('/* OPTIONAL_ASSETS */ []',JSON.stringify(optional)));
  console.log(`Offline Coach: ${assets.length} files, ${(assets.reduce((sum,asset)=>sum+asset.bytes,0)/1048576).toFixed(1)} MiB.`);
  return assets;
 }

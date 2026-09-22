@@ -134,6 +134,20 @@
       "when": 1790031159443,
       "tag": "0018_account_data_epochs",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790035909178,
+      "tag": "0019_workout_import_trust",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790039380366,
+      "tag": "0020_coach_army_data_epochs",
+      "breakpoints": true
     }
   ]
 }

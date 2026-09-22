@@ -1,3 +1,4 @@
+import {isAttemptEvent,validateAttemptEvents,projectImportAttempts} from './import-attempts.mjs';
 // Pure policy for a single owner's guest-import history. The caller must load
 // validated source workouts and commit returned changes in one transaction.
 // Epochs/proofs come from an authenticated adapter: shape checks are NOT auth.
@@ -105,7 +106,7 @@ const stateOf = state => {
     }
     for (const event of state.events) {
       const item = state.items.find(candidate => candidate.claimId === event.claimId);
-      if (!item || item.kind !== 'import' || !['imported', 'retry', 'target_deleted', 'deletion_evidence'].includes(event.type) || event.generation !== item.generation) fail('invalid-state');
+      if (!item || item.kind !== 'import' || (!['imported', 'retry', 'target_deleted', 'deletion_evidence'].includes(event.type) && !isAttemptEvent(event)) || event.generation !== item.generation) fail('invalid-state');
       if (['target_deleted', 'deletion_evidence'].includes(event.type)) {
         opaque(event.targetAccountId, 'targetAccountId');
         positive(event.deletedThroughEpoch, 'deletedThroughEpoch');
@@ -114,6 +115,7 @@ const stateOf = state => {
             !(item.targetDataEpoch <= event.deletedThroughEpoch && event.deletedThroughEpoch < event.currentDataEpoch)) fail('invalid-state');
       }
     }
+    validateAttemptEvents(state.events);
     return state;
   } catch { fail('invalid-state'); }
 };
@@ -165,14 +167,14 @@ export const claimAssignment = (state, input) => {
     items: [...state.items, item], events: state.events,
   }, item, duplicate: false});
 };
-export const assignmentStatus = (state, claimId) => {
+export const assignmentStatus = (state, claimId, now) => {
   state = stateOf(state);
   const item = state.items.find(candidate => candidate.claimId === claimId);
   if (!item) fail('not-found');
   if (item.kind === 'keep_local') return 'keep_local';
   if (item.targetDataEpoch <= deletionWatermark(state, item.targetAccountId)) return 'target_deleted';
-  for (const type of ['target_deleted','imported','retry']) if (state.events.some(event => event.claimId === claimId && event.type === type)) return type;
-  return 'pending';
+  if (state.events.some(event=>event.claimId===claimId&&event.type==='target_deleted')) return 'target_deleted';
+  return projectImportAttempts(state.events.filter(event=>event.claimId===claimId),now).status;
 };
 export const recordImportOutcome = (state, callback) => {
   state = stateOf(state);
@@ -183,7 +185,8 @@ export const recordImportOutcome = (state, callback) => {
       item.sourceOwnerId !== callback.sourceOwnerId || item.sourceDeviceId !== callback.sourceDeviceId ||
       item.clientWorkoutId !== callback.clientWorkoutId) fail('not-found');
   const status = assignmentStatus(state, item.claimId);
-  if (status === 'target_deleted' || status === 'imported' || status === callback.type) return freeze({state, item, duplicate: true});
+  if (status === 'target_deleted' || status === 'imported' || ['conflict','rejected'].includes(status) || status === callback.type) return freeze({state, item, duplicate: true});
+  if (own(item,'digestVersion')) fail('invalid-record', 'Prepared import outcomes require a committed attempt.');
   const event = freeze({type: callback.type, claimId: item.claimId, generation: item.generation});
   return freeze({state: {...state, events: [...state.events, event]}, item, duplicate: false});
 };

@@ -19,7 +19,7 @@ before(async()=>{
 });
 after(async()=>{globalThis.fetch=originalFetch;await mf?.dispose();});
 async function request(path,{method='GET',user='alice',data,origin='https://coach.test'}={}){
-  const response=await coach.fetch(new Request(`https://coach.test${path}`,{method,headers:{...(user?{'oai-authenticated-user-id':user}:{}),'Origin':origin,'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined}),local);
+  const response=await coach.fetch(new Request(`https://coach.test${path}`,{method,headers:{...(user?{'oai-authenticated-user-id':user,'X-Target-Account':user,'X-Expected-Data-Epoch':'1'}:{}),'Origin':origin,'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined}),local);
   return {status:response.status,data:await response.json()};
 }
 const reminder=(kind='water')=>({id:crypto.randomUUID(),kind,time:'09:00',timezone:'America/Los_Angeles',enabled:true,quietStart:'22:00',quietEnd:'07:00'});
@@ -75,18 +75,18 @@ test('remote reminder changes and export remain isolated by the signed-in accoun
   assert.equal((await local.DB.prepare('SELECT count(*) AS n FROM reminders WHERE id=?').bind(r.id).first()).n,0);
 });
 test('scheduler runs independently and account reports a real recent heartbeat',async()=>{
-  assert.equal((await request('/api/account')).data.push.schedulerActive,false);
+  assert.equal((await request('/api/account/readiness')).data.push.schedulerActive,false);
   const scheduled=[];await service.scheduled({},remote,{waitUntil:p=>scheduled.push(p)});await Promise.all(scheduled);
-  assert.equal((await request('/api/account')).data.push.schedulerActive,true);
+  assert.equal((await request('/api/account/readiness')).data.push.schedulerActive,true);
   await remote.DB.prepare("UPDATE system SET value=? WHERE key='scheduler_tick'").bind(String(Date.now()-600000)).run();
-  assert.equal((await request('/api/account')).data.push.schedulerActive,false);
+  assert.equal((await request('/api/account/readiness')).data.push.schedulerActive,false);
 });
 test('reminder outage preserves the rest of the account and never reports a successful save',async()=>{
   const token=local.REMINDER_SERVICE_TOKEN;local.REMINDER_SERVICE_TOKEN='wrong';
   try{assert.equal((await request('/api/account')).status,200);assert.equal((await request('/api/account')).data.push.schedulerActive,false);assert.equal((await request('/api/reminders',{method:'POST',data:reminder()})).status,401);}finally{local.REMINDER_SERVICE_TOKEN=token;}
 });
 test('deleting account removes remote reminders and retries cannot restore them',async()=>{
-  assert.equal((await request('/api/account',{method:'DELETE',data:{confirm:'DELETE'}})).status,200);
+  assert.equal((await request('/api/account',{method:'DELETE',data:{confirm:'DELETE',expectedDataEpoch:1}})).status,200);
   assert.equal((await request('/api/reminders')).data.items.length,0);
   await local.DB.prepare('DELETE FROM system WHERE key=?').bind('reminders_remote:alice').run();
   assert.equal((await request('/api/reminders')).data.items.length,0);

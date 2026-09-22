@@ -1,3 +1,4 @@
+import {epochFencedBatch} from './remote-epochs.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 import {DAILY_ROUND_LIMIT,exerciseFamily,makeExerciseRoute,routeDay} from '../workout-route.mjs';
 import {fail,validateCompletion} from './domain.mjs';
@@ -12,25 +13,28 @@ const familyModes=mode=>[...Object.values(EXERCISES).filter(m=>m.group===exercis
 export async function readExerciseRoute(database,user,onboarding,now=Date.now()){
  const timezone=onboarding?.data?.profile?.timezone||'UTC',{day,start,end}=workoutDayBounds(now,timezone);
  const [history,today]=await Promise.all([
-  database.prepare('SELECT mode,sets,value FROM (SELECT mode,value,COUNT(*) OVER (PARTITION BY mode) AS sets,ROW_NUMBER() OVER (PARTITION BY mode ORDER BY completed_at DESC,id DESC) AS recent FROM workouts WHERE user_id=? AND completed_at IS NOT NULL) WHERE recent=1').bind(user).all(),
-  database.prepare('SELECT mode,COUNT(*) AS sets FROM workouts WHERE user_id=? AND completed_at>=? AND completed_at<? GROUP BY mode').bind(user,start,end).all()
+  database.prepare(`SELECT mode,sets,value FROM (SELECT mode,value,COUNT(*) OVER (PARTITION BY mode) AS sets,ROW_NUMBER() OVER (PARTITION BY mode ORDER BY completed_at DESC,id DESC) AS recent FROM workouts WHERE user_id=? AND source='server' AND completed_at IS NOT NULL) WHERE recent=1`).bind(user).all(),
+  database.prepare(`SELECT mode,COUNT(*) AS sets FROM workouts WHERE user_id=? AND source='server' AND completed_at>=? AND completed_at<? GROUP BY mode`).bind(user,start,end).all()
  ]);
  return makeExerciseRoute(history.results,today.results,{day,timezone,goals:onboarding?.targets?.goals});
 }
 export async function assertRoundAvailable(database,user,mode,timezone,now){
  const {start,end}=workoutDayBounds(now,timezone),modes=familyModes(mode);
- const count=await database.prepare(`SELECT COUNT(*) AS n FROM workouts WHERE user_id=? AND mode IN (${modes.map(()=>'?').join(',')}) AND completed_at>=? AND completed_at<?`).bind(user,...modes,start,end).first();
+ const count=await database.prepare(`SELECT COUNT(*) AS n FROM workouts WHERE user_id=? AND source='server' AND mode IN (${modes.map(()=>'?').join(',')}) AND completed_at>=? AND completed_at<?`).bind(user,...modes,start,end).first();
  if(count.n>=DAILY_ROUND_LIMIT)fail('Five rounds completed for this exercise family today. Choose another family or come back tomorrow.',409);
 }
 export async function maximumRoundGoal(database,user,mode,personalGoal=0){
- const previous=await database.prepare('SELECT value FROM workouts WHERE user_id=? AND mode=? AND completed_at IS NOT NULL ORDER BY completed_at DESC,id DESC LIMIT 1').bind(user,mode).first();
+ const previous=await database.prepare(`SELECT value FROM workouts WHERE user_id=? AND source='server' AND mode=? AND completed_at IS NOT NULL ORDER BY completed_at DESC,id DESC LIMIT 1`).bind(user,mode).first();
  return Math.max(600,personalGoal,previous?Math.floor(Number(previous.value))+1:0);
 }
-export async function completeRound(database,user,workout,input,timezone,now){
- if(workout.completed_at!=null)return;
- validateCompletion(workout,input,now);
+export async function completeRound(database,user,workout,input,timezone,now,{dataEpoch=1}={}){
+ if(workout.completed_at==null)validateCompletion(workout,input,now);
  const {start,end}=workoutDayBounds(now,timezone),modes=familyModes(workout.mode);
  // The limit and completion are one atomic write, including competing devices.
- const saved=await database.prepare(`UPDATE workouts SET completed_at=?,value=?,active=? WHERE id=? AND user_id=? AND completed_at IS NULL AND (SELECT COUNT(*) FROM workouts WHERE user_id=? AND mode IN (${modes.map(()=>'?').join(',')}) AND completed_at>=? AND completed_at<?)<? RETURNING id`).bind(now,input.value,Number.isFinite(input.active)?input.active:0,workout.id,user,user,...modes,start,end,DAILY_ROUND_LIMIT).first();
- if(!saved){const existing=await database.prepare('SELECT completed_at FROM workouts WHERE id=? AND user_id=?').bind(workout.id,user).first();if(existing?.completed_at==null)throw Object.assign(Error('Five rounds completed for this exercise family today. This extra round was not added.'),{status:409,code:'daily_round_limit'});}
+ const statement=database.prepare(`UPDATE workouts SET completed_at=?,value=?,active=? WHERE id=? AND user_id=? AND source='server' AND completed_at IS NULL AND (SELECT COUNT(*) FROM workouts WHERE user_id=? AND source='server' AND mode IN (${modes.map(()=>'?').join(',')}) AND completed_at>=? AND completed_at<?)<? RETURNING id`).bind(now,input.value,Number.isFinite(input.active)?input.active:0,workout.id,user,user,...modes,start,end,DAILY_ROUND_LIMIT);
+ const results=await epochFencedBatch(database,{ownerId:user,expectedDataEpoch:dataEpoch,now,statements:[statement,
+  database.prepare("INSERT INTO login_days(user_id,day,logged_at) SELECT user_id,?,? FROM workouts WHERE id=? AND user_id=? AND source='server' AND completed_at IS NOT NULL ON CONFLICT(user_id,day) DO NOTHING").bind(Math.floor(now/86400000),now,workout.id,user),
+ ]});
+ const saved=results[0].results?.[0];
+ if(!saved){const existing=await database.prepare(`SELECT completed_at FROM workouts WHERE id=? AND user_id=? AND source='server'`).bind(workout.id,user).first();if(existing?.completed_at==null)throw Object.assign(Error('Five rounds completed for this exercise family today. This extra round was not added.'),{status:409,code:'daily_round_limit'});}
 }

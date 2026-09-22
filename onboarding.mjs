@@ -1,3 +1,5 @@
+import {authTransitions} from './auth-transition.mjs';
+import {createAccountSessionActions} from './account-session-actions.mjs';
 import {signInPath} from './auth-paths.mjs';
 import {authFetch} from './auth-client.mjs';
 import {setupAllowed} from './install-context.mjs';
@@ -12,7 +14,8 @@ import {openLocalCoach,probeOptionalAccount,probeOptionalTransfer} from './local
 const status=document.getElementById('setupStatus'),host=document.getElementById('setupBody'),title=document.querySelector('h1');
 const KEY='myr5-incoming-coach-v1',OFFICE_KEY='myr5-office-draft-v1',params=new URLSearchParams(location.search);
 let account=null,localCoach=null,localScope=null,localIntake=null;
-async function api(path,method='GET',data){const r=await authFetch(path,{method,credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Object.assign(Error(r.status>=500?'Coach service is unavailable. Please retry.':'Sign in to save your coach.'),{status:r.status});const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'Could not save. Please retry.'),{status:r.status});return value;}
+const transitions=authTransitions(),accountActions=createAccountSessionActions({api,transitions});
+async function api(path,method='GET',data,assertions={},signal){const ticket=transitions.capture();const r=await authFetch(path,{method,signal:signal?AbortSignal.any([ticket.signal,signal]):ticket.signal,credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...assertions},body:data?JSON.stringify(data):undefined,cache:'no-store'});transitions.assertCurrent(ticket);if(!r.headers.get('content-type')?.includes('application/json'))throw Object.assign(Error(r.status>=500?'Coach service is unavailable. Please retry.':'Sign in to save your coach.'),{status:r.status});const value=await r.json();transitions.assertCurrent(ticket);if(!r.ok)throw Object.assign(Error(value.error||'Could not save. Please retry.'),{status:r.status,code:value.code});return value;}
 function link(text,href,parent=host){const a=document.createElement('a');a.className='setup-action';a.textContent=text;a.href=href;a.target='_top';parent.append(a);return a;}
 function readDraft(key){try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}}
 function removeDraft(key){try{sessionStorage.removeItem(key);}catch{}}
@@ -30,6 +33,7 @@ function chooseRoute(){
  if(!account)link('Already have a coach? Sign in',signIn('/onboarding.html'));
 }
 async function renderForm(data,{edit=false,autoSave=false}={}){
+ const displayedAccount=account;
  if(!edit)data=withQuickDefaults(data);
  const office=data.entryRoute==='office',draftKey=office?OFFICE_KEY:KEY;
  document.body.classList.toggle('office-mode',office&&edit);document.body.classList.toggle('quick-mode',!edit);
@@ -42,9 +46,9 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
  host.append(formHost,notice);
  function remember(value){if(edit)return;try{if(office)sessionStorage.setItem(draftKey,JSON.stringify(value));else saveIncomingCoach(value);notice.textContent='';}catch{notice.textContent='Your browser cannot save a draft. Keep this page open and sign in before completing the form.';}}
  async function save(value){
-   if(!account){const result=await localScope.saveSetup(value,{startDay:calendarDay(Date.now(),value.profile.timezone)});restore(result.intake.appearance);clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');return;}
-  const result=await api('/api/onboarding','PUT',{data:value,revision:account.onboarding?.revision||0});
-  try{restore(result.appearance);localStorage.setItem('myr5-coach-owner',account.user.id);}catch{}
+   if(!displayedAccount){const result=await localScope.saveSetup(value,{startDay:calendarDay(Date.now(),value.profile.timezone)});restore(result.intake.appearance);clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');return;}
+  const saved=await accountActions.saveOnboarding(displayedAccount,value);transitions.assertCurrent(saved.transitionTicket);
+  try{restore(saved.result.appearance);localStorage.setItem('myr5-coach-owner',saved.ownerId);}catch{}
   clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
  }
  if(autoSave&&!missingFields(withQuickDefaults(data)).length){status.textContent=office?'Saving…':'Saving…';try{await save(data);return;}catch(e){status.textContent=e.message;}}
@@ -56,11 +60,11 @@ try{
  const raw=new URLSearchParams(location.hash.slice(1)).get('coach');
  if(raw){incoming=saveIncomingCoach(decodeHandoff(raw));history.replaceState(null,'',location.pathname+location.search);}
  if(params.get('receive')==='1'&&!incoming){status.textContent='Bringing your saved website choices aboard…';incoming=await receiveCoach(raw=>saveIncomingCoach(raw));}
- account=await probeOptionalAccount(()=>api('/api/account'));
+ account=await probeOptionalAccount(({signal})=>api('/api/account?core=1','GET',undefined,{},signal));
  localCoach=await openLocalCoach();try{localScope=localCoach.forOwner(localCoach.guestOwnerId);localIntake=await localScope.getIntake();}catch(error){localCoach.close();localCoach=null;throw error;}window.addEventListener('pagehide',()=>localCoach?.close(),{once:true});
  const edit=params.get('edit')==='1',office=params.get('route')==='office';
  if(!edit&&!setupAllowed()&&!account?.onboarding){location.replace('/install.html'+(office?'?route=office':''));}else{
- if(setupAllowed()&&!edit&&!raw)incoming=(account?await restoreInstall():await probeOptionalTransfer(()=>restoreInstall()))||incoming;
+ if(setupAllowed()&&!edit&&!raw)incoming=(account?await restoreInstall():await probeOptionalTransfer(({signal})=>restoreInstall(fetch,sessionStorage,localStorage,{signal})))||incoming;
  if(edit){
    if(!account&&!localIntake){status.textContent='Set up your coach on this device first.';link('Set up Coach','/onboarding.html');}
    else if(!account){await renderForm(structuredClone(localIntake),{edit:true});}

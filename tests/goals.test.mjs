@@ -17,7 +17,7 @@ after(async()=>mf?.dispose());
 
 async function request(path,{method='GET',data,user='goal-alice',origin='https://coach.test'}={}){
  const headers={};
- if(user) Object.assign(headers,{'oai-authenticated-user-id':user,'oai-authenticated-user-email':`${user}@test.example`});
+ if(user) Object.assign(headers,{'oai-authenticated-user-id':user,'X-Target-Account':user,'X-Expected-Data-Epoch':'1','oai-authenticated-user-email':`${user}@test.example`});
  if(!['GET','HEAD'].includes(method)) Object.assign(headers,{Origin:origin,'Content-Type':'application/json'});
  const response=await worker.fetch(new Request(`https://coach.test${path}`,{method,headers,body:data===undefined?undefined:JSON.stringify(data)}),env);
  return {status:response.status,data:await response.json()};
@@ -61,6 +61,6 @@ test('goals validate title, note, status, and request shape',async()=>{
 test('goals are included in export and account deletion',async()=>{
  const id=crypto.randomUUID();assert.equal((await request('/api/goals',{method:'POST',user:'goal-cleanup',data:{id,title:'Clear me'}})).status,200);
  const exportData=(await request('/api/export',{user:'goal-cleanup'})).data;assert.equal(exportData.goals.length,1);assert.equal(exportData.goals[0].id,id);
- assert.equal((await request('/api/account',{method:'DELETE',user:'goal-cleanup',data:{confirm:'DELETE'}})).status,200);
+ assert.equal((await request('/api/account',{method:'DELETE',user:'goal-cleanup',data:{confirm:'DELETE',expectedDataEpoch:1}})).status,200);
  assert.equal((await request('/api/goals',{user:'goal-cleanup'})).data.items.length,0);
 });

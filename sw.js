@@ -1,6 +1,22 @@
 const SHELL='myr5-shell-22d1026e5a1d6f2441dd',VOICE='myr5-voice-approved-v2';
 // Filled from the complete production asset inventory, with content identities.
 const ASSETS=/* OFFLINE_ASSETS */ [];
+const OPTIONAL_ASSETS=/* OPTIONAL_ASSETS */ [];
+const OPTIONAL='myr5-optional-'+SHELL.slice('myr5-shell-'.length),OPTIONAL_LIMIT=64*1024*1024;
+const OPTIONAL_BY_URL=new Map(OPTIONAL_ASSETS.map(asset=>[asset.url,asset]));
+let optionalWrite=Promise.resolve();
+async function saveOptional(asset,response){
+ if(asset.bytes>OPTIONAL_LIMIT)return;
+ const copy=response.clone();
+ const write=optionalWrite.then(async()=>{
+  const cache=await caches.open(OPTIONAL),keys=await cache.keys();
+  let used=keys.reduce((sum,key)=>sum+(OPTIONAL_BY_URL.get(new URL(key.url).pathname)?.bytes??0),0);
+  if(await cache.match(asset.url))return;
+  for(const key of keys){if(used+asset.bytes<=OPTIONAL_LIMIT)break;used-=OPTIONAL_BY_URL.get(new URL(key.url).pathname)?.bytes??0;await cache.delete(key);}
+  await cache.put(asset.url,copy);
+ });
+ optionalWrite=write.catch(()=>{});return optionalWrite;
+}
 const INDEX='/__myr5_offline_assets__';
 const ASSET_BY_URL=new Map(ASSETS.map(asset=>[asset.url,asset]));
 const downloadProgress={type:'OFFLINE_PROGRESS',files:0,totalFiles:ASSETS.length,bytes:0,totalBytes:ASSETS.reduce((n,a)=>n+a.bytes,0)};
@@ -10,9 +26,9 @@ async function reportDownload(){
 
 function assetPath(path){
  if(path==='/'||path==='/index.html'||path==='/index')return '/pose.html';
- if(ASSET_BY_URL.has(path))return path;
+ if(ASSET_BY_URL.has(path)||OPTIONAL_BY_URL.has(path))return path;
  const html=path.endsWith('/')?path+'index.html':path+'.html';
- if(ASSET_BY_URL.has(html))return html;
+ if(ASSET_BY_URL.has(html)||OPTIONAL_BY_URL.has(html))return html;
  return path+'/index.html';
 }
 function offlineResponse(response){
@@ -61,24 +77,21 @@ async function installAssets(){
  }catch(error){await caches.delete(SHELL);throw error;}
 }
 self.addEventListener('install',event=>event.waitUntil(installAssets()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if((key.startsWith('myr5-shell-')&&key!==SHELL)||(key.startsWith('myr5-voice-')&&key!==VOICE))await caches.delete(key);await self.clients.claim();})()));
-self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ const names=await caches.keys();let previous=null;
+ for(const name of [...names].reverse())if(name.startsWith('myr5-shell-')&&name!==SHELL&&await(await caches.open(name)).match(INDEX)){previous=name;break;}
+ for(const name of names){
+  if(name.startsWith('myr5-shell-')&&name!==SHELL&&name!==previous)await caches.delete(name);
+  if(name.startsWith('myr5-optional-')&&name!==OPTIONAL&&name!=='myr5-optional-'+previous?.slice('myr5-shell-'.length))await caches.delete(name);
+ }
+ await self.clients.claim();
+})()));
 self.addEventListener('message',event=>{
  if(event.data?.type==='OFFLINE_STATUS'){event.source?.postMessage(downloadProgress);return;}
  if(event.data?.type!=='PREPARE_UPDATE')return;
- event.waitUntil((async()=>{
-  const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-  const approvals=await Promise.all(clients.map(client=>new Promise(resolve=>{
-   const channel=new MessageChannel();
-   const finish=ok=>{clearTimeout(timer);channel.port1.close();resolve(ok);};
-   const timer=setTimeout(()=>finish(false),4000);
-   channel.port1.onmessage=message=>finish(message.data?.safe===true);
-   try{client.postMessage({type:'UPDATE_SAFETY_CHECK'},[channel.port2]);}catch{finish(false);}
-  })));
-  const activated=approvals.length>0&&approvals.every(Boolean);
-  if(activated)await self.skipWaiting();
-  event.ports[0]?.postMessage({activated});
- })());
+ // Natural activation waits until every old controlled window closes. No
+ // snapshot or expiring client lease can make forced activation race-free.
+ event.ports[0]?.postMessage({activated:false,reason:'close_clients'});
 });
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
@@ -89,18 +102,18 @@ self.addEventListener('fetch',event=>{
  // Canonical paths also cover release query strings and customizer directory
  // links. Cached art is returned immediately, without a network revalidation.
  const path=assetPath(url.pathname);
- const asset=ASSET_BY_URL.get(path);
+ const asset=ASSET_BY_URL.get(path)||OPTIONAL_BY_URL.get(path);
  if(!asset)return;
+ const optional=OPTIONAL_BY_URL.has(path);
  event.respondWith((async()=>{
-  const cache=await caches.open(SHELL),cached=await cache.match(path);
+  const cache=await caches.open(optional?OPTIONAL:SHELL),cached=await cache.match(path);
   if(cached)return offlineResponse(cached);
   let response;
   try{response=await downloadAsset(asset);}catch{
-   // A stale worker must never turn an updated app file into a blank page.
-   // Serve the current network response without caching it when SRI disagrees.
-   return fetch(new Request(request,{cache:'no-store'}));
+   // Never mix an unverified new executable into an older installed shell.
+   return new Response('This resource is unavailable. Reconnect or update Coach.',{status:503});
   }
-  try{await cache.put(path,response.clone());}catch{}
+  if(optional)event.waitUntil(saveOptional(asset,response));else try{await cache.put(path,response.clone());}catch{}
   return response;
  })());
 });

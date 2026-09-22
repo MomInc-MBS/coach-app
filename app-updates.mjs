@@ -1,5 +1,5 @@
 import {RELEASE} from './release-info.mjs';
-import {safeToUpdate,releaseNotice,requestActivation} from './update-policy.mjs';
+import {safeToUpdate,releaseNotice} from './update-policy.mjs';
 
 export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) {
  const panel=document.getElementById('installPanel'),section=document.createElement('details');
@@ -20,20 +20,20 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  function showNotes(r){$('releaseVersion').textContent=r.title+' · '+r.date;$('releaseNotes').replaceChildren(...r.notes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}
  function paint(){
   applyButton.hidden=!ready();banner.hidden=ready()?dismissed:!notice.visible;
-  banner.querySelector('span').textContent=ready()?'Coach will update when you’re idle.':'Updated: '+RELEASE.title;
+  banner.querySelector('span').textContent=ready()?'Close all Coach windows to finish updating.':'Updated: '+RELEASE.title;
   const b=banner.querySelector('[data-update]');b.hidden=!ready();b.disabled=!safe(false)||applying;applyButton.disabled=b.disabled;
-  b.textContent=!safe(false)?'Finish what you’re doing':applying?'Updating…':'Update now';
+  b.textContent=reg?.waiting?'How to finish':!safe(false)?'Finish what you’re doing':applying?'Updating…':'Update now';
   banner.querySelector('[data-later]').textContent=ready()?'Later':'Got it';
-  $('releaseStatus').textContent=error||(ready()?'Updates install automatically when you’re idle.':latest.id!==RELEASE.id?'Downloading update…':'Automatic updates are on.');
+  $('releaseStatus').textContent=error||(ready()?'Update downloaded. Close all Coach windows, then reopen Coach.':latest.id!==RELEASE.id?'Downloading update…':'Automatic updates are on.');
  }
  async function apply(automatic=false){
   if(!safe(automatic)||applying||!ready())return;
+  if(reg?.waiting){error='Update downloaded. Close all Coach windows, then reopen Coach.';retryAt=Date.now()+300000;paint();return;}
   applying=true;error='';paint();
   try{
    await onBeforeUpdate?.();
    if(!safe(automatic)){applying=false;paint();return;}
-   if(reg?.waiting)await requestActivation(reg.waiting);
-   else location.reload();
+   location.reload();
   }catch(e){applying=false;retryAt=Date.now()+30000;error=e.message||'Save your progress before updating.';paint();}
  }
  applyButton.onclick=()=>apply(false);banner.querySelector('[data-update]').onclick=()=>apply(false);
@@ -79,9 +79,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
   navigator.serviceWorker.addEventListener('message',async event=>{
    if(event.data?.type==='APP_UPDATE_AVAILABLE'){openDownload();event.ports[0]?.postMessage({handled:true});return;}
    if(event.data?.type!=='UPDATE_SAFETY_CHECK')return;
-   let approved=safe(false,true);
-   if(approved)try{await onBeforeUpdate?.();approved=safe(false,true);}catch{approved=false;}
-   event.ports[0]?.postMessage({safe:approved});
+   event.ports[0]?.postMessage({safe:false});
   });
  }else check();
  showNotes(RELEASE);paint();

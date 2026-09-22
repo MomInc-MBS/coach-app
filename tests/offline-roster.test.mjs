@@ -3,7 +3,7 @@ import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
-import {offlineAssets} from '../scripts/offline-assets.mjs';
+import {offlineAssets,offlineInventory} from '../scripts/offline-assets.mjs';
 
 test('roster models remain available on demand without blocking mobile install',async()=>{
  const root=await mkdtemp(join(tmpdir(),'myr5-offline-'));
@@ -14,8 +14,11 @@ test('roster models remain available on demand without blocking mobile install',
   await writeFile(join(root,'creature/models/roster/manifest.json'),'{}');
   await writeFile(join(root,'creature/models/roster/new-coach.glb'),'roster');
   const urls=(await offlineAssets(root)).map(asset=>asset.url);
-  assert(urls.includes('/creature/models/core.glb'));
-  assert(urls.includes('/creature/models/roster/manifest.json'));
+  assert(!urls.includes('/creature/models/core.glb'));
+  const optional=(await offlineInventory(root)).optional.map(a=>a.url);
+  assert(optional.includes('/creature/models/core.glb'));
+  assert(optional.includes('/creature/models/roster/new-coach.glb'));
+  assert(optional.includes('/creature/models/roster/manifest.json'));
   assert(!urls.includes('/creature/models/roster/new-coach.glb'));
  }finally{await rm(root,{recursive:true,force:true});}
 });

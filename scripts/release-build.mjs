@@ -10,7 +10,7 @@ export async function releaseBuildId(root='.'){
  async function add(path){hash.update(path+'\0');for await(const chunk of createReadStream(join(root,path)))hash.update(chunk);hash.update('\0');}
  async function walk(path){for(const entry of (await readdir(join(root,path),{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const name=path+'/'+entry.name;if(entry.isDirectory())await walk(name);else if(entry.isFile())await add(name);}}
  for(const entry of (await readdir(root,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name)))if(entry.isFile()&&!['release-build.mjs','launch-runtime.mjs','app-runtime.mjs'].includes(entry.name)&&/\.(html|css|mjs|js|webmanifest|json)$/.test(entry.name))await add(entry.name);
- for(const folder of ['server','db','scripts','scheduler','pod','creature','models','icons','handborne','arcade','voice'])try{await walk(folder);}catch(error){if(error.code!=='ENOENT')throw error;}
+ for(const folder of ['server','db','scripts','scheduler','pod','creature','models','icons','handborne','arcade','voice','local-coach','modules','packs','war-room'])try{await walk(folder);}catch(error){if(error.code!=='ENOENT')throw error;}
  return hash.digest('hex').slice(0,20);
 }
 export async function prepareReleaseBuild(root='.'){

@@ -2,9 +2,21 @@ import {openLocalCoach,LocalCoachStorageError} from './repository.mjs';
 
 export {openLocalCoach,LocalCoachStorageError};
 
-export function accountProbeFallsBackToLocal(error){return error instanceof TypeError||Number(error?.status)>=500&&Number(error?.status)<=599;}
-export async function probeOptionalAccount(load){try{return await load();}catch(error){if(error?.status===401&&error?.code!=='auth-config'||accountProbeFallsBackToLocal(error))return null;throw error;}}
-export async function probeOptionalTransfer(load){try{return await load();}catch(error){if(accountProbeFallsBackToLocal(error))return null;throw error;}}
+export function accountProbeFallsBackToLocal(error){
+ if(error instanceof LocalCoachStorageError)return false;
+ const status=Number(error?.status);if(status>=400&&status<500)return false;
+ return error instanceof TypeError||error?.name==='TimeoutError'||error?.code==='optional_probe_timeout'||status>=500&&status<=599;
+}
+async function boundedOptionalProbe(load,{timeoutMs=4000,setTimeoutFn=setTimeout,clearTimeoutFn=clearTimeout}={}){
+ if(!Number.isFinite(timeoutMs)||timeoutMs<=0)throw RangeError('Invalid optional probe deadline.');
+ const controller=new AbortController();let timer;
+ try{return await Promise.race([
+  Promise.resolve().then(()=>load({signal:controller.signal})),
+  new Promise((_,reject)=>{timer=setTimeoutFn(()=>{const error=Object.assign(Error('Optional account service timed out.'),{code:'optional_probe_timeout',status:503});controller.abort(error);reject(error);},timeoutMs);}),
+ ]);}finally{clearTimeoutFn(timer);}
+}
+export async function probeOptionalAccount(load,options){try{return await boundedOptionalProbe(load,options);}catch(error){if(error?.status===401&&error?.code!=='auth-config'||accountProbeFallsBackToLocal(error))return null;throw error;}}
+export async function probeOptionalTransfer(load,options){try{return await boundedOptionalProbe(load,options);}catch(error){if(accountProbeFallsBackToLocal(error))return null;throw error;}}
 
 const HEARTBEAT_MS=20_000,STALE_MS=60_000,CHANNEL='myr5-local-workout-lease-v1';
 const defaultChannel=name=>typeof BroadcastChannel==='function'?new BroadcastChannel(name):null;

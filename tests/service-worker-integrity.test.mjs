@@ -33,7 +33,7 @@ test('HTML downloads tolerate CDN rewrites without weakening other assets',async
  ]);
 });
 
-test('a runtime integrity failure falls back to an uncached network response',async()=>{
+test('a runtime integrity failure rejects unverified code without retrying',async()=>{
  const asset={url:'/app.js',integrity:'sha256-YQ==',bytes:1};
  const requests=[];
  const {listeners,puts}=worker([asset],async request=>{
@@ -47,10 +47,9 @@ test('a runtime integrity failure falls back to an uncached network response',as
   respondWith(value){responsePromise=value;},
  });
  const response=await responsePromise;
- assert.equal(await response.text(),'current app');
+ assert.equal(response.status,503);
  assert.deepEqual(requests,[
   {integrity:'sha256-YQ==',cache:'reload'},
-  {integrity:'',cache:'no-store'},
  ]);
- assert.equal(puts.length,0,'the unverified fallback must not enter the offline cache');
+ assert.equal(puts.length,0,'unverified code must not enter the offline cache');
 });

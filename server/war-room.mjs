@@ -1,3 +1,4 @@
+import {epochFencedBatch} from './remote-epochs.mjs';
 import {fail} from './domain.mjs';
 import {readEntitlements} from './entitlements.mjs';
 
@@ -32,23 +33,23 @@ async function current(database,user){
  return (await database.prepare('SELECT loadout,recipes,revision,updated_at FROM war_room_arsenals WHERE user_id=?').bind(user).first())||{loadout:json({type:'rapier',tier:0}),recipes:'[]',revision:0,updated_at:null};
 }
 const safe=row=>({loadout:storedWeapon(parse(row.loadout,{type:'rapier',tier:0})),recipes:storedRecipes(row.recipes),revision:Number.isSafeInteger(Number(row.revision))&&Number(row.revision)>=0?Number(row.revision):0,updatedAt:row.updated_at==null?null:Number.isFinite(Number(row.updated_at))?Number(row.updated_at):null});
-async function save(database,user,previous,next,now){
- const result=await database.prepare('INSERT INTO war_room_arsenals(user_id,loadout,recipes,revision,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET loadout=excluded.loadout,recipes=excluded.recipes,revision=war_room_arsenals.revision+1,updated_at=excluded.updated_at WHERE war_room_arsenals.revision=? RETURNING revision,updated_at').bind(user,json(next.loadout),json(next.recipes),1,now,previous.revision).first();
+async function save(database,user,previous,next,now,dataEpoch){
+ const result=(await epochFencedBatch(database,{ownerId:user,expectedDataEpoch:dataEpoch,now,statements:[database.prepare('INSERT INTO war_room_arsenals(user_id,loadout,recipes,revision,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET loadout=excluded.loadout,recipes=excluded.recipes,revision=war_room_arsenals.revision+1,updated_at=excluded.updated_at WHERE war_room_arsenals.revision=? RETURNING revision,updated_at').bind(user,json(next.loadout),json(next.recipes),1,now,previous.revision)]}))[0].results[0];
  if(!result)fail('War Room changed on another device. Refresh before saving.',409);
  return {...next,revision:Number(result.revision),updatedAt:Number(result.updated_at)};
 }
-export async function warRoomApi(database,user,path,method,input,now=Date.now()){
+export async function warRoomApi(database,user,path,method,input,now=Date.now(),{dataEpoch=1}={}){
  const entitlements=await clearance(database,user);
  const row=await current(database,user),state=safe(row);
  if(path==='/api/war-room'&&method==='GET')return {entitlements,state};
  if(path==='/api/war-room/loadout'&&method==='PUT'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
-  return {state:await save(database,user,state,{...state,loadout:weapon(input.loadout)},now)};
+  return {state:await save(database,user,state,{...state,loadout:weapon(input.loadout)},now,dataEpoch)};
  }
  if(path==='/api/war-room/recipes'&&method==='POST'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
   const item=recipe(input.recipe);if(state.recipes.some(existing=>existing.id===item.id))fail('That recipe id already exists.',409);if(state.recipes.length>=20)fail('Keep up to 20 saved recipes.');
-  return {state:await save(database,user,state,{...state,recipes:[...state.recipes,item]},now)};
+  return {state:await save(database,user,state,{...state,recipes:[...state.recipes,item]},now,dataEpoch)};
  }
  if(path==='/api/war-room/import/profile'&&method==='POST'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before importing.',409);
@@ -61,13 +62,13 @@ export async function warRoomApi(database,user,path,method,input,now=Date.now())
   const legacyRecipe=saved['myr5-recipe-v1'];
   if(typeof legacyRecipe==='string'&&legacyRecipe.length>0&&legacyRecipe.length<=30000&&!next.recipes.some(item=>item.id==='legacy-myr5'))next.recipes=[...next.recipes,{id:'legacy-myr5',name:'Imported MYR5 recipe',data:legacyRecipe}];
   if(JSON.stringify(next.loadout)===JSON.stringify(state.loadout)&&JSON.stringify(next.recipes)===JSON.stringify(state.recipes))fail('No validated legacy War Room data is available for this account.',404);
-  return {state:await save(database,user,state,next,now),imported:true};
+  return {state:await save(database,user,state,next,now,dataEpoch),imported:true};
  }
  const match=path.match(/^\/api\/war-room\/recipes\/([A-Za-z0-9_-]{1,80})$/);
  if(match&&method==='DELETE'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
   const recipes=state.recipes.filter(item=>item?.id!==match[1]);if(recipes.length===state.recipes.length)fail('Recipe not found.',404);
-  return {state:await save(database,user,state,{...state,recipes},now)};
+  return {state:await save(database,user,state,{...state,recipes},now,dataEpoch)};
  }
  fail('War Room action unavailable.',405);
 }

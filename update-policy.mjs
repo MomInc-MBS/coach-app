@@ -16,7 +16,7 @@ export function requestActivation(worker,{timeout=10000}={}){
   const channel=new MessageChannel();
   const finish=(error)=>{clearTimeout(timer);channel.port1.close();error?reject(error):resolve();};
   const timer=setTimeout(()=>finish(Error('Keep one Coach window open to finish updating.')),timeout);
-  channel.port1.onmessage=event=>finish(event.data?.activated?null:Error('Update will finish when your other Coach windows are idle.'));
+  channel.port1.onmessage=event=>finish(event.data?.activated?null:Error(event.data?.reason==='close_clients'?'Update downloaded. Close all Coach windows, then reopen Coach.':'Update will finish when your other Coach windows are idle.'));
   try{worker.postMessage({type:'PREPARE_UPDATE'},[channel.port2]);}catch(error){finish(error);}
  });
 }

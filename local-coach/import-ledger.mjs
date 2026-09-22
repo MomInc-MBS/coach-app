@@ -1,3 +1,4 @@
+import {createImportAttempts} from './import-attempts.mjs';
 import {createImportPreparation} from './import-preparation.mjs';
 import {ImportAssignmentError,claimAssignment,recordImportOutcome,releaseAssignment,assignmentStatus} from './import-assignment.mjs';
 
@@ -56,6 +57,7 @@ export function createImportLedger({db,ownerId,deviceId,getWorkout,transact,Stor
   return {item:result.item,duplicate:result.duplicate,status:assignmentStatus(result.state,result.item.claimId)};
  });
  return Object.freeze({
+  ...createImportAttempts({db,ownerId,deviceId,tables,read:()=>readImportLedger(db,ownerId,StorageError),persist,transact,readOperation,status:assignmentStatus,invalid}),
   ...createImportPreparation({db,ownerId,deviceId,tables,source,persist,transact,read:()=>readImportLedger(db,ownerId,StorageError),policy,invalid,readOperation,StorageError}),
   // Call before any asynchronous hashing. The revision is rechecked inside the
   // claim transaction. This legacy API cannot create prepared upload metadata;

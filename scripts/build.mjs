@@ -21,7 +21,7 @@ await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
-for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 // The source configuration is intentionally empty. Only a validated public
 // verification JWK may be embedded in a release; signing material is never read.
 const expansionConfigPath='dist/client/modules/new/expansion-config.mjs';
