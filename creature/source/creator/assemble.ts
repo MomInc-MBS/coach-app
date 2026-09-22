@@ -3,8 +3,9 @@ import {EYE_LAYOUTS,EYE_REFERENCE} from './eye-layouts';
 import {pupilGeometry} from './pupils';
 import {getCoach} from './coaching';
 import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
-import {sculptMaterial,growMaterial} from './material-language';
+import {sculptMaterial,growMaterial,applySparkle} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
+import {resolveRegionMaterial} from './materials-registry';
 
 import * as THREE from 'three';
 import {GLTFLoader,type GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -78,37 +79,39 @@ export async function assembleCreature(d:Design,assetBase:string){
  const hologram=false,parts=false;
    if(e.eyeCopies){e.regions.eye.remove(e.eyeCopies);e.eyeCopies=null;}e.eyeTemplate.visible=true;
   for(const [region,key] of [['head','head_'+d.eyeLayout],['arms','arms_'+d.fingers],['feet','feet_'+d.toes]] as const){if(from[region]!=='myr5')continue;const variant=e.variants.get(key);if(variant&&e.regions[region].children[0]!==variant){e.regions[region].clear();e.regions[region].add(variant);}if(region==='head')variant?.traverse(o=>{o.userData.eyeSockets=EYE_LAYOUTS[d.eyeLayout].eyes;});}
-  for(const region of REGIONS){const style=STYLES[d.styles[region]],group=e.regions[region];
+  for(const region of REGIONS){const style=resolveRegionMaterial(d.styles[region],d.materials?.[region]),group=e.regions[region];
    // The eye region is placed by arrangeEyes below, so its wrapper stays at the origin.
    group.position.set(0,0,0);group.scale.setScalar(1);if(region!=='eye'){group.position.copy(fits[region].t);group.scale.setScalar(fits[region].s);}
    if(parts){const offsets:Record<Region,number[]>={head:[0,.65,0],eye:[0,.18,1.0],collar:[0,-.1,0],body:[0,-.45,0],arms:[.45,0,0],feet:[0,-.65,0]};group.position.add(new THREE.Vector3().fromArray(offsets[region]));}
    group.traverse(o=>{if(!(o instanceof THREE.Mesh)||o===e.lid)return;const m=o.material as THREE.MeshStandardMaterial;const base=m.userData.baseColor as THREE.Color;const name=m.userData.name as string;const fixed=['Eye ivory','Pupil','Eye glint'].includes(name);
     m.color.copy(base);m.emissive.set(0);m.metalness=m.userData.baseMetal;m.roughness=m.userData.baseRough;m.transparent=false;m.opacity=1;m.depthWrite=true;
-    if(d.styles[region]!==0&&!fixed){m.color.set(name==='Lilac hair'||name==='Raised scales'?style.accent:style.primary);if(name==='Socket shadow'||name==='Body velvet')m.color.multiplyScalar(.43);m.roughness=style.roughness;m.metalness=style.metalness;m.emissive.set(style.emissive).multiplyScalar(.25);}
+    if(style.id!==0&&!fixed){m.color.set(name==='Lilac hair'||name==='Raised scales'?style.accent:style.primary);if(name==='Socket shadow'||name==='Body velvet')m.color.multiplyScalar(.43);m.roughness=style.roughness;m.metalness=style.metalness;m.emissive.set(style.emissive).multiplyScalar(.25);}
     if(hologram){m.color.set(fixed&&name==='Pupil'?'#261336':'#c9b0ea');m.emissive.set('#76518f');m.emissiveIntensity=.55;m.roughness=.25;m.metalness=.1;}
     if(o.name==='Pupil'&&o.userData.pupilType!==d.pupil){o.geometry.dispose();o.geometry=pupilGeometry(d.pupil);o.userData.basePosition=new THREE.Vector3(.04,2.1475,1.183);o.userData.baseScale=new THREE.Vector3(1,1,1);o.userData.pupilType=d.pupil;}
     if(o.name==='Iris'&&o.userData.irisType!==d.pupil){o.geometry.dispose();o.geometry=pupilGeometry(d.pupil);o.geometry.scale(1.48,1.48,1);o.userData.basePosition=new THREE.Vector3(.04,2.1475,1.133);o.userData.baseScale=new THREE.Vector3(1,1,1);o.userData.irisType=d.pupil;}
     if(/^Iris.fiber/.test(o.name))o.visible=d.pupil==='round';
     if(/^Crown.scale/.test(o.name))o.visible=d.styles[region]===0;
-    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible&&style.id!==0)sculptMaterial(o,style,1,d.detail);
+    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible&&style.id!==0){sculptMaterial(o,style,1,d.detail);applySparkle(o.material as THREE.MeshPhysicalMaterial,style.sparkle);}
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
    });
   }
-  const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':STYLES[d.styles.head].primary);
+  const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':resolveRegionMaterial(d.styles.head,d.materials?.head).primary);
   if(d.eyeLayout!=='single'||eyeMoved){e.eyeCopies=arrangeEyes(e.eyeTemplate,d.eyeLayout,eyeOffset,eyeScale,surfaceZ);e.regions.eye.add(e.eyeCopies);e.eyeTemplate.visible=false;}
   const key=JSON.stringify([d.styles,d.detail,d.eyeLayout,d.fingers,d.toes,d.body,d.headFrom,d.armsFrom,d.feetFrom,hologram,parts]);e.details.userData.key=key;
   e.details.children.slice().forEach(o=>{o.traverse(c=>{if(c instanceof THREE.Mesh){c.geometry.dispose();(c.material as THREE.Material).dispose();}});e.details.remove(o);});
   for(const region of REGIONS){
-   const style=STYLES[d.styles[region]],original=e.regions[region];
+   const style=resolveRegionMaterial(d.styles[region],d.materials?.[region]),original=e.regions[region];
    // Bone and robot structures are sculpted around MYR5's own proportions, so roster parts keep their mesh.
    const own=from[region]==='myr5';
    if(own&&style.id===7&&region!=='head'&&region!=='eye'){original.visible=false;e.details.add(skeletalStructure(region,d));continue;}
    if(own&&style.id===18&&['body','arms','feet'].includes(region)){original.visible=false;e.details.add(robotStructure(region,d));continue;}
    let surface=original;
-   if(own&&region==='collar'&&style.id!==0&&style.id!==20){original.visible=false;surface=materialCollar(style.id);e.details.add(surface);}
+   // materialCollar()/STYLES only know legacy ids 1-22 (0 and 20 are excluded on purpose above);
+   // Flat/Clay/battle-pass family ids (30, 31, -1) fall outside that range and must skip this swap.
+   if(own&&region==='collar'&&style.id>0&&style.id<=22&&style.id!==20){original.visible=false;surface=materialCollar(style.id);e.details.add(surface);}
    const growth=growMaterial(surface,style,region,1,d.detail);growth.position.copy(surface.position);growth.scale.copy(surface.scale);e.details.add(growth);
   }
-  if(from.head==='myr5'&&d.styles.head===7){e.regions.eye.visible=false;e.details.add(boneSockets(d));}
+  if(from.head==='myr5'&&resolveRegionMaterial(d.styles.head,d.materials?.head).id===7){e.regions.eye.visible=false;e.details.add(boneSockets(d));}
  // Animation pivots fitted to this creature's measured parts; the rig falls back to MYR5's own numbers.
  root.updateMatrixWorld(true);
  const measured=(r:Region)=>boxOf(e.regions[r]);

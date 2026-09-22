@@ -71,6 +71,10 @@ export function surfaceSample(id:number,x:number,y:number){
   case 20:h=.5+Math.sin(x*160+Math.sin(y*25))* .2;t=.58+grain*.2;rough=.98;break;
   case 21:h=.5+wave*.018;t=.7+wave*.07;rough=.07;break;
   case 22:h=.5+grain*.035+wave*.01;t=.67+wave*.02;rough=.51;break;
+  // Rank 4 additions: Flat (no mask - literally constant) and Clay (soft procedural noise,
+  // PLAN §6.1) so the runtime tint system has an always-unlocked, no-download starting pair.
+  case 30:h=.5;t=.5;rough=.55;break;
+  case 31:h=.5+grain*.05+wave*.008;t=.5+grain*.03;rough=.92;break;
  }
  return {height:h,tint:clamp(t,0,1),glow,rough};
 }
@@ -101,6 +105,23 @@ export function materialFor(style:Style,unit:number,original?:T.MeshStandardMate
  if(id===20){mat.sheen=1;mat.sheenRoughness=.96;mat.sheenColor.set(style.accent);mat.metalness=0;}
  if(id===0||id===22){mat.sheen=.22;mat.sheenColor.set('#ffc9b1');}
  mat.flatShading=[13,14].includes(id);mat.userData.materialStyle=id;return mat;
+}
+
+// Rank 4: continuous (0-1) view-dependent glint, independent of texture/colour. A shader
+// effect rather than a texture-per-level, per the brief. Uses only vViewPosition (declared
+// unconditionally in every MeshPhysicalMaterial fragment shader, flat-shaded or not) so it
+// never depends on chunks that vary by material feature flags.
+// ponytail: grain frequency is tied to view-space distance, not UV, so sparkle speckle size
+// drifts with camera distance - fine for a slider you're testing, revisit if art wants a
+// fixed on-surface grain size.
+export function applySparkle(mat:T.MeshPhysicalMaterial,sparkle:number){
+ const amount=clamp(sparkle,0,1);if(amount<=0)return;
+ mat.onBeforeCompile=shader=>{
+  shader.uniforms.uSparkle={value:amount};
+  shader.fragmentShader=shader.fragmentShader
+   .replace('#include <common>','uniform float uSparkle;\n#include <common>')
+   .replace('#include <dithering_fragment>','float mySparkleGrain=fract(sin(dot(floor(vViewPosition*46.0),vec3(12.9898,78.233,37.719)))*43758.5453);\ngl_FragColor.rgb+=step(0.985,mySparkleGrain)*uSparkle*1.4;\n#include <dithering_fragment>');
+ };
 }
 
 export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1){
