@@ -43,8 +43,12 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  function moveCoach(){
   card??=document.querySelector('.myr5-companion-card');if(!card)return;
   if(observedCard!==card){observer.observe(card,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ready']});observedCard=card;}
-  const mount=flow.phase==='rest'?$('restCoachMount'):$('coachMount');if(card.parentElement!==mount)mount.append(card);
-  if(window.myr5Creature?.stats().stage!==(flow.phase==='rest'?'encounter':'pod'))window.myr5Creature?.stage(flow.phase==='rest'?'encounter':'pod');
+  // Full-screen workout mode parks the card in #coachOverlay (created at runtime by camera-workout.mjs,
+  // not a static pose.html id, hence document.getElementById here rather than the $() shorthand); leave it there while tracking.
+  if(document.body.dataset.tracking==='true'&&document.getElementById('coachOverlay')){}else{
+   const mount=flow.phase==='rest'?$('restCoachMount'):$('coachMount');if(card.parentElement!==mount)mount.append(card);
+   if(window.myr5Creature?.stats().stage!==(flow.phase==='rest'?'encounter':'pod'))window.myr5Creature?.stage(flow.phase==='rest'?'encounter':'pod');
+  }
   const label=card.querySelector('.myr5-companion-status')?.textContent||'';
   // Errors from the finished companion still need a visible place in the new shell.
   for(const id of ['coachLoading','restCoachLoading']){const loading=$(id);loading.hidden=card.dataset.ready==='true';if(!loading.hidden&&loading.textContent!==label)loading.textContent=label;}
