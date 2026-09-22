@@ -29,6 +29,10 @@ for(const folder of ['creature/source','handborne/source']){const target=resolve
 // Keep debugger-only maps in the open-source repository,
 // but not in the deployable static archive. Runtime code does not request them.
 for(const path of [
+ 'dist/client/handborne/assets/hand-entry-B7K7J180.js',
+ 'dist/client/handborne/assets/hand-entry-BySRDxUO.css',
+ 'dist/client/handborne/assets/GLTFExporter-CL_WC7Dc.js',
+ 'dist/client/handborne/assets/OBJExporter-J3SdsgWZ.js',
  'dist/client/creature/assets/chunk-2X4UOJKI.js',
  'dist/client/creature/assets/chunk-FY3X2IKC.js',
  'dist/client/creature/assets/chunk-QUSSDQTX.js',
