@@ -10,6 +10,7 @@ import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoo
 import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
+import {mountCoachOverlay} from './coach-overlay.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -137,6 +138,8 @@ async function loop(run){
       const p=result.landmarks[0]?.slice(0,27);
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
+      // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
+      window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:result.landmarks[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0}}));
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
@@ -181,6 +184,7 @@ soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+mountCoachOverlay();
 
 let cinematics={play(){}};
 let optionalLoaded=false;

@@ -3,13 +3,13 @@ import type {CreatureRig} from './rig';
 export const GESTURES={
  idle:{label:'At ease',duration:7,loop:true},listening:{label:'Listening',duration:4,loop:true},thinking:{label:'Thinking',duration:5,loop:true},speaking:{label:'Speaking',duration:3.6,loop:true},
  greet:{label:'Hello',duration:2.6,loop:false},agree:{label:'Yes / understood',duration:1.9,loop:false},correct:{label:'Gentle correction',duration:2.4,loop:false},encourage:{label:'Encouragement',duration:2.8,loop:false},celebrate:{label:'Celebrate',duration:3.2,loop:false},rest:{label:'Take a breath',duration:5,loop:true},laugh:{label:'Giant laugh',duration:3.4,loop:false},swipe:{label:'Platform sweep',duration:1.8,loop:false}
- ,awaken:{label:'Pod awakening',duration:4.8,loop:false},ready:{label:'Ready to train',duration:3.3,loop:false},victory:{label:'Effort earned',duration:3.8,loop:false}
+ ,awaken:{label:'Pod awakening',duration:4.8,loop:false},ready:{label:'Ready to train',duration:3.3,loop:false},victory:{label:'Effort earned',duration:3.8,loop:false},walk:{label:'Walking',duration:.9,loop:true}
 } as const;
 export type Gesture=keyof typeof GESTURES;
 export function gestureForCue(key:string){return ({count:'agree',complete:'celebrate',ready:'greet',tracking:'correct',setup:'listening',time:'encourage'} as Record<string,Gesture>)[key]||'speaking';}
 export function samplePose(id:Gesture,t:number){
  const d=GESTURES[id].duration,u=t/d,s=Math.sin(u*Math.PI*2),envelope=Math.sin(Math.PI*u)**2;
- const p={headX:0,headY:0,headZ:0,bodyX:0,bodyZ:0,bodyY:0,leftX:0,leftZ:0,rightX:0,rightZ:0,breath:0};
+ const p={headX:0,headY:0,headZ:0,bodyX:0,bodyZ:0,bodyY:0,leftX:0,leftZ:0,rightX:0,rightZ:0,breath:0,footLX:0,footRX:0,footLY:0,footRY:0,footLZ:0,footRZ:0};
  if(id==='idle'){p.headY=.045*s;p.headZ=.018*Math.sin(u*Math.PI*4);p.breath=.009*s;p.leftX=.02*s;p.rightX=-.015*s;}
  if(id==='listening'){p.headZ=-.085*(.5-.5*Math.cos(u*Math.PI*2));p.headX=.03*s;}
  if(id==='thinking'){p.headY=.10*s;p.headZ=.055*(1-Math.cos(u*Math.PI*2));p.rightX=-.06*s;}
@@ -25,6 +25,8 @@ export function samplePose(id:Gesture,t:number){
  if(id==='awaken'){p.headX=.24*(1-u)*envelope;p.headY=-.14*Math.sin(u*Math.PI*2)*envelope;p.bodyY=.08*envelope;p.leftZ=-.17*envelope;p.rightZ=.27*envelope;p.breath=.028*envelope;}
  if(id==='ready'){p.headX=.16*Math.sin(u*Math.PI*2)*envelope;p.leftZ=-.36*envelope;p.rightZ=.42*envelope;p.leftX=-.24*envelope;p.rightX=-.32*envelope;p.bodyY=-.045*envelope;p.breath=.018*envelope;}
  if(id==='victory'){p.leftZ=-.65*envelope;p.rightZ=.68*envelope;p.headX=-.12*envelope;p.headZ=.08*Math.sin(u*Math.PI*2)*envelope;p.bodyY=.09*envelope;p.breath=.026*envelope;}
+ // One stride per foot: feet swing and lift in turn, the body waddles over the planted foot, arms swing opposite.
+ if(id==='walk'){p.footLX=-.55*s;p.footRX=.55*s;p.footLZ=.18*s;p.footRZ=-.18*s;p.footLY=.16*Math.max(0,s);p.footRY=.16*Math.max(0,-s);p.bodyY=.05*Math.abs(s);p.bodyZ=.09*s;p.headZ=-.05*s;p.leftX=.45*s;p.rightX=-.45*s;p.leftZ=-.08;p.rightZ=.08;}
  return p;
 }
 export function createClips(rig:CreatureRig){
@@ -34,6 +36,7 @@ export function createClips(rig:CreatureRig){
   const rotations:Record<string,(p:ReturnType<typeof samplePose>)=>number[]>={HeadMotion:p=>[p.headX,p.headY,p.headZ],BodyMotion:p=>[p.bodyX,0,p.bodyZ],ArmLeft:p=>[p.leftX,0,p.leftZ],ArmRight:p=>[p.rightX,0,p.rightZ]};
   for(const [node,get] of Object.entries(rotations)){tracks.push(new T.QuaternionKeyframeTrack(node+'.quaternion',times,pose.flatMap(p=>{const [x,y,z]=get(p);return new T.Quaternion().setFromEuler(new T.Euler(x,y,z)).toArray();})));}
   tracks.push(new T.VectorKeyframeTrack('BodyMotion.position',times,pose.flatMap(p=>[0,rig.rest.BodyMotion.position.y+p.bodyY,0])));
+  for(const [node,x,y,z] of [['FootLeft','footLX','footLY','footLZ'],['FootRight','footRX','footRY','footRZ']] as const){const rest=rig.rest[node].position;tracks.push(new T.QuaternionKeyframeTrack(node+'.quaternion',times,pose.flatMap(p=>new T.Quaternion().setFromEuler(new T.Euler(p[x],0,0)).toArray())));tracks.push(new T.VectorKeyframeTrack(node+'.position',times,pose.flatMap(p=>[rest.x,rest.y+p[y],rest.z+p[z]])));}
   tracks.push(new T.VectorKeyframeTrack('BodyMotion.scale',times,pose.flatMap(p=>[1+p.breath*.3,1+p.breath,1+p.breath*.3])));
   for(const node of Object.keys(rig.nodes).filter(n=>n.startsWith('EyeBlink'))){const mid=meta.duration*.55;tracks.push(new T.VectorKeyframeTrack(node+'.scale',[0,mid,mid+.10,mid+.23,meta.duration],[1,1,1,1,1,1,1,.06,1,1,1,1,1,1,1]));}
   return new T.AnimationClip(name,meta.duration,tracks);

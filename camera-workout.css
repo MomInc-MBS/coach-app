@@ -9,3 +9,4 @@ body[data-camera-workout=true]>:not(#cameraWorkout){display:none!important}
 #cameraWorkout #primary .flip-tile:after{display:none}
 #cameraWorkout #primary .flip-half{background:none;color:#fff}
 #cameraWorkout .camera-workout-counter:focus-visible{outline:3px solid white;outline-offset:4px}
+#cameraWorkout #coachOverlay{position:absolute;inset:0;pointer-events:none;z-index:1}
