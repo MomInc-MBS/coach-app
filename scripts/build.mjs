@@ -1,6 +1,8 @@
 import {build} from 'vite';
+import {resolve,sep} from 'node:path';
+import {compactModels} from './compact-models.mjs';
 import {sites} from '@openai/sites-vite-plugin';
-import {mkdir,cp,readdir,readFile,writeFile,unlink} from 'node:fs/promises';
+import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
 import {ensureAssets,ensureHandAssets} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {prepareReleaseBuild} from './release-build.mjs';
@@ -22,15 +24,21 @@ await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+// Authoring projects remain in the published source repository, not the app bundle.
+for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,
 // but not in the deployable static archive. Runtime code does not request them.
 for(const path of [
+ 'dist/client/creature/assets/chunk-2X4UOJKI.js',
+ 'dist/client/creature/assets/chunk-FY3X2IKC.js',
+ 'dist/client/creature/assets/chunk-QUSSDQTX.js',
  'dist/client/creature/assets/chunk-2X4UOJKI.js.map',
  'dist/client/creature/assets/chunk-FY3X2IKC.js.map',
  'dist/client/creature/assets/chunk-QUSSDQTX.js.map',
  'dist/client/creature/assets/editor.js.map',
  'dist/client/creature/assets/phone.js.map',
 ])await unlink(path);
+console.log('Duplicate model bytes removed:',await compactModels('dist/client/creature/models')+await compactModels('dist/client/handborne/models'));
 // The source configuration is intentionally empty. Only a validated public
 // verification JWK may be embedded in a release; signing material is never read.
 const expansionConfigPath='dist/client/modules/new/expansion-config.mjs';
@@ -52,6 +60,6 @@ await writeFile('dist/client/pose.html',pose);await writeFile('dist/client/index
 await writeOfflineWorker('dist/client',releaseBuild);
 // The AGPL source offer travels with the app, with no runtime secrets or user records.
 const sources={};for(const folder of ['server','db','scripts','scheduler','pod','local-coach'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
-for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry))sources[entry]=await readFile(entry,'utf8');
+for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry)&&!['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs'].includes(entry))sources[entry]=await readFile(entry,'utf8');
 await writeFile('dist/client/source.json',JSON.stringify(sources));
 console.log('Coach build ready.');
