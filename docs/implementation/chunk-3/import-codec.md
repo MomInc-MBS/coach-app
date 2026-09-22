@@ -1,0 +1,11 @@
+# Shared workout import codec
+
+workout-import-codec.mjs defines immutable digest version 1 for both browser and Worker callers. It has no network calls and is not wired to a live import route.
+
+Snapshot fields are exactly schemaVersion, clientWorkoutId, mode, goal, restSeconds, startedAt, completedAt, value, activeSeconds and elapsedSeconds. UUIDs are lowercase RFC4122 v4. Numbers are safe integers; unknown properties, accessors, exotic prototypes, hidden/symbol fields and invalid bounds reject without coercion. Source projection excludes owner/device IDs, intake, metadata, pose/camera, XP and rewards. Legacy rows missing integral durations return snapshot_unavailable; they remain stored locally.
+
+Version1 pins the current mode set. Count modes cap goal/value at100000 (existing persisted ceiling); timed modes at7200 (existing duration ceiling). Rest is15..180; durations0..7200 with active<=elapsed. Timestamps are integer epoch milliseconds within the ECMAScript date range and completed>=started. This is bounded personal history, not proof of performance: wall time versus elapsed and timed value versus active are not cross-validated. New modes or changed validation require a new digest version while keeping old replay support.
+
+The fingerprint is SHA256 over UTF-8 JSON [1, snapshot with fixed key order]. The idempotency key is SHA256 over UTF-8 JSON [1,targetAccountId,targetDataEpoch,clientWorkoutId,fingerprint]. All input primitives are captured before async hashing. Reimport after deletion requires an authoritative newer epoch (or different target account); same target/epoch/payload always replays the same key. The server must recompute hashes and independently authenticate/assert owner and fence the epoch transactionally.
+
+10 focused tests pass, including fixed literal fingerprint/key vectors verified with node:crypto, every snapshot/key field alteration, privacy exclusion, mutation across awaits and Proxy error normalization. Claude source review PASS (chunk-3-import-codec-opus-text-review.json), GPT-OSS PASS (chunk-3-import-codec-local-review.md). The earlier Claude invocation produced tool-call-shaped text without a verdict; it is not acceptance evidence. Full combined suite394/394 and build pass, recorded in import-ledger.md. No deployment or live upload enablement.
