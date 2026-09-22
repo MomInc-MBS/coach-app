@@ -1,6 +1,14 @@
 import {RELEASE} from './release-info.mjs';
 import {safeToUpdate,releaseNotice} from './update-policy.mjs';
 
+// Release notes are optional; a slow or unavailable API must not block the
+// browser's independent check for a new service worker.
+export async function checkUpdateSources(registration,loadNotes){
+ const notes=Promise.resolve().then(loadNotes).then(()=>true,()=>false);
+ if(registration){await registration.update();return;}
+ if(!await notes)throw Error('Release information is unavailable.');
+}
+
 export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) {
  const panel=document.getElementById('installPanel'),section=document.createElement('details');
  section.className='release-settings';
@@ -13,7 +21,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  document.body.append(banner);
  let storage;try{storage=localStorage;}catch{}
  const notice=releaseNotice(storage,RELEASE.id);
- let reg=null,latest=RELEASE,applying=false,switched=false,dismissed=false,poll=0,error='',lastInteraction=Date.now(),retryAt=0,checking=false;
+ let reg=null,latest=RELEASE,applying=false,switched=false,dismissed=false,poll=0,error='',lastInteraction=Date.now(),retryAt=0,checking=false,notesRequest=null;
  const hadController=!!navigator.serviceWorker?.controller;
  const safe=(automatic=true,background=false)=>safeToUpdate({tracking:document.body.dataset.tracking==='true',rest:document.body.dataset.screen==='rest',dialog:!!document.querySelector('dialog[open]:not(#installPanel):not(#coachSetupGate)'),editing:!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]'),hidden:document.hidden&&!background,online:navigator.onLine,lastInteraction,automatic});
  const ready=()=>!!reg?.waiting||switched||(!('serviceWorker' in navigator)&&latest.id!==RELEASE.id);
@@ -43,9 +51,11 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  async function check(){
   if(checking)return;checking=true;
   try{
-   const value=await api('/api/releases/current');
-   if(typeof value?.id==='string'&&Array.isArray(value.notes)&&value.notes.every(n=>typeof n==='string')){if(latest.id!==value.id)dismissed=false;latest=value;showNotes(latest);}
-   await reg?.update();error='';paint();
+   await checkUpdateSources(reg,()=>notesRequest??=(async()=>{
+    const value=await api('/api/releases/current');
+    if(typeof value?.id==='string'&&Array.isArray(value.notes)&&value.notes.every(n=>typeof n==='string')){if(latest.id!==value.id)dismissed=false;latest=value;showNotes(latest);paint();}
+   })().finally(()=>{notesRequest=null;}));
+   error='';paint();
   }catch{error='Could not check for an update. Reconnect and try again.';paint();}finally{checking=false;}
  }
  $('checkAppUpdate').onclick=check;
