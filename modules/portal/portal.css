@@ -16,15 +16,30 @@
 #portalObjects{position:absolute;inset:0;z-index:8;pointer-events:none}
 .portal-object{position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle,color-mix(in srgb,var(--glow) 40%,#1a1024) 0%,transparent 72%);box-shadow:0 0 22px var(--glow),inset 0 0 12px var(--glow);transform:scale(1) rotate(0deg);opacity:1;transition:transform .6s cubic-bezier(.3,0,.7,1),opacity .6s ease,left .6s cubic-bezier(.3,0,.7,1),top .6s cubic-bezier(.3,0,.7,1);pointer-events:none;z-index:8}
 .portal-object.falling{transform:scale(.05) rotate(240deg);opacity:0}
-/* Neon liquid glass: sits between #portalHome's background and the (transparent) board canvas, clipped to
-   the cut shape, so it only shows through the hole. JS fades it in (portal-glass-in, 600 ms). */
-.portal-glass{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;--glass:#fff}
-.portal-glass>b{position:absolute;inset:-28px;filter:url(#portalCaustic);background:radial-gradient(ellipse at 38% 30%,color-mix(in srgb,var(--glass) 45%,#fff) 0%,var(--glass) 38%,color-mix(in srgb,var(--glass) 70%,#000) 78%,color-mix(in srgb,var(--glass) 40%,#000) 100%)}
-.portal-glass.all>b{background:conic-gradient(from 210deg at 50% 46%,#ff5f1f,#b026ff,#ff10f0,#1f51ff,#39ff14,#ffff33,#ff5f1f)}
+/* Neon liquid glass: sits between #portalHome's background and the (transparent) board canvas, boxed and clipped
+   to the cut shape (JS sets the box and clip), so it only shows through the hole. JS fades it in (portal-glass-in,
+   600 ms). The WebGL wormhole canvas draws the whole look (.gl); <b> and the sheen are the no-WebGL fallback. */
+.portal-glass{position:absolute;z-index:0;pointer-events:none;overflow:hidden;--glass:#fff}
+.portal-glass>b{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#fff 0,var(--glass) 18%,transparent 62%),conic-gradient(from 210deg at 50% 46%,var(--glass),#ff5f1f,#ffff33,#39ff14,var(--glass),#1f51ff,#b026ff,#ff10f0,var(--glass))}
+.portal-glass.all>b{background:radial-gradient(circle at 50% 46%,#fff 0,transparent 30%),conic-gradient(from 210deg at 50% 46%,#ff5f1f,#ffff33,#39ff14,#1f51ff,#b026ff,#ff10f0,#ff5f1f)}
+.portal-glass>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.portal-glass.gl>b,.portal-glass.gl:after{display:none}
 .portal-glass:after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;right:-60%;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 42%,#ffffff55 49%,#ffffff1a 53%,transparent 60%);animation:portal-sheen 6s ease-in-out infinite alternate}
-.portal-glass svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:blur(3px)}
-.portal-glass polygon{fill:none;stroke:url(#portalRimGrad);stroke-width:18;stroke-linejoin:round}
+/* Glass bezel over the board along the exact cut outline, wide enough (JS sets it) to cover the cloth's stair-stepped
+   hole edge: soft shadow, smoky glass lit top-left, a neon filament with its glow, a specular line. Static, no filters. */
+.portal-bezel{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}
+.portal-bezel polygon{fill:none;stroke-linejoin:round}
+.portal-bezel .shade{stroke:#000;stroke-opacity:.2}
+.portal-bezel .body{stroke:url(#portalBezelLit)}
+.portal-bezel .glow{stroke:var(--glass);stroke-opacity:.3}
+.portal-bezel .core{stroke:color-mix(in srgb,var(--glass) 55%,#fff)}
+.portal-bezel .spec{stroke:url(#portalBezelSpec)}
+.portal-bezel .lit{stop-color:color-mix(in srgb,var(--glass) 40%,#3a3048)}
+.portal-bezel .mid{stop-color:color-mix(in srgb,var(--glass) 22%,#140e1e)}
+.portal-bezel .far{stop-color:color-mix(in srgb,var(--glass) 12%,#08050c)}
 .portal-ripple{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:3px solid color-mix(in srgb,var(--glass) 15%,#fff);box-shadow:0 0 0 2px color-mix(in srgb,var(--glass) 55%,#000),0 0 22px 3px #ffffff90,inset 0 0 26px #ffffffa0;opacity:0;pointer-events:none}
+/* A destination dialog growing out of the wormhole's core: its backdrop fades in over the dive (JS sets class + duration). */
+.portal-arriving::backdrop{animation:portal-glass-in var(--portal-arrive,.6s) ease both}
 @keyframes portal-sheen{from{transform:translateX(-28%)}to{transform:translateX(28%)}}
 @keyframes portal-glass-in{from{opacity:0}}
 @keyframes portal-ripple{from{transform:scale(.12);opacity:.95}to{transform:scale(2.2);opacity:0}}
