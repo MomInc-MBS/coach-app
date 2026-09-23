@@ -6,7 +6,7 @@
 // Served unbundled (external in scripts/build.mjs): no .ts imports and no build-time defines here.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import MeshoptDecoder from 'three/addons/libs/meshopt_decoder.module.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {pyramidTiles,mealNutrients,todayTiles} from './pyramid-tiles.mjs';
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
