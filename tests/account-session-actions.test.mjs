@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {createAccountSessionActions} from '../account-session-actions.mjs';
+import * as breathingModes from '../breathing-modes.mjs';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 function coordinator(){let revision=0;const listeners=new Set();return {capture:()=>({revision}),isCurrent:ticket=>ticket?.revision===revision,assertCurrent(ticket){if(ticket?.revision!==revision)throw Object.assign(Error('transition'),{code:'auth_transition'});},subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},invalidate(){revision++;for(const fn of listeners)fn();}};}
 const account=(owner='A',epoch=2)=>({user:{id:owner},dataEpoch:epoch,onboarding:{revision:4}});
@@ -47,14 +48,23 @@ test('actual independent onboarding api preserves assertion headers and guards b
 
 const breathing=await readFile(new URL('../breathing.mjs',import.meta.url),'utf8');
 function breathingHarness(transitions,api){
- const button={},bar={},status={},pause={},controls={querySelector:key=>key==='button'?button:key==='progress'?bar:status},dialog={open:true,classList:{remove(){},contains(){return false;}},addEventListener(){}},scene={hidden:false,append(){}};let tick,completeNext=false,callbacks=0;
+ const els=new Map(),el=key=>{if(!els.has(key))els.set(key,{dataset:{},hidden:false,textContent:''});return els.get(key);},pause={},controls={dataset:{},querySelector:el},dialog={open:true,classList:{remove(){},contains(){return false;}},addEventListener(){},close(){}},scene={hidden:false,append(){}};let tick,completeNext=false,callbacks=0;
  class Clock{constructor(){this.elapsed=0;}sample(){if(completeNext)this.elapsed=180000;}get complete(){return this.elapsed>=180000;}}
- const context={createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
+ const context={createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,...breathingModes,document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
  const mount=vm.runInNewContext(breathing.replace(/^import .*;\s*$/mg,'').replace('export function','function')+';mountBreathing;',context);
- mount({dialog,scene,pause,api,getAccount:()=>account(),transitions,onComplete:()=>callbacks++});return {button,status,start:()=>button.onclick(),finish(){completeNext=true;tick();},callbacks:()=>callbacks};
+ mount({dialog,scene,pause,api,getAccount:()=>account(),transitions,onComplete:()=>callbacks++});
+ return {modes:el('[data-breath-modes]'),runView:el('[data-breath-run]'),status:el('[data-status]'),start:(mode='wim-hof')=>el(`[data-mode="${mode}"]`).onclick(),exit:()=>el('[data-breath-exit]').onclick(),finish(){completeNext=true;tick();},callbacks:()=>callbacks};
 }
 test('actual breathing caller resets on transition and suppresses late completion UI/callback',async()=>{
  const transitions=coordinator(),post=deferred(),sent=deferred();
  const h=breathingHarness(transitions,async path=>{if(path.startsWith('/api/account'))return account();if(path.endsWith('/start'))return startReply();sent.resolve();return post.promise;});
- await h.start();h.finish();await sent.promise;transitions.invalidate();post.resolve({combat:{},targetAccountId:'A',dataEpoch:2});await new Promise(resolve=>setImmediate(resolve));assert.equal(h.callbacks(),0);assert.equal(h.button.textContent,'Start 3-minute breathing');assert(!h.status.textContent.includes('complete ·'));
+ await h.start();h.finish();await sent.promise;transitions.invalidate();post.resolve({combat:{},targetAccountId:'A',dataEpoch:2});await new Promise(resolve=>setImmediate(resolve));assert.equal(h.callbacks(),0);assert.equal(h.modes.hidden,false);assert.equal(h.runView.hidden,true);assert(!h.status.textContent.includes('complete ·'));
+});
+test('breathing exit is immediate mid-session: back to mode choice, nothing saved, next session still completes once',async()=>{
+ const transitions=coordinator(),completes=[];
+ const h=breathingHarness(transitions,async(path,method,body)=>{if(path.startsWith('/api/account'))return account();if(path.endsWith('/start'))return startReply();completes.push(body);return {combat:{},targetAccountId:'A',dataEpoch:2};});
+ await h.start('wim-hof');assert.equal(h.runView.hidden,false);assert.equal(h.modes.hidden,true);
+ h.exit();assert.equal(h.runView.hidden,true);assert.equal(h.modes.hidden,false);
+ h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,0);assert.equal(h.callbacks(),0);
+ await h.start('tai-chi');h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,1);assert.equal(h.callbacks(),1);assert.match(h.status.textContent,/Breathing complete/);
 });
