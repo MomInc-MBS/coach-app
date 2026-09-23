@@ -138,7 +138,19 @@ self.addEventListener('fetch',event=>{
   return response;
  })());
 });
-self.addEventListener('push',event=>{let data={title:'MYR5 Coach',body:'Your coach has a reminder.',url:'/pose.html'};try{data={...data,...event.data.json()};}catch{}event.waitUntil(self.registration.showNotification(String(data.title).slice(0,80),{body:String(data.body).slice(0,200),icon:'/icons/myr5-alien-192.png',badge:'/icons/myr5-alien-192.png',tag:data.tag||'myr5-reminder',data:{url:data.url,kind:data.kind},...(data.kind==='app-update'?{actions:[{action:'download',title:'Download update'}]}:{}),renotify:false}));});
+self.addEventListener('push',event=>{
+ let data={title:'MYR5 Coach',body:'Your coach has a reminder.',url:'/pose.html'};try{data={...data,...event.data.json()};}catch{}
+ event.waitUntil((async()=>{
+  // D23: an Armie letter push is never shown during camera-only mode or
+  // mid-set. The busy window holds it and shows it when the set ends
+  // (armie-letters-client.mjs); the letter itself already lives in the inbox.
+  if(data.kind==='myr5-armie-letter'){
+   for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))
+    if(await clientAnswers(client,'ARMIE_NOTIFY_CHECK',reply=>reply?.blocked===true)){client.postMessage({type:'ARMIE_LETTER_HELD',letter:data});return;}
+  }
+  return self.registration.showNotification(String(data.title).slice(0,80),{body:String(data.body).slice(0,200),icon:'/icons/myr5-alien-192.png',badge:'/icons/myr5-alien-192.png',tag:data.tag||'myr5-reminder',data:{url:data.url,kind:data.kind},...(data.kind==='app-update'?{actions:[{action:'download',title:'Download update'}]}:{}),renotify:false});
+ })());
+});
 function clientAnswers(client,type,accept){
  return new Promise(resolve=>{
   const channel=new MessageChannel();

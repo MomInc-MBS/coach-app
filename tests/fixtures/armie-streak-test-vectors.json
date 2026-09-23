@@ -1,0 +1,4452 @@
+{
+  "scenarios": [
+    {
+      "id": "s01-single-forgiven-miss",
+      "description": "A single missed Monday is forgiven; the rest of the week is kept.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R4 forgives the Monday miss because no day was forgiven yet that week and the count was 0, so the streak grows through it and forgive-1 fires. R3 then counts each kept day, reaching streak 5 on Friday, which fires milestone-5 per R7. At the Sunday week-end update R5 moves the count from 0 to 1 because the week had a forgiven day and no break."
+    },
+    {
+      "id": "s02-sunday-forgiven-miss",
+      "description": "Six kept days, then a missed Sunday that is forgiven at the week's end.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "missed"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        }
+      ],
+      "reasoning": "The Sunday miss is forgiven under R4 (first miss of the week, count 0), so R3 counts it and the streak reaches 7, firing forgive-1. Friday's kept day hit streak 5 and fired milestone-5 per R7. The Sunday week-end update then applies R5, raising the count to 1 for the coming week."
+    },
+    {
+      "id": "s03-sunday-midnight-boundary",
+      "description": "A miss at Sunday 23:59 and another at Monday 00:00 fall in different weeks, so each is forgiven separately.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-11",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-11",
+          "streak": 1,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 2,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 3,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 4,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 5,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 6,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 8,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R2 puts the Sunday miss in week 1 and the Monday miss in week 2, so R4 forgives each independently: forgive-1 on Sunday (count was 0) and forgive-2 on Monday (count was 1 after week 1's week-end update). The streak counts both forgiven days and keeps growing, hitting milestone-5 on Thursday. Each Sunday's week-end update raises the count, ending at 2."
+    },
+    {
+      "id": "s04-two-misses-one-week",
+      "description": "A forgiven Monday miss followed by a second miss on Thursday breaks the streak.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken"
+          ]
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Monday's miss is forgiven (forgive-1) but Thursday's miss fails R4a because a day was already forgiven that week, so R3 resets the streak to 0 and R5 zeroes the count immediately, firing streak-broken. Friday's kept day restarts the streak at 1. The Sunday week-end update keeps the count at 0 because the week had a break, and no week-end letter fires."
+    },
+    {
+      "id": "s05-three-weeks-then-miss-breaks",
+      "description": "Three straight weeks each forgive one Monday miss; the fourth week's miss breaks the streak, and forgiveness works again the week after.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-26",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-27",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-28",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-29",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-30",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-31",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-01",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-02",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-03",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-04",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-08",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "forgive-3-limit",
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 20,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 21,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-off-warning"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken-after-limit"
+          ]
+        },
+        {
+          "date": "2026-10-27",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-28",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-29",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-30",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-31",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-11-01",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-02",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-11-03",
+          "streak": 8,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-04",
+          "streak": 9,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-05",
+          "streak": 10,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-11-06",
+          "streak": 11,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-07",
+          "streak": 12,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-08",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Each of the first three Mondays is forgiven, firing forgive-1, forgive-2, then forgive-3-limit co-firing with milestone-15 on the third Monday; each Sunday's week-end update raises the count 0 to 1 to 2 to 3, and the third Sunday fires forgive-off-warning. The fourth Monday's miss fails R4b because the count is 3, so it breaks: streak-broken-after-limit fires, the streak resets to 0, and the count drops to 0 immediately. The next week's Monday miss is forgiven again (forgive-1) because the count is back under 3, and no forgive-restored ever fires since week 4 contained a break. Under R4c, forgiveness stays off for the rest of the break week (26 Oct–1 Nov) and returns on Monday 2 Nov, where the miss is forgiven with forgive-1."
+    },
+    {
+      "id": "s06-limit-clean-week-forgiven",
+      "description": "After three forgiveness weeks hit the limit, a fully clean week restores forgiveness and the next miss is forgiven again.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-26",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-27",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-28",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-29",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-30",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-31",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-01",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-02",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-03",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-04",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-08",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "forgive-3-limit",
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 20,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 21,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-off-warning"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "streak": 22,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-27",
+          "streak": 23,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-28",
+          "streak": 24,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-29",
+          "streak": 25,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 25,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-30",
+          "streak": 26,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-31",
+          "streak": 27,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-01",
+          "streak": 28,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-restored"
+          ]
+        },
+        {
+          "date": "2026-11-02",
+          "streak": 29,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-03",
+          "streak": 30,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 30,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-04",
+          "streak": 31,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-11-05",
+          "streak": 32,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-06",
+          "streak": 33,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-07",
+          "streak": 34,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-08",
+          "streak": 35,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 35,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Weeks 1-3 each forgive a Monday miss and the count climbs to 3, with forgive-off-warning firing on the third Sunday. Week 4 has no miss and no break, so its Sunday week-end update resets the count to 0 and fires forgive-restored. Week 5's Wednesday miss is therefore forgiven (forgive-1), proving the limit only blocks while the count sits at 3."
+    },
+    {
+      "id": "s07-limit-warning-triple-cofire",
+      "description": "The Sunday ending the third forgiveness week is itself the forgiven day and lands on streak 15, so three letters co-fire.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-11",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "missed"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-11",
+          "streak": 1,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 2,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 3,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 4,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 5,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 6,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 8,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 9,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 10,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 11,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 12,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 13,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 15,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "forgive-3-limit",
+            "milestone-15",
+            "forgive-off-warning"
+          ]
+        }
+      ],
+      "reasoning": "Week 1 forgives its Sunday miss (forgive-1) and week 2 its Monday miss (forgive-2), with the count reaching 2. Week 3 keeps six days, so the Sunday miss lands on streak 15: it is forgiven because the count was 2, firing forgive-3-limit, and R7 fires milestone-15 on the same day. The Sunday week-end update then raises the count to 3, which fires forgive-off-warning, giving the required order forgive, milestone, week-end letter."
+    },
+    {
+      "id": "s08-dst-fall-back-week",
+      "description": "A week containing the US fall-back transition (2026-11-01); the 25-hour Sunday is still one local day.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-26",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-27",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-28",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-29",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-30",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-31",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-01",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-26",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-27",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-28",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-29",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-30",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-31",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-11-01",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R1 evaluates each local calendar date once, so the repeated 1am-2am hour on 2026-11-01 does not create an extra day: Sunday is a single kept day and the streak reaches 7. Saturday's miss is forgiven (forgive-1) under R4, and the Sunday week-end update moves the count to 1."
+    },
+    {
+      "id": "s09-dst-spring-forward-week",
+      "description": "A week containing the US spring-forward transition (2027-03-14); the 23-hour Sunday is still one local day.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2027-03-08",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-09",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-10",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-11",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-12",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-13",
+          "status": "kept"
+        },
+        {
+          "date": "2027-03-14",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2027-03-08",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2027-03-09",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2027-03-10",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2027-03-11",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2027-03-12",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2027-03-13",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2027-03-14",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "The skipped 2am-3am hour on 2027-03-14 does not remove the local date, so R1 still evaluates Sunday once as a kept day and the streak reaches 7 with no letters. The week-end update leaves the count at 0 because there was no forgiven day."
+    },
+    {
+      "id": "s10-travel-ny-to-la",
+      "description": "The user moves from New York to Los Angeles mid-week; each day is evaluated in its own recorded timezone.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept",
+          "timezone": "America/New_York"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "missed",
+          "timezone": "America/New_York"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R2 keeps every day in the Monday-Sunday week of its own local date, so the timezone change does not shift any day into a different week. Tuesday's New York miss is forgiven (forgive-1), the streak counts it, and Friday's Los Angeles day hits streak 5, firing milestone-5. The Sunday week-end update raises the count to 1."
+    },
+    {
+      "id": "s11-travel-tokyo-to-london",
+      "description": "The user moves from Tokyo to London mid-week; each day is evaluated in its own recorded timezone.",
+      "timezone": "Asia/Tokyo",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept",
+          "timezone": "Asia/Tokyo"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept",
+          "timezone": "Asia/Tokyo"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept",
+          "timezone": "Europe/London"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "missed",
+          "timezone": "Europe/London"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept",
+          "timezone": "Europe/London"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept",
+          "timezone": "Europe/London"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept",
+          "timezone": "Europe/London"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Per R2 each day's local date decides its week, so Wednesday's London date stays in the same Monday-Sunday week as the Tokyo days. Thursday's London miss is forgiven (forgive-1), the streak reaches 7, and the Sunday week-end update moves the count to 1."
+    },
+    {
+      "id": "s12-repeated-date-one-day",
+      "description": "Flying Tokyo → Honolulu crosses the date line eastward and repeats local Tuesday; the two Tuesday recordings collapse into one evaluated day.",
+      "timezone": "Asia/Tokyo",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept",
+          "timezone": "Asia/Tokyo"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept",
+          "timezone": "Asia/Tokyo"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept",
+          "timezone": "Pacific/Honolulu"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept",
+          "timezone": "Pacific/Honolulu"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R2: a repeated local date is one day, so the Tokyo and Honolulu entries for 2026-10-06 are evaluated once and there is one expected row for it. The streak goes 1, 2, 3 — not 4."
+    },
+    {
+      "id": "s13-skipped-date-not-missed",
+      "description": "Flying Los Angeles → Sydney crosses the date line westward and skips local Tuesday; the skipped date is not a missed day.",
+      "timezone": "America/Los_Angeles",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept",
+          "timezone": "America/Los_Angeles"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R2: 2026-10-06 never exists locally for this traveller, so it is not a miss. The streak continues from 1 to 2 with no forgiveness used."
+    },
+    {
+      "id": "s14-milestone-5",
+      "description": "Five straight kept days fire the first aura milestone letter.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R3 counts five consecutive kept days, and R7 fires milestone-5 on Friday because the streak is a positive multiple of 5 on a kept day. Forgiveness is never used, so it stays available all week and the count remains 0."
+    },
+    {
+      "id": "s15-milestones-10-and-15",
+      "description": "Fifteen straight kept days fire milestone letters at 5, 10 and 15.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "milestone-15"
+          ]
+        }
+      ],
+      "reasoning": "With no misses at all, R3 climbs uninterrupted and R7 fires milestone-5, milestone-10 and milestone-15 on the exact days the streak hits those values. Both Sundays run the week-end update with no forgiven day and no break, so the count stays 0 and no week-end letter fires."
+    },
+    {
+      "id": "s16-milestone-on-forgiven-day",
+      "description": "Friday's forgiven miss lands exactly on streak 5, co-firing the forgive letter and the milestone letter.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "forgive-1",
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Friday's miss is forgiven under R4, and R7 explicitly covers forgiven days, so the streak reaches 5 and both forgive-1 and milestone-5 fire, in that order. The Sunday week-end update then raises the count to 1."
+    },
+    {
+      "id": "s17-broken-before-milestone",
+      "description": "A second miss in the same week breaks the streak at 4, one day short of the milestone.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Monday's miss is forgiven but Friday's miss fails R4a (a day was already forgiven that week), so the streak resets to 0 at 4 and no milestone fires; R7 reports null because the day was neither kept nor forgiven. R5 zeroes the count immediately on the break day, and the weekend's kept days restart the streak at 1 and 2."
+    },
+    {
+      "id": "s18-sydney-user",
+      "description": "A full week evaluated in Australia/Sydney with one forgiven miss.",
+      "timezone": "Australia/Sydney",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "missed",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept",
+          "timezone": "Australia/Sydney"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "The scenario timezone is Australia/Sydney, so R1 and R2 use Sydney local dates for day and week boundaries. Tuesday's miss is forgiven (forgive-1), Friday hits streak 5 and fires milestone-5, and the Sunday week-end update moves the count to 1."
+    },
+    {
+      "id": "s19-milestone-20-no-letter",
+      "description": "Twenty straight kept days: milestone letters fire at 5, 10 and 15, but day 20 reports the value with no letter.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 20,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "R7 reports auraMilestone 20 on 2026-10-20 because the streak is a positive multiple of 5, but no milestone letter exists beyond milestone-15, so lettersFired is empty that day. The earlier milestones at 5, 10 and 15 each fired their letters normally."
+    },
+    {
+      "id": "s20-six-week-mixed-run",
+      "description": "Six weeks mixing forgiven Sundays and Mondays, a clean week, a DST week, a mid-week break, and milestones with and without letters.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-26",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-27",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-28",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-29",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-30",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-31",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-01",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-02",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-03",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-04",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-12",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "missed"
+        },
+        {
+          "date": "2026-11-15",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 20,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 21,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-restored"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "streak": 22,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-27",
+          "streak": 23,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-28",
+          "streak": 24,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-29",
+          "streak": 25,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 25,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-30",
+          "streak": 26,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-31",
+          "streak": 27,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-01",
+          "streak": 28,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-02",
+          "streak": 29,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-03",
+          "streak": 30,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 30,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-11-04",
+          "streak": 31,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-05",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken"
+          ]
+        },
+        {
+          "date": "2026-11-06",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-07",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-08",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-09",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-10",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-11-11",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-12",
+          "streak": 7,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-13",
+          "streak": 8,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-14",
+          "streak": 9,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-11-15",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        }
+      ],
+      "reasoning": "Weeks 1-2 each forgive one miss and the count reaches 2; week 3 is fully clean so its Sunday resets the count to 0 and fires forgive-restored. Week 4's Thursday miss is forgiven on streak 25, which reports auraMilestone 25 with no letter. Week 5 forgives Tuesday (forgive-2) then breaks on Thursday's second miss (streak-broken), zeroing the count immediately. Week 6 recovers: Saturday's miss is forgiven (forgive-1) and Sunday hits streak 10, firing milestone-10."
+    },
+    {
+      "id": "s21-forgiven-after-same-week-break",
+      "description": "After the limit break on Monday, a second miss the same week also breaks the streak (R4c: forgiveness stays off after any break until next Monday).",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-26",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-27",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-28",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-29",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-30",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-31",
+          "status": "kept"
+        },
+        {
+          "date": "2026-11-01",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "forgive-3-limit",
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 20,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 21,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-off-warning"
+          ]
+        },
+        {
+          "date": "2026-10-26",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken-after-limit"
+          ]
+        },
+        {
+          "date": "2026-10-27",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-28",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken"
+          ]
+        },
+        {
+          "date": "2026-10-29",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-30",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-31",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-11-01",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        }
+      ],
+      "reasoning": "Weeks 1–3 each forgive one miss (count 1, 2, 3; warning on the third Sunday). Monday of week 4 misses with the count at 3, so R4b breaks the streak (streak-broken-after-limit) and R5 sets the count to 0. Wednesday's miss is not forgiven because the streak already broke this week (R4c), so it breaks again (streak-broken). Forgiveness is available again from the next Monday."
+    },
+    {
+      "id": "s22-break-on-sunday",
+      "description": "The week's second miss lands on Sunday: the break and the week-end update happen on the same evaluation.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "missed"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 0,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "streak-broken"
+          ]
+        }
+      ],
+      "reasoning": "Monday's miss is forgiven (forgive-1), so Sunday's miss fails R4a and breaks the streak, firing streak-broken and zeroing the count immediately. The Sunday week-end update then sees a week with a break and keeps the count at 0; no week-end letter fires because forgive-restored requires a break-free week."
+    },
+    {
+      "id": "s23-minimal-forgive-restored",
+      "description": "One forgiven miss in week 1, then a fully clean week 2 restores forgiveness.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-07",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-07",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 5,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 6,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 12,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-restored"
+          ]
+        }
+      ],
+      "reasoning": "Week 1 forgives Wednesday's miss (forgive-1) and the Sunday week-end update moves the count to 1; Sunday's kept day also hits streak 5 and fires milestone-5. Week 2 has no miss and no break, so its Sunday week-end update resets the count to 0 and fires forgive-restored, proving a single clean week re-arms forgiveness."
+    },
+    {
+      "id": "s24-forgive-3-limit-monday",
+      "description": "Three straight Monday forgivenesses; the third Monday co-fires forgive-3-limit with milestone-15 and the warning follows on Sunday.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-05",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-06",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-07",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-19",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-21",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-23",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-24",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-25",
+          "status": "kept"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-05",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-07",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 5,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 6,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 12,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 13,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 14,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-19",
+          "streak": 15,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 15,
+          "lettersFired": [
+            "forgive-3-limit",
+            "milestone-15"
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "streak": 16,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-21",
+          "streak": 17,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-22",
+          "streak": 18,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-23",
+          "streak": 19,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-24",
+          "streak": 20,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 20,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-25",
+          "streak": 21,
+          "forgivenWeeksInARow": 3,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-off-warning"
+          ]
+        }
+      ],
+      "reasoning": "Each Monday miss is forgiven while the count climbs 0 to 1 to 2. The third Monday lands on streak 15, so forgive-3-limit and milestone-15 co-fire in that order. The week-end update then raises the count to 3 and fires forgive-off-warning on Sunday."
+    },
+    {
+      "id": "s25-forgive-2-on-sunday",
+      "description": "Week 2's forgiven day is its Sunday, firing forgive-2 on the same evaluation as the week-end update.",
+      "timezone": "America/New_York",
+      "days": [
+        {
+          "date": "2026-10-07",
+          "status": "missed"
+        },
+        {
+          "date": "2026-10-08",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-09",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-10",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-11",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-12",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-13",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-17",
+          "status": "kept"
+        },
+        {
+          "date": "2026-10-18",
+          "status": "missed"
+        }
+      ],
+      "expectedAfterEachDay": [
+        {
+          "date": "2026-10-07",
+          "streak": 1,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-1"
+          ]
+        },
+        {
+          "date": "2026-10-08",
+          "streak": 2,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-09",
+          "streak": 3,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-10",
+          "streak": 4,
+          "forgivenWeeksInARow": 0,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-11",
+          "streak": 5,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": 5,
+          "lettersFired": [
+            "milestone-5"
+          ]
+        },
+        {
+          "date": "2026-10-12",
+          "streak": 6,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-13",
+          "streak": 7,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-14",
+          "streak": 8,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-15",
+          "streak": 9,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-16",
+          "streak": 10,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": 10,
+          "lettersFired": [
+            "milestone-10"
+          ]
+        },
+        {
+          "date": "2026-10-17",
+          "streak": 11,
+          "forgivenWeeksInARow": 1,
+          "forgivenessAvailableThisWeek": true,
+          "auraMilestone": null,
+          "lettersFired": []
+        },
+        {
+          "date": "2026-10-18",
+          "streak": 12,
+          "forgivenWeeksInARow": 2,
+          "forgivenessAvailableThisWeek": false,
+          "auraMilestone": null,
+          "lettersFired": [
+            "forgive-2"
+          ]
+        }
+      ],
+      "reasoning": "Week 1 forgives Wednesday's miss (forgive-1) and the count moves to 1; Sunday's kept day hits streak 5 and fires milestone-5. Week 2 keeps six days, so the Sunday miss lands on streak 12 and is forgiven because the count was 1, firing forgive-2. The Sunday week-end update then raises the count to 2."
+    }
+  ]
+}
