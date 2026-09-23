@@ -50,6 +50,7 @@ function sync(){
  $('partLabel').textContent=LABELS[selected];
  syncMomOnly();
  syncMaterials();
+ syncSkinChoice();
  ($('undo') as HTMLButtonElement).disabled=!undo.length;($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
 const queue=new LatestPreview<{recipe:Design;message:string}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe))throw Error('Preview was interrupted.');},(job,error)=>{
@@ -58,12 +59,12 @@ const queue=new LatestPreview<{recipe:Design;message:string}>(async job=>{if(!vi
 });
 function render(message:string,persist=false){
  ready=false;($('exportGLB') as HTMLButtonElement).disabled=true;sync();
- if(persist)try{localStorage.setItem(RECIPE_KEY,JSON.stringify(recipe));window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));message='Saved on this device';}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
+ if(persist)try{persistSkinSettings();localStorage.setItem(RECIPE_KEY,JSON.stringify(recipe));window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));message='Saved on this device';}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
  tell('Updating preview…');queue.request({recipe,message});
 }
 function commit(next:Design,rangeId:string|null=null){
  if(JSON.stringify(next)===JSON.stringify(recipe))return;
- if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;if(skinOwner)try{localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify(Object.fromEntries(REGIONS.flatMap(region=>{const id=recipe.materials?.[region]?.textureId;return id?.startsWith('creature-')?[[region,id]]:[]}))));}catch{}render('Coach updated',true);
+ if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;render('Coach updated',true);
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
 // Creatures grouped by design family so 70+ bodies stay scannable in a phone picker.
@@ -103,13 +104,15 @@ for(const id of ['fur','iris','pupilSize','detail']){
 }
 const tabs=[...document.querySelectorAll<HTMLButtonElement>('[data-menu]')];
 const skinTab=document.createElement('button');skinTab.type='button';skinTab.id='tab-skin';skinTab.setAttribute('role','tab');skinTab.setAttribute('aria-controls','panel-skin');skinTab.setAttribute('aria-selected','false');skinTab.tabIndex=-1;skinTab.dataset.menu='skin';skinTab.textContent='Skins';skinTab.hidden=true;
-const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><div><small>INSTALLED REWARDS</small><h2>Creature skins</h2></div></div><label>Owned and installed skin<select id="skinChoice"></select></label><p class="help">Only this account’s unlocked skins with verified offline files appear here. Choose a part in Materials to apply the skin to that part.</p>';
+const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><div><small>INSTALLED REWARDS</small><h2>Creature skins</h2></div></div><label>Owned and installed skin<select id="skinChoice"></select></label><p class="help">Only this account’s unlocked skins with verified offline files appear here. Choose a part in Texture to apply the skin to that part.</p>';
 document.querySelector('.menu-tabs')?.append(skinTab);document.querySelector('.console-scroll')?.append(skinPanel);tabs.push(skinTab);
 const shipTab=document.createElement('button');shipTab.type='button';shipTab.id='tab-ship';shipTab.setAttribute('role','tab');shipTab.setAttribute('aria-controls','panel-ship');shipTab.setAttribute('aria-selected','false');shipTab.tabIndex=-1;shipTab.dataset.menu='ship';shipTab.textContent='Ship';shipTab.hidden=true;
 const shipPanel=document.createElement('div');shipPanel.id='panel-ship';shipPanel.setAttribute('role','tabpanel');shipPanel.setAttribute('aria-labelledby','tab-ship');shipPanel.tabIndex=0;shipPanel.hidden=true;shipPanel.innerHTML='<div class="panel-heading"><div><small>YOUR ARRIVAL</small><h2>Ship</h2></div></div><div class="field-grid"><label>Owned ship<select id="shipChoice"></select></label><label>Ship tint<input id="shipTint" type="color" value="#ffffff"></label></div><p class="help">Choose an owned ship and tint. Your choice is saved separately from the coach recipe.</p>';
 document.querySelector('.menu-tabs')?.append(shipTab);document.querySelector('.console-scroll')?.append(shipPanel);tabs.push(shipTab);
 const SHIP_SETTINGS_KEY='myr5-ship-customization-v1';
 const SKIN_SETTINGS_PREFIX='myr5-editor-skins-v1/account/';let skinOwner:string|null=null;
+// Persist from the current recipe for every edit, including Undo and Redo.
+function persistSkinSettings(){if(skinOwner)localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify(Object.fromEntries(REGIONS.flatMap(region=>{const id=recipe.materials?.[region]?.textureId;return id?.startsWith('creature-')?[[region,id]]:[]}))));}
 function skinSettings(){if(!skinOwner)return{};try{const value=JSON.parse(localStorage.getItem(SKIN_SETTINGS_PREFIX+skinOwner)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 const editorOwner=()=>{const account=window.myr5AuthenticatedAccount;return typeof account==='string'?account:account?.user?.id;};
 function shipSettings(){try{const owner=editorOwner();if(!owner)return{};const value=JSON.parse(localStorage.getItem(`${SHIP_SETTINGS_KEY}/${owner}`)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}}
@@ -121,7 +124,7 @@ let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,sk
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}
 function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;return option}));select.value='';syncSkinChoice();}
 async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
- const run=++skinEpoch,owner=typeof account==='string'?account:account?.user?.id||null;skinOwner=owner;skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);renderSkinChoices();
+ const run=++skinEpoch,owner=typeof account==='string'?account:account?.user?.id||null;if(owner!==skinOwner){undo=[];redo=[];activeRange=null;}skinOwner=owner;skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);renderSkinChoices();
  if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};
  skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);
  if(!owner){render('Your coach is ready');return;}
@@ -129,7 +132,7 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
  if(!rows.length){source.dispose();render('Your coach is ready');return;}
  skinSource=source;skinChoices=rows.map(({id,displayName})=>({id,displayName}));viewer?.setSkinResolver(source.resolve);skinTab.hidden=false;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','false');const remembered=skinSettings();for(const region of REGIONS){const id=remembered[region];if(typeof id==='string'&&skinChoices.some(s=>s.id===id))recipe={...recipe,materials:{...recipe.materials,[region]:{...(recipe.materials?.[region]??DEFAULT_MATERIAL),textureId:id}}};}renderSkinChoices();render('Installed skins ready');
 }
-skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;try{localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify({...skinSettings(),[selected]:id}));}catch{}setMaterial({textureId:id});});
+skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;setMaterial({textureId:id});});
 window.addEventListener('myr5:account-ready',event=>void refreshSkinEditor((event as CustomEvent).detail));window.addEventListener('myr5:account-cleared',()=>void refreshSkinEditor(null));window.addEventListener('myr5:battle-pass',()=>void refreshSkinEditor());window.addEventListener('storage',event=>{if(event.key?.startsWith('myr5-battle-pass-ledger-v1/account/')||event.key==='myr5-battle-pass-ledger-v1')void refreshSkinEditor();});
 function openMenu(tab:HTMLButtonElement){if(tab.hidden)return;activeRange=null;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye');else if(tab.dataset.menu==='body')focusPart('body');else if(tab.dataset.menu==='materials')focusPart(selected);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
 tabs.forEach(b=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{const enabled=tabs.filter(tab=>!tab.hidden),index=enabled.indexOf(b);let next=index;if(event.key==='ArrowRight')next=(index+1)%enabled.length;else if(event.key==='ArrowLeft')next=(index+enabled.length-1)%enabled.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=enabled.length-1;else return;event.preventDefault();openMenu(enabled[next]);enabled[next].focus();};});

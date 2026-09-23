@@ -17,10 +17,12 @@ async function withPage(run){
  // Bundled (like the deployed app-runtime.mjs) so battle-pass.mjs's .ts import resolves without
  // a full Vite dev server; 'three' stays external, resolved by the page's own import map at runtime.
  const bundle=await build({entryPoints:['modules/ships/ship-view.mjs'],bundle:true,write:false,format:'esm',target:'es2022',external:['three','three/addons/loaders/GLTFLoader.js']});
+ const arrivalBundle=await build({stdin:{contents:"export {mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';export {grantUnlock} from './unlock-ledger.mjs';export {hasSeenShipReveal,coachEditorShips} from './modules/ships/ship-access.mjs';",resolveDir:process.cwd()},bundle:true,write:false,format:'esm',target:'es2022',external:['three','three/addons/loaders/GLTFLoader.js','./modules/ships/ship-intro.mjs']});
  const root=resolve('.');
  const server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://test').pathname;
   if(path==='/'){res.setHeader('Content-Type','text/html');res.end(HTML);return;}
+  if(path==='/arrival.js'){res.setHeader('Content-Type','text/javascript');res.end(arrivalBundle.outputFiles[0].text);return;}
   if(path==='/ship-view.js'){res.setHeader('Content-Type','text/javascript');res.end(bundle.outputFiles[0].text);return;}
   try{
    const file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();
@@ -142,4 +144,93 @@ test('an available ship bridge renders the ship over the coach instead of the fa
  await page.locator('.ship-view-close').click();
  await page.waitForFunction(()=>bridgeDisposes===1);
  assert.equal(await page.locator('.ship-view-canvas').count(),0);
+}));
+
+async function primeArrival(page) {
+ await primeFixture(page);
+ await page.evaluate(async()=>{
+  const THREE=await import('/vendor/three/three.module.js'),{GLTFLoader}=await import('/vendor/three/GLTFLoader.js');
+  GLTFLoader.prototype.loadAsync=async()=>{const model=new THREE.Group();model.add(new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial()));return {scene:model};};
+  const {openShipView}=await import('/ship-view.js'),arrival=await import('/arrival.js');
+  window.arrival=arrival;window.myr5AuthenticatedAccount={user:{id:'owner-a'}};
+  arrival.grantUnlock('ship','ship-supportive',{account:'owner-a'});
+  window.bridgeDisposes=0;window.makeBridge=()=>({ownedShipIds:()=>['supportive'],getShipUrl:()=>'blob:verified',getBackgroundUrl:()=>'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',dispose:()=>window.bridgeDisposes++});
+  window.openArrival=(getBridge=async()=>makeBridge())=>openShipView({loadCoachViewer:fakeLoadCoachViewer,getBridge,mountArrival:arrival.mountFirstShipArrival});
+  window.arrivalEvents=[];window.addEventListener('myr5:ship-scene-ready',e=>arrivalEvents.push(e.detail));
+ });
+}
+
+test('first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive',async()=>withPage(async page=>{
+ await primeArrival(page);
+ await page.evaluate(()=>{window.opening=openArrival();});
+ await page.waitForSelector('.ship-scene-beam.is-charging');
+ assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),false);
+ assert.equal(await page.locator('.ship-view-coach').evaluate(el=>getComputedStyle(el).opacity),'0');
+ await page.evaluate(()=>window.opening);
+ assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),true);
+ assert.deepEqual(await page.evaluate(()=>arrival.coachEditorShips()),['supportive']);
+ assert.equal(await page.evaluate(()=>arrivalEvents.filter(e=>e.revealComplete).length),1);
+ assert.equal(await page.locator('.ship-view-coach').evaluate(el=>getComputedStyle(el).opacity),'1');
+ await page.locator('.ship-view-close').click();await page.waitForFunction(()=>location.hash!=='#ship');
+ assert.equal(await page.locator('#coachMount .myr5-companion-card').count(),1);
+ await page.evaluate(()=>openArrival());
+ assert.equal(await page.locator('.ship-scene').count(),0);
+ assert.equal(await page.locator('.ship-view-canvas').count(),1);
+ assert.equal(await page.evaluate(()=>arrivalEvents.filter(e=>e.revealComplete).length),1);
+ await page.locator('.ship-view-close').click();await page.waitForFunction(()=>location.hash!=='#ship');
+ await page.evaluate(()=>{
+  arrival.grantUnlock('ship','ship-direct',{account:'owner-a'});
+  localStorage.setItem('myr5-ship-customization-v1/owner-a',JSON.stringify({ship:'supportive'}));
+  const previous=makeBridge;window.makeBridge=()=>({...previous(),ownedShipIds:()=>['supportive','direct']});
+ });
+ await page.evaluate(()=>openArrival());
+ assert.equal(await page.locator('.ship-scene').getAttribute('data-ship'),'direct','new unseen ship takes precedence over a previously customized ship');
+ assert.deepEqual(await page.evaluate(()=>arrival.coachEditorShips()),['supportive','direct']);
+}));
+
+test('closing or changing account during real arrival cancels without marking seen or retaining coach',async()=>withPage(async page=>{
+ await primeArrival(page);
+ for(const action of ['close','account']) {
+  await page.evaluate(()=>{window.opening=openArrival();});
+  await page.waitForSelector('.ship-scene-beam.is-charging');
+  if(action==='close')await page.locator('.ship-view-close').click();
+  else await page.evaluate(()=>{window.myr5AuthenticatedAccount={user:{id:'owner-b'}};window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:myr5AuthenticatedAccount}));});
+  await page.evaluate(()=>window.opening);await page.waitForFunction(()=>location.hash!=='#ship');
+  assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive',{account:'owner-a'})),false);
+  assert.equal(await page.locator('.ship-scene').count(),0);
+  assert.equal(await page.locator('.ship-scene-flash').count(),0);
+  assert.equal(await page.locator('#coachMount .myr5-companion-card').count(),1);
+  assert.equal(await page.evaluate(()=>arrivalEvents.length),0);
+ }
+}));
+
+test('account change while verifying bridge discards late assets and cannot start an arrival',async()=>withPage(async page=>{
+ await primeArrival(page);
+ await page.evaluate(()=>{window.opening=openArrival(()=>new Promise(resolve=>window.finishBridge=resolve));});
+ await page.waitForFunction(()=>typeof window.finishBridge==='function');
+ await page.evaluate(()=>{window.myr5AuthenticatedAccount={user:{id:'owner-b'}};window.dispatchEvent(new CustomEvent('myr5:account-ready'));window.finishBridge(makeBridge());});
+ await page.evaluate(()=>window.opening);
+ assert.equal(await page.evaluate(()=>bridgeDisposes),1);
+ assert.equal(await page.locator('.ship-scene').count(),0);
+ assert.equal(await page.locator('.ship-view-canvas').count(),0);
+ assert.equal(await page.evaluate(()=>arrivalEvents.length),0);
+ assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive',{account:'owner-a'})),false);
+}));
+
+
+test('closing while the optional arrival module loads prevents a late scene and leaves reveal unseen',async()=>withPage(async page=>{
+ await primeArrival(page);
+ let releaseRequest;
+ const requested=new Promise(resolve=>{releaseRequest=resolve;});
+ await page.route('**/modules/ships/ship-intro.mjs',route=>{releaseRequest(route);});
+ await page.evaluate(()=>{window.opening=openArrival();});
+ const pending=await requested;
+ await page.locator('.ship-view-close').click();
+ await page.waitForFunction(()=>!document.querySelector('.ship-view').open);
+ await pending.continue();await page.evaluate(()=>window.opening);
+ assert.equal(await page.evaluate(()=>bridgeDisposes),1);
+ assert.equal(await page.locator('.ship-scene').count(),0);
+ assert.equal(await page.evaluate(()=>arrivalEvents.length),0);
+ assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),false);
+ assert.equal(await page.locator('#coachMount .myr5-companion-card').count(),1);
 }));

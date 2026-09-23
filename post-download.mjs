@@ -25,18 +25,20 @@ export function mountPostDownload({host}){
  // Account-bound, signed optional packets live beside (not inside) the legacy anonymous package.
  // Do not even add their controls to the anonymous page: mount them only after the same-origin
  // account bridge publishes a stable owner, and remove them again as soon as that owner clears.
- let sectionControls=null,sectionEpoch=0;
+ let sectionControls=null,sectionEpoch=0,mountedOwner=null;
  const sectionOwner=value=>typeof value?.user?.id==='string'?value.user.id:null;
- const clearSections=()=>{++sectionEpoch;sectionControls?.dispose();sectionControls=null;};
+ const clearSections=()=>{++sectionEpoch;sectionControls?.dispose();sectionControls=null;mountedOwner=null;};
  const mountSections=async account=>{
-  const owner=sectionOwner(account),run=++sectionEpoch;if(!owner)return;
+  const owner=sectionOwner(account),run=++sectionEpoch;if(!owner)return;mountedOwner=owner;
   try{
    const {mountPostDownloadSections}=await import('./modules/materials/post-download-ui.mjs');
    if(run!==sectionEpoch||sectionOwner(window.myr5AuthenticatedAccount)!==owner)return;
-   sectionControls=mountPostDownloadSections({host:settings,account});
-  }catch(error){console.warn('Extra offline packs unavailable',error);}
+   sectionControls=mountPostDownloadSections({host:settings,account:window.myr5AuthenticatedAccount});
+   if(!sectionControls)mountedOwner=null;
+  }catch(error){if(run===sectionEpoch)mountedOwner=null;console.warn('Extra offline packs unavailable',error);}
  };
- const sectionsReady=event=>{clearSections();void mountSections(event.detail);};
+ // The section UI receives account updates itself; polling the same owner must not dispose it.
+ const sectionsReady=event=>{if(mountedOwner&&sectionOwner(event.detail)===mountedOwner)return;clearSections();void mountSections(event.detail);};
  const sectionsCleared=()=>clearSections();
  window.addEventListener('myr5:account-ready',sectionsReady);window.addEventListener('myr5:account-cleared',sectionsCleared);
  void mountSections(window.myr5AuthenticatedAccount);
@@ -109,7 +111,8 @@ export function mountPostDownload({host}){
   }catch(error){
    if(signal.aborted){phase='paused';write(localStorage,STATE,'paused');write(sessionStorage,LATER,'1');}
    else{phase='error';message=error.shown?error.message:error.name==='QuotaExceededError'?'Not enough free space. Free some up, then resume.':'Download stopped. Check your connection; it continues where it left off.';}
-  }finally{controller=null;got=0;paint();}
+  // Keep saved bytes against this plan until the next worker plan replaces both plan and got.
+  }finally{controller=null;paint();}
  }
  function openOffer(){
   if(!plan?.remaining||controller||offer.open)return;

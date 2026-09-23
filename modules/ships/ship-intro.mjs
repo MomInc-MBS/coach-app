@@ -10,7 +10,7 @@ const savedShip=owner=>{try{return JSON.parse(localStorage.getItem(`${SHIP_SETTI
 function disposeModel(root){const geometries=new Set(),materials=new Set(),textures=new Set();root?.traverse(node=>{if(node.geometry)geometries.add(node.geometry);for(const mat of Array.isArray(node.material)?node.material:[node.material])if(mat){materials.add(mat);for(const value of Object.values(mat))if(value?.isTexture)textures.add(value);}});for(const t of textures){t.source?.data?.close?.();t.dispose();}for(const m of materials)m.dispose();for(const g of geometries)g.dispose();}
 
 /** Mount the coach-arrival scene. `assetBridge` must come from signed, owned, verified chunk data. */
-export function mountShipScene({host=document.getElementById('view'),customizer='/creature/index.html',assetBridge}={}){
+export function mountShipScene({host=document.getElementById('view'),customizer='/creature/index.html',assetBridge,ship:initialShip}={}){
  if(!host||!assetBridge?.getShipUrl||!assetBridge?.getBackgroundUrl)throw new Error('A verified owned ship section is required.');
  const ownerId=globalThis.myr5AuthenticatedAccount?.user?.id;if(!ownerId)throw new Error('An authenticated ship owner is required.');
  const lifecycle=new AbortController();
@@ -29,7 +29,7 @@ export function mountShipScene({host=document.getElementById('view'),customizer=
  camera.position.set(0,.45,7);camera.lookAt(0,.9,0);scene.add(new THREE.HemisphereLight(0xe9d9ff,0x23162d,2.5));
  const key=new THREE.DirectionalLight(0xffefca,4.2);key.position.set(-3,5,4);key.castShadow=true;scene.add(key);const rim=new THREE.DirectionalLight(0xb58cff,3.2);rim.position.set(4,2,-3);scene.add(rim);
  const manager=new THREE.LoadingManager();manager.setURLModifier(url=>{if(!/^(blob:|data:)/.test(url))throw new Error('Ship assets must be embedded verified bytes');return url;});
- const loader=new GLTFLoader(manager),raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),cache=new Map(),models=new Set(),custom=savedShip(ownerId);let state={...initialScene(recipe()),ship:ownedShips.includes(custom.ship)?custom.ship:ownedShips.includes(recipe().coach)?recipe().coach:ownedShips[0]},ship=null,shipMeshes=[],shipEpoch=0,disposed=false,raf=0,approachStart=0,approaching=false,hoverStart=performance.now(),swapChain=Promise.resolve(),shipTint=/^#[0-9a-f]{6}$/i.test(custom.tint||'')?custom.tint:'#ffffff';
+ const loader=new GLTFLoader(manager),raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),cache=new Map(),models=new Set(),custom=savedShip(ownerId);let state={...initialScene(recipe()),ship:ownedShips.includes(initialShip)?initialShip:ownedShips.includes(custom.ship)?custom.ship:ownedShips.includes(recipe().coach)?recipe().coach:ownedShips[0]},ship=null,shipMeshes=[],shipEpoch=0,disposed=false,raf=0,approachStart=0,approaching=false,hoverStart=performance.now(),swapChain=Promise.resolve(),shipTint=/^#[0-9a-f]{6}$/i.test(custom.tint||'')?custom.tint:'#ffffff';
  const css=document.createElement('link');css.rel='stylesheet';css.href='/modules/ships/ship-scene.css';document.head.append(css);
  const resize=()=>{const rect=root.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()};
  const observer=new ResizeObserver(resize);observer.observe(root);resize();

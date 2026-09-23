@@ -5,7 +5,7 @@
 // instead of being fetched raw by the browser, where the define would be undefined and the .ts file
 // would 404. tests/ship-view-import-graph.test.mjs enforces that ship-view.mjs never re-acquires
 // this chain.
-import {ownedShipIds} from './ship-access.mjs';
+import {ownedShipIds,hasSeenShipReveal,acceptShipRevealComplete} from './ship-access.mjs';
 import {createVerifiedShipAssetBridge} from './verified-ship-assets.mjs';
 import {productionMaterialTrust} from '../materials/material-config.mjs';
 import {resolvePostDownloadSection} from '../materials/post-download-sections.mjs';
@@ -20,9 +20,34 @@ export {ownedShipIds};
 export async function localVerifiedBridge() {
  const account = globalThis.myr5AuthenticatedAccount, owner = account?.user?.id;
  if (!owner || !ownedShipIds().length) return null;
+ const assertOwner = () => { if (globalThis.myr5AuthenticatedAccount?.user?.id !== owner) throw new DOMException('Ship owner changed', 'AbortError'); };
  const trust = productionMaterialTrust(); if (!trust) return null;
  const resolved = await resolvePostDownloadSection('coach-ships-biomes', { trust });
- const downloader = new ChunkDownloader({ store: indexedDbChunkStore(), policy: DEFAULT_LOCAL_RESOURCE_POLICY, expectedVersion: resolved.manifest.version, manifestPublicKey: resolved.trust, ownership: async () => owner });
+ assertOwner();
+ const downloader = new ChunkDownloader({ store: indexedDbChunkStore(), policy: DEFAULT_LOCAL_RESOURCE_POLICY, expectedVersion: resolved.manifest.version, manifestPublicKey: resolved.trust, ownership: async () => { assertOwner(); return owner; } });
  await downloader.verifyStored(resolved.manifest); // local store reads + hash checks only, no network
- return createVerifiedShipAssetBridge({ downloader, manifest: resolved.manifest, isOwned: id => id === 'coach-ships-biomes', canUseShip: ownedShipIds });
+ assertOwner();
+ return createVerifiedShipAssetBridge({ downloader, manifest: resolved.manifest, isOwned: id => id === 'coach-ships-biomes' && globalThis.myr5AuthenticatedAccount?.user?.id === owner, canUseShip: () => { assertOwner(); return ownedShipIds(); } });
+}
+
+/** Called only with the view's verified local bridge. The real post-flash scene
+ * event is the sole source of reveal completion; cancellation never marks seen. */
+export async function mountFirstShipArrival({host,assetBridge,isCurrent = () => true}) {
+ const ownerId = globalThis.myr5AuthenticatedAccount?.user?.id;
+ const ship = assetBridge.ownedShipIds().find(id => !hasSeenShipReveal(id));
+ if (!ownerId || !ship) return null;
+ // Optional scene code must not become a core-only offline startup dependency.
+ const {mountShipScene} = await import('./ship-intro.mjs');
+ if (!isCurrent() || globalThis.myr5AuthenticatedAccount?.user?.id !== ownerId) throw new DOMException('Ship arrival cancelled', 'AbortError');
+ let scene, disposed = false;
+ const complete = event => {
+  if (!disposed && scene && event.detail?.ownerId === ownerId && event.detail?.ship === ship) acceptShipRevealComplete(event);
+ };
+ window.addEventListener('myr5:ship-scene-ready', complete);
+ try { scene = mountShipScene({host,assetBridge,ship}); }
+ catch (error) { window.removeEventListener('myr5:ship-scene-ready', complete); throw error; }
+ return {
+  ready: scene.ready.finally(() => window.removeEventListener('myr5:ship-scene-ready', complete)),
+  dispose() { if (disposed) return; disposed = true; window.removeEventListener('myr5:ship-scene-ready', complete); scene.dispose(); }
+ };
 }

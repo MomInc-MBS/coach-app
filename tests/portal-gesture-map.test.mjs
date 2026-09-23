@@ -18,7 +18,7 @@ test('gesture id -> destination label matches the map',()=>{
   'line-lr':'Meditation',
   'line-rl':'Reminders',
   'line-down':'Settings',
-  'line-up':'Share QR', // not built: opens the Menu sheet instead
+  'line-up':'Menu', // opens the Menu sheet
  };
  for(const [id,label] of Object.entries(table))assert.equal(MENUS[id]?.label,label,id);
  // cross has no destination of its own: today's "everything falls in, Menu sheet opens" stays in portal.mjs's portalSequence.
@@ -32,7 +32,7 @@ test('both diamond orientations route to the exact same Leaderboard destination,
  assert.equal(MENUS.hdiamond.hidden,true);
 });
 
-test('Share QR (line-up) opens the Menu sheet, not a dialog, and is hidden from the sheet grid itself',()=>{
+test('Menu (line-up) opens the Menu sheet, not a dialog, and is hidden from the sheet grid itself',()=>{
  assert.equal(MENUS['line-up'].kind,'menu');
  assert.equal(MENUS['line-up'].hidden,true);
 });

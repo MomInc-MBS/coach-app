@@ -24,8 +24,7 @@ function disposeModel(root) {
 }
 
 /** A still (idle hover only) ship + biome backdrop, not the full approach/beam/flash cinematic —
- * this is a passive viewer, not the unlock reveal. ponytail: no tint/customizer-tap here; add if
- * Ian wants the full ship-intro.mjs treatment reused instead of this lighter still scene. */
+ * used after the first arrival has completed. */
 async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  const [THREE, { GLTFLoader }] = await Promise.all([import('three'), import('three/addons/loaders/GLTFLoader.js')]);
  bgEl.style.backgroundImage = `url("${bridge.getBackgroundUrl(background)}")`;
@@ -68,6 +67,7 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
 }
 
 let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null;
+let viewOwner = null;
 let realShip = null, pushedHash = false, openEpoch = 0;
 
 function showFallback({ text, download }) { bgEl.className = 'ship-view-bg ship-view-bg-fallback'; bgEl.style.backgroundImage = ''; fallback.querySelector('p').textContent = text; downloadBtn.hidden = !download; fallback.hidden = false; }
@@ -103,7 +103,10 @@ function build() {
  downloadBtn.onclick = () => { if (typeof window.myr5Packs?.open === 'function') window.myr5Packs.open('coach-ships-biomes'); else document.querySelector('.coach-dock [data-panel="install"]')?.click(); };
  dialog.addEventListener('close', onClose);
  window.addEventListener('popstate', onPopState);
- window.addEventListener('pagehide', () => realShip?.dispose());
+ window.addEventListener('pagehide', () => { openEpoch++; clearShipVisual(); });
+ const accountChanged = () => { if (dialog.open && globalThis.myr5AuthenticatedAccount?.user?.id !== viewOwner) { openEpoch++; clearShipVisual(); dialog.close(); } };
+ window.addEventListener('myr5:account-ready', accountChanged);
+ window.addEventListener('myr5:account-cleared', accountChanged);
  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/modules/ships/ship-view.css'; document.head.append(css);
 }
 
@@ -113,9 +116,11 @@ function build() {
  * `ownedShipIds` come from app.mjs's statically-bundled modules/ships/ship-view-bridge.mjs (this
  * file is served unbundled and cannot import that chain itself — see the header comment). Both are
  * overridable for tests. */
-export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [] } = {}) {
+export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [], mountArrival = () => null } = {}) {
  if (!dialog) build();
  const epoch = ++openEpoch;
+ const owner = viewOwner = globalThis.myr5AuthenticatedAccount?.user?.id;
+ const isCurrent = () => epoch === openEpoch && dialog.open && globalThis.myr5AuthenticatedAccount?.user?.id === owner;
  clearShipVisual(); note.textContent = 'Preparing your coach…';
  const firstOpen = !dialog.open;
  if (firstOpen) dialog.showModal();
@@ -123,21 +128,30 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
  document.body.dataset.shipView = 'true';
  try { await loadCoachViewer?.(); } catch { /* surfaced below via the missing card */ }
  const card = await waitForCard();
- if (epoch !== openEpoch) return dialog;
+ if (!isCurrent()) return dialog;
  if (card) { coachMount.append(card); note.textContent = ''; }
  else note.textContent = 'Coach could not load. Check your connection and try again.';
  const signedIn = !!globalThis.myr5AuthenticatedAccount?.user?.id;
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
- if (epoch !== openEpoch) { bridge?.dispose?.(); return dialog; }
+ if (!isCurrent()) { bridge?.dispose?.(); return dialog; }
  if (!bridge) { showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); return dialog; }
  try {
-  const owner = globalThis.myr5AuthenticatedAccount?.user?.id, owned = bridge.ownedShipIds();
+  const owned = bridge.ownedShipIds();
+  const arrival = await mountArrival({host:stage,assetBridge:bridge,isCurrent});
+  if (!isCurrent()) { if (arrival) arrival.dispose(); else bridge.dispose?.(); return dialog; }
+  if (arrival) {
+   realShip = arrival;
+   const completed = await arrival.ready;
+   if (!isCurrent()) { arrival.dispose(); return dialog; }
+   if (!completed) throw new Error('Ship arrival did not complete');
+   fallback.hidden = true; return dialog;
+  }
   const scene = initialScene(readJSON(RECIPE_KEY)), custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
   const shipId = owned.includes(custom.ship) ? custom.ship : owned.includes(scene.ship) ? scene.ship : owned[0];
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
-  if (epoch !== openEpoch) { mounted.dispose(); return dialog; }
+  if (!isCurrent()) { mounted.dispose(); return dialog; }
   realShip = mounted; fallback.hidden = true;
- } catch { bridge.dispose?.(); showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); }
+ } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); }
  return dialog;
 }

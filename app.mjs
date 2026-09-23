@@ -15,7 +15,7 @@ import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
-import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds} from './modules/ships/ship-view-bridge.mjs';
+import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
 import {isInstalled} from './install-context.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
@@ -206,7 +206,7 @@ window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalReady())void showQuiltPortal({shouldShow:starterPortalReady});
 });
 // D-ship-route: full-screen ship view, same coach capsule renderer as "Show my coach" below.
-window.myr5Menus={...window.myr5Menus,ship:async()=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds});}};
+window.myr5Menus={...window.myr5Menus,ship:async()=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds,mountArrival:mountFirstShipArrival});}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();

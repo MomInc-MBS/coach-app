@@ -25,7 +25,7 @@ await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,forma
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
-await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs'],define:materialRelease.defines});
+await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs'],define:materialRelease.defines});
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs'],define:materialRelease.defines});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});

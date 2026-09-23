@@ -55,8 +55,8 @@ export const MENUS={
  'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
  'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');}},
  'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open(){document.getElementById('openSettings')?.click();return document.getElementById('settings');}},
- // Share QR isn't built: trace it and get today's Menu sheet instead.
- 'line-up':{label:'Share QR',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
+ // Line-up opens the Menu sheet; it is hidden from the sheet grid itself.
+ 'line-up':{label:'Menu',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
  // Full-screen ship view (Ian 2026-09-22: the coach capsule view, full screen, with the ship and pixel planet). Menu sheet only.
  ship:{label:'Ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:()=>window.myr5Menus?.ship?.()},
  // War Room/Arcade has no gesture: Menu sheet only, same lock as before.

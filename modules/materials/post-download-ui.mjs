@@ -62,6 +62,7 @@ export function mountPostDownloadSections({ host, account=globalThis.myr5Authent
       catch(error){if(!signal.aborted)console.warn(`Offline pack unavailable: ${section.id}`,error);return [section.id,null];}
     }));
     if(refreshEpoch!==epoch||!allowed()||signal.aborted)return;
+    checking=null;
     available=new Map(results.filter(([,value])=>value));
     const failed=results.length-available.size;
     render();
@@ -70,7 +71,7 @@ export function mountPostDownloadSections({ host, account=globalThis.myr5Authent
     else if(!actions.childElementCount)panel.hidden=true;
     else status.textContent='';
   }
-  const onReady=event=>{currentAccount=event.detail;void refresh();};
+  const onReady=event=>{currentAccount=event.detail;if(owner&&accountId(currentAccount)===owner){if(!controller&&!pausedIds&&!checking&&available.size<POST_DOWNLOAD_SECTIONS.length)void refresh();else render();return;}void refresh();};
   const onCleared=()=>{currentAccount=null;void refresh();};
   window.addEventListener('myr5:account-ready',onReady);window.addEventListener('myr5:account-cleared',onCleared);
   void refresh();

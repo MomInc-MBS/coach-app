@@ -3,6 +3,7 @@
 // advanced, and rows outside the user's paths, are locked and not clickable. AGPL-3.0-or-later.
 // The two swap points (selected paths, beaten levels) read the battle-pass API (rank 6b, D30).
 import {selectedTracks,loadProgress} from './battle-pass.mjs';
+import {bossRewards} from './battle-pass-rewards.mjs';
 export {selectedTracks,loadProgress};
 const IMAGE='/pod/worlds/achievements.jpg';
 // D25 track ids. Row → track is a default (top to bottom in dial order) — change freely; Ian hasn't assigned rows.
@@ -25,6 +26,7 @@ export const TIERS=[
 export const LEVELS=[['Weapon 1','Texture 1'],['Colour palette','Boss texture'],['Weapon 2','Special','Texture 2'],['Pet'],['Aura','Boss skin','Texture 3']];
 export const MAX_LEVEL=LEVELS.length;
 export const BOSSES=TIERS.flatMap((tier,t)=>tier.boxes.map((box,i)=>({id:`${tier.id}-${i+1}`,name:tier.boxes.length>1?`${tier.name} ${i+1}`:tier.name,tier:t,track:tier.track,color:tier.color,box})));
+export const levelRewardsForBoss=bossId=>bossRewards(bossId);
 
 // progress = {bossId: levels beaten}; tracks = the user's available track ids (null = every track).
 // Ian (22 Sept): the rows available to each user are their selected paths plus Meditation. Within an
@@ -73,6 +75,8 @@ function zoom(b,btn){
  const path=b.track?TRACK_NAMES[b.track]:'Shared';
  detail.innerHTML=`<h2>${b.name}</h2><hr><p class="ach-status">${path} · ${b.state==='done'?'every level beaten':`${b.levels} of ${MAX_LEVEL} levels beaten · beat level ${b.levels+1} next`}</p><ol>${LEVELS.map((rewards,i)=>`<li data-step="${i<b.levels?'done':i===b.levels?'next':'todo'}"><b>Level ${i+1}</b><span>${rewards.join(' · ')}</span></li>`).join('')}</ol><button type="button" class="ach-back">Back</button>`;
  detail.hidden=false;detail.querySelector('.ach-back').onclick=unzoom;
+ const rewards=levelRewardsForBoss(b.id);
+ detail.querySelectorAll('ol li span').forEach((span,i)=>{const items=rewards[i]||[];span.textContent=items.length?items.map(item=>`${item.name}${item.line?` — ${item.line}`:''}`).join(' · '):'No reward';});
 }
 function unzoom(){stage.style.transform='';dialog.classList.remove('zoomed');detail.hidden=true;stage.querySelector('.ach-boss.selected')?.classList.remove('selected');}
 export function openAchievements(){

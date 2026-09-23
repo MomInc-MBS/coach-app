@@ -28,7 +28,13 @@ test('signed packet UI pauses/resumes verified chunks, resets on account switch 
   const data=new Map(),store={get:async k=>data.get(k),put:async(k,v)=>data.set(k,new Uint8Array(v)),removePrefix:async p=>{for(const k of data.keys())if(k.startsWith(p))data.delete(k);}};
   window.packs=mountPostDownloadSections({host:document.querySelector('#packs'),trust,fetchImpl,store,policy:{maxChunkBytes:1024,maxAssetBytes:1024,maxPackBytes:2048,maxAssets:16,maxChunksPerAsset:256,trustedOrigins:['https://pack.test'],allowedProtocols:['https:'],pathPrefix:'/materials/'}});
  },{trust,manifests});
- await page.getByRole('button',{name:'Download starter styles',exact:true}).click();await page.waitForFunction(()=>assetCalls===1);await page.getByRole('button',{name:'Pause',exact:true}).click();await page.getByRole('button',{name:'Resume starter styles',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Download starter styles',exact:true}).click();await page.waitForFunction(()=>assetCalls===1);
+ await page.evaluate(()=>{window.myr5AuthenticatedAccount={user:{id:'owner-a'},progress:{completedSets:2}};window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:window.myr5AuthenticatedAccount}));});
+ assert.equal(await page.getByRole('button',{name:'Pause',exact:true}).isVisible(),true,'same-owner account refresh preserves the active download');
+ assert.equal(await page.evaluate(()=>assetCalls),1,'same-owner refresh does not restart the transfer');
+ await page.getByRole('button',{name:'Pause',exact:true}).click();await page.getByRole('button',{name:'Resume starter styles',exact:true}).waitFor();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:window.myr5AuthenticatedAccount})));
+ await page.getByRole('button',{name:'Resume starter styles',exact:true}).waitFor();
  await page.evaluate(()=>{window.hold=false;});await page.getByRole('button',{name:'Resume starter styles',exact:true}).click();await page.getByText('Offline packs ready.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>assetCalls),5);
  await page.getByRole('button',{name:'Download starter styles',exact:true}).click();await page.getByText('Offline packs ready.',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>assetCalls),5,'verified cached chunks are reused');
  await page.evaluate(()=>{window.deferDiscovery=true;void packs.refresh();window.myr5AuthenticatedAccount={user:{id:'owner-b'}};window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:window.myr5AuthenticatedAccount}));window.myr5AuthenticatedAccount=null;window.dispatchEvent(new Event('myr5:account-cleared'));for(const resolve of discoveries)resolve();});

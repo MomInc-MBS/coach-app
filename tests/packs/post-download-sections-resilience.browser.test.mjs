@@ -51,6 +51,12 @@ test('every section failing keeps the panel visible with a plain-language status
  await retryButton.click();
  await page.getByRole('button',{name:'Download ships & worlds',exact:true}).waitFor();
  assert.equal(await retryButton.isHidden(),true,'Retry is hidden again once every section resolves');
+ // A settled failed discovery also recovers on the normal same-owner account poll.
+ await page.evaluate(async()=>{window.broken=true;await packs.refresh();});
+ await page.getByText('Could not check offline packs. Check your connection, then try again.').waitFor();
+ await page.evaluate(()=>{window.broken=false;window.myr5AuthenticatedAccount={user:{id:'owner-a'}};window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:window.myr5AuthenticatedAccount}));});
+ await page.getByRole('button',{name:'Download ships & worlds',exact:true}).waitFor();
+ assert.equal(await retryButton.isHidden(),true,'same-owner polling retries failed discovery while idle');
 }));
 
 test('one section failing still shows the rest, and names what is missing',async()=>withPage(async page=>{

@@ -40,3 +40,11 @@ test('modules/ships/ship-view-bridge.mjs (the trust/ledger/battle-pass chain) is
  const files = [...(await walk(ENTRY, root)).keys()];
  assert.ok(!files.some(f => f.endsWith('ship-view-bridge.mjs')), 'ship-view.mjs must receive getBridge/ownedShipIds as parameters, not import ship-view-bridge.mjs itself');
 });
+
+
+test('production app loads the optional arrival module only through a dynamic import', async () => {
+ const {build} = await import('esbuild');
+ const result = await build({entryPoints:['./app.mjs'],bundle:true,write:false,metafile:true,format:'esm',outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs']});
+ const imports = result.metafile.outputs['app-runtime.mjs'].imports.filter(entry=>entry.path.endsWith('/ship-intro.mjs'));
+ assert.deepEqual(imports,[{path:'./modules/ships/ship-intro.mjs',kind:'dynamic-import',external:true}], 'core-only offline startup must not require the optional scene');
+});
