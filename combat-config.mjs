@@ -9,21 +9,24 @@ export const KILL_TARGET_SECONDS=90;     // D20's target. Audit found the shippe
 export const REST_SECONDS=60;            // shipped default, pose.html #restDuration / pod/set-flow.mjs start()'s restSeconds=60 default (reports/audit-game.md "Rest timer length between sets")
 export const RESTS_PER_WORKOUT=3;
 
-export const BASE_TAP_DAMAGE_PER_LEVEL=1; // base tap damage == level * this
+// Base tap damage by level (index = level-1). L1-L4 = level; L5 jumps to 8 (D33: L4 kit ~15% short of the L5 boss).
+// A linear level x N base can't reach D33: weapons+pet add the same to L4 and L5, so L4/L5 output never drops below
+// 4/5, and 4/5 x 1.1 (L5's 10% kill margin) leaves L4 at most 12% short even with no weapon, pet or special damage.
+export const BASE_TAP_DAMAGE=[1,2,3,4,8];
 export const WEAPON_1_LEVEL=1,WEAPON_1_BONUS=1; // D22: weapon 1 unlocks at L1
 export const WEAPON_2_LEVEL=3,WEAPON_2_BONUS=2; // D22: weapon 2 unlocks at L3
 export const PET_LEVEL=4,PET_DPS=5;             // D22: pet unlocks at L4 (aura at L5 is cosmetic only — D22/D7 — so it adds no combat stat)
 export const SPECIAL_LEVEL=3;                   // D17: weapon specials unlock at L3; refused below it
 // The ONE special-damage knob: everything a day's specials deal together is capped at this share of
-// that level's boss max HP. 0.05 keeps D8/D20 true even with a special on every cooldown: L4 kit =
-// 19/s·T x (1 + 0.95 x 0.05) = 19.90/s·T, still under the L5 boss's 19.95/s·T at any killTargetSeconds.
-// Above ~0.052 the L4 kit plus specials would kill the L5 boss (tests/combat-tuning.test.mjs).
-export const SPECIAL_DAMAGE_FRACTION=0.05;
+// that level's boss max HP. With a special on every cooldown the L4 kit deals 19/s·T x (1 + 0.9 x 0.1) =
+// 20.71/s·T against the L5 boss's 0.9 x 27/s·T = 24.3/s·T: 14.8% short at any killTargetSeconds (D33).
+// Above ~0.139 the L4 shortfall drops under 12% (tests/combat-tuning.test.mjs).
+export const SPECIAL_DAMAGE_FRACTION=0.1;
 
 // [minStreak,multiplier], highest matching breakpoint wins; below all of them the multiplier is 1.
 export const STREAK_BREAKPOINTS=[[20,1.5],[10,1.25],[5,1.1]];
 
-export const BOSS_HP_FACTOR=0.95;   // a level's boss HP = this fraction of that level's own kit output over KILL_TARGET_SECONDS — killable by that level's kit, not by the level below (see plan/COMBAT-TUNING.md for why 0.95 keeps that true at any KILL_TARGET_SECONDS)
+export const BOSS_HP_FACTOR=0.9;    // a level's boss HP = this fraction of that level's own kit output over KILL_TARGET_SECONDS — every level's own kit (taps only) clears it with 1/0.9 = 11.1% to spare, at any KILL_TARGET_SECONDS (plan/COMBAT-TUNING.md)
 export const DAILY_CAP_FACTOR=2;    // daily cap = this many boss-kills worth of damage, so it never blocks the intended kill
 
 export const BOSS_ATTACK_EVERY_HITS=6; // spectacle only (D7) — no gameplay listener consumes this
@@ -35,7 +38,7 @@ export function streakMultiplier(streak){
 }
 export function kitTapDamage(level){
  const l=Number.isSafeInteger(level)&&level>=1?level:1;
- return l*BASE_TAP_DAMAGE_PER_LEVEL+(l>=WEAPON_1_LEVEL?WEAPON_1_BONUS:0)+(l>=WEAPON_2_LEVEL?WEAPON_2_BONUS:0);
+ return BASE_TAP_DAMAGE[Math.min(l,BASE_TAP_DAMAGE.length)-1]+(l>=WEAPON_1_LEVEL?WEAPON_1_BONUS:0)+(l>=WEAPON_2_LEVEL?WEAPON_2_BONUS:0);
 }
 export function kitPetDps(level){
  const l=Number.isSafeInteger(level)&&level>=1?level:1;
