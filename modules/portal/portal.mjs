@@ -206,7 +206,11 @@ function buildDom(){
 }
 
 function backgroundBlocked(block){
- if(block){for(const el of document.body.children)if(el!==portalHome&&el!==menuSheet&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
+ // Dialogs that are open or hidden are never made inert: one opened as a modal while the quilt is up (the full-download
+ // offer, setup gate, reward reveals) sits in the top layer and must stay tappable, or the app freezes. A closed dialog
+ // that is still drawn (styled display:grid) stays inert so it can't catch taps meant for the quilt.
+ const liveDialog=el=>el.tagName==='DIALOG'&&(el.open||getComputedStyle(el).display==='none');
+ if(block){for(const el of document.body.children)if(el!==portalHome&&el!==menuSheet&&!liveDialog(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
 function openMenu(){
