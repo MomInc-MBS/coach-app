@@ -171,12 +171,14 @@ async function loadBoard(id){
  return board;
 }
 
+// #111 metal frame bolts (portal.css .portal-frame i): the four corners, then two down each long side.
+const FRAME_BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
  portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
  portalHome.innerHTML=`
   <div id="portalShadows" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div id="portalBoardHost"></div>
+  <div id="portalBoardHost"><div class="portal-frame" aria-hidden="true"><s></s><s></s>${FRAME_BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div></div>
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>

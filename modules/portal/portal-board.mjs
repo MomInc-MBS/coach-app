@@ -59,6 +59,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   const box=host.getBoundingClientRect();width=Math.max(1,box.width);height=Math.max(1,box.height);
   // Contain (up to a slight vertical stretch): the whole quilt stays visible so every stitched shape can be traced.
   const w=Math.min(width,height*IMAGE_W/IMAGE_H),h=Math.min(height,w*IMAGE_H/IMAGE_W*knobs.stretch);quilt={left:(width-w)/2,top:(height-h)/2,width:w,height:h};
+  for(const k in quilt)host.style.setProperty('--face-'+k,quilt[k]+'px'); // the portal's metal frame (#111) wraps this box
   for(let j=0;j<=segY;j++)for(let i=0;i<=segX;i++){const n=3*(j*cols+i);rest[n]=quilt.left+w*i/segX;rest[n+1]=-(quilt.top+h*j/segY);rest[n+2]=0;}
   pos.set(rest);prev.set(rest);
   const dist=(ids,k,a=ids[2*k],b=ids[2*k+1])=>Math.hypot(rest[3*a]-rest[3*b],rest[3*a+1]-rest[3*b+1]);
