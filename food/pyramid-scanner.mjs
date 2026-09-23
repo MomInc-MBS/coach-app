@@ -45,9 +45,12 @@ function softDotTexture(tint=1){
 // this lazy-loaded scanner mounts itself just before. Building the host div and its
 // styling here, instead of shipping them in launch-shell.mjs/food-live.css, keeps
 // three.js and its container fully out of the core offline bundle.
-export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,nutrients:null})}={}){
+export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,nutrients:null}),signal}={}){
+ const cancelled=()=>new DOMException('Pyramid scanner closed.','AbortError');
+ if(signal?.aborted)throw cancelled();
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- let disposed=false,raf=0,observer,tileState=pyramidTiles(null,null);
+ let disposed=false,raf=0,observer,timer,tileState=pyramidTiles(null,null);
+ const download=new AbortController();
  const host=document.createElement('div');host.id='pyramidScanner';host.setAttribute('aria-hidden','true');
  host.style.cssText='position:relative;width:100%;height:230px;border-radius:10px;overflow:hidden;margin-bottom:12px;background:radial-gradient(circle at 50% 28%,#332a42,#150f1c);touch-action:none';
  anchor.before(host);
@@ -69,11 +72,13 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  for(const p of steamPool){p.sprite.visible=false;p.sprite.scale.setScalar(0.012);}
 
  function disposeMat(mat){for(const m of [mat].flat())if(m){for(const v of Object.values(m))if(v?.isTexture)v.dispose();m.dispose();}}
+ function disposeTree(root){root.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});}
  function dispose(){
   if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
+  signal?.removeEventListener('abort',dispose);download.abort();clearTimeout(timer);
   window.removeEventListener('myr5:meal-nutrition',onNutrition);
   const dom=renderer.domElement;dom.removeEventListener('pointerdown',onDown);dom.removeEventListener('pointermove',onMove);dom.removeEventListener('pointerup',onUp);dom.removeEventListener('pointercancel',onUp);
-  scene.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});
+  disposeTree(scene);
   for(const p of steamPool)if(!p.sprite.parent)p.sprite.material.dispose();
   steamTex.dispose();renderer.dispose();renderer.forceContextLoss();host.remove();
  }
@@ -102,7 +107,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  function toggleKnob(k){k.on=!k.on;k.tapT=performance.now();spawnSteam(k);}
  function animateKnob(k,now){
   const dt=(now-k.tapT)/1000;
-  if(k.tapT>0&&dt<1.1){const decay=Math.exp(-dt*4),ang=decay*Math.sin(dt*26)*0.5,pop=decay*Math.sin(dt*26)*0.002;
+  if(!reduced&&k.tapT>0&&dt<1.1){const decay=Math.exp(-dt*4),ang=decay*Math.sin(dt*26)*0.5,pop=decay*Math.sin(dt*26)*0.002;
    k.mesh.quaternion.setFromAxisAngle(k.axis,ang);k.mesh.position.copy(k.basePos).addScaledVector(k.axis,pop);
   }else{k.mesh.quaternion.identity();k.mesh.position.copy(k.basePos);}
  }
@@ -110,10 +115,10 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   const t=now/1000;
   for(const k of knobs){
    const mat=k.mesh.material;if(!mat.emissive)continue;
-   const idle=(k.on?0.32:0.12)+Math.sin(t*2+k.mesh.id)*0.08,flashDt=(now-k.tapT)/1000,flash=flashDt>=0&&flashDt<0.3?(1-flashDt/0.3)*1.6:0;
+   const idle=(k.on?0.32:0.12)+(reduced?0:Math.sin(t*2+k.mesh.id)*0.08),flashDt=(now-k.tapT)/1000,flash=!reduced&&flashDt>=0&&flashDt<0.3?(1-flashDt/0.3)*1.6:0;
    mat.emissive.set(k.on?0x7fe6ff:0x3fb6d8);mat.emissiveIntensity=Math.max(0.05,idle)+flash;
   }
-  if(lensHalo){const idle=0.3+Math.sin(t*2.4)*0.12,flashDt=(now-lensFlashT)/1000,flash=flashDt>=0&&flashDt<0.3?(1-flashDt/0.3)*0.9:0;lensHalo.material.opacity=Math.min(1,idle+flash);}
+  if(lensHalo){const idle=0.3+(reduced?0:Math.sin(t*2.4)*0.12),flashDt=(now-lensFlashT)/1000,flash=!reduced&&flashDt>=0&&flashDt<0.3?(1-flashDt/0.3)*0.9:0;lensHalo.material.opacity=Math.min(1,idle+flash);}
  }
 
  let dragging=false,downX=0,downY=0,downT=0,lastX=0,moved=false,velocity=0;
@@ -122,7 +127,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   if(!dragging)return;
   const dx=e.clientX-lastX;lastX=e.clientX;
   if(Math.abs(e.clientX-downX)>6||Math.abs(e.clientY-downY)>6)moved=true;
-  if(moved){pivot.rotation.y+=dx*0.009;velocity=dx*0.009;}
+  if(moved){pivot.rotation.y+=dx*0.009;velocity=reduced?0:dx*0.009;}
  }
  function lensWorldSphere(){const p=new THREE.Vector3();lens.getWorldPosition(p);const s=new THREE.Vector3();lens.getWorldScale(s);return new THREE.Sphere(p,lensRadius*s.x);}
  function handleTap(cx,cy){
@@ -143,10 +148,15 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
 
  function resize(){const r=host.getBoundingClientRect();renderer.setSize(Math.max(r.width,1),Math.max(r.height,1),false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();}
 
+ signal?.addEventListener('abort',dispose,{once:true});
  try{
-  const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),20000);let bytes;
-  try{const response=await fetch('/food/pyramid-scanner.glb',{signal:abort.signal});if(!response.ok)throw new Error('Pyramid model unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
+  timer=setTimeout(()=>download.abort(),20000);let bytes;
+  try{const response=await fetch('/food/pyramid-scanner.glb',{signal:download.signal});if(!response.ok)throw new Error('Pyramid model unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
+  if(disposed)throw cancelled();
   const gltf=await new GLTFLoader().parseAsync(bytes,'');const model=gltf.scene;
+  // GLTF texture decoding cannot be aborted. Discard a late result without
+  // mounting anything or reviving the closed renderer/listeners.
+  if(disposed){disposeTree(model);throw cancelled();}
   const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),scale=1.6/Math.max(size.x,size.y,size.z);
   const offset=new THREE.Group();offset.position.copy(center).multiplyScalar(-1);offset.add(model);
   const normalized=new THREE.Group();normalized.scale.setScalar(scale);normalized.add(offset);pivot.add(normalized);
