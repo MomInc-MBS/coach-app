@@ -5,7 +5,10 @@ import {join} from 'node:path';
 
 const folders=['pod','creature','models','icons','handborne','arcade','war-room'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
-export const isCoreAsset=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+// ponytail: the achievements board art (453 KB) is built-in optional, not core: core is ~7.8 of the 8 MiB
+// without it and the build refuses more. It still ships, and is cached the first time the board opens
+// online. Drop the achievements.jpg exception once the core budget has room for it.
+export const isCoreAsset=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url)&&url!=='/pod/worlds/achievements.jpg';
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 

@@ -1,0 +1,49 @@
+/* Achievements / battle-pass board, styled after Skyrim's skill constellations: dim stars until earned,
+   a slow camera glide into the chosen boss, thin all-caps text with a hairline rule. */
+@font-face{font-family:'Barlow Condensed';src:url('/handborne/fonts/barlow-400.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+.ach-board{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#05030c;color:#fff;overflow:hidden;font:16px/1.4 'Barlow Condensed',var(--font,system-ui);letter-spacing:.04em}
+.ach-board[open]{display:grid;place-items:center}
+.ach-board::backdrop{background:#000}
+.ach-stage{position:relative;aspect-ratio:1141/2000;height:min(100dvh,calc(100vw * 2000 / 1141));transition:transform .9s cubic-bezier(.22,.61,.36,1);will-change:transform}
+.ach-art{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
+.ach-stars{position:absolute;inset:0;pointer-events:none}
+.ach-stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px #fff;opacity:0;animation:ach-star 3s ease-in-out infinite alternate;animation-delay:var(--d)}
+.ach-bosses{position:absolute;inset:0}
+.ach-boss{position:absolute;margin:0;padding:0;border:0;background:none;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ach-boss:focus-visible{outline:2px solid var(--glow);outline-offset:4px}
+/* Beaten bosses: the same slice of the art screened over itself, once blurred (bloom) and once sharp, feathered so no rectangle shows. */
+.ach-boss[data-state=done]::before,.ach-boss[data-state=done]::after{content:'';position:absolute;inset:0;pointer-events:none;background:url(/pod/worlds/achievements.jpg) no-repeat;background-size:calc(10000% / var(--bw)) auto;background-position:calc(var(--bx) / (100 - var(--bw)) * 100%) calc(var(--by) / (100 - var(--bh)) * 100%);mix-blend-mode:screen;-webkit-mask:radial-gradient(ellipse at center,#000 45%,transparent 74%);mask:radial-gradient(ellipse at center,#000 45%,transparent 74%);animation:ach-twinkle 2.6s ease-in-out infinite alternate;animation-delay:var(--d)}
+.ach-boss[data-state=done]::before{filter:blur(10px) brightness(1.7) saturate(1.4)}
+.ach-boss[data-state=done]::after{filter:brightness(1.35) saturate(1.2)}
+.ach-boss[data-state=locked]{background:radial-gradient(ellipse at center,#03020ce8 40%,#03020c99 60%,transparent 78%);cursor:default}
+.ach-boss.selected{background:radial-gradient(ellipse at center,#ffffff38 12%,transparent 68%);animation:ach-pulse 1.4s ease-in-out infinite alternate}
+.ach-head{position:absolute;top:max(14px,env(safe-area-inset-top));left:18px;right:72px;text-transform:uppercase;text-shadow:0 0 10px #000,0 1px 2px #000;transition:opacity .4s}
+.ach-head h1{margin:0;font-size:22px;font-weight:400;letter-spacing:.2em}
+.ach-head p{margin:2px 0 0;font-size:14px;letter-spacing:.14em;color:#cfc8e6}
+.ach-head::after{content:'';display:block;height:1px;margin-top:8px;background:linear-gradient(90deg,#fffc,transparent)}
+.ach-board.zoomed .ach-head{opacity:0}
+.ach-stars{transition:opacity .5s}.ach-board.zoomed .ach-stars{opacity:0}
+.ach-detail{position:absolute;left:0;right:0;bottom:0;max-height:56%;padding:34px 24px calc(24px + env(safe-area-inset-bottom));overflow:auto;text-align:center;background:linear-gradient(#0000,#05030cd9 24%,#05030cf5);animation:ach-rise .5s ease}
+.ach-detail[hidden]{display:none}
+.ach-detail h2{margin:0;font-size:36px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 0 18px var(--glow),0 0 2px #fff}
+.ach-detail hr{width:min(320px,80%);height:1px;border:0;margin:10px auto 12px;background:linear-gradient(90deg,transparent,#fff,transparent)}
+.ach-detail .ach-status{margin:0 0 16px;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#d9d2ee}
+.ach-detail ol{list-style:none;margin:0 auto;padding:0;display:grid;gap:8px;width:min(360px,100%);text-align:left}
+.ach-detail li{display:grid;grid-template-columns:18px 70px 1fr;gap:10px;align-items:baseline;font-size:17px}
+.ach-detail li::before{content:'✦';color:#5e5878;font-size:12px}
+.ach-detail li[data-step=done]::before{color:#fff;text-shadow:0 0 8px var(--glow),0 0 14px var(--glow)}
+.ach-detail li[data-step=next]::before{color:var(--glow);animation:ach-twinkle 1.2s ease-in-out infinite alternate}
+.ach-detail li[data-step=todo]{color:#8f89a8}
+.ach-detail li b{font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:#e9e3ff}
+.ach-back{margin-top:18px;min-height:44px;padding:0 6px;border:0;border-bottom:1px solid #fff9;background:none;color:#fff;font:400 17px/1 'Barlow Condensed',var(--font,system-ui);letter-spacing:.2em;text-transform:uppercase}
+.ach-close{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff55;background:#05030ccc;color:#fff;font-size:18px}
+@keyframes ach-twinkle{from{opacity:.5}to{opacity:1}}
+@keyframes ach-pulse{from{opacity:.45}to{opacity:1}}
+@keyframes ach-star{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1.3)}}
+@keyframes ach-rise{from{transform:translateY(24px);opacity:0}}
+/* The locked intake theme turns off every animation; the board twinkles for everyone. */
+html[data-public-state] .ach-board .ach-stars i{animation:ach-star 3s ease-in-out infinite alternate!important}
+html[data-public-state] .ach-board .ach-boss.selected{animation:ach-pulse 1.4s ease-in-out infinite alternate!important}
+html[data-public-state] .ach-board .ach-detail{animation:ach-rise .5s ease!important}
+html[data-public-state] .ach-board .ach-stage{transition:transform .9s cubic-bezier(.22,.61,.36,1)!important}
+@media (prefers-reduced-motion:reduce){.ach-board .ach-stage{transition:none!important}.ach-board *,.ach-board ::before,.ach-board ::after{animation:none!important}.ach-stars i{opacity:.8}}

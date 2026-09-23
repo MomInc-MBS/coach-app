@@ -2,7 +2,7 @@
 export const XP_PER_SET=25,XP_PER_LEVEL=100;
 export const REST_IDLE_MS=3000;
 import {weaponDamage,dayAt} from '../combat.mjs';
-import {tapDamage,kitPetDps,bossHp,dailyCap,BOSS_ATTACK_EVERY_HITS,REST_SECONDS} from '../combat-config.mjs';
+import {tapDamage,kitPetDps,bossHp,dailyCap,specialBudget,SPECIAL_LEVEL,BOSS_ATTACK_EVERY_HITS,REST_SECONDS} from '../combat-config.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 import {AbilityCooldown} from './weapon-evolution.mjs';
 export {bossHp as bossHealthMax} from '../combat-config.mjs';
@@ -17,18 +17,17 @@ export function readProgress(raw){
 }
 export class SetFlow {
  constructor(progress=null,{cooldown=null,now=Date.now()}={}){this.progress=readProgress(progress);this.phase='pod';this.sequence=0;this.active=null;this.preview=false;this.restUntil=0;this.hits=0;this.damage=0;this.lastTap=-Infinity;this.lastRestInteraction=-Infinity;this.abilities=new AbilityCooldown(cooldown,now);
-  // Battle-pass kit level (D8/D22), 1-5. Defaults to the weakest kit until a
-  // future rank's item registry sets it from the real per-track level; the
-  // boss HP / daily cap machinery below is fully wired against it either way.
+  // Battle-pass kit level (D8/D22), 1-5: pod.mjs sets it from battle-pass.mjs (combatLevel)
+  // for the track of the set just finished; 1 (the weakest kit) until then.
   this.kitLevel=1;
   // Boss HP and the daily tap-damage cap are per calendar day, not per rest
   // bout, so one boss fight can span all 3 rests of a workout (D20).
-  this.damageDay=dayAt(now);this.tapDamageToday=0;this.lastPetTick=null;
+  this.damageDay=dayAt(now);this.tapDamageToday=0;this.specialDamageToday=0;this.lastPetTick=null;
  }
  get xp(){return this.progress.completedSets*XP_PER_SET;}
  get level(){return 1+Math.floor(this.xp/XP_PER_LEVEL);}
  get coachHealth(){return Math.max(0,bossHp(this.kitLevel??1)-this.damage);}
- resetIfNewDay(now){const day=dayAt(now);if(this.damageDay!==day){this.damageDay=day;this.damage=0;this.tapDamageToday=0;}}
+ resetIfNewDay(now){const day=dayAt(now);if(this.damageDay!==day){this.damageDay=day;this.damage=0;this.tapDamageToday=0;this.specialDamageToday=0;}}
  // Pet DPS (D22) accrues for the time since the last tap/rest-start, capped
  // at 30s so a long idle gap can't award a lump of pet damage.
  // ponytail: only ticks on tap(), so an idle pet (no taps) deals no damage —
@@ -66,7 +65,11 @@ export class SetFlow {
   this.tapDamageToday+=damage;this.damage+=damage;
   return {hits:this.hits,damage,totalDamage:this.damage,blocked:damage===0,assisted,charge:withHand?this.hits%3:0,bossAttack:this.hits%BOSS_ATTACK_EVERY_HITS===0};
  }
- special(weapon,{now=Date.now(),progress,catalog}={}){this.touchRest(now);this.resetIfNewDay(now);if(this.tapDamageToday>=dailyCap(this.kitLevel))return {ok:false,reason:'daily-cap'}; // checked before activate() so a capped special never burns its cooldown
- const result=this.abilities.activate(weapon,{now,progress,catalog,inRest:this.phase==='rest'});if(!result.ok)return result;const damage=weaponDamage(this.combat,weapon,now);this.damage+=damage;return {...result,special:true,assisted:false,damage,totalDamage:this.damage,blocked:damage===0,hits:this.hits};}
+ special(weapon,{now=Date.now(),progress,catalog}={}){this.touchRest(now);this.resetIfNewDay(now);const level=this.kitLevel??1;
+ if(level<SPECIAL_LEVEL)return {ok:false,reason:'level',unlockLevel:SPECIAL_LEVEL}; // D17: specials unlock at L3
+ if(this.tapDamageToday>=dailyCap(level))return {ok:false,reason:'daily-cap'}; // both checked before activate() so a refused special never burns its cooldown
+ const result=this.abilities.activate(weapon,{now,progress,catalog,inRest:this.phase==='rest'});if(!result.ok)return result;
+ // Legacy weapon-tier damage, capped by the day's special budget (combat-config SPECIAL_DAMAGE_FRACTION).
+ const damage=Math.min(weaponDamage(this.combat,weapon,now),Math.max(0,specialBudget(level)-this.specialDamageToday));this.specialDamageToday+=damage;this.damage+=damage;return {...result,special:true,assisted:false,damage,totalDamage:this.damage,blocked:damage===0,hits:this.hits};}
  leave(){this.phase='pod';this.active=null;}
 }

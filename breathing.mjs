@@ -8,6 +8,14 @@ import {BREATHING_MODES,MODE_IDS,SEATED_ONLY_NOTICE,NO_MEDICAL_CLAIM,buildScript
 // counts a day with *any* completed breathing_sessions row, so either mode is the day's single
 // meditation step and a second completion the same day adds nothing.
 const DEFAULT_STATUS='Complete a session for today’s ×100 damage.';
+const IDLE_CAPTION='Breathe in. Breathe out.';
+// The big caption follows the phase. Reduced motion keeps it steady through fast in/out breathing.
+function captionFor(p,reduced){
+ if(p.key==='recover')return 'Breathe in and hold.';
+ if(p.key==='rest')return 'Breathe normally.';
+ if(p.breath)return reduced?IDLE_CAPTION:p.breath==='in'?'Breathe in.':'Breathe out.';
+ return p.key==='hold'?'Breathe out and hold.':IDLE_CAPTION;
+}
 
 export function mountBreathing({dialog,scene,pause,api,onComplete,getAccount,transitions=authTransitions()}){
  const actions=createAccountSessionActions({api,transitions});
@@ -20,14 +28,18 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,getAccount,tra
  scene.append(controls);
  const $=selector=>controls.querySelector(selector);
  const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),seated=$('[data-seated]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),exit=$('[data-breath-exit]'),retry=$('[data-retry]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]');
- let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null;
+ const speech=scene.querySelector?.('.meditation-speech'),reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+ let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='';
  function renderPhase(ms){
   const p=phaseAt(script,ms);runEl.dataset.phase=p.key;
   phaseEl.textContent=[p.label,p.breath&&'breathe '+p.breath,p.remainingMs>0&&Math.ceil(p.remainingMs/1000)+'s'].filter(Boolean).join(' · ');
   stanceLink.hidden=!p.stanceId;stanceLink.dataset.stance=p.stanceId||'';
+  // Only on change, so a character-tap line stays until the next phase and the live region is not re-announced.
+  const next=captionFor(p,reducedMotion?.matches);if(speech&&next!==caption){caption=next;speech.textContent=next;}
  }
  function reset(){
   run++;clock=new BreathingSession();ticket=null;saving=false;finished=false;awaitingRetry=false;script=null;
+  if(caption&&speech)speech.textContent=IDLE_CAPTION;caption='';
   bar.value=0;pause.disabled=true;pause.hidden=true;pause.textContent='Pause';dialog.classList.remove('breathing-paused');
   modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;stanceLink.hidden=true;runEl.dataset.phase='';
   exit.textContent='Stop now';phaseEl.textContent='';statusEl.textContent=DEFAULT_STATUS;

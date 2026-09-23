@@ -9,6 +9,8 @@ import {mountCircuitUI} from '../circuit-ui.mjs';
 import {ROUTE_LINES,exerciseFamily} from '../workout-route.mjs';
 import {VOICE_MANIFEST} from '../robot-audio.mjs';
 import {WorkoutSessionOwner} from './workout-session-owner.mjs';
+import {combatLevel} from '../battle-pass.mjs';
+import {SPECIAL_LEVEL} from '../combat-config.mjs';
 let voiceManifest=null;
 // Fetch the clips this set will say while the camera opens; sw.js stores /voice/* in the voice cache, so RobotAudio's later fetch is a hit.
 function warmVoice(goal){try{voiceManifest??=fetch(VOICE_MANIFEST).then(r=>r.json()).catch(()=>{voiceManifest=null;return null;});voiceManifest.then(m=>{if(!m)return;const say=['Get into position.',...Array.from({length:Math.min(60,Number(goal)||0)},(_,i)=>String(i+1))];for(const p of say){const u=m.phrases[p];if(u)fetch(u,{priority:'low'}).catch(()=>{});}});}catch{}}
@@ -68,13 +70,14 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  function render(m){const goal=flow.active?.mode===m.mode?flow.active.goal:Number($('goal').value)||DEFAULT_GOALS[m.mode];$('activity').style.width=Math.min(100,valueOf(m)/goal*100)+'%';}
  function power(){const p=$('coachPower').value;document.body.dataset.power=p;$('powerName').textContent=POWERS[p].name.toUpperCase()+' ACTIVE';store('myr5-pod-power-v1',p);}
  function syncCombat(){flow.weapon=arena.weapon;const p=flow.combat;$('shieldNote').textContent=p?`${p.loginStreak} login days × weapon level ${arena.weapon.tier+1}${p.breathingCompleted?' ×100 breathing':''} · ${flow.attackDamage} damage`:`BASE POWER · ${flow.attackDamage} damage`;}
- function specialControls(){syncCombat();const weapon=arena.weapon,ability=abilityFor(weapon),remaining=flow.abilities.remaining(),button=$('weaponSpecial');button.disabled=flow.phase!=='rest'||!ability||remaining>0;button.textContent=!ability?'Special · tier 4':remaining?`${ability.name} · ${Math.ceil(remaining/1000)}s`:ability.name;$('weaponCooldown').value=remaining?Math.max(0,1-remaining/Math.max(1,flow.abilities.durationMs)):1;}
+ function specialControls(){syncCombat();const weapon=arena.weapon,ability=abilityFor(weapon),remaining=flow.abilities.remaining(),button=$('weaponSpecial');const locked=flow.kitLevel<SPECIAL_LEVEL;button.disabled=flow.phase!=='rest'||locked||!ability||remaining>0;button.textContent=locked?`Special · level ${SPECIAL_LEVEL}`:!ability?'Special · tier 4':remaining?`${ability.name} · ${Math.ceil(remaining/1000)}s`:ability.name;$('weaponCooldown').value=remaining?Math.max(0,1-remaining/Math.max(1,flow.abilities.durationMs)):1;}
  $('coachPower').value=loadPower({getItem:safeRead});power();
  function paintHealth(){const hp=Math.ceil(flow.coachHealth),max=bossHealthMax(flow.kitLevel);$('coachHealth').textContent=hp.toLocaleString()+' HP';$('bossHealth').style.width=(hp/max*100)+'%';$('bossHealth').parentElement.setAttribute('aria-valuenow',String(hp));}
  function speakChallenge(){if(pendingChallenge&&flow.phase==='rest'&&!document.hidden&&!document.body.dataset.cinematic){const text=pendingChallenge;pendingChallenge=null;voice.say(text,{key:'challenge',interrupt:true});}}
  window.addEventListener('myr5:cinematic-end',speakChallenge);
  function tick(){if(flow.phase!=='rest')return;speakChallenge();const now=Date.now();if(flow.shouldEndRest(now)){leave();return;}specialControls();const remaining=flow.remaining(now),next=route.suggestion();setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0||!next;$('nextSet').textContent=remaining?'Recovering…':awaitingRound?'Waiting to sync…':next?'Preview next round →':'Finished for today';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest complete. Keep tapping to stay.',{interrupt:true});}}
  function enterRest(result=null,{silent=false}={}){
+  flow.kitLevel=combatLevel(result?.mode||currentMode||'squat'); // real battle-pass level for this boss's track (D8/D22)
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
   document.body.dataset.screen='rest';$('homeScreen').hidden=true;$('restScreen').hidden=false;
   $('restEyebrow').textContent=result?'SET COMPLETE':'REST PRACTICE';$('restHeading').textContent='Rest';

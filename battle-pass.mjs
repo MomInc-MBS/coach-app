@@ -54,6 +54,14 @@ export function loadProgress({tracks=stepTracks(),account,stepsPerLevel=STEPS_PE
  return progress;
 }
 
+/** Combat kit level (1–5, D8/D22) for the rest-arena boss after a set of `mode`: the levels beaten
+ * on that exercise's track = its row's first boss in loadProgress(), so a row outside the user's
+ * paths fights at L1, same as the board shows it. Core/balance moves sit on Meditation (board rule). */
+export function combatLevel(mode,opts={}){
+ const track=CIRCUIT_TRACK[STYLE_OF_GROUP[exerciseFamily(mode)]]??'meditation',row=ROWS.find(r=>r.track===track);
+ return Math.max(1,loadProgress(opts)[`${row.id}-1`]);
+}
+
 const STORE_KINDS=new Set(['texture','color','palette']);
 const isGranted=item=>(STORE_KINDS.has(item.kind)?store:ledger).isGranted(item.kind,item.id);
 function grant(item){

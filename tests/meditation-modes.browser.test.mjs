@@ -43,6 +43,7 @@ async function serve(){
 
 const count=(page,path)=>page.evaluate(p=>window.__calls.filter(c=>c===p).length,path);
 const phase=page=>page.locator('[data-breath-run]').getAttribute('data-phase');
+const caption=page=>page.locator('.meditation-speech').textContent();
 async function shot(page,name){await page.screenshot({path:`${SHOTS}/${name}.png`});}
 async function stopVisible(page){const box=await page.locator('[data-breath-exit]').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=844,'Stop now must be on screen without scrolling');}
 
@@ -79,12 +80,15 @@ test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold
  await shot(page,'01-wim-hof-choose');
  await start(page,'wim-hof');
  assert.equal(await page.locator('[data-seated]').isVisible(),true);assert.equal(await phase(page),'breathe');
+ assert.match(await caption(page),/^Breathe (in|out)\.$/,'the caption follows each breath');
  await shot(page,'02-wim-hof-start');
  await page.clock.runFor(38000); // 15 breaths x 2.4 s placeholder pace -> into the first hold
  assert.equal(await phase(page),'hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Round 1 of 3 · Breathe out and hold · \d+s/);
+ assert.equal(await caption(page),'Breathe out and hold.','the caption follows the hold, not the idle line');
  await stopVisible(page);await shot(page,'03-wim-hof-hold');
  await page.locator('[data-breath-exit]').click(); // exit mid-hold: immediate, no network wait
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);assert.equal(await page.locator('[data-breath-run]').isHidden(),true);
+ assert.equal(await caption(page),'Breathe in. Breathe out.','exit restores the idle caption');
  await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0,'an exited session never completes');
  await shot(page,'04-wim-hof-exited');
  await start(page,'wim-hof');await page.clock.runFor(181000);
@@ -122,6 +126,10 @@ test('always-visible exits and reduced motion: Close stays pinned when scrolled,
  await page.locator('.meditation-panel').evaluate(d=>d.scrollTo(0,d.scrollHeight));
  const close=await page.locator('[data-meditation-close]').boundingBox();assert.ok(close.y>=0&&close.y<80,'Close pinned at top after scrolling');
  await shot(page,'09-reduced-motion-scrolled');
+ // Reduced motion: no per-breath flicker, but the caption still follows the hold and the recovery.
+ assert.equal(await caption(page),'Breathe in. Breathe out.');
+ await page.clock.runFor(38000);assert.equal(await caption(page),'Breathe out and hold.');
+ await page.clock.runFor(15000);assert.equal(await phase(page),'recover');assert.equal(await caption(page),'Breathe in and hold.');
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false);
  await page.locator('.meditation-entry').click();

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SetFlow} from '../pod/set-flow.mjs';
-import {KILL_TARGET_SECONDS,TAPS_PER_SECOND,RESTS_PER_WORKOUT,BOSS_ATTACK_EVERY_HITS,dailyCap,bossHp} from '../combat-config.mjs';
+import {KILL_TARGET_SECONDS,TAPS_PER_SECOND,RESTS_PER_WORKOUT,BOSS_ATTACK_EVERY_HITS,SPECIAL_LEVEL,dailyCap,bossHp,maxKitDamage,specialBudget} from '../combat-config.mjs';
 
 // The level-5 boss's fixed HP — both scenarios below measure raw damage
 // dealt against this SAME number. In live play coachHealth is self-relative
@@ -20,17 +20,22 @@ const LEVEL_5_BOSS_HP=bossHp(5);
 // 3 rests"). The gap between rests (the set itself) deals no damage and
 // doesn't advance the pet clock (pod/set-flow.mjs only ticks the pet between
 // taps inside a rest). Returns the raw cumulative damage dealt.
-function tapDamageOverWorkout(kitLevel){
+// specials:true also fires the fastest special (dagger, 6 s cooldown) every time it is ready, with
+// breathing done (x100 legacy damage, 5,000 raw per hit) — the worst case the cap has to absorb.
+const DAGGER={type:'dagger',tier:4},UNLOCKED={progress:{},catalog:{unlocked:()=>true}};
+function tapDamageOverWorkout(kitLevel,{specials=false}={}){
  const flow=new SetFlow(null,{now:0});flow.kitLevel=kitLevel;
+ if(specials)flow.combat={day:0,loginStreak:1,breathingCompleted:true};
+ let fired=0;
  const tapIntervalMs=1000/TAPS_PER_SECOND;
  const tapsPerRest=Math.round((KILL_TARGET_SECONDS/RESTS_PER_WORKOUT)*TAPS_PER_SECOND);
  let now=0,landed=0;
  for(let rest=0;rest<RESTS_PER_WORKOUT;rest++){
   now+=45000; // time spent doing the set between rests; irrelevant to combat math
   flow.previewRest(now,180);
-  for(let i=0;i<tapsPerRest;i++){now+=tapIntervalMs;if(flow.tap(now))landed++;}
+  for(let i=0;i<tapsPerRest;i++){now+=tapIntervalMs;if(flow.tap(now))landed++;if(specials&&flow.special(DAGGER,{now,...UNLOCKED}).ok)fired++;}
  }
- return {dealt:flow.damage,landed};
+ return {dealt:flow.damage,landed,fired,specialDamage:flow.specialDamageToday};
 }
 
 test('the L5 kit kills the boss within killTargetSeconds of tapping across the 3 rests',()=>{
@@ -42,6 +47,24 @@ test('the L5 kit kills the boss within killTargetSeconds of tapping across the 3
 test('the L4 kit does not kill the same boss in the same window',()=>{
  const {dealt}=tapDamageOverWorkout(4);
  assert.ok(dealt<LEVEL_5_BOSS_HP,`L4 kit dealt ${dealt}, which should fall short of ${LEVEL_5_BOSS_HP} — level 5 has to matter`);
+});
+
+test('specials unlock at L3 (D17): below it they are refused without burning the cooldown',()=>{
+ const flow=new SetFlow(null,{now:0});flow.kitLevel=SPECIAL_LEVEL-1;flow.previewRest(0);
+ assert.deepEqual(flow.special(DAGGER,{now:500,...UNLOCKED}),{ok:false,reason:'level',unlockLevel:SPECIAL_LEVEL});
+ assert.equal(flow.abilities.remaining(500),0);assert.equal(flow.damage,0);
+ flow.kitLevel=SPECIAL_LEVEL;
+ assert.equal(flow.special(DAGGER,{now:600,...UNLOCKED}).ok,true);
+});
+
+test('with specials on every cooldown, the L5 kit still kills and the L4 kit still does not',()=>{
+ const l5=tapDamageOverWorkout(5,{specials:true}),l4=tapDamageOverWorkout(4,{specials:true});
+ assert.ok(l4.fired>=RESTS_PER_WORKOUT,`a special fired in every rest (${l4.fired})`);
+ assert.ok(l4.specialDamage<=specialBudget(4),'all specials of the day together stay inside the budget');
+ assert.ok(l4.dealt<LEVEL_5_BOSS_HP,`L4 kit + specials dealt ${l4.dealt}, must stay under ${LEVEL_5_BOSS_HP}`);
+ assert.ok(l5.dealt>=LEVEL_5_BOSS_HP,`L5 kit + specials dealt ${l5.dealt}, needs ${LEVEL_5_BOSS_HP}`);
+ // The split does not depend on the open D20 number: it holds for any killTargetSeconds.
+ for(const seconds of [30,60,90,180,360])assert.ok(maxKitDamage(4,seconds)+specialBudget(4,seconds)<bossHp(5,seconds),`L4 + specials < L5 boss at ${seconds}s`);
 });
 
 test('once the daily cap is reached, no further damage events occur',()=>{
