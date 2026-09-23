@@ -110,6 +110,20 @@ test('signed in, owns a ship, pack unavailable: starter scene with the upgrade l
  assert.equal(await page.evaluate(()=>window.installClicks),1,'prefers myr5Packs.open over the Install panel once it exists');
 }));
 
+test('the coach is framed whole (overlay stage) while the ship view is open, and gets its own stage back on close',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await primeFixture(page);
+ const stages=await page.evaluate(async()=>{
+  const {openShipView}=await import('/ship-view.js');
+  let stage='pod';const seen=[];window.myr5Creature={stage:next=>{stage=next;seen.push(next);},stats:()=>({stage})};
+  await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null});
+  const open=stage,coach=document.querySelector('.ship-view-coach').getBoundingClientRect(),view=document.querySelector('.ship-view-stage').getBoundingClientRect();
+  document.querySelector('.ship-view').close();await new Promise(r=>setTimeout(r,50));
+  return {open,closed:stage,seen,coachBelowShipBand:coach.top>view.top+view.height*.3};
+ });
+ assert.deepEqual(stages,{open:'overlay',closed:'pod',seen:['overlay','pod'],coachBelowShipBand:true});
+}));
+
 test('open/close/#ship hash contract: close button, Escape, and the phone back button all close it and restore the coach',async()=>withPage(async page=>{
  await primeFixture(page);
  await page.evaluate(async()=>{const {openShipView}=await import('/ship-view.js');window.open=()=>openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null});window.dialog=await window.open();});
