@@ -6,7 +6,8 @@ import {getCoach} from './coaching';
 import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
 import {sculptMaterial,growMaterial,applySparkle} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
-import {resolveRegionMaterial} from './materials-registry';
+import {colorTriad,resolveRegionMaterial} from './materials-registry';
+import {applyInstalledSkin,type InstalledSkin} from './skin-materials';
 
 import * as THREE from 'three';
 import {GLTFLoader,type GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -21,7 +22,8 @@ type Fit={s:number;t:THREE.Vector3};
 const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
 function boxOf(object:THREE.Object3D|undefined){const box=new THREE.Box3();if(object){object.updateWorldMatrix(true,true);box.setFromObject(object);}return box;}
 
-export async function assembleCreature(d:Design,assetBase:string){
+export type InstalledSkinResolver=(id:string)=>Promise<InstalledSkin|null>;
+export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver){
  const loader=new GLTFLoader();
  const load=async(name:string)=>loader.parseAsync(await bytes(assetBase+'models/'+name+'.glb'),assetBase+'models/');
  // Each region can come from a different creature. A GLTF scene can only give each node away once,
@@ -29,6 +31,9 @@ export async function assembleCreature(d:Design,assetBase:string){
  const from:Record<Region,string>={head:d.headFrom,eye:'myr5',collar:d.body,body:d.body,arms:d.armsFrom,feet:d.feetFrom};
  const extraIds=[...new Set(REGIONS.map(r=>from[r]).filter(id=>id!=='myr5'))];
  const [gltf,anatomy,hands,...extras]=await Promise.all([load('myr5'),load('anatomy'),load('hands-v2'),...extraIds.map(load)]);
+ const installedSkins=new Map<Region,InstalledSkin>();
+ if(resolveInstalledSkin)for(const region of REGIONS){const id=d.materials?.[region]?.textureId;if(!id?.startsWith('creature-'))continue;try{const skin=await resolveInstalledSkin(id);if(skin?.id===id)installedSkins.set(region,skin);}catch{/* Missing, revoked, offline, or untrusted optional packs fail closed to built-in materials. */}}
+ const skinTextures=new Set<THREE.Texture>();
  const sources=new Map<string,GLTF>([['myr5',gltf],...extraIds.map((id,i)=>[id,extras[i]] as [string,GLTF])]);
  const scene=(id:string)=>sources.get(id)!.scene;
 
@@ -139,6 +144,11 @@ export async function assembleCreature(d:Design,assetBase:string){
   return {body:[0,hip,0],head:[0,neck-hip,0],arm:[Math.max(.15,b.max.x*.9),shoulder-hip,0],foot:[Math.max(.08,(f.max.x-f.min.x)*.25),hip*.44,0]};
  })();
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
+ try{
+  for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate')??colorTriad('default-slate')!;const group=e.regions[region];
+   const tasks:Promise<boolean>[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)tasks.push(applyInstalledSkin(object,skin,triad,skinTextures));});await Promise.all(tasks);
+  }
+ }catch(error){skinTextures.forEach(texture=>texture.dispose());throw error;}
  root.userData.recipe=JSON.parse(JSON.stringify(d));root.userData.eyeOffset=eyeOffset;root.userData.eyeScale=eyeScale;root.userData.eyeSurfaceZ=surfaceZ;root.userData.pivots=pivots;
- return {root,dispose(){const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());}};
+ return {root,skinTextures,dispose(){const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());}};
 }

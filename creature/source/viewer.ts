@@ -2,7 +2,7 @@ import * as T from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
-import {assembleCreature} from './creator/assemble';
+import {assembleCreature,type InstalledSkinResolver} from './creator/assemble';
 import {createRig,disposeObject,type CreatureRig} from './rig';
 import {MotionController,type Gesture} from './motion';
 import {importCreature,motionSettings} from './profile';
@@ -29,8 +29,8 @@ export class CreatureViewer {
   if(this.cinematicKind!==kind){this.cinematicKind=kind;this.play(SHOTS[kind].gesture);}
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
- scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];
- constructor(public mount:HTMLElement,public assetBase:string,public interactive=true){
+ scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();
+ constructor(public mount:HTMLElement,public assetBase:string,public interactive=true,skinResolver?:InstalledSkinResolver){this.skinResolver=skinResolver;
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
   this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;
   const environment=new RoomEnvironment(),pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(environment,.04).texture;environment.dispose();pmrem.dispose();
@@ -47,11 +47,15 @@ export class CreatureViewer {
  resize(){const {width,height}=this.mount.getBoundingClientRect();if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}}}
  async setRecipe(raw:unknown){
   const recipe=importCreature(JSON.stringify(raw)),generation=++this.generation;
-  const assembly=await assembleCreature(recipe,this.assetBase);let rig:CreatureRig;
-  try{if(this.disposed||generation!==this.generation)return false;this.regionBoxes=new Map(REGIONS.map(region=>[region,regionBounds(assembly.root,region)]));if(this.regionBoxes.get('eye')!.isEmpty())this.regionBoxes.set('eye',this.regionBoxes.get('head')!.clone());this.bodyBounds.makeEmpty();for(const box of this.regionBoxes.values())this.bodyBounds.union(box);rig=createRig(assembly.root,recipe);}finally{assembly.dispose();}
+  const assembly=await assembleCreature(recipe,this.assetBase,this.skinResolver);let rig:CreatureRig|undefined;
+  try{if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}this.regionBoxes=new Map(REGIONS.map(region=>[region,regionBounds(assembly.root,region)]));if(this.regionBoxes.get('eye')!.isEmpty())this.regionBoxes.set('eye',this.regionBoxes.get('head')!.clone());this.bodyBounds.makeEmpty();for(const box of this.regionBoxes.values())this.bodyBounds.union(box);rig=createRig(assembly.root,recipe);}catch(error){assembly.skinTextures.forEach(texture=>texture.dispose());throw error;}finally{assembly.dispose();}
+  if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}
   if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);}
+  this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures=assembly.skinTextures;
   this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}return true;
  }
+ setSkinResolver(resolver?:InstalledSkinResolver){this.skinResolver=resolver;}
+ clearSkinState(){this.generation++;if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);this.rig=null;this.motion=null;}this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.regionBoxes.clear();this.bodyBounds.makeEmpty();}
  play(id:Gesture){this.gesture=id;this.motion?.play(id);}
  // Workout overlay: turn to face where the coach walks (0 = the camera, π/2 = screen right).
  face(yaw:number){if(this.rig)this.rig.root.rotation.y=yaw;}
@@ -69,5 +73,5 @@ export class CreatureViewer {
   const result=await new GLTFExporter().parseAsync(clone,{binary:true,animations:this.motion.clips});return new Blob([result as ArrayBuffer],{type:'model/gltf-binary'});
  }
  stats(){return {gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
- dispose(){this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();disposeObject(this.scene);this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+ dispose(){this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();disposeObject(this.scene);this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
