@@ -3,7 +3,7 @@ import {createReadStream} from 'node:fs';
 import {readdir,readFile,writeFile,stat} from 'node:fs/promises';
 import {join,posix} from 'node:path';
 
-const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor'];
+const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // D34: core precache holds only what a first run needs (sign-in/onboarding, home, a camera or manual
 // workout with its counter, updates/recovery, the offline shell). Core is every root, /icons/ or /pod/
@@ -12,9 +12,10 @@ export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // post-download package (sw.js OPTIONAL_ASSETS): fetched on demand online, offline once downloaded.
 const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html','/install.html','/privacy.html','/manifest.webmanifest'];
 // Named by first-run code, but used only by deferrable features that already cope without them:
-// food reference search (2.6 MB), rest/meditation/board backgrounds, Records handwriting fonts (swap).
+// food reference search (2.6 MB), rest/meditation backgrounds and Records handwriting fonts (swap).
+// The quilt is the starter portal and stays in core so it remains available after an offline install.
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/|pod\/fonts\/)/;
-const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','package.json','package-lock.json','recover.html','recovery-page.mjs']);
@@ -29,7 +30,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
-  if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url))continue;
+  if(core.has(url)||!urls.has(url)||!coreFolder(url)||(DEFERRED.test(url)&&url!=='/pod/worlds/quilt.webp'))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));

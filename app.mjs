@@ -189,6 +189,7 @@ $('variationName').addEventListener('click',()=>library.introduce($('movement').
 mountHomeCharacter();
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
+window.myr5Menus={...window.myr5Menus,portal:async()=>{try{const {openQuiltPortal}=await import('./modules/portal/portal-entry.mjs');await openQuiltPortal();}catch(error){console.warn('Quilt portal could not be opened.',error);}}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();
