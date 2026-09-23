@@ -53,7 +53,7 @@ test('#104 idle ambient flash: fast pass order/timing, slow pass continues, a to
 
  // 1.7s into the fast pass: shape index 3 (down -> "Achievements") — proves the order, not just shape 0.
  await waitUntil(page,armedAt,3000+1700);
- await page.screenshot({path:resolve(FRAMES_DIR,'idle-fast-1.7s.png')});
+ await page.screenshot({path:resolve(FRAMES_DIR,'idle-fast-1.7s-v2.png')});
  labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Achievements'),`expected Achievements by 1.7s into the fast pass, got ${JSON.stringify(labels)}`);
 

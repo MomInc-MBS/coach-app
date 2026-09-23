@@ -45,11 +45,26 @@ async function anyLitPixel(page){
   return false;
  });
 }
+// Polls (rather than sampling once) so this can't race a starved renderer on a busy shared host — this
+// box runs many concurrent worker lanes, and a Chromium tab can go a while between scheduled frames under
+// contention; waiting for the first real paint is the fix, not a longer fixed sleep.
+async function waitForLit(page,timeout=15000){
+ await page.waitForFunction(()=>{
+  const c=document.getElementById('portalOverlay'),ctx=c.getContext('2d');
+  const d=ctx.getImageData(0,0,c.width,c.height).data;
+  for(let i=0;i<d.length;i+=4)if(d[i+3]>40&&(d[i]>60||d[i+1]>60||d[i+2]>60))return true;
+  return false;
+ },{timeout});
+}
+// Kept deliberately sparse: `mouse.move(..., {steps:N})` costs real wall-clock time per step in this
+// environment (each intermediate pointermove synchronously presses the cloth board) — 30 steps measured
+// at ~8s total on this box, i.e. slower than TRAIL_FADE_MS itself, which silently ate the *start* of every
+// drag before a screenshot ever saw it. A real finger swipe is fast; a handful of steps says so too.
 async function dragRect(page,r,inset=.06){
  const x0=r.left+r.width*inset,y0=r.top+r.height*inset,x1=r.left+r.width*(1-inset),y1=r.top+r.height*(1-inset);
  await page.mouse.move(x0,y0);await page.mouse.down();
- await page.mouse.move(x1,y0,{steps:15});await page.mouse.move(x1,y1,{steps:15});
- await page.mouse.move(x0,y1,{steps:15});await page.mouse.move(x0,y0,{steps:15});
+ await page.mouse.move(x1,y0,{steps:3});await page.mouse.move(x1,y1,{steps:3});
+ await page.mouse.move(x0,y1,{steps:3});await page.mouse.move(x0,y0,{steps:3});
 }
 
 test('#105 trail: flowing neon ribbon mid-stroke, still fading just after release, gone ~0.8s later',async()=>withPortal(async(browser,url)=>{
@@ -60,20 +75,45 @@ test('#105 trail: flowing neon ribbon mid-stroke, still fading just after releas
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const r=await page.evaluate(()=>window.portal.current().patternRect());
 
+ // Phase 1: mid-stroke — its own drag, released without any timing claim once we're done looking at it.
+ // (The mid-stroke checks below can take an unpredictable amount of real time under host contention —
+ // see phase 2's comment — so this drag must not be the one release-timing is measured against.)
  await page.mouse.move(r.left+r.width*.1,r.top+r.height*.1);await page.mouse.down();
- await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:30});
- await page.screenshot({path:resolve(FRAMES_DIR,'trail-mid-stroke.png')});
+ await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:3}); // see dragRect's comment on step count
+ // Only fall back to polling if nothing painted yet — under normal load this is already lit (the drag's
+ // own moves kept it rendering), and skipping the extra round trip keeps more of the ribbon's length
+ // visible in the screenshot (its tail fades ~0.8s behind the fingertip, same as everywhere else).
+ if(!(await anyLitPixel(page)))await waitForLit(page);
+ await page.screenshot({path:resolve(FRAMES_DIR,'trail-mid-stroke-v2.png')});
  const midBuckets=await litHueBuckets(page);
  assert(midBuckets>3,`expected several distinct hues along the flowing ribbon, saw ${midBuckets}`);
-
  await page.mouse.up();
- // Check the pixels before the screenshot round-trip (not after): under heavy system load the extra
- // capture latency can eat into the ~0.8s fade window and make this flaky for no functional reason.
- const litRightAfter=await anyLitPixel(page);
- await page.screenshot({path:resolve(FRAMES_DIR,'trail-just-after-release.png')});
- assert(litRightAfter,'the trail should still be fading (light-painting), not vanish the instant the finger lifts');
 
- await page.waitForTimeout(900);
+ // Phase 2: a fresh drag, released immediately with nothing slow in between — every point in this stroke
+ // is fresh at the moment of release, so elapsed-since-release is a true measure of the fade's own age
+ // (phase 1 interleaved slow checks *before* releasing, which aged its own points before the clock in
+ // that check ever started — a test-timing bug, not an app bug, caught via a standalone debug harness).
+ await page.mouse.move(r.left+r.width*.1,r.top+r.height*.1);await page.mouse.down();
+ await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:3});
+ await page.mouse.up();
+ // Wait and check inside one evaluate() (a page-side setTimeout, not a separate Node-side waitForTimeout
+ // plus a second round trip), and judge the result against the *page's own* clock, not an assumed 300ms:
+ // this box runs many concurrent worker lanes and can stall the whole test process for a while, so the
+ // only scheduling-proof way to assert "still fading" is to also measure how much time had really passed
+ // by the time the check could run, and only require litness when that's comfortably inside the fade.
+ const releasedAt=await page.evaluate(()=>performance.now());
+ const{lit,elapsedMs}=await page.evaluate((releasedAt)=>new Promise(resolve=>setTimeout(()=>{
+  const c=document.getElementById('portalOverlay'),ctx=c.getContext('2d');
+  const d=ctx.getImageData(0,0,c.width,c.height).data;
+  let lit=false;
+  for(let i=0;i<d.length;i+=4)if(d[i+3]>40&&(d[i]>60||d[i+1]>60||d[i+2]>60)){lit=true;break;}
+  resolve({lit,elapsedMs:performance.now()-releasedAt});
+ },300)),releasedAt);
+ await page.screenshot({path:resolve(FRAMES_DIR,'trail-release-v2.png')});
+ if(elapsedMs<700)assert(lit,`the trail should still be fading ${elapsedMs.toFixed(0)}ms after release (light-painting), not vanish the instant the finger lifts`);
+ else console.log(`skipped the "still fading" check: ${elapsedMs.toFixed(0)}ms had already passed before it could run (host contention)`);
+
+ await page.waitForTimeout(700);
  assert.equal(await anyLitPixel(page),false,'the trail should be fully faded ~0.8s after release');
  await page.close();
 }));
@@ -86,7 +126,7 @@ test('#105 reduced motion: a plain single-colour line, no sparkles/ribbon flow',
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const r=await page.evaluate(()=>window.portal.current().patternRect());
  await page.mouse.move(r.left+r.width*.1,r.top+r.height*.1);await page.mouse.down();
- await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:30});
+ await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:3});
  const buckets=await litHueBuckets(page);
  assert(buckets<=2,`reduced motion should be a plain glowing line, saw ${buckets} distinct hues`);
  await page.mouse.up();

@@ -291,46 +291,104 @@ function touchDot(x,y,color){
 function kickRender(){if(!rafId)rafId=requestAnimationFrame(drawFrame);}
 
 // #105 magical trail: the ribbon's colour cycles through NEONS once every ~48px travelled.
-function neonAt(t){
+function neonRGB(t){
  const n=NEON_RGB.length,i=((Math.floor(t)%n)+n)%n,j=(i+1)%n,f=t-Math.floor(t);
  const[r1,g1,b1]=NEON_RGB[i],[r2,g2,b2]=NEON_RGB[j];
- return`rgb(${r1+(r2-r1)*f|0},${g1+(g2-g1)*f|0},${b1+(b2-b1)*f|0})`;
+ return[r1+(r2-r1)*f|0,g1+(g2-g1)*f|0,b1+(b2-b1)*f|0];
 }
-// Fixed-size sparkle pool (typed arrays, ring buffer index) so shedding stardust never allocates per frame.
-const SPARK_N=90,SPARK_LIFE=500;
+// Fixed-size sparkle pool (typed arrays, ring buffer index) so shedding stardust never allocates per
+// frame; raised to 240 slots / 3-per-frame emission (conductor review 2026-09-23) for visibly thicker
+// stardust — still self-capping (a slow frame rate spawns fewer, since spawn is once per rendered frame).
+const SPARK_N=240,SPARK_LIFE=550;
 const sparkX=new Float32Array(SPARK_N),sparkY=new Float32Array(SPARK_N),sparkVX=new Float32Array(SPARK_N),sparkVY=new Float32Array(SPARK_N),sparkSize=new Float32Array(SPARK_N),sparkHue=new Int8Array(SPARK_N),sparkBorn=new Float32Array(SPARK_N).fill(-1e9);
 let sparkCursor=0;
 function spawnSpark(x,y){
  const i=sparkCursor;sparkCursor=(sparkCursor+1)%SPARK_N;
- const a=Math.random()*Math.PI*2,s=20+Math.random()*40;
- sparkX[i]=x;sparkY[i]=y;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s-15;
- sparkSize[i]=1.5+Math.random()*2;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=performance.now();
+ const a=Math.random()*Math.PI*2,s=16+Math.random()*30;
+ sparkX[i]=x;sparkY[i]=y;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s*.5+18; // outward, biased slightly down
+ sparkSize[i]=2+Math.random()*3;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=performance.now();
 }
 function sparksAlive(now){for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)return true;return false;}
 function drawSparks(now){
  for(let i=0;i<SPARK_N;i++){
   const age=now-sparkBorn[i];if(age<0||age>=SPARK_LIFE)continue;
-  const t=age/1000,life=age/SPARK_LIFE,x=sparkX[i]+sparkVX[i]*t,y=sparkY[i]+sparkVY[i]*t+40*life*life;
-  const alpha=(1-life)*(.5+.5*Math.sin(age*.02+i)),color=NEONS[sparkHue[i]];
-  ctx.save();ctx.globalAlpha=Math.max(0,alpha);ctx.shadowColor=color;ctx.shadowBlur=6;ctx.fillStyle=color;
-  ctx.beginPath();ctx.arc(x,y,sparkSize[i]*(1-life*.5),0,Math.PI*2);ctx.fill();ctx.restore();
+  const t=age/1000,life=age/SPARK_LIFE,x=sparkX[i]+sparkVX[i]*t,y=sparkY[i]+sparkVY[i]*t+30*life*life;
+  const alpha=(1-life)*(.55+.45*Math.sin(age*.03+i)),color=NEONS[sparkHue[i]];
+  ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.max(0,alpha);ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fillStyle=color;
+  ctx.beginPath();ctx.arc(x,y,sparkSize[i]*(1-life*.4),0,Math.PI*2);ctx.fill();ctx.restore();
  }
 }
-// Full-motion trail: a neon ribbon flowing along its length, sparks shed from the tip, a bright tip, an
-// ~0.8s fade (TRAIL_FADE_MS) per segment. `live` also sheds sparkles; a just-released trail (in `fading`)
-// keeps rendering with no new sparks until it ages out.
-function renderRibbon(pts,now,live){
- if(!pts.length)return;
- if(pts.length<2){touchDot(pts[0].x,pts[0].y,'#ffffff');return;}
- let dist=0;
- for(let i=1;i<pts.length;i++){
-  const a=pts[i-1],b=pts[i],age=now-b.t;if(age>=TRAIL_FADE_MS)continue;
-  dist+=Math.hypot(b.x-a.x,b.y-a.y);
-  strokeGlow([[a.x,a.y],[b.x,b.y]],neonAt(dist/48),Math.max(0,1-age/TRAIL_FADE_MS),5);
+// A bloom + short star-flare at the fingertip (one gradient fill + a couple of strokes — cheap, one per
+// active tip per frame, not per particle). `rgb` is an [r,g,b] triple, not a CSS string: building rgba()
+// stops directly avoids the hex-only "+'cc'" alpha-suffix trick, which broke for the rgb(...) tip colour.
+function drawFlare(x,y,[r,g,b],alpha){
+ const solid=`rgb(${r},${g},${b})`;
+ ctx.save();ctx.globalAlpha=alpha;ctx.globalCompositeOperation='lighter';
+ const grad=ctx.createRadialGradient(x,y,0,x,y,26);
+ grad.addColorStop(0,'#ffffffee');grad.addColorStop(.4,`rgba(${r},${g},${b},.8)`);grad.addColorStop(1,`rgba(${r},${g},${b},0)`);
+ ctx.fillStyle=grad;ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.shadowColor=solid;ctx.shadowBlur=10;
+ ctx.beginPath();ctx.moveTo(x-15,y);ctx.lineTo(x+15,y);ctx.moveTo(x,y-15);ctx.lineTo(x,y+15);ctx.stroke();
+ ctx.fillStyle='#ffffff';ctx.shadowBlur=0;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+const pathLength=pts=>{let d=0;for(let i=1;i<pts.length;i++)d+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return d;};
+const ribbonPath=pts=>{const p=new Path2D();pts.forEach((pt,i)=>i?p.lineTo(pt.x,pt.y):p.moveTo(pt.x,pt.y));return p;};
+// One gradient along the trail's own line (tail->tip): colour flows through NEONS by distance travelled,
+// alpha follows each sampled point's own age — capped to a handful of stops, so building and stroking it
+// costs the same regardless of how many raw points the stroke has.
+const RIBBON_STOPS=10;
+function ribbonGradient(pts,now){
+ const head=pts[pts.length-1],tail=pts[0];
+ if(head.x===tail.x&&head.y===tail.y)return null;
+ const g=ctx.createLinearGradient(tail.x,tail.y,head.x,head.y);
+ const n=pts.length,count=Math.min(n,RIBBON_STOPS);
+ let dist=0,last=pts[0];
+ for(let k=0;k<count;k++){
+  const i=Math.round(k*(n-1)/(count-1)),p=pts[i];
+  dist+=Math.hypot(p.x-last.x,p.y-last.y);last=p;
+  const alpha=Math.max(0,1-(now-p.t)/TRAIL_FADE_MS),[r,gg,b]=neonRGB(dist/48);
+  g.addColorStop(k/(count-1),`rgba(${r},${gg},${b},${alpha.toFixed(3)})`);
  }
- const tip=pts[pts.length-1];
- if(now-tip.t<TRAIL_FADE_MS)touchDot(tip.x,tip.y,'#ffffff');
- if(live)spawnSpark(tip.x,tip.y);
+ return g;
+}
+// Full-motion trail: a wide soft additive glow under a brighter core — TWO stroke() calls total for the
+// whole path (not one shadowed stroke per segment), so cost doesn't scale with point count. `live` also
+// sheds sparkles from a bright bloom/flare tip; a just-released trail (in `fading`) keeps rendering with
+// no new sparks until it ages out.
+function renderRibbon(pts,now,live){
+ const visible=pts.filter(p=>now-p.t<TRAIL_FADE_MS);
+ if(!visible.length)return;
+ if(visible.length<2){drawFlare(visible[0].x,visible[0].y,[255,255,255],1);return;}
+ const grad=ribbonGradient(visible,now);
+ if(grad){
+  const path=ribbonPath(visible);
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=grad;
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.55;ctx.shadowColor='#ffffff';ctx.shadowBlur=10;ctx.lineWidth=22; // wide soft glow
+  ctx.stroke(path);
+  ctx.shadowBlur=0;ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.lineWidth=5.5; // bright core
+  ctx.stroke(path);
+  ctx.restore();
+ }
+ const tip=visible[visible.length-1],tipAlpha=Math.max(.35,1-(now-tip.t)/TRAIL_FADE_MS);
+ drawFlare(tip.x,tip.y,neonRGB(pathLength(visible)/48),tipAlpha);
+ if(live)for(let k=0;k<3;k++)spawnSpark(tip.x,tip.y);
+}
+// #105: a short bright shimmer that sweeps the frozen path from tail to tip over the fade window, once,
+// right after release — a ripple riding the trail out as it dies.
+function drawShimmer(entry,now){
+ const t=(now-entry.releasedAt)/TRAIL_FADE_MS;if(t<0||t>1)return;
+ const pts=entry.pts,total=pathLength(pts);if(!total)return;
+ const target=t*total;let d=0,x=pts[0].x,y=pts[0].y;
+ for(let i=1;i<pts.length;i++){
+  const seg=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+  if(d+seg>=target){const f=seg?(target-d)/seg:0;x=pts[i-1].x+(pts[i].x-pts[i-1].x)*f;y=pts[i-1].y+(pts[i].y-pts[i-1].y)*f;break;}
+  d+=seg;x=pts[i].x;y=pts[i].y;
+ }
+ ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=(1-t)*.85+.1;
+ const g=ctx.createRadialGradient(x,y,0,x,y,16);g.addColorStop(0,'#ffffffee');g.addColorStop(1,'#ffffff00');
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();
+ ctx.restore();
 }
 function renderPlainTrail(pts,now){
  const trail=pts.filter(pt=>now-pt.t<TRAIL_FADE_MS).map(pt=>[pt.x,pt.y]);
@@ -371,19 +429,34 @@ function drawArrow(from,to,color,alpha){
  ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len,0);ctx.moveTo(len-6,-5);ctx.lineTo(len,0);ctx.lineTo(len-6,5);ctx.stroke();
  ctx.restore();
 }
-function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width){
- polys.forEach(p=>strokeGlow(p,color,alpha,width));
- if(arrow)drawArrow(arrow.from,arrow.to,color,alpha);
- ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;
- ctx.font='600 12px system-ui,sans-serif';ctx.textBaseline='bottom';
- ctx.fillText(label,labelPt[0]+6,labelPt[1]-6);
+// A bold, pill-backed label near the shape's start point, clear of the stroke and clamped inside the
+// board face with a 12px margin (conductor review 2026-09-23: the old plain small text ran off-board in
+// a corner). Flips to whichever side keeps it fully on-board rather than clipping.
+function drawLabel(text,[x,y],color,alpha,rect){
+ ctx.save();ctx.font='700 15px system-ui,sans-serif';ctx.textBaseline='middle';
+ const padX=9,padY=6,h=15+padY*2,w=ctx.measureText(text).width+padX*2,margin=12;
+ const face=rect||fallbackRect();
+ let lx=x+12,ly=y-14;
+ if(lx+w>face.left+face.width-margin)lx=x-12-w;
+ lx=Math.min(Math.max(lx,face.left+margin),face.left+face.width-margin-w);
+ ly=Math.min(Math.max(ly,face.top+margin+h/2),face.top+face.height-margin-h/2);
+ ctx.globalAlpha=alpha;
+ ctx.fillStyle='rgba(8,5,14,.75)';
+ ctx.beginPath();ctx.roundRect(lx,ly-h/2,w,h,h/2);ctx.fill();
+ ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;
+ ctx.fillText(text,lx+padX,ly+1);
  ctx.restore();
 }
+function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width,rect){
+ polys.forEach(p=>strokeGlow(p,color,alpha,width));
+ if(arrow)drawArrow(arrow.from,arrow.to,color,alpha);
+ drawLabel(label,labelPt,color,alpha,rect);
+}
 function drawIdle(now){
- const rect=board?board.patternRect():fallbackRect();
- if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3));return;}
+ const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
+ if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face));return;}
  const{id,alpha,width}=idleFrame(now);
- drawIdleShape(idleShapeInfo(id,rect),alpha,width);
+ drawIdleShape(idleShapeInfo(id,rect),alpha,width,face);
 }
 
 function drawFrame(){
@@ -397,10 +470,13 @@ function drawFrame(){
  }
  if(idleCycle)drawIdle(now);
  if(phase?.pulse&&phase.pts)strokeGlow(phase.pts,phase.color,.4+.25*Math.sin((now-phase.t0)/280),3); // soft breathing outline while loading
- for(let i=fading.length-1;i>=0;i--)if(now-fading[i].at(-1).t>=TRAIL_FADE_MS)fading.splice(i,1);
+ for(let i=fading.length-1;i>=0;i--)if(now-fading[i].pts.at(-1).t>=TRAIL_FADE_MS)fading.splice(i,1);
  const reduced=prefersReducedMotion();
  for(const p of pointers.values())reduced?renderPlainTrail(p.pts,now):renderRibbon(p.pts,now,true);
- for(const pts of fading)reduced?renderPlainTrail(pts,now):renderRibbon(pts,now,false);
+ for(const entry of fading){
+  if(reduced){renderPlainTrail(entry.pts,now);continue;}
+  renderRibbon(entry.pts,now,false);drawShimmer(entry,now); // #105: a shimmer ripples along the path as it fades
+ }
  if(!reduced)drawSparks(now);
  if(pointers.size||fading.length||outlineFlash||(idleCycle&&!idleCycle.static)||(phase?.pulse)||(!reduced&&sparksAlive(now)))kickRender();
 }
@@ -557,7 +633,7 @@ function endPointer(e,cancel){
  const p=pointers.get(e.pointerId);if(!p)return;
  pointers.delete(e.pointerId);board.release(e.pointerId);
  // #105: the just-released stroke keeps fading (light-painting), independent of whether it matches.
- if(p.pts.length>1)fading.push(p.pts);
+ if(p.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});
  scheduleIdle();kickRender();
  if(cancel||busy)return;
  const xs=p.norm.map(n=>n[0]),ys=p.norm.map(n=>n[1]);
