@@ -1,0 +1,720 @@
+{
+  "title": "Top 100 three-color combinations",
+  "source": {
+    "path": "C:/Users/ianmy/.codex/visualizations/2026/09/23/01a0cbf9-7133-7c20-ad39-c65a44c69c18/top-100-three-color-combinations.html",
+    "extractedFrom": "the JavaScript palettes array",
+    "note": "Approximate popularity order, preserved exactly from the source visualization."
+  },
+  "colorRatio": {
+    "dominant": 60,
+    "support": 30,
+    "accent": 10
+  },
+  "colors": [
+    "dominant",
+    "support",
+    "accent"
+  ],
+  "palettes": [
+    {
+      "rank": 1,
+      "name": "Navy · Ivory · Gold",
+      "dominant": "#14213D",
+      "support": "#F8F4E3",
+      "accent": "#D4A017"
+    },
+    {
+      "rank": 2,
+      "name": "Sage · Cream · Charcoal",
+      "dominant": "#A3B18A",
+      "support": "#F5F1E8",
+      "accent": "#2F3E46"
+    },
+    {
+      "rank": 3,
+      "name": "Black · White · Red",
+      "dominant": "#111111",
+      "support": "#F7F7F7",
+      "accent": "#E63946"
+    },
+    {
+      "rank": 4,
+      "name": "Forest · Cream · Brass",
+      "dominant": "#234E3F",
+      "support": "#F4EBD0",
+      "accent": "#C49A3A"
+    },
+    {
+      "rank": 5,
+      "name": "Terracotta · Sand · Olive",
+      "dominant": "#C96F4A",
+      "support": "#E8D8C3",
+      "accent": "#66704A"
+    },
+    {
+      "rank": 6,
+      "name": "Navy · Blush · Gold",
+      "dominant": "#1D3557",
+      "support": "#F2C6C2",
+      "accent": "#D6A84B"
+    },
+    {
+      "rank": 7,
+      "name": "Cobalt · Orange · Ivory",
+      "dominant": "#185ADB",
+      "support": "#FF8C42",
+      "accent": "#FFF7E6"
+    },
+    {
+      "rank": 8,
+      "name": "Teal · Coral · Cream",
+      "dominant": "#167D7F",
+      "support": "#FF7F6A",
+      "accent": "#FFF4E6"
+    },
+    {
+      "rank": 9,
+      "name": "Lavender · Cream · Deep Purple",
+      "dominant": "#C9B8E4",
+      "support": "#F6F0E8",
+      "accent": "#4B2E5A"
+    },
+    {
+      "rank": 10,
+      "name": "Emerald · Ivory · Black",
+      "dominant": "#147D64",
+      "support": "#FAF3E0",
+      "accent": "#151515"
+    },
+    {
+      "rank": 11,
+      "name": "Mocha · Beige · Cream",
+      "dominant": "#6F4E37",
+      "support": "#CBB89D",
+      "accent": "#F4EDE1"
+    },
+    {
+      "rank": 12,
+      "name": "Dusty Blue · Warm White · Tan",
+      "dominant": "#7895A8",
+      "support": "#F6F2EA",
+      "accent": "#B88A65"
+    },
+    {
+      "rank": 13,
+      "name": "Burgundy · Blush · Cream",
+      "dominant": "#7A1F3D",
+      "support": "#E8B4B8",
+      "accent": "#FFF5E8"
+    },
+    {
+      "rank": 14,
+      "name": "Olive · Mustard · Cream",
+      "dominant": "#66733D",
+      "support": "#D4A72C",
+      "accent": "#F5E6C8"
+    },
+    {
+      "rank": 15,
+      "name": "Powder Blue · Peach · Ivory",
+      "dominant": "#A9D6E5",
+      "support": "#F6BD9A",
+      "accent": "#FFF8E7"
+    },
+    {
+      "rank": 16,
+      "name": "Charcoal · Taupe · Ivory",
+      "dominant": "#30343F",
+      "support": "#A99C8D",
+      "accent": "#F4F1EA"
+    },
+    {
+      "rank": 17,
+      "name": "Mint · Coral · Navy",
+      "dominant": "#A8DADC",
+      "support": "#F08080",
+      "accent": "#1D3557"
+    },
+    {
+      "rank": 18,
+      "name": "Royal Blue · White · Yellow",
+      "dominant": "#2447C6",
+      "support": "#F8F9FA",
+      "accent": "#FFD60A"
+    },
+    {
+      "rank": 19,
+      "name": "Rust · Cream · Dark Brown",
+      "dominant": "#B55239",
+      "support": "#F3E2C7",
+      "accent": "#4A2C2A"
+    },
+    {
+      "rank": 20,
+      "name": "Sky Blue · Sand · Navy",
+      "dominant": "#8ECAE6",
+      "support": "#E9D8A6",
+      "accent": "#023047"
+    },
+    {
+      "rank": 21,
+      "name": "Plum · Mauve · Cream",
+      "dominant": "#5D2E46",
+      "support": "#B784A7",
+      "accent": "#F5E9DD"
+    },
+    {
+      "rank": 22,
+      "name": "Chocolate · Caramel · Cream",
+      "dominant": "#4E2A1E",
+      "support": "#C68B59",
+      "accent": "#F7E7CE"
+    },
+    {
+      "rank": 23,
+      "name": "Pink · Red · Cream",
+      "dominant": "#F4A6B8",
+      "support": "#D7263D",
+      "accent": "#FFF1E6"
+    },
+    {
+      "rank": 24,
+      "name": "Deep Green · Blush · Gold",
+      "dominant": "#12372A",
+      "support": "#E8C4C4",
+      "accent": "#C6A15B"
+    },
+    {
+      "rank": 25,
+      "name": "Indigo · Lilac · Cream",
+      "dominant": "#35317A",
+      "support": "#B8A9D9",
+      "accent": "#F5F0E6"
+    },
+    {
+      "rank": 26,
+      "name": "Burnt Orange · Teal · Cream",
+      "dominant": "#C65D2E",
+      "support": "#2A7F7F",
+      "accent": "#F7E7CE"
+    },
+    {
+      "rank": 27,
+      "name": "Red · Yellow · Navy",
+      "dominant": "#D62828",
+      "support": "#F9C74F",
+      "accent": "#003049"
+    },
+    {
+      "rank": 28,
+      "name": "Sage · Terracotta · Cream",
+      "dominant": "#9CAF88",
+      "support": "#C97A63",
+      "accent": "#F2E9D8"
+    },
+    {
+      "rank": 29,
+      "name": "Black · Tan · Cream",
+      "dominant": "#171717",
+      "support": "#C5A880",
+      "accent": "#F7F1E3"
+    },
+    {
+      "rank": 30,
+      "name": "Dusty Rose · Sage · Cream",
+      "dominant": "#C48B9F",
+      "support": "#98A886",
+      "accent": "#F4EBDD"
+    },
+    {
+      "rank": 31,
+      "name": "Aqua · Navy · Coral",
+      "dominant": "#48CAE4",
+      "support": "#023E8A",
+      "accent": "#FF6B6B"
+    },
+    {
+      "rank": 32,
+      "name": "Denim · Mustard · Cream",
+      "dominant": "#466B8A",
+      "support": "#D4A72C",
+      "accent": "#F5EFE0"
+    },
+    {
+      "rank": 33,
+      "name": "Emerald · Pink · Cream",
+      "dominant": "#0B6E4F",
+      "support": "#F2A7B5",
+      "accent": "#FFF4E6"
+    },
+    {
+      "rank": 34,
+      "name": "Cobalt · Pink · Lavender",
+      "dominant": "#3454D1",
+      "support": "#F78FB3",
+      "accent": "#C8B6E2"
+    },
+    {
+      "rank": 35,
+      "name": "Peach · Mint · Cream",
+      "dominant": "#FFC6A5",
+      "support": "#A8E6CF",
+      "accent": "#FFF8E7"
+    },
+    {
+      "rank": 36,
+      "name": "Orange · Fuchsia · Purple",
+      "dominant": "#FF7A00",
+      "support": "#E83E8C",
+      "accent": "#5B2A86"
+    },
+    {
+      "rank": 37,
+      "name": "Navy · Mint · White",
+      "dominant": "#0B2545",
+      "support": "#A7E8D4",
+      "accent": "#F8FAFC"
+    },
+    {
+      "rank": 38,
+      "name": "Wine · Dusty Rose · Beige",
+      "dominant": "#722F37",
+      "support": "#C98C8C",
+      "accent": "#E7D7C1"
+    },
+    {
+      "rank": 39,
+      "name": "Cyan · Magenta · Yellow",
+      "dominant": "#00A8E8",
+      "support": "#D8119B",
+      "accent": "#FFD400"
+    },
+    {
+      "rank": 40,
+      "name": "Primary Red · Blue · Yellow",
+      "dominant": "#E63946",
+      "support": "#1D4ED8",
+      "accent": "#F4D35E"
+    },
+    {
+      "rank": 41,
+      "name": "Charcoal · Electric Yellow · White",
+      "dominant": "#252A34",
+      "support": "#F9E900",
+      "accent": "#F7F7F7"
+    },
+    {
+      "rank": 42,
+      "name": "Purple · Lime · Black",
+      "dominant": "#6A35A5",
+      "support": "#B7E532",
+      "accent": "#151515"
+    },
+    {
+      "rank": 43,
+      "name": "Turquoise · Yellow · Navy",
+      "dominant": "#22B8B5",
+      "support": "#FFD166",
+      "accent": "#073B4C"
+    },
+    {
+      "rank": 44,
+      "name": "Coral · Peach · Burgundy",
+      "dominant": "#EF6F6C",
+      "support": "#F6BD9A",
+      "accent": "#7A1F3D"
+    },
+    {
+      "rank": 45,
+      "name": "Warm Gray · Pale Blue · Navy",
+      "dominant": "#A8A29E",
+      "support": "#BFD7EA",
+      "accent": "#1E3A5F"
+    },
+    {
+      "rank": 46,
+      "name": "Moss · Camel · Cream",
+      "dominant": "#596B3D",
+      "support": "#C39B77",
+      "accent": "#F4E9D8"
+    },
+    {
+      "rank": 47,
+      "name": "Pistachio · Pink · Cream",
+      "dominant": "#B7C99A",
+      "support": "#E8A0BF",
+      "accent": "#FFF4E6"
+    },
+    {
+      "rank": 48,
+      "name": "Butter Yellow · Sky · Coral",
+      "dominant": "#F6E6A7",
+      "support": "#9ED2E6",
+      "accent": "#F28C8C"
+    },
+    {
+      "rank": 49,
+      "name": "Aqua · Lilac · Pink",
+      "dominant": "#8BDCE1",
+      "support": "#C8B6E2",
+      "accent": "#F4A6C1"
+    },
+    {
+      "rank": 50,
+      "name": "Midnight · Violet · Cyan",
+      "dominant": "#101D42",
+      "support": "#7B2CBF",
+      "accent": "#00D4FF"
+    },
+    {
+      "rank": 51,
+      "name": "Dark Teal · Rust · Sand",
+      "dominant": "#174C4F",
+      "support": "#B65C3A",
+      "accent": "#DCC9A9"
+    },
+    {
+      "rank": 52,
+      "name": "Maroon · Mustard · Cream",
+      "dominant": "#6B1D2A",
+      "support": "#D5A72E",
+      "accent": "#F4E8D0"
+    },
+    {
+      "rank": 53,
+      "name": "Slate Blue · Terracotta · Cream",
+      "dominant": "#5B6C8F",
+      "support": "#C96F4A",
+      "accent": "#F4EBDD"
+    },
+    {
+      "rank": 54,
+      "name": "Emerald · Cobalt · White",
+      "dominant": "#008F6B",
+      "support": "#1E5AA8",
+      "accent": "#F8FAFC"
+    },
+    {
+      "rank": 55,
+      "name": "Ochre · Dusty Blue · Cream",
+      "dominant": "#C58B2A",
+      "support": "#7895A8",
+      "accent": "#F5E9D3"
+    },
+    {
+      "rank": 56,
+      "name": "Seafoam · Salmon · Navy",
+      "dominant": "#9ADBC5",
+      "support": "#F28B82",
+      "accent": "#16324F"
+    },
+    {
+      "rank": 57,
+      "name": "Copper · Teal · Charcoal",
+      "dominant": "#B66A3C",
+      "support": "#2B7A78",
+      "accent": "#2D3436"
+    },
+    {
+      "rank": 58,
+      "name": "Lemon · Lilac · Mint",
+      "dominant": "#F8E77E",
+      "support": "#C9B8E8",
+      "accent": "#B8E0D2"
+    },
+    {
+      "rank": 59,
+      "name": "Cherry · Pink · Cream",
+      "dominant": "#B91C3B",
+      "support": "#F4A6B8",
+      "accent": "#FFF4E6"
+    },
+    {
+      "rank": 60,
+      "name": "Khaki · Navy · Rust",
+      "dominant": "#B3A369",
+      "support": "#1F3556",
+      "accent": "#B95C3A"
+    },
+    {
+      "rank": 61,
+      "name": "Brick · Blue Gray · Cream",
+      "dominant": "#A84734",
+      "support": "#6F8896",
+      "accent": "#F2E8D5"
+    },
+    {
+      "rank": 62,
+      "name": "Eucalyptus · Clay · Linen",
+      "dominant": "#7D9A8A",
+      "support": "#B8755E",
+      "accent": "#EDE3D1"
+    },
+    {
+      "rank": 63,
+      "name": "Fuchsia · Orange · Cream",
+      "dominant": "#D63A8C",
+      "support": "#FF8A3D",
+      "accent": "#FFF1DA"
+    },
+    {
+      "rank": 64,
+      "name": "Jade · Peach · Ivory",
+      "dominant": "#2F8F6B",
+      "support": "#F5B895",
+      "accent": "#FFF8E8"
+    },
+    {
+      "rank": 65,
+      "name": "Raspberry · Powder Blue · Cream",
+      "dominant": "#A92858",
+      "support": "#A9D6E5",
+      "accent": "#FFF4E6"
+    },
+    {
+      "rank": 66,
+      "name": "Aubergine · Olive · Cream",
+      "dominant": "#4C234D",
+      "support": "#7A7F46",
+      "accent": "#F2E5CC"
+    },
+    {
+      "rank": 67,
+      "name": "Camel · Black · Cream",
+      "dominant": "#C49A6C",
+      "support": "#171717",
+      "accent": "#F5E9D8"
+    },
+    {
+      "rank": 68,
+      "name": "Cobalt · Lime · White",
+      "dominant": "#2356D8",
+      "support": "#A8D82E",
+      "accent": "#F8FAFC"
+    },
+    {
+      "rank": 69,
+      "name": "Dusty Purple · Sage · Ivory",
+      "dominant": "#8E7A9D",
+      "support": "#97A78B",
+      "accent": "#F5F0E6"
+    },
+    {
+      "rank": 70,
+      "name": "Scarlet · Blush · Charcoal",
+      "dominant": "#C92A35",
+      "support": "#E9B7B9",
+      "accent": "#2F3437"
+    },
+    {
+      "rank": 71,
+      "name": "Mustard · Plum · Cream",
+      "dominant": "#D0A12A",
+      "support": "#633A5D",
+      "accent": "#F5E9D3"
+    },
+    {
+      "rank": 72,
+      "name": "Turquoise · Coral · White",
+      "dominant": "#20B2AA",
+      "support": "#FF7F6A",
+      "accent": "#FAFAF7"
+    },
+    {
+      "rank": 73,
+      "name": "Smoky Blue · Mauve · Cream",
+      "dominant": "#657A8E",
+      "support": "#A987A8",
+      "accent": "#F4EBDD"
+    },
+    {
+      "rank": 74,
+      "name": "Pine · Rust · Parchment",
+      "dominant": "#254D3B",
+      "support": "#A94D35",
+      "accent": "#E9DCC3"
+    },
+    {
+      "rank": 75,
+      "name": "Rose · Brown · Cream",
+      "dominant": "#C68083",
+      "support": "#6B493D",
+      "accent": "#F5EBDD"
+    },
+    {
+      "rank": 76,
+      "name": "Periwinkle · Peach · Ivory",
+      "dominant": "#8F9EE8",
+      "support": "#F7B89C",
+      "accent": "#FFF8E7"
+    },
+    {
+      "rank": 77,
+      "name": "Magenta · Violet · Black",
+      "dominant": "#D0006F",
+      "support": "#6A00A8",
+      "accent": "#141414"
+    },
+    {
+      "rank": 78,
+      "name": "Mint · Yellow · Coral",
+      "dominant": "#A8E6CF",
+      "support": "#F6E58D",
+      "accent": "#FF7F6A"
+    },
+    {
+      "rank": 79,
+      "name": "Petrol Blue · Mustard · Cream",
+      "dominant": "#1F6673",
+      "support": "#D3A12B",
+      "accent": "#F3E7D3"
+    },
+    {
+      "rank": 80,
+      "name": "Navy · Lavender · Blush",
+      "dominant": "#172A46",
+      "support": "#B7A9D6",
+      "accent": "#E7B7C8"
+    },
+    {
+      "rank": 81,
+      "name": "Espresso · Powder Blue · Ivory",
+      "dominant": "#4A3027",
+      "support": "#A9C8DA",
+      "accent": "#FFF8E8"
+    },
+    {
+      "rank": 82,
+      "name": "Olive · Pink · Burgundy",
+      "dominant": "#6F763B",
+      "support": "#E9A6B5",
+      "accent": "#7D2138"
+    },
+    {
+      "rank": 83,
+      "name": "Slate · Mint · Peach",
+      "dominant": "#64748B",
+      "support": "#A8DCC8",
+      "accent": "#F4B69B"
+    },
+    {
+      "rank": 84,
+      "name": "Ultramarine · Tangerine · Cream",
+      "dominant": "#2646C8",
+      "support": "#F47A34",
+      "accent": "#FFF2DA"
+    },
+    {
+      "rank": 85,
+      "name": "Forest · Lavender · Cream",
+      "dominant": "#244B3A",
+      "support": "#B9A7D3",
+      "accent": "#F4ECDD"
+    },
+    {
+      "rank": 86,
+      "name": "Denim · Rust · Sand",
+      "dominant": "#3F6A8A",
+      "support": "#B8563A",
+      "accent": "#E5D0B1"
+    },
+    {
+      "rank": 87,
+      "name": "Hot Pink · Red · White",
+      "dominant": "#FF3E8A",
+      "support": "#E31B23",
+      "accent": "#FAFAFA"
+    },
+    {
+      "rank": 88,
+      "name": "Deep Purple · Gold · Ivory",
+      "dominant": "#3E245C",
+      "support": "#C9A227",
+      "accent": "#FFF8E7"
+    },
+    {
+      "rank": 89,
+      "name": "Blue · Green · Lemon",
+      "dominant": "#1E88E5",
+      "support": "#43A047",
+      "accent": "#F5E663"
+    },
+    {
+      "rank": 90,
+      "name": "Gray · Pink · Burgundy",
+      "dominant": "#8B8C89",
+      "support": "#E7A6B0",
+      "accent": "#762A3A"
+    },
+    {
+      "rank": 91,
+      "name": "Sea Blue · Orange · Sand",
+      "dominant": "#287C8E",
+      "support": "#F28C3A",
+      "accent": "#E7D4B5"
+    },
+    {
+      "rank": 92,
+      "name": "Lilac · Olive · Beige",
+      "dominant": "#C0AED6",
+      "support": "#777B45",
+      "accent": "#E9DDC7"
+    },
+    {
+      "rank": 93,
+      "name": "Coral · Teal · Navy",
+      "dominant": "#F2766B",
+      "support": "#2C8C88",
+      "accent": "#18324A"
+    },
+    {
+      "rank": 94,
+      "name": "Brown · Sky Blue · Cream",
+      "dominant": "#694A3A",
+      "support": "#98CCE3",
+      "accent": "#F4E8D5"
+    },
+    {
+      "rank": 95,
+      "name": "Black · Neon Green · White",
+      "dominant": "#121212",
+      "support": "#7CFF00",
+      "accent": "#F5F5F5"
+    },
+    {
+      "rank": 96,
+      "name": "Blue Violet · Hot Pink · Cyan",
+      "dominant": "#5D3FD3",
+      "support": "#FF4FA3",
+      "accent": "#39D5FF"
+    },
+    {
+      "rank": 97,
+      "name": "Crimson · Gold · Black",
+      "dominant": "#A31621",
+      "support": "#D4AF37",
+      "accent": "#171717"
+    },
+    {
+      "rank": 98,
+      "name": "Icy Blue · Charcoal · White",
+      "dominant": "#C7E3F1",
+      "support": "#343A40",
+      "accent": "#FAFAFA"
+    },
+    {
+      "rank": 99,
+      "name": "Soft Peach · Butter · Sage",
+      "dominant": "#F4C7AB",
+      "support": "#F2D98D",
+      "accent": "#9EAD8C"
+    },
+    {
+      "rank": 100,
+      "name": "Black · Gray · White",
+      "dominant": "#111111",
+      "support": "#8A8A8A",
+      "accent": "#F5F5F5"
+    }
+  ]
+}

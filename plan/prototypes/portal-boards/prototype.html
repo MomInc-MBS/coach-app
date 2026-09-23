@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="color-scheme" content="dark">
+ <title>Portal Boards · Local Prototype</title>
+ <style>
+  *{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#150f1e;color:#f5eaff;font:16px/1.45 system-ui,sans-serif;display:grid;place-items:center;padding:16px}.app-card{width:min(360px,100%);padding:24px 16px;border:1px solid #ffffff22;border-radius:16px;background:#221833;text-align:center}.app-card p{margin:0 0 16px}.hint{margin:12px 0 0;font-size:14px;opacity:.7;text-align:center}button{font:inherit;color:inherit;background:#34264a;border:1px solid #ffffff44;border-radius:10px;padding:10px 16px;cursor:pointer}dialog.stand-in{background:#1c1428;color:#f5eaff;border:1px solid #ffffff33;border-radius:16px;padding:24px 16px;width:min(420px,calc(100vw - 32px));min-height:50vh}dialog.stand-in::backdrop{background:#0008}dialog.stand-in h2{margin:0 0 16px}
+ </style>
+ <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/":"/vendor/three/"}}</script>
+ <link rel="stylesheet" href="./portal.css">
+</head>
+<body>
+ <main><div class="app-card"><p>This is a local visual prototype. Tracing a shape opens its destination stand-in.</p><button id="openBoard" type="button" hidden>Back to the board</button></div><p class="hint">Trace a shape on the board. Menu → Board switches boards.</p></main>
+ <button class="meditation-entry" type="button" hidden></button>
+ <div class="coach-dock" hidden><button data-panel="meals" type="button" hidden></button><button data-panel="account" type="button" hidden></button></div>
+ <dialog class="meditation-panel stand-in"><h2>Meditation (stand-in)</h2><button type="button" data-close>Close</button></dialog>
+ <dialog id="mealsPanel" class="stand-in"><h2>Nutrition (stand-in)</h2><button type="button" data-close>Close</button></dialog>
+ <dialog id="accountPanel" class="stand-in"><h2>Scoreboard (stand-in)</h2><button type="button" data-close>Close</button></dialog>
+ <script type="module">
+  import {mountPortal} from './portal.mjs';
+  const wire=(sel,dlg)=>document.querySelector(sel).addEventListener('click',()=>document.querySelector(dlg).showModal());
+  wire('.meditation-entry','.meditation-panel');
+  wire('.coach-dock [data-panel="meals"]','#mealsPanel');
+  wire('.coach-dock [data-panel="account"]','#accountPanel');
+  document.querySelectorAll('dialog.stand-in [data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+  window.myr5VerifiedOptionalAccess=true; // Local prototype only: War Room destination is unlocked for visual testing.
+  mountPortal();
+ </script>
+</body>
+</html>
