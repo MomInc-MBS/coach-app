@@ -30,8 +30,9 @@ function serve(){
 
 // Installed (standalone), seeded with a completed setup, camera/network-free (reduced motion also
 // collapses the quilt's cut/reveal animations to near-zero, so tracing many shapes stays fast).
-async function installedContext(browser){
- const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion:'reduce'});
+// `overrides` lets #5 opt back into real motion to exercise the glass/tunnel/dive path.
+async function installedContext(browser,overrides={}){
+ const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion:'reduce',...overrides});
  await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));
  return context;
 }
@@ -41,8 +42,8 @@ async function seed(context,base){
  await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
  await page.close();
 }
-async function openApp(browser,base){
- const context=await installedContext(browser);
+async function openApp(browser,base,overrides){
+ const context=await installedContext(browser,overrides);
  await seed(context,base);
  const page=await context.newPage();
  await page.goto(base+'/pose.html');
@@ -177,5 +178,25 @@ test('4. Menu sheet -> Ship opens the full-screen ship view, and the phone back 
   assert.equal(await page.evaluate(()=>location.hash),'#ship');
   await page.goBack();
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open);
+ }finally{await context.close();}
+});
+
+test('5. one shape without reduced motion runs the real glass and dive, and the quilt returns clean',async()=>{
+ const {context,page}=await openApp(browser,base,{reducedMotion:'no-preference'});
+ try{
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+  // triangle -> Food: the one real-motion run of #101/#103's glass, tunnel and dive.
+  await page.evaluate(()=>{window.myr5SmokeSeq=window.myr5Portal.open('up');});
+  await page.waitForFunction(()=>!!document.querySelector('.portal-glass.gl canvas'),{timeout:5000});
+  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,{timeout:15000});
+  const midTransform=await page.evaluate(()=>getComputedStyle(document.getElementById('portalHome')).transform);
+  assert.notEqual(midTransform,'none','the dive must actually scale the portal, not skip straight to the destination');
+  await page.evaluate(()=>window.myr5SmokeSeq);
+  await page.locator('#mealsPanel [data-close]').click();
+  // Closing fires the dialog's native 'close' event asynchronously; poll for the settled state
+  // (bounded) rather than snapshotting immediately, or this legitimately races the event.
+  await page.waitForFunction(()=>getComputedStyle(document.getElementById('portalHome')).transform==='none'&&!document.querySelector('.portal-glass'),{timeout:5000});
+  assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),false,'the quilt is back, not left hidden');
  }finally{await context.close();}
 });

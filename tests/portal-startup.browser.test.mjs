@@ -41,5 +41,23 @@ test('installed Coach starts at Quilt only after setup and preserves panel deep 
   const deepLink=await installedContext();await seed(deepLink);const install=await deepLink.newPage();await install.goto(base+'/pose.html?panel=install');await install.waitForFunction(()=>document.getElementById('installPanel')?.open===true);assert.equal(await install.locator('#portalHome').count(),0);await deepLink.close();
 
   const active=await installedContext();await seed(active);const workout=await active.newPage();let heldCss,holdCssReady;const cssHeld=new Promise(resolve=>holdCssReady=resolve);await workout.route('**/modules/portal/portal.css',route=>{heldCss=route;holdCssReady();});await workout.goto(base+'/pose.html');await cssHeld;await workout.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);await workout.locator('#openSettings').click();await workout.locator('#camera').selectOption('manual');await workout.locator('#closeSettings').click();await workout.locator('#start').click();await workout.waitForFunction(()=>window.myr5TestState?.phase==='manual');await heldCss.continue();await workout.waitForFunction(()=>document.getElementById('portalHome'));assert.equal(await workout.locator('#portalHome').isVisible(),false);assert.equal(await workout.locator('#stop').isDisabled(),false);await active.close();
+
+  // W1-1G #15: a bounced ?optional= link (public-entry.mjs -> launch.mjs) must land where the visitor
+  // can actually read why -- not get covered the instant the starter portal (#2) would otherwise open.
+  const optionalSeen=await installedContext();await seed(optionalSeen);const optionalPage=await optionalSeen.newPage();await optionalPage.goto(base+'/pose.html?optional=/war-room');
+  await optionalPage.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
+  await optionalPage.waitForTimeout(300); // past the myr5:coach-plan tick that would otherwise auto-open the portal
+  assert.equal(await optionalPage.locator('#status').textContent(),'Finish Coach setup to unlock the War Room.','the reason lands where the visitor is standing');
+  assert.equal(await optionalPage.locator('#portalHome').count(),0,'the starter portal must not cover that reason before it is read');
+  await optionalPage.waitForFunction(()=>!new URL(location.href).searchParams.has('optional'));
+  await optionalSeen.close();
+
+  // Same bounce, but signed out with nothing saved on this device: the gate is what blocks, so the
+  // reason must land on its line instead.
+  const optionalNoPlan=await installedContext();const gatePage=await optionalNoPlan.newPage();await gatePage.goto(base+'/pose.html?optional=/war-room');
+  await gatePage.waitForFunction(()=>document.getElementById('coachSetupGate')?.open===true);
+  await gatePage.waitForTimeout(300);
+  assert.match(await gatePage.locator('#coachSetupGate p').textContent(),/War Room/,'the blocking gate carries the same reason when there is no pod to show it on');
+  await optionalNoPlan.close();
  }finally{await browser?.close();await new Promise(done=>server.close(done));}
 });

@@ -12,7 +12,7 @@ import {mountCreatureSkinRewardReveal} from './creature-skin-reward-reveal.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
-import {applyCoachAccount,applyLocalCoach,clearCoachAccount} from './coach-profile.mjs';
+import {applyCoachAccount,applyLocalCoach,clearCoachAccount,setOptionalGateReason} from './coach-profile.mjs';
 import {openLocalCoach} from './local-coach-runtime.mjs';
 import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {mountScoreboard} from './scoreboard.mjs';
@@ -61,14 +61,21 @@ document.addEventListener('click',event=>{
 },true);
 // A direct visit to an optional route (typed URL, bookmark) never reaches the click guard above —
 // public-entry.mjs already bounced it here with ?optional=<route> before this page's account state
-// was known. Say why, in #status (always visible on landing, unlike #identityStatus which lives in
-// a closed dialog), then drop the param so a reload/share is clean.
+// was known. Say why: in #status (visible once the pod shows — app.mjs's starterPortalReady() now
+// keeps the starter portal from covering it while this param is present), and in the setup gate's own
+// reason line if the gate is what ends up blocking instead. Strip the param only once account state
+// has settled (plan found, or definitively no plan) — stripping it immediately would make app.mjs's
+// own read of this same param miss it and auto-open the portal over #status anyway.
 {
  const optionalEntry=new URLSearchParams(location.search).get('optional');
  if(optionalEntry){
-  const status=document.getElementById('status');
-  if(status)status.textContent=optionalEntry==='/war-room'?'Finish Coach setup to unlock the War Room.':'Complete Coach setup to unlock this room.';
-  const clean=new URL(location.href);clean.searchParams.delete('optional');history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
+  const message=optionalEntry==='/war-room'?'Finish Coach setup to unlock the War Room.':'Complete Coach setup to unlock this room.';
+  const status=document.getElementById('status');if(status)status.textContent=message;
+  setOptionalGateReason(message);
+  const clean=new URL(location.href);clean.searchParams.delete('optional');
+  const strip=()=>history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
+  window.addEventListener('myr5:coach-plan',strip,{once:true});
+  window.addEventListener('myr5:account-cleared',strip,{once:true});
  }
 }
 const scoreboard=mountScoreboard({api,getAccount:()=>account});

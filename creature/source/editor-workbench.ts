@@ -73,7 +73,14 @@ function sync(){
  syncMomOnly();
  syncMaterials();
  syncSkinChoice();
- const unlocks=[...new Set(Object.values(preview).flatMap(p=>[p?.textureId,p?.colorId]).map(id=>id&&lockSource(id)).filter(Boolean))].map(source=>'unlocks at '+source);
+ // #1: a locked texture with no pattern files yet (familyId -1) previews Flat regardless -- say so,
+ // instead of leaving the strip's "unlocks at X" as the only clue something is off about the preview.
+ const unlocks=[...new Set(Object.values(preview).flatMap(p=>{
+  const parts:string[]=[];
+  if(p?.textureId){const t=TEXTURES.find(x=>x.id===p.textureId);if(t&&t.familyId<0)parts.push(`${t.displayName} pattern is coming`);const source=lockSource(p.textureId);if(source)parts.push('unlocks at '+source);}
+  if(p?.colorId){const source=lockSource(p.colorId);if(source)parts.push('unlocks at '+source);}
+  return parts;
+ }))];
  if(previewBody)unlocks.push('unlocks when you complete '+bodyLock(previewBody));
  strip.hidden=!unlocks.length;strip.textContent='Preview · '+unlocks.join(' · ');
  ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();

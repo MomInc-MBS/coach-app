@@ -200,7 +200,9 @@ function starterPortalReady(){
  // No isInstalled() gate: a browser visitor who has already finished setup (window.coachPlan set)
  // gets the same quilt-first landing as an installed one. New/signed-out visitors never reach this
  // point with a coachPlan, so they still see setup first.
- return !route.has('panel')&&location.hash!=='#pod'&&location.hash!=='#ship'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
+ // #15: a bounced ?optional= route (launch.mjs) must stay on the visible pod long enough to read
+ // why, not get covered by the starter portal the instant a coachPlan resolves.
+ return !route.has('panel')&&!route.has('optional')&&location.hash!=='#pod'&&location.hash!=='#ship'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
 }
 window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalAttempted)return;

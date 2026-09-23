@@ -11,7 +11,7 @@ const result=await build({
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,lockSource,resolveRegionMaterial,grantUnlock,findPalette,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,frameRegion,T}=m;
+const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,lockSource,resolveRegionMaterial,grantUnlock,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
@@ -32,6 +32,18 @@ test('a locked palette paints only in preview; the normal render still falls bac
  const choice={textureId:'flat',colorId:'pal-01',sparkle:0,metallic:0},palette=findPalette('pal-01');
  assert.notEqual(resolveRegionMaterial(0,choice).primary,palette.colors[0]);
  assert.equal(resolveRegionMaterial(0,choice,true).primary,palette.colors[0]);
+});
+
+test('#1 a locked battle-pass texture (no pattern files yet) still paints in preview -- honestly, with its own representative colour, not silently Flat-and-unrelated',()=>{
+ memory.clear();
+ const texture=TEXTURES.find(t=>t.id==='chest-plate-steel');
+ assert.equal(texture.familyId,-1,'fixture: no pattern art exists for this one yet');
+ const representative=findColor(texture.defaultColorId);
+ const choice={textureId:'chest-plate-steel',colorId:'default-ruby',sparkle:0,metallic:0};
+ const previewed=resolveRegionMaterial(0,choice,true);
+ assert.equal(previewed.primary,representative.primary,"paints the texture's own representative colour, not the unrelated colour already picked for another texture");
+ const real=resolveRegionMaterial(0,choice); // outside preview (not owned) it still falls all the way back, unaffected
+ assert.notEqual(real.primary,representative.primary);
 });
 
 test('save guard: a locked texture, palette or body forced into the save path is rejected and the last owned look is kept',()=>{

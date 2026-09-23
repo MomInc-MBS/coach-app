@@ -126,9 +126,15 @@ export function lockSource(id: string): string | null {
 export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false) {
  if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0 };
  const texture = findTexture(choice.textureId);
+ // #1: a locked battle-pass texture previews (no art exists yet, familyId -1 -> falls back to Flat's
+ // shape), but honestly: paint the texture's own representative colour so it doesn't silently read as
+ // "just Flat, nothing selected" -- falling back to today's colour only if that data is missing.
+ const noArtPreview = preview && !!texture && texture.familyId < 0;
  const safeTexture = texture && (preview || isTextureUnlocked(texture)) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
  const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : FLAT_BASE;
- const triad = colorTriad(choice.colorId, preview) ?? colorTriad(safeTexture.defaultColorId) ?? base;
+ const triad = noArtPreview
+  ? colorTriad(texture!.defaultColorId) ?? colorTriad(choice.colorId, preview) ?? base
+  : colorTriad(choice.colorId, preview) ?? colorTriad(safeTexture.defaultColorId) ?? base;
  const metalness = Number.isFinite(choice.metallic) ? Math.max(0, Math.min(1, choice.metallic)) : base.metalness;
  const sparkle = Number.isFinite(choice.sparkle) ? Math.max(0, Math.min(1, choice.sparkle)) : 0;
  return { ...base, ...triad, metalness, sparkle };
