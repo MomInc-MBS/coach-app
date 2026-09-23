@@ -13,6 +13,16 @@ export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs
 // Liquid-glass slab over the wormhole (CSS px): lens-map texel, bevel depth, max refraction at the rim,
 // rim inset inside the cut (the cloth hole's edge is ragged by about half a grid cell).
 const GLASS={mapPx:3,bevel:30,bend:22,rimInset:8};
+// #104/#105 (W2-2E): the six neons already used for the "all menus" glass (portal.css .portal-glass.all),
+// reused for the flowing finger-trail ribbon. IDLE: 3s of no touch arms the cycle; fast pass 0.5s/shape once
+// through the order below, then a gentler 2.5s/shape loop until the next touch. TRAIL_FADE_MS: how long a
+// trail segment (live or just-released) stays lit before it's fully faded.
+const TRAIL_NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
+const TRAIL_NEON_RGB=TRAIL_NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+const IDLE={armMs:3000,fastMs:500,slowMs:2500};
+// Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
+const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','line-up','cross'];
+const TRAIL_FADE_MS=800;
 
 // Board catalogue: add one line per wave-2 board here.
 export const PRODUCTION_PORTALS=Object.freeze(['quilt']);
@@ -124,9 +134,13 @@ let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boa
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
-let pointers=new Map(),pendingStrokes=[],finalizeTimer=0,outlineFlash=null,rafId=0;
+let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
+// #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
+// tab visible); idleCycle is the running cycle ({phase:'fast'|'slow',t0}) or {static:true} under reduced
+// motion. #105: fading holds just-released strokes still fading out, drawn alongside any live ones.
+let idleTimer=0,idleCycle=null,fading=[];
 
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return '<span class="portal-board-label">Quilt portal</span>';}
@@ -216,26 +230,27 @@ function openMenu(){
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
 function setVisible(v){
  visibilityRun++;
- if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
+ if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;
+ scheduleIdle();
 }
 function fadeOutBoard(){
  const run=++visibilityRun;
  backgroundBlocked(false);
  motion(portalHome,'opacity .3s ease');portalHome.style.opacity='0';
- return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;}r();},prefersReducedMotion()?0:300));
+ return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;scheduleIdle();}r();},prefersReducedMotion()?0:300));
 }
 function fadeInBoard(){
  visibilityRun++;
  endPhase();board?.heal();
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
- board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();
+ board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();scheduleIdle();
  const run=visibilityRun;
  settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
 }
@@ -258,25 +273,295 @@ function touchDot(x,y,color){
  ctx.save();const g=ctx.createRadialGradient(x,y,0,x,y,20);g.addColorStop(0,color+'cc');g.addColorStop(1,color+'00');
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-function kickRender(){if(!rafId)rafId=requestAnimationFrame(drawFrame);}
-function drawFrame(){
+function kickRender(){if(!rafId&&!probeFrozen)rafId=requestAnimationFrame(drawFrame);}
+
+// #105 magical trail (W2-2E2). Colour flows through TRAIL_NEONS once every TRAIL_NEON_PX of stroke length (anchored
+// to where the finger went, drifting slowly toward the tip); alpha follows each point's age, eased so it holds
+// near full strength before it fades. Normal source-over throughout: additive washes out on the light quilt.
+const TRAIL_NEON_PX=48,TRAIL_STOP_PX=12,TRAIL_MAX_STOPS=64,SHIMMER_MS=450;
+const TAU=Math.PI*2,UNDERGLOW=[16,8,28],WHITE=[255,255,255];
+function neonRGB(t){
+ const n=TRAIL_NEON_RGB.length,i=((Math.floor(t)%n)+n)%n,j=(i+1)%n,f=t-Math.floor(t);
+ const[r1,g1,b1]=TRAIL_NEON_RGB[i],[r2,g2,b2]=TRAIL_NEON_RGB[j];
+ return[r1+(r2-r1)*f|0,g1+(g2-g1)*f|0,b1+(b2-b1)*f|0];
+}
+const trailColor=(d,now)=>neonRGB((d+now*.06)/TRAIL_NEON_PX);
+const fadeAlpha=age=>{const k=Math.min(1,Math.max(0,age/TRAIL_FADE_MS));return 1-k*k*(3-2*k);};
+// Fixed-size sparkle pool (typed arrays, ring-buffer cursor) so shedding dust never allocates. Each mote is a
+// 2–5px neon disc with a white centre on a soft dark backing (so it reads on beige), twinkling on its own
+// phase, drifting outward and slowing to a stop as it dies.
+const SPARK_N=400,SPARK_LIFE=700;
+const sparkX=new Float32Array(SPARK_N),sparkY=new Float32Array(SPARK_N),sparkVX=new Float32Array(SPARK_N),sparkVY=new Float32Array(SPARK_N),sparkSize=new Float32Array(SPARK_N),sparkHue=new Int8Array(SPARK_N),sparkBorn=new Float32Array(SPARK_N).fill(-1e9);
+let sparkCursor=0;
+function spawnSpark(x,y,born){
+ const i=sparkCursor;sparkCursor=(sparkCursor+1)%SPARK_N;
+ const a=Math.random()*TAU,s=30+Math.random()*110,off=4+Math.random()*6; // born just off the point, heading out
+ sparkX[i]=x+Math.cos(a)*off;sparkY[i]=y+Math.sin(a)*off;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s;
+ sparkSize[i]=1.4+Math.random()*1.1;sparkHue[i]=(Math.random()*TRAIL_NEONS.length)|0;sparkBorn[i]=born;
+}
+// Per live frame (self-capping: a slow frame rate sheds less): three motes off the fingertip, four scattered
+// along the last SHED_RECENT_MS of path.
+const SHED_RECENT_MS=250;
+function shedSparks(pts,now){
+ const last=pts.length-1,tip=pts[last];for(let k=0;k<3;k++)spawnSpark(tip.x,tip.y,now);
+ let first=last;while(first>0&&now-pts[first-1].t<SHED_RECENT_MS)first--;
+ if(first===last)return;
+ for(let k=0;k<4;k++){const i=first+1+((Math.random()*(last-first))|0),f=Math.random(),a=pts[i-1],b=pts[i];spawnSpark(a.x+(b.x-a.x)*f,a.y+(b.y-a.y)*f,now);}
+}
+function sparksAlive(now){for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)return true;return false;}
+// Mote sprites, drawn once: a row of the six neons in one small canvas, so each mote is a single drawImage
+// from one source (which the canvas batches) instead of three path fills. Cell = soft dark backing, neon
+// disc at MOTE_NEON of the cell radius, white centre at MOTE_WHITE.
+const MOTE_PX=20,MOTE_NEON=.68,MOTE_WHITE=.3;
+let moteSprites=null;
+function motes(){
+ if(moteSprites)return moteSprites;
+ const c=document.createElement('canvas'),g=c.getContext('2d'),R=MOTE_PX/2;c.width=MOTE_PX*TRAIL_NEONS.length;c.height=MOTE_PX;
+ TRAIL_NEONS.forEach((color,i)=>{
+  const x=i*MOTE_PX+R,disc=(r,style)=>{g.fillStyle=style;g.beginPath();g.arc(x,R,r,0,TAU);g.fill();};
+  const back=g.createRadialGradient(x,R,0,x,R,R);back.addColorStop(0,'rgba(16,8,28,.5)');back.addColorStop(1,'rgba(16,8,28,0)');
+  disc(R,back);disc(R*MOTE_NEON,color);disc(R*MOTE_WHITE,'#fff');
+ });
+ return moteSprites=c;
+}
+function drawSparks(now){
+ const sprites=motes();
+ ctx.save();
+ for(let i=0;i<SPARK_N;i++){
+  const age=now-sparkBorn[i];if(age<0||age>=SPARK_LIFE)continue;
+  const life=age/SPARK_LIFE,drift=age/1000*(1-life/2),x=sparkX[i]+sparkVX[i]*drift,y=sparkY[i]+sparkVY[i]*drift+16*life*life;
+  const tw=.5+.5*Math.sin(age*.04+i*2.4),h=sparkSize[i]*(.8+.2*tw)/MOTE_NEON;
+  ctx.globalAlpha=(1-life*life)*(.55+.45*tw);
+  ctx.drawImage(sprites,sparkHue[i]*MOTE_PX,0,MOTE_PX,MOTE_PX,x-h,y-h,2*h,2*h);
+ }
+ ctx.restore();
+}
+function starPath(p,x,y,len,waist,rot){
+ for(let k=0;k<8;k++){const a=rot+k*Math.PI/4,rr=k%2?waist:len,px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;k?p.lineTo(px,py):p.moveTo(px,py);}
+ p.closePath();
+}
+// Fingertip bloom + slowly turning star flare: a dark halo (so it reads on beige), a white-hot → neon bloom,
+// then a long and a short four-point star in one fill. A few fills per tip per frame, not per particle.
+// size scales the whole flare (the release shimmer reuses it as a smaller, faster-turning glint).
+// `rgb` is an [r,g,b] triple so rgba() stops can be built directly.
+function drawFlare(x,y,[r,g,b],alpha,now,size=1){
+ const neon=a=>`rgba(${r},${g},${b},${a})`;
+ ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.scale(size,size);
+ let grad=ctx.createRadialGradient(0,0,0,0,0,30);grad.addColorStop(0,'rgba(16,8,28,.3)');grad.addColorStop(1,'rgba(16,8,28,0)');
+ ctx.fillStyle=grad;ctx.fillRect(-30,-30,60,60);
+ grad=ctx.createRadialGradient(0,0,0,0,0,20);
+ grad.addColorStop(0,'#fff');grad.addColorStop(.25,'rgba(255,255,255,.9)');grad.addColorStop(.5,neon(.75));grad.addColorStop(1,neon(0));
+ ctx.fillStyle=grad;ctx.fillRect(-20,-20,40,40);
+ const star=new Path2D(),rot=now/1200;starPath(star,0,0,28,3,rot);starPath(star,0,0,14,2.5,rot+Math.PI/4);
+ grad=ctx.createRadialGradient(0,0,0,0,0,28);
+ grad.addColorStop(0,'#fff');grad.addColorStop(.18,'#fff');grad.addColorStop(.45,neon(.95));grad.addColorStop(1,neon(0));
+ ctx.fillStyle=grad;ctx.fill(star);
+ ctx.restore();
+}
+const pathLength=pts=>{let d=0;for(let i=1;i<pts.length;i++)d+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return d;};
+const ribbonPath=pts=>{const p=new Path2D();pts.forEach((pt,i)=>i?p.lineTo(pt.x,pt.y):p.moveTo(pt.x,pt.y));return p;};
+// Gradient stops every TRAIL_STOP_PX of arc length (interpolated inside long segments, capped at
+// TRAIL_MAX_STOPS so cost doesn't grow with point count), each placed at its projection on the tail→head
+// axis — the one line a canvas gradient follows — so colour and fade track the path for any stroke that
+// doesn't fold back past 90°. d0: stroke length already faded off the tail (keeps colours anchored).
+function ribbonSamples(pts,now,d0){
+ const tail=pts[0],head=pts[pts.length-1],ax=head.x-tail.x,ay=head.y-tail.y,len2=ax*ax+ay*ay;
+ if(len2<1)return null;
+ const total=pathLength(pts),step=Math.max(TRAIL_STOP_PX,total/TRAIL_MAX_STOPS),stops=[];
+ let d=0,next=0,off=0;
+ for(let i=1;i<pts.length;i++){
+  const a=pts[i-1],b=pts[i],seg=Math.hypot(b.x-a.x,b.y-a.y);
+  while(next<=d+seg){
+   const f=seg?(next-d)/seg:0,x=a.x+(b.x-a.x)*f,y=a.y+(b.y-a.y)*f;
+   off=Math.max(off,Math.min(1,((x-tail.x)*ax+(y-tail.y)*ay)/len2));
+   stops.push({off,alpha:fadeAlpha(now-(a.t+(b.t-a.t)*f)),d:d0+next});next+=step;
+  }
+  d+=seg;
+ }
+ stops.push({off:1,alpha:fadeAlpha(now-head.t),d:d0+total});
+ return{tail,head,stops};
+}
+function ribbonGradient({tail,head,stops},colorAt){
+ const g=ctx.createLinearGradient(tail.x,tail.y,head.x,head.y);
+ for(const s of stops){const[r,gg,b]=colorAt(s.d);g.addColorStop(s.off,`rgba(${r},${gg},${b},${s.alpha.toFixed(3)})`);}
+ return g;
+}
+// Full-motion trail: six stroke() passes over one Path2D (no shadows, so cost doesn't scale with point
+// count) — a soft dark underglow so the neon pops on the light quilt, a wide soft two-step neon glow, a
+// vivid core, a white-hot centre — then the tip flare. `live` also sheds dust; a just-released trail (in
+// `fading`) keeps rendering with no new tip dust until it ages out.
+function renderRibbon(pts,now,live){
+ let start=0,d0=0;
+ while(start<pts.length-1&&now-pts[start].t>=TRAIL_FADE_MS){d0+=Math.hypot(pts[start+1].x-pts[start].x,pts[start+1].y-pts[start].y);start++;}
+ if(now-pts[start].t>=TRAIL_FADE_MS)return;
+ const visible=start?pts.slice(start):pts,tip=visible[visible.length-1];
+ const samples=visible.length>1&&ribbonSamples(visible,now,d0);
+ if(samples){
+  const path=ribbonPath(visible),dark=ribbonGradient(samples,()=>UNDERGLOW),neon=ribbonGradient(samples,d=>trailColor(d,now)),hot=ribbonGradient(samples,()=>WHITE);
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  const pass=(style,alpha,width)=>{ctx.strokeStyle=style;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.stroke(path);};
+  pass(dark,.08,40);pass(dark,.12,32); // soft dark underglow
+  pass(neon,.3,26);pass(neon,.42,17); // wide soft glow
+  pass(neon,1,6.5); // vivid core
+  pass(hot,1,1.5); // white-hot centre
+  ctx.restore();
+ }
+ drawFlare(tip.x,tip.y,trailColor(d0+pathLength(visible),now),Math.max(.35,fadeAlpha(now-tip.t)),now);
+ if(live)shedSparks(visible,now);
+}
+// #105 release shimmer: a star glint sweeps the part of the path still lit at release, tail→tip, over
+// SHIMMER_MS, shaking dust loose as it goes (so the last motes are gone ~SHIMMER_MS+SPARK_LIFE after release).
+function shimmerPoint({pts,releasedAt},now){
+ const k=(now-releasedAt)/SHIMMER_MS;if(k<0||k>1)return null;
+ let i=0,d=0;
+ while(i<pts.length-1&&releasedAt-pts[i].t>=TRAIL_FADE_MS){d+=Math.hypot(pts[i+1].x-pts[i].x,pts[i+1].y-pts[i].y);i++;}
+ let left=k*pathLength(pts.slice(i));d+=left;
+ for(;i<pts.length-1;i++){
+  const a=pts[i],b=pts[i+1],seg=Math.hypot(b.x-a.x,b.y-a.y);
+  if(seg>=left){const f=seg?left/seg:0;return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,d,k};}
+  left-=seg;
+ }
+ return{x:pts[i].x,y:pts[i].y,d,k};
+}
+function shimmerDust(entry,now){const s=shimmerPoint(entry,now);if(s){spawnSpark(s.x,s.y,now);spawnSpark(s.x,s.y,now);}return s;}
+function drawShimmer(entry,now){
+ const s=shimmerDust(entry,now);if(s)drawFlare(s.x,s.y,trailColor(s.d,now),1-.4*s.k,now*2,.7);
+}
+function renderPlainTrail(pts,now){
+ const trail=pts.filter(pt=>now-pt.t<TRAIL_FADE_MS).map(pt=>[pt.x,pt.y]);
+ strokeGlow(trail,'#d8f6ff',1,4);
+ const last=pts.at(-1);if(last&&now-last.t<TRAIL_FADE_MS)touchDot(last.x,last.y,'#d8f6ff');
+}
+// Test-only trail probe: exposed as myr5Portal.trailProbe only when a test sets window.__portalTrailProbe
+// before mount (the app never does). It drives the trail renderer directly, skipping the cloth-board press
+// that makes synthetic drags slower than the fade in headless runs, so frames show the trail at full strength.
+const PROBE_ID=-1;
+let probeFrozen=false;
+const trailProbe={
+ // Draws one frozen frame of `xy` ([[x,y],…]) swept over durationMs ending now (or releasedAgoMs ago), with
+ // the dust those frames would have shed replayed at 60fps. Returns how many motes are alive. dust:false
+ // draws the ribbon and tip alone, so a cross-section measures the strokes without motes drifting across it.
+ draw(xy,{durationMs=350,releasedAgoMs=null,dust=true}={}){
+  cancelAnimationFrame(rafId);rafId=0;probeFrozen=true;clearTimeout(idleTimer);idleCycle=null;
+  const now=performance.now(),end=now-(releasedAgoMs??0),n=xy.length;
+  const pts=xy.map(([x,y],i)=>({x,y,t:end-durationMs*(1-i/Math.max(1,n-1))}));
+  sparkBorn.fill(-1e9);
+  if(!dust){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();renderRibbon(pts,now,false);return 0;}
+  for(let ft=pts[0].t;ft<end;ft+=1000/60)shedSparks(pts.filter(p=>p.t<=ft),ft);
+  pointers.delete(PROBE_ID);fading.length=0;
+  if(releasedAgoMs==null)pointers.set(PROBE_ID,{pts,norm:[]});
+  else{const entry={pts,releasedAt:end};fading.push(entry);for(let ft=end;ft<now;ft+=1000/60)shimmerDust(entry,ft);}
+  drawFrame(0,now);
+  let alive=0;for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)alive++;
+  return alive;
+ },
+ // Live strokes (fps check): down/move/up like a finger, minus the cloth press and shape matching.
+ down(x,y){probeFrozen=false;pointers.set(PROBE_ID,{pts:[{x,y,t:performance.now()}],norm:[]});scheduleIdle();kickRender();},
+ move(x,y){pointers.get(PROBE_ID)?.pts.push({x,y,t:performance.now()});},
+ up(){const p=pointers.get(PROBE_ID);pointers.delete(PROBE_ID);if(p?.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});scheduleIdle();kickRender();},
+ resume(){probeFrozen=false;pointers.delete(PROBE_ID);fading.length=0;kickRender();},
+};
+
+// #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
+function idleFrame(now){
+ let elapsed=now-idleCycle.t0;
+ if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='slow';idleCycle.t0=now;elapsed=0;}
+ const dur=idleCycle.phase==='fast'?IDLE.fastMs:IDLE.slowMs,idx=Math.floor(elapsed/dur)%IDLE_ORDER.length,t=elapsed%dur;
+ const envelope=Math.min(1,t/60,(dur-t)/60),peak=idleCycle.phase==='fast'?.9:.5;
+ return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:idleCycle.phase==='fast'?4:3};
+}
+// Outline + label (+ arrow for a line) for one idle-flash entry; `rect` is the stitched-pattern rect.
+function idleShapeInfo(id,rect){
+ if(id==='cross'){
+  const polys=SHAPES.cross.map(p=>toClientPts(p.points,rect));
+  return{polys,color:'#ffffff',label:MENUS['line-up'].label,labelPt:[rect.left+rect.width/2,rect.top+rect.height/2],arrow:null};
+ }
+ const menu=MENUS[id];
+ if(id==='x'){
+  const polys=SHAPES.x.map(p=>toClientPts(p.points,rect));
+  return{polys,color:menu.color,label:menu.label,labelPt:polys[0][0],arrow:null};
+ }
+ if(LINE_IDS.has(id)){
+  const[a,b]=toClientPts(lineTemplatePts(id),rect),reversed=id==='line-rl'||id==='line-up',start=reversed?b:a,end=reversed?a:b;
+  return{polys:[[a,b]],color:menu.color,label:menu.label,labelPt:start,arrow:{from:start,to:end}};
+ }
+ const pts=shapeClipPts(id,rect);
+ return{polys:[pts],color:menu.color,label:menu.label,labelPt:pts[0],arrow:null};
+}
+function drawArrow(from,to,color,alpha){
+ const mx=(from[0]+to[0])/2,my=(from[1]+to[1])/2,ang=Math.atan2(to[1]-from[1],to[0]-from[0]),len=10;
+ ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=6;
+ ctx.translate(mx,my);ctx.rotate(ang);
+ ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len,0);ctx.moveTo(len-6,-5);ctx.lineTo(len,0);ctx.lineTo(len-6,5);ctx.stroke();
+ ctx.restore();
+}
+// A bold, pill-backed label near the shape's start point, clear of the stroke and clamped inside the
+// board face with a 12px margin (conductor review 2026-09-23: the old plain small text ran off-board in
+// a corner). Flips to whichever side keeps it fully on-board rather than clipping.
+function drawLabel(text,[x,y],color,alpha,rect){
+ ctx.save();ctx.font='700 15px system-ui,sans-serif';ctx.textBaseline='middle';
+ const padX=9,padY=6,h=15+padY*2,w=ctx.measureText(text).width+padX*2,margin=12;
+ const face=rect||fallbackRect();
+ let lx=x+12,ly=y-14;
+ if(lx+w>face.left+face.width-margin)lx=x-12-w;
+ lx=Math.min(Math.max(lx,face.left+margin),face.left+face.width-margin-w);
+ ly=Math.min(Math.max(ly,face.top+margin+h/2),face.top+face.height-margin-h/2);
+ ctx.globalAlpha=alpha;
+ ctx.fillStyle='rgba(8,5,14,.75)';
+ ctx.beginPath();ctx.roundRect(lx,ly-h/2,w,h,h/2);ctx.fill();
+ ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;
+ ctx.fillText(text,lx+padX,ly+1);
+ ctx.restore();
+}
+function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width,rect){
+ polys.forEach(p=>strokeGlow(p,color,alpha,width));
+ if(arrow)drawArrow(arrow.from,arrow.to,color,alpha);
+ drawLabel(label,labelPt,color,alpha,rect);
+}
+function drawIdle(now){
+ const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
+ if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face));return;}
+ const{id,alpha,width}=idleFrame(now);
+ drawIdleShape(idleShapeInfo(id,rect),alpha,width,face);
+}
+
+// now: the trail probe draws a frozen frame at a chosen time (rAF's own timestamp arrives first and is ignored).
+function drawFrame(_,now=performance.now()){
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
- const now=performance.now();
  if(outlineFlash){
   const t=now-outlineFlash.start;
   if(t<350)outlineFlash.polys.forEach(p=>strokeGlow(p,outlineFlash.color,1-t/350,4));
   else outlineFlash=null;
  }
+ if(idleCycle)drawIdle(now);
  if(phase?.pulse&&phase.pts)strokeGlow(phase.pts,phase.color,.4+.25*Math.sin((now-phase.t0)/280),3); // soft breathing outline while loading
- for(const p of pointers.values()){
-  const trail=p.pts.filter(pt=>now-pt.t<250).map(pt=>[pt.x,pt.y]);
-  strokeGlow(trail,'#d8f6ff',1,4);
-  const last=p.pts.at(-1);if(last)touchDot(last.x,last.y,'#d8f6ff');
+ for(let i=fading.length-1;i>=0;i--)if(now-fading[i].pts.at(-1).t>=TRAIL_FADE_MS)fading.splice(i,1);
+ const reduced=prefersReducedMotion();
+ for(const p of pointers.values())reduced?renderPlainTrail(p.pts,now):renderRibbon(p.pts,now,true);
+ for(const entry of fading){
+  if(reduced){renderPlainTrail(entry.pts,now);continue;}
+  renderRibbon(entry.pts,now,false);drawShimmer(entry,now); // #105: a shimmer ripples along the path as it fades
  }
- if(pointers.size||outlineFlash||phase?.pulse)kickRender();
+ if(!reduced)drawSparks(now);
+ if(pointers.size||fading.length||outlineFlash||(idleCycle&&!idleCycle.static)||(phase?.pulse)||(!reduced&&sparksAlive(now)))kickRender();
 }
 function flashOutline(polys,color){if(prefersReducedMotion())return;outlineFlash={polys,color,start:performance.now()};kickRender();}
+
+// #104: arms/disarms the idle cycle from every place eligibility can change (touch, sequence start/end,
+// show/hide, tab visibility). Always safe to call — it's a no-op when nothing needs to change.
+function idleEligible(){return boardShown&&!busy&&pointers.size===0&&!document.hidden&&!document.querySelector('dialog[open]');}
+function scheduleIdle(){
+ clearTimeout(idleTimer);idleTimer=0;
+ if(idleCycle){idleCycle=null;kickRender();} // clears the drawn hint on the next frame
+ if(idleEligible())idleTimer=setTimeout(beginIdleCycle,IDLE.armMs);
+}
+function beginIdleCycle(){
+ idleTimer=0;
+ if(!idleEligible())return;
+ idleCycle=prefersReducedMotion()?{static:true}:{phase:'fast',t0:performance.now()};
+ kickRender();
+}
 
 function fallInAll([cx,cy]){
  const menus=Object.values(MENUS),n=menus.length,R=90;
@@ -479,7 +764,9 @@ function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.le
 
 async function runShape(id){
  if(busy||!boardShown)return;
- const run=++sequence;busy=true;try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}finally{if(run===sequence)busy=false;}
+ const run=++sequence;busy=true;scheduleIdle();
+ try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}
+ finally{if(run===sequence){busy=false;scheduleIdle();}}
 }
 // Lines (and x) are open strokes with no enclosed area: no hole to cut. Flash the trace in the
 // destination colour, then open it directly — no glass phase, no forced loadMinMs wait, no porthole
@@ -569,18 +856,30 @@ function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.
 function endPointer(e,cancel){
  const p=pointers.get(e.pointerId);if(!p)return;
  pointers.delete(e.pointerId);board.release(e.pointerId);
+ // #105: the just-released stroke keeps fading (light-painting), independent of whether it matches.
+ if(p.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});
+ scheduleIdle();kickRender();
  if(cancel||busy)return;
  const xs=p.norm.map(n=>n[0]),ys=p.norm.map(n=>n[1]);
  const size=Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  if(size<.03)return; // ignore taps
- pendingStrokes.push(p.norm);
+ pendingStrokes.push(p.norm);pendingTrailPts.push(p.pts);
  clearTimeout(finalizeTimer);
- finalizeTimer=setTimeout(()=>{const strokes=pendingStrokes;pendingStrokes=[];const id=recognizeShape(strokes);if(id)runShape(id);},450);
+ finalizeTimer=setTimeout(()=>{
+  const strokes=pendingStrokes,trailPts=pendingTrailPts;pendingStrokes=[];pendingTrailPts=[];
+  const id=recognizeShape(strokes);
+  if(id){
+   // #105: on a match, the drawn trail itself flashes the destination colour before the cut starts.
+   flashOutline(trailPts.map(pts=>pts.map(pt=>[pt.x,pt.y])),id==='cross'?'#ffffff':(MENUS[id]?.color||'#ffffff'));
+   runShape(id);
+  }
+ },450);
 }
 function wirePointerEvents(){
  overlay.addEventListener('pointerdown',e=>{
   overlay.setPointerCapture(e.pointerId);clearTimeout(finalizeTimer);
   pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)]});
+  scheduleIdle();
   if(busy)ripple(e.clientX,e.clientY);else board.press(e.pointerId,e.clientX,e.clientY);
   kickRender();
  });
@@ -611,9 +910,11 @@ export async function mountPortal({visible=false}={}){
  let resumeAfterPageShow=false;
  addEventListener('pagehide',()=>{resumeAfterPageShow=boardShown;setVisible(false);},{signal:lifecycle.signal});
  addEventListener('pageshow',e=>{if(e.persisted&&resumeAfterPageShow)setVisible(true);},{signal:lifecycle.signal});
+ // #104: pause/resume the idle cycle with the tab (a backgrounded tab must not keep animating).
+ document.addEventListener('visibilitychange',scheduleIdle,{signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;setVisible(false);boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;setVisible(false);clearTimeout(idleTimer);idleTimer=0;idleCycle=null;fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
@@ -633,5 +934,6 @@ export async function mountPortal({visible=false}={}){
   },
   current:()=>board,
  };
+ if(window.__portalTrailProbe===true)window.myr5Portal.trailProbe=trailProbe;
  return window.myr5Portal;
 }
