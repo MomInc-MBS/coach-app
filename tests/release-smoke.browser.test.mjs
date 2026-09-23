@@ -4,7 +4,7 @@
 //
 // Step 3 is the regression check for the 11773d3 hotfix ("dialogs opened over the quilt portal stay
 // tappable"): it recreates the exact shape of the bug -- a <dialog> that already exists, closed, in
-// the DOM before the quilt opens (like #fullDownloadOffer and the "Updated" toast both do at boot),
+// the DOM before the quilt opens (like the old #fullDownloadOffer and the "Updated" toast did at boot),
 // then showModal()s once the quilt is already up and has swept the page for inert. On 9658fbb that
 // sweep blindly marked the still-closed dialog inert; by the time it opened modal it was both on top
 // and untappable. 11773d3 exempts an open-or-closed <dialog> from the sweep. This test must fail on
@@ -133,10 +133,9 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
 test('3. freeze check: a dialog opened over the quilt stays tappable, and the Menu button works again after it closes',async()=>{
  const {context,page}=await openApp(browser,base);
  try{
-  // Stand-in for the real #fullDownloadOffer (mountPostDownload needs an installed, package-
-  // controlling service worker -- see tests/post-download.browser.test.mjs -- which this
-  // static-file harness doesn't set up). Built the same way the real offer is: a <dialog> appended
-  // straight to <body>, left CLOSED, before the quilt opens.
+  // Stand-in for any boot-time <dialog> (the old #fullDownloadOffer, the setup gate, reward reveals):
+  // appended straight to <body>, left CLOSED, before the quilt opens. The real Downloads menu (W2-2I)
+  // never opens over the quilt at all; step 3b checks that.
   await page.evaluate(()=>{
    const d=document.createElement('dialog');
    d.id='fullDownloadOffer';
@@ -158,6 +157,32 @@ test('3. freeze check: a dialog opened over the quilt stays tappable, and the Me
 
   await page.evaluate(()=>{document.getElementById('fullDownloadOffer').close();document.getElementById('fullDownloadOffer').remove();});
   assert.equal(await centerHit(page,'#portalMenuButton'),true,'the Menu button must be hit-testable again once the dialog closes');
+ }finally{await context.close();}
+});
+
+test('3b. the Downloads menu is its own screen: the quilt steps aside while it is up and comes back tappable',async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+  // From the quilt (another feature asking for a pack, e.g. the ship view).
+  await page.evaluate(()=>window.myr5Packs.open());
+  await page.waitForFunction(()=>document.getElementById('downloadsMenu')?.open===true);
+  assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),true,'the quilt is not behind the menu');
+  assert.equal(await centerHit(page,'#downloadsMenu [data-later]'),true,'the menu stays tappable');
+  await page.locator('#downloadsMenu [data-later]').click();
+  await portalUp(page);
+  assert.equal(await centerHit(page,'#portalMenuButton'),true,'the Menu button works again');
+  // From Settings, which the quilt opens with its line-down shape.
+  await page.evaluate(()=>window.myr5Portal.open('line-down'));
+  await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
+  await page.locator('#settings .downloads-entry button').click();
+  await page.waitForFunction(()=>document.getElementById('downloadsMenu')?.open===true);
+  assert.equal(await centerHit(page,'#downloadsMenu [data-later]'),true);
+  await page.locator('#downloadsMenu [data-later]').click();
+  await page.locator('#closeSettings').click();
+  await portalUp(page);
+  assert.equal(await centerHit(page,'#portalMenuButton'),true);
  }finally{await context.close();}
 });
 

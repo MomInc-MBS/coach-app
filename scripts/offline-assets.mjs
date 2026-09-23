@@ -2,6 +2,8 @@ import {createHash} from 'node:crypto';
 import {createReadStream} from 'node:fs';
 import {readdir,readFile,writeFile,stat} from 'node:fs/promises';
 import {join,posix} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
 
 const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
@@ -45,6 +47,27 @@ export async function identifyVoice(root){
  await writeFile(join(root,'voice/manifest.json'),JSON.stringify(manifest));
 }
 
+// The Downloads menu picks the post-download package by group; every optional file carries one.
+// First match wins; whatever is left (regular coach models, customizer, exercise demos, app screens)
+// is "Your coach". Roster bodies never join it: each goes to its workout section from
+// track-placements.ts (#102), or Starter when it has no placement.
+const GROUPS=[
+ ['voices',/^\/voice\//],
+ ['hand',/^\/handborne\//],
+ ['food',/^\/(?:food\/|nutrition-data\.mjs$|food-live\.css$|meal-)/],
+ ['meditation',/^\/(?:pod\/worlds\/|meditation|breathing)/],
+ ['games',/^\/(?:arcade|war-room)\//],
+];
+const ROSTER_BODY=/^\/creature\/models\/roster\/[^/]+\.glb$/;
+let placements;
+export function bodySections(){
+ placements??=build({entryPoints:[fileURLToPath(new URL('../creature/source/creator/track-placements.ts',import.meta.url))],bundle:true,write:false,format:'esm',platform:'neutral',logLevel:'silent'})
+  .then(({outputFiles:[out]})=>import('data:text/javascript;base64,'+Buffer.from(out.text).toString('base64')))
+  .then(({TRACK_PLACEMENTS})=>new Map(TRACK_PLACEMENTS.map(p=>['/'+p.sourceAsset,p.tracks[0]])));
+ return placements;
+}
+export const groupOf=(url,sections)=>ROSTER_BODY.test(url)?'bodies-'+(sections.get(url)??'starter'):GROUPS.find(([,test])=>test.test(url))?.[0]??'coach';
+
 // PackLifecycle bytes are outside both inventories.
 export async function offlineInventory(root,template='sw.js'){
  const assets=[];
@@ -61,7 +84,8 @@ export async function offlineInventory(root,template='sw.js'){
  const core=await coreClosure(root,new Set(assets.map(a=>a.url)),template);
  try{const {files}=JSON.parse(await readFile(join(root,'voice/manifest.json'),'utf8'));if(Array.isArray(files))assets.push({...await identify(root,'voice/manifest.json'),contains:files.reduce((sum,file)=>sum+file.bytes,0)});}catch(error){if(error.code!=='ENOENT')throw error;}
  assets.sort((a,b)=>a.url.localeCompare(b.url));
- return {core:assets.filter(a=>core.has(a.url)),optional:assets.filter(a=>!core.has(a.url))};
+ const sections=await bodySections();
+ return {core:assets.filter(a=>core.has(a.url)),optional:assets.filter(a=>!core.has(a.url)).map(a=>({...a,group:groupOf(a.url,sections)}))};
 }
 
 export async function offlineAssets(root){return (await offlineInventory(root)).core;}
@@ -77,6 +101,7 @@ export async function writeOfflineWorker(root,buildId,template='sw.js'){
  if(!source.includes('/* OFFLINE_ASSETS */ []'))throw Error('Offline worker template is missing its asset marker.');
  await writeFile(join(root,'sw.js'),source.replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${buildId}'`).replace('/* OFFLINE_ASSETS */ []',JSON.stringify(assets)).replace('/* OPTIONAL_ASSETS */ []',JSON.stringify(optional)));
  const mib=list=>(list.reduce((sum,asset)=>sum+asset.bytes+(asset.contains||0),0)/1048576).toFixed(1);
- console.log(`Offline Coach: ${assets.length} files, ${mib(assets)} MiB (${assets.reduce((sum,a)=>sum+a.bytes,0)} of ${CORE_OFFLINE_BUDGET} B). Post-download package: ${optional.length} entries, ${mib(optional)} MiB.`);
+ const groups=Object.entries(Object.groupBy(optional,a=>a.group)).map(([id,list])=>`${id} ${list.length}/${mib(list)}`).join(', ');
+ console.log(`Offline Coach: ${assets.length} files, ${mib(assets)} MiB (${assets.reduce((sum,a)=>sum+a.bytes,0)} of ${CORE_OFFLINE_BUDGET} B). Post-download package: ${optional.length} entries, ${mib(optional)} MiB (groups, files/MiB: ${groups}).`);
  return assets;
 }

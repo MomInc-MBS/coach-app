@@ -1,8 +1,9 @@
 const SHELL='myr5-shell-22d1026e5a1d6f2441dd',VOICE='myr5-voice-approved-v2';
 // Filled from the complete production asset inventory, with content identities.
 const ASSETS=/* OFFLINE_ASSETS */ [];
-// D34 post-download package: every other deployed runtime file. Fetched on demand into a small LRU
-// until the user downloads the whole package into this release's own package cache.
+// D34 post-download package: every other deployed runtime file, each tagged with its Downloads-menu
+// group (scripts/offline-assets.mjs). Fetched on demand into a small LRU until the user downloads its
+// group into this release's own package cache. A roster body fetched on demand is kept there too.
 const OPTIONAL_ASSETS=/* OPTIONAL_ASSETS */ [];
 const BUILD=SHELL.slice('myr5-shell-'.length);
 const OPTIONAL='myr5-optional-'+BUILD,OPTIONAL_LIMIT=64*1024*1024;
@@ -36,24 +37,36 @@ async function localCopy(asset,lru=true){
  const hit=lru&&await caches.match(asset.url,{cacheName:OPTIONAL});return hit&&{name:OPTIONAL,hit};
 }
 const sri=async body=>'sha256-'+btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',body))));
-// What this release's package still needs from the network. Unchanged files already on the device
-// (older package, older shell) are moved in first; the on-demand LRU (64 MiB, kept for people who
-// never asked for the package) is adopted only once the user has chosen to download.
-async function packagePlan(adopt){
+async function packageCache(){
  const cache=await caches.open(PACKAGE);
  if(!await cache.match(PACKAGE_INDEX))await cache.put(PACKAGE_INDEX,new Response(JSON.stringify(OPTIONAL_ASSETS),{headers:{'Content-Type':'application/json'}}));
- const have=new Set((await cache.keys()).map(key=>new URL(key.url).pathname)),missing=[];let total=0;
+ return cache;
+}
+const size=list=>list.reduce((sum,asset)=>sum+asset.bytes+(asset.contains||0),0);
+// What the chosen groups still need from the network, plus every group's size and what it still
+// misses (the Downloads menu). No group list (older pages) means the whole package. Unchanged files
+// already on the device (older package, older shell) are moved in first, whatever their group; the
+// on-demand LRU (64 MiB, kept for people who never asked for a group) is adopted only for a chosen
+// group, once the user has chosen to download.
+async function packagePlan(adopt,groups){
+ const cache=await packageCache(),chosen=Array.isArray(groups)?new Set(groups):null,wanted=asset=>!chosen||chosen.has(asset.group);
+ const have=new Set((await cache.keys()).map(key=>new URL(key.url).pathname)),missing=[],sizes={};let total=0;
  for(const asset of OPTIONAL_ASSETS){
-  total+=asset.bytes+(asset.contains||0);
-  if(asset.contains!==undefined){missing.push(...await voiceMissing(asset));continue;}
-  if(have.has(asset.url))continue;
-  const copy=await localCopy(asset,adopt);
-  if(!copy){missing.push(asset);continue;}
-  await cache.put(asset.url,copy.hit);
-  if(!copy.name.startsWith('myr5-shell-'))await(await caches.open(copy.name)).delete(asset.url);
+  const group=sizes[asset.group]??={files:0,total:0,remaining:0};let need=[];
+  if(asset.contains!==undefined)need=await voiceMissing(asset);
+  else if(!have.has(asset.url)){
+   const copy=await localCopy(asset,adopt&&wanted(asset));
+   if(!copy)need=[asset];
+   else{await cache.put(asset.url,copy.hit);if(!copy.name.startsWith('myr5-shell-'))await(await caches.open(copy.name)).delete(asset.url);}
+  }
+  group.files++;group.total+=size([asset]);group.remaining+=size(need);
+  if(wanted(asset)){total+=size([asset]);missing.push(...need);}
  }
- if(!missing.length)for(const name of await caches.keys())if(name!==PACKAGE&&/^myr5-(?:package|optional)-/.test(name))await caches.delete(name);
- return {type:'PACKAGE_PLAN',cache:PACKAGE,total,missing,remaining:missing.reduce((sum,asset)=>sum+asset.bytes+(asset.contains||0),0)};
+ // Older packages are spent once the chosen groups are complete; this release's LRU still serves
+ // groups nobody chose, until every group is here.
+ const complete=Object.values(sizes).every(group=>!group.remaining);
+ if(!missing.length)for(const name of await caches.keys())if(name!==PACKAGE&&(name.startsWith('myr5-package-')||name.startsWith('myr5-optional-')&&(name!==OPTIONAL||complete)))await caches.delete(name);
+ return {type:'PACKAGE_PLAN',cache:PACKAGE,total,missing,remaining:size(missing),groups:sizes};
 }
 // Voice clips live in the update-stable voice cache. Their identities come from this release's
 // verified voice manifest; until that is saved, the manifest itself is what is missing.
@@ -161,7 +174,7 @@ async function prepareUpdate(source){
 self.addEventListener('message',event=>{
  if(event.data?.type==='OFFLINE_STATUS'){event.source?.postMessage(downloadProgress);return;}
  if(event.data?.type==='PACKAGE_PLAN'){
-  const plan=planning.then(()=>packagePlan(event.data.adopt===true));planning=plan.catch(()=>{});
+  const plan=planning.then(()=>packagePlan(event.data.adopt===true,event.data.groups));planning=plan.catch(()=>{});
   event.waitUntil(plan.then(value=>event.ports[0]?.postMessage(value),()=>event.ports[0]?.postMessage({type:'PACKAGE_PLAN',error:true})));return;
  }
  if(event.data?.type!=='PREPARE_UPDATE')return;
@@ -180,17 +193,23 @@ self.addEventListener('fetch',event=>{
  const path=assetPath(url.pathname);
  const asset=ASSET_BY_URL.get(path)||OPTIONAL_BY_URL.get(path);
  if(!asset)return;
- const optional=OPTIONAL_BY_URL.has(path);
+ const optional=OPTIONAL_BY_URL.has(path),body=asset.group?.startsWith('bodies-');
+ // A roster body that isn't on the device yet: its page shows "Downloading this body…", or says it's
+ // missing when offline (post-download.mjs).
+ const tell=state=>body&&event.clientId&&event.waitUntil(self.clients.get(event.clientId).then(client=>client?.postMessage({type:'BODY_DOWNLOAD',url:path,state}),()=>{}));
  event.respondWith((async()=>{
   // Opening a cache creates it, so the package cache is only read by name here.
   const cached=optional?await caches.match(path,{cacheName:PACKAGE})||(await localCopy(asset))?.hit:await(await caches.open(SHELL)).match(path);
   if(cached)return offlineResponse(cached);
+  tell('start');
   let response;
   try{response=await downloadAsset(asset);}catch{
+   tell('unavailable');
    // Never mix an unverified new executable into an older installed shell.
    return new Response('This resource is unavailable. Reconnect or update Coach.',{status:503});
   }
-  if(optional)event.waitUntil(saveOptional(asset,response));else try{await(await caches.open(SHELL)).put(path,response.clone());}catch{}
+  if(body){const copy=response.clone();event.waitUntil(packageCache().then(cache=>cache.put(path,copy)).catch(()=>{}).then(()=>tell('done')));}
+  else if(optional)event.waitUntil(saveOptional(asset,response));else try{await(await caches.open(SHELL)).put(path,response.clone());}catch{}
   return response;
  })());
 });

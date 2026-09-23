@@ -1,6 +1,7 @@
 // Ian reported he couldn't find the extra packs at all (Install -> Full download -> Extra offline
 // packs is three levels deep). window.myr5Packs.open(sectionId?) is the fix other code (the ship
-// scene, when its pack is missing) calls to jump the owner straight to the right button.
+// scene, when its pack is missing) calls to jump the owner straight to the right button. Since W2-2I
+// the signed packs are listed in the Downloads menu, so open() opens that menu.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -11,7 +12,7 @@ import {chromium} from 'playwright';
 import {generateKeyPairSync,sign,createHash} from 'node:crypto';
 import {canonicalChunkPayload} from '../../modules/materials/chunk-delivery.mjs';
 
-test('myr5Packs.open() opens Install, scrolls to Extra offline packs, and can point at one section',async()=>{
+test('myr5Packs.open() opens the Downloads menu with its Extra offline packs, and can point at one section',async()=>{
  const pair=generateKeyPairSync('ed25519'),publicJwk=pair.publicKey.export({format:'jwk'});
  const commit='0123456789abcdef0123456789abcdef01234567',pathPrefix=`/owner/repo/${commit}/materials/`;
  const policy={trustedOrigins:['https://raw.githubusercontent.com'],allowedProtocols:['https:'],pathPrefix};
@@ -43,21 +44,21 @@ test('myr5Packs.open() opens Install, scrolls to Extra offline packs, and can po
 
   const generic=await page.evaluate(()=>window.myr5Packs.open());
   assert.equal(generic,false,'no section requested: nothing to highlight, but it still opens');
-  assert.equal(await page.evaluate(()=>document.getElementById('installPanel').open),true,'Install panel opened');
+  assert.equal(await page.evaluate(()=>document.getElementById('downloadsMenu').open),true,'Downloads menu opened');
 
-  await page.evaluate(()=>document.getElementById('installPanel').close());
+  await page.evaluate(()=>document.getElementById('downloadsMenu').close());
   const found=await page.evaluate(()=>window.myr5Packs.open('coach-ships-biomes'));
   assert.equal(found,true,'the ships & worlds button was located');
-  assert.equal(await page.evaluate(()=>document.getElementById('installPanel').open),true);
+  assert.equal(await page.evaluate(()=>document.getElementById('downloadsMenu').open),true);
   assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Download ships & worlds','the exact section button is focused');
 
   const missing=await page.evaluate(()=>window.myr5Packs.open('not-a-real-section'));
-  assert.equal(missing,false,'an unknown id opens the panel but highlights nothing');
+  assert.equal(missing,false,'an unknown id opens the menu but highlights nothing');
 
-  // Signed out: no Extra offline packs panel exists, but open() still reaches Install instead of throwing.
-  await page.evaluate(()=>{document.getElementById('installPanel').close();window.myr5AuthenticatedAccount=null;window.dispatchEvent(new Event('myr5:account-cleared'));});
+  // Signed out: no Extra offline packs panel exists, but open() still reaches the menu instead of throwing.
+  await page.evaluate(()=>{document.getElementById('downloadsMenu').close();window.myr5AuthenticatedAccount=null;window.dispatchEvent(new Event('myr5:account-cleared'));});
   const signedOut=await page.evaluate(()=>window.myr5Packs.open('coach-ships-biomes'));
   assert.equal(signedOut,false);
-  assert.equal(await page.evaluate(()=>document.getElementById('installPanel').open),true,'still opens Install for a signed-out visitor');
+  assert.equal(await page.evaluate(()=>document.getElementById('downloadsMenu').open),true,'still opens the menu for a signed-out visitor');
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });

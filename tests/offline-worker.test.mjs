@@ -9,7 +9,7 @@ function fixture(fetcher=async()=>new Response('core'),optionals=[optional]){
  const handlers={},stores=new Map(),calls=[],name=(source.match(/const SHELL='([^']+)'/)||[])[1];let skips=0,clients=[];
  const path=value=>{const url=new URL(typeof value==='string'?value:value.url,'https://test');return url.pathname+url.search;};
  const caches={async keys(){return [...stores.keys()];},async delete(key){return stores.delete(key);},async match(k,{cacheName}={}){return stores.get(cacheName)?.get(path(k))?.clone();},async open(key){if(!stores.has(key))stores.set(key,new Map());const map=stores.get(key);return{async match(k){return map.get(path(k))?.clone();},async put(k,v){map.set(path(k),v.clone());},async delete(k){return map.delete(path(k));},async keys(){return [...map.keys()].map(k=>new Request('https://test'+k));}};}};
- const self={location:{origin:'https://test'},addEventListener:(k,fn)=>handlers[k]=fn,skipWaiting:async()=>skips++,clients:{matchAll:async()=>clients,claim:async()=>{}},registration:{}};
+ const self={location:{origin:'https://test'},addEventListener:(k,fn)=>handlers[k]=fn,skipWaiting:async()=>skips++,clients:{matchAll:async()=>clients,get:async id=>clients.find(client=>client.id===id),claim:async()=>{}},registration:{}};
  runInNewContext(source.replace('/* OFFLINE_ASSETS */ []',JSON.stringify([core])).replace('/* OPTIONAL_ASSETS */ []',JSON.stringify(optionals)),{self,caches,URL,Request,Response,Headers,crypto,btoa,TextDecoder,MessageChannel,setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,20)),clearTimeout,fetch:async request=>{calls.push(request);return fetcher(request);}});
  return{handlers,caches,stores,calls,name,setClients:value=>clients=value,get skips(){return skips;},async event(type,input={}){let pending;handlers[type]({...input,waitUntil:p=>pending=p});await pending;}};
 }
@@ -67,4 +67,57 @@ test('activation keeps this release, the newest older package and only this rele
  await f.event('activate');
  assert.deepEqual([...f.stores.keys()].filter(n=>n.startsWith('myr5-package-')),['myr5-package-b']);
  assert.deepEqual([...f.stores.get('myr5-voice-approved-v2').keys()].sort(),['/voice/a.mp3','/voice/manifest.json?v='+id]);
+});
+
+// W2-2I Downloads menu: the page sends the groups this device picked (post-download.mjs).
+const grouped=[{url:'/creature/models/myr5.glb',integrity:'sha256-coach',bytes:10,group:'coach'},{url:'/creature/models/roster/chest-a.glb',integrity:'sha256-a',bytes:4,group:'bodies-chest'},{url:'/creature/models/roster/chest-b.glb',integrity:'sha256-b',bytes:6,group:'bodies-chest'},{url:'/creature/models/roster/starter.glb',integrity:'sha256-s',bytes:3,group:'bodies-starter'}];
+async function pick(f,groups,adopt=false){let reply;await f.event('message',{data:{type:'PACKAGE_PLAN',adopt,groups},ports:[{postMessage:v=>reply=v}]});return JSON.parse(JSON.stringify(reply));}
+test('picking one group plans only its files, and every group reports its size and what it still misses',async()=>{
+ const f=fixture(undefined,grouped),id=build(f.name);
+ let reply=await pick(f,['bodies-chest']);
+ assert.deepEqual(reply.missing.map(a=>a.url),['/creature/models/roster/chest-a.glb','/creature/models/roster/chest-b.glb']);
+ assert.equal(reply.total,10);assert.equal(reply.remaining,10);
+ assert.deepEqual(reply.groups,{coach:{files:1,total:10,remaining:10},'bodies-chest':{files:2,total:10,remaining:10},'bodies-starter':{files:1,total:3,remaining:3}});
+ await seed(f,'myr5-package-'+id,null,{'/creature/models/roster/chest-a.glb':'aaaa'});
+ reply=await pick(f,['bodies-chest']);
+ assert.deepEqual(reply.missing.map(a=>a.url),['/creature/models/roster/chest-b.glb']);assert.equal(reply.groups['bodies-chest'].remaining,6);
+ reply=await pick(f,['coach']);assert.deepEqual(reply.missing.map(a=>a.url),['/creature/models/myr5.glb'],'the regular coach never pulls the roster bodies');
+ reply=await pick(f,undefined);assert.equal(reply.missing.length,3,'no list (an older page) is the whole package');
+});
+test('an empty pick downloads nothing, keeps on-demand files, and still moves unchanged files forward',async()=>{
+ const f=fixture(undefined,grouped),id=build(f.name),[coach,a]=grouped;
+ await seed(f,'myr5-package-older',[{url:coach.url,integrity:coach.integrity}],{[coach.url]:'coach!'});
+ await seed(f,'myr5-optional-'+id,null,{[a.url]:'lru'});
+ const reply=await pick(f,[]);
+ assert.deepEqual(reply.missing,[]);assert.equal(reply.total,0);
+ assert.equal(await f.stores.get('myr5-package-'+id).get(coach.url).text(),'coach!','carried forward');
+ assert.equal(f.stores.has('myr5-package-older'),false);
+ assert.equal(f.stores.get('myr5-optional-'+id).has(a.url),true,'this release\'s LRU still serves groups nobody picked');
+ assert.equal(reply.groups['bodies-chest'].remaining,10,'an LRU copy is not adopted without a pick');
+});
+test('on demand: a roster body that isn\'t downloaded is fetched alone, kept in the package, and its page is told',async()=>{
+ const messages=[],page={id:'page',postMessage:m=>messages.push(m)};
+ for(const online of [true,false]){
+  messages.length=0;
+  const f=fixture(async()=>{if(!online)throw TypeError('Failed to fetch');return new Response('body');},grouped),id=build(f.name);f.setClients([page]);
+  const pending=[];let response;
+  f.handlers.fetch({request:new Request('https://test/creature/models/roster/chest-a.glb'),clientId:'page',respondWith:p=>response=p,waitUntil:p=>pending.push(p)});
+  const reply=await response;
+  for(let i=0;i<pending.length;i++)await pending[i];
+  assert.deepEqual(f.calls.map(r=>new URL(r.url).pathname),['/creature/models/roster/chest-a.glb'],'just that one file');
+  if(online){
+   assert.equal(await reply.text(),'body');
+   assert.equal(await f.stores.get('myr5-package-'+id).get('/creature/models/roster/chest-a.glb').text(),'body','kept in this release\'s package');
+   assert.deepEqual(messages.map(m=>[m.type,m.url,m.state]),[['BODY_DOWNLOAD','/creature/models/roster/chest-a.glb','start'],['BODY_DOWNLOAD','/creature/models/roster/chest-a.glb','done']]);
+   assert.equal((await pick(f,['bodies-chest'])).groups['bodies-chest'].remaining,6,'the menu counts it as downloaded');
+  }else{
+   assert.equal(reply.status,503);
+   assert.deepEqual(messages.map(m=>m.state),['start','unavailable']);
+  }
+ }
+ // Anything else fetched on demand still goes to the small LRU, silently.
+ const f=fixture(undefined,grouped),id=build(f.name);f.setClients([page]);messages.length=0;const pending=[];let response;
+ f.handlers.fetch({request:new Request('https://test/creature/models/myr5.glb'),clientId:'page',respondWith:p=>response=p,waitUntil:p=>pending.push(p)});
+ await response;for(const p of pending)await p;
+ assert.equal(f.stores.get('myr5-optional-'+id).has('/creature/models/myr5.glb'),true);assert.equal(f.stores.has('myr5-package-'+id),false);assert.deepEqual(messages,[]);
 });
