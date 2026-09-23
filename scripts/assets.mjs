@@ -1,5 +1,12 @@
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {build} from 'esbuild';
+// Keep Three.js out of the eager launch bundle; the Food panel loads it on demand.
+export async function ensureThreeVendor(){
+ await mkdir('vendor/three',{recursive:true});
+ await build({entryPoints:['node_modules/three/build/three.module.js'],bundle:false,minify:true,format:'esm',outfile:'vendor/three/three.module.js',logLevel:'silent'});
+ await build({entryPoints:['node_modules/three/examples/jsm/loaders/GLTFLoader.js'],bundle:true,minify:true,format:'esm',external:['three'],outfile:'vendor/three/GLTFLoader.js',logLevel:'silent'});
+}
 const revision='40911d5761c2e8167664c3416fb37580246c74b9';
 const files=[['myr5.glb','1593467f0aa641119d56f28b2a98af3877fe08ec'],['anatomy.glb','1035a26eb090e8a0436495a3c62839ad67a718b6'],['hands-v2.glb','83713fc5689b8e78ced779fcb5435d14b04d4c7a']];
 const blobId=bytes=>createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');

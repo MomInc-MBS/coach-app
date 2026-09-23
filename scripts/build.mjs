@@ -3,7 +3,7 @@ import {resolve,sep} from 'node:path';
 import {compactModels} from './compact-models.mjs';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
-import {ensureAssets,ensureHandAssets} from './assets.mjs';
+import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
@@ -11,6 +11,7 @@ const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(p
 if(publicExpansionKey && !(publicExpansionKey.kty==='OKP' && publicExpansionKey.crv==='Ed25519' && typeof publicExpansionKey.x==='string' && /^[A-Za-z0-9_-]{43}$/.test(publicExpansionKey.x) && !/^A+$/.test(publicExpansionKey.x))) throw new Error('PUBLIC_EXPANSION_SIGNING_JWK must be a non-placeholder Ed25519 public JWK');
 await ensureAssets();
 await ensureHandAssets();
+await ensureThreeVendor();
 await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js'});
 // The app viewer must use the same recipe catalog and materials as the editor.
 await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js'});
@@ -18,12 +19,12 @@ await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'ii
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
 await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js']});
-await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs']});
+await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs']});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
-for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 // Authoring projects remain in the published source repository, not the app bundle.
 for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,

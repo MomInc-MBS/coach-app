@@ -151,7 +151,18 @@ try{localStorage.setItem('myr5-voice-style','robot');}catch{}
 $('downloadVoice').onclick=async()=>{const b=$('downloadVoice');b.disabled=true;try{const manifest=await(await fetch(VOICE_MANIFEST)).json(),urls=Object.values(manifest.phrases),cache=await caches.open(VOICE_CACHE);let i=0;await cache.add(VOICE_MANIFEST);for(const url of urls){if(!await cache.match(url)){const response=await fetch(url);if(!response.ok)throw Error('Download interrupted. Tap again to resume.');await cache.put(url,response);}set('downloadStatus',`Downloaded ${++i} of ${urls.length} voice clips.`);}set('downloadStatus','Robot voice pack is available offline on this device.');}catch(e){set('downloadStatus',e.message);}finally{b.disabled=false;}};
 initAppUpdates({api,applyButton:$('applyUpdate'),onRegistration:reg=>{registration=reg;syncDeviceSwitch();},onBeforeUpdate:async()=>{await flushSets();if(account&&pending(account.user.id).length)throw Error('Your set is still syncing. Reconnect before updating.');}});
 mountPostDownload({host:$('installPanel')});
- for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals')await meals();if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
+let pyramidScanner=null,pyramidGen=0;
+async function mountPyramid(){
+ const run=++pyramidGen;if(pyramidScanner)return;
+ try{
+  const {mountPyramidScanner}=await import('./food/pyramid-scanner.mjs');if(run!==pyramidGen||!$('mealsPanel').open)return;
+  const instance=await mountPyramidScanner($('foodCamera'));if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
+  pyramidScanner=instance;
+ }catch(error){console.warn('Pyramid scanner unavailable',error);}
+}
+function releasePyramid(){pyramidGen++;pyramidScanner?.dispose();pyramidScanner=null;}
+$('mealsPanel').addEventListener('close',releasePyramid);window.addEventListener('pagehide',releasePyramid);
+ for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){await meals();void mountPyramid();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
  window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>{guestHistoryChoice?.close();localHistoryRepository?.close();},{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));
 window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});

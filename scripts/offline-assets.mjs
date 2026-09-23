@@ -3,7 +3,7 @@ import {createReadStream} from 'node:fs';
 import {readdir,readFile,writeFile,stat} from 'node:fs/promises';
 import {join,posix} from 'node:path';
 
-const folders=['pod','creature','models','icons','handborne','arcade','war-room'];
+const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // D34: core precache holds only what a first run needs (sign-in/onboarding, home, a camera or manual
 // workout with its counter, updates/recovery, the offline shell). Core is every root, /icons/ or /pod/
