@@ -60,19 +60,20 @@ test('the two skin packets stay additive, uniquely namespaced, and checksum-iden
 test('track packets combine both additive collections; ships stay in a separate resumable packet', async () => {
   const temp = await mkdtemp(join(tmpdir(), 'myr5-section-build-'));
   try {
-    const result = await buildPostDownloadSections({ root, outputDir: temp });
+    const baseUrl='https://raw.githubusercontent.com/mominc/myr5-packs/0123456789abcdef0123456789abcdef01234567/materials';
+    const result = await buildPostDownloadSections({ root, outputDir: temp, baseUrl });
     assert.equal(result.signed, false);
     assert.equal(result.activation, 'blocked-until-signed-and-hosted');
     assert.deepEqual(result.sections.map(x => [x.id,x.assets]), [['track-arms',1],['track-cardio',1],['track-chest',1],['track-glutes',1],['track-martial-arts',1],['track-meditation',1],['track-quads',1],['track-yoga',1],['coach-ships-biomes',7]]);
-    const policy = { ...DEFAULT_LOCAL_RESOURCE_POLICY, trustedOrigins:['https://mominc.online'], pathPrefix:'/materials/' };
+    const policy = { ...DEFAULT_LOCAL_RESOURCE_POLICY, trustedOrigins:['https://raw.githubusercontent.com'], pathPrefix:'/mominc/myr5-packs/0123456789abcdef0123456789abcdef01234567/materials/' };
     for (const section of result.sections) {
       const dir = join(temp,section.id);
       const manifest = JSON.parse(await readFile(join(dir,'chunk-manifest.unsigned.json'),'utf8'));
       assert.equal(manifest.signature,'');
       assert.equal(validateChunkManifest(manifest,policy),true);
       assert.equal(manifest.assets.length,section.assets);
-      assert.ok(manifest.assets.every(asset => asset.chunks.every(chunk => chunk.bytes <= 1024*1024 && new URL(chunk.url).origin === 'https://mominc.online')));
-      assert.ok(manifest.assets.every(asset=>asset.chunks.every(chunk=>new URL(chunk.url).pathname.startsWith(`/materials/${manifest.packId}/1.0.0/`))));
+      assert.ok(manifest.assets.every(asset => asset.chunks.every(chunk => chunk.bytes <= 1024*1024 && new URL(chunk.url).origin === 'https://raw.githubusercontent.com')));
+      assert.ok(manifest.assets.every(asset=>asset.chunks.every(chunk=>new URL(chunk.url).pathname.startsWith(`${policy.pathPrefix}${manifest.packId}/1.0.0/`))));
       for (const asset of manifest.assets) {
         const bytes = await readFile(join(dir,asset.path));
         assert.equal(bytes.byteLength,asset.bytes);

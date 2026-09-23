@@ -9,24 +9,36 @@ import {build as bundleEditor} from 'esbuild';
 import {gzipSync} from 'node:zlib';
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
+import {copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
 if(publicExpansionKey && !(publicExpansionKey.kty==='OKP' && publicExpansionKey.crv==='Ed25519' && typeof publicExpansionKey.x==='string' && /^[A-Za-z0-9_-]{43}$/.test(publicExpansionKey.x) && !/^A+$/.test(publicExpansionKey.x))) throw new Error('PUBLIC_EXPANSION_SIGNING_JWK must be a non-placeholder Ed25519 public JWK');
+if(process.env.MYR5_MATERIAL_SIGNING_PRIVATE_JWK)throw new Error('Do not expose a private material signing key to the Sites build.');
+const materialRelease=loadMaterialPublicBuildConfig(),materialManifestSource=process.env.MYR5_MATERIAL_SITE_MANIFESTS;
+if(materialRelease.configured&&!materialManifestSource)throw new Error('MYR5_MATERIAL_SITE_MANIFESTS is required when material release trust is configured.');
+if(!materialRelease.configured&&materialManifestSource)throw new Error('Signed material manifests cannot be copied without matching public trust and immutable host configuration.');
 await ensureAssets();
 await ensureHandAssets();
 await ensureThreeVendor();
-await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js'});
+await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js',define:materialRelease.defines});
 // The app viewer must use the same recipe catalog and materials as the editor.
-await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js'});
+await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js',define:materialRelease.defines});
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
-await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs']});
+await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs'],define:materialRelease.defines});
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs']});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
+await rm('dist/client/materials',{recursive:true,force:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+if(materialRelease.configured){
+ await copySignedMaterialManifests({sourceDir:materialManifestSource,siteRoot:'dist/client',baseUrl:process.env.MYR5_MATERIALS_BASE_URL,publicJwk:materialRelease.publicJwk});
+ const configPath='dist/client/modules/materials/material-config.mjs';let config=await readFile(configPath,'utf8');
+ config=config.replace(/export const BUILT_PUBLIC_MATERIAL_SIGNING_JWK = [^;]+;/,`export const BUILT_PUBLIC_MATERIAL_SIGNING_JWK = ${JSON.stringify(materialRelease.publicJwk)};`).replace(/export const BUILT_MATERIAL_RESOURCE_POLICY = [^;]+;/,`export const BUILT_MATERIAL_RESOURCE_POLICY = ${JSON.stringify(materialRelease.policy)};`);
+ await writeFile(configPath,config);
+}
 // Authoring projects remain in the published source repository, not the app bundle.
 for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,

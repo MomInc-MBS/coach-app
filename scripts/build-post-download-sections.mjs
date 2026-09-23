@@ -4,9 +4,9 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { parseMaterialsBaseUrl } from './material-release.mjs';
 
 const MAP_ORDER = ['basecolor','normal','roughness','height','metalness','tintMask','ao','opacity','emissive','preview'];
-const DEFAULT_BASE = 'https://mominc.online/materials';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function makeBundle(entries) {
@@ -27,10 +27,9 @@ async function chunkRecord(bytes, { path, url, chunkBytes }) {
   return { path, bytes: bytes.byteLength, sha256: hash(bytes), chunks };
 }
 
-export async function buildPostDownloadSections({ root = process.cwd(), outputDir = join(root, 'plan/assets-inbox/post-download-sections'), baseUrl = DEFAULT_BASE, chunkBytes = 1024 * 1024, materialize = true } = {}) {
+export async function buildPostDownloadSections({ root = process.cwd(), outputDir = join(root, 'plan/assets-inbox/post-download-sections'), baseUrl = process.env.MYR5_MATERIALS_BASE_URL, chunkBytes = 1024 * 1024, materialize = true } = {}) {
   if (!Number.isInteger(chunkBytes) || chunkBytes < 1 || chunkBytes > 1024 * 1024) throw new Error('chunk size must obey the 1 MiB chunk-delivery policy');
-  const origin = new URL(baseUrl);
-  if (origin.protocol !== 'https:' || origin.pathname !== '/materials' || origin.username || origin.password || origin.search || origin.hash) throw new Error('base URL must be an HTTPS origin ending in /materials');
+  baseUrl=parseMaterialsBaseUrl(baseUrl).baseUrl;
   const output = resolve(outputDir), generated = [];
   const sections = [];
   const sourcePackets = await Promise.all(['forged-realms','celestial-rift'].map(async packet => ({
