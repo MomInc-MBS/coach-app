@@ -8,7 +8,8 @@
     "build": "node scripts/build.mjs",
     "catalog:provision-keys": "node scripts/provision-pack-catalog-keys.mjs",
     "db:generate": "drizzle-kit generate",
-    "test": "node --test tests/*.test.mjs tests/packs/*.test.mjs"
+    "test": "node --test tests/*.test.mjs tests/packs/*.test.mjs",
+    "test:smoke": "node --test tests/release-smoke.browser.test.mjs"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.8.1",
