@@ -21,7 +21,10 @@ async function withPortal(run){
  try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});await run(browser,'http://127.0.0.1:'+server.address().port+'/__portal__');}
  finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
-async function open(page){return page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
+// W2-2B #22: a fresh page's localStorage has no "seen" flag, so the first-run hint would otherwise play
+// (and suppress the idle cycle) before any of this file's own idle timing starts — mark it seen so idle's
+// own 3s-armed cycle is what these tests measure.
+async function open(page){return page.evaluate(async()=>{try{localStorage.setItem('myr5.portalHintShown','1');}catch{}const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
 // Labels are drawn via ctx.fillText once per idle-hint entry per frame; patched before any page script
 // runs so every draw (cycling or static) is recorded with its timestamp.
 async function recordLabels(page){

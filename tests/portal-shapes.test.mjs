@@ -4,7 +4,7 @@
 // (see the diff note below); direction-aware line coverage is new here.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {recognizeShape,SHAPE_IDS} from '../modules/portal/portal-shapes.mjs';
+import {recognizeShape,nearestShape,TOLERANCE,SHAPE_IDS} from '../modules/portal/portal-shapes.mjs';
 
 // Seeded jitter so failures reproduce.
 let seed=7;const rand=()=>((seed=(seed*16807)%2147483647)/2147483647);
@@ -96,6 +96,34 @@ test('near misses and scribbles return null',()=>{
 
 test('ignores malformed input instead of throwing',()=>{
  assert.equal(recognizeShape(null),null);assert.equal(recognizeShape([[['a',1]]]),null);assert.equal(recognizeShape([[[NaN,NaN],[1,1]]]),null);
+});
+
+// #21 "almost": nearestShape reuses recognizeShape's own coverage math (same candidates, same
+// TOLERANCE.dist), just without the pass/fail gate — so a near-complete trace of the right shape scores
+// high even though recognizeShape itself must still reject it.
+test('nearestShape: a clean trace scores 1, a 3-sided rect (last side never closed) scores high but under TOLERANCE.cover',()=>{
+ assert.deepEqual(nearestShape([trace(RECT)]),{id:'rect',score:1});
+ const partial=trace(RECT).slice(0,230); // ~5/8 of the way around: three sides plus a bit, closing side missing
+ assert.equal(recognizeShape([partial]),null,'a 3-sided rect must not itself match');
+ const near=nearestShape([partial]);
+ assert.equal(near.id,'rect');
+ assert(near.score<TOLERANCE.cover&&near.score>0.65,`expected a near-miss score in (0.65, ${TOLERANCE.cover}), got ${near.score}`);
+});
+
+test('nearestShape returns null for the same malformed/empty/too-many-strokes input recognizeShape rejects',()=>{
+ assert.equal(nearestShape(null),null);
+ assert.equal(nearestShape([]),null);
+ assert.equal(nearestShape([[]]),null);
+ assert.equal(nearestShape([[['a',1]]]),null);
+ assert.equal(nearestShape([[[NaN,NaN],[1,1]]]),null);
+ assert.equal(nearestShape([[[.1,.1]],[[.2,.2]],[[.3,.3]]]),null,'3+ strokes has no candidate list');
+});
+
+test('nearestShape never throws on a wild scribble, and keeps the single-stroke line direction-aware',()=>{
+ const scribble=jitter(Array.from({length:120},(_,i)=>[.5+.3*Math.sin(i*.7),.5+.3*Math.cos(i*1.9)]),.02);
+ assert.doesNotThrow(()=>nearestShape([scribble]));
+ assert.equal(nearestShape([line([.5,.03],[.5,.97])]).id,'line-down');
+ assert.equal(nearestShape([line([.5,.97],[.5,.03])]).id,'line-up');
 });
 
 test('distinguishes inset rectangles from ovals despite shifts, jitter and reversed traces',()=>{
