@@ -241,6 +241,14 @@ async function offerUpdate(client){
  // reply still proves they are alive, including a busy workout answering false.
  return clientAnswers(client,'UPDATE_SAFETY_CHECK',data=>typeof data?.safe==='boolean');
 }
+// W2-2A (#18): a reminder opens its route in the app: meal -> #food, workout -> #workout. Older ?panel= links
+// (other reminders, the test push) map to the same routes; anything else opens unchanged.
+const NOTIFY_ROUTES={'reminder-meal':'food','reminder-workout':'workout'},PANEL_ROUTES={meals:'food',reminders:'reminders',account:'scoreboard',history:'history',install:'install'};
+function routeUrl(url,kind){
+ if(!['/pose.html','/pose','/'].includes(url.pathname))return url;
+ const route=NOTIFY_ROUTES[kind]||PANEL_ROUTES[url.searchParams.get('panel')];if(!route)return url;
+ const routed=new URL('/pose.html',url);url.searchParams.forEach((value,key)=>{if(key!=='panel')routed.searchParams.set(key,value);});routed.hash=route;return routed;
+}
 self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{
  let url;try{url=new URL(event.notification.data?.url||'/pose.html',self.location.origin);}catch{return;}
  if(url.origin!==self.location.origin)return;
@@ -254,6 +262,7 @@ self.addEventListener('notificationclick',event=>{event.notification.close();eve
   }
   return self.clients.openWindow(new URL('/repair-coach',self.location.origin).href);
  }
+ url=routeUrl(url,event.notification.data?.kind);
  for(const client of all)if(new URL(client.url).origin===url.origin){await client.navigate(url.href);return client.focus();}
  return self.clients.openWindow(url.href);
 })());});

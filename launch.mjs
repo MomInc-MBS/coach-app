@@ -189,4 +189,4 @@ $('mealsPanel').addEventListener('close',releasePyramid);window.addEventListener
  window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>{guestHistoryChoice?.close();localHistoryRepository?.close();},{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));
 window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
- await applyLocalCoach();{const cached=packGrantCache?.active();if(cached)void mountVerifiedExpansion(cached);}void refresh();const panel=new URLSearchParams(location.search).get('panel');if(['history','meals','reminders','account','install'].includes(panel))document.querySelector(`[data-panel=${panel}]`).click();
+ await applyLocalCoach();{const cached=packGrantCache?.active();if(cached)void mountVerifiedExpansion(cached);}void refresh();const panel=new URLSearchParams(location.search).get('panel');window.myr5Routes.boot(panel);

@@ -52,6 +52,8 @@ async function openApp(browser,base,overrides){
  return {context,page};
 }
 const portalUp=page=>page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+// W2-2A: the bottom bar's centre Portal button replaced the quilt's floating Menu button.
+const PORTAL_BUTTON='#coachDock [data-route="portal"]';
 const centerHit=(page,selector)=>page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;},selector);
 
 let server,base,browser;
@@ -101,25 +103,27 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    await portalUp(page);
   }
 
-  // rect: kind:'home' -> hides the quilt and presses BEGIN. Force manual mode first so BEGIN never
-  // touches the camera or a network-fetched tracker model.
-  await page.evaluate(()=>{document.getElementById('camera').value='manual';});
+  // rect (Ian 2026-09-23): the workout start page -- hides the quilt and shows the pod from the top (viewing port,
+  // control board, BEGIN). BEGIN is not pressed for you any more.
+  await page.evaluate(()=>{scrollTo(0,400);});
   await page.evaluate(()=>window.myr5Portal.show());
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('rect'));
-  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true);
-  await page.waitForFunction(()=>window.myr5TestState?.phase!=='idle');
-  assert.equal(await page.evaluate(()=>document.getElementById('start').disabled),true,'rect must press BEGIN');
-  await page.evaluate(()=>document.getElementById('stop').click());
-  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle');
+  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true&&location.hash==='#workout');
+  await page.waitForFunction(()=>scrollY===0);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle','rect must not start the workout');
+  const beginBox=await page.locator('#start').boundingBox();
+  assert.ok(beginBox,'BEGIN is on the start page');
 
-  // oval: kind:'home' -> hides the quilt and scrolls the workout picker (#controls) into view.
+  // oval (Ian 2026-09-23): the coach's arrival -- the ship view opens (its entrance plays every time), and the
+  // quilt comes back when it closes.
   await page.evaluate(()=>window.myr5Portal.show());
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('oval'));
-  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true);
-  const controlsBox=await page.locator('#controls').boundingBox();
-  assert.ok(controlsBox&&controlsBox.y<812&&controlsBox.y+controlsBox.height>0,'oval must bring the workout picker (#controls) into view');
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',{timeout:10000});
+  await page.locator('.ship-view-close').click();
+  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash!=='#select');
+  await portalUp(page);
 
   // x: kind:'nav' -> leaves the pod for the Character Editor. Fire-and-forget: the evaluate call's
   // own context is torn down mid-navigation, so it must not be awaited directly.
@@ -156,7 +160,7 @@ test('3. freeze check: a dialog opened over the quilt stays tappable, and the Me
   assert.equal(await centerHit(page,'#fullDownloadOffer button'),true,"the offer's primary button must be tappable, not swallowed by the inert quilt background");
 
   await page.evaluate(()=>{document.getElementById('fullDownloadOffer').close();document.getElementById('fullDownloadOffer').remove();});
-  assert.equal(await centerHit(page,'#portalMenuButton'),true,'the Menu button must be hit-testable again once the dialog closes');
+  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the Menu (Portal) button must be hit-testable again once the dialog closes');
  }finally{await context.close();}
 });
 
@@ -172,7 +176,7 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
   assert.equal(await centerHit(page,'#downloadsMenu [data-later]'),true,'the menu stays tappable');
   await page.locator('#downloadsMenu [data-later]').click();
   await portalUp(page);
-  assert.equal(await centerHit(page,'#portalMenuButton'),true,'the Menu button works again');
+  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the Menu (Portal) button works again');
   // From Settings, which the quilt opens with its line-down shape.
   await page.evaluate(()=>window.myr5Portal.open('line-down'));
   await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
@@ -182,7 +186,7 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
   await page.locator('#downloadsMenu [data-later]').click();
   await page.locator('#closeSettings').click();
   await portalUp(page);
-  assert.equal(await centerHit(page,'#portalMenuButton'),true);
+  assert.equal(await centerHit(page,PORTAL_BUTTON),true);
  }finally{await context.close();}
 });
 
@@ -191,15 +195,16 @@ test('4. Menu sheet -> Ship opens the full-screen ship view, and the phone back 
  try{
   await page.evaluate(()=>window.myr5Menus.portal());
   await portalUp(page);
-  await page.locator('#portalMenuButton').click();
+  await page.locator(PORTAL_BUTTON).click();
   await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
   await page.locator('#portalMenu [data-menu="ship"]').click();
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true);
   // ship-view.css loads via a dynamically-appended <link>; wait for it so the full-screen layout
   // (position:fixed;inset:0) is actually applied before measuring the box.
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed');
-  const box=await page.locator('dialog.ship-view').boundingBox();
-  assert.ok(box&&box.width>=370&&box.height>=800,'the ship view must fill the screen');
+  // W2-2A: full screen down to the bottom bar, which stays showing under it.
+  const box=await page.locator('dialog.ship-view').boundingBox(),barTop=(await page.locator('#coachDock').boundingBox()).y;
+  assert.ok(box&&box.width>=370&&box.y===0&&Math.abs(box.y+box.height-barTop)<1&&box.height>=740,'the ship view must fill the screen above the bar');
   assert.equal(await page.evaluate(()=>location.hash),'#ship');
   await page.goBack();
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open);
@@ -223,5 +228,102 @@ test('5. one shape without reduced motion runs the real glass and dive, and the 
   // (bounded) rather than snapshotting immediately, or this legitimately races the event.
   await page.waitForFunction(()=>getComputedStyle(document.getElementById('portalHome')).transform==='none'&&!document.querySelector('.portal-glass'),{timeout:5000});
   assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),false,'the quilt is back, not left hidden');
+ }finally{await context.close();}
+});
+
+// W2-2A (#4, #5, #17, #30): every scene has a #route; the one bottom bar shows on each, lit for its own item, and is
+// tappable inside the route's dialog; phone back closes the route. [route, what shows, bar item lit (or null)].
+const bar=page=>page.evaluate(()=>{
+ const dock=document.getElementById('coachDock'),r=dock?.getBoundingClientRect(),style=dock&&getComputedStyle(dock);
+ const food=dock?.querySelector('[data-route="food"]'),fr=food?.getBoundingClientRect();
+ return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>40&&Math.round(r.bottom)===innerHeight,
+  tappable:!!fr&&document.elementFromPoint(fr.left+fr.width/2,fr.top+fr.height/2)===food,
+  lit:[...dock.querySelectorAll('[aria-current="page"]')].map(b=>b.dataset.route),live:dock.querySelector('.dock-live')?.textContent||''};
+});
+const DIALOG_ROUTES=[
+ ['food','#mealsPanel','food'],['reminders','#remindersPanel','reminders'],['scoreboard','#accountPanel','scoreboard'],
+ ['history','#historyPanel','history'],['install','#installPanel','install'],['settings','#settings',null],
+ ['achievements','.ach-board',null],['meditate','.meditation-panel',null],['share','#portalMenu',null],
+ ['ship','dialog.ship-view',null],['select','dialog.ship-view',null],
+];
+test('6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it',{timeout:180000},async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  for(const [route,dialogSel,lit] of DIALOG_ROUTES){
+   await page.evaluate(route=>{location.hash=route;},route);
+   await page.waitForFunction(sel=>document.querySelector(sel)?.open===true,dialogSel,{timeout:10000});
+   await page.waitForFunction(route=>window.myr5Routes.current()===route,route);
+   const state=await bar(page);
+   assert.equal(state.visible,true,`#${route}: the bar sits at the bottom, visible`);
+   assert.equal(state.tappable,true,`#${route}: the bar is tappable over its dialog`);
+   assert.deepEqual(state.lit,lit?[lit]:[],`#${route}: the bar lights its own item only`);
+   const heading=await page.evaluate(sel=>{const h=document.activeElement;return /^H[12]$/.test(h?.tagName)&&document.querySelector(sel).contains(h);},dialogSel);
+   if(!['ship','select'].includes(route))assert.equal(heading,true,`#${route}: focus moves to the route's heading`);
+   await page.goBack();
+   await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
+   await page.waitForFunction(route=>location.hash!=='#'+route&&window.myr5Routes.current()==='',route);
+  }
+  // No-dialog scenes: the workout start page (BEGIN not pressed) and the pod.
+  await page.evaluate(()=>{scrollTo(0,400);location.hash='workout';});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='workout'&&scrollY===0);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle');
+  assert.equal((await bar(page)).visible,true);
+  await page.goBack();await page.waitForFunction(()=>window.myr5Routes.current()===''&&location.hash==='');
+  await page.evaluate(()=>{location.hash='pod';});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
+  await page.goBack();await page.waitForFunction(()=>window.myr5Routes.current()==='');
+  // The War Room keeps its lock (no verified pack here): the route says why and stays put.
+  await page.evaluate(()=>{location.hash='war-room';});
+  await page.waitForFunction(()=>document.getElementById('status')?.textContent==='Finish Coach setup to unlock the War Room.');
+  assert.equal(new URL(page.url()).pathname,'/pose.html');
+  // D24: nothing over the camera view (and no bar during a set).
+  for(const flag of ['cameraWorkout','tracking']){
+   const hidden=await page.evaluate(flag=>{document.body.dataset[flag]='true';const d=getComputedStyle(document.getElementById('coachDock')).display;delete document.body.dataset[flag];return d==='none';},flag);
+   assert.equal(hidden,true,`the bar is hidden while body[data-${flag}] is set`);
+  }
+  // Customize is its own page, with the same bar linking back into /pose.html#<route>.
+  await page.evaluate(()=>{location.hash='customize';});
+  await page.waitForURL('**/creature/index.html');
+  const links=await page.$$eval('.coach-dock a',links=>links.map(a=>a.getAttribute('href')));
+  assert.deepEqual(links,['/pose.html#history','/pose.html#food','/pose.html','/pose.html#reminders','/pose.html#scoreboard','/pose.html#install']);
+  const box=await page.locator('.coach-dock').boundingBox();
+  assert.ok(box&&Math.round(box.y+box.height)===812,'the customizer bar sits at the bottom');
+  await page.locator('.coach-dock a[href="/pose.html#food"]').click();
+  await page.waitForURL('**/pose.html#food');
+  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,null,{timeout:15000});
+ }finally{await context.close();}
+});
+
+test('7. a traced route sets its hash; back returns to the quilt, the bar Portal goes home, and back on the quilt stays in the app',async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+  assert.deepEqual((await bar(page)).lit,['portal'],'the quilt lights the Portal');
+  await page.locator(PORTAL_BUTTON).focus();await page.keyboard.press('Tab'); // a real key arms the back guard, as a first tap does
+  await page.evaluate(()=>window.myr5Portal.open('line-rl'));
+  await page.waitForFunction(()=>document.getElementById('remindersPanel')?.open===true&&location.hash==='#reminders');
+  const state=await bar(page);
+  assert.deepEqual(state.lit,['reminders']);
+  await page.waitForFunction(()=>document.querySelector('#coachDock .dock-live')?.textContent==='Reminders'); // a polite live region names the route
+  // Switching routes from the bar replaces the entry: one back still lands on the quilt.
+  await page.locator('#coachDock [data-route="food"]').click();
+  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true&&location.hash==='#food'&&!document.getElementById('remindersPanel').open);
+  await page.goBack();
+  await page.waitForFunction(()=>!document.getElementById('mealsPanel').open&&location.hash==='');
+  await portalUp(page);
+  await page.goBack();await page.waitForTimeout(300);
+  assert.equal(new URL(page.url()).pathname,'/pose.html','back on the quilt stays in the app');
+  await portalUp(page);
+  await page.waitForFunction(()=>document.querySelector('#coachDock .dock-live')?.textContent==='Press back again to leave Coach'); // also shown for 3s as a pill over the bar
+  // Off the quilt, the Portal button goes home.
+  await page.evaluate(()=>{location.hash='scoreboard';});
+  await page.waitForFunction(()=>document.getElementById('accountPanel')?.open===true);
+  await page.locator(PORTAL_BUTTON).click();
+  await page.waitForFunction(()=>!document.getElementById('accountPanel').open&&location.hash==='');
+  await portalUp(page);
+  // On the quilt it opens the Menu sheet (#share).
+  await page.locator(PORTAL_BUTTON).click();
+  await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true&&location.hash==='#share');
  }finally{await context.close();}
 });
