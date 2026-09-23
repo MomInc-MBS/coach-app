@@ -1,8 +1,8 @@
 // Global battle-pass ledger (rank 6b) for the items unlock-store.ts doesn't hold: weapons, pets,
-// boss looks, specials, auras. Textures/colours/palettes stay in unlock-store.ts. Same API
+// boss looks, specials, auras, Food bonuses (D32). Textures/colours/palettes stay in unlock-store.ts. Same API
 // shape as unlock-store.ts, one localStorage key, not per-coach (unlocks are global).
 export const LEDGER_KEY='myr5-battle-pass-ledger-v1';
-export const LEDGER_KINDS=Object.freeze(['weapon','pet','boss-texture','boss-skin','special','aura']);
+export const LEDGER_KINDS=Object.freeze(['weapon','pet','boss-texture','boss-skin','special','aura','bonus']);
 
 function read(){
  try{

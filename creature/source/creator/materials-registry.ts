@@ -3,6 +3,7 @@
 // no other code changes. See plan/PLAN.md "Rank 4" and plan/reports/audit-materials.md.
 import {STYLES as LEGACY_STYLES, type MaterialChoice} from './design';
 import {isGranted, grantUnlock, type UnlockKind} from './unlock-store';
+import PALETTE_DATA from './palettes.json';
 export {grantUnlock};
 
 export type UnlockRule = 'default' | 'battle-pass' | 'aura-milestone';
@@ -15,7 +16,10 @@ export type TextureDef = {
  defaultColorId: string;  // colour used until the player chooses another
 };
 export type ColorDef = { id: string; displayName: string; unlockRule: UnlockRule; primary: string; secondary: string; accent: string; packId?: string };
-export type PaletteDef = { id: string; displayName: string; unlockRule: 'aura-milestone'; unlockAtDay: number; colors: [string, string, string, string, string] };
+// D32: a palette is a primary/secondary/accent triad (the same roles the tint uses). Aura
+// palettes carry unlockAtDay; battle-pass palettes carry `reward` = the slot that grants them
+// ('<bossId>:L<n>' or 'food:L<n>', read by battle-pass-rewards.mjs).
+export type PaletteDef = { id: string; displayName: string; tagline: string; unlockRule: 'aura-milestone' | 'battle-pass'; unlockAtDay?: number; reward?: string; colors: [string, string, string] };
 
 const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule }) => item.unlockRule === 'default' || isGranted(kind, item.id);
 export const isTextureUnlocked = (t: TextureDef) => isUnlocked('texture', t);
@@ -82,33 +86,15 @@ const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.
 export const TEXTURES: TextureDef[] = [FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES];
 export const COLORS: ColorDef[] = [...SIMPLE_COLORS, ...LEGACY_COLORS];
 
-// --- Palettes: plan/muse/palettes.json (aura-milestone, unlockAtDay). Inlined — that plan/
-// directory isn't part of this worktree's build (a battle-pass worker can regenerate this
-// block from the source JSON if the palette list changes). ---
-export const PALETTES: PaletteDef[] = [
- { id: 'pal-01', displayName: 'Morning Mist', unlockRule: 'aura-milestone', unlockAtDay: 5, colors: ['#F6E8E8', '#DCE9F5', '#CFE8D8', '#F5E6C8', '#E8D8F0'] },
- { id: 'pal-02', displayName: 'River Clay', unlockRule: 'aura-milestone', unlockAtDay: 10, colors: ['#8A6F55', '#C2A878', '#5C4A3A', '#D9C7A5', '#3E5C4B'] },
- { id: 'pal-03', displayName: 'Static Pop', unlockRule: 'aura-milestone', unlockAtDay: 15, colors: ['#111111', '#FFFFFF', '#FF3B30', '#34C759', '#0A84FF'] },
- { id: 'pal-04', displayName: 'Night Shift', unlockRule: 'aura-milestone', unlockAtDay: 20, colors: ['#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560'] },
- { id: 'pal-05', displayName: 'Tin Star', unlockRule: 'aura-milestone', unlockAtDay: 25, colors: ['#C0C0C8', '#8E8E96', '#E8E8F0', '#5A5A66', '#FFD166'] },
- { id: 'pal-06', displayName: 'Meadow Line', unlockRule: 'aura-milestone', unlockAtDay: 30, colors: ['#E3F2E1', '#BFE3C0', '#F9F3D9', '#F6C9B8', '#A8D5E2'] },
- { id: 'pal-07', displayName: 'Campfire', unlockRule: 'aura-milestone', unlockAtDay: 35, colors: ['#7A4A2B', '#C97B3D', '#E8A94C', '#4A2E1B', '#F5E0B8'] },
- { id: 'pal-08', displayName: 'Signal Jam', unlockRule: 'aura-milestone', unlockAtDay: 40, colors: ['#00E5FF', '#FF00E5', '#0A0A0A', '#F5F5F5', '#FFEA00'] },
- { id: 'pal-09', displayName: 'Deep Well', unlockRule: 'aura-milestone', unlockAtDay: 45, colors: ['#0B0F1A', '#1B2A4A', '#274156', '#3E6B7E', '#9AD1D4'] },
- { id: 'pal-10', displayName: 'Chrome Garden', unlockRule: 'aura-milestone', unlockAtDay: 50, colors: ['#D9DDE3', '#A6ACB8', '#6E7480', '#F2C14E', '#7FB069'] },
- { id: 'pal-11', displayName: 'Sorbet Stand', unlockRule: 'aura-milestone', unlockAtDay: 55, colors: ['#FFD6E0', '#C1F0F6', '#FFF3B0', '#D8F3DC', '#E4C1F9'] },
- { id: 'pal-12', displayName: 'Foundry Floor', unlockRule: 'aura-milestone', unlockAtDay: 60, colors: ['#2B2B30', '#6B6B75', '#B8B8C4', '#E8B44C', '#4CC9F0'] },
-];
+// --- Palettes: palettes.json next to this file (plan/muse/palettes.json cut to triads, plus the
+// D32 battle-pass fill). Adding a palette is a new row there. ---
+export const PALETTES: PaletteDef[] = PALETTE_DATA.map(({ name, ...p }) => ({ ...p, displayName: name }) as PaletteDef);
 
 export const findTexture = (id: string) => TEXTURES.find(t => t.id === id);
 export const findColor = (id: string) => COLORS.find(c => c.id === id);
 export const findPalette = (id: string) => PALETTES.find(p => p.id === id);
 
-const luminance = (hex: string) => { const n = parseInt(hex.slice(1), 16); return .2126 * (n >> 16 & 255) + .7152 * (n >> 8 & 255) + .0722 * (n & 255); };
-// Palettes are five loose colours (not authored as a dark/mid/light ramp), so derive a
-// tintable triad by sorting on perceived brightness. ponytail: a straight luminance sort is a
-// blunt instrument for palettes with two equally-bright hues; good enough for a first pass.
-function triadFromPalette(p: PaletteDef) { const sorted = [...p.colors].sort((a, b) => luminance(a) - luminance(b)); return { primary: sorted[2], secondary: sorted[0], accent: sorted[4] }; }
+function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent }; }
 
 /** The tint triad for a colour or palette id, or undefined if it doesn't exist or isn't unlocked yet. */
 export function colorTriad(id: string): { primary: string; secondary: string; accent: string } | undefined {

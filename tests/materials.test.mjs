@@ -58,8 +58,29 @@ test('registry has Flat+Clay (always unlocked) plus every legacy family plus the
  const battlePass=TEXTURES.filter(t=>t.unlockRule==='battle-pass');
  assert.equal(battlePass.length,24);
  for(const t of battlePass){assert.equal(isTextureUnlocked(t),false);assert.ok(t.track&&[1,3,5].includes(t.passLevel));}
- assert.equal(PALETTES.length,12);
+ // The 12 aura-milestone palettes keep their ids, names and unlock days (D32 only cut them to triads).
+ assert.deepEqual(PALETTES.filter(p=>p.unlockRule==='aura-milestone').map(p=>[p.id,p.unlockAtDay]),Array.from({length:12},(_,i)=>[`pal-${String(i+1).padStart(2,'0')}`,5*(i+1)]));
+ assert.deepEqual(PALETTES.slice(0,12).map(p=>p.displayName),['Morning Mist','River Clay','Static Pop','Night Shift','Tin Star','Meadow Line','Campfire','Signal Jam','Deep Well','Chrome Garden','Sorbet Stand','Foundry Floor']);
  for(const p of PALETTES)assert.equal(isPaletteUnlocked(p),false);
+});
+
+test('D32: every palette is a primary/secondary/accent triad of valid hex, with unique ids, names and taglines of at most 6 words',()=>{
+ assert.equal(PALETTES.length,12+95);
+ for(const p of PALETTES){
+  assert.equal(p.colors.length,3,p.id);
+  for(const c of p.colors)assert.match(c,/^#[0-9A-F]{6}$/i,p.id);
+  assert.ok(p.tagline&&p.tagline.trim().split(/\s+/).length<=6,`${p.id} tagline`);
+  if(p.unlockRule==='battle-pass')assert.ok(/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)&&p.unlockAtDay===undefined,p.id);
+  else assert.equal(p.unlockRule,'aura-milestone',p.id);
+ }
+ const unique=key=>assert.equal(new Set(PALETTES.map(key)).size,PALETTES.length);
+ unique(p=>p.id);unique(p=>p.displayName.toLowerCase());unique(p=>p.reward??p.id);
+ // material-language.ts caches bakes by texture id + primary, so two palettes sharing a primary would share a bake.
+ const primaries=[...PALETTES.map(p=>p.colors[0]),...COLORS.map(c=>c.primary)].map(c=>c.toUpperCase());
+ assert.equal(new Set(primaries).size,primaries.length);
+ // The triad is used as-is: colours[0..2] -> primary/secondary/accent.
+ const p=PALETTES.find(p=>p.id==='pal-40');grantUnlock('palette',p.id);
+ assert.deepEqual(colorTriad(p.id),{primary:p.colors[0],secondary:p.colors[1],accent:p.colors[2]});
 });
 
 test('a locked battle-pass texture cannot be applied - resolveRegionMaterial falls back to Flat instead of crashing',()=>{
