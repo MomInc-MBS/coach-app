@@ -288,123 +288,194 @@ function touchDot(x,y,color){
  ctx.save();const g=ctx.createRadialGradient(x,y,0,x,y,20);g.addColorStop(0,color+'cc');g.addColorStop(1,color+'00');
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-function kickRender(){if(!rafId)rafId=requestAnimationFrame(drawFrame);}
+function kickRender(){if(!rafId&&!probeFrozen)rafId=requestAnimationFrame(drawFrame);}
 
-// #105 magical trail: the ribbon's colour cycles through NEONS once every ~48px travelled.
+// #105 magical trail (W2-2E2). Colour flows through NEONS once every TRAIL_NEON_PX of stroke length (anchored
+// to where the finger went, drifting slowly toward the tip); alpha follows each point's age, eased so it holds
+// near full strength before it fades. Normal source-over throughout: additive washes out on the light quilt.
+const TRAIL_NEON_PX=48,TRAIL_STOP_PX=12,TRAIL_MAX_STOPS=64,SHIMMER_MS=450;
+const TAU=Math.PI*2,UNDERGLOW=[16,8,28],WHITE=[255,255,255];
 function neonRGB(t){
  const n=NEON_RGB.length,i=((Math.floor(t)%n)+n)%n,j=(i+1)%n,f=t-Math.floor(t);
  const[r1,g1,b1]=NEON_RGB[i],[r2,g2,b2]=NEON_RGB[j];
  return[r1+(r2-r1)*f|0,g1+(g2-g1)*f|0,b1+(b2-b1)*f|0];
 }
-// Fixed-size sparkle pool (typed arrays, ring buffer index) so shedding stardust never allocates per
-// frame; raised to 240 slots / 3-per-frame emission (conductor review 2026-09-23) for visibly thicker
-// stardust — still self-capping (a slow frame rate spawns fewer, since spawn is once per rendered frame).
-const SPARK_N=240,SPARK_LIFE=550;
+const trailColor=(d,now)=>neonRGB((d+now*.06)/TRAIL_NEON_PX);
+const fadeAlpha=age=>{const k=Math.min(1,Math.max(0,age/TRAIL_FADE_MS));return 1-k*k*(3-2*k);};
+// Fixed-size sparkle pool (typed arrays, ring-buffer cursor) so shedding dust never allocates. Each mote is a
+// 2–5px neon disc with a white centre on a soft dark backing (so it reads on beige), twinkling on its own
+// phase, drifting outward and slowing to a stop as it dies.
+const SPARK_N=400,SPARK_LIFE=700;
 const sparkX=new Float32Array(SPARK_N),sparkY=new Float32Array(SPARK_N),sparkVX=new Float32Array(SPARK_N),sparkVY=new Float32Array(SPARK_N),sparkSize=new Float32Array(SPARK_N),sparkHue=new Int8Array(SPARK_N),sparkBorn=new Float32Array(SPARK_N).fill(-1e9);
 let sparkCursor=0;
-function spawnSpark(x,y){
+function spawnSpark(x,y,born){
  const i=sparkCursor;sparkCursor=(sparkCursor+1)%SPARK_N;
- const a=Math.random()*Math.PI*2,s=16+Math.random()*30;
- sparkX[i]=x;sparkY[i]=y;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s*.5+18; // outward, biased slightly down
- sparkSize[i]=2+Math.random()*3;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=performance.now();
+ const a=Math.random()*TAU,s=30+Math.random()*110,off=4+Math.random()*6; // born just off the point, heading out
+ sparkX[i]=x+Math.cos(a)*off;sparkY[i]=y+Math.sin(a)*off;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s;
+ sparkSize[i]=1.4+Math.random()*1.1;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=born;
+}
+// Per live frame (self-capping: a slow frame rate sheds less): three motes off the fingertip, four scattered
+// along the last SHED_RECENT_MS of path.
+const SHED_RECENT_MS=250;
+function shedSparks(pts,now){
+ const last=pts.length-1,tip=pts[last];for(let k=0;k<3;k++)spawnSpark(tip.x,tip.y,now);
+ let first=last;while(first>0&&now-pts[first-1].t<SHED_RECENT_MS)first--;
+ if(first===last)return;
+ for(let k=0;k<4;k++){const i=first+1+((Math.random()*(last-first))|0),f=Math.random(),a=pts[i-1],b=pts[i];spawnSpark(a.x+(b.x-a.x)*f,a.y+(b.y-a.y)*f,now);}
 }
 function sparksAlive(now){for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)return true;return false;}
-// Source-over, not additive (conductor review 2026-09-23): 'lighter' over the light quilt washed the
-// neon pale. A saturated disc with a small white centre reads as a solid spark instead.
+// Mote sprites, drawn once: a row of the six neons in one small canvas, so each mote is a single drawImage
+// from one source (which the canvas batches) instead of three path fills. Cell = soft dark backing, neon
+// disc at MOTE_NEON of the cell radius, white centre at MOTE_WHITE.
+const MOTE_PX=20,MOTE_NEON=.68,MOTE_WHITE=.3;
+let moteSprites=null;
+function motes(){
+ if(moteSprites)return moteSprites;
+ const c=document.createElement('canvas'),g=c.getContext('2d'),R=MOTE_PX/2;c.width=MOTE_PX*NEONS.length;c.height=MOTE_PX;
+ NEONS.forEach((color,i)=>{
+  const x=i*MOTE_PX+R,disc=(r,style)=>{g.fillStyle=style;g.beginPath();g.arc(x,R,r,0,TAU);g.fill();};
+  const back=g.createRadialGradient(x,R,0,x,R,R);back.addColorStop(0,'rgba(16,8,28,.5)');back.addColorStop(1,'rgba(16,8,28,0)');
+  disc(R,back);disc(R*MOTE_NEON,color);disc(R*MOTE_WHITE,'#fff');
+ });
+ return moteSprites=c;
+}
 function drawSparks(now){
+ const sprites=motes();
+ ctx.save();
  for(let i=0;i<SPARK_N;i++){
   const age=now-sparkBorn[i];if(age<0||age>=SPARK_LIFE)continue;
-  const t=age/1000,life=age/SPARK_LIFE,x=sparkX[i]+sparkVX[i]*t,y=sparkY[i]+sparkVY[i]*t+30*life*life;
-  const alpha=(1-life)*(.55+.45*Math.sin(age*.03+i)),color=NEONS[sparkHue[i]],size=sparkSize[i]*(1-life*.4);
-  ctx.save();ctx.globalAlpha=Math.max(0,alpha);
-  ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,size*.4,0,Math.PI*2);ctx.fill();
-  ctx.restore();
+  const life=age/SPARK_LIFE,drift=age/1000*(1-life/2),x=sparkX[i]+sparkVX[i]*drift,y=sparkY[i]+sparkVY[i]*drift+16*life*life;
+  const tw=.5+.5*Math.sin(age*.04+i*2.4),h=sparkSize[i]*(.8+.2*tw)/MOTE_NEON;
+  ctx.globalAlpha=(1-life*life)*(.55+.45*tw);
+  ctx.drawImage(sprites,sparkHue[i]*MOTE_PX,0,MOTE_PX,MOTE_PX,x-h,y-h,2*h,2*h);
  }
+ ctx.restore();
 }
-// A bloom + short star-flare at the fingertip (one gradient fill + a couple of strokes — cheap, one per
-// active tip per frame, not per particle). `rgb` is an [r,g,b] triple, not a CSS string: building rgba()
-// stops directly avoids the hex-only "+'cc'" alpha-suffix trick, which broke for the rgb(...) tip colour.
-function drawFlare(x,y,[r,g,b],alpha){
- const solid=`rgb(${r},${g},${b})`;
- ctx.save();ctx.globalAlpha=alpha;ctx.globalCompositeOperation='lighter';
- const grad=ctx.createRadialGradient(x,y,0,x,y,26);
- grad.addColorStop(0,'#ffffffee');grad.addColorStop(.4,`rgba(${r},${g},${b},.8)`);grad.addColorStop(1,`rgba(${r},${g},${b},0)`);
- ctx.fillStyle=grad;ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.shadowColor=solid;ctx.shadowBlur=10;
- ctx.beginPath();ctx.moveTo(x-15,y);ctx.lineTo(x+15,y);ctx.moveTo(x,y-15);ctx.lineTo(x,y+15);ctx.stroke();
- ctx.fillStyle='#ffffff';ctx.shadowBlur=0;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+function starPath(p,x,y,len,waist,rot){
+ for(let k=0;k<8;k++){const a=rot+k*Math.PI/4,rr=k%2?waist:len,px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;k?p.lineTo(px,py):p.moveTo(px,py);}
+ p.closePath();
+}
+// Fingertip bloom + slowly turning star flare: a dark halo (so it reads on beige), a white-hot → neon bloom,
+// then a long and a short four-point star in one fill. A few fills per tip per frame, not per particle.
+// size scales the whole flare (the release shimmer reuses it as a smaller, faster-turning glint).
+// `rgb` is an [r,g,b] triple so rgba() stops can be built directly.
+function drawFlare(x,y,[r,g,b],alpha,now,size=1){
+ const neon=a=>`rgba(${r},${g},${b},${a})`;
+ ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.scale(size,size);
+ let grad=ctx.createRadialGradient(0,0,0,0,0,30);grad.addColorStop(0,'rgba(16,8,28,.3)');grad.addColorStop(1,'rgba(16,8,28,0)');
+ ctx.fillStyle=grad;ctx.fillRect(-30,-30,60,60);
+ grad=ctx.createRadialGradient(0,0,0,0,0,20);
+ grad.addColorStop(0,'#fff');grad.addColorStop(.25,'rgba(255,255,255,.9)');grad.addColorStop(.5,neon(.75));grad.addColorStop(1,neon(0));
+ ctx.fillStyle=grad;ctx.fillRect(-20,-20,40,40);
+ const star=new Path2D(),rot=now/1200;starPath(star,0,0,28,3,rot);starPath(star,0,0,14,2.5,rot+Math.PI/4);
+ grad=ctx.createRadialGradient(0,0,0,0,0,28);
+ grad.addColorStop(0,'#fff');grad.addColorStop(.18,'#fff');grad.addColorStop(.45,neon(.95));grad.addColorStop(1,neon(0));
+ ctx.fillStyle=grad;ctx.fill(star);
  ctx.restore();
 }
 const pathLength=pts=>{let d=0;for(let i=1;i<pts.length;i++)d+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return d;};
 const ribbonPath=pts=>{const p=new Path2D();pts.forEach((pt,i)=>i?p.lineTo(pt.x,pt.y):p.moveTo(pt.x,pt.y));return p;};
-// One gradient along the trail's own line (tail->tip): colour (via `colorAt`, default the flowing NEONS)
-// flows by distance travelled, alpha follows each sampled point's own age — capped to a handful of stops,
-// so building and stroking it costs the same regardless of how many raw points the stroke has. Reused
-// with a flat colour for the dark backing and the white hot centre so every layer fades in step.
-const RIBBON_STOPS=10;
-function ribbonGradient(pts,now,colorAt=d=>neonRGB(d/48)){
- const head=pts[pts.length-1],tail=pts[0];
- if(head.x===tail.x&&head.y===tail.y)return null;
- const g=ctx.createLinearGradient(tail.x,tail.y,head.x,head.y);
- const n=pts.length,count=Math.min(n,RIBBON_STOPS);
- let dist=0,last=pts[0];
- for(let k=0;k<count;k++){
-  const i=Math.round(k*(n-1)/(count-1)),p=pts[i];
-  dist+=Math.hypot(p.x-last.x,p.y-last.y);last=p;
-  const alpha=Math.max(0,1-(now-p.t)/TRAIL_FADE_MS),[r,gg,b]=colorAt(dist);
-  g.addColorStop(k/(count-1),`rgba(${r},${gg},${b},${alpha.toFixed(3)})`);
+// Gradient stops every TRAIL_STOP_PX of arc length (interpolated inside long segments, capped at
+// TRAIL_MAX_STOPS so cost doesn't grow with point count), each placed at its projection on the tail→head
+// axis — the one line a canvas gradient follows — so colour and fade track the path for any stroke that
+// doesn't fold back past 90°. d0: stroke length already faded off the tail (keeps colours anchored).
+function ribbonSamples(pts,now,d0){
+ const tail=pts[0],head=pts[pts.length-1],ax=head.x-tail.x,ay=head.y-tail.y,len2=ax*ax+ay*ay;
+ if(len2<1)return null;
+ const total=pathLength(pts),step=Math.max(TRAIL_STOP_PX,total/TRAIL_MAX_STOPS),stops=[];
+ let d=0,next=0,off=0;
+ for(let i=1;i<pts.length;i++){
+  const a=pts[i-1],b=pts[i],seg=Math.hypot(b.x-a.x,b.y-a.y);
+  while(next<=d+seg){
+   const f=seg?(next-d)/seg:0,x=a.x+(b.x-a.x)*f,y=a.y+(b.y-a.y)*f;
+   off=Math.max(off,Math.min(1,((x-tail.x)*ax+(y-tail.y)*ay)/len2));
+   stops.push({off,alpha:fadeAlpha(now-(a.t+(b.t-a.t)*f)),d:d0+next});next+=step;
+  }
+  d+=seg;
  }
+ stops.push({off:1,alpha:fadeAlpha(now-head.t),d:d0+total});
+ return{tail,head,stops};
+}
+function ribbonGradient({tail,head,stops},colorAt){
+ const g=ctx.createLinearGradient(tail.x,tail.y,head.x,head.y);
+ for(const s of stops){const[r,gg,b]=colorAt(s.d);g.addColorStop(s.off,`rgba(${r},${gg},${b},${s.alpha.toFixed(3)})`);}
  return g;
 }
-// Full-motion trail (conductor review 2026-09-23: normal source-over, not additive — 'lighter' over the
-// light quilt background washed the neon pale). Four stroke() calls total for the whole path (not one
-// shadowed stroke per segment, so cost doesn't scale with point count): a soft dark backing so the neon
-// pops against the light quilt, a wide soft glow, a bright saturated core, then a thin white hot centre.
-// `live` also sheds sparkles from a bright bloom/flare tip; a just-released trail (in `fading`) keeps
-// rendering with no new sparks until it ages out.
+// Full-motion trail: six stroke() passes over one Path2D (no shadows, so cost doesn't scale with point
+// count) — a soft dark underglow so the neon pops on the light quilt, a wide soft two-step neon glow, a
+// vivid core, a white-hot centre — then the tip flare. `live` also sheds dust; a just-released trail (in
+// `fading`) keeps rendering with no new tip dust until it ages out.
 function renderRibbon(pts,now,live){
- const visible=pts.filter(p=>now-p.t<TRAIL_FADE_MS);
- if(!visible.length)return;
- if(visible.length<2){drawFlare(visible[0].x,visible[0].y,[255,255,255],1);return;}
- const path=ribbonPath(visible);
- ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.globalCompositeOperation='source-over';
- const shadowGrad=ribbonGradient(visible,now,()=>[20,10,30]);
- if(shadowGrad){ctx.strokeStyle=shadowGrad;ctx.globalAlpha=.25;ctx.shadowColor='rgba(20,10,30,.25)';ctx.shadowBlur=10;ctx.lineWidth=24;ctx.stroke(path);ctx.shadowBlur=0;}
- const neonGrad=ribbonGradient(visible,now);
- if(neonGrad){
-  ctx.strokeStyle=neonGrad;
-  ctx.globalAlpha=.42;ctx.lineWidth=20;ctx.stroke(path); // wide soft glow
-  ctx.globalAlpha=1;ctx.lineWidth=5.5;ctx.stroke(path); // bright saturated core
+ let start=0,d0=0;
+ while(start<pts.length-1&&now-pts[start].t>=TRAIL_FADE_MS){d0+=Math.hypot(pts[start+1].x-pts[start].x,pts[start+1].y-pts[start].y);start++;}
+ if(now-pts[start].t>=TRAIL_FADE_MS)return;
+ const visible=start?pts.slice(start):pts,tip=visible[visible.length-1];
+ const samples=visible.length>1&&ribbonSamples(visible,now,d0);
+ if(samples){
+  const path=ribbonPath(visible),dark=ribbonGradient(samples,()=>UNDERGLOW),neon=ribbonGradient(samples,d=>trailColor(d,now)),hot=ribbonGradient(samples,()=>WHITE);
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+  const pass=(style,alpha,width)=>{ctx.strokeStyle=style;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.stroke(path);};
+  pass(dark,.08,40);pass(dark,.12,32); // soft dark underglow
+  pass(neon,.3,26);pass(neon,.42,17); // wide soft glow
+  pass(neon,1,6.5); // vivid core
+  pass(hot,1,1.5); // white-hot centre
+  ctx.restore();
  }
- const whiteGrad=ribbonGradient(visible,now,()=>[255,255,255]);
- if(whiteGrad){ctx.strokeStyle=whiteGrad;ctx.globalAlpha=.9;ctx.lineWidth=1.3;ctx.stroke(path);} // hot centre
- ctx.restore();
- const tip=visible[visible.length-1],tipAlpha=Math.max(.35,1-(now-tip.t)/TRAIL_FADE_MS);
- drawFlare(tip.x,tip.y,neonRGB(pathLength(visible)/48),tipAlpha);
- if(live)for(let k=0;k<3;k++)spawnSpark(tip.x,tip.y);
+ drawFlare(tip.x,tip.y,trailColor(d0+pathLength(visible),now),Math.max(.35,fadeAlpha(now-tip.t)),now);
+ if(live)shedSparks(visible,now);
 }
-// #105: a short bright shimmer that sweeps the frozen path from tail to tip over the fade window, once,
-// right after release — a ripple riding the trail out as it dies.
-function drawShimmer(entry,now){
- const t=(now-entry.releasedAt)/TRAIL_FADE_MS;if(t<0||t>1)return;
- const pts=entry.pts,total=pathLength(pts);if(!total)return;
- const target=t*total;let d=0,x=pts[0].x,y=pts[0].y;
- for(let i=1;i<pts.length;i++){
-  const seg=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
-  if(d+seg>=target){const f=seg?(target-d)/seg:0;x=pts[i-1].x+(pts[i].x-pts[i-1].x)*f;y=pts[i-1].y+(pts[i].y-pts[i-1].y)*f;break;}
-  d+=seg;x=pts[i].x;y=pts[i].y;
+// #105 release shimmer: a star glint sweeps the part of the path still lit at release, tail→tip, over
+// SHIMMER_MS, shaking dust loose as it goes (so the last motes are gone ~SHIMMER_MS+SPARK_LIFE after release).
+function shimmerPoint({pts,releasedAt},now){
+ const k=(now-releasedAt)/SHIMMER_MS;if(k<0||k>1)return null;
+ let i=0,d=0;
+ while(i<pts.length-1&&releasedAt-pts[i].t>=TRAIL_FADE_MS){d+=Math.hypot(pts[i+1].x-pts[i].x,pts[i+1].y-pts[i].y);i++;}
+ let left=k*pathLength(pts.slice(i));d+=left;
+ for(;i<pts.length-1;i++){
+  const a=pts[i],b=pts[i+1],seg=Math.hypot(b.x-a.x,b.y-a.y);
+  if(seg>=left){const f=seg?left/seg:0;return{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,d,k};}
+  left-=seg;
  }
- ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=(1-t)*.85+.1;
- const g=ctx.createRadialGradient(x,y,0,x,y,16);g.addColorStop(0,'#ffffffee');g.addColorStop(1,'#ffffff00');
- ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();
- ctx.restore();
+ return{x:pts[i].x,y:pts[i].y,d,k};
+}
+function shimmerDust(entry,now){const s=shimmerPoint(entry,now);if(s){spawnSpark(s.x,s.y,now);spawnSpark(s.x,s.y,now);}return s;}
+function drawShimmer(entry,now){
+ const s=shimmerDust(entry,now);if(s)drawFlare(s.x,s.y,trailColor(s.d,now),1-.4*s.k,now*2,.7);
 }
 function renderPlainTrail(pts,now){
  const trail=pts.filter(pt=>now-pt.t<TRAIL_FADE_MS).map(pt=>[pt.x,pt.y]);
  strokeGlow(trail,'#d8f6ff',1,4);
  const last=pts.at(-1);if(last&&now-last.t<TRAIL_FADE_MS)touchDot(last.x,last.y,'#d8f6ff');
 }
+// Test-only trail probe: exposed as myr5Portal.trailProbe only when a test sets window.__portalTrailProbe
+// before mount (the app never does). It drives the trail renderer directly, skipping the cloth-board press
+// that makes synthetic drags slower than the fade in headless runs, so frames show the trail at full strength.
+const PROBE_ID=-1;
+let probeFrozen=false;
+const trailProbe={
+ // Draws one frozen frame of `xy` ([[x,y],…]) swept over durationMs ending now (or releasedAgoMs ago), with
+ // the dust those frames would have shed replayed at 60fps. Returns how many motes are alive. dust:false
+ // draws the ribbon and tip alone, so a cross-section measures the strokes without motes drifting across it.
+ draw(xy,{durationMs=350,releasedAgoMs=null,dust=true}={}){
+  cancelAnimationFrame(rafId);rafId=0;probeFrozen=true;clearTimeout(idleTimer);idleCycle=null;
+  const now=performance.now(),end=now-(releasedAgoMs??0),n=xy.length;
+  const pts=xy.map(([x,y],i)=>({x,y,t:end-durationMs*(1-i/Math.max(1,n-1))}));
+  sparkBorn.fill(-1e9);
+  if(!dust){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();renderRibbon(pts,now,false);return 0;}
+  for(let ft=pts[0].t;ft<end;ft+=1000/60)shedSparks(pts.filter(p=>p.t<=ft),ft);
+  pointers.delete(PROBE_ID);fading.length=0;
+  if(releasedAgoMs==null)pointers.set(PROBE_ID,{pts,norm:[]});
+  else{const entry={pts,releasedAt:end};fading.push(entry);for(let ft=end;ft<now;ft+=1000/60)shimmerDust(entry,ft);}
+  drawFrame(0,now);
+  let alive=0;for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)alive++;
+  return alive;
+ },
+ // Live strokes (fps check): down/move/up like a finger, minus the cloth press and shape matching.
+ down(x,y){probeFrozen=false;pointers.set(PROBE_ID,{pts:[{x,y,t:performance.now()}],norm:[]});scheduleIdle();kickRender();},
+ move(x,y){pointers.get(PROBE_ID)?.pts.push({x,y,t:performance.now()});},
+ up(){const p=pointers.get(PROBE_ID);pointers.delete(PROBE_ID);if(p?.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});scheduleIdle();kickRender();},
+ resume(){probeFrozen=false;pointers.delete(PROBE_ID);fading.length=0;kickRender();},
+};
 
 // #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
 function idleFrame(now){
@@ -469,10 +540,10 @@ function drawIdle(now){
  drawIdleShape(idleShapeInfo(id,rect),alpha,width,face);
 }
 
-function drawFrame(){
+// now: the trail probe draws a frozen frame at a chosen time (rAF's own timestamp arrives first and is ignored).
+function drawFrame(_,now=performance.now()){
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
- const now=performance.now();
  if(outlineFlash){
   const t=now-outlineFlash.start;
   if(t<350)outlineFlash.polys.forEach(p=>strokeGlow(p,outlineFlash.color,1-t/350,4));
@@ -720,5 +791,6 @@ export async function mountPortal({visible=false}={}){
   },
   current:()=>board,
  };
+ if(window.__portalTrailProbe===true)window.myr5Portal.trailProbe=trailProbe;
  return window.myr5Portal;
 }
