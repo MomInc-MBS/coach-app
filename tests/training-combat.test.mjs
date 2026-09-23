@@ -21,14 +21,29 @@ test('general XP cannot unlock category upgrades and each day is enough without 
  const p={activeDays:999,totalXp:99900,strength:999,trainingVersion:1,training:trainingFromDaily([{mode:'pushup',day:1,sets:1},{mode:'pushup',day:2,sets:1}])};
  assert.equal(W.unlocked({type:'crossbow',tier:1},p),true);assert.equal(W.unlocked({type:'axe',tier:1},p),false);assert.equal(W.unlocked({type:'crossbow',tier:2},p),false);assert.equal(W.unlocked({type:'crossbow',tier:20},{activeDays:999,totalXp:99900,strength:999}),false);assert.equal(W.unlocked({type:'dagger',tier:0},{}),true);
 });
-test('login streak deduplicates visits, crosses adjacent days and resets after a gap',async()=>{
+test('login streak deduplicates visits, crosses adjacent days and forgives a single gap (D12)',async()=>{
  const now=21000*DAY_MS+1000;
  assert.equal((await combatProgress(database,'streak',now)).loginStreak,1);
  assert.equal((await combatProgress(database,'streak',now+1000)).loginStreak,1);
  assert.equal((await combatProgress(database,'streak',now+DAY_MS)).loginStreak,2);
- assert.equal((await combatProgress(database,'streak',now+3*DAY_MS)).loginStreak,1);
+ // D12 R4: day 21002 (Sat) is the first miss this week, so it is forgiven and
+ // the streak keeps counting instead of resetting to 1 as the old plain
+ // consecutive-day count did. 21003 is Sunday, so the week closes with count 1.
+ const detail=await combatProgress(database,'streak',now+3*DAY_MS);
+ assert.equal(detail.loginStreak,4);
+ assert.equal(detail.forgivenWeeksInARow,1);
+ // forgive-1 fired on the missed day itself; pendingLetters catches it up.
+ assert.equal(detail.pendingLetters.some(l=>l.id==='forgive-1'),true);
  assert.equal((await combatProgress(database,'other',now+DAY_MS)).loginStreak,1);
  assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM workouts WHERE user_id=?').bind('streak').first()).n,0);
+});
+test('a second missed day in the same week still breaks the streak (D12 R4)',async()=>{
+ const now=23000*DAY_MS+1000;
+ await combatProgress(database,'breaker',now);
+ await combatProgress(database,'breaker',now+2*DAY_MS); // day+1 missed: forgiven
+ const detail=await combatProgress(database,'breaker',now+4*DAY_MS); // day+3 also missed: breaks
+ assert.equal(detail.loginStreak,1);
+ assert.equal(detail.pendingLetters.some(l=>l.id==='streak-broken'),true);
 });
 test('a full breathing session is account-owned, timed, idempotent and expires at the next UTC day',async()=>{
  const now=22000*DAY_MS+1000,ticket=await startBreathing(database,'breather',now),value={id:ticket.id,activeMs:BREATHING_MS};
