@@ -24,7 +24,8 @@ export function createInstalledCreatureSkinSource({account=globalThis.myr5Authen
    sectionStore??=indexedDbChunkStore();
    const sectionId=`track-${track}`,manifestKey=`material-manifest/${owner}/${sectionId}/1.0.0`;let resolved,networkFailed=false;
    try{resolved=await resolvePostDownloadSection(sectionId,{fetchImpl:async(...args)=>{try{return await fetchImpl(...args);}catch(error){networkFailed=true;throw error;}},policy,trust,signal:abort.signal});
-    if(!current())throw new Error('Skin owner changed.');await sectionStore.put(manifestKey,new TextEncoder().encode(JSON.stringify(resolved.manifest)));
+    if(!current())throw new Error('Skin owner changed.');await sectionStore.put(manifestKey,resolved.manifestBytes);
+    if(!current()){await sectionStore.removePrefix(manifestKey);throw new Error('Skin owner changed.');}
    }catch(error){
     // Offline fallback may use only this owner's previously verified signed metadata.
     // A responding server with invalid signatures/version must never be bypassed.

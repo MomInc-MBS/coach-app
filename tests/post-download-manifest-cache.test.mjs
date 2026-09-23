@@ -45,6 +45,7 @@ test('completed signed section caches exact manifest bytes for its first offline
   assert.equal(manifestRequests,2,'first renderer use attempted the network once, then used the cached verified manifest');
   assert.equal(chunkRequests,downloadedChunks,'renderer did not redownload already verified chunks');
   source.dispose();
+  online=true;const refreshed=createInstalledCreatureSkinSource({account:owner,fetchImpl,store,policy,trust});assert.equal((await refreshed.list())[0]?.id,skin.id);refreshed.dispose();assert.deepEqual(await store.get(key),manifestBytes,'online renderer refresh preserves the exact signed response bytes too');
  }finally{
   if(previous)Object.defineProperty(globalThis,'myr5AuthenticatedAccount',previous);else delete globalThis.myr5AuthenticatedAccount;
   if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);else delete globalThis.localStorage;

@@ -8,11 +8,13 @@ import {build} from 'esbuild';
 import {signedSkinFixture} from './skin-fixture.mjs';
 
 test('standalone creature page hydrates a stable same-origin account before revealing account-owned tabs',async()=>{
- const root=resolve('dist/client'),fixture=await signedSkinFixture(),requests=[];
+ const root=resolve('dist/client'),fixture=await signedSkinFixture(),requests=[],accountHeaders=[];
  const server=createServer(async(req,res)=>{
   const url=new URL(req.url,'http://local'),path=url.pathname;
+  if(path==='/api/auth/config'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({enabled:clerkEnabled,frontend:'http://'+req.headers.host,publishableKey:'fixture'}));return;}
+  if(path.startsWith('/npm/@clerk/')){res.writeHead(200,{'Content-Type':'text/javascript'});res.end('');return;}
   if(path==='/api/account'){
-   requests.push(url.pathname+url.search);const response=accountResponses.shift()??{status:401};
+   requests.push(url.pathname+url.search);accountHeaders.push(req.headers.authorization);const response=accountResponses.shift()??{status:401};
    res.writeHead(response.status??200,{'Content-Type':response.contentType??'application/json','Cache-Control':'no-store',...(response.location?{Location:response.location}:{})});
    if(response.redirectTo){res.end();return;}
    res.end(response.body??JSON.stringify(response.account??{user:{id:'owner-a'},dataEpoch:4}));return;
@@ -20,25 +22,27 @@ test('standalone creature page hydrates a stable same-origin account before reve
   try{
    const body=path==='/creature/index.html'?await readFile(resolve('creature/index.html')):
     path==='/creature/assets/account-bridge.js'?await readFile(resolve('creature/assets/account-bridge.js')):
+    ['/auth-client.mjs','/auth-transition.mjs','/auth-paths.mjs'].includes(path)?await readFile(resolve('.'+path)):
     path==='/creature/assets/editor.js'?editor.outputFiles[0].text:await readFile(resolve(root,'.'+path));
    res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.glb':'model/gltf-binary'})[extname(path)]||'application/octet-stream'});res.end(body);
   }catch{res.writeHead(404);res.end();}
  });
- let accountResponses=[];
+ let accountResponses=[],clerkEnabled=false;
  const materialTrustPlugin={name:'fixture-material-trust',setup(build){build.onLoad({filter:/material-config\.mjs$/},async args=>({contents:(await readFile(args.path,'utf8')).replace(/BUILT_PUBLIC_MATERIAL_SIGNING_JWK = [^;]+;/,'BUILT_PUBLIC_MATERIAL_SIGNING_JWK = '+JSON.stringify(fixture.trust)+';'),loader:'js'}));}};
  const editor=await build({entryPoints:['creature/source/editor.ts'],bundle:true,write:false,format:'esm',target:'es2022',plugins:[materialTrustPlugin]});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   const base='http://127.0.0.1:'+server.address().port;
-  const open=async(responses,query='')=>{
-   accountResponses=[...responses];const page=await browser.newPage();
-   await page.addInitScript(()=>{
+  const open=async(responses,query='',clerk=false)=>{
+   accountResponses=[...responses];clerkEnabled=clerk;const context=await browser.newContext(),page=await context.newPage();
+   await page.addInitScript(clerk=>{
+    if(clerk){localStorage.setItem('myr5-login-provider','clerk');window.Clerk={load:async()=>{},addListener:()=>{},session:{id:'session-a',getToken:async()=>'fixture-clerk-token'},user:{id:'owner-a'}};}
     localStorage.setItem('myr5-battle-pass-ledger-v1/account/owner-a',JSON.stringify({ship:['ship-supportive','ship-direct']}));
     localStorage.setItem('myr5-battle-pass-ledger-v1/account/owner-b',JSON.stringify({ship:['ship-calm']}));
     localStorage.setItem('myr5-ship-reveal-seen-v1',JSON.stringify({'owner-a':['supportive','direct'],'owner-b':['calm']}));
     localStorage.setItem('myr5-account-id','spoofed-owner');
-   });
+   },clerk);
    await page.goto(base+'/creature/index.html'+query);await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
    return page;
   };
@@ -49,12 +53,27 @@ test('standalone creature page hydrates a stable same-origin account before reve
   assert.equal(await anonymous.locator('#tab-skin').isHidden(),true);
   assert.deepEqual(requests.slice(0,1),['/api/account?core=1'],'the bridge uses only the authenticated same-origin account endpoint');
   await anonymous.close();
+  const clerk=await open([{account:{user:{id:'owner-a'},dataEpoch:4}},{account:{user:{id:'owner-a'},dataEpoch:4}}],'',true);
+  await clerk.waitForFunction(()=>window.myr5AuthenticatedAccount?.user?.id==='owner-a');
+  assert.deepEqual(accountHeaders.slice(-2),['Bearer fixture-clerk-token','Bearer fixture-clerk-token'],'both identity checks use the main app’s authenticated transport');
+  await clerk.close();
 
   const ownerA=await open([{account:{user:{id:'owner-a'},dataEpoch:4}},{account:{user:{id:'owner-a'},dataEpoch:4}}],'?account=owner-b');
   await ownerA.waitForFunction(()=>!document.querySelector('#tab-ship')?.hidden);
   assert.equal(await ownerA.evaluate(()=>window.myr5AuthenticatedAccount.user.id),'owner-a','URL and localStorage account IDs do not select identity');
   assert.deepEqual(await ownerA.locator('#shipChoice option').evaluateAll(nodes=>nodes.map(n=>n.value)),['supportive','direct']);
   assert.equal(await ownerA.locator('#tab-skin').isHidden(),true,'a ship unlock cannot reveal the skin tab');
+  const otherTab=await ownerA.context().newPage();
+  await otherTab.goto(base+'/signin.html');
+  await otherTab.evaluate(async()=>{const {authTransitions}=await import('/auth-transition.mjs');authTransitions().invalidate();});
+  await ownerA.waitForFunction(()=>window.myr5AuthenticatedAccount===null);
+  assert.equal(await ownerA.locator('#tab-ship').isHidden(),true,'cross-tab logout immediately hides private ship controls');
+  assert.equal(await ownerA.locator('#tab-skin').isHidden(),true);
+  accountResponses=[{account:{user:{id:'owner-b'},dataEpoch:9}},{account:{user:{id:'owner-b'},dataEpoch:9}}];
+  await ownerA.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await ownerA.waitForFunction(()=>window.myr5AuthenticatedAccount?.user?.id==='owner-b'&&!document.querySelector('#tab-ship')?.hidden);
+  assert.deepEqual(await ownerA.locator('#shipChoice option').evaluateAll(nodes=>nodes.map(n=>n.value)),['calm'],'focus revalidates instead of restoring the old account');
+  await otherTab.close();
   await ownerA.close();
 
   const ownerB=await open([{account:{user:{id:'owner-b'},dataEpoch:9}},{account:{user:{id:'owner-b'},dataEpoch:9}}]);
@@ -67,6 +86,7 @@ test('standalone creature page hydrates a stable same-origin account before reve
    [{status:302,location:'/signin.html'}],
    [{status:200,contentType:'text/html',body:'<h1>sign in</h1>'}],
    [{account:{user:{id:'../owner-a'},dataEpoch:4}}],
+   [{account:{user:{id:123},dataEpoch:4}}],
    [{account:{user:{id:'owner-a'},dataEpoch:0}}],
    [{account:{user:{id:'owner-a'},dataEpoch:4}},{account:{user:{id:'owner-b'},dataEpoch:4}}],
    [{account:{user:{id:'owner-a'},dataEpoch:4}},{account:{user:{id:'owner-a'},dataEpoch:5}}],

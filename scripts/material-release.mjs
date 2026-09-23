@@ -1,7 +1,8 @@
 import { createHash, createPrivateKey, createPublicKey, sign } from 'node:crypto';
-import { mkdir, readFile, writeFile, copyFile, readdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { canonicalChunkPayload, DEFAULT_LOCAL_RESOURCE_POLICY, validateChunkManifest, verifyChunkManifest } from '../modules/materials/chunk-delivery.mjs';
 
 export const MATERIAL_SECTION_IDS=Object.freeze(['track-arms','track-cardio','track-chest','track-glutes','track-martial-arts','track-meditation','track-quads','track-yoga','coach-ships-biomes']);
@@ -34,6 +35,12 @@ export function loadMaterialPublicBuildConfig(env=process.env){
 
 const safeOutput=(root,path)=>{const full=resolve(path),base=resolve(root);if(full===base||!full.startsWith(base+sep))throw new Error('Output path must be a dedicated child directory.');return full;};
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
+const expectedPaths=id=>id==='coach-ships-biomes'?['supportive','direct','analytical','playful','calm','mom'].map(ship=>`assets/ships/${ship}.glb`).concat('assets/biomes.m5bundle'):[`assets/${id.slice(6)}.m5bundle`];
+function validateSectionInventory(manifest,host){
+ const expected=expectedPaths(manifest.packId).sort(),actual=manifest.assets.map(asset=>asset.path).sort();
+ if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error(`Section asset inventory mismatch: ${manifest.packId}.`);
+ for(const asset of manifest.assets){const filename=asset.path.split('/').at(-1),expectedUrl=`${host.baseUrl}/${manifest.packId}/1.0.0/${filename}`;if(asset.chunks.some(chunk=>chunk.url!==expectedUrl))throw new Error(`Section asset URL mismatch: ${manifest.packId}/${asset.path}.`);}
+}
 
 /** Signs all nine manifests, stages host bytes without overwriting conflicts, and stages only manifests for Sites. */
 export async function signAndStageMaterialSections({inputDir,hostRoot,siteRoot,baseUrl,privateJwk,keyId='mom-material-production-v1'}={}){
@@ -49,7 +56,7 @@ export async function signAndStageMaterialSections({inputDir,hostRoot,siteRoot,b
  for(const id of MATERIAL_SECTION_IDS){
   const dir=join(input,id);let manifest;try{manifest=JSON.parse(await readFile(join(dir,'chunk-manifest.unsigned.json'),'utf8'));}catch{throw new Error(`Missing unsigned manifest for ${id}.`);}
   if(manifest.schema!=='mom-material-chunks-v1'||manifest.packId!==id||manifest.version!=='1.0.0'||!Array.isArray(manifest.assets)||!manifest.assets.length)throw new Error(`Unsigned manifest identity mismatch for ${id}.`);
-  manifest.keyId=keyId;manifest.signature='';validateChunkManifest(manifest,policy);
+  manifest.keyId=keyId;manifest.signature='';validateChunkManifest(manifest,policy);validateSectionInventory(manifest,host);
   const hostedPaths=new Set();for(const asset of manifest.assets){
    const urls=new Set(asset.chunks.map(chunk=>chunk.url));if(urls.size!==1)throw new Error(`Asset URLs must resolve to one immutable file: ${id}/${asset.path}`);
    const url=new URL([...urls][0]),expectedPrefix=`${host.baseUrl}/${id}/1.0.0/`,filename=decodeURIComponent(url.pathname.split('/').at(-1)||'');
@@ -59,10 +66,11 @@ export async function signAndStageMaterialSections({inputDir,hostRoot,siteRoot,b
    if(!safeSegment(filename)||url.pathname!==`${host.pathPrefix}${id}/1.0.0/${filename}`)throw new Error(`Chunk URL has an unsafe asset path: ${id}/${asset.path}`);
    if(hostedPaths.has(url.pathname))throw new Error(`Two assets map to one hosted path: ${id}/${url.pathname}`);hostedPaths.add(url.pathname);
    const destination=safeOutput(hostOut,join(hostOut,'materials',id,'1.0.0',filename));await mkdir(dirname(destination),{recursive:true});
-   try{const hosted=await readFile(destination);if(!hosted.equals(bytes))throw new Error(`Existing raw-host file differs from the signed source: ${id}/${filename}`);}catch(error){if(error?.code!=='ENOENT')throw error;await copyFile(join(dir,asset.path),destination);}
+   try{const hosted=await readFile(destination);if(!hosted.equals(bytes))throw new Error(`Existing raw-host file differs from the signed source: ${id}/${filename}`);}catch(error){if(error?.code!=='ENOENT')throw error;await writeFile(destination,bytes,{flag:'wx'});}
   }
-  const unsigned={...manifest,signature:''};manifest.signature=sign(null,Buffer.from(canonicalChunkPayload(unsigned)),privateKey).toString('base64');
-  await verifyChunkManifest(manifest,publicJwk,policy);
+  // Publish only authenticated wire-format fields, never arbitrary input metadata.
+  manifest=JSON.parse(canonicalChunkPayload(manifest));manifest.signature=sign(null,Buffer.from(canonicalChunkPayload(manifest)),privateKey).toString('base64');
+  await verifyChunkManifest(manifest,publicJwk,policy);validateSectionInventory(manifest,host);
   const siteManifest=safeOutput(siteOut,join(siteOut,'materials',id,'chunk-manifest.json'));await mkdir(dirname(siteManifest),{recursive:true});await writeFile(siteManifest,JSON.stringify(manifest,null,2)+'\n');
   sectionSummaries.push({id,assets:manifest.assets.length,bytes:manifest.assets.reduce((n,a)=>n+a.bytes,0)});
  }
@@ -76,10 +84,11 @@ export async function copySignedMaterialManifests({sourceDir,siteRoot,baseUrl,pu
  if(inside(site,source))throw new Error('Signed manifests must be staged outside the Sites archive.');
  const policy={...DEFAULT_LOCAL_RESOURCE_POLICY,...host},copied=[];
  for(const id of MATERIAL_SECTION_IDS){
-  const path=join(source,'materials',id,'chunk-manifest.json');let manifest;try{manifest=JSON.parse(await readFile(path,'utf8'));}catch{throw new Error(`Missing signed Site manifest for ${id}.`);}
+  const path=join(source,'materials',id,'chunk-manifest.json');let manifest,bytes;try{bytes=await readFile(path);manifest=JSON.parse(bytes.toString('utf8'));}catch{throw new Error(`Missing signed Site manifest for ${id}.`);}
   if(manifest.packId!==id||manifest.version!=='1.0.0'||!manifest.signature)throw new Error(`Signed manifest identity mismatch for ${id}.`);
-  await verifyChunkManifest(manifest,publicJwk,policy);
-  const destination=safeOutput(site,join(site,'materials',id,'chunk-manifest.json'));await mkdir(dirname(destination),{recursive:true});await copyFile(path,destination);copied.push(id);
+  await verifyChunkManifest(manifest,publicJwk,policy);validateSectionInventory(manifest,host);
+  if(!isDeepStrictEqual(manifest,{...JSON.parse(canonicalChunkPayload(manifest)),signature:manifest.signature}))throw new Error(`Signed manifest contains unauthenticated metadata: ${id}.`);
+  const destination=safeOutput(site,join(site,'materials',id,'chunk-manifest.json'));await mkdir(dirname(destination),{recursive:true});await writeFile(destination,bytes);copied.push(id);
  }
  return Object.freeze(copied);
 }
