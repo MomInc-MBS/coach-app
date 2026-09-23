@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {WEAPON_FAMILIES, evolution, abilityFor, AbilityCooldown} from '../pod/weapon-evolution.mjs';
 import {SetFlow} from '../pod/set-flow.mjs';
+import {specialBudget} from '../combat-config.mjs';
 
 const context = {window: {}};
 vm.runInNewContext(readFileSync(new URL('../workout-tracks.js',import.meta.url),'utf8'),context);
@@ -72,16 +73,17 @@ test('cooldown restores across reload and never shortens on a clock rollback', (
   assert.throws(() => evolution({...weapon, tier: 21}));
 });
 
-test('special damage uses the same streak formula at every workout level and never awards XP',()=>{
+// Specials unlock at kit L3 (D17) and are capped by the day's special budget (combat-config.mjs).
+test('special damage uses the same streak formula, capped by the special budget, at every workout level and never awards XP',()=>{
   for(const sets of [0,192,196,220]){
-    const flow=new SetFlow({version:1,completedSets:sets},{now:0});
+    const flow=new SetFlow({version:1,completedSets:sets},{now:0});flow.kitLevel=5;
     flow.combat={day:0,loginStreak:3,breathingCompleted:true};
     const options={now:1000,progress:earned,catalog};
     assert.equal(flow.special(weapon,options).reason,'not-rest');
     flow.previewRest(0);
     const hit=flow.special(weapon,options);
     assert.equal(hit.ok,true);
-    assert.equal(hit.damage,10*3*(weapon.tier+1)*100);
+    assert.equal(hit.damage,Math.min(10*3*(weapon.tier+1)*100,specialBudget(5)));
     assert.equal(hit.blocked,false);
     assert.equal(flow.xp,sets*25);
     assert.equal(flow.progress.completedSets,sets);
@@ -100,6 +102,6 @@ test('serialized cooldown and another tab retain the longest active timer',()=>{
   assert.equal(second.readyAt,first.readyAt);
   second.merge('{"version":1,"readyAt":0}',2500);
   assert.equal(second.readyAt,first.readyAt);
-  const flow=new SetFlow(null,{cooldown:saved,now:3000});flow.previewRest(3000);
+  const flow=new SetFlow(null,{cooldown:saved,now:3000});flow.kitLevel=3;flow.previewRest(3000);
   assert.equal(flow.special(weapon,{now:3000,progress:earned,catalog}).reason,'cooldown');
 });

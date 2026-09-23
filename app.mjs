@@ -3,6 +3,8 @@ import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
 import {initPod} from './pod/pod.mjs';
+import {openAchievements} from './achievements-board.mjs';
+import {syncBattlePass} from './battle-pass.mjs';
 import {mountHomeCharacter} from './pod/home-character.mjs';
 import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
@@ -184,6 +186,11 @@ soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+// D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
+window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
+// App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
+// myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
+syncBattlePass();
 mountCoachOverlay();
 
 let cinematics={play(){}};

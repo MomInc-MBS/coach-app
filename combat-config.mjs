@@ -13,6 +13,12 @@ export const BASE_TAP_DAMAGE_PER_LEVEL=1; // base tap damage == level * this
 export const WEAPON_1_LEVEL=1,WEAPON_1_BONUS=1; // D22: weapon 1 unlocks at L1
 export const WEAPON_2_LEVEL=3,WEAPON_2_BONUS=2; // D22: weapon 2 unlocks at L3
 export const PET_LEVEL=4,PET_DPS=5;             // D22: pet unlocks at L4 (aura at L5 is cosmetic only — D22/D7 — so it adds no combat stat)
+export const SPECIAL_LEVEL=3;                   // D17: weapon specials unlock at L3; refused below it
+// The ONE special-damage knob: everything a day's specials deal together is capped at this share of
+// that level's boss max HP. 0.05 keeps D8/D20 true even with a special on every cooldown: L4 kit =
+// 19/s·T x (1 + 0.95 x 0.05) = 19.90/s·T, still under the L5 boss's 19.95/s·T at any killTargetSeconds.
+// Above ~0.052 the L4 kit plus specials would kill the L5 boss (tests/combat-tuning.test.mjs).
+export const SPECIAL_DAMAGE_FRACTION=0.05;
 
 // [minStreak,multiplier], highest matching breakpoint wins; below all of them the multiplier is 1.
 export const STREAK_BREAKPOINTS=[[20,1.5],[10,1.25],[5,1.1]];
@@ -52,4 +58,8 @@ export function bossHp(level,seconds=KILL_TARGET_SECONDS){
 }
 export function dailyCap(level,seconds=KILL_TARGET_SECONDS){
  return Math.round(DAILY_CAP_FACTOR*maxKitDamage(level,seconds));
+}
+// Total special damage allowed per boss (per day) at this level; whole numbers so the UI never shows float noise.
+export function specialBudget(level,seconds=KILL_TARGET_SECONDS){
+ return Math.floor(SPECIAL_DAMAGE_FRACTION*bossHp(level,seconds));
 }
