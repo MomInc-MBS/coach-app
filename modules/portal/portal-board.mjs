@@ -1,9 +1,19 @@
 // Quilt cloth board for the portal home. The solver is a port of Ten Minute Physics
 // "Cloth Simulation" (c) 2022 Matthias Müller, MIT licence (see portal-board NOTICE below),
 // adapted to a quilt pinned at its border that fingers press and drag. AGPL-3.0-or-later wrapper.
-// NOTICE: Permission is hereby granted, free of charge, to any person obtaining a copy of the
-// cloth solver to deal in it without restriction, subject to including this copyright notice.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+// MIT License — Copyright (c) 2022 Matthias Müller
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+// and associated documentation files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge, publish, distribute,
+// sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import * as THREE from 'three';
 import {splitIndexByPolygon,pieceMaterial,fallPieces} from './portal-cut.mjs';
 
@@ -15,11 +25,15 @@ export const QUILT={segX:24,substeps:6,compliance:3e-6,restore:1.0,stretch:1.15,
 const BACKGROUND='#17111e';
 
 export async function createQuiltBoard(host,{knobs=QUILT}={}){
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  // Transparent canvas; BACKGROUND goes on #portalHome (board.background) so the neon glass shows only through a cut.
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
- const texture=await new THREE.TextureLoader().loadAsync(IMAGE);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
+ let texture;
+ try{texture=await new THREE.TextureLoader().loadAsync(IMAGE);}
+ catch(error){renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
+ texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));
  const sun=new THREE.DirectionalLight(0xfff0dc,2.4);sun.position.set(-.7,.55,.45);scene.add(sun);
@@ -39,7 +53,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const pieceMat=pieceMaterial(material),warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
  const fullIndex=geometry.index;let cutting=null;
 
- let width=1,height=1,quilt={left:0,top:0,width:1,height:1},frame=0,disposed=false,awakeUntil=0,last=0,frameMs=0;
+ let width=1,height=1,quilt={left:0,top:0,width:1,height:1},frame=0,disposed=false,paused=false,awakeUntil=0,last=0,frameMs=0;
  const pointers=new Map();
  function layout(){
   const box=host.getBoundingClientRect();width=Math.max(1,box.width);height=Math.max(1,box.height);
@@ -78,11 +92,11 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   }
   for(const touch of pointers.values()){touch.px=touch.x;touch.py=touch.y;}
  }
- function wake(){awakeUntil=performance.now()+knobs.sleepMs;if(!frame&&!disposed){last=performance.now();frame=requestAnimationFrame(tick);}}
+ function wake(){awakeUntil=performance.now()+(reduced?0:knobs.sleepMs);if(!frame&&!disposed&&!paused){last=performance.now();frame=requestAnimationFrame(tick);}}
  function tick(now){
-  frame=0;if(disposed)return;
+  frame=0;if(disposed||paused)return;
   const dt=Math.min(1/30,Math.max(1/240,(now-last)/1000));last=now;
-  if(!document.hidden){const t=performance.now();step(dt);if(cutting?.fall.live)cutting.fall.pose(now);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();renderer.render(scene,camera);frameMs=frameMs*.9+(performance.now()-t)*.1;}
+  if(!document.hidden){const t=performance.now();if(!reduced)step(dt);if(cutting?.fall.live)cutting.fall.pose(now);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();renderer.render(scene,camera);frameMs=frameMs*.9+(performance.now()-t)*.1;}
   if(pointers.size||now<awakeUntil||cutting?.fall.live)frame=requestAnimationFrame(tick);
  }
  const local=(x,y)=>{const box=host.getBoundingClientRect();return [x-box.left,y-box.top];};
@@ -92,6 +106,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  // index -> a hole; a static copy of their current positions + uvs falls into the board. The cloth
  // keeps simulating everything (constraints on the now-invisible vertices are harmless).
  function cut(poly,color,ms=1100){
+  if(reduced)ms=0;
   heal();
   const {keep,cut:tri}=splitIndexByPolygon(rest,fullIndex.array,(x,y)=>[(x-quilt.left)/quilt.width,(-y-quilt.top)/quilt.height],poly);
   const pieces=[];
@@ -120,11 +135,11 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   // Stitched-shape area in client pixels; the portal normalises traces against it.
   patternRect(){const box=host.getBoundingClientRect();return {left:box.left+quilt.left+quilt.width*PATTERN.left,top:box.top+quilt.top+quilt.height*PATTERN.top,width:quilt.width*(PATTERN.right-PATTERN.left),height:quilt.height*(PATTERN.bottom-PATTERN.top)};},
   quiltRect,
-  press(id,clientX,clientY){const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
+  press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
   release(id){pointers.delete(id);wake();},
   frameMs:()=>frameMs,
-  pause(){pointers.clear();cancelAnimationFrame(frame);frame=0;},
-  resume:wake,
+  pause(){paused=true;pointers.clear();cancelAnimationFrame(frame);frame=0;},
+  resume(){paused=false;wake();},
   dispose(){cutting?.fall.end();pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
 }

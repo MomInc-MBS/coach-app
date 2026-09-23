@@ -2,7 +2,8 @@ import {build} from 'vite';
 import {resolve,sep} from 'node:path';
 import {compactModels} from './compact-models.mjs';
 import {sites} from '@openai/sites-vite-plugin';
-import {mkdir,cp,readdir,readFile,writeFile,unlink,rm,stat} from 'node:fs/promises';
+import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
+import {deploymentSize,SITES_ARCHIVE_LIMIT} from './deployment-size.mjs';
 import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {prepareReleaseBuild} from './release-build.mjs';
@@ -67,11 +68,6 @@ await writeOfflineWorker('dist/client',releaseBuild);
 const sources={};for(const folder of ['server','db','scripts','scheduler','pod','local-coach'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
 for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry)&&!['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs'].includes(entry))sources[entry]=await readFile(entry,'utf8');
 await writeFile('dist/client/source.json',JSON.stringify(sources));
-// Sites caps the uncompressed deployment archive at 256 MiB. Measure every deployed file after
-// staging (including server output) and fail closed if this release has no positive headroom.
-const SITES_ARCHIVE_LIMIT=268435456;
-async function deployedBytes(path){let total=0;for(const entry of await readdir(path,{withFileTypes:true})){const child=`${path}/${entry.name}`;total+=entry.isDirectory()?await deployedBytes(child):(await stat(child)).size;}return total;}
-const archiveBytes=await deployedBytes('dist'),archiveHeadroom=SITES_ARCHIVE_LIMIT-archiveBytes;
-if(archiveHeadroom<=0)throw Error(`Sites archive has no headroom: ${archiveBytes} / ${SITES_ARCHIVE_LIMIT} bytes.`);
-console.log(`Sites archive: ${archiveBytes} / ${SITES_ARCHIVE_LIMIT} bytes; ${archiveHeadroom} bytes headroom.`);
+const {payloadBytes,tarBytes,headroom}=await deploymentSize('dist');
+console.log(`Sites local tar: ${tarBytes} / ${SITES_ARCHIVE_LIMIT} bytes; ${headroom} bytes headroom (${payloadBytes} file bytes). Validate the final staged Sites archive before upload.`);
 console.log('Coach build ready.');

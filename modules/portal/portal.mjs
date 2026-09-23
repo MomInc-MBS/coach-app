@@ -45,7 +45,7 @@ const MENUS={
 };
 
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
-const motion=(el,value)=>value?el.style.setProperty('transition',value,'important'):el.style.removeProperty('transition');
+const motion=(el,value)=>value?el.style.setProperty('transition',prefersReducedMotion()?'none':value,'important'):el.style.removeProperty('transition');
 const prefersReducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const raf=()=>new Promise(r=>requestAnimationFrame(r));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -81,11 +81,12 @@ function buildHoleClip(pts,box,scale){
  const outer=[[0,0],[box.width,0],[box.width,box.height],[0,box.height],[0,0]];
  return `polygon(evenodd, ${[...outer,...scaled,[0,0]].map(([x,y])=>`${x}px ${y}px`).join(',')})`;
 }
-function growHole(el,pts,box){
+function growHole(el,pts,box,current=()=>true){
  return new Promise(resolve=>{
   motion(el,'none');el.style.clipPath=buildHoleClip(pts,box,1);
   if(prefersReducedMotion()){el.style.clipPath=buildHoleClip(pts,box,GROW);resolve();return;}
-  raf().then(raf).then(()=>{
+  settle().then(()=>{
+   if(!current()){resolve();return;}
    motion(el,'clip-path .6s cubic-bezier(.2,0,.4,1)');
    el.style.clipPath=buildHoleClip(pts,box,GROW);
    setTimeout(resolve,600);
@@ -98,19 +99,22 @@ function buildPortholeClip(pts,scale){
  const c=centroidOf(pts),scaled=scale===1?pts:pts.map(([x,y])=>[c[0]+(x-c[0])*scale,c[1]+(y-c[1])*scale]);
  return `polygon(${scaled.map(([x,y])=>`${x}px ${y}px`).join(',')})`;
 }
-function growPorthole(el,pts){
+function growPorthole(el,pts,current=()=>true){
  return new Promise(resolve=>{
   motion(el,'none');el.style.clipPath=buildPortholeClip(pts,1);
   if(prefersReducedMotion()){el.style.clipPath='';resolve();return;}
-  raf().then(raf).then(()=>{
+  settle().then(()=>{
+   if(!current()){resolve();return;}
    motion(el,`clip-path ${PORTAL.revealMs}ms cubic-bezier(.2,0,.1,1)`);
    el.style.clipPath=buildPortholeClip(pts,GROW);
-   setTimeout(()=>{el.style.clipPath='';motion(el,'');resolve();},PORTAL.revealMs);
+   setTimeout(()=>{if(current()){el.style.clipPath='';motion(el,'');}resolve();},PORTAL.revealMs);
   });
  });
 }
 
-let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn;
+let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,caustic;
+let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
+const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
 let pointers=new Map(),pendingStrokes=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
@@ -124,11 +128,12 @@ function updateBoardChips(){menuSheet?.querySelectorAll('[data-board]').forEach(
 // call time, so nothing needs re-wiring here.
 async function loadBoard(id){
  if(!BOARDS[id])id='quilt';
+ const load=++boardLoad;
  status(`Loading ${BOARDS[id].label} board…`);
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
  board?.pause();board?.dispose();board=null;boardFailed=false;
- try{board=await BOARDS[id].create(boardHost);}
+ try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
  catch(error){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
   if(id!=='quilt'){
@@ -136,6 +141,8 @@ async function loadBoard(id){
    catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
   }else boardFailed=true;
  }
+ if(load!==boardLoad)return null;
+ if(!boardShown)board?.pause();
  portalHome.classList.toggle('no-board',boardFailed);
  portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
  status('');boardId=id;store.set(BOARD_KEY,id);updateBoardChips();
@@ -144,6 +151,7 @@ async function loadBoard(id){
 
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
+ portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
  portalHome.innerHTML=`
   <div id="portalShadows" aria-hidden="true"><i></i><i></i><i></i></div>
   <div id="portalBoardHost"></div>
@@ -158,10 +166,12 @@ function buildDom(){
  statusEl=portalHome.querySelector('#portalStatus');
  menuBtn=portalHome.querySelector('#portalMenuButton');
  portalHome.querySelector('#portalExitButton').onclick=()=>setVisible(false);
+ portalHome.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[menuBtn,portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}});
  boardBtn=document.getElementById('openBoard');
  // Animated caustic filter for the liquid-glass surface, kept outside portalHome so it's never
  // affected by portalHome being hidden.
  document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="portalCaustic" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" values="0.010 0.016;0.018 0.010;0.010 0.016" dur="6s" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="22"/></filter></defs></svg>');
+ caustic=document.getElementById('portalCaustic').closest('svg');if(prefersReducedMotion())caustic.querySelector('animate')?.remove();
  // The fallback menu sheet lives outside portalHome too: a dialog nested in a hidden ancestor
  // would be hidden along with it while open (e.g. mid-fade during the "all" portal reveal).
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
@@ -171,30 +181,45 @@ function buildDom(){
  menuSheet.querySelectorAll('[data-menu]').forEach(btn=>btn.onclick=()=>{
   const menu=MENUS[btn.dataset.menu];
   if(menu.locked?.()){menuSheet.querySelector('#portalMenuStatus').textContent=menu.lockedMessage;return;}
-  menuSheet.querySelector('#portalMenuStatus').textContent='';menuSheet.close();menu.open?.();
+  menuSheet.querySelector('#portalMenuStatus').textContent='';menuChosen=true;menuSheet.close();setVisible(false);menu.open?.();
  });
  menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=()=>{menuSheet.close();loadBoard(btn.dataset.board);});
 }
 
+function backgroundBlocked(block){
+ if(block){for(const el of document.body.children)if(el!==portalHome&&el!==menuSheet&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
+ else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
+}
+function openMenu(){
+ setVisible(false);menuChosen=false;menuSheet.showModal();
+ menuSheet.addEventListener('close',()=>{if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
+}
+
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
 function setVisible(v){
+ visibilityRun++;
+ if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
- if(v){motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();}
- else{endPhase();board?.pause();}
+ if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();}
+ else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;
 }
 function fadeOutBoard(){
+ const run=++visibilityRun;
+ backgroundBlocked(false);
  motion(portalHome,'opacity .3s ease');portalHome.style.opacity='0';
- return new Promise(r=>setTimeout(()=>{portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;r();},300));
+ return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;}r();},prefersReducedMotion()?0:300));
 }
 function fadeInBoard(){
+ visibilityRun++;
  endPhase();board?.heal();
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
- board?.resume();boardShown=true;
- raf().then(raf).then(()=>{motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
+ board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();
+ const run=visibilityRun;
+ settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
 }
 function status(text){statusEl.textContent=text;}
 
@@ -233,7 +258,7 @@ function drawFrame(){
  }
  if(pointers.size||outlineFlash||phase?.pulse)kickRender();
 }
-function flashOutline(polys,color){outlineFlash={polys,color,start:performance.now()};kickRender();}
+function flashOutline(polys,color){if(prefersReducedMotion())return;outlineFlash={polys,color,start:performance.now()};kickRender();}
 
 function fallInAll([cx,cy]){
  const menus=Object.values(MENUS),n=menus.length,R=90;
@@ -244,7 +269,7 @@ function fallInAll([cx,cy]){
  });
  return new Promise(resolve=>{
   if(prefersReducedMotion()){els.forEach(el=>el.remove());resolve();return;}
-  raf().then(raf).then(()=>{els.forEach(el=>{el.style.left=cx+'px';el.style.top=cy+'px';el.classList.add('falling');});setTimeout(()=>{els.forEach(el=>el.remove());resolve();},600);});
+  settle().then(()=>{els.forEach(el=>{el.style.left=cx+'px';el.style.top=cy+'px';el.classList.add('falling');});setTimeout(()=>{els.forEach(el=>el.remove());resolve();},600);});
  });
 }
 // Neon liquid glass between #portalHome's background and the board canvas, so it shows only through the
@@ -276,16 +301,16 @@ function revealDialogFromPoint(dialog,[cx,cy]){
  if(prefersReducedMotion())return;
  const dbox=dialog.getBoundingClientRect();
  dialog.style.transformOrigin=`${cx-dbox.left}px ${cy-dbox.top}px`;motion(dialog,'none');dialog.style.transform='scale(.05)';dialog.style.opacity='0';
- raf().then(raf).then(()=>{motion(dialog,'transform .5s cubic-bezier(.2,0,.3,1),opacity .4s ease');dialog.style.transform='';dialog.style.opacity='';});
+ settle().then(()=>{if(!dialog.open)return;motion(dialog,'transform .5s cubic-bezier(.2,0,.3,1),opacity .4s ease');dialog.style.transform='';dialog.style.opacity='';});
 }
 
 function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}
 
 async function runShape(id){
- if(busy)return;
- busy=true;try{await portalSequence(id);}finally{busy=false;}
+ if(busy||!boardShown)return;
+ const run=++sequence;busy=true;try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}finally{if(run===sequence)busy=false;}
 }
-async function portalSequence(id){
+async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect();
  if(id==='x'||id==='cross'||id==='line'){
   flashOutline(SHAPES[id].map(p=>toClientPts(p.points,rect)),'#ffffff');
@@ -293,37 +318,43 @@ async function portalSequence(id){
   const face=board?.faceRect();
   showGlass(face&&closeLoop(toClientPts([[0,0],[1,0],[1,1],[0,1]],face)),'#ffffff',true); // rainbow glass behind the whole board; the whole pattern falls in over it
   await Promise.all([cutBoard(shapeClipPts('rect',rect),'#ffffff'),fallInAll(center)]);
-  menuSheet.showModal();
+  if(!current())return;
+  openMenu();
   await settle();
   revealDialogFromPoint(menuSheet,center);
-  fadeOutBoard();
-  menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';fadeInBoard();},{once:true});
+  menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';},{once:true});
   return;
  }
  const menu=MENUS[id];if(!menu)return;
- if(!SHAPES[id]){menu.open?.();return;} // menu without a traced shape (opened by id)
+ if(!SHAPES[id]){setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
  const pts=shapeClipPts(id,rect);
  flashOutline([pts],menu.color);
  if(menu.locked?.()){status(menu.lockedMessage);return;}
  status('');
  showGlass(pts,menu.color);
  await cutBoard(pts,menu.color);
+ if(!current())return;
  // Loading phase: the glass stays live (touch ripples, breathing outline) for at least loadMinMs.
- if(phase)phase.pulse=true;
- await sleep(PORTAL.loadMinMs);
- if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome));setVisible(false);return;}
+ if(phase)phase.pulse=!prefersReducedMotion();
+ if(phase?.pulse)kickRender();
+ await sleep(prefersReducedMotion()?0:PORTAL.loadMinMs);
+ if(!current())return;
+ if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome),current);if(current())setVisible(false);return;}
  if(menu.kind==='nav'){menu.open();return;} // the glass stays up while the next page loads
  let dialog=null;
+ backgroundBlocked(false);
  try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}
  await settle();
+ if(!current())return;
  const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
  // Panel missing in this build (or it refused to open): never leave the screen stuck on the glass.
  if(!shown){status(`${menu.label} isn't available here yet.`);await fadeOutBoard();fadeInBoard();return;}
  if(dialog instanceof HTMLDialogElement){
   const dbox=dialog.getBoundingClientRect(),local=pts.map(([x,y])=>[x-dbox.left,y-dbox.top]);
-  await growPorthole(dialog,local);
+  await growPorthole(dialog,local,current);
+  if(!current()){dialog.style.clipPath='';motion(dialog,'');return;}
   if(!dialog.open){fadeInBoard();return;} // closed mid-reveal
-  dialog.addEventListener('close',()=>fadeInBoard(),{once:true});
+  dialog.addEventListener('close',()=>{if(current())fadeInBoard();},{once:true});
  }
  fadeOutBoard();
 }
@@ -361,28 +392,40 @@ function initialVisible(){
 }
 
 export async function mountPortal({visible=false}={}){
+ if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
+ const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
- menuBtn.addEventListener('click',()=>{if(busy)return;fadeOutBoard();menuSheet.showModal();menuSheet.addEventListener('close',()=>fadeInBoard(),{once:true});});
- boardBtn?.addEventListener('click',()=>setVisible(true));
+ menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();});
+ boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  if(!boardFailed)wirePointerEvents();
- resizeOverlay();new ResizeObserver(resizeOverlay).observe(portalHome);
+ resizeOverlay();overlayObserver=new ResizeObserver(resizeOverlay);overlayObserver.observe(portalHome);
  setVisible(visible&&initialVisible());
  // Back from a 'nav' portal via the bfcache: drop the stale glass and hole.
- addEventListener('pageshow',e=>{if(e.persisted&&phase){endPhase();board?.heal();portalHome.style.clipPath='';}});
+ let resumeAfterPageShow=false;
+ addEventListener('pagehide',()=>{resumeAfterPageShow=boardShown;setVisible(false);},{signal:lifecycle.signal});
+ addEventListener('pageshow',e=>{if(e.persisted&&resumeAfterPageShow)setVisible(true);},{signal:lifecycle.signal});
  window.myr5Portal={
+  get disposed(){return lifetime.signal.aborted;},
+  dispose(){if(lifetime.signal.aborted)return;setVisible(false);boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();caustic?.remove();for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
   trace(strokes){const id=recognizeShape(strokes);if(id)runShape(id);return id;},
   board:id=>loadBoard(id),
   flashTransition:async({duration=520}={})=>{
+   duration=Number.isFinite(duration)?Math.max(0,Math.min(duration,10000)):520;
+   if(prefersReducedMotion())duration=0;
    const flash=document.createElement('div');flash.className='portal-transition-flash';flash.setAttribute('aria-hidden','true');document.body.append(flash);
+   flash.style.setProperty('animation',`portal-transition-flash ${duration}ms ease-in-out both`,'important');
+   if(flash.showPopover){flash.setAttribute('popover','manual');flash.showPopover();}
    window.dispatchEvent(new CustomEvent('myr5:portal-transition',{detail:{phase:'flash',duration}}));
-   if(prefersReducedMotion()){flash.remove();window.dispatchEvent(new CustomEvent('myr5:portal-transition',{detail:{phase:'complete'}}));return;}
-   await new Promise(resolve=>{flash.addEventListener('animationend',resolve,{once:true});setTimeout(resolve,duration+100);});
+   if(!duration){flash.remove();window.dispatchEvent(new CustomEvent('myr5:portal-transition',{detail:{phase:'complete'}}));return;}
+   await new Promise((resolve,reject)=>{let timer;const finish=()=>{clearTimeout(timer);flashes.delete(cancel);resolve();},cancel=()=>{clearTimeout(timer);flash.remove();flashes.delete(cancel);reject(new DOMException('Portal closed.','AbortError'));};flashes.add(cancel);flash.addEventListener('animationend',finish,{once:true});timer=setTimeout(finish,duration+100);});
+   if(lifetime.signal.aborted){flash.remove();throw new DOMException('Portal closed.','AbortError');}
    flash.remove();window.dispatchEvent(new CustomEvent('myr5:portal-transition',{detail:{phase:'complete'}}));
   },
   current:()=>board,
  };
+ return window.myr5Portal;
 }

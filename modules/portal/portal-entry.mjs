@@ -1,15 +1,20 @@
-let loading;
+let loading,mounted;
 
 export async function openQuiltPortal() {
+  if(mounted?.disposed)loading=null;
   if (!loading) {
     loading = (async () => {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
       style.href = '/modules/portal/portal.css';
+      const styled=new Promise((resolve,reject)=>{style.onload=resolve;style.onerror=()=>reject(new Error('Portal styles unavailable.'));});
       document.head.append(style);
-      const { mountPortal } = await import('./portal.mjs');
-      await mountPortal();
-      return window.myr5Portal;
+      try{
+        const [{mountPortal}]=await Promise.all([import('./portal.mjs'),styled]);
+        mounted=await mountPortal();
+        const dispose=mounted.dispose;mounted.dispose=()=>{dispose();style.remove();};
+        return mounted;
+      }catch(error){style.remove();throw error;}
     })().catch(error => {
       loading = null;
       throw error;

@@ -33,7 +33,7 @@
 #portalStatus:empty{display:none}
 #portalMenuButton{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10;min-height:48px;min-width:120px;padding:0 22px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 15px/1 var(--font,system-ui);backdrop-filter:blur(10px);box-shadow:0 6px 20px #0007}
 #portalExitButton{position:fixed;right:12px;top:max(12px,env(safe-area-inset-top));z-index:10;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 14px/1 var(--font,system-ui)}
-.portal-transition-flash{position:fixed;inset:0;z-index:10000;pointer-events:none;background:radial-gradient(ellipse at center,#fff 0%,#fff8dc 45%,#ffd86a 100%);animation:portal-transition-flash .52s ease-in-out both}
+.portal-transition-flash{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;z-index:10000;pointer-events:none;background:radial-gradient(ellipse at center,#fff 0%,#fff8dc 45%,#ffd86a 100%);animation:portal-transition-flash .52s ease-in-out both}
 @keyframes portal-transition-flash{0%{opacity:0}35%{opacity:1}65%{opacity:1}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.portal-transition-flash{animation:none;opacity:1}}
 .portal-menu{border:1px solid #ffffff33;border-radius:16px;background:#1a1224f5;color:#f5eaff;padding:18px;max-width:360px;width:88vw}

@@ -40,3 +40,18 @@ test('D34: core is only what first-run pages name; bundled sources, deferred fea
   assert.deepEqual(files.map(f=>[f.url,f.bytes]),[['/voice/a.mp3',12]]);assert.match(files[0].integrity,/^sha256-/);assert.equal(voice.contains,12);
  }finally{await rm(root,{recursive:true,force:true});}
 });
+
+test('the starter portal renderer is available before the optional food model download',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'myr5-portal-core-'));
+ try{
+  for(const folder of ['modules/portal','vendor/three','pod/worlds'])await mkdir(join(root,folder),{recursive:true});
+  await writeFile(join(root,'pose.html'),'<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js"}}</script><script src="/app-runtime.mjs"></script>');
+  await writeFile(join(root,'app-runtime.mjs'),"import('./modules/portal/portal-entry.mjs')");
+  await writeFile(join(root,'modules/portal/portal-entry.mjs'),"import './portal.mjs'");
+  await writeFile(join(root,'modules/portal/portal.mjs'),"import 'three';const texture='/pod/worlds/quilt.webp'");
+  for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp'])await writeFile(join(root,name),'fixture');
+  const {core,optional}=await offlineInventory(root);
+  for(const url of ['/modules/portal/portal-entry.mjs','/modules/portal/portal.mjs','/vendor/three/three.module.js','/pod/worlds/quilt.webp'])assert(core.some(a=>a.url===url),url);
+  assert(optional.some(a=>a.url==='/vendor/three/GLTFLoader.js'),'food-only loader remains deferred');
+ }finally{await rm(root,{recursive:true,force:true});}
+});
