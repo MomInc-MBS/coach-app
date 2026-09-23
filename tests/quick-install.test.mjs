@@ -36,6 +36,11 @@ test('the release-review URL bypasses only the install display check for its tab
  assert.equal(setupAllowed(win),true);win.location.search='';assert.equal(setupAllowed(win),true,'the onboarding navigation keeps the same test session');
  win.sessionStorage=storage();assert.equal(setupAllowed(win),false);win.location.search='?test=wrong';assert.equal(setupAllowed(win),false);
 });
+test('the browser-test entry uses a new path and only stamps the existing setup-session marker',async()=>{
+ const html=await readFile('test-coach.html','utf8'),entry=await readFile('test-coach-entry.mjs','utf8');
+ assert.match(html,/src="\/test-coach-entry\.mjs"/);assert.match(entry,/myr5-in-app-setup/);assert.match(entry,/location\.replace\('\/onboarding\.html\?from=browser-test'\)/);
+ assert.doesNotMatch(entry,/api\/|myr5AuthenticatedAccount|camera|Notification|mediaDevices|fetch\s*\(/);
+});
 let mf,env;
 before(async()=>{mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB']});env={DB:await mf.getD1Database('DB')};for(const name of (await readdir('drizzle')).filter(n=>n.endsWith('.sql')).sort())await env.DB.batch((await readFile('drizzle/'+name,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>env.DB.prepare(s)));});
 after(async()=>mf?.dispose());
