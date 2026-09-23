@@ -196,5 +196,15 @@ window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newVa
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;document.querySelectorAll<HTMLButtonElement>('[data-gesture]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gesture===current)));},250);
 window.addEventListener('pagehide',()=>{skinEpoch++;skinSource?.dispose();skinSource=null;clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
-try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||'Your coach is ready');void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
+// D34 post-download: listen for body download state from service worker
+const pendingBodyUrls=new Set<string>();let bodyDownloadTimer=0;const originalStatus='Your coach is ready';
+navigator.serviceWorker?.addEventListener('message',({data})=>{
+ if(data?.type!=='BODY_DOWNLOAD')return;
+ clearTimeout(bodyDownloadTimer);
+ if(data.state==='start')pendingBodyUrls.add(data.url);else pendingBodyUrls.delete(data.url);
+ if(data.state==='unavailable'){tell('This body isn\'t on this phone yet. Connect to the internet to download it.');bodyDownloadTimer=setTimeout(()=>{tell(originalStatus);},6000);}
+ else if(pendingBodyUrls.size)tell('Downloading this body…');
+ else tell(originalStatus);
+});
+try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
 catch(error){tell('3D could not start. '+(error as Error).message);}
