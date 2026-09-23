@@ -16,14 +16,14 @@ export function postDownloadChoices(account, availableIds) {
 
 /** Account-scoped explicit-action controls; anonymous core download remains independent. */
 export function mountPostDownloadSections({ host, account=globalThis.myr5AuthenticatedAccount, fetchImpl=globalThis.fetch, trust=productionMaterialTrust(), policy, store }={}) {
-  if (!host || !trust) return null;
+  const accountId=value=>typeof value?.user?.id==='string'?value.user.id:null;
+  if (!host || !trust || !accountId(account)) return null;
   const panel=document.createElement('section');
   panel.className='post-download-sections';panel.hidden=true;
   panel.innerHTML='<h3>Extra offline packs</h3><p data-status role="status"></p><div data-actions></div><progress max="1" value="0" hidden aria-label="Extra pack download progress"></progress><button type="button" data-pause hidden>Pause</button>';
   host.append(panel);
   const status=panel.querySelector('[data-status]'), actions=panel.querySelector('[data-actions]'), progress=panel.querySelector('progress'), pause=panel.querySelector('[data-pause]');
   let currentAccount=account, owner=null, available=new Map(), controller=null, pausedIds=null,epoch=0,disposed=false,checking=null;
-  const accountId=value=>typeof value?.user?.id==='string'?value.user.id:null;
   const allowed=()=>!disposed&&!!owner&&accountId(Object.hasOwn(globalThis,'myr5AuthenticatedAccount')?globalThis.myr5AuthenticatedAccount:currentAccount)===owner;
   const labels=new Map(POST_DOWNLOAD_SECTIONS.map(section=>[section.id,section.title]));
   function clear(){available=new Map();actions.replaceChildren();panel.hidden=true;}

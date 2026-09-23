@@ -23,7 +23,23 @@ export function mountPostDownload({host}){
  settings.innerHTML='<h3 id="fullDownloadSettingsTitle">Full download</h3>'+status;
  host.append(settings);document.body.append(offer,bar);
  // Account-bound, signed optional packets live beside (not inside) the legacy anonymous package.
- void import('./modules/materials/post-download-ui.mjs').then(({mountPostDownloadSections})=>mountPostDownloadSections({host:settings,account:window.myr5AuthenticatedAccount})).catch(()=>{});
+ // Do not even add their controls to the anonymous page: mount them only after the same-origin
+ // account bridge publishes a stable owner, and remove them again as soon as that owner clears.
+ let sectionControls=null,sectionEpoch=0;
+ const sectionOwner=value=>typeof value?.user?.id==='string'?value.user.id:null;
+ const clearSections=()=>{++sectionEpoch;sectionControls?.dispose();sectionControls=null;};
+ const mountSections=async account=>{
+  const owner=sectionOwner(account),run=++sectionEpoch;if(!owner)return;
+  try{
+   const {mountPostDownloadSections}=await import('./modules/materials/post-download-ui.mjs');
+   if(run!==sectionEpoch||sectionOwner(window.myr5AuthenticatedAccount)!==owner)return;
+   sectionControls=mountPostDownloadSections({host:settings,account});
+  }catch{}
+ };
+ const sectionsReady=event=>{clearSections();void mountSections(event.detail);};
+ const sectionsCleared=()=>clearSections();
+ window.addEventListener('myr5:account-ready',sectionsReady);window.addEventListener('myr5:account-cleared',sectionsCleared);
+ void mountSections(window.myr5AuthenticatedAccount);
 
  let plan=null,phase='checking',message='',got=0,controller=null,wantOffer=false,doneTimer=0;
  const busy=()=>document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||BUSY.includes(window.myr5TestState?.phase);
@@ -101,7 +117,7 @@ export function mountPostDownload({host}){
   if(phase==='done'&&!bar.hidden&&!doneTimer&&idle())doneTimer=setTimeout(()=>{bar.hidden=true;},6000);
  },1000);
  window.addEventListener('online',()=>{if(read(localStorage,STATE)==='on'&&['ready','error'].includes(phase)&&!cellular())void start();});
- window.addEventListener('pagehide',event=>{if(!event.persisted)clearInterval(ticker);});
+ window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(ticker);window.removeEventListener('myr5:account-ready',sectionsReady);window.removeEventListener('myr5:account-cleared',sectionsCleared);clearSections();}});
  (async()=>{
   try{plan=await ask();}catch(error){phase='error';message=error.message;paint();return;}
   phase=plan.remaining?'ready':'done';paint();

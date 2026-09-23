@@ -124,9 +124,9 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
  const run=++skinEpoch,owner=typeof account==='string'?account:account?.user?.id||null;skinOwner=owner;skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);renderSkinChoices();
  if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};
  skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);
- if(!owner){render();return;}
+ if(!owner){render('Your coach is ready');return;}
  const source=createInstalledCreatureSkinSource({account});skinSource=source;render('Checking installed skins');const rows=await source.list();const active=window.myr5AuthenticatedAccount,activeOwner=typeof active==='string'?active:active?.user?.id;if(run!==skinEpoch||activeOwner!==owner){source.dispose();return;}
- if(!rows.length){source.dispose();render();return;}
+ if(!rows.length){source.dispose();render('Your coach is ready');return;}
  skinSource=source;skinChoices=rows.map(({id,displayName})=>({id,displayName}));viewer?.setSkinResolver(source.resolve);skinTab.hidden=false;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','false');const remembered=skinSettings();for(const region of REGIONS){const id=remembered[region];if(typeof id==='string'&&skinChoices.some(s=>s.id===id))recipe={...recipe,materials:{...recipe.materials,[region]:{...(recipe.materials?.[region]??DEFAULT_MATERIAL),textureId:id}}};}renderSkinChoices();render('Installed skins ready');
 }
 skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;try{localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify({...skinSettings(),[selected]:id}));}catch{}setMaterial({textureId:id});});
