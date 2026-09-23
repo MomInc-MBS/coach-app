@@ -1,21 +1,23 @@
 // D-ship-route: full-screen ship view. Same coach capsule renderer as the pod's "Show my coach"
 // card (creature/assets/phone.js), reparented full-screen, with the owned ship + biome backdrop
 // composed behind it when the signed "Ships and worlds" pack is already downloaded and verified
-// locally. `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
+// locally. Without that pack (signed out, no ship owned, or not downloaded) Original MYR5's bundled
+// starter ship and a starter wonder show instead, with his entrance the first open of the session.
+// `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
 // scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
 // must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
 import {initialScene} from './ship-scene-domain.mjs';
+import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 
 const HASH = '#ship';
 const RECIPE_KEY = 'myr5-recipe-v1';
 const SHIP_SETTINGS_KEY = 'myr5-ship-customization-v1';
 const readJSON = key => { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
 
-function fallbackMessage(signedIn, owned) {
- if (!signedIn) return { text: 'Sign in to see your ship', download: false };
- if (!owned.length) return { text: 'Earn your first ship at level 3 of any achievement track', download: false };
- return { text: 'Download Ships & worlds to see your ship', download: true };
-}
+// Original MYR5's recipe (coach 'supportive') maps to this ship through initialScene().
+const STARTER_SHIP = 'supportive', STARTER_SHIP_URL = '/pod/worlds/starter/supportive.glb';
+const UPGRADE_TEXT = 'Earn ships on your tracks · Download Ships & worlds for all of them';
+let starterEntranceDone = false; // once per app session (page lifetime)
 
 function disposeModel(root) {
  const geometries = new Set(), materials = new Set(), textures = new Set();
@@ -70,8 +72,27 @@ let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fa
 let viewOwner = null;
 let realShip = null, pushedHash = false, openEpoch = 0;
 
-function showFallback({ text, download }) { bgEl.className = 'ship-view-bg ship-view-bg-fallback'; bgEl.style.backgroundImage = ''; fallback.querySelector('p').textContent = text; downloadBtn.hidden = !download; fallback.hidden = false; }
-function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.className = 'ship-view-bg'; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
+function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
+
+/** No verified pack: the starter ship over today's starter wonder. The upgrade line shows only when
+ * signed in; the download button only when they own a ship. Reduced motion or a repeat open idles. */
+async function showStarter({ signedIn, owned, isCurrent }) {
+ const background = starterWonderUrl(backgroundForDay(STARTER_WONDERS));
+ bgEl.style.backgroundImage = `url("${background}")`;
+ fallback.querySelector('p').textContent = UPGRADE_TEXT; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
+ const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL, getBackgroundUrl: () => background };
+ try {
+  if (!starterEntranceDone && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+   const { mountShipScene } = await import('./ship-intro.mjs');
+   if (!isCurrent()) return;
+   const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
+   if (await scene.ready && isCurrent()) starterEntranceDone = true;
+   return;
+  }
+  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP });
+  if (!isCurrent()) mounted.dispose(); else realShip = mounted;
+ } catch { /* no WebGL or model: the wonder and the coach still show */ }
+}
 
 async function waitForCard(timeoutMs = 8000) {
  const started = performance.now();
@@ -135,7 +156,7 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
  if (!isCurrent()) { bridge?.dispose?.(); return dialog; }
- if (!bridge) { showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); return dialog; }
+ if (!bridge) { await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent }); return dialog; }
  try {
   const owned = bridge.ownedShipIds();
   const arrival = await mountArrival({host:stage,assetBridge:bridge,isCurrent});
@@ -152,6 +173,6 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
   if (!isCurrent()) { mounted.dispose(); return dialog; }
   realShip = mounted; fallback.hidden = true;
- } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); }
+ } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent }); }
  return dialog;
 }

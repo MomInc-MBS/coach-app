@@ -44,53 +44,64 @@ async function primeFixture(page){
  });
 }
 
-test('signed out: fallback tells them to sign in, no download button',async()=>withPage(async page=>{
+// No verified pack: Original MYR5's bundled starter ship (the real GLB) over today's starter wonder.
+const starterState=()=>({
+ bg:document.querySelector('.ship-view-bg').style.backgroundImage,
+ scene:document.querySelector('.ship-scene')?.dataset.ship||null,
+ status:document.querySelector('.ship-scene-status')?.textContent||null,
+ revealed:document.querySelector('.ship-view-stage').classList.contains('ship-intro-revealed'),
+ idleCanvas:!!document.querySelector('.ship-view-canvas'),
+ flash:!!document.querySelector('.ship-scene-flash'),
+ line:document.querySelector('.ship-view-fallback').hidden?null:document.querySelector('.ship-view-fallback p').textContent,
+ downloadHidden:document.querySelector('.ship-view-download').hidden,
+ hasCoach:!!document.querySelector('.ship-view-coach .myr5-companion-card'),
+});
+const STARTER_BG=/^url\("\/pod\/worlds\/starter\/(great-wall-of-china-a|great-pyramid-of-giza-a|machu-picchu-a|taj-mahal-a|colosseum-a|mount-fuji-a)\.webp"\)$/;
+const UPGRADE='Earn ships on your tracks · Download Ships & worlds for all of them';
+
+test('signed out: the starter ship makes its entrance over a starter wonder once per session, then idles; no upgrade line, no reveal marked',async()=>withPage(async page=>{
  await primeFixture(page);
- const state=await page.evaluate(async()=>{
+ const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));
+ const first=await page.evaluate(async state=>{
   const {openShipView}=await import('/ship-view.js');
-  window.myr5AuthenticatedAccount=null;
-  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>{throw Error('must not be called while signed out')}});
-  return {
-   fallbackHidden:document.querySelector('.ship-view-fallback').hidden,
-   fallbackText:document.querySelector('.ship-view-fallback p').textContent,
-   downloadHidden:document.querySelector('.ship-view-download').hidden,
-  };
- });
- assert.deepEqual(state,{fallbackHidden:false,fallbackText:'Sign in to see your ship',downloadHidden:true});
+  window.myr5AuthenticatedAccount=null;window.readyEvents=[];addEventListener('myr5:ship-scene-ready',e=>readyEvents.push(e.detail));
+  window.openStarter=()=>openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>{throw Error('must not be called while signed out')}});
+  await openStarter();
+  return {...(0,eval)(state)(),events:readyEvents.map(e=>({ship:e.ship,revealComplete:e.revealComplete,starter:e.starter}))};
+ },`(${starterState})`);
+ assert.match(first.bg,STARTER_BG);
+ assert.deepEqual({...first,bg:undefined},{bg:undefined,scene:'supportive',status:'Coach ready. Select the ship to customize.',revealed:true,idleCanvas:false,flash:true,line:null,downloadHidden:true,hasCoach:true,events:[{ship:'supportive',revealComplete:false,starter:true}]});
+ assert.ok(requests.includes('/pod/worlds/starter/supportive.glb'),'loads the bundled starter ship');
+ await page.locator('.ship-view-close').click();await page.waitForFunction(()=>location.hash!=='#ship');
+ await page.evaluate(()=>openStarter());
+ const again=await page.evaluate(state=>(0,eval)(state)(),`(${starterState})`);
+ assert.deepEqual({scene:again.scene,idleCanvas:again.idleCanvas,flash:again.flash,line:again.line},{scene:null,idleCanvas:true,flash:false,line:null},'the entrance plays once per session; after that the view idles');
+ assert.match(again.bg,STARTER_BG);
 }));
 
-test('signed in but owns no ship yet: fallback points at earning one, no download button',async()=>withPage(async page=>{
+test('signed in without a ship, reduced motion: a still starter scene plus the upgrade line, no download button',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
  await primeFixture(page);
- const state=await page.evaluate(async()=>{
+ const state=await page.evaluate(async state=>{
   const {openShipView}=await import('/ship-view.js');
   window.myr5AuthenticatedAccount={user:{id:'owner-a'}};
-  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>[]});
-  return {
-   fallbackText:document.querySelector('.ship-view-fallback p').textContent,
-   downloadHidden:document.querySelector('.ship-view-download').hidden,
-  };
- });
- assert.deepEqual(state,{fallbackText:'Earn your first ship at level 3 of any achievement track',downloadHidden:true});
+  await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>[]});
+  return (0,eval)(state)();
+ },`(${starterState})`);
+ assert.match(state.bg,STARTER_BG);
+ assert.deepEqual({scene:state.scene,idleCanvas:state.idleCanvas,flash:state.flash,line:state.line,downloadHidden:state.downloadHidden},{scene:null,idleCanvas:true,flash:false,line:UPGRADE,downloadHidden:true},'reduced motion never plays the cinematic');
 }));
 
-test('signed in, owns a ship, pack unavailable: fallback shows the coach with a local backdrop and routes the download button',async()=>withPage(async page=>{
+test('signed in, owns a ship, pack unavailable: starter scene with the upgrade line, and the download button routes to Ships & worlds',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
  await primeFixture(page);
- const state=await page.evaluate(async()=>{
+ const state=await page.evaluate(async state=>{
   const {openShipView}=await import('/ship-view.js');
   window.myr5AuthenticatedAccount={user:{id:'owner-a'}};
   const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>['supportive']});
-  window.shipDialog=dialog;
-  return {
-   isDialog:dialog instanceof HTMLDialogElement,open:dialog.open,
-   fallbackHidden:document.querySelector('.ship-view-fallback').hidden,
-   fallbackText:document.querySelector('.ship-view-fallback p').textContent,
-   downloadHidden:document.querySelector('.ship-view-download').hidden,
-   bgIsFallback:document.querySelector('.ship-view-bg').classList.contains('ship-view-bg-fallback'),
-   hasCoach:!!document.querySelector('.ship-view-coach .myr5-companion-card'),
-   hasCanvas:!!document.querySelector('.ship-view-canvas'),
-  };
- });
- assert.deepEqual(state,{isDialog:true,open:true,fallbackHidden:false,fallbackText:'Download Ships & worlds to see your ship',downloadHidden:false,bgIsFallback:true,hasCoach:true,hasCanvas:false});
+  return {isDialog:dialog instanceof HTMLDialogElement,open:dialog.open,...(0,eval)(state)()};
+ },`(${starterState})`);
+ assert.deepEqual({isDialog:state.isDialog,open:state.open,line:state.line,downloadHidden:state.downloadHidden,hasCoach:state.hasCoach,idleCanvas:state.idleCanvas},{isDialog:true,open:true,line:UPGRADE,downloadHidden:false,hasCoach:true,idleCanvas:true});
  await page.locator('.ship-view-download').click();
  assert.equal(await page.evaluate(()=>window.installClicks),1,'falls back to the Install panel control when myr5Packs is unavailable');
  await page.evaluate(()=>{window.myr5Packs={open:id=>{window.packsOpened=id;}};});

@@ -8,7 +8,7 @@ import {BREATHING_MS,DAY_MS} from '../combat.mjs';
 import {startBreathing,completeBreathing} from '../server/combat.mjs';
 import {circuitProgress} from '../circuit.mjs';
 import {BREATHING_MODES,MODE_IDS,PENDING_WELLNESS_REVIEW,SEATED_ONLY_NOTICE,NO_MEDICAL_CLAIM,buildScript,scriptMs,phaseAt} from '../breathing-modes.mjs';
-import {WONDER_BACKGROUNDS,WONDERS_PACK,wonderAssetPath,backgroundForDay,resolveBackground,averageRgb} from '../meditation-backgrounds.mjs';
+import {WONDER_BACKGROUNDS,WONDERS_PACK,STARTER_WONDERS,wonderAssetPath,backgroundForDay,resolveBackground,todaysBackground,averageRgb} from '../meditation-backgrounds.mjs';
 
 test('two modes live in one data config, flagged pending wellness review, seated-only on the intense one',()=>{
  assert.deepEqual(MODE_IDS,['wim-hof','tai-chi']);
@@ -53,6 +53,13 @@ test('wonder backgrounds: manifest ids, day rotation, neutral placeholder unless
  let asked;assert.equal(await resolveBackground('petra',async request=>{asked=request;return 'blob:x';}),'blob:x');
  assert.deepEqual(asked,{pack:WONDERS_PACK,path:'backgrounds/clean/petra.webp',id:'petra'});
  assert.equal(averageRgb(new Uint8ClampedArray([10,20,30,255,30,40,50,255])),'rgb(20,30,40)');
+});
+
+test('todays background: the downloaded pack copy wins, otherwise the bundled starter wonder for the day',async()=>{
+ const day=20718;
+ assert.deepEqual(await todaysBackground(undefined,day),{id:STARTER_WONDERS[day%6],url:`/pod/worlds/starter/${STARTER_WONDERS[day%6]}.webp`});
+ assert.deepEqual(await todaysBackground(async()=>null,day+1),{id:STARTER_WONDERS[(day+1)%6],url:`/pod/worlds/starter/${STARTER_WONDERS[(day+1)%6]}.webp`});
+ assert.deepEqual(await todaysBackground(async({id})=>'blob:'+id,day),{id:WONDER_BACKGROUNDS[day%48],url:'blob:'+WONDER_BACKGROUNDS[day%48]});
 });
 
 let mf,database;

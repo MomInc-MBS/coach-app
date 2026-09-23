@@ -21,3 +21,7 @@ test('approach animation begins offscreen and ends at the hover anchor',()=>{
  assert.ok(sampleApproach(0).x>3&&sampleApproach(0).scale<.2);
  assert.deepEqual(sampleApproach(1600),{x:0,y:1.82,z:0,scale:1,roll:0,done:true});
 });
+test('Original MYR5\'s fresh recipe (creature/source/creator/design.ts fresh()) maps to the supportive starter ship',()=>{
+ const original={version:1,styles:{head:0,eye:0,collar:0,body:0,arms:0,feet:0},coach:'supportive',body:'myr5'};
+ assert.equal(initialScene(original).ship,'supportive');
+});

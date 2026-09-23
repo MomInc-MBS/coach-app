@@ -1,8 +1,8 @@
 // D28: meditation backgrounds are the "wonders" pack entries in plan/asset-manifest.json
-// (pack "wonders", files backgrounds/clean/<id>.webp). They ship through the signed pack host,
-// never core: this module ships zero image bytes and fetches nothing itself. It picks today's id
-// (default: rotate by day) and asks a caller-supplied lookup for a locally downloaded copy; with
-// no lookup or nothing downloaded, meditation.css's neutral gradient placeholder shows instead.
+// (pack "wonders", files backgrounds/clean/<id>.webp). The full 48 ship through the signed pack host,
+// never core. Six starters are bundled in the site (pod/worlds/starter/) so meditation and the ship
+// view never start blank: todaysBackground() asks a caller-supplied lookup for today's pack copy and
+// falls back to today's starter. This module fetches nothing itself.
 // ponytail: no default pack-store lookup yet (no live pack host); wire one when packs ship.
 export const WONDERS_PACK = 'wonders';
 // Stems of every pack:"wonders" entry in plan/asset-manifest.json (48, checked 2026-09-22).
@@ -14,6 +14,8 @@ mount-fuji-a mount-fuji-b new-york-a new-york-b niagara-falls-a niagara-falls-b 
 statue-of-zeus-at-olympia sydney-opera-house-a sydney-opera-house-b taj-mahal-a taj-mahal-b temple-of-artemis-at-ephesus tokyo
 tropical-island venice-a venice-b`.split(/\s+/));
 export const wonderAssetPath = id => `backgrounds/clean/${id}.webp`;
+export const STARTER_WONDERS = Object.freeze(['great-wall-of-china-a', 'great-pyramid-of-giza-a', 'machu-picchu-a', 'taj-mahal-a', 'colosseum-a', 'mount-fuji-a']);
+export const starterWonderUrl = id => `/pod/worlds/starter/${id}.webp`;
 
 export function backgroundForDay(ids = WONDER_BACKGROUNDS, day = Math.floor(Date.now() / 86400000)) {
  return ids?.length ? ids[((Math.floor(day) % ids.length) + ids.length) % ids.length] : null;
@@ -28,6 +30,14 @@ export async function resolveBackground(id, lookup) {
  } catch {
   return null;
  }
+}
+
+// Today's wonder: the downloaded pack copy (any of the 48) when the lookup has it, else today's starter.
+export async function todaysBackground(lookup, day = Math.floor(Date.now() / 86400000)) {
+ const id = backgroundForDay(WONDER_BACKGROUNDS, day), url = await resolveBackground(id, lookup);
+ if (url) return {id, url};
+ const starter = backgroundForDay(STARTER_WONDERS, day);
+ return {id: starter, url: starterWonderUrl(starter)};
 }
 
 // Mean colour of the image's bottom pixel row, so the page below the landmark continues it.

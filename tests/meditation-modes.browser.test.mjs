@@ -65,11 +65,12 @@ let server,base,browser;
 test.before(async()=>{await mkdir(SHOTS,{recursive:true});server=await serve();base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 test.after(async()=>{await browser?.close();server?.close();});
 
-test('placeholder: no downloaded wonder keeps the neutral gradient and both mode cards on screen',async()=>{
+test('no downloaded wonder: the bundled starter wonder for the day shows, with both mode cards on screen',async()=>{
  const {context,page}=await openRoom(browser,{art:false});
- assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('has-wonder-art')),false);
+ await page.waitForFunction(()=>document.querySelector('.meditation-panel').classList.contains('has-wonder-art'));
+ assert.equal(await page.locator('.meditation-panel').getAttribute('data-wonder'),'great-wall-of-china-a','2026-09-22 is starter day 0');
  for(const mode of ['wim-hof','tai-chi']){const box=await page.locator(`[data-mode="${mode}"]`).boundingBox();assert.ok(box.y+box.height<=844,mode+' card visible without scrolling');}
- await shot(page,'00-placeholder-choose');await context.close();
+ await shot(page,'00-starter-choose');await context.close();
 });
 
 test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold, then complete once',async()=>{

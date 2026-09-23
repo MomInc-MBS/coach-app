@@ -1,6 +1,6 @@
 import {mountTubFlight} from './arcade/tub-flight/game.mjs';
 import {mountBreathing} from './breathing.mjs';
-import {backgroundForDay,resolveBackground,averageRgb} from './meditation-backgrounds.mjs';
+import {todaysBackground,averageRgb} from './meditation-backgrounds.mjs';
 export function mountMeditation({api,onComplete,getAccount,backgroundLookup}={}){
  const open=document.createElement('button');open.type='button';open.className='meditation-entry';open.innerHTML='<span>◌</span><strong>Meditation</strong><small aria-hidden="true">→</small>';document.querySelector('.crew-footer').after(open);
  const dialog=document.createElement('dialog');dialog.className='launch-panel meditation-panel';dialog.setAttribute('aria-labelledby','meditation-title');dialog.innerHTML='<header><h2 id="meditation-title">The still room</h2><button data-meditation-close>Close</button></header><section data-meditation-scene><div class="meditation-stage"><div class="meditation-platform" aria-hidden="true"></div><i class="breathing-ring" aria-hidden="true"></i><button class="meditation-character" aria-label="Tap your Gala character"><canvas width="64" height="96"></canvas></button><div class="meditation-can" aria-hidden="true"><b>FUEL</b><i></i></div><div class="meditation-powder" aria-hidden="true">· · · · ·</div></div><p class="meditation-speech" role="status">Breathe in. Breathe out.</p><button data-breath-pause type="button">Pause</button></section><section data-meditation-arcade hidden></section><div class="meditation-blackout" aria-hidden="true">'+Array.from({length:8},(_,i)=>'<i style="--strip:'+i+'"></i>').join('')+'</div>';document.body.append(dialog);
@@ -8,10 +8,10 @@ export function mountMeditation({api,onComplete,getAccount,backgroundLookup}={})
  const later=(fn,ms)=>{const id=setTimeout(fn,ms);timers.push(id);};
  function portrait(){try{const A=window.GalaAvatar;let look=A.defaultLook;try{look=A.normalize(JSON.parse(localStorage.getItem('mominc-avatar-v1')));}catch{}A.draw(character.querySelector('canvas'),look,{base:false,weapon:false,pose:{petting:taps>2?.4:0}});}catch{}}
  function reset(){timers.forEach(clearTimeout);timers=[];game?.dispose();game=null;taps=0;transitioning=false;scene.hidden=false;arcade.hidden=true;dialog.classList.remove('snorting','blacking-out');stage.dataset.annoyed='0';character.disabled=false;dialog.classList.remove('breathing-paused');breathPause.textContent='Pause';speech.textContent='Breathe in. Breathe out.';portrait();}
- // D28: the day's "wonders" pack background, if a caller-supplied lookup has it downloaded;
- // otherwise the room's neutral gradient stays as the placeholder. Ships no image bytes.
+ // D28: the day's "wonders" pack background when a caller-supplied lookup has it downloaded,
+ // otherwise today's bundled starter wonder; the neutral gradient only shows if the image fails.
  async function applyBackground(){
-  const id=backgroundForDay(),url=await resolveBackground(id,backgroundLookup);let art=null;
+  const {id,url}=await todaysBackground(backgroundLookup);let art=null;
   if(url)try{const img=new Image();img.src=url;await img.decode();art={url:`url("${url}")`,ratio:String(img.naturalWidth/img.naturalHeight),base:bottomColour(img)};}catch{}
   dialog.dataset.wonder=art?id:'';dialog.classList.toggle('has-wonder-art',!!art);
   for(const key of ['url','ratio','base'])art?.[key]?dialog.style.setProperty('--wonder-'+key,art[key]):dialog.style.removeProperty('--wonder-'+key);
