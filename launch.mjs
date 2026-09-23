@@ -59,6 +59,18 @@ document.addEventListener('click',event=>{
  let url;try{url=new URL(raw,location.origin);}catch{return;}
  if(url.origin===location.origin&&!canEnterPublicRoute(url.pathname,armyComplete)){event.preventDefault();event.stopImmediatePropagation();const status=document.getElementById('identityStatus')||document.getElementById('status');if(status)status.textContent='Complete Coach setup to unlock this room.';}
 },true);
+// A direct visit to an optional route (typed URL, bookmark) never reaches the click guard above —
+// public-entry.mjs already bounced it here with ?optional=<route> before this page's account state
+// was known. Say why, in #status (always visible on landing, unlike #identityStatus which lives in
+// a closed dialog), then drop the param so a reload/share is clean.
+{
+ const optionalEntry=new URLSearchParams(location.search).get('optional');
+ if(optionalEntry){
+  const status=document.getElementById('status');
+  if(status)status.textContent=optionalEntry==='/war-room'?'Finish Coach setup to unlock the War Room.':'Complete Coach setup to unlock this room.';
+  const clean=new URL(location.href);clean.searchParams.delete('optional');history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
+ }
+}
 const scoreboard=mountScoreboard({api,getAccount:()=>account});
 const deviceBinding=notificationBinding(api);
 const liveReminders=mountLiveReminders({refresh,read:reminders,getAccount:()=>account,deviceReady:()=>deviceBinding.ready(account?.user.id)});
