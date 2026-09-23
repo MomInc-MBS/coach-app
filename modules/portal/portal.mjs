@@ -8,6 +8,16 @@ import {recognizeShape,SHAPES} from './portal-shapes.mjs';
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dialog porthole reveal, the healed board fading back in, one touch ripple on the glass.
 const PORTAL={cutMs:1100,loadMinMs:2000,revealMs:900,healMs:400,rippleMs:900};
+// #104/#105 (W2-2E): the six neons already used for the "all menus" glass (portal.css .portal-glass.all),
+// reused for the flowing finger-trail ribbon. IDLE: 3s of no touch arms the cycle; fast pass 0.5s/shape once
+// through the order below, then a gentler 2.5s/shape loop until the next touch. TRAIL_FADE_MS: how long a
+// trail segment (live or just-released) stays lit before it's fully faded.
+const NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
+const NEON_RGB=NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+const IDLE={armMs:3000,fastMs:500,slowMs:2500};
+// Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
+const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','line-up','cross'];
+const TRAIL_FADE_MS=800;
 
 // Board catalogue: add one line per wave-2 board here.
 export const PRODUCTION_PORTALS=Object.freeze(['quilt']);
@@ -135,9 +145,13 @@ let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boa
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
-let pointers=new Map(),pendingStrokes=[],finalizeTimer=0,outlineFlash=null,rafId=0;
+let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
+// #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
+// tab visible); idleCycle is the running cycle ({phase:'fast'|'slow',t0}) or {static:true} under reduced
+// motion. #105: fading holds just-released strokes still fading out, drawn alongside any live ones.
+let idleTimer=0,idleCycle=null,fading=[];
 
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return '<span class="portal-board-label">Quilt portal</span>';}
@@ -231,26 +245,27 @@ function openMenu(){
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
 function setVisible(v){
  visibilityRun++;
- if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
+ if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;
+ scheduleIdle();
 }
 function fadeOutBoard(){
  const run=++visibilityRun;
  backgroundBlocked(false);
  motion(portalHome,'opacity .3s ease');portalHome.style.opacity='0';
- return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;}r();},prefersReducedMotion()?0:300));
+ return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;scheduleIdle();}r();},prefersReducedMotion()?0:300));
 }
 function fadeInBoard(){
  visibilityRun++;
  endPhase();board?.heal();
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
- board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();
+ board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();scheduleIdle();
  const run=visibilityRun;
  settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
 }
@@ -274,6 +289,103 @@ function touchDot(x,y,color){
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function kickRender(){if(!rafId)rafId=requestAnimationFrame(drawFrame);}
+
+// #105 magical trail: the ribbon's colour cycles through NEONS once every ~48px travelled.
+function neonAt(t){
+ const n=NEON_RGB.length,i=((Math.floor(t)%n)+n)%n,j=(i+1)%n,f=t-Math.floor(t);
+ const[r1,g1,b1]=NEON_RGB[i],[r2,g2,b2]=NEON_RGB[j];
+ return`rgb(${r1+(r2-r1)*f|0},${g1+(g2-g1)*f|0},${b1+(b2-b1)*f|0})`;
+}
+// Fixed-size sparkle pool (typed arrays, ring buffer index) so shedding stardust never allocates per frame.
+const SPARK_N=90,SPARK_LIFE=500;
+const sparkX=new Float32Array(SPARK_N),sparkY=new Float32Array(SPARK_N),sparkVX=new Float32Array(SPARK_N),sparkVY=new Float32Array(SPARK_N),sparkSize=new Float32Array(SPARK_N),sparkHue=new Int8Array(SPARK_N),sparkBorn=new Float32Array(SPARK_N).fill(-1e9);
+let sparkCursor=0;
+function spawnSpark(x,y){
+ const i=sparkCursor;sparkCursor=(sparkCursor+1)%SPARK_N;
+ const a=Math.random()*Math.PI*2,s=20+Math.random()*40;
+ sparkX[i]=x;sparkY[i]=y;sparkVX[i]=Math.cos(a)*s;sparkVY[i]=Math.sin(a)*s-15;
+ sparkSize[i]=1.5+Math.random()*2;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=performance.now();
+}
+function sparksAlive(now){for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)return true;return false;}
+function drawSparks(now){
+ for(let i=0;i<SPARK_N;i++){
+  const age=now-sparkBorn[i];if(age<0||age>=SPARK_LIFE)continue;
+  const t=age/1000,life=age/SPARK_LIFE,x=sparkX[i]+sparkVX[i]*t,y=sparkY[i]+sparkVY[i]*t+40*life*life;
+  const alpha=(1-life)*(.5+.5*Math.sin(age*.02+i)),color=NEONS[sparkHue[i]];
+  ctx.save();ctx.globalAlpha=Math.max(0,alpha);ctx.shadowColor=color;ctx.shadowBlur=6;ctx.fillStyle=color;
+  ctx.beginPath();ctx.arc(x,y,sparkSize[i]*(1-life*.5),0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+}
+// Full-motion trail: a neon ribbon flowing along its length, sparks shed from the tip, a bright tip, an
+// ~0.8s fade (TRAIL_FADE_MS) per segment. `live` also sheds sparkles; a just-released trail (in `fading`)
+// keeps rendering with no new sparks until it ages out.
+function renderRibbon(pts,now,live){
+ if(!pts.length)return;
+ if(pts.length<2){touchDot(pts[0].x,pts[0].y,'#ffffff');return;}
+ let dist=0;
+ for(let i=1;i<pts.length;i++){
+  const a=pts[i-1],b=pts[i],age=now-b.t;if(age>=TRAIL_FADE_MS)continue;
+  dist+=Math.hypot(b.x-a.x,b.y-a.y);
+  strokeGlow([[a.x,a.y],[b.x,b.y]],neonAt(dist/48),Math.max(0,1-age/TRAIL_FADE_MS),5);
+ }
+ const tip=pts[pts.length-1];
+ if(now-tip.t<TRAIL_FADE_MS)touchDot(tip.x,tip.y,'#ffffff');
+ if(live)spawnSpark(tip.x,tip.y);
+}
+function renderPlainTrail(pts,now){
+ const trail=pts.filter(pt=>now-pt.t<TRAIL_FADE_MS).map(pt=>[pt.x,pt.y]);
+ strokeGlow(trail,'#d8f6ff',1,4);
+ const last=pts.at(-1);if(last&&now-last.t<TRAIL_FADE_MS)touchDot(last.x,last.y,'#d8f6ff');
+}
+
+// #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
+function idleFrame(now){
+ let elapsed=now-idleCycle.t0;
+ if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='slow';idleCycle.t0=now;elapsed=0;}
+ const dur=idleCycle.phase==='fast'?IDLE.fastMs:IDLE.slowMs,idx=Math.floor(elapsed/dur)%IDLE_ORDER.length,t=elapsed%dur;
+ const envelope=Math.min(1,t/60,(dur-t)/60),peak=idleCycle.phase==='fast'?.9:.5;
+ return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:idleCycle.phase==='fast'?4:3};
+}
+// Outline + label (+ arrow for a line) for one idle-flash entry; `rect` is the stitched-pattern rect.
+function idleShapeInfo(id,rect){
+ if(id==='cross'){
+  const polys=SHAPES.cross.map(p=>toClientPts(p.points,rect));
+  return{polys,color:'#ffffff',label:MENUS['line-up'].label,labelPt:[rect.left+rect.width/2,rect.top+rect.height/2],arrow:null};
+ }
+ const menu=MENUS[id];
+ if(id==='x'){
+  const polys=SHAPES.x.map(p=>toClientPts(p.points,rect));
+  return{polys,color:menu.color,label:menu.label,labelPt:polys[0][0],arrow:null};
+ }
+ if(LINE_IDS.has(id)){
+  const[a,b]=toClientPts(lineTemplatePts(id),rect),reversed=id==='line-rl'||id==='line-up',start=reversed?b:a,end=reversed?a:b;
+  return{polys:[[a,b]],color:menu.color,label:menu.label,labelPt:start,arrow:{from:start,to:end}};
+ }
+ const pts=shapeClipPts(id,rect);
+ return{polys:[pts],color:menu.color,label:menu.label,labelPt:pts[0],arrow:null};
+}
+function drawArrow(from,to,color,alpha){
+ const mx=(from[0]+to[0])/2,my=(from[1]+to[1])/2,ang=Math.atan2(to[1]-from[1],to[0]-from[0]),len=10;
+ ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=6;
+ ctx.translate(mx,my);ctx.rotate(ang);
+ ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len,0);ctx.moveTo(len-6,-5);ctx.lineTo(len,0);ctx.lineTo(len-6,5);ctx.stroke();
+ ctx.restore();
+}
+function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width){
+ polys.forEach(p=>strokeGlow(p,color,alpha,width));
+ if(arrow)drawArrow(arrow.from,arrow.to,color,alpha);
+ ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;
+ ctx.font='600 12px system-ui,sans-serif';ctx.textBaseline='bottom';
+ ctx.fillText(label,labelPt[0]+6,labelPt[1]-6);
+ ctx.restore();
+}
+function drawIdle(now){
+ const rect=board?board.patternRect():fallbackRect();
+ if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3));return;}
+ const{id,alpha,width}=idleFrame(now);
+ drawIdleShape(idleShapeInfo(id,rect),alpha,width);
+}
+
 function drawFrame(){
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
@@ -283,15 +395,31 @@ function drawFrame(){
   if(t<350)outlineFlash.polys.forEach(p=>strokeGlow(p,outlineFlash.color,1-t/350,4));
   else outlineFlash=null;
  }
+ if(idleCycle)drawIdle(now);
  if(phase?.pulse&&phase.pts)strokeGlow(phase.pts,phase.color,.4+.25*Math.sin((now-phase.t0)/280),3); // soft breathing outline while loading
- for(const p of pointers.values()){
-  const trail=p.pts.filter(pt=>now-pt.t<250).map(pt=>[pt.x,pt.y]);
-  strokeGlow(trail,'#d8f6ff',1,4);
-  const last=p.pts.at(-1);if(last)touchDot(last.x,last.y,'#d8f6ff');
- }
- if(pointers.size||outlineFlash||phase?.pulse)kickRender();
+ for(let i=fading.length-1;i>=0;i--)if(now-fading[i].at(-1).t>=TRAIL_FADE_MS)fading.splice(i,1);
+ const reduced=prefersReducedMotion();
+ for(const p of pointers.values())reduced?renderPlainTrail(p.pts,now):renderRibbon(p.pts,now,true);
+ for(const pts of fading)reduced?renderPlainTrail(pts,now):renderRibbon(pts,now,false);
+ if(!reduced)drawSparks(now);
+ if(pointers.size||fading.length||outlineFlash||(idleCycle&&!idleCycle.static)||(phase?.pulse)||(!reduced&&sparksAlive(now)))kickRender();
 }
 function flashOutline(polys,color){if(prefersReducedMotion())return;outlineFlash={polys,color,start:performance.now()};kickRender();}
+
+// #104: arms/disarms the idle cycle from every place eligibility can change (touch, sequence start/end,
+// show/hide, tab visibility). Always safe to call — it's a no-op when nothing needs to change.
+function idleEligible(){return boardShown&&!busy&&pointers.size===0&&!document.hidden&&!document.querySelector('dialog[open]');}
+function scheduleIdle(){
+ clearTimeout(idleTimer);idleTimer=0;
+ if(idleCycle){idleCycle=null;kickRender();} // clears the drawn hint on the next frame
+ if(idleEligible())idleTimer=setTimeout(beginIdleCycle,IDLE.armMs);
+}
+function beginIdleCycle(){
+ idleTimer=0;
+ if(!idleEligible())return;
+ idleCycle=prefersReducedMotion()?{static:true}:{phase:'fast',t0:performance.now()};
+ kickRender();
+}
 
 function fallInAll([cx,cy]){
  const menus=Object.values(MENUS),n=menus.length,R=90;
@@ -341,7 +469,9 @@ function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.le
 
 async function runShape(id){
  if(busy||!boardShown)return;
- const run=++sequence;busy=true;try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}finally{if(run===sequence)busy=false;}
+ const run=++sequence;busy=true;scheduleIdle();
+ try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}
+ finally{if(run===sequence){busy=false;scheduleIdle();}}
 }
 // Lines (and x) are open strokes with no enclosed area: no hole to cut. Flash the trace in the
 // destination colour, then open it directly — no glass phase, no forced loadMinMs wait, no porthole
@@ -426,18 +556,30 @@ function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.
 function endPointer(e,cancel){
  const p=pointers.get(e.pointerId);if(!p)return;
  pointers.delete(e.pointerId);board.release(e.pointerId);
+ // #105: the just-released stroke keeps fading (light-painting), independent of whether it matches.
+ if(p.pts.length>1)fading.push(p.pts);
+ scheduleIdle();kickRender();
  if(cancel||busy)return;
  const xs=p.norm.map(n=>n[0]),ys=p.norm.map(n=>n[1]);
  const size=Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  if(size<.03)return; // ignore taps
- pendingStrokes.push(p.norm);
+ pendingStrokes.push(p.norm);pendingTrailPts.push(p.pts);
  clearTimeout(finalizeTimer);
- finalizeTimer=setTimeout(()=>{const strokes=pendingStrokes;pendingStrokes=[];const id=recognizeShape(strokes);if(id)runShape(id);},450);
+ finalizeTimer=setTimeout(()=>{
+  const strokes=pendingStrokes,trailPts=pendingTrailPts;pendingStrokes=[];pendingTrailPts=[];
+  const id=recognizeShape(strokes);
+  if(id){
+   // #105: on a match, the drawn trail itself flashes the destination colour before the cut starts.
+   flashOutline(trailPts.map(pts=>pts.map(pt=>[pt.x,pt.y])),id==='cross'?'#ffffff':(MENUS[id]?.color||'#ffffff'));
+   runShape(id);
+  }
+ },450);
 }
 function wirePointerEvents(){
  overlay.addEventListener('pointerdown',e=>{
   overlay.setPointerCapture(e.pointerId);clearTimeout(finalizeTimer);
   pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)]});
+  scheduleIdle();
   if(busy)ripple(e.clientX,e.clientY);else board.press(e.pointerId,e.clientX,e.clientY);
   kickRender();
  });
@@ -468,9 +610,11 @@ export async function mountPortal({visible=false}={}){
  let resumeAfterPageShow=false;
  addEventListener('pagehide',()=>{resumeAfterPageShow=boardShown;setVisible(false);},{signal:lifecycle.signal});
  addEventListener('pageshow',e=>{if(e.persisted&&resumeAfterPageShow)setVisible(true);},{signal:lifecycle.signal});
+ // #104: pause/resume the idle cycle with the tab (a backgrounded tab must not keep animating).
+ document.addEventListener('visibilitychange',scheduleIdle,{signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;setVisible(false);boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();caustic?.remove();for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;setVisible(false);clearTimeout(idleTimer);idleTimer=0;idleCycle=null;fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();caustic?.remove();for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
