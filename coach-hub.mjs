@@ -2,6 +2,7 @@ import {weaponDamage} from './combat.mjs';
 import {TRAINING_TRACKS} from './weapon-training.mjs';
 import {coachReminder} from './reminder-plan.mjs';
 import {RELEASE} from './release-info.mjs';
+import {mountSettingsCrt} from './settings-crt.mjs';
 
 // #107: military-satcom frame around the Settings dialog. Adds a top SATCOM status strip (with a
 // short acquiring -> locked animation each time the dialog opens), a bottom clock/BUILD strip, a
@@ -64,6 +65,7 @@ export function mountCoachHub({api}){
  // D30: Achievements opens through the same window.myr5Menus hook the owner's portal will call (app.mjs).
  for(const [label,target] of [['PORTAL','portal'],['ACHIEVEMENTS','achievements'],['REMINDERS','reminders'],['ACCOUNT','account'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']]){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():['achievements','portal'].includes(target)?window.myr5Menus?.[target]():document.querySelector('.coach-dock [data-panel='+target+']').click();};nav.append(b);}settings.append(nav);
  mountSatcomFrame(settings);
+ mountSettingsCrt(settings); // #137: TV touch effect + CRT curve + scan lines, screen area only
  for(const id of ['installPanel','remindersPanel'])document.getElementById(id).classList.add('terminal-menu');
  let progress=null;
  function paint(){hub.querySelector('[data-streak]').textContent=progress?.combat?.loginStreak??'—';let weapon={type:'rapier',tier:0};try{weapon=window.GalaWeapons.normalize(JSON.parse(localStorage.getItem('mominc-avatar-v1'))?.weapon||weapon);}catch{}if(!window.GalaWeapons.unlocked(weapon,progress))weapon={type:weapon.type,tier:0};const damage=weaponDamage(progress?.combat,weapon);hub.querySelector('[data-damage]').textContent=damage?damage.toLocaleString()+' DMG / HIT':'Sign in to power up';hub.dataset.boost=String(!!progress?.combat?.breathingCompleted);}

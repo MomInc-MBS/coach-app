@@ -1,0 +1,33 @@
+/* W2-2P (#137): TV site's CRT tube glass, ported to the Settings terminal screen only — never the
+   bezel (border/box-shadow/corner bolts) or the SATCOM top / BUILD bottom strips that
+   settings-frame.css (#107, lane 2L) owns. Geometry (position/size) is written inline by
+   settings-crt.mjs from the live screen rect; this file only styles what's drawn inside it.
+   Curve = rounded corners + edge vignette + a soft top-left bulge highlight, ported from site-hint
+   tv/tv.css .glass + .phosphor + .glare (border-radius, inset shadow, scanline+vignette gradient,
+   glare gradient), at that file's own "clear picture" opacity — the variant the site already tuned
+   so text stays legible through it (tv.css: `.tv[data-picture="clear"]`). Both layers are
+   pointer-events:none overlays; see settings-crt.mjs for why. */
+.crt-screen{position:fixed;pointer-events:none;z-index:6;overflow:hidden;border-radius:16px/12px}
+.crt-screen>div{position:absolute;inset:0}
+.crt-vignette{
+ background:
+  radial-gradient(ellipse 55% 38% at 22% 14%,#ffffff33,transparent 60%),
+  radial-gradient(ellipse at center,transparent 55%,#00000094 100%);
+}
+.crt-scanlines{
+ background-image:repeating-linear-gradient(#000 0 1px,transparent 1px 3px);
+ opacity:.16;animation:crt-roll 9s linear infinite;
+}
+@keyframes crt-roll{to{background-position-y:12px}}
+@media(prefers-reduced-motion:reduce){.crt-scanlines{animation:none}}
+
+.crt-touch-layer{position:fixed;pointer-events:none;z-index:7;overflow:hidden;border-radius:16px/12px}
+/* the touch spot: ported from site-hint tv/tv.css .press (dark centre, purple/gold rings,
+   mix-blend-mode:screen) — the "press into the glass" pulse, without the site's hold-to-grow sizing. */
+.settings-touch-mark{
+ position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;
+ background:radial-gradient(circle,#00000090 0 18%,#7a2fc459 34%,#ffd36e2e 46%,transparent 62%);
+ mix-blend-mode:screen;animation:settings-touch-pulse .5s ease-out forwards;
+}
+@keyframes settings-touch-pulse{0%{transform:scale(.25);opacity:0}30%{opacity:.9}100%{transform:scale(1);opacity:0}}
+@media(prefers-reduced-motion:reduce){.settings-touch-mark{animation:none;opacity:0}}
