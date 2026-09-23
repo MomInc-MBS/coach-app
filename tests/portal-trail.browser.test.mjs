@@ -75,17 +75,25 @@ test('#105 trail: flowing neon ribbon mid-stroke, still fading just after releas
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const r=await page.evaluate(()=>window.portal.current().patternRect());
 
- // Phase 1: mid-stroke — its own drag, released without any timing claim once we're done looking at it.
- // (The mid-stroke checks below can take an unpredictable amount of real time under host contention —
- // see phase 2's comment — so this drag must not be the one release-timing is measured against.)
- await page.mouse.move(r.left+r.width*.1,r.top+r.height*.1);await page.mouse.down();
- await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:3}); // see dragRect's comment on step count
- // Only fall back to polling if nothing painted yet — under normal load this is already lit (the drag's
- // own moves kept it rendering), and skipping the extra round trip keeps more of the ribbon's length
- // visible in the screenshot (its tail fades ~0.8s behind the fingertip, same as everywhere else).
- if(!(await anyLitPixel(page)))await waitForLit(page);
- await page.screenshot({path:resolve(FRAMES_DIR,'trail-mid-stroke-v2.png')});
- const midBuckets=await litHueBuckets(page);
+ // Phase 1: mid-stroke — its own drag(s), released without any timing claim once we're done looking at it.
+ // (The mid-stroke checks below can take an unpredictable amount of real time under host contention — see
+ // phase 2's comment — so this drag must not be the one release-timing is measured against.) Retried with
+ // a fresh drag rather than a longer wait: this box runs many concurrent worker-lane browsers, and running
+ // this file alongside the rest of the portal suite (many more headless Edge/WebGL processes at once) can
+ // occasionally stall the check long enough for even a *held-down* trail's fixed-timestamp points to age
+ // past TRAIL_FADE_MS — a fresh drag has fresh timestamps and sidesteps that entirely.
+ let midBuckets=0;
+ for(let attempt=0;attempt<3&&midBuckets<=3;attempt++){
+  if(attempt)await page.mouse.up();
+  await page.mouse.move(r.left+r.width*.1,r.top+r.height*.1);await page.mouse.down();
+  await page.mouse.move(r.left+r.width*.9,r.top+r.height*.9,{steps:2}); // see dragRect's comment on step count
+  // Only fall back to polling if nothing painted yet — under normal load this is already lit (the drag's
+  // own moves kept it rendering), and skipping the extra round trip keeps more of the ribbon's length
+  // visible in the screenshot (its tail fades ~0.8s behind the fingertip, same as everywhere else).
+  if(!(await anyLitPixel(page)))await waitForLit(page);
+  midBuckets=await litHueBuckets(page);
+ }
+ await page.screenshot({path:resolve(FRAMES_DIR,'trail-mid-stroke-v3.png')});
  assert(midBuckets>3,`expected several distinct hues along the flowing ribbon, saw ${midBuckets}`);
  await page.mouse.up();
 
@@ -109,7 +117,7 @@ test('#105 trail: flowing neon ribbon mid-stroke, still fading just after releas
   for(let i=0;i<d.length;i+=4)if(d[i+3]>40&&(d[i]>60||d[i+1]>60||d[i+2]>60)){lit=true;break;}
   resolve({lit,elapsedMs:performance.now()-releasedAt});
  },300)),releasedAt);
- await page.screenshot({path:resolve(FRAMES_DIR,'trail-release-v2.png')});
+ await page.screenshot({path:resolve(FRAMES_DIR,'trail-release-v3.png')});
  if(elapsedMs<700)assert(lit,`the trail should still be fading ${elapsedMs.toFixed(0)}ms after release (light-painting), not vanish the instant the finger lifts`);
  else console.log(`skipped the "still fading" check: ${elapsedMs.toFixed(0)}ms had already passed before it could run (host contention)`);
 

@@ -309,13 +309,17 @@ function spawnSpark(x,y){
  sparkSize[i]=2+Math.random()*3;sparkHue[i]=(Math.random()*NEONS.length)|0;sparkBorn[i]=performance.now();
 }
 function sparksAlive(now){for(let i=0;i<SPARK_N;i++)if(now-sparkBorn[i]<SPARK_LIFE)return true;return false;}
+// Source-over, not additive (conductor review 2026-09-23): 'lighter' over the light quilt washed the
+// neon pale. A saturated disc with a small white centre reads as a solid spark instead.
 function drawSparks(now){
  for(let i=0;i<SPARK_N;i++){
   const age=now-sparkBorn[i];if(age<0||age>=SPARK_LIFE)continue;
   const t=age/1000,life=age/SPARK_LIFE,x=sparkX[i]+sparkVX[i]*t,y=sparkY[i]+sparkVY[i]*t+30*life*life;
-  const alpha=(1-life)*(.55+.45*Math.sin(age*.03+i)),color=NEONS[sparkHue[i]];
-  ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.max(0,alpha);ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fillStyle=color;
-  ctx.beginPath();ctx.arc(x,y,sparkSize[i]*(1-life*.4),0,Math.PI*2);ctx.fill();ctx.restore();
+  const alpha=(1-life)*(.55+.45*Math.sin(age*.03+i)),color=NEONS[sparkHue[i]],size=sparkSize[i]*(1-life*.4);
+  ctx.save();ctx.globalAlpha=Math.max(0,alpha);
+  ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,size*.4,0,Math.PI*2);ctx.fill();
+  ctx.restore();
  }
 }
 // A bloom + short star-flare at the fingertip (one gradient fill + a couple of strokes — cheap, one per
@@ -334,11 +338,12 @@ function drawFlare(x,y,[r,g,b],alpha){
 }
 const pathLength=pts=>{let d=0;for(let i=1;i<pts.length;i++)d+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return d;};
 const ribbonPath=pts=>{const p=new Path2D();pts.forEach((pt,i)=>i?p.lineTo(pt.x,pt.y):p.moveTo(pt.x,pt.y));return p;};
-// One gradient along the trail's own line (tail->tip): colour flows through NEONS by distance travelled,
-// alpha follows each sampled point's own age — capped to a handful of stops, so building and stroking it
-// costs the same regardless of how many raw points the stroke has.
+// One gradient along the trail's own line (tail->tip): colour (via `colorAt`, default the flowing NEONS)
+// flows by distance travelled, alpha follows each sampled point's own age — capped to a handful of stops,
+// so building and stroking it costs the same regardless of how many raw points the stroke has. Reused
+// with a flat colour for the dark backing and the white hot centre so every layer fades in step.
 const RIBBON_STOPS=10;
-function ribbonGradient(pts,now){
+function ribbonGradient(pts,now,colorAt=d=>neonRGB(d/48)){
  const head=pts[pts.length-1],tail=pts[0];
  if(head.x===tail.x&&head.y===tail.y)return null;
  const g=ctx.createLinearGradient(tail.x,tail.y,head.x,head.y);
@@ -347,29 +352,34 @@ function ribbonGradient(pts,now){
  for(let k=0;k<count;k++){
   const i=Math.round(k*(n-1)/(count-1)),p=pts[i];
   dist+=Math.hypot(p.x-last.x,p.y-last.y);last=p;
-  const alpha=Math.max(0,1-(now-p.t)/TRAIL_FADE_MS),[r,gg,b]=neonRGB(dist/48);
+  const alpha=Math.max(0,1-(now-p.t)/TRAIL_FADE_MS),[r,gg,b]=colorAt(dist);
   g.addColorStop(k/(count-1),`rgba(${r},${gg},${b},${alpha.toFixed(3)})`);
  }
  return g;
 }
-// Full-motion trail: a wide soft additive glow under a brighter core — TWO stroke() calls total for the
-// whole path (not one shadowed stroke per segment), so cost doesn't scale with point count. `live` also
-// sheds sparkles from a bright bloom/flare tip; a just-released trail (in `fading`) keeps rendering with
-// no new sparks until it ages out.
+// Full-motion trail (conductor review 2026-09-23: normal source-over, not additive — 'lighter' over the
+// light quilt background washed the neon pale). Four stroke() calls total for the whole path (not one
+// shadowed stroke per segment, so cost doesn't scale with point count): a soft dark backing so the neon
+// pops against the light quilt, a wide soft glow, a bright saturated core, then a thin white hot centre.
+// `live` also sheds sparkles from a bright bloom/flare tip; a just-released trail (in `fading`) keeps
+// rendering with no new sparks until it ages out.
 function renderRibbon(pts,now,live){
  const visible=pts.filter(p=>now-p.t<TRAIL_FADE_MS);
  if(!visible.length)return;
  if(visible.length<2){drawFlare(visible[0].x,visible[0].y,[255,255,255],1);return;}
- const grad=ribbonGradient(visible,now);
- if(grad){
-  const path=ribbonPath(visible);
-  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=grad;
-  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.55;ctx.shadowColor='#ffffff';ctx.shadowBlur=10;ctx.lineWidth=22; // wide soft glow
-  ctx.stroke(path);
-  ctx.shadowBlur=0;ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.lineWidth=5.5; // bright core
-  ctx.stroke(path);
-  ctx.restore();
+ const path=ribbonPath(visible);
+ ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.globalCompositeOperation='source-over';
+ const shadowGrad=ribbonGradient(visible,now,()=>[20,10,30]);
+ if(shadowGrad){ctx.strokeStyle=shadowGrad;ctx.globalAlpha=.25;ctx.shadowColor='rgba(20,10,30,.25)';ctx.shadowBlur=10;ctx.lineWidth=24;ctx.stroke(path);ctx.shadowBlur=0;}
+ const neonGrad=ribbonGradient(visible,now);
+ if(neonGrad){
+  ctx.strokeStyle=neonGrad;
+  ctx.globalAlpha=.42;ctx.lineWidth=20;ctx.stroke(path); // wide soft glow
+  ctx.globalAlpha=1;ctx.lineWidth=5.5;ctx.stroke(path); // bright saturated core
  }
+ const whiteGrad=ribbonGradient(visible,now,()=>[255,255,255]);
+ if(whiteGrad){ctx.strokeStyle=whiteGrad;ctx.globalAlpha=.9;ctx.lineWidth=1.3;ctx.stroke(path);} // hot centre
+ ctx.restore();
  const tip=visible[visible.length-1],tipAlpha=Math.max(.35,1-(now-tip.t)/TRAIL_FADE_MS);
  drawFlare(tip.x,tip.y,neonRGB(pathLength(visible)/48),tipAlpha);
  if(live)for(let k=0;k<3;k++)spawnSpark(tip.x,tip.y);
