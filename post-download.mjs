@@ -34,12 +34,23 @@ export function mountPostDownload({host}){
    const {mountPostDownloadSections}=await import('./modules/materials/post-download-ui.mjs');
    if(run!==sectionEpoch||sectionOwner(window.myr5AuthenticatedAccount)!==owner)return;
    sectionControls=mountPostDownloadSections({host:settings,account});
-  }catch{}
+  }catch(error){console.warn('Extra offline packs unavailable',error);}
  };
  const sectionsReady=event=>{clearSections();void mountSections(event.detail);};
  const sectionsCleared=()=>clearSections();
  window.addEventListener('myr5:account-ready',sectionsReady);window.addEventListener('myr5:account-cleared',sectionsCleared);
  void mountSections(window.myr5AuthenticatedAccount);
+ // Findability: Install → Full download → Extra offline packs is three levels deep and easy to
+ // miss. Any part of the app (e.g. the ship scene, when its pack isn't installed yet) can send the
+ // owner straight there, and optionally point at one section's button.
+ window.myr5Packs=Object.freeze({open(sectionId){
+  if(!host.open)host.showModal();
+  const packs=sectionControls?.panel;
+  (packs||settings).scrollIntoView({block:'start',behavior:'smooth'});
+  const target=typeof sectionId==='string'&&/^[a-z0-9-]+$/.test(sectionId)?packs?.querySelector(`[data-actions] [data-sections~="${sectionId}"]`):null;
+  if(target){target.scrollIntoView({block:'center',behavior:'smooth'});target.focus({preventScroll:true});}
+  return !!target;
+ }});
 
  let plan=null,phase='checking',message='',got=0,controller=null,wantOffer=false,doneTimer=0;
  const busy=()=>document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||BUSY.includes(window.myr5TestState?.phase);
