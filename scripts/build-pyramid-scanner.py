@@ -1,4 +1,6 @@
 # Pyramid food scanner GLB (run: blender -b -P scripts/build-pyramid-scanner.py -- food/pyramid-scanner.glb 0.2): decimate, split dials, add screen planes + lens node.
+# W3 compression (2026-09-23): npx @gltf-transform/cli webp (quality 80) → simplify (ratio 0.5, error 0.001) → quantize → meshopt (level medium).
+# Result: 3.1 MB → 2.46 MB (WebP) → 1.36 MB (simplify+quantize) → 845.7 KB (meshopt); decoder wired in pose.html & food/pyramid-scanner.mjs.
 import bpy, bmesh, math, json, sys
 from mathutils import Vector
 from mathutils.geometry import intersect_line_plane
