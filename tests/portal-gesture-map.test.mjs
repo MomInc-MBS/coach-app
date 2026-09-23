@@ -47,5 +47,5 @@ test('War Room/Arcade keeps its Menu-sheet row and lock, with no gesture of its 
 test('every recognizable shape other than cross has a MENUS destination, and the Menu sheet rows follow the table order',()=>{
  for(const id of SHAPE_IDS)if(id!=='cross')assert(MENUS[id],`${id} should route somewhere`);
  const visibleRows=Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id])=>id);
- assert.deepEqual(visibleRows,['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','warroom']);
+ assert.deepEqual(visibleRows,['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','ship','warroom']);
 });
