@@ -18,7 +18,7 @@ const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/|pod\/fonts\/)/;
 const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
-const excluded=new Set(['sw.js','source.json','package.json','package-lock.json','recover.html','recovery-page.mjs']);
+const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 
 async function identify(root,path){
  const hash=createHash('sha256');

@@ -6,6 +6,7 @@ import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
 import {deploymentSize,SITES_ARCHIVE_LIMIT} from './deployment-size.mjs';
 import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
+import {gzipSync} from 'node:zlib';
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
@@ -67,7 +68,8 @@ await writeOfflineWorker('dist/client',releaseBuild);
 // The AGPL source offer travels with the app, with no runtime secrets or user records.
 const sources={};for(const folder of ['server','db','scripts','scheduler','pod','local-coach'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
 for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry)&&!['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs'].includes(entry))sources[entry]=await readFile(entry,'utf8');
-await writeFile('dist/client/source.json',JSON.stringify(sources));
+await unlink('dist/client/source.json').catch(error=>{if(error?.code!=='ENOENT')throw error;});
+await writeFile('dist/client/source.json.gz',gzipSync(JSON.stringify(sources),{level:9}));
 const {payloadBytes,tarBytes,headroom}=await deploymentSize('dist');
 console.log(`Sites local tar: ${tarBytes} / ${SITES_ARCHIVE_LIMIT} bytes; ${headroom} bytes headroom (${payloadBytes} file bytes). Validate the final staged Sites archive before upload.`);
 console.log('Coach build ready.');
