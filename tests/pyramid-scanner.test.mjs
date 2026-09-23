@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {pyramidTiles} from '../food/pyramid-tiles.mjs';
+import {pyramidTiles,mealNutrients,mealsOn,todayTiles} from '../food/pyramid-tiles.mjs';
 
 test('idle state before any scan shows the prompt and dashes',()=>{
  const tiles=pyramidTiles(null,null);
- assert.equal(tiles.name,'TAP CAMERA TO SCAN');
+ assert.equal(tiles.name,'TAP THE LENS');
  assert.equal(tiles.calories,'—');assert.equal(tiles.protein,'—');assert.equal(tiles.fat,'—');assert.equal(tiles.carbs,'—');assert.equal(tiles.vitamins,'—');
 });
 
@@ -31,6 +31,36 @@ test('a matched scan fills macros and picks the top two vitamins by %DV',()=>{
 test('a zero-value vitamin is excluded, not treated as a tie at the top',()=>{
  const tiles=pyramidTiles('Water',{calories:0,protein:0,fat:0,carbs:0,vitaminA:0,vitaminC:0,vitaminD:0,vitaminE:0,vitaminB12:0,folate:0});
  assert.equal(tiles.vitamins,'—');
+});
+
+test('#35 today face sums only meals eaten on the local day, including D1 JSON micros',()=>{
+ const now=new Date(2026,8,23,19,0);
+ const at=(d,h)=>new Date(2026,8,d,h,30).toISOString();
+ const items=[
+  {name:'Salad',eaten_at:at(23,12),calories:420,protein:38,carbs:14,fat:22,micros:JSON.stringify({vitaminA:450,vitaminC:30})},
+  {name:'Oats',eaten_at:at(23,8),calories:310.4,protein:11,carbs:54,fat:6,micros:{vitaminC:9,folate:40}},
+  {name:'Yesterday pizza',eaten_at:at(22,21),calories:900,protein:30,carbs:100,fat:40,micros:'{}'},
+ ];
+ assert.deepEqual(mealsOn(items,now).map(m=>m.name),['Salad','Oats']);
+ const tiles=todayTiles(items,now);
+ assert.equal(tiles.name,'TODAY · 2 MEALS');
+ assert.equal(tiles.calories,'730 kcal');assert.equal(tiles.protein,'49 g');assert.equal(tiles.carbs,'68 g');assert.equal(tiles.fat,'28 g');
+ // %DV: A 450/900=50%, C 39/90=43%, folate 40/400=10% -> A C
+ assert.equal(tiles.vitamins,'A C');
+});
+
+test('#35 today face: nothing logged yet reads zero; no list (signed out) reads dashes',()=>{
+ const empty=todayTiles([],new Date());
+ assert.equal(empty.name,'TODAY');assert.equal(empty.calories,'0 kcal');assert.equal(empty.protein,'0 g');assert.equal(empty.vitamins,'—');
+ const unknown=todayTiles(null);
+ assert.equal(unknown.name,'TODAY');assert.equal(unknown.calories,'—');
+ assert.equal(mealsOn(null),null);
+});
+
+test('a saved meal row feeds the last-meal face; broken micros JSON is ignored',()=>{
+ assert.deepEqual(mealNutrients({calories:5,protein:1,carbs:2,fat:3,micros:'{"vitaminC":90}'}),{vitaminC:90,calories:5,protein:1,fat:3,carbs:2});
+ assert.deepEqual(mealNutrients({calories:5,micros:'not json'}),{calories:5,protein:undefined,fat:undefined,carbs:undefined});
+ assert.equal(pyramidTiles('Soup',mealNutrients({calories:120,protein:4,carbs:18,fat:3,micros:'{"vitaminA":900}'})).vitamins,'A');
 });
 
 test('pyramid room reuses the Dr Girlfriend game wall pattern and both original poster texts lazily',async()=>{

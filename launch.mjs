@@ -18,6 +18,7 @@ import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {mountScoreboard} from './scoreboard.mjs';
 import {mountMealNutrition} from './meal-nutrition.mjs';
 import {MACROS,MICROS,displayNutrient} from './nutrition.mjs';
+import {mealsOn,todayTiles} from './food/pyramid-tiles.mjs';
 import {mountLiveReminders} from './reminder-live.mjs';
 import {notificationBinding} from './device-notifications.mjs';
 import {mountMealScanner} from './meal-scanner.mjs';
@@ -95,15 +96,15 @@ const pendingKey=accountPendingKey;
 const pending=user=>accountWorkoutSync.pending(user);
 async function flushSets(){if(accountTransitionBusy||!account)return;let ticket;try{ticket=accountTransitions.capture();await accountWorkoutSync.flush();}catch(error){if(!ticket||!accountTransitions.isCurrent(ticket))return;if(error.code!=='auth_transition'&&error.code!=='account_scope_changed')set('syncBadge',error.message);}}
 window.coachAccount={refresh,async start(mode,goal){if(accountTransitionBusy)throw Error('Account is changing.');const ticket=accountTransitions.capture(),ready=account||await refresh();accountTransitions.assertCurrent(ticket);if(ready!==account)throw Error('Account changed. Refresh to continue.');if(!ready)throw Error('Sign in from Progress before starting a saved workout.');if(!ready.onboarding)throw Error('Complete your coach setup first.');return accountWorkoutSync.start(mode,goal);},async complete(data){if(accountTransitionBusy)throw Error('Account is changing.');return accountWorkoutSync.complete(data);}};
-accountTransitions.subscribe(()=>{account=null;scoreboard.clear();clearCoachAccount();$('signIn').hidden=false;$('accountContent').hidden=true;$('accountSettingsContent').hidden=true;$('workoutList').replaceChildren();$('mealList').replaceChildren();$('reminderList').replaceChildren();reminderSnapshot=null;liveReminders.update([]);});
+accountTransitions.subscribe(()=>{account=null;scoreboard.clear();clearCoachAccount();$('signIn').hidden=false;$('accountContent').hidden=true;$('accountSettingsContent').hidden=true;$('workoutList').replaceChildren();$('mealList').replaceChildren();mealItems=null;$('reminderList').replaceChildren();reminderSnapshot=null;liveReminders.update([]);});
 const localDate=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
 $('mealForm').elements.eatenAt.value=localDate();$('reminderForm').elements.timezone.value=Intl.DateTimeFormat().resolvedOptions().timeZone;
-async function meals(){try{const {items}=await api('/api/meals');$('mealList').replaceChildren();if(!items.length)set('mealList','No meals logged yet.');for(const item of items){
+async function meals(){try{const {items}=await api('/api/meals');mealItems=items;$('mealList').replaceChildren();if(!items.length)set('mealList','No meals logged yet.');for(const item of items){
  const row=document.createElement('div');row.className='entry';const text=document.createElement('details'),name=document.createElement('summary');name.textContent=item.name;text.append(name);
  const detail=document.createElement('small');detail.textContent=item.portion+' · '+new Date(item.eaten_at).toLocaleString();text.append(detail);
  const breakdown=document.createElement('div');breakdown.className='saved-nutrients';const micros=typeof item.micros==='string'?JSON.parse(item.micros):item.micros||{};
  for(const [label,keys,values] of [['Macros',MACROS,item],['Micros',MICROS,micros]]){const p=document.createElement('p');p.textContent=label+': '+keys.map(([k,title,unit])=>title+' '+displayNutrient(values[k],unit)).join(' · ');breakdown.append(p);}text.append(breakdown);
- row.append(text,button('Remove',async()=>{try{await api('/api/meals/'+item.id,'DELETE');await meals();}catch(e){set('mealStatus',e.message);}}));$('mealList').append(row);}}catch(e){set('mealList',e.message);}}
+ row.append(text,button('Remove',async()=>{try{await api('/api/meals/'+item.id,'DELETE');await meals();}catch(e){set('mealStatus',e.message);}}));$('mealList').append(row);}}catch(e){mealItems=null;set('mealList',e.message);}finally{pyramidScanner?.refresh();if($('mealsPanel').dataset.dial)renderFoodDial();}}
 $('mealForm').onsubmit=async e=>{e.preventDefault();const form=e.target,submit=form.querySelector('[type=submit]');submit.disabled=true;$('foodCamera').disabled=true;const d={...Object.fromEntries(new FormData(form)),...mealNutrition.data()};try{d.id=crypto.randomUUID();d.eatenAt=new Date(d.eatenAt).toISOString();await api('/api/meals','POST',d);set('mealStatus','Meal saved');mealNutrition.reset();form.elements.eatenAt.value=localDate();$('foodStatus').textContent='';await meals();void refresh();}catch(err){set('mealStatus',err.message);}finally{submit.disabled=false;$('foodCamera').disabled=false;}};
 async function reminders(){try{
  const {items}=await api('/api/reminders');const snapshot=JSON.stringify(items);if(snapshot===reminderSnapshot){liveReminders.update(items);return;}reminderSnapshot=snapshot;$('reminderList').replaceChildren();if(!items.length)set('reminderList','No reminders saved yet.');
@@ -172,20 +173,59 @@ try{localStorage.setItem('myr5-voice-style','robot');}catch{}
 $('downloadVoice').onclick=async()=>{const b=$('downloadVoice');b.disabled=true;try{const manifest=await(await fetch(VOICE_MANIFEST)).json(),urls=Object.values(manifest.phrases),cache=await caches.open(VOICE_CACHE);let i=0;await cache.add(VOICE_MANIFEST);for(const url of urls){if(!await cache.match(url)){const response=await fetch(url);if(!response.ok)throw Error('Download interrupted. Tap again to resume.');await cache.put(url,response);}set('downloadStatus',`Downloaded ${++i} of ${urls.length} voice clips.`);}set('downloadStatus','Robot voice pack is available offline on this device.');}catch(e){set('downloadStatus',e.message);}finally{b.disabled=false;}};
 initAppUpdates({api,applyButton:$('applyUpdate'),onRegistration:reg=>{registration=reg;syncDeviceSwitch();},onBeforeUpdate:async()=>{await flushSets();if(account&&pending(account.user.id).length)throw Error('Your set is still syncing. Reconnect before updating.');}});
 mountPostDownload({host:$('installPanel')});
-let pyramidScanner=null,pyramidRequest=null,pyramidGen=0;
+let pyramidScanner=null,pyramidRequest=null,pyramidGen=0,pyramidBroken=false,mealItems=null;
+// #3 (W3-3A): Food opens as one full-screen pyramid scene (.pyramid-mode). A WebGL or model failure drops the class,
+// leaving the plain panel with its Camera button and Macros/Micros lists.
 async function mountPyramid(){
  if(pyramidScanner||pyramidRequest)return;
  const run=++pyramidGen,request=new AbortController();pyramidRequest=request;
  try{
   const {mountPyramidScanner}=await import('./food/pyramid-scanner.mjs');if(run!==pyramidGen||!$('mealsPanel').open)return;
-  const instance=await mountPyramidScanner($('foodCamera'),{getNutrition:mealNutrition.snapshot,signal:request.signal});if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
-  pyramidScanner=instance;
- }catch(error){if(!request.signal.aborted)console.warn('Pyramid scanner unavailable',error);}
+  const instance=await mountPyramidScanner($('foodCamera'),{getNutrition:mealNutrition.snapshot,getMeals:()=>mealItems,onDial:foodDial,frame:foodFrame,signal:request.signal});if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
+  pyramidScanner=instance;pyramidBroken=false;$('mealsPanel').classList.add('pyramid-mode');
+ }catch(error){if(!request.signal.aborted){pyramidBroken=true;$('mealsPanel').classList.remove('pyramid-mode');console.warn('Pyramid scanner unavailable',error);}}
  finally{if(pyramidRequest===request)pyramidRequest=null;}
 }
 function releasePyramid(){pyramidGen++;pyramidRequest?.abort();pyramidRequest=null;pyramidScanner?.dispose();pyramidScanner=null;}
-$('mealsPanel').addEventListener('close',releasePyramid);window.addEventListener('pagehide',releasePyramid);
- for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){await meals();void mountPyramid();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
+// The pyramid fits between the Food header and whatever the bottom sheet is showing.
+function foodFrame(){const panel=$('mealsPanel');return {top:panel.querySelector('header').offsetHeight,bottom:panel.querySelector('.food-sheet').offsetTop};} // layout px: unaffected by the portal's arrival scale
+new ResizeObserver(()=>pyramidScanner?.reframe()).observe($('mealsPanel').querySelector('.food-sheet'));
+// D36: the pyramid's dials. knob_0 opens the existing manual entry; knob_1/knob_2 toggle the Water and Today cards.
+let foodDialReturn=null;
+function foodDial(index,on){
+ if(index===0){setFoodDial(null);if($('mealConfirmation').hidden)window.dispatchEvent(new CustomEvent('myr5:food-selected',{detail:{name:''}}));$('mealName').focus();return;}
+ setFoodDial(on?['log','water','today'][index]:null);
+}
+function setFoodDial(name){
+ const panel=$('mealsPanel');
+ if(name&&!panel.dataset.dial)foodDialReturn=document.activeElement;
+ if(name)panel.dataset.dial=name;else delete panel.dataset.dial;
+ $('foodDial').hidden=!name;
+ if(name){renderFoodDial();$('foodDial').focus({preventScroll:true});return;}
+ if(foodDialReturn?.isConnected&&panel.open)foodDialReturn.focus({preventScroll:true});foodDialReturn=null;
+}
+function renderFoodDial(){
+ const name=$('mealsPanel').dataset.dial,targets=window.coachPlan?.targets,line=(text,className)=>{const p=document.createElement('p');p.textContent=text;if(className)p.className=className;return p;};
+ if(name==='water'){
+  // No water log exists yet (no /api/logs): the existing water UI is the daily target and a water reminder.
+  set('foodDialTitle','Water');
+  $('foodDialBody').replaceChildren(line(targets?.waterOz?`${targets.waterOz} oz`:'—','food-dial-big'),line(targets?.waterOz?'Your water target for today.':'Finish Coach setup to get a daily water target.','hint'),button('Set a water reminder',()=>{$('reminderForm').elements.kind.value='water';document.querySelector('[data-panel="reminders"]')?.click();}));
+ }else if(name==='today'){
+  set('foodDialTitle','Today');
+  const eaten=mealsOn(mealItems);
+  if(!eaten){$('foodDialBody').replaceChildren(line('Sign in to see today’s meals.','hint'));return;}
+  const t=todayTiles(mealItems),list=document.createElement('ul');list.className='food-dial-list';
+  for(const item of eaten){const li=document.createElement('li');li.textContent=`${item.name} · ${new Date(item.eaten_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · ${displayNutrient(item.calories,'kcal')}`;list.append(li);}
+  $('foodDialBody').replaceChildren(line(t.calories,'food-dial-big'),line(`Protein ${t.protein} · Carbs ${t.carbs} · Fat ${t.fat}${targets?.proteinGrams?` · target ${targets.proteinGrams} g protein`:''}`),eaten.length?list:line('No meals logged today yet. Tap the lens to scan one.','hint'));
+ }
+}
+$('foodDialBack').onclick=()=>{pyramidScanner?.setDial(-1);setFoodDial(null);};
+// Clears the meal in progress (and any scan left on screen) so the pyramid is back to its idle face.
+$('cancelMeal').onclick=()=>{if(!$('cancelFoodScan').hidden)$('cancelFoodScan').click();window.dispatchEvent(new Event('myr5:food-reset'));for(const id of ['mealScanStage','foodSuggestions','recognizeFood'])$(id).hidden=true;set('foodStatus','');};
+$('mealsPanel').addEventListener('close',()=>{releasePyramid();setFoodDial(null);});window.addEventListener('pagehide',releasePyramid);
+// Router/portal hook (same contract as myr5Menus.ship): opens Food and returns its <dialog>.
+window.myr5Menus={...window.myr5Menus,food:()=>{if(!$('mealsPanel').open)document.querySelector('[data-panel="meals"]')?.click();return $('mealsPanel');}};
+ for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){$('mealsPanel').classList.toggle('pyramid-mode',!pyramidBroken);void mountPyramid();await meals();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
  window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>{guestHistoryChoice?.close();localHistoryRepository?.close();},{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));
 window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
