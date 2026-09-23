@@ -1,0 +1,53 @@
+/* #107: a military-satcom frame around the Settings dialog (#settings, opened by #openSettings).
+   Decoration only — corner bezel, a SATCOM status strip on top and a BUILD/clock strip on the
+   bottom. The dialog's own items, their order and their behaviour are untouched. */
+#settings.satcom-frame{
+ position:relative;
+ border:3px solid #47523f!important;
+ box-shadow:7px 7px 0 #030806,inset 0 0 0 3px #10160e,inset 0 0 0 4px #6b9e6c66!important;
+}
+#settings.satcom-frame h2{text-shadow:0 0 6px #6fae6f99}
+/* Faint CRT scanlines. A ::before is never matched by the locked theme's `html[...] *` kill switch,
+   so this keeps animating there without any JS — see satcom-radar below for the same trick. */
+#settings.satcom-frame::before{
+ content:'';position:absolute;inset:0;z-index:5;pointer-events:none;border-radius:inherit;
+ background-image:repeating-linear-gradient(#000 0 1px,transparent 1px 3px);
+ opacity:.08;animation:satcom-scan 7s linear infinite;
+}
+@media(prefers-reduced-motion:reduce){#settings.satcom-frame::before{animation:none}}
+
+.satcom-strip{display:flex;align-items:center;gap:8px;padding:7px 0;font:700 .7rem/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:#9be8a3;text-shadow:0 0 4px #4f9b57}
+.satcom-top{border-bottom:1px solid #3e5b41;margin-bottom:10px}
+.satcom-bottom{border-top:1px solid #3e5b41;margin-top:14px;justify-content:space-between}
+.satcom-sat{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}
+.satcom-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.satcom-label em{font-style:normal;color:#ffbe5c}
+.satcom-top.locked .satcom-label em{color:#9dffb0}
+.satcom-bars{display:flex;align-items:flex-end;gap:2px;flex:none}
+.satcom-bars i{display:block;width:3px;background:#3e5b41;opacity:.35}
+.satcom-bars i:nth-child(1){height:5px}.satcom-bars i:nth-child(2){height:8px}.satcom-bars i:nth-child(3){height:11px}.satcom-bars i:nth-child(4){height:14px}
+.satcom-top.locked .satcom-bars i{background:#9dffb0;opacity:1}
+@keyframes satcom-blink{0%,100%{opacity:.2}50%{opacity:1}}
+@keyframes satcom-flash{0%{box-shadow:inset 0 0 0 999px #9dffb033}100%{box-shadow:inset 0 0 0 999px transparent}}
+@keyframes satcom-scan{0%{background-position-y:0}100%{background-position-y:12px}}
+@keyframes satcom-spin{to{transform:rotate(1turn)}}
+
+.satcom-clock{font-variant-numeric:tabular-nums;flex:none}
+.satcom-build{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.satcom-radar{position:relative;flex:none;width:15px;height:15px;border-radius:50%;border:1px solid #3e5b41;overflow:hidden}
+.satcom-radar::before{content:'';position:absolute;inset:2px;border:1px solid #2b4230;border-radius:50%}
+.satcom-radar::after{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#9dffb0cc,transparent 30%);animation:satcom-spin 4s linear infinite}
+@media(prefers-reduced-motion:reduce){.satcom-radar::after{animation:none}}
+
+.satcom-bolt{position:absolute;width:14px;height:14px;border-color:#6b9e6c;pointer-events:none}
+.satcom-bolt::after{content:'';position:absolute;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#cfead0,#5b7a5c 70%);box-shadow:0 0 0 1px #253524}
+.satcom-bolt-tl{top:6px;left:6px;border-top:2px solid;border-left:2px solid}
+.satcom-bolt-tl::after{top:-1px;left:-1px}
+.satcom-bolt-tr{top:6px;right:6px;border-top:2px solid;border-right:2px solid}
+.satcom-bolt-tr::after{top:-1px;right:-1px}
+.satcom-bolt-bl{bottom:6px;left:6px;border-bottom:2px solid;border-left:2px solid}
+.satcom-bolt-bl::after{bottom:-1px;left:-1px}
+.satcom-bolt-br{bottom:6px;right:6px;border-bottom:2px solid;border-right:2px solid}
+.satcom-bolt-br::after{bottom:-1px;right:-1px}
+
+@media(max-width:380px){.satcom-strip{font-size:.62rem}}
