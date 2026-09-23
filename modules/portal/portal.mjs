@@ -2,7 +2,7 @@
 // stitched shapes cuts that shape out of the 3D board — the piece falls in, neon liquid glass glows
 // through the hole behind it for a short interactive loading phase — then opens the shape's menu.
 // AGPL-3.0-or-later.
-import {createQuiltBoard} from './portal-board.mjs';
+import {createQuiltBoard,QUILT} from './portal-board.mjs';
 import {recognizeShape,SHAPES} from './portal-shapes.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
@@ -418,7 +418,9 @@ function startTunnel(ph,poly,color,all){
 // The glass sits between #portalHome's background and the board canvas, so it shows only through the cut.
 // pts: client-px polygon to clip to (null = whole screen); all: even rainbow (the cross). The box is the clip's
 // bounds, so the wormhole only fills what can show. <b> is the CSS fallback when WebGL2 is unavailable.
-function showGlass(pts,color,all=false){
+// edge: the cut outline. A static glass bezel is drawn along it ABOVE the board: the cut drops whole mesh
+// triangles, so the cloth's hole edge stair-steps up to ~12 px either side of the outline, and the bezel covers that.
+function showGlass(pts,color,all=false,edge=pts){
  endPhase();
  const poly=pts||closeLoop([[0,0],[innerWidth,0],[innerWidth,innerHeight],[0,innerHeight]]),clip=pts?bleedPts(pts):poly;
  const xs=clip.map(p=>p[0]),ys=clip.map(p=>p[1]),left=Math.floor(Math.min(...xs)),top=Math.floor(Math.min(...ys)),w=Math.ceil(Math.max(...xs))-left,h=Math.ceil(Math.max(...ys))-top;
@@ -427,10 +429,18 @@ function showGlass(pts,color,all=false){
  if(pts)el.style.clipPath=`polygon(${clip.map(([x,y])=>`${x-left}px ${y-top}px`).join(',')})`;
  if(!prefersReducedMotion())el.style.setProperty('animation','portal-glass-in .6s ease both','important'); // beats the locked theme's animation:none
  portalHome.append(el);
- phase={glass:el,pts,color,t0:performance.now(),pulse:false,box:{left,top,w,h}};
+ let bezel=null;
+ if(edge){
+  // Width: 1.55 grid cells (24 px on a phone). Measured at 375x812, the hole edge strays up to 11.2 px (0.72 cell) from the outline.
+  const B=1.55*(board?.faceRect().width||375)/QUILT.segX,p=edge.map(q=>q.join(',')).join(' '),ring=(cls,w,more='')=>`<polygon class="${cls}" stroke-width="${w}" ${more} points="${p}"/>`;
+  portalHome.insertAdjacentHTML('beforeend',`<svg class="portal-bezel" aria-hidden="true" style="--glass:${color}"><defs><linearGradient id="portalBezelLit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lit"/><stop offset=".5" class="mid"/><stop offset="1" class="far"/></linearGradient><linearGradient id="portalBezelSpec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity=".6"/></linearGradient></defs>${ring('shade',B+10)+ring('shade',B+5)+ring('body',B)+ring('glow',B*.6)+ring('glow',B*.36)+ring('core',2.5)+ring('spec',2,`transform="translate(${-.3*B} ${-.3*B})"`)}</svg>`); // stacked strokes, no blur filters: those cost a ~100 ms first paint
+  bezel=portalHome.lastElementChild;
+  if(!prefersReducedMotion())bezel.style.setProperty('animation','portal-glass-in .3s ease both','important');
+ }
+ phase={glass:el,bezel,pts,color,t0:performance.now(),pulse:false,box:{left,top,w,h}};
  startTunnel(phase,poly,color,all);
 }
-function endPhase(){phase?.stop?.();phase?.glass.remove();phase=null;}
+function endPhase(){phase?.stop?.();phase?.glass.remove();phase?.bezel?.remove();phase=null;}
 function ripple(x,y){
  if(!phase||prefersReducedMotion())return;
  const r=document.createElement('i');r.className='portal-ripple';r.style.left=(x-phase.box.left)+'px';r.style.top=(y-phase.box.top)+'px';
@@ -476,8 +486,9 @@ async function portalSequence(id,current){
   flashOutline(SHAPES.cross.map(p=>toClientPts(p.points,rect)),'#ffffff');
   const center=[rect.left+rect.width/2,rect.top+rect.height/2];
   const face=board?.faceRect();
-  showGlass(face&&closeLoop(toClientPts([[0,0],[1,0],[1,1],[0,1]],face)),'#ffffff',true); // rainbow glass behind the whole board; the whole pattern falls in over it
-  await Promise.all([cutBoard(shapeClipPts('rect',rect),'#ffffff'),fallInAll(center)]);
+  const cut=shapeClipPts('rect',rect);
+  showGlass(face&&closeLoop(toClientPts([[0,0],[1,0],[1,1],[0,1]],face)),'#ffffff',true,cut); // rainbow glass behind the whole board; the whole pattern falls in over it
+  await Promise.all([cutBoard(cut,'#ffffff'),fallInAll(center)]);
   if(!current())return;
   openMenu();
   await settle();
