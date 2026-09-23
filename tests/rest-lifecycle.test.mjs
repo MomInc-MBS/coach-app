@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SetFlow,COACH_HEALTH} from '../pod/set-flow.mjs';
+import {SetFlow,bossHealthMax} from '../pod/set-flow.mjs';
+import {DAY_MS} from '../combat.mjs';
+import {tapDamage} from '../combat-config.mjs';
 
 test('rest waits for its full timer and then three idle seconds',()=>{
  const flow=new SetFlow();flow.previewRest(0,30);
@@ -22,8 +24,13 @@ test('a completed set starts the same rest grace period',()=>{
  const flow=new SetFlow();flow.start('squat',3,30);flow.consume({mode:'squat',name:'Squats',kind:'reps',count:3},1000);
  assert.equal(flow.shouldEndRest(33999),false);assert.equal(flow.shouldEndRest(34000),true);
 });
-test('Coach has one billion HP and both damage accumulation and overkill display correctly',()=>{
- const flow=new SetFlow();flow.previewRest(0);assert.equal(flow.coachHealth,1_000_000_000);
- const hit=flow.tap(200);assert.equal(hit.damage,10);assert.equal(flow.coachHealth,COACH_HEALTH-10);
- flow.damage=COACH_HEALTH+100;assert.equal(flow.coachHealth,0);flow.previewRest(1000);assert.equal(flow.coachHealth,COACH_HEALTH);
+test('boss HP is level-scoped, persists across rests the same day, overkill floors at zero, and a new day is a fresh boss',()=>{
+ const flow=new SetFlow(null,{now:0});const max=bossHealthMax(1);
+ flow.previewRest(0);assert.equal(flow.coachHealth,max);
+ const hit=flow.tap(200);assert.equal(hit.damage,tapDamage(1,undefined,200));assert.equal(flow.coachHealth,max-hit.damage);
+ // Same boss, later rest, same day: damage carries over (D20 spans 3 rests).
+ flow.previewRest(1000);assert.equal(flow.coachHealth,max-hit.damage);
+ flow.damage=max+100;assert.equal(flow.coachHealth,0);
+ // A new UTC day is a fresh boss at full health.
+ flow.previewRest(DAY_MS+1000);assert.equal(flow.coachHealth,max);
 });
