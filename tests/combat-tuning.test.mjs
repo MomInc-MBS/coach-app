@@ -14,6 +14,8 @@ import {KILL_TARGET_SECONDS,TAPS_PER_SECOND,RESTS_PER_WORKOUT,BOSS_ATTACK_EVERY_
 // requires the level-5 kit, i.e. that reaching level 5 is a real combat
 // upgrade and not just a reskin.
 const LEVEL_5_BOSS_HP=bossHp(5);
+// D33: the L4 kit falls at least 12% short of it (aim ~15%), the L5 kit clears it with at least 10% to spare.
+const L4_SHORT=0.12,L5_MARGIN=0.10;
 
 // One workout: RESTS_PER_WORKOUT rests, each carrying its even share of
 // KILL_TARGET_SECONDS of tapping at TAPS_PER_SECOND (D20: "spread across the
@@ -41,12 +43,12 @@ function tapDamageOverWorkout(kitLevel,{specials=false}={}){
 test('the L5 kit kills the boss within killTargetSeconds of tapping across the 3 rests',()=>{
  const {dealt,landed}=tapDamageOverWorkout(5);
  assert.equal(landed,KILL_TARGET_SECONDS*TAPS_PER_SECOND,'the daily cap must not reject a single tap before the kill');
- assert.ok(dealt>=LEVEL_5_BOSS_HP,`L5 kit dealt ${dealt}, needed ${LEVEL_5_BOSS_HP} to kill in time`);
+ assert.ok(dealt>=LEVEL_5_BOSS_HP*(1+L5_MARGIN),`L5 kit dealt ${dealt}, needed ${LEVEL_5_BOSS_HP} +10% to kill in time`);
 });
 
 test('the L4 kit does not kill the same boss in the same window',()=>{
  const {dealt}=tapDamageOverWorkout(4);
- assert.ok(dealt<LEVEL_5_BOSS_HP,`L4 kit dealt ${dealt}, which should fall short of ${LEVEL_5_BOSS_HP} — level 5 has to matter`);
+ assert.ok(dealt<=LEVEL_5_BOSS_HP*(1-L4_SHORT),`L4 kit dealt ${dealt}, which should fall 12%+ short of ${LEVEL_5_BOSS_HP} — level 5 has to matter`);
 });
 
 test('specials unlock at L3 (D17): below it they are refused without burning the cooldown',()=>{
@@ -61,10 +63,21 @@ test('with specials on every cooldown, the L5 kit still kills and the L4 kit sti
  const l5=tapDamageOverWorkout(5,{specials:true}),l4=tapDamageOverWorkout(4,{specials:true});
  assert.ok(l4.fired>=RESTS_PER_WORKOUT,`a special fired in every rest (${l4.fired})`);
  assert.ok(l4.specialDamage<=specialBudget(4),'all specials of the day together stay inside the budget');
- assert.ok(l4.dealt<LEVEL_5_BOSS_HP,`L4 kit + specials dealt ${l4.dealt}, must stay under ${LEVEL_5_BOSS_HP}`);
- assert.ok(l5.dealt>=LEVEL_5_BOSS_HP,`L5 kit + specials dealt ${l5.dealt}, needs ${LEVEL_5_BOSS_HP}`);
+ assert.ok(l4.dealt<=LEVEL_5_BOSS_HP*(1-L4_SHORT),`L4 kit + specials dealt ${l4.dealt}, must stay 12%+ under ${LEVEL_5_BOSS_HP}`);
+ assert.ok(l5.dealt>=LEVEL_5_BOSS_HP*(1+L5_MARGIN),`L5 kit + specials dealt ${l5.dealt}, needs ${LEVEL_5_BOSS_HP} +10%`);
  // The split does not depend on the open D20 number: it holds for any killTargetSeconds.
- for(const seconds of [30,60,90,180,360])assert.ok(maxKitDamage(4,seconds)+specialBudget(4,seconds)<bossHp(5,seconds),`L4 + specials < L5 boss at ${seconds}s`);
+ for(const seconds of [30,60,90,180,360]){
+  assert.ok(maxKitDamage(4,seconds)+specialBudget(4,seconds)<=bossHp(5,seconds)*(1-L4_SHORT),`L4 + specials 12%+ short of L5 boss at ${seconds}s`);
+  assert.ok(maxKitDamage(5,seconds)>=bossHp(5,seconds)*(1+L5_MARGIN),`L5 taps alone clear L5 boss +10% at ${seconds}s`);
+ }
+});
+
+test("every level's own kit kills its own boss; the level below, specials included, does not",()=>{
+ for(let level=1;level<=5;level++){
+  const {dealt}=tapDamageOverWorkout(level);
+  assert.ok(dealt>=bossHp(level),`L${level} kit dealt ${dealt}, needs ${bossHp(level)}`);
+  if(level>1){const below=tapDamageOverWorkout(level-1,{specials:true}).dealt;assert.ok(below<bossHp(level),`L${level-1} kit + specials dealt ${below}, must stay under the L${level} boss's ${bossHp(level)}`);}
+ }
 });
 
 test('once the daily cap is reached, no further damage events occur',()=>{
