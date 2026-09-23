@@ -335,7 +335,8 @@ test('7. a traced route sets its hash; back returns to the quilt, the bar Portal
 // Release 5 (W2-2A + W2-2B + W2-2K + W3-3A together): a traced destination dives in and opens INSIDE the metal frame with
 // the bottom bar below it, visible, lit and tappable (never in the frame's window, never under its matte); closing
 // reverse-dives out of the wormhole; the oval's ship view and Food (the pyramid) both sit in the frame; the square is the
-// workout start page. Frames for the conductor land in .frames/ (untracked).
+// workout start page. Frames for the conductor land in .frames/ (untracked). Waits are generous: `npm test` runs the
+// browser files in parallel, and a starved swiftshader page can take seconds per animation.
 const FRAMES=resolve('.frames');
 const frameBar=page=>page.evaluate(()=>{
  const dock=document.getElementById('coachDock'),chrome=document.getElementById('portalChrome'),open=chrome.matches(':popover-open');
@@ -395,7 +396,7 @@ test('8. traced destinations dive into the frame with the bar lit below it, the 
 
   // Close: the reverse dive, held half way. The bar stays showing below the frame throughout.
   await page.locator('#mealsPanel [data-close]').click();
-  await page.waitForFunction(()=>window.__backs.length===1,null,{timeout:10000});
+  await page.waitForFunction(()=>window.__backs.length===1,null,{timeout:20000});
   await page.evaluate(()=>new Promise(r=>{const a=window.__backs[0],d=a.effect.getTiming().duration;a.currentTime=d*.5;const g=document.querySelector('.portal-ghost')?.getAnimations()[0];if(g){g.pause();g.currentTime=Math.min(d*.5,g.effect.getTiming().duration);}requestAnimationFrame(()=>requestAnimationFrame(r));}));
   const scale=await page.evaluate(()=>new DOMMatrix(getComputedStyle(document.getElementById('portalHome')).transform).a);
   assert.ok(scale>1,`half way out, the portal is still scaled from the dive (${scale})`);
@@ -403,7 +404,7 @@ test('8. traced destinations dive into the frame with the bar lit below it, the 
   assert.equal((await bar(page)).visible,true,'the bar shows through the reverse dive');
   await page.screenshot({path:resolve(FRAMES,'r5-4-reverse-dive-50.png')});
   await page.evaluate(()=>{window.__backs[0].play();document.querySelector('.portal-ghost')?.getAnimations()[0]?.play();});
-  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&getComputedStyle(document.getElementById('portalHome')).transform==='none'&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:10000});
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&getComputedStyle(document.getElementById('portalHome')).transform==='none'&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:20000});
   await page.waitForFunction(()=>location.hash==='');
   assert.deepEqual((await bar(page)).lit,['portal'],'back on the quilt, the Portal is lit again');
 
@@ -419,19 +420,19 @@ test('8. traced destinations dive into the frame with the bar lit below it, the 
   await page.screenshot({path:resolve(FRAMES,'r5-3-ship-from-oval-mid-entrance.png')});
   await page.evaluate(()=>window.r5Run);
   await page.locator('.ship-view-close').click();
-  await page.waitForFunction(()=>window.__backs.length===2,null,{timeout:10000});
+  await page.waitForFunction(()=>window.__backs.length===2,null,{timeout:20000});
   await page.evaluate(()=>window.__backs[1].play());
-  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.querySelector('dialog.ship-view').open&&location.hash!=='#select',null,{timeout:10000});
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.querySelector('dialog.ship-view').open&&location.hash!=='#select',null,{timeout:20000});
 
   // A line (Reminders) opens straight into the frame; the bar's Portal takes it home the same way, out of the wormhole.
   await page.evaluate(()=>window.myr5Portal.open('line-rl'));
-  await page.waitForFunction(()=>{const d=document.getElementById('remindersPanel');return d.open&&d.classList.contains('portal-framed')&&location.hash==='#reminders';},null,{timeout:10000});
+  await page.waitForFunction(()=>{const d=document.getElementById('remindersPanel');return d.open&&d.classList.contains('portal-framed')&&location.hash==='#reminders';},null,{timeout:20000});
   f=await frameBar(page);assertBarBelowFrame(f,'Reminders');
   assert.deepEqual((await bar(page)).lit,['reminders']);
   await page.locator(PORTAL_BUTTON).click();
-  await page.waitForFunction(()=>window.__backs.length===3,null,{timeout:10000});
+  await page.waitForFunction(()=>window.__backs.length===3,null,{timeout:20000});
   await page.evaluate(()=>window.__backs[2].play());
-  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.getElementById('remindersPanel').open&&location.hash===''&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:10000});
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.getElementById('remindersPanel').open&&location.hash===''&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:20000});
   assert.deepEqual((await bar(page)).lit,['portal']);
 
   // Square -> the workout start page: the pod from the top, BEGIN not pressed, the bar still there.
