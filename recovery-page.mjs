@@ -27,7 +27,7 @@ function state(worker,allowed){return new Promise((resolve,reject)=>{
 function activate(worker){return new Promise((resolve,reject)=>{
  const channel=new MessageChannel();
  const finish=(error,result)=>{clearTimeout(timer);channel.port1.close();error?reject(error):resolve(result);};
- const timer=setTimeout(()=>finish(Error(waitingMessage)),10000);
+ const timer=setTimeout(()=>finish(Error(waitingMessage)),20000);
  channel.port1.onmessage=event=>{
   if(event.data?.activated)return finish(null,true);
   if(['close_clients','busy'].includes(event.data?.reason))return finish(null,false);

@@ -1,5 +1,5 @@
 // A prepared page keeps its workout lease until activation or an explicit abort.
-// No timer silently releases the lease while a worker could still activate.
+// Only an explicit abort releases it early (app-updates.mjs aborts when its barrier times out).
 export function createUpdateParticipant({canPrepare,acquire,save,freeze,reload}){
  let held=null,preparing=null;
  function abort(id){if(held?.id!==id)return;const item=held;held=null;item.release();item.thaw?.();}
@@ -13,7 +13,7 @@ export function createUpdateParticipant({canPrepare,acquire,save,freeze,reload})
   const release=acquire();if(!release)return {safe:false};
   const item={id,release,ready:false,thaw:null};held=item;
   try{
-   item.thaw=freeze();preparing=Promise.resolve().then(save);await preparing;
+   item.thaw=freeze(id);preparing=Promise.resolve().then(save);await preparing;
    if(held!==item)return {safe:false};item.ready=true;
    return {safe:true,protocol:2,id};
   }catch{abort(id);return {safe:false};}finally{preparing=null;}
