@@ -20,9 +20,17 @@ test('installed Coach starts at Quilt only after setup and preserves panel deep 
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   async function installedContext(){const context=await browser.newContext({serviceWorkers:'block'});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));return context;}
+  async function browserContext(){return browser.newContext({serviceWorkers:'block'});}
   async function seed(context){const page=await context.newPage();await page.goto(base+'/onboarding.html');await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await page.close();}
 
   const ready=await installedContext();await seed(ready);const home=await ready.newPage();await home.goto(base+'/pose.html');await home.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);assert.equal(await home.locator('#portalHome').getAttribute('aria-label'),'Quilt portal');await ready.close();
+
+  // W1-1C #2: a plain browser tab (no navigator.standalone) that already finished setup gets the
+  // same quilt-first landing as an installed one — only new/signed-out visitors still see setup first.
+  const web=await browserContext();await seed(web);const webHome=await web.newPage();await webHome.goto(base+'/pose.html');await webHome.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);assert.equal(await webHome.locator('#portalHome').getAttribute('aria-label'),'Quilt portal');await web.close();
+
+  // #ship joins ?panel= and #pod as a deep link the starter portal must not cover on load.
+  const shipLink=await installedContext();await seed(shipLink);const ship=await shipLink.newPage();await ship.goto(base+'/pose.html#ship');await ship.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);await ship.waitForTimeout(300);assert.equal(await ship.locator('#portalHome').count(),0);await shipLink.close();
 
   const stale=await installedContext();await seed(stale);const broken=await stale.newPage();await broken.route('**/launch-runtime.mjs*',route=>route.fulfill({status:503,contentType:'text/javascript',body:'// stale runtime fixture'}));await broken.goto(base+'/pose.html');await broken.waitForFunction(()=>document.getElementById('coachStartupRecovery')?.open===true);await broken.waitForTimeout(500);assert.equal(await broken.locator('#coachStartupRecovery').isVisible(),true);assert.equal(await broken.locator('#portalHome').count(),0,'a seeded local coach must not open Quilt while startup recovery is active');await stale.close();
 

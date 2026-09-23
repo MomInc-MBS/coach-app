@@ -16,7 +16,6 @@ import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
-import {isInstalled} from './install-context.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -198,7 +197,10 @@ window.myr5Menus={...window.myr5Menus,portal:showQuiltPortal};
 let starterPortalAttempted=false;
 function starterPortalReady(){
  const route=new URLSearchParams(location.search);
- return isInstalled()&&!route.has('panel')&&location.hash!=='#pod'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
+ // No isInstalled() gate: a browser visitor who has already finished setup (window.coachPlan set)
+ // gets the same quilt-first landing as an installed one. New/signed-out visitors never reach this
+ // point with a coachPlan, so they still see setup first.
+ return !route.has('panel')&&location.hash!=='#pod'&&location.hash!=='#ship'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
 }
 window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalAttempted)return;
