@@ -6,6 +6,28 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {pyramidTiles} from './pyramid-tiles.mjs';
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
+// Reuse the lightweight striped wall + paper notices from
+// C:/Users/ianmy/Documents/Codex/2026-09-22/co/work/mominc-girlfriend-fix/tv/channels/girlfriend.html.
+// These are the original game's CSS/DOM treatment; no raster art or external request is needed.
+const ROOM_STYLE_ID='pyramidScannerRoomStyle';
+const ROOM_CSS=`
+#pyramidScanner{isolation:isolate;background:#bba16e!important}
+#pyramidScanner .pyramid-room{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+#pyramidScanner .dg-paper-wall{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 139px,#604c4133 140px 142px),repeating-linear-gradient(0deg,#b8a477 0 79px,#c3b181 80px 82px);border:14px solid #665044}
+#pyramidScanner .dg-paper-wall:after{content:'';position:absolute;inset:0;opacity:.22;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23p)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
+#pyramidScanner .paper-poster{position:absolute;z-index:1;top:18%;left:7%;width:23%;padding:17px 13px;background:#e5d4a2;border:2px solid #ad9769;box-shadow:5px 5px #76614955;text-align:center;transform:rotate(-3deg);color:#4c3255;font:700 clamp(12px,1.5vw,22px)/1.25 Georgia,serif}
+#pyramidScanner .paper-poster:before{content:'';position:absolute;width:45%;height:15px;left:27%;top:-9px;background:#e2c388bb;transform:rotate(3deg)}
+#pyramidScanner .paper-poster small{display:block;font:9px monospace;letter-spacing:.1em;margin-top:12px}
+#pyramidScanner .paper-note{position:absolute;z-index:1;left:35%;top:18%;background:#dbc68a;color:#463149;border-left:5px solid #79558a;padding:12px;font:11px monospace;transform:rotate(3deg)}
+#pyramidScanner canvas{position:absolute;inset:0;z-index:2}
+`;
+let roomStyle=null,roomStyleUsers=0;
+function acquireRoomStyle(){
+ if(!roomStyle){roomStyle=document.getElementById(ROOM_STYLE_ID)||document.createElement('style');roomStyle.id=ROOM_STYLE_ID;roomStyle.textContent=ROOM_CSS;if(!roomStyle.isConnected)document.head.append(roomStyle);}
+ roomStyleUsers++;
+ return ()=>{roomStyleUsers=Math.max(0,roomStyleUsers-1);if(!roomStyleUsers){roomStyle?.remove();roomStyle=null;}};
+}
+
 const TILES=[ // [mesh name, tileState key, small label, tile background]
  ['screen_name','name','FOOD','#7fcf5a'],
  ['screen_calories','calories','CALORIES','#f4d35e'],
@@ -51,8 +73,10 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  let disposed=false,raf=0,observer,timer,tileState=pyramidTiles(null,null);
  const download=new AbortController();
+ const releaseRoomStyle=acquireRoomStyle();
  const host=document.createElement('div');host.id='pyramidScanner';host.setAttribute('aria-hidden','true');
- host.style.cssText='position:relative;width:100%;height:230px;border-radius:10px;overflow:hidden;margin-bottom:12px;background:radial-gradient(circle at 50% 28%,#332a42,#150f1c);touch-action:none';
+ host.style.cssText='position:relative;width:100%;height:230px;border-radius:10px;overflow:hidden;margin-bottom:12px;background:#bba16e;touch-action:none';
+ host.innerHTML='<div class="pyramid-room" aria-hidden="true"><div class="dg-paper-wall"></div><div class="paper-poster">CARED FOR.<br>CORRECTED.<br>PROVIDED FOR.<small>A MOM INC. WORKPLACE</small></div><div class="paper-note">READ THE SOURCE.<br>KEEP THE LABEL.</div></div>';
  anchor.before(host);
  const scene=new THREE.Scene(),stage=new THREE.Group(),pivot=new THREE.Group();
  scene.add(stage);stage.add(pivot);
@@ -60,7 +84,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  const key=new THREE.DirectionalLight(0xffffff,0.75);key.position.set(0.6,1.4,1.2);scene.add(key);
  let renderer;
  try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});}
- catch(error){host.remove();throw error;}
+ catch(error){host.remove();releaseRoomStyle();throw error;}
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);
  renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none';host.append(renderer.domElement);
  const camera=new THREE.PerspectiveCamera(35,1,0.01,20);camera.position.set(0,0.05,2.2);camera.lookAt(0,0.05,0);
@@ -75,6 +99,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  function disposeTree(root){root.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});}
  function dispose(){
   if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
+  releaseRoomStyle();
   signal?.removeEventListener('abort',dispose);download.abort();clearTimeout(timer);
   window.removeEventListener('myr5:meal-nutrition',onNutrition);
   const dom=renderer.domElement;dom.removeEventListener('pointerdown',onDown);dom.removeEventListener('pointermove',onMove);dom.removeEventListener('pointerup',onUp);dom.removeEventListener('pointercancel',onUp);

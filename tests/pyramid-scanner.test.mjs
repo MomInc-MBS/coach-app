@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {pyramidTiles} from '../food/pyramid-tiles.mjs';
 
 test('idle state before any scan shows the prompt and dashes',()=>{
@@ -30,4 +31,16 @@ test('a matched scan fills macros and picks the top two vitamins by %DV',()=>{
 test('a zero-value vitamin is excluded, not treated as a tie at the top',()=>{
  const tiles=pyramidTiles('Water',{calories:0,protein:0,fat:0,carbs:0,vitaminA:0,vitaminC:0,vitaminD:0,vitaminE:0,vitaminB12:0,folate:0});
  assert.equal(tiles.vitamins,'—');
+});
+
+test('pyramid room reuses the Dr Girlfriend game wall pattern and both original poster texts lazily',async()=>{
+ const source=await readFile(new URL('../food/pyramid-scanner.mjs',import.meta.url),'utf8');
+ assert.match(source,/mominc-girlfriend-fix\/tv\/channels\/girlfriend\.html/);
+ assert.match(source,/repeating-linear-gradient\(90deg,transparent 0 139px,#604c4133 140px 142px\)/);
+ assert.match(source,/repeating-linear-gradient\(0deg,#b8a477 0 79px,#c3b181 80px 82px\)/);
+ assert.match(source,/CARED FOR\.<br>CORRECTED\.<br>PROVIDED FOR\.<small>A MOM INC\. WORKPLACE<\/small>/);
+ assert.match(source,/READ THE SOURCE\.<br>KEEP THE LABEL\./);
+ assert.match(source,/releaseRoomStyle\(\)/);
+ assert.doesNotMatch(source,/drgf-paper-character/i);
+ assert.doesNotMatch(source,/https?:\/\/(?!www\.w3\.org)/i,'room CSS may embed its SVG texture, but must not request a remote asset');
 });

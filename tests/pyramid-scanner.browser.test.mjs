@@ -34,6 +34,19 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
   assert.equal(responses.get('/food/pyramid-scanner.mjs'),200,JSON.stringify({seen,responses:[...responses]}));
   assert(seen.includes('/food/pyramid-scanner.mjs'));
   assert.equal(responses.get('/food/pyramid-scanner.glb'),200,JSON.stringify({seen,responses:[...responses],warnings}));
+  const room=await page.evaluate(()=>{
+   const wall=document.querySelector('#pyramidScanner .dg-paper-wall'),poster=document.querySelector('#pyramidScanner .paper-poster'),note=document.querySelector('#pyramidScanner .paper-note'),canvas=document.querySelector('#pyramidScanner canvas'),style=document.querySelector('#pyramidScannerRoomStyle');
+   const origin=location.origin;
+   return {wall:!!wall,wallPattern:wall&&getComputedStyle(wall).backgroundImage,poster:poster?.innerText.replace(/\s+/g,' ').trim(),note:note?.innerText.replace(/\s+/g,' ').trim(),canvasZ:canvas&&getComputedStyle(canvas).zIndex,style:style?.textContent||'',roomArtRequests:[...performance.getEntriesByType('resource')].filter(e=>/girlfriend|paper-character/i.test(new URL(e.name).pathname)).map(e=>e.name),externalRequests:[...performance.getEntriesByType('resource')].filter(e=>new URL(e.name).origin!==origin).map(e=>e.name)};
+  });
+  assert(room.wall,'striped room wall is mounted lazily with the scanner');
+  assert.match(room.wallPattern,/repeating-linear-gradient/);
+  assert.equal(room.poster,'CARED FOR. CORRECTED. PROVIDED FOR. A MOM INC. WORKPLACE');
+  assert.equal(room.note,'READ THE SOURCE. KEEP THE LABEL.');
+  assert.equal(room.canvasZ,'2','the pyramid canvas stays in front of the room');
+  assert.match(room.style,/repeating-linear-gradient\(90deg,transparent 0 139px/);
+  assert.deepEqual(room.roomArtRequests,[],'room uses the original lightweight CSS/DOM, not a character image');
+  assert.deepEqual(room.externalRequests,[],'room makes no external asset request');
   assert(!warnings.some(x=>x.includes('Pyramid scanner unavailable')),warnings.join('\n'));
   assert(!failures.some(x=>x.includes('pyramid-scanner.mjs')||x.includes('pyramid-scanner.glb')),failures.join('\n'));
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('myr5:food-selected',{detail:{name:'apple'}})));
@@ -53,6 +66,7 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
   await page.waitForFunction(()=>window.pyramidPaint.CALORIES==='432 kcal');
   await page.locator('#mealsPanel [data-close]').click();
   await page.waitForFunction(()=>!document.querySelector('#pyramidScanner'));
+  await page.waitForFunction(()=>!document.querySelector('#pyramidScannerRoomStyle'));
   if(await page.getByRole('button',{name:'Dismiss update notice'}).isVisible())await page.getByRole('button',{name:'Dismiss update notice'}).click();
   await page.locator('[data-panel="meals"]').click();
   await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&window.pyramidPaint.CALORIES==='432 kcal');
@@ -68,6 +82,7 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
   await noGL.waitForFunction(()=>performance.getEntriesByType('resource').some(e=>new URL(e.name).pathname==='/food/pyramid-scanner.mjs'));
   await new Promise((resolve,reject)=>{const until=Date.now()+15000;const poll=()=>noGLWarnings.some(x=>x.includes('Pyramid scanner unavailable'))?resolve():Date.now()>until?reject(Error('No WebGL failure observed')):setTimeout(poll,50);poll();});
   assert.equal(await noGL.locator('#pyramidScanner').count(),0);
+  assert.equal(await noGL.locator('#pyramidScannerRoomStyle').count(),0,'failed WebGL setup releases the lazy room style');
   assert(await noGL.locator('#foodCamera').isVisible());
   await browser.close();browser=null;
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
