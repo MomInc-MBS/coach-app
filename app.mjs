@@ -11,6 +11,7 @@ import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
+import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -254,3 +255,4 @@ async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await 
 function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}
 $('primary').addEventListener('pointerdown',event=>{if(state.phase==='manual'){event.preventDefault();void activateManual();}});
 $('primary').addEventListener('keydown',event=>{if(state.phase==='manual'&&(event.key==='Enter'||event.key===' ')){event.preventDefault();void activateManual();}});
+void mountArmieInboxUI().catch(()=>{}); // D23 inbox; best-effort so a failure here never blocks the workout.
