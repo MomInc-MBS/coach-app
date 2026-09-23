@@ -30,7 +30,7 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
   await page.goto(base+'/pose.html?panel=meals');
   await page.waitForFunction(()=>document.querySelector('#mealsPanel')?.open);
   await page.waitForFunction(()=>performance.getEntriesByType('resource').some(e=>new URL(e.name).pathname==='/food/pyramid-scanner.mjs'),null,{timeout:15000});
-  await page.waitForFunction(()=>window.pyramidPaint.FOOD==='TAP CAMERA TO SCAN',null,{timeout:15000});
+  await page.waitForFunction(()=>window.pyramidPaint.FOOD==='TAP THE LENS',null,{timeout:15000});
   assert.equal(responses.get('/food/pyramid-scanner.mjs'),200,JSON.stringify({seen,responses:[...responses]}));
   assert(seen.includes('/food/pyramid-scanner.mjs'));
   assert.equal(responses.get('/food/pyramid-scanner.glb'),200,JSON.stringify({seen,responses:[...responses],warnings}));
@@ -71,7 +71,7 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
   await page.locator('[data-panel="meals"]').click();
   await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&window.pyramidPaint.CALORIES==='432 kcal');
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('myr5:food-reset')));
-  await page.waitForFunction(()=>window.pyramidPaint.FOOD==='TAP CAMERA TO SCAN'&&window.pyramidPaint.CALORIES==='—');
+  await page.waitForFunction(()=>window.pyramidPaint.FOOD==='TAP THE LENS'&&window.pyramidPaint.CALORIES==='—');
 
   // A browser with WebGL unavailable keeps the normal food flow and no orphaned host.
   const noGL=await browser.newPage(),noGLWarnings=[];

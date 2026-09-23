@@ -87,7 +87,8 @@ test('reduced motion keeps knobs, glow, lens and released drag steady',async()=>
   window.sampleMotion=()=>new Promise(resolve=>{
    const frames=[];function sample(){const stage=window.scannerScene.children.find(n=>n.isGroup),knob=stage.getObjectByName('knob_0'),lens=stage.getObjectByName('lens');frames.push({stage:stage.matrix.toArray(),knob:knob.matrix.toArray(),glow:knob.material.emissiveIntensity,lens:lens.children[0].material.opacity,rotation:stage.children[0].rotation.y,steam:stage.children[0].getObjectsByProperty('isSprite',true).filter(n=>n.visible&&n.parent.name!=='lens').length});if(frames.length===12)resolve(frames);else requestAnimationFrame(sample);}requestAnimationFrame(sample);
   });
-  window.knobPosition=()=>{const knob=window.scannerScene.getObjectByName('knob_0'),rect=document.querySelector('#pyramidScanner canvas').getBoundingClientRect(),camera=new THREE.PerspectiveCamera(35,rect.width/rect.height,.01,20);camera.position.set(0,.05,2.2);camera.lookAt(0,.05,0);camera.updateMatrixWorld();const p=knob.getWorldPosition(new THREE.Vector3()).project(camera);return {x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2};};
+  // The scanner frames its own camera (it lives in the scene); project the knob through it.
+  window.knobPosition=()=>{const knob=window.scannerScene.getObjectByName('knob_0'),rect=document.querySelector('#pyramidScanner canvas').getBoundingClientRect(),camera=window.scannerScene.children.find(n=>n.isCamera);const p=knob.getWorldPosition(new THREE.Vector3()).project(camera);return {x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2};};
  });
  const idle=await page.evaluate(()=>window.sampleMotion());for(const frame of idle)assert.deepEqual(frame,idle[0]);
  const spot=await page.evaluate(()=>window.knobPosition());await page.mouse.click(spot.x,spot.y);
