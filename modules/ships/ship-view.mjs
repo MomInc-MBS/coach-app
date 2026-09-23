@@ -1,30 +1,20 @@
 // D-ship-route: full-screen ship view. Same coach capsule renderer as the pod's "Show my coach"
 // card (creature/assets/phone.js), reparented full-screen, with the owned ship + biome backdrop
 // composed behind it when the signed "Ships and worlds" pack is already downloaded and verified
-// locally. No new download is ever started here — see localVerifiedBridge().
-import {ownedShipIds} from './ship-access.mjs';
-import {createVerifiedShipAssetBridge} from './verified-ship-assets.mjs';
+// locally. `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
+// scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
+// must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
 import {initialScene} from './ship-scene-domain.mjs';
-import {productionMaterialTrust} from '../materials/material-config.mjs';
-import {resolvePostDownloadSection} from '../materials/post-download-sections.mjs';
-import {ChunkDownloader, indexedDbChunkStore, DEFAULT_LOCAL_RESOURCE_POLICY} from '../materials/chunk-delivery.mjs';
 
 const HASH = '#ship';
 const RECIPE_KEY = 'myr5-recipe-v1';
 const SHIP_SETTINGS_KEY = 'myr5-ship-customization-v1';
 const readJSON = key => { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
 
-/** Read-only: true only if this account's owned ship section is already downloaded and verified
- * on this device. Never fetches chunk bytes — a missing/partial pack always falls through to null
- * so opening this view can never start the 60MB download on its own. */
-async function localVerifiedBridge() {
- const account = globalThis.myr5AuthenticatedAccount, owner = account?.user?.id;
- if (!owner || !ownedShipIds().length) return null;
- const trust = productionMaterialTrust(); if (!trust) return null;
- const resolved = await resolvePostDownloadSection('coach-ships-biomes', { trust });
- const downloader = new ChunkDownloader({ store: indexedDbChunkStore(), policy: DEFAULT_LOCAL_RESOURCE_POLICY, expectedVersion: resolved.manifest.version, manifestPublicKey: resolved.trust, ownership: async () => owner });
- await downloader.verifyStored(resolved.manifest); // local store reads + hash checks only, no network
- return createVerifiedShipAssetBridge({ downloader, manifest: resolved.manifest, isOwned: id => id === 'coach-ships-biomes', canUseShip: ownedShipIds });
+function fallbackMessage(signedIn, owned) {
+ if (!signedIn) return { text: 'Sign in to see your ship', download: false };
+ if (!owned.length) return { text: 'Earn your first ship at level 3 of any achievement track', download: false };
+ return { text: 'Download Ships & worlds to see your ship', download: true };
 }
 
 function disposeModel(root) {
@@ -80,7 +70,7 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
 let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null;
 let realShip = null, pushedHash = false, openEpoch = 0;
 
-function showFallback() { bgEl.className = 'ship-view-bg ship-view-bg-fallback'; bgEl.style.backgroundImage = ''; fallback.hidden = false; }
+function showFallback({ text, download }) { bgEl.className = 'ship-view-bg ship-view-bg-fallback'; bgEl.style.backgroundImage = ''; fallback.querySelector('p').textContent = text; downloadBtn.hidden = !download; fallback.hidden = false; }
 function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.className = 'ship-view-bg'; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
 
 async function waitForCard(timeoutMs = 8000) {
@@ -104,7 +94,7 @@ function build() {
  dialog = document.createElement('dialog'); dialog.className = 'ship-view'; dialog.setAttribute('aria-label', 'Your ship');
  dialog.innerHTML = '<div class="ship-view-stage"><div class="ship-view-bg" aria-hidden="true"></div><div class="ship-view-coach"></div></div>'
   + '<p class="ship-view-note" role="status"></p>'
-  + '<div class="ship-view-fallback" hidden><p>Download Ships &amp; worlds to see your ship</p><button type="button" class="ship-view-download">Download Ships &amp; worlds</button></div>'
+  + '<div class="ship-view-fallback" hidden><p></p><button type="button" class="ship-view-download">Download Ships &amp; worlds</button></div>'
   + '<button type="button" class="ship-view-close" aria-label="Close">✕</button>';
  document.body.append(dialog);
  stage = dialog.querySelector('.ship-view-stage'); bgEl = dialog.querySelector('.ship-view-bg'); coachMount = dialog.querySelector('.ship-view-coach');
@@ -119,9 +109,11 @@ function build() {
 
 /** window.myr5Menus.ship(): opens the full-screen ship view and returns its <dialog> (the portal
  * uses this for its porthole reveal / fade-back, same contract as achievements). `loadCoachViewer`
- * is app.mjs's existing coach-capsule loader (same function "Show my coach" uses); `getBridge` is
+ * is app.mjs's existing coach-capsule loader (same function "Show my coach" uses); `getBridge` and
+ * `ownedShipIds` come from app.mjs's statically-bundled modules/ships/ship-view-bridge.mjs (this
+ * file is served unbundled and cannot import that chain itself — see the header comment). Both are
  * overridable for tests. */
-export async function openShipView({ loadCoachViewer, getBridge = localVerifiedBridge } = {}) {
+export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [] } = {}) {
  if (!dialog) build();
  const epoch = ++openEpoch;
  clearShipVisual(); note.textContent = 'Preparing your coach…';
@@ -134,10 +126,11 @@ export async function openShipView({ loadCoachViewer, getBridge = localVerifiedB
  if (epoch !== openEpoch) return dialog;
  if (card) { coachMount.append(card); note.textContent = ''; }
  else note.textContent = 'Coach could not load. Check your connection and try again.';
+ const signedIn = !!globalThis.myr5AuthenticatedAccount?.user?.id;
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
  if (epoch !== openEpoch) { bridge?.dispose?.(); return dialog; }
- if (!bridge) { showFallback(); return dialog; }
+ if (!bridge) { showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); return dialog; }
  try {
   const owner = globalThis.myr5AuthenticatedAccount?.user?.id, owned = bridge.ownedShipIds();
   const scene = initialScene(readJSON(RECIPE_KEY)), custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
@@ -145,6 +138,6 @@ export async function openShipView({ loadCoachViewer, getBridge = localVerifiedB
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
   if (epoch !== openEpoch) { mounted.dispose(); return dialog; }
   realShip = mounted; fallback.hidden = true;
- } catch { bridge.dispose?.(); showFallback(); }
+ } catch { bridge.dispose?.(); showFallback(fallbackMessage(signedIn, signedIn ? ownedShipIds() : [])); }
  return dialog;
 }

@@ -42,22 +42,53 @@ async function primeFixture(page){
  });
 }
 
-test('missing-pack fallback shows the coach with a local backdrop and routes the download button',async()=>withPage(async page=>{
+test('signed out: fallback tells them to sign in, no download button',async()=>withPage(async page=>{
  await primeFixture(page);
  const state=await page.evaluate(async()=>{
   const {openShipView}=await import('/ship-view.js');
-  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null});
+  window.myr5AuthenticatedAccount=null;
+  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>{throw Error('must not be called while signed out')}});
+  return {
+   fallbackHidden:document.querySelector('.ship-view-fallback').hidden,
+   fallbackText:document.querySelector('.ship-view-fallback p').textContent,
+   downloadHidden:document.querySelector('.ship-view-download').hidden,
+  };
+ });
+ assert.deepEqual(state,{fallbackHidden:false,fallbackText:'Sign in to see your ship',downloadHidden:true});
+}));
+
+test('signed in but owns no ship yet: fallback points at earning one, no download button',async()=>withPage(async page=>{
+ await primeFixture(page);
+ const state=await page.evaluate(async()=>{
+  const {openShipView}=await import('/ship-view.js');
+  window.myr5AuthenticatedAccount={user:{id:'owner-a'}};
+  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>[]});
+  return {
+   fallbackText:document.querySelector('.ship-view-fallback p').textContent,
+   downloadHidden:document.querySelector('.ship-view-download').hidden,
+  };
+ });
+ assert.deepEqual(state,{fallbackText:'Earn your first ship at level 3 of any achievement track',downloadHidden:true});
+}));
+
+test('signed in, owns a ship, pack unavailable: fallback shows the coach with a local backdrop and routes the download button',async()=>withPage(async page=>{
+ await primeFixture(page);
+ const state=await page.evaluate(async()=>{
+  const {openShipView}=await import('/ship-view.js');
+  window.myr5AuthenticatedAccount={user:{id:'owner-a'}};
+  const dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>['supportive']});
   window.shipDialog=dialog;
   return {
    isDialog:dialog instanceof HTMLDialogElement,open:dialog.open,
    fallbackHidden:document.querySelector('.ship-view-fallback').hidden,
    fallbackText:document.querySelector('.ship-view-fallback p').textContent,
+   downloadHidden:document.querySelector('.ship-view-download').hidden,
    bgIsFallback:document.querySelector('.ship-view-bg').classList.contains('ship-view-bg-fallback'),
    hasCoach:!!document.querySelector('.ship-view-coach .myr5-companion-card'),
    hasCanvas:!!document.querySelector('.ship-view-canvas'),
   };
  });
- assert.deepEqual(state,{isDialog:true,open:true,fallbackHidden:false,fallbackText:'Download Ships & worlds to see your ship',bgIsFallback:true,hasCoach:true,hasCanvas:false});
+ assert.deepEqual(state,{isDialog:true,open:true,fallbackHidden:false,fallbackText:'Download Ships & worlds to see your ship',downloadHidden:false,bgIsFallback:true,hasCoach:true,hasCanvas:false});
  await page.locator('.ship-view-download').click();
  assert.equal(await page.evaluate(()=>window.installClicks),1,'falls back to the Install panel control when myr5Packs is unavailable');
  await page.evaluate(()=>{window.myr5Packs={open:id=>{window.packsOpened=id;}};});
