@@ -3,7 +3,8 @@
 // item content is plan/muse/item-catalog.json, copied row-for-row below because this worktree
 // has no plan/ dir at build time and root .json files are left out of the AGPL source offer
 // (scripts/build.mjs). Regenerate by hand if the catalog changes. Food rows and the `keys`
-// list are not copied: D30 has no Food row, and keys are not pass rewards.
+// list are not copied: D32 gives Food no weapons/pet/boss (only palettes + bonuses, below), and
+// keys are not pass rewards.
 //
 // Ladder per boss = D22 (L1 weapon 1 · L2 palette + boss texture · L3 weapon 2 · L4 pet ·
 // L5 aura + boss skin) + D16 (the style's 3 textures at L1/L3/L5) + D17 (special at L3) —
@@ -11,10 +12,13 @@
 // of 3–6 consecutive bosses per track plus two shared ones. Following D30:
 //  - boss looks (texture L2, skin L5) belong to each board boss, not to the family;
 //  - a style's catalog items (2 weapons, 3 textures, special, aura, palette) exist once, so
-//    they sit on the row's FIRST boss; later bosses and the shared bosses award only their own
-//    boss looks until the catalog grows (content gap, see plan/reports/battle-pass.md);
+//    they sit on the row's FIRST boss; D32 fills the other bosses' empty L1/L3/L4 with palettes
+//    from creature/source/creator/palettes.json (each row's `reward` names its slot);
 //  - D21 sharing still applies to pets: one pet per family, and the second row of a family
 //    gets that family's substitute palette at L4 instead (resolved in battle-pass.mjs).
+
+import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
+import {FOOD_BONUS_DAMAGE_MULTIPLIER} from './combat-config.mjs';
 
 // D30 rows, top to bottom — ids/order/counts must match achievements-board.mjs TIERS.
 export const ROWS=Object.freeze([
@@ -36,10 +40,8 @@ export const BOSSES=Object.freeze(ROWS.flatMap(row=>Array.from({length:row.bosse
 }))));
 
 // D25 track -> circuit.mjs step-track id, item-catalog `track`, D21 family, L2 palette.
-// Palettes: the catalog has none, so L2 reuses materials-registry.ts's palette ids (the
-// aura-milestone set from plan/muse/palettes.json) — one per row, plus one D21 substitute per
-// two-row family. ponytail: 11 of 12 palettes used; a real food-photo/palette list replaces
-// this table when it exists.
+// Palettes: L2 reuses the aura-milestone palettes (pal-01…12) — one per row, plus one D21
+// substitute per two-row family. Every other palette slot comes from palettes.json `reward`.
 export const TRACKS=Object.freeze({
  chest:{circuit:'chest',catalog:'chest',family:'push',name:'Chest',palette:'pal-01'},
  quads:{circuit:'legs',catalog:'quads',family:'legs',name:'Quads',palette:'pal-02'},
@@ -51,7 +53,6 @@ export const TRACKS=Object.freeze({
  meditation:{circuit:'meditation',catalog:'meditation',family:'meditation',name:'Meditation',palette:'pal-08'},
 });
 export const PET_SUBSTITUTE_PALETTE=Object.freeze({push:'pal-09',legs:'pal-10',motion:'pal-11'});
-const PALETTE_NAMES={'pal-01':'Morning Mist','pal-02':'River Clay','pal-03':'Static Pop','pal-04':'Night Shift','pal-05':'Tin Star','pal-06':'Meadow Line','pal-07':'Campfire','pal-08':'Signal Jam','pal-09':'Deep Well','pal-10':'Chrome Garden','pal-11':'Sorbet Stand'};
 
 // --- item-catalog.json `weapons` (D21: 2 per style) ---
 const WEAPONS=[
@@ -91,7 +92,10 @@ const PET_LINES={
 
 const item=(kind,[id,name,line])=>({kind,id,name,line});
 const find=(list,id)=>list.find(row=>row[0]===id);
-export const paletteItem=id=>({kind:'palette',id,name:PALETTE_NAMES[id],line:'A new palette for your coach.'});
+export function paletteItem(id){const p=PALETTES.find(p=>p.id===id);return {kind:'palette',id,name:p.name,line:p.tagline};}
+// palettes.json `reward` ('<bossId>:L<n>' | 'food:L<n>') -> palette id.
+const SLOT_PALETTE=new Map(PALETTES.filter(p=>p.reward).map(p=>[p.reward,p.id]));
+const slotPalettes=(owner,count)=>Array.from({length:count},(_,i)=>SLOT_PALETTE.get(`${owner}:L${i+1}`)).map(id=>id?[paletteItem(id)]:[]);
 const petItem=family=>({kind:'pet',id:`${family}-pet`,name:`${family[0].toUpperCase()}${family.slice(1)} pet`,line:PET_LINES[family],family});
 
 /** The D22 ladder for one board boss: an array of 5 levels, each an array of
@@ -101,7 +105,9 @@ export function bossRewards(bossId){
  const boss=BOSSES.find(b=>b.id===bossId);
  if(!boss)return null;
  const meta=boss.track&&TRACKS[boss.track],lines=BOSS_LINES[meta?.family]||[null,null];
- const levels=[[],[{kind:'boss-texture',id:`${boss.id}-texture`,name:`${boss.name} Texture`,line:lines[0]}],[],[],[{kind:'boss-skin',id:`${boss.id}-skin`,name:`${boss.name} Skin`,line:lines[1]}]];
+ const levels=slotPalettes(boss.id,LEVELS_PER_BOSS); // D32 fill (empty for first bosses)
+ levels[1].push({kind:'boss-texture',id:`${boss.id}-texture`,name:`${boss.name} Texture`,line:lines[0]});
+ levels[4].push({kind:'boss-skin',id:`${boss.id}-skin`,name:`${boss.name} Skin`,line:lines[1]});
  if(!meta||boss.index!==1)return levels;
  const c=meta.catalog,tex=TEXTURES.filter(t=>t[0].startsWith(c+'-')); // catalog order = texture-1/2/3
  levels[0].unshift(item('weapon',find(WEAPONS,`${c}-w1`)),item('texture',tex[0]));
@@ -112,3 +118,13 @@ export function bossRewards(bossId){
  levels[4].push(item('texture',tex[2]));
  return levels;
 }
+
+// --- Food (D32): no board row, no weapons (item-catalog's food-w1/w2 are never granted), no pet
+// or boss. Each Food level (food-photo steps, circuit `tracks.food`) grants its palettes.json
+// palette + one bonus. Levels = the food:L<n> palettes, so adding one adds a level. ---
+export const FOOD_BONUS=Object.freeze({id:'food-bonus',name:'Second Helping',line:'Hits harder for one day. Chew responsibly.',
+ effect:Object.freeze({type:'damage-multiplier',days:1,value:FOOD_BONUS_DAMAGE_MULTIPLIER})});
+export const FOOD_LEVELS=PALETTES.filter(p=>p.reward?.startsWith('food:')).length;
+/** Food ladder: FOOD_LEVELS levels, each `[palette, bonus]`. Bonus ids are per level
+ * (`food-bonus-<n>`) so each grant happens once. */
+export const foodRewards=()=>slotPalettes('food',FOOD_LEVELS).map((items,i)=>[...items,{kind:'bonus',id:`${FOOD_BONUS.id}-${i+1}`,name:FOOD_BONUS.name,line:FOOD_BONUS.line,effect:FOOD_BONUS.effect}]);

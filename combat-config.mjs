@@ -53,3 +53,7 @@ export function bossHp(level,seconds=KILL_TARGET_SECONDS){
 export function dailyCap(level,seconds=KILL_TARGET_SECONDS){
  return Math.round(DAILY_CAP_FACTOR*maxKitDamage(level,seconds));
 }
+
+// D32 Food bonus: each Food level grants a bonus (battle-pass-rewards.mjs FOOD_BONUS) worth this
+// damage multiplier for one day. DEFAULT — the owner can change it.
+export const FOOD_BONUS_DAMAGE_MULTIPLIER=1.1;

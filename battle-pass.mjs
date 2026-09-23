@@ -4,7 +4,7 @@
 // earned and fires `myr5:battle-pass` on window. Usage: plan/reports/battle-pass.md.
 import {STEPS_PER_LEVEL,STYLE_OF_GROUP} from './circuit.mjs';
 import {exerciseFamily} from './workout-route.mjs';
-import {ROWS,BOSSES,TRACKS,LEVELS_PER_BOSS,PET_SUBSTITUTE_PALETTE,bossRewards,paletteItem} from './battle-pass-rewards.mjs';
+import {ROWS,BOSSES,TRACKS,LEVELS_PER_BOSS,PET_SUBSTITUTE_PALETTE,FOOD_LEVELS,bossRewards,paletteItem,foodRewards} from './battle-pass-rewards.mjs';
 import {readSelectedTracks} from './chosen-styles.mjs';
 import * as store from './creature/source/creator/unlock-store.ts';
 import * as ledger from './unlock-ledger.mjs';
@@ -64,11 +64,14 @@ function grant(item){
 }
 
 /** Richer read: `{stepsPerLevel, available:[track], progress, bosses:[{id,name,row,track,index,
- * levels, rewards:[{level, beaten, items:[{kind,id,name,line,granted}]}]}]}` in board order.
+ * levels, rewards:[{level, beaten, items:[{kind,id,name,line,granted}]}]}], food}` in board order.
  * D21 pets: in a two-row family the first available row (board order) to beat L4 of its
- * first boss holds the pet; the other row shows the family's substitute palette there. */
+ * first boss holds the pet; the other row shows the family's substitute palette there.
+ * `food` (D32, no board row): `{steps, levels, maxLevel, rewards}` from food-photo steps; each
+ * level's items are a palette + a bonus (`kind:'bonus'`, with `effect`). */
 export function battlePassState(opts={}){
  const stepsPerLevel=opts.stepsPerLevel??STEPS_PER_LEVEL,available=selectedTracks(opts.account),progress=loadProgress({...opts,stepsPerLevel});
+ const foodSteps=Math.max(0,Number((opts.tracks??stepTracks())?.food?.steps)||0),foodLevels=Math.min(FOOD_LEVELS,levelsBeaten(foodSteps,stepsPerLevel));
  const petOwner=family=>ROWS.find(row=>row.track&&TRACKS[row.track].family===family&&available.has(row.track)&&progress[`${row.id}-1`]>=4)?.id;
  const bosses=BOSSES.map(boss=>({...boss,levels:progress[boss.id],rewards:bossRewards(boss.id).map((items,i)=>({
   level:i+1,beaten:progress[boss.id]>i,
@@ -78,7 +81,8 @@ export function battlePassState(opts={}){
    return {...shown,granted:isGranted(shown)};
   }),
  }))}));
- return {stepsPerLevel,available:[...available],progress,bosses};
+ const food={steps:foodSteps,levels:foodLevels,maxLevel:FOOD_LEVELS,rewards:foodRewards().map((items,i)=>({level:i+1,beaten:foodLevels>i,items:items.map(item=>({...item,granted:isGranted(item)}))}))};
+ return {stepsPerLevel,available:[...available],progress,bosses,food};
 }
 
 /** Grants every beaten level's items not yet granted (idempotent: replaying the same steps
@@ -86,7 +90,7 @@ export function battlePassState(opts={}){
  * window with `{granted:[item], state}`. Returns the same `{granted, state}`. */
 export function syncBattlePass(opts={}){
  const state=battlePassState(opts),granted=[];
- for(const boss of state.bosses)for(const level of boss.rewards)if(level.beaten)for(const item of level.items)if(!item.granted&&grant(item)){item.granted=true;granted.push(item);}
+ for(const level of [...state.bosses.flatMap(boss=>boss.rewards),...state.food.rewards])if(level.beaten)for(const item of level.items)if(!item.granted&&grant(item)){item.granted=true;granted.push(item);}
  if(granted.length&&typeof window!=='undefined'&&window.dispatchEvent)window.dispatchEvent(new CustomEvent('myr5:battle-pass',{detail:{granted,state}}));
  return {granted,state};
 }

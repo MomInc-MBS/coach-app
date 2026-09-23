@@ -81,7 +81,7 @@ $('textureId').addEventListener('change',()=>setMaterial({textureId:($('textureI
 type Swatch={id:string;title:string;background:string;unlocked:boolean};
 const colorSwatches:Swatch[]=[
  ...COLORS.map(c=>({id:c.id,title:c.displayName+(isColorUnlocked(c)?'':' (locked)'),background:c.primary,unlocked:isColorUnlocked(c)})),
- ...PALETTES.map(p=>({id:p.id,title:p.displayName+(isPaletteUnlocked(p)?'':` (locked — aura day ${p.unlockAtDay})`),background:`linear-gradient(90deg,${p.colors.join(',')})`,unlocked:isPaletteUnlocked(p)})),
+ ...PALETTES.map(p=>({id:p.id,title:p.displayName+(isPaletteUnlocked(p)?'':` (locked — ${p.unlockAtDay?`aura day ${p.unlockAtDay}`:'battle pass'})`),background:`linear-gradient(90deg,${p.colors.join(',')})`,unlocked:isPaletteUnlocked(p)})),
 ];
 for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.title;b.style.background=s.background;b.style.height='34px';b.disabled=!s.unlocked;b.onclick=()=>setMaterial({colorId:s.id});$('colorSwatches').append(b);}
 $('materialClear').onclick=()=>{const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
