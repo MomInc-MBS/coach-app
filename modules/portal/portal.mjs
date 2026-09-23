@@ -30,18 +30,34 @@ const ICONS={
  trophy:'<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 8h16v10a8 8 0 0 1-16 0z"/><path d="M16 10H8v4a8 8 0 0 0 8 8M32 10h8v4a8 8 0 0 1-8 8"/><path d="M24 26v8M17 40h14M20 34h8v6h-8z"/></svg>',
  joystick:'<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="24" cy="14" r="6"/><path d="M24 20v10"/><rect x="10" y="30" width="28" height="10" rx="3"/></svg>',
  star:'<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="M24 6l5.2 11.4L41 19l-9 8.3 2.4 12.2L24 33.4 13.6 39.5 16 27.3 7 19l11.8-1.6z"/></svg>',
+ bell:'<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6c-6 0-9 5-9 12v6l-4 8h26l-4-8v-6c0-7-3-12-9-12z"/><path d="M19 38a5 5 0 0 0 10 0"/></svg>',
+ gear:'<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M44 24h-6M10 24H4M37.6 10.4l-4.2 4.2M14.6 33.4l-4.2 4.2M37.6 37.6l-4.2-4.2M14.6 14.6l-4.2-4.2"/></svg>',
 };
 
-// Shape -> menu. Neon colours: Ian picked the six most popular neons (2026-09-22) — orange, purple, pink, green, yellow, electric blue.
-const MENUS={
- rect:{label:'Workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home'},
- oval:{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
- up:{label:'Customizer',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:()=>location.assign('/creature/index.html')},
- down:{label:'Nutrition',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');}},
- vdiamond:{label:'Scoreboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');}},
- // No shape yet: reachable from the Menu sheet (plan/DECISIONS.md puts Achievements on the inverted triangle — rename this key to `down` once Nutrition moves).
- achievements:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:()=>window.myr5Menus?.achievements?.()},
- hdiamond:{label:'Arcade / War Room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:()=>location.assign('/war-room/index.html')},
+// Shape -> menu. Ian's gesture map (2026-09-22): rect/oval are camera/nav-free ("home") destinations —
+// hide the portal, then trigger the pod's own control; up/down/diamonds/lines/x open a dialog or navigate.
+// Neon colours: Ian picked the six most popular neons (2026-09-22) — orange, purple, pink, green, yellow,
+// electric blue — reused freely across destinations; #ff4fa0 is the dedicated Achievements pink.
+// `hidden:true` keeps an id routable (gesture lookup, MENUS[id]) without adding a duplicate row to the
+// Menu sheet grid — used for the second diamond (same destination as the first) and line-up (opens the
+// sheet itself, so it can't also be a row in it).
+const LEADERBOARD={label:'Leaderboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');}};
+// Exported so tests can check the gesture -> destination table without a DOM.
+export const MENUS={
+ rect:{label:'Workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open(){document.getElementById('start')?.click();}},
+ oval:{label:'Choose Workout',color:'#1f51ff',icon:ICONS.dumbbell,kind:'home',open(){document.getElementById('controls')?.scrollIntoView({behavior:prefersReducedMotion()?'auto':'smooth',block:'center'});}},
+ up:{label:'Food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');}},
+ down:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:()=>window.myr5Menus?.achievements?.()},
+ vdiamond:LEADERBOARD,
+ hdiamond:{...LEADERBOARD,hidden:true},
+ x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:()=>location.assign('/creature/index.html')},
+ 'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
+ 'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');}},
+ 'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open(){document.getElementById('openSettings')?.click();return document.getElementById('settings');}},
+ // Share QR isn't built: trace it and get today's Menu sheet instead.
+ 'line-up':{label:'Share QR',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
+ // War Room/Arcade has no gesture: Menu sheet only, same lock as before.
+ warroom:{label:'Arcade / War Room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:()=>location.assign('/war-room/index.html')},
 };
 
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
@@ -120,7 +136,7 @@ let pointers=new Map(),pendingStrokes=[],finalizeTimer=0,outlineFlash=null,rafId
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
 
-function menuButtonsHtml(){return Object.entries(MENUS).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
+function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return '<span class="portal-board-label">Quilt portal</span>';}
 function updateBoardChips(){menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));}
 // Swaps the mounted board: pauses/disposes the old one, creates the new one, falls back to the
@@ -310,10 +326,25 @@ async function runShape(id){
  if(busy||!boardShown)return;
  const run=++sequence;busy=true;try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}finally{if(run===sequence)busy=false;}
 }
+// Lines (and x) are open strokes with no enclosed area: no hole to cut. Flash the trace in the
+// destination colour, then open it directly — no glass phase, no forced loadMinMs wait, no porthole
+// reveal (Ian 2026-09-22: transitions for these are his own later work).
+const LINE_IDS=new Set(['line-lr','line-rl','line-down','line-up']);
+const lineTemplatePts=id=>SHAPES.line[(id==='line-lr'||id==='line-rl')?1:0].points;
+async function openDirect(menu,current){
+ let dialog=null;
+ backgroundBlocked(false);
+ try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}
+ if(!current())return;
+ const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
+ if(!shown){status(`${menu.label} isn't available here yet.`);await fadeOutBoard();fadeInBoard();return;}
+ if(dialog instanceof HTMLDialogElement)dialog.addEventListener('close',()=>{if(current())fadeInBoard();},{once:true});
+ await fadeOutBoard();
+}
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect();
- if(id==='x'||id==='cross'||id==='line'){
-  flashOutline(SHAPES[id].map(p=>toClientPts(p.points,rect)),'#ffffff');
+ if(id==='cross'){
+  flashOutline(SHAPES.cross.map(p=>toClientPts(p.points,rect)),'#ffffff');
   const center=[rect.left+rect.width/2,rect.top+rect.height/2];
   const face=board?.faceRect();
   showGlass(face&&closeLoop(toClientPts([[0,0],[1,0],[1,1],[0,1]],face)),'#ffffff',true); // rainbow glass behind the whole board; the whole pattern falls in over it
@@ -326,7 +357,22 @@ async function portalSequence(id,current){
   return;
  }
  const menu=MENUS[id];if(!menu)return;
- if(!SHAPES[id]){setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
+ if(id==='x'){
+  // No area to cut (see LINE_IDS above); reuses the plain nav open Customizer used, so the glass/board
+  // stays up while the next page loads, same as any other kind:'nav' destination.
+  flashOutline(SHAPES.x.map(p=>toClientPts(p.points,rect)),menu.color);
+  if(menu.locked?.()){status(menu.lockedMessage);return;}
+  status('');menu.open();return;
+ }
+ if(LINE_IDS.has(id)){
+  flashOutline([toClientPts(lineTemplatePts(id),rect)],menu.color);
+  if(menu.locked?.()){status(menu.lockedMessage);return;}
+  status('');
+  if(menu.kind==='menu'){openMenu();return;} // Share QR isn't built: today's Menu sheet (openMenu hides the portal itself)
+  await openDirect(menu,current);
+  return;
+ }
+ if(!SHAPES[id]){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
  const pts=shapeClipPts(id,rect);
  flashOutline([pts],menu.color);
  if(menu.locked?.()){status(menu.lockedMessage);return;}
@@ -339,7 +385,7 @@ async function portalSequence(id,current){
  if(phase?.pulse)kickRender();
  await sleep(prefersReducedMotion()?0:PORTAL.loadMinMs);
  if(!current())return;
- if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome),current);if(current())setVisible(false);return;}
+ if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome),current);if(current()){setVisible(false);menu.open?.();}return;}
  if(menu.kind==='nav'){menu.open();return;} // the glass stays up while the next page loads
  let dialog=null;
  backgroundBlocked(false);

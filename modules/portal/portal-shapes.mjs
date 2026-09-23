@@ -39,11 +39,16 @@ const pathLength = (lines, step = 0.05) => {
   return len;
 };
 
+// A single-stroke straight line is direction-aware: 'line-down'/'line-up' for the vertical template,
+// 'line-lr'/'line-rl' for the horizontal one, named for the stroke's first vs last point (see recognizeShape).
 const SHAPE_IDS = [
   'cross',
   'down',
   'hdiamond',
-  'line',
+  'line-down',
+  'line-lr',
+  'line-rl',
+  'line-up',
   'oval',
   'rect',
   'up',
@@ -292,10 +297,15 @@ export const recognizeShape = (strokes) => {
 
   for (const id of candidates) {
     if (id === 'line') {
-      // Evaluate vertical and horizontal orientations separately.
+      // Evaluate vertical (orientations[0]) and horizontal (orientations[1]) templates separately.
       if (tooLong(SHAPES['line'].slice(0, 1))) continue;
       const orientations = SHAPES['line'].map((poly) => poly.sampled);
-      for (const templatePts of orientations) {
+      // Direction comes from the raw (un-filled-in) stroke's endpoints, not the template: normalized
+      // coords, y grows downward. A single-stroke candidate means strokes.length === 1 here.
+      const raw = strokes[0];
+      const first = raw[0], last = raw[raw.length - 1];
+      for (let i = 0; i < orientations.length; i++) {
+        const templatePts = orientations[i];
         const traceWithin =
           tracePoints.filter((p) => minDistToSet(p, templatePts) <= tolerance)
             .length / tracePoints.length;
@@ -311,7 +321,9 @@ export const recognizeShape = (strokes) => {
           const mean = sum / tracePoints.length;
           if (mean < bestScore) {
             bestScore = mean;
-            bestId = 'line';
+            bestId = i === 0
+              ? (last[1] >= first[1] ? 'line-down' : 'line-up')
+              : (last[0] >= first[0] ? 'line-lr' : 'line-rl');
           }
         }
       }
