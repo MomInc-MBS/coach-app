@@ -1,0 +1,16 @@
+.ship-view{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#0b0714;color:#fff0c0}
+.ship-view::backdrop{background:#000}
+.ship-view-stage{position:absolute;inset:0;overflow:hidden}
+.ship-view-bg{position:absolute;inset:0;z-index:0;background:#171020 center/cover no-repeat;image-rendering:pixelated}
+.ship-view-bg-fallback{background:radial-gradient(circle at 50% 34%,#ff9066 0 2%,#e8532f 2% 7%,#8a2a1f 7% 26%,#170a12 55%) center/cover,radial-gradient(1px 1px at 12% 22%,#fff 50%,transparent 51%) 0 0/70px 70px,radial-gradient(1px 1px at 62% 68%,#ffffffcc 50%,transparent 51%) 0 0/110px 110px,radial-gradient(1px 1px at 40% 85%,#ffffff99 50%,transparent 51%) 0 0/90px 90px,#0b0714}
+.ship-view-canvas{position:absolute;inset:0;z-index:1;width:100%;height:100%}
+.ship-view-coach{position:absolute;inset:0;z-index:2}
+.ship-view-coach .myr5-companion-card{position:absolute;inset:0;width:auto;height:auto;border:0;background:transparent;overflow:visible;backdrop-filter:none;border-radius:0}
+.ship-view-coach .myr5-companion-stage{width:100%;height:100%;background:transparent}
+.ship-view-coach .myr5-companion-status,.ship-view-coach .myr5-customize,.ship-view-coach .myr5-hide{display:none!important}
+.ship-view-note{position:absolute;z-index:3;left:12px;right:12px;bottom:9px;margin:0;text-align:center;color:#fff0c0;font:700 11px/1.4 ui-monospace,monospace;letter-spacing:.05em;text-shadow:0 2px 3px #000}
+.ship-view-fallback{position:absolute;z-index:3;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px;border-radius:12px;background:#000000b3;backdrop-filter:blur(4px)}
+.ship-view-fallback p{margin:0;color:#fff0c0;font:600 13px/1.4 ui-monospace,monospace;text-align:center}
+.ship-view-download{min-height:40px;padding:0 16px;border:0;border-radius:8px;background:#ffd76d;color:#241407;font:700 13px/1 ui-monospace,monospace}
+.ship-view-close{position:absolute;z-index:4;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:40px;height:40px;border-radius:50%;border:1px solid #70568b80;background:#21162bc9;color:#fff0c0;font-size:16px}
+@media(prefers-reduced-motion:reduce){.ship-view *{animation:none!important;transition:none!important}}

@@ -15,6 +15,7 @@ import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
+import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds} from './modules/ships/ship-view-bridge.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -192,6 +193,8 @@ window.addEventListener('myr5:ship-scene-ready',event=>{acceptShipRevealComplete
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
 window.myr5Menus={...window.myr5Menus,portal:async()=>{try{const {openQuiltPortal}=await import('./modules/portal/portal-entry.mjs');await openQuiltPortal();}catch(error){console.warn('Quilt portal could not be opened.',error);}}};
+// D-ship-route: full-screen ship view, same coach capsule renderer as "Show my coach" below.
+window.myr5Menus={...window.myr5Menus,ship:async()=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds});}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();

@@ -47,7 +47,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   if(observedCard!==card){observer.observe(card,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ready']});observedCard=card;}
   // Full-screen workout mode parks the card in #coachOverlay (created at runtime by camera-workout.mjs,
   // not a static pose.html id, hence document.getElementById here rather than the $() shorthand); leave it there while tracking.
-  if(document.body.dataset.tracking==='true'&&document.getElementById('coachOverlay')){}else{
+  if((document.body.dataset.tracking==='true'&&document.getElementById('coachOverlay'))||document.body.dataset.shipView==='true'){}else{
    const mount=flow.phase==='rest'?$('restCoachMount'):$('coachMount');if(card.parentElement!==mount)mount.append(card);
    if(window.myr5Creature?.stats().stage!==(flow.phase==='rest'?'encounter':'pod'))window.myr5Creature?.stage(flow.phase==='rest'?'encounter':'pod');
   }
