@@ -355,4 +355,74 @@ export const recognizeShape = (strokes) => {
   return bestId;
 };
 
+/**
+ * #21 "almost": the closest candidate even when it fails TOLERANCE.cover, for a near-miss hint.
+ * Reuses recognizeShape's own coverage math (same candidates, same tolerance, same tooLong guard)
+ * without the pass/fail gate, so it stays in lockstep with what recognizeShape accepts.
+ *
+ * @param {Array<Array<[number, number]>>} strokes
+ * @returns {{id:string,score:number}|null} score is min(traceWithin,templateWithin) in [0,1); recognizeShape
+ *  would accept the same candidate once that reaches TOLERANCE.cover. Never throws; null on malformed input,
+ *  no strokes, or a trace too long/short-stroked to score against anything.
+ */
+export const nearestShape = (strokes) => {
+  if (!Array.isArray(strokes)) return null;
+  const tracePoints = [];
+  for (const stroke of strokes) {
+    if (!Array.isArray(stroke)) return null;
+    for (const pt of stroke) {
+      if (
+        !Array.isArray(pt) ||
+        pt.length !== 2 ||
+        typeof pt[0] !== 'number' ||
+        typeof pt[1] !== 'number' ||
+        !Number.isFinite(pt[0]) ||
+        !Number.isFinite(pt[1])
+      )
+        return null;
+      tracePoints.push(pt);
+    }
+  }
+  if (tracePoints.length === 0) return null;
+  const dense = strokes.flatMap((stroke) => stroke.length > 1 ? samplePolyline(stroke) : stroke);
+  const points = dense.length ? dense : tracePoints;
+
+  const strokeCount = strokes.length;
+  let candidates = [];
+  if (strokeCount === 1)
+    candidates = ['rect', 'up', 'down', 'vdiamond', 'hdiamond', 'oval', 'line'];
+  else if (strokeCount === 2) candidates = ['x', 'cross'];
+  else return null;
+
+  const tolerance = TOLERANCE.dist;
+  const traceLength = pathLength(strokes);
+  const tooLong = (polys) => traceLength > TOLERANCE.maxLength * pathLength(polys.map((p) => p.points), 0);
+  let best = null;
+  const consider = (id, templatePts) => {
+    const traceWithin =
+      points.filter((p) => minDistToSet(p, templatePts) <= tolerance).length / points.length;
+    const templateWithin =
+      templatePts.filter((tp) => minDistToSet(tp, points) <= tolerance).length / templatePts.length;
+    const score = Math.min(traceWithin, templateWithin);
+    if (!best || score > best.score) best = { id, score };
+  };
+
+  for (const id of candidates) {
+    if (id === 'line') {
+      if (tooLong(SHAPES.line.slice(0, 1))) continue;
+      const raw = strokes[0], first = raw[0], last = raw[raw.length - 1];
+      SHAPES.line.forEach((poly, i) => {
+        const name = i === 0
+          ? (last[1] >= first[1] ? 'line-down' : 'line-up')
+          : (last[0] >= first[0] ? 'line-lr' : 'line-rl');
+        consider(name, poly.sampled);
+      });
+    } else {
+      if (tooLong(SHAPES[id])) continue;
+      consider(id, SHAPES[id].flatMap((poly) => poly.sampled));
+    }
+  }
+  return best;
+};
+
 export { SHAPE_IDS, SHAPES };

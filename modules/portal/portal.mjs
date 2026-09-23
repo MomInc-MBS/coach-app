@@ -3,7 +3,7 @@
 // through the hole behind it for a short interactive loading phase — then opens the shape's menu.
 // AGPL-3.0-or-later.
 import {createQuiltBoard,QUILT} from './portal-board.mjs';
-import {recognizeShape,SHAPES} from './portal-shapes.mjs';
+import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dive into the wormhole (the destination appears from its core), the healed board fading back in, one touch ripple on
@@ -23,10 +23,35 @@ const IDLE={armMs:3000,fastMs:500,slowMs:2500};
 // Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
 const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','line-up','cross'];
 const TRAIL_FADE_MS=800;
+// #20 double-tap to open: a second tap within TAP_MS and TAP_MOVE_PX of the first counts as one double-tap;
+// TAP_HIT_PX is how close (client px) it must land to a shape's stitched outline. #21 "almost": a failed
+// trace whose closest candidate (nearestShape) still covers at least ALMOST_COVER of both trace and template
+// gets the near-miss flash instead of silence; ALMOST_MS is how long that flash (with its label) stays up.
+// #22 first-run hint: HINT_MS is one lap of the glowing fingertip around the square.
+// ALMOST_COVER sits well above the ~0.55-0.60 a wrong-shape trace (a circle, an L, a stray diagonal) scores
+// against its closest candidate, and below the ~0.65-0.78 a genuine partial trace of the right shape (most
+// of a rect with the last side never closed) scores — calibrated against portal-shapes.test.mjs's near-miss
+// fixtures so a scribble never earns an "Almost".
+const TAP_MS=350,TAP_MOVE_PX=32,TAP_HIT_PX=14,ALMOST_COVER=.65,ALMOST_MS=1200,HINT_MS=2600,HINT_KEY='myr5.portalHintShown';
+// Only the shapes that actually cut/glass/dive through portalSequence's default branch (SHAPES entries
+// that are single closed-area strokes, i.e. not 'x'/'cross'/'line') are tap targets — matches #20's "same
+// cut, glass and dive" as tracing.
+const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes(id));
 
 // Board catalogue: add one line per wave-2 board here.
 export const PRODUCTION_PORTALS=Object.freeze(['quilt']);
 const BOARDS={quilt:{label:'Quilt',create:host=>createQuiltBoard(host)}};
+// Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
+// a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module
+// is imported (window.__portalTrailProbe above is the same pattern). Its create() only touches `host` at
+// call time, never `document` at module-eval time, so importing this module without a DOM still works.
+if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
+ BOARDS.__stub__={label:'Stub',create:host=>Promise.resolve({
+  background:'#000',
+  faceRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
+  patternRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
+  cut:()=>Promise.resolve(),heal(){},press(){},release(){},pause(){},resume(){},dispose(){},
+ })};
 const BOARD_KEY='myr5.portalBoard';
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
 const store={get(){return 'quilt'},set(){}};
@@ -87,6 +112,9 @@ export const MENUS={
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
 const motion=(el,value)=>value?el.style.setProperty('transition',prefersReducedMotion()?'none':value,'important'):el.style.removeProperty('transition');
 const prefersReducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+// #29: a short buzz on a recognised match (trace or tap), a double pulse on an "almost" near-miss. iOS
+// ignores navigator.vibrate; never vibrate under reduced motion.
+const buzz=pattern=>{if(!prefersReducedMotion())navigator.vibrate?.(pattern);};
 const raf=()=>new Promise(r=>requestAnimationFrame(r));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // Lets a just-opened dialog's layout settle before we measure it. Races two frames against a plain
@@ -147,6 +175,9 @@ let busy=false,phase=null;
 // tab visible); idleCycle is the running cycle ({phase:'fast'|'slow',t0}) or {static:true} under reduced
 // motion. #105: fading holds just-released strokes still fading out, drawn alongside any live ones.
 let idleTimer=0,idleCycle=null,fading=[];
+// #22 first-run hint: {t0} while the glowing-fingertip demo plays, else null. idleEligible() also checks
+// this (below) so the idle ambient flash never runs underneath it.
+let hint=null,lastTap=null;
 
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return '<span class="portal-board-label">Quilt portal</span>';}
@@ -246,7 +277,7 @@ function setVisible(v){
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
- if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();}
+ if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;
  scheduleIdle();
@@ -537,6 +568,70 @@ function drawIdle(now){
  drawIdleShape(idleShapeInfo(id,rect),alpha,width,face);
 }
 
+// #22 first-run hint: a glowing fingertip traces the stitched square once, labelled, the first time the
+// quilt shows (never again once seen). localStorage is wrapped in try/catch — sandboxed frames and
+// private-mode Safari throw, and a blocked flag must never crash the hint (or nag every visit: on error we
+// act as if it's already been seen).
+function hintSeen(){try{return localStorage.getItem(HINT_KEY)==='1';}catch{return true;}}
+function markHintSeen(){try{localStorage.setItem(HINT_KEY,'1');}catch{}}
+// Points on a closed polyline from its start up to `frac` of the way around (arc-length, not index).
+function tracedPrefix(pts,frac){
+ const segs=[];let total=0;
+ for(let i=0;i<pts.length-1;i++){total+=segs[i]=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);}
+ let left=frac*total,out=[pts[0]];
+ for(let i=0;i<segs.length;i++){
+  if(segs[i]>=left){const f=segs[i]?left/segs[i]:0;const[ax,ay]=pts[i],[bx,by]=pts[i+1];out.push([ax+(bx-ax)*f,ay+(by-ay)*f]);break;}
+  left-=segs[i];out.push(pts[i+1]);
+ }
+ return out;
+}
+// Coordinates with idle flashing (COMMON): idleEligible() also checks `!hint` so the two never overlap;
+// starting/stopping the hint just re-runs scheduleIdle() to pick that up, without touching idle's own state.
+function maybeStartHint(){
+ // Ian 2026-09-23: "the magical finger is only for the quilt" — same board-scoping as the trail above.
+ if(hint||idleCycle||hintSeen()||boardId!=='quilt')return;
+ hint={t0:performance.now()};
+ scheduleIdle();kickRender();
+}
+function stopHint(){
+ if(!hint)return;
+ hint=null;
+ scheduleIdle();
+}
+function drawHint(now){
+ const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
+ const elapsed=now-hint.t0;
+ if(elapsed>=HINT_MS){stopHint();return;} // one lap done: clear it through stopHint so idle re-arms too
+ const pts=shapeClipPts('rect',rect),reduced=prefersReducedMotion();
+ strokeGlow(pts,'#ffffff',.18,3);
+ const prefix=reduced?pts:tracedPrefix(pts,elapsed/HINT_MS);
+ strokeGlow(prefix,'#ffffff',.9,4);
+ const tip=prefix[prefix.length-1];touchDot(tip[0],tip[1],'#ffffff');
+ drawLabel('Trace to start your workout',pts[0],'#ffffff',.85,face);
+}
+
+// #20 tap as well as trace: nearest tappable shape outline to a client-px point, or null past TAP_HIT_PX.
+// Point-to-segment distance over each candidate's own closed outline (shapeClipPts), not nearest vertex, so
+// a 5-corner rect/diamond still hit-tests accurately along its straight edges.
+function distToPolyline(pt,pts){
+ let best=Infinity;
+ for(let i=0;i<pts.length-1;i++){
+  const[ax,ay]=pts[i],[bx,by]=pts[i+1],dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+  const t=len2?Math.max(0,Math.min(1,((pt[0]-ax)*dx+(pt[1]-ay)*dy)/len2)):0;
+  best=Math.min(best,Math.hypot(pt[0]-(ax+dx*t),pt[1]-(ay+dy*t)));
+ }
+ return best;
+}
+function nearestTapShape(x,y){
+ const rect=board?board.patternRect():fallbackRect();
+ let bestId=null,bestDist=TAP_HIT_PX;
+ for(const id of TAPPABLE_IDS){
+  const d=distToPolyline([x,y],shapeClipPts(id,rect));
+  if(d<=bestDist){bestDist=d;bestId=id;}
+ }
+ return bestId;
+}
+
 // now: the trail probe draws a frozen frame at a chosen time (rAF's own timestamp arrives first and is ignored).
 function drawFrame(_,now=performance.now()){
  // #104 risk 4: eligibility (no open dialog, tab visible, etc.) is otherwise only rechecked when the
@@ -546,27 +641,40 @@ function drawFrame(_,now=performance.now()){
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
  if(outlineFlash){
-  const t=now-outlineFlash.start;
-  if(t<350)outlineFlash.polys.forEach(p=>strokeGlow(p,outlineFlash.color,1-t/350,4));
-  else outlineFlash=null;
+  const dur=outlineFlash.duration||350,t=now-outlineFlash.start;
+  if(t<dur){
+   const alpha=1-t/dur;
+   outlineFlash.polys.forEach(p=>strokeGlow(p,outlineFlash.color,alpha,4));
+   if(outlineFlash.label)drawLabel(outlineFlash.label,outlineFlash.labelPt,outlineFlash.color,Math.min(.6,alpha),board?board.faceRect():fallbackRect());
+  }else outlineFlash=null;
  }
  if(idleCycle)drawIdle(now);
+ // Any active pointer — a real touch (wirePointerEvents' own pointerdown already calls stopHint()
+ // synchronously, before this ever runs) or the test-only trailProbe's simulated one — ends the hint for
+ // good; probeFrozen means trailProbe wants a clean frame with nothing else drawn on it.
+ if(hint){if(pointers.size)stopHint();else if(!probeFrozen)drawHint(now);}
  if(phase?.pulse&&phase.pts)strokeGlow(phase.pts,phase.color,.4+.25*Math.sin((now-phase.t0)/280),3); // soft breathing outline while loading
  for(let i=fading.length-1;i>=0;i--)if(now-fading[i].pts.at(-1).t>=TRAIL_FADE_MS)fading.splice(i,1);
  const reduced=prefersReducedMotion();
- for(const p of pointers.values())reduced?renderPlainTrail(p.pts,now):renderRibbon(p.pts,now,true);
- for(const entry of fading){
-  if(reduced){renderPlainTrail(entry.pts,now);continue;}
-  renderRibbon(entry.pts,now,false);drawShimmer(entry,now); // #105: a shimmer ripples along the path as it fades
+ // Ian 2026-09-23: "the magical finger is only for the quilt" — other boards (ice, grass, cogs, jelly,
+ // wood) bring their own touch effects, so the trail only draws while the mounted board is the quilt.
+ if(boardId==='quilt'){
+  for(const p of pointers.values())reduced?renderPlainTrail(p.pts,now):renderRibbon(p.pts,now,true);
+  for(const entry of fading){
+   if(reduced){renderPlainTrail(entry.pts,now);continue;}
+   renderRibbon(entry.pts,now,false);drawShimmer(entry,now); // #105: a shimmer ripples along the path as it fades
+  }
+  if(!reduced)drawSparks(now);
  }
- if(!reduced)drawSparks(now);
- if(pointers.size||fading.length||outlineFlash||(idleCycle&&!idleCycle.static)||(phase?.pulse)||(!reduced&&sparksAlive(now)))kickRender();
+ if(pointers.size||fading.length||outlineFlash||(idleCycle&&!idleCycle.static)||(phase?.pulse)||(!reduced&&sparksAlive(now))||hint)kickRender();
 }
-function flashOutline(polys,color){if(prefersReducedMotion())return;outlineFlash={polys,color,start:performance.now()};kickRender();}
+// opts (#21 "almost"): {label,labelPt,duration} — a plain match flash stays the original quick 350ms
+// outline-only pulse; an "almost" flash carries a fading label and runs ~1.2s (ALMOST_MS below).
+function flashOutline(polys,color,opts){if(prefersReducedMotion())return;outlineFlash={polys,color,start:performance.now(),...opts};kickRender();}
 
 // #104: arms/disarms the idle cycle from every place eligibility can change (touch, sequence start/end,
 // show/hide, tab visibility). Always safe to call — it's a no-op when nothing needs to change.
-function idleEligible(){return boardShown&&!busy&&pointers.size===0&&!document.hidden&&!document.querySelector('dialog[open]');}
+function idleEligible(){return boardShown&&!busy&&!hint&&pointers.size===0&&!document.hidden&&!document.querySelector('dialog[open]');}
 function scheduleIdle(){
  clearTimeout(idleTimer);idleTimer=0;
  if(idleCycle){idleCycle=null;kickRender();} // clears the drawn hint on the next frame
@@ -876,9 +984,23 @@ function endPointer(e,cancel){
  if(p.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});
  scheduleIdle();kickRender();
  if(cancel||busy)return;
+ markHintSeen(); // #22: any real released touch, trace or tap, ends the first-run hint window for good.
  const xs=p.norm.map(n=>n[0]),ys=p.norm.map(n=>n[1]);
  const size=Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
- if(size<.03)return; // ignore taps
+ if(size<.03){
+  // #20: a second tap within TAP_MS and TAP_MOVE_PX of the first, near a shape's stitched outline (within
+  // TAP_HIT_PX), opens it exactly as tracing does. A single tap, or a double-tap far from any outline,
+  // just ripples the fabric (board.press on pointerdown already does that).
+  const tap={x:e.clientX,y:e.clientY,t:performance.now()};
+  const isDouble=lastTap&&tap.t-lastTap.t<=TAP_MS&&Math.hypot(tap.x-lastTap.x,tap.y-lastTap.y)<=TAP_MOVE_PX;
+  lastTap=isDouble?null:tap;
+  if(isDouble){
+   const id=nearestTapShape(tap.x,tap.y);
+   if(id){buzz(12);runShape(id);}
+  }
+  return;
+ }
+ lastTap=null;
  pendingStrokes.push(p.norm);pendingTrailPts.push(p.pts);
  clearTimeout(finalizeTimer);
  finalizeTimer=setTimeout(()=>{
@@ -887,12 +1009,22 @@ function endPointer(e,cancel){
   if(id){
    // #105: on a match, the drawn trail itself flashes the destination colour before the cut starts.
    flashOutline(trailPts.map(pts=>pts.map(pt=>[pt.x,pt.y])),id==='cross'?'#ffffff':(MENUS[id]?.color||'#ffffff'));
+   buzz(12); // #29
    runShape(id);
+   return;
+  }
+  // #21 "almost": close but not a match — flash the nearest candidate's outline + faint label, don't open it.
+  const near=nearestShape(strokes);
+  if(near&&near.score>=ALMOST_COVER){
+   const rect=board?board.patternRect():fallbackRect(),info=idleShapeInfo(near.id,rect);
+   flashOutline(info.polys,info.color,{label:`Almost: ${info.label}`,labelPt:info.labelPt,duration:ALMOST_MS});
+   buzz([12,40,12]); // #29 double-pulse
   }
  },450);
 }
 function wirePointerEvents(){
  overlay.addEventListener('pointerdown',e=>{
+  stopHint(); // #22: any touch stops the first-run hint immediately, mid-animation or not.
   overlay.setPointerCapture(e.pointerId);clearTimeout(finalizeTimer);
   pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)]});
   scheduleIdle();
