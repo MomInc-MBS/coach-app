@@ -1,6 +1,6 @@
 let loading,mounted;
 
-export async function openQuiltPortal() {
+export async function openQuiltPortal({shouldShow=()=>true}={}) {
   if(mounted?.disposed)loading=null;
   if (!loading) {
     loading = (async () => {
@@ -21,6 +21,7 @@ export async function openQuiltPortal() {
     });
   }
   const portal = await loading;
+  if(!shouldShow())return null;
   portal.show();
   return portal;
 }

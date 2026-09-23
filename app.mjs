@@ -16,6 +16,7 @@ import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds} from './modules/ships/ship-view-bridge.mjs';
+import {isInstalled} from './install-context.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -192,7 +193,18 @@ mountHomeCharacter();
 window.addEventListener('myr5:ship-scene-ready',event=>{acceptShipRevealComplete(event);});
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
-window.myr5Menus={...window.myr5Menus,portal:async()=>{try{const {openQuiltPortal}=await import('./modules/portal/portal-entry.mjs');await openQuiltPortal();}catch(error){console.warn('Quilt portal could not be opened.',error);}}};
+async function showQuiltPortal(options){try{const {openQuiltPortal}=await import('./modules/portal/portal-entry.mjs');return !!await openQuiltPortal(options);}catch(error){console.warn('Quilt portal could not be opened.',error);return false;}}
+window.myr5Menus={...window.myr5Menus,portal:showQuiltPortal};
+let starterPortalAttempted=false;
+function starterPortalReady(){
+ const route=new URLSearchParams(location.search);
+ return isInstalled()&&!route.has('panel')&&location.hash!=='#pod'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
+}
+window.addEventListener('myr5:coach-plan',()=>{
+ if(starterPortalAttempted)return;
+ starterPortalAttempted=true;
+ if(starterPortalReady())void showQuiltPortal({shouldShow:starterPortalReady});
+});
 // D-ship-route: full-screen ship view, same coach capsule renderer as "Show my coach" below.
 window.myr5Menus={...window.myr5Menus,ship:async()=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds});}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
