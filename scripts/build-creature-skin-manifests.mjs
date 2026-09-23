@@ -21,10 +21,10 @@ export async function buildCreatureSkinManifests({ root = process.cwd(), outputD
     collections.push({ id: source.items[0]?.collection, packetId: source.packetId, displayName: source.displayName, description: source.description, runtimeNotes: source.runtimeNotes });
     for (const item of source.items) {
       if (!item.id?.startsWith('creature-') || ids.has(item.id)) throw new Error(`Duplicate or non-namespaced creature skin id: ${item.id}`);
-      if (!TRACKS.has(item.track) || item.collection !== collections.at(-1).id) throw new Error(`Invalid track/collection for ${item.id}`);
+      if (!TRACKS.has(item.track) || ![1,2,3].includes(item.collectionSlot) || item.collection !== collections.at(-1).id) throw new Error(`Invalid track/collection for ${item.id}`);
       ids.add(item.id);
       for (const [map, info] of Object.entries(item.maps)) {
-        if (!info.file || !Number.isSafeInteger(info.bytes) || !HEX.test(info.sha256)) throw new Error(`Invalid ${map} metadata for ${item.id}`);
+        if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(info.file||'') || info.file.includes('..') || !Number.isSafeInteger(info.bytes) || info.bytes<1 || !HEX.test(info.sha256)) throw new Error(`Invalid ${map} metadata for ${item.id}`);
       }
     }
   }
@@ -34,7 +34,7 @@ export async function buildCreatureSkinManifests({ root = process.cwd(), outputD
   catalog.skins = [];
   for (const packet of PACKETS) {
     const source = JSON.parse(await readFile(join(base, packet.dir, 'source-manifest.json'), 'utf8'));
-    catalog.skins.push(...source.items.map(item => ({ ...item, runtime: { unlock: { level: [1, 3, 5][item.collectionSlot - 1], track: item.track }, pack: item.collection, bundle: `assets/${item.track}.m5bundle`, maps: Object.fromEntries(Object.entries(item.maps).map(([name, map]) => [name, { entry: `${item.id}/${name}`, bytes: map.bytes, sha256: map.sha256 }])) } })));
+    catalog.skins.push(...source.items.map(item => ({ ...item, runtime: { unlock: { level: [1, 3, 5][item.collectionSlot - 1], track: item.track }, pack: `track-${item.track}`, bundle: `assets/${item.track}.m5bundle`, maps: Object.fromEntries(Object.entries(item.maps).map(([name, map]) => [name, { entry: `${item.id}/${name}`, bytes: map.bytes, sha256: map.sha256 }])) } })));
   }
   await mkdir(outputDir, { recursive: true });
   await mkdir(dirname(catalogPath), { recursive: true });

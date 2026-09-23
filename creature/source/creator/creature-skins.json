@@ -114,7 +114,7 @@
           "level": 1,
           "track": "chest"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -205,7 +205,7 @@
           "level": 3,
           "track": "chest"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -301,7 +301,7 @@
           "level": 5,
           "track": "chest"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -402,7 +402,7 @@
           "level": 1,
           "track": "quads"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -493,7 +493,7 @@
           "level": 3,
           "track": "quads"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -584,7 +584,7 @@
           "level": 5,
           "track": "quads"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -680,7 +680,7 @@
           "level": 1,
           "track": "glutes"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -776,7 +776,7 @@
           "level": 3,
           "track": "glutes"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -872,7 +872,7 @@
           "level": 5,
           "track": "glutes"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -968,7 +968,7 @@
           "level": 1,
           "track": "arms"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -1064,7 +1064,7 @@
           "level": 3,
           "track": "arms"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -1155,7 +1155,7 @@
           "level": 5,
           "track": "arms"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -1241,7 +1241,7 @@
           "level": 1,
           "track": "yoga"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -1327,7 +1327,7 @@
           "level": 3,
           "track": "yoga"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -1423,7 +1423,7 @@
           "level": 5,
           "track": "yoga"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -1529,7 +1529,7 @@
           "level": 1,
           "track": "martial-arts"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -1635,7 +1635,7 @@
           "level": 3,
           "track": "martial-arts"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -1731,7 +1731,7 @@
           "level": 5,
           "track": "martial-arts"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -1822,7 +1822,7 @@
           "level": 1,
           "track": "cardio"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -1918,7 +1918,7 @@
           "level": 3,
           "track": "cardio"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -2019,7 +2019,7 @@
           "level": 5,
           "track": "cardio"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -2120,7 +2120,7 @@
           "level": 1,
           "track": "meditation"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {
@@ -2216,7 +2216,7 @@
           "level": 3,
           "track": "meditation"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {
@@ -2312,7 +2312,7 @@
           "level": 5,
           "track": "meditation"
         },
-        "pack": "creature-forged-realms",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {
@@ -2408,7 +2408,7 @@
           "level": 1,
           "track": "chest"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -2504,7 +2504,7 @@
           "level": 3,
           "track": "chest"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -2600,7 +2600,7 @@
           "level": 5,
           "track": "chest"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-chest",
         "bundle": "assets/chest.m5bundle",
         "maps": {
           "basecolor": {
@@ -2696,7 +2696,7 @@
           "level": 1,
           "track": "quads"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -2792,7 +2792,7 @@
           "level": 3,
           "track": "quads"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -2883,7 +2883,7 @@
           "level": 5,
           "track": "quads"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-quads",
         "bundle": "assets/quads.m5bundle",
         "maps": {
           "basecolor": {
@@ -2974,7 +2974,7 @@
           "level": 1,
           "track": "glutes"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -3070,7 +3070,7 @@
           "level": 3,
           "track": "glutes"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -3166,7 +3166,7 @@
           "level": 5,
           "track": "glutes"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-glutes",
         "bundle": "assets/glutes.m5bundle",
         "maps": {
           "basecolor": {
@@ -3257,7 +3257,7 @@
           "level": 1,
           "track": "arms"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -3343,7 +3343,7 @@
           "level": 3,
           "track": "arms"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -3429,7 +3429,7 @@
           "level": 5,
           "track": "arms"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-arms",
         "bundle": "assets/arms.m5bundle",
         "maps": {
           "basecolor": {
@@ -3520,7 +3520,7 @@
           "level": 1,
           "track": "yoga"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -3616,7 +3616,7 @@
           "level": 3,
           "track": "yoga"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -3707,7 +3707,7 @@
           "level": 5,
           "track": "yoga"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-yoga",
         "bundle": "assets/yoga.m5bundle",
         "maps": {
           "basecolor": {
@@ -3798,7 +3798,7 @@
           "level": 1,
           "track": "martial-arts"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -3894,7 +3894,7 @@
           "level": 3,
           "track": "martial-arts"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -3990,7 +3990,7 @@
           "level": 5,
           "track": "martial-arts"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-martial-arts",
         "bundle": "assets/martial-arts.m5bundle",
         "maps": {
           "basecolor": {
@@ -4086,7 +4086,7 @@
           "level": 1,
           "track": "cardio"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -4182,7 +4182,7 @@
           "level": 3,
           "track": "cardio"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -4278,7 +4278,7 @@
           "level": 5,
           "track": "cardio"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-cardio",
         "bundle": "assets/cardio.m5bundle",
         "maps": {
           "basecolor": {
@@ -4374,7 +4374,7 @@
           "level": 1,
           "track": "meditation"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {
@@ -4470,7 +4470,7 @@
           "level": 3,
           "track": "meditation"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {
@@ -4566,7 +4566,7 @@
           "level": 5,
           "track": "meditation"
         },
-        "pack": "creature-celestial-rift",
+        "pack": "track-meditation",
         "bundle": "assets/meditation.m5bundle",
         "maps": {
           "basecolor": {

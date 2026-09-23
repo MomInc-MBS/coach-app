@@ -11,10 +11,23 @@ function read(){
  }catch{return Object.fromEntries(LEDGER_KINDS.map(k=>[k,[]]));}
 }
 
-export const isGranted=(kind,id)=>read()[kind]?.includes(id)??false;
-export const grantedIds=kind=>read()[kind]??[];
+export const ACCOUNT_SCOPED_LEDGER_KINDS=Object.freeze(['creature-skin','ship']);
+const accountKinds=new Set(ACCOUNT_SCOPED_LEDGER_KINDS);
+const ownerKey=({account=globalThis.myr5AuthenticatedAccount}={})=>{
+ const id=typeof account==='string'?account:account?.user?.id;
+ return typeof id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id)?`${LEDGER_KEY}/account/${id}`:null;
+};
+function accountRead(options){try{const key=ownerKey(options);if(!key)return {};const data=JSON.parse(localStorage.getItem(key)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch{return {};}}
+export const grantedIds=(kind,options)=>{const value=(accountKinds.has(kind)?accountRead(options):read())[kind];return Array.isArray(value)?value:[];};
+export const isGranted=(kind,id,options)=>grantedIds(kind,options).includes(id);
 /** Idempotent: true only the first time `id` is granted for `kind`. */
-export function grantUnlock(kind,id){
+export function grantUnlock(kind,id,options){
+ if(accountKinds.has(kind)){
+  const key=ownerKey(options);if(!key)return false;
+  const data=accountRead(options),ids=Array.isArray(data[kind])?data[kind]:[];
+  if(ids.includes(id))return false;data[kind]=[...ids,id];
+  try{localStorage.setItem(key,JSON.stringify(data));return true;}catch{return false;}
+ }
  const store=read();
  if(!store[kind]||store[kind].includes(id))return false;
  store[kind].push(id);

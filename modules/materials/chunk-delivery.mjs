@@ -22,11 +22,13 @@ async download(m,{signal,retry=1}={}) { const owner=await this.prepare(m);if(!th
  /** Same signed/resumable flow, with progress from verified cached or newly committed chunks. */
  async downloadWithProgress(m,{signal,retry=1,onProgress}={}) {
   const owner=await this.prepare(m), totalBytes=m.assets.reduce((n,a)=>n+a.bytes,0),verified=new Set();let receivedBytes=0;
-  const report=()=>{try{onProgress?.({packId:m.packId,receivedBytes,totalBytes,percent:totalBytes?receivedBytes/totalBytes:1})}catch{/* progress observers cannot affect delivery */}};
+  const report=()=>{if(signal?.aborted)return;try{onProgress?.({packId:m.packId,receivedBytes,totalBytes,percent:totalBytes?receivedBytes/totalBytes:1})}catch{/* progress observers cannot affect delivery */}};
   report();
   for(const asset of m.assets)for(const chunk of asset.chunks){
+   if(signal?.aborted)throw new Error('download cancelled; resume available');
    await this.ownerFor(m,owner);const key=this.key(m,owner,asset,chunk),saved=await this.store.get(key);
-   if(saved?.byteLength===chunk.bytes&&await hash(saved)===chunk.sha256){verified.add(key);receivedBytes+=saved.byteLength;report()}
+   const valid=saved?.byteLength===chunk.bytes&&await hash(saved)===chunk.sha256;await this.ownerFor(m,owner);
+   if(valid){verified.add(key);receivedBytes+=saved.byteLength;report()}
   }
   const baseStore=this.store;
   const progressStore={
@@ -34,7 +36,7 @@ async download(m,{signal,retry=1}={}) { const owner=await this.prepare(m);if(!th
    async put(key,bytes){await baseStore.put(key,bytes);if(!verified.has(key)){verified.add(key);receivedBytes+=bytes.byteLength;report()}},
    removePrefix:prefix=>baseStore.removePrefix(prefix),
   };
-  const downloader=new ChunkDownloader({store:progressStore,fetchImpl:this.fetchImpl,policy:this.policy,ownership:this.ownership,online:this.online,expectedVersion:this.expectedVersion,manifestPublicKey:this.manifestPublicKey});
+  const downloader=new ChunkDownloader({store:progressStore,fetchImpl:this.fetchImpl,policy:this.policy,ownership:()=>this.ownerFor(m,owner),online:this.online,expectedVersion:this.expectedVersion,manifestPublicKey:this.manifestPublicKey});
   const result=await downloader.download(m,{signal,retry});this.maxAccountedAllocationBytes=Math.max(this.maxAccountedAllocationBytes,downloader.maxAccountedAllocationBytes);return result;
  }
  async verifyStored(m){const owner=await this.prepare(m);for(const a of m.assets)for(const c of a.chunks){await this.ownerFor(m,owner);const v=await this.store.get(this.key(m,owner,a,c));if(!v||v.byteLength!==c.bytes||await hash(v)!==c.sha256)throw new Error(`unverified stored chunk: ${a.path}/${c.index}`);await this.ownerFor(m,owner)}await this.ownerFor(m,owner);return {verified:true,owner,guarantee:'canonical signed ordered chunk list'}}

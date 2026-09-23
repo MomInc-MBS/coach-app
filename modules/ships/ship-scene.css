@@ -19,3 +19,4 @@
 #view.ship-intro-revealed .myr5-companion-status,#view.ship-intro-revealed .myr5-customize,#view.ship-intro-revealed .myr5-hide{display:none!important}
 .ship-scene~.pod-floor,.ship-scene~.pod-nameplate,.ship-scene~.camera-preview{z-index:5}
 @media(prefers-reduced-motion:reduce){.ship-scene-beam,.ship-scene-flash{transition-duration:.01ms!important}.ship-scene-background{transform:none}}
+.ship-scene-flash[popover]{margin:0;border:0;padding:0;max-width:none;max-height:none;width:100vw;height:100dvh;}

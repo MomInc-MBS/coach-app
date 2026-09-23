@@ -62,16 +62,12 @@ export const CREATURE_SKIN_REWARDS=Object.freeze(SKIN_CATALOG.skins.map(skin=>Ob
  track:skin.track,level:skin.runtime.unlock.level,pack:skin.runtime.pack,collection:skin.collection,
 })));
 
-// Ship assignments use board track order, not D21 family grouping: three midpoint and three
-// end-of-ladder rewards. Ship ownership is global and grant idempotence deduplicates repeats.
-export const SHIP_DEFINITIONS=Object.freeze([
- {id:'ship-supportive',ship:'supportive',name:'Supportive Ship',track:'chest',level:3},
- {id:'ship-direct',ship:'direct',name:'Direct Ship',track:'quads',level:3},
- {id:'ship-analytical',ship:'analytical',name:'Analytical Ship',track:'glutes',level:3},
- {id:'ship-playful',ship:'playful',name:'Playful Ship',track:'arms',level:5},
- {id:'ship-calm',ship:'calm',name:'Calm Ship',track:'yoga',level:5},
- {id:'ship-mom',ship:'mom',name:'MOM Ship',track:'martial-arts',level:5},
-].map(item=>Object.freeze(item)));
+// Every track receives a midpoint and end milestone, cycling six unique ships.
+// Duplicate grants are idempotent; family/grouping does not affect placement.
+const SHIPS=['supportive','direct','analytical','playful','calm','mom'];
+export const SHIP_DEFINITIONS=Object.freeze(Object.values(TRACKS).flatMap(({catalog:track},index)=>
+ [3,5].map((level,slot)=>{const ship=SHIPS[(index*2+slot)%SHIPS.length];return Object.freeze({id:`ship-${ship}`,ship,name:`${ship==='mom'?'MOM':ship[0].toUpperCase()+ship.slice(1)} Ship`,track,level});})
+));
 
 // --- item-catalog.json `weapons` (D21: 2 per style) ---
 const WEAPONS=[

@@ -63,9 +63,9 @@ export function combatLevel(mode,opts={}){
 }
 
 const STORE_KINDS=new Set(['texture','color','palette']);
-const isGranted=item=>(STORE_KINDS.has(item.kind)?store:ledger).isGranted(item.kind,item.id);
-function grant(item){
- if(!STORE_KINDS.has(item.kind))return ledger.grantUnlock(item.kind,item.id);
+const isGranted=(item,opts)=>(STORE_KINDS.has(item.kind)?store:ledger).isGranted(item.kind,item.id,opts);
+function grant(item,opts){
+ if(!STORE_KINDS.has(item.kind))return ledger.grantUnlock(item.kind,item.id,opts);
  if(store.isGranted(item.kind,item.id))return false;
  store.grantUnlock(item.kind,item.id);
  return store.isGranted(item.kind,item.id); // false if storage is unavailable
@@ -86,7 +86,7 @@ export function battlePassState(opts={}){
   items:items.map(item=>{
    const owner=item.kind==='pet'&&PET_SUBSTITUTE_PALETTE[item.family]&&petOwner(item.family);
    const shown=owner&&owner!==boss.row?paletteItem(PET_SUBSTITUTE_PALETTE[item.family]):item;
-   return {...shown,granted:isGranted(shown)};
+   return {...shown,granted:isGranted(shown,opts)};
   }),
  }))}));
  const food={steps:foodSteps,levels:foodLevels,maxLevel:FOOD_LEVELS,rewards:foodRewards().map((items,i)=>({level:i+1,beaten:foodLevels>i,items:items.map(item=>({...item,granted:isGranted(item)}))}))};
@@ -98,7 +98,7 @@ export function battlePassState(opts={}){
  * window with `{granted:[item], state}`. Returns the same `{granted, state}`. */
 export function syncBattlePass(opts={}){
  const state=battlePassState(opts),granted=[];
- for(const level of [...state.bosses.flatMap(boss=>boss.rewards),...state.food.rewards])if(level.beaten)for(const item of level.items)if(!item.granted&&grant(item)){item.granted=true;granted.push(item);}
+ for(const level of [...state.bosses.flatMap(boss=>boss.rewards),...state.food.rewards])if(level.beaten)for(const item of level.items)if(!item.granted&&grant(item,opts)){item.granted=true;granted.push(item);}
  if(granted.length&&typeof window!=='undefined'&&window.dispatchEvent)window.dispatchEvent(new CustomEvent('myr5:battle-pass',{detail:{granted,state}}));
  return {granted,state};
 }

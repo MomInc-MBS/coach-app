@@ -33,7 +33,9 @@ test('the two skin packets stay additive, uniquely namespaced, and checksum-iden
 
     const ids = new Set();
     for (const packet of ['forged-realms','celestial-rift']) {
-      const source = JSON.parse(await readFile(join(root, `plan/assets-inbox/creature-skins/${packet}/source-manifest.json`), 'utf8'));
+      const sourceText=await readFile(join(root, `plan/assets-inbox/creature-skins/${packet}/source-manifest.json`), 'utf8');
+      assert.equal(sha(sourceText.replaceAll('\r\n','\n')),{'forged-realms':'1a11eaa0ed509a0612b1c7cc31e2fc3664ef58cdd2d37e9e09db484d858f4a42','celestial-rift':'4bd028f7461c1b64d88cf7b6dae86ce32818bc004993f58416ee9fef5aa2601e'}[packet],'exact immutable source IDs, hashes, licenses and color-space semantics are retained');
+      const source = JSON.parse(sourceText);
       for (const item of source.items) {
         assert.ok(item.id.startsWith('creature-'));
         assert.ok(!legacyRegistry.includes(item.id),`${item.id} must not replace or overlap a fitness material id`);
@@ -41,6 +43,7 @@ test('the two skin packets stay additive, uniquely namespaced, and checksum-iden
         assert.equal(item.license, 'CC0-1.0');
         const catalogItem=catalog.skins.find(row=>row.id===item.id);
         assert.ok(catalogItem,`${item.id} is present in the runtime catalog`);
+        assert.equal(catalogItem.runtime.pack,`track-${item.track}`);
         assert.deepEqual([catalogItem.sourceUrl,catalogItem.license,catalogItem.author],[item.sourceUrl,item.license,item.author]);
         assert.deepEqual(catalogItem.maps,item.maps,`${item.id} source map sizes and hashes stay verbatim`);
         for (const map of Object.values(item.maps)) {
@@ -105,6 +108,7 @@ test('starter selection is the three chosen styles plus meditation; other tracks
     const partial=postDownloadChoices(account,new Set(['track-meditation','track-chest','track-arms','coach-ships-biomes']));
     assert.deepEqual(partial.starter,[],'starter is withheld rather than silently omitting a selected track packet');
     assert.deepEqual(postDownloadChoices(null,new Set(fullPostDownloadSectionIds())),{starter:[],individual:[],all:[]},'anonymous users only see the unchanged legacy full download');
+    for(const selection of [[],['chest'],['chest','cardio','quads','glutes']]){values.set('myr5-selected-tracks-v1',JSON.stringify(selection));assert.deepEqual(starterPostDownloadSectionIds(account),[],'starter needs exactly three chosen workouts, never silently fills or omits choices');}
   } finally { if(old)Object.defineProperty(globalThis,'localStorage',old);else delete globalThis.localStorage; }
 });
 
@@ -126,12 +130,13 @@ test('skin unlock slots are deterministic and additive to existing first-boss re
   assert.equal(bossRewards('strider-2').flat().filter(item => item.kind === 'creature-skin').length, 0, 'style rewards appear once on the track first boss');
 });
 
-test('six distinct ship IDs are allocated by track order at L3/L5, not by family', () => {
-  assert.equal(SHIP_DEFINITIONS.length, 6);
+test('six distinct ship IDs cycle through both L3/L5 milestones on every track, not by family', () => {
+  assert.equal(SHIP_DEFINITIONS.length, 16);
   assert.equal(new Set(SHIP_DEFINITIONS.map(x => x.id)).size, 6);
-  assert.deepEqual(SHIP_DEFINITIONS.filter(x=>x.level===3).map(x=>x.ship), ['supportive','direct','analytical']);
-  assert.deepEqual(SHIP_DEFINITIONS.filter(x=>x.level===5).map(x=>x.ship), ['playful','calm','mom']);
-  const rows = { chest:'strider', quads:'ringer', glutes:'manyarm', arms:'wedge', yoga:'blob', 'martial-arts':'cap' };
+  const cycle=['supportive','direct','analytical','playful','calm','mom'];
+  assert.deepEqual(SHIP_DEFINITIONS.map(x=>x.ship),Array.from({length:16},(_,i)=>cycle[i%6]));
+  const rows = { chest:'strider', quads:'ringer', glutes:'manyarm', arms:'wedge', yoga:'blob', 'martial-arts':'cap',cardio:'stalk',meditation:'tanka' };
+  for(const row of Object.values(rows)){const levels=bossRewards(`${row}-1`);for(const level of [3,5])assert.equal(levels[level-1].filter(x=>x.kind==='ship').length,1);}
   for (const ship of SHIP_DEFINITIONS) {
     const row = rows[ship.track], levels = bossRewards(`${row}-1`);
     assert.ok(levels[ship.level-1].some(x => x.kind==='ship' && x.id===ship.id && x.ship===ship.ship));
@@ -147,13 +152,16 @@ test('Ship editor access requires both explicit ownership and persisted complete
   try {
     const account = { user:{id:'test-owner-ship'} }, options = { account, storage };
     assert.equal(canShowCoachEditorShipSection(options),false);
-    unlockLedger.grantUnlock('ship','ship-supportive');
+    unlockLedger.grantUnlock('ship','ship-supportive',options);
     assert.deepEqual(coachEditorShips(options),[]);
     assert.equal(acceptShipRevealComplete({detail:{ship:'supportive',revealComplete:false}},options),false);
-    assert.equal(acceptShipRevealComplete({detail:{ship:'supportive',revealComplete:true}},options),true);
+    assert.equal(acceptShipRevealComplete({detail:{ship:'supportive',revealComplete:true,ownerId:'other-owner'}},options),false);
+    assert.equal(acceptShipRevealComplete({detail:{ship:'supportive',revealComplete:true,ownerId:account.user.id}},options),true);
     assert.deepEqual(coachEditorShips(options),['supportive']);
     assert.equal(canShowCoachEditorShipSection(options),true);
     assert.ok(data.has(SHIP_REVEAL_KEY));
+    assert.deepEqual(coachEditorShips({account:{user:{id:'different-owner'}},storage}),[]);
+    assert.equal(unlockLedger.isGranted('ship','ship-supportive',{account:null}),false);
   } finally {
     if (old) Object.defineProperty(globalThis,'localStorage',old); else delete globalThis.localStorage;
   }

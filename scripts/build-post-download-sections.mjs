@@ -10,9 +10,9 @@ const DEFAULT_BASE = 'https://mominc.online/materials';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function makeBundle(entries) {
-  const index = {};
+  const index = Object.create(null);
   let offset = 0;
-  for (const [name, bytes] of entries) { index[name] = { offset, bytes: bytes.byteLength, sha256: hash(bytes) }; offset += bytes.byteLength; }
+  for (const [name, bytes] of entries) { if(!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(name)||name.includes('..')||Object.hasOwn(index,name)||!bytes.byteLength)throw new Error('unsafe or duplicate bundle entry');index[name] = { offset, bytes: bytes.byteLength, sha256: hash(bytes) }; offset += bytes.byteLength; }
   const header = Buffer.from(JSON.stringify(index));
   const prefix = Buffer.alloc(4); prefix.writeUInt32BE(header.byteLength);
   return Buffer.concat([prefix, header, ...entries.map(([, bytes]) => bytes)]);
@@ -30,7 +30,7 @@ async function chunkRecord(bytes, { path, url, chunkBytes }) {
 export async function buildPostDownloadSections({ root = process.cwd(), outputDir = join(root, 'plan/assets-inbox/post-download-sections'), baseUrl = DEFAULT_BASE, chunkBytes = 1024 * 1024, materialize = true } = {}) {
   if (!Number.isInteger(chunkBytes) || chunkBytes < 1 || chunkBytes > 1024 * 1024) throw new Error('chunk size must obey the 1 MiB chunk-delivery policy');
   const origin = new URL(baseUrl);
-  if (origin.protocol !== 'https:' || origin.pathname !== '/materials') throw new Error('base URL must be an HTTPS origin ending in /materials');
+  if (origin.protocol !== 'https:' || origin.pathname !== '/materials' || origin.username || origin.password || origin.search || origin.hash) throw new Error('base URL must be an HTTPS origin ending in /materials');
   const output = resolve(outputDir), generated = [];
   const sections = [];
   const sourcePackets = await Promise.all(['forged-realms','celestial-rift'].map(async packet => ({
@@ -39,6 +39,10 @@ export async function buildPostDownloadSections({ root = process.cwd(), outputDi
     items: JSON.parse(await readFile(join(root, `plan/assets-inbox/creature-skins/${packet}/source-manifest.json`), 'utf8')).items,
   })));
   const trackNames = [...new Set(sourcePackets.flatMap(packet => packet.items.map(item => item.track)))].sort();
+  const expectedTracks=['arms','cardio','chest','glutes','martial-arts','meditation','quads','yoga'];
+  if(JSON.stringify(trackNames)!==JSON.stringify(expectedTracks))throw new Error('expected exactly eight known track packets');
+  const ids=new Set();for(const source of sourcePackets)for(const item of source.items){if(!/^creature-[a-z0-9-]+$/.test(item.id)||ids.has(item.id)||![1,2,3].includes(item.collectionSlot))throw new Error('invalid source skin identity');ids.add(item.id);}
+  if(ids.size!==48)throw new Error('expected exactly 48 source skins');
   for (const track of trackNames) {
     const packId = `track-${track}`, packDir = join(output, packId), entries = [];
     for (const source of sourcePackets) {
@@ -46,6 +50,7 @@ export async function buildPostDownloadSections({ root = process.cwd(), outputDi
         for (const map of MAP_ORDER) {
           const meta = item.maps[map];
           if (!meta) continue;
+          if(!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(meta.file||'')||meta.file.includes('..'))throw new Error('unsafe source texture path');
           const bytes = await readFile(join(source.root, meta.file));
           if (bytes.byteLength !== meta.bytes || hash(bytes) !== meta.sha256) throw new Error(`source packet checksum mismatch: ${item.id}/${map}`);
           entries.push([`${item.id}/${map}`, bytes]);

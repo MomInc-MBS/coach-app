@@ -15,48 +15,52 @@ export function postDownloadChoices(account, availableIds) {
 }
 
 /** Account-scoped explicit-action controls; anonymous core download remains independent. */
-export function mountPostDownloadSections({ host, account=globalThis.myr5AuthenticatedAccount, fetchImpl=globalThis.fetch, trust=productionMaterialTrust() }={}) {
+export function mountPostDownloadSections({ host, account=globalThis.myr5AuthenticatedAccount, fetchImpl=globalThis.fetch, trust=productionMaterialTrust(), policy, store }={}) {
   if (!host || !trust) return null;
   const panel=document.createElement('section');
   panel.className='post-download-sections';panel.hidden=true;
   panel.innerHTML='<h3>Extra offline packs</h3><p data-status role="status"></p><div data-actions></div><progress max="1" value="0" hidden aria-label="Extra pack download progress"></progress><button type="button" data-pause hidden>Pause</button>';
   host.append(panel);
   const status=panel.querySelector('[data-status]'), actions=panel.querySelector('[data-actions]'), progress=panel.querySelector('progress'), pause=panel.querySelector('[data-pause]');
-  let currentAccount=account, owner=null, available=new Map(), controller=null, pausedIds=null;
+  let currentAccount=account, owner=null, available=new Map(), controller=null, pausedIds=null,epoch=0,disposed=false,checking=null;
   const accountId=value=>typeof value?.user?.id==='string'?value.user.id:null;
-  const allowed=()=>!!owner&&accountId(globalThis.myr5AuthenticatedAccount??currentAccount)===owner;
+  const allowed=()=>!disposed&&!!owner&&accountId(Object.hasOwn(globalThis,'myr5AuthenticatedAccount')?globalThis.myr5AuthenticatedAccount:currentAccount)===owner;
   const labels=new Map(POST_DOWNLOAD_SECTIONS.map(section=>[section.id,section.title]));
   function clear(){available=new Map();actions.replaceChildren();panel.hidden=true;}
-  function button(label,ids,operation){const b=document.createElement('button');b.type='button';const resume=pausedIds&&JSON.stringify(pausedIds)===JSON.stringify(ids);b.textContent=resume?label.replace(/^Download/,'Resume'):label;b.addEventListener('click',()=>{pausedIds=null;void run(ids,opts=>operation({...opts,account:currentAccount,authorize:()=>true,fetchImpl,onProgress:report}));});actions.append(b);}
+  function button(label,ids,operation){const b=document.createElement('button');b.type='button';b.disabled=!!controller;const resume=pausedIds&&JSON.stringify(pausedIds)===JSON.stringify(ids);b.textContent=resume?label.replace(/^Download/,'Resume'):label;b.addEventListener('click',()=>{pausedIds=null;void run(ids,operation);});actions.append(b);}
   function render(){
     if(!allowed()){clear();return;}
     const choices=postDownloadChoices(currentAccount,new Set(available.keys()));
     actions.replaceChildren();
     if(choices.starter.length)button('Download starter styles',choices.starter,opts=>downloadStarterPostDownloadSections(opts));
-    for(const id of choices.individual)button(id==='coach-ships-biomes'?'Ships & worlds':`Download ${labels.get(id)} pack`,[id],opts=>downloadPostDownloadSection({...opts,id}));
+    for(const id of choices.individual)button(id==='coach-ships-biomes'?'Download ships & worlds':`Download ${labels.get(id)} pack`,[id],opts=>downloadPostDownloadSection({...opts,id}));
     if(choices.all.length===POST_DOWNLOAD_SECTIONS.length)button('Download every extra',choices.all,opts=>downloadAllPostDownloadSections(opts));
     panel.hidden=!actions.childElementCount;
   }
   function report(info){progress.hidden=false;progress.value=Math.max(0,Math.min(1,Number(info?.percent)||0));status.textContent=`Downloading ${labels.get(info?.packId)||'offline packs'} · ${Math.round(progress.value*100)}%`;}
   async function run(ids,operation){
     if(controller||!allowed())return;
-    controller=new AbortController();pause.hidden=false;pause.disabled=false;pause.textContent='Pause';status.textContent='Preparing verified download…';
-    try{await operation({signal:controller.signal});if(!allowed())throw new Error('Account changed during download.');status.textContent='Offline packs ready.';progress.value=1;}
-    catch(error){if(controller?.signal.aborted){pausedIds=[...ids];status.textContent='Download paused. Resume is available.';}else status.textContent=error.message||'Download unavailable. Try again later.';}
-    finally{controller=null;pause.hidden=true;render();}
+    const runEpoch=epoch,runOwner=owner,runAccount=currentAccount,abort=new AbortController();controller=abort;
+    const active=()=>runEpoch===epoch&&allowed()&&owner===runOwner;
+    pause.hidden=false;pause.disabled=false;pause.textContent='Pause';status.textContent='Preparing verified download…';render();
+    try{await operation({signal:abort.signal,account:runAccount,authorize:()=>active(),fetchImpl,trust,policy,store,onProgress:info=>{if(active())report(info);}});if(active()){status.textContent='Offline packs ready.';progress.value=1;}}
+    catch(error){if(active()){if(abort.signal.aborted){pausedIds=[...ids];status.textContent='Download paused. Resume is available.';}else status.textContent=error.message||'Download unavailable. Try again later.';}}
+    finally{if(controller===abort){controller=null;pause.hidden=true;if(active())render();}}
   }
   pause.addEventListener('click',()=>{if(controller){controller.abort();pause.disabled=true;}});
   async function refresh(){
-    owner=accountId(currentAccount);clear();if(!owner)return;
+    const refreshEpoch=++epoch;controller?.abort();controller=null;checking?.abort();checking=new AbortController();
+    pausedIds=null;pause.hidden=true;progress.hidden=true;progress.value=0;owner=accountId(currentAccount);clear();if(!owner||disposed)return;
     status.textContent='Checking signed offline packs…';
-    const rows=await Promise.all(POST_DOWNLOAD_SECTIONS.map(async section=>{try{return [section.id,await resolvePostDownloadSection(section.id,{fetchImpl,trust})]}catch{return null}}));
-    if(!allowed())return;
+    const signal=checking.signal;
+    const rows=await Promise.all(POST_DOWNLOAD_SECTIONS.map(async section=>{try{return [section.id,await resolvePostDownloadSection(section.id,{fetchImpl,trust,policy,signal})]}catch{return null}}));
+    if(refreshEpoch!==epoch||!allowed())return;
     available=new Map(rows.filter(Boolean));render();
     if(!available.size)clear();
   }
   const onReady=event=>{currentAccount=event.detail;void refresh();};
-  const onCleared=()=>{currentAccount=null;owner=null;controller?.abort();clear();};
+  const onCleared=()=>{currentAccount=null;void refresh();};
   window.addEventListener('myr5:account-ready',onReady);window.addEventListener('myr5:account-cleared',onCleared);
   void refresh();
-  return Object.freeze({panel,refresh,dispose(){controller?.abort();window.removeEventListener('myr5:account-ready',onReady);window.removeEventListener('myr5:account-cleared',onCleared);panel.remove();}});
+  return Object.freeze({panel,refresh,dispose(){disposed=true;++epoch;controller?.abort();checking?.abort();window.removeEventListener('myr5:account-ready',onReady);window.removeEventListener('myr5:account-cleared',onCleared);panel.remove();}});
 }

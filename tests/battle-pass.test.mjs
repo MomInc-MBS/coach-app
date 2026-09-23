@@ -18,7 +18,7 @@ const ledger=await import('../unlock-ledger.mjs');
 const nobody={onboarding:{data:{profile:{exercises:[]}}}};
 const steps=obj=>Object.fromEntries(Object.entries(obj).map(([t,s])=>[t,{steps:s}])); // circuit.mjs track ids
 const row=(progress,id)=>BOSSES.filter(b=>b.row===id).map(b=>progress[b.id]);
-const fresh=()=>memory.clear();
+const fresh=()=>{memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'battle-pass-test'}};};
 const ALL_TRACKS=['chest','quads','glutes','arms-shoulders','yoga','martial-arts','cardio'];
 const allSteps=n=>steps({chest:n,legs:n,hips:n,shoulders:n,yoga:n,'martial-arts':n,cardio:n,meditation:n,food:n});
 
@@ -81,7 +81,7 @@ test('D22 ladder with D16 textures at L1/L3/L5 and D17 special at L3',()=>{
  assert.deepEqual(bossRewards('wedge-1')[0].filter(i=>!['creature-skin','ship'].includes(i.kind)).map(i=>i.id),['arms-w1','arms-hammered-bronze'],'arms-shoulders uses the catalog arms items');
  // D30: later bosses and the shared ones keep their own boss looks; D32 adds a palette at L1/L3/L4.
  for(const id of ['strider-2','cap-3','warden-1','lume-1'])assert.deepEqual(bossRewards(id).map(l=>l.map(i=>i.kind)),[['palette'],['boss-texture'],['palette'],['palette'],['boss-skin']],id);
- assert.equal(new Set(BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>i.kind!=='pet').map(i=>i.kind+':'+i.id))).size,BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>i.kind!=='pet')).length,'no item appears twice except family pets');
+ assert.equal(new Set(BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>!['pet','ship'].includes(i.kind)).map(i=>i.kind+':'+i.id))).size,BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>!['pet','ship'].includes(i.kind))).length,'no item appears twice except family pets and cycling ships');
 });
 
 test('D32: every board boss level has at least one reward, and the fill sits only in the old empty slots',()=>{
