@@ -54,11 +54,14 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const fullIndex=geometry.index;let cutting=null;
 
  let width=1,height=1,quilt={left:0,top:0,width:1,height:1},frame=0,disposed=false,paused=false,awakeUntil=0,last=0,frameMs=0;
+ // Contain (up to a slight vertical stretch): the whole quilt stays visible so every stitched shape can be traced.
+ const fit=(width,height)=>{const w=Math.min(width,height*IMAGE_W/IMAGE_H),h=Math.min(height,w*IMAGE_H/IMAGE_W*knobs.stretch);return {left:(width-w)/2,top:(height-h)/2,width:w,height:h};};
  const pointers=new Map();
- function layout(){
-  const box=host.getBoundingClientRect();width=Math.max(1,box.width);height=Math.max(1,box.height);
-  // Contain (up to a slight vertical stretch): the whole quilt stays visible so every stitched shape can be traced.
-  const w=Math.min(width,height*IMAGE_W/IMAGE_H),h=Math.min(height,w*IMAGE_H/IMAGE_W*knobs.stretch);quilt={left:(width-w)/2,top:(height-h)/2,width:w,height:h};
+ // Untransformed size (the observer's contentRect, else clientWidth): the portal can be re-shown mid-dive, scaled.
+ function layout(box={width:host.clientWidth,height:host.clientHeight}){
+  width=Math.max(1,box.width);height=Math.max(1,box.height);
+  quilt=fit(width,height);const w=quilt.width,h=quilt.height;
+  for(const k in quilt)host.style.setProperty('--face-'+k,quilt[k]+'px'); // the portal's metal frame (#111) wraps this box
   for(let j=0;j<=segY;j++)for(let i=0;i<=segX;i++){const n=3*(j*cols+i);rest[n]=quilt.left+w*i/segX;rest[n+1]=-(quilt.top+h*j/segY);rest[n+2]=0;}
   pos.set(rest);prev.set(rest);
   const dist=(ids,k,a=ids[2*k],b=ids[2*k+1])=>Math.hypot(rest[3*a]-rest[3*b],rest[3*a+1]-rest[3*b+1]);
@@ -100,8 +103,9 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   if(pointers.size||now<awakeUntil||cutting?.fall.live)frame=requestAnimationFrame(tick);
  }
  const local=(x,y)=>{const box=host.getBoundingClientRect();return [x-box.left,y-box.top];};
- const observer=new ResizeObserver(layout);observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
- const quiltRect=()=>{const box=host.getBoundingClientRect();return {left:box.left+quilt.left,top:box.top+quilt.top,width:quilt.width,height:quilt.height};};
+ const observer=new ResizeObserver(entries=>layout(entries.at(-1).contentRect));observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
+ // Measured fresh from the host box (not the last layout), so it's right before the ResizeObserver runs and mid-dive.
+ const quiltRect=()=>{const box=host.getBoundingClientRect(),q=fit(box.width,box.height);return {left:box.left+q.left,top:box.top+q.top,width:q.width,height:q.height};};
  // Cut-away: grid triangles whose centroid (in quilt-image fractions, v down) is inside poly leave the
  // index -> a hole; a static copy of their current positions + uvs falls into the board. The cloth
  // keeps simulating everything (constraints on the now-invisible vertices are harmless).
@@ -133,7 +137,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   faceRect:quiltRect,
   cut,heal,
   // Stitched-shape area in client pixels; the portal normalises traces against it.
-  patternRect(){const box=host.getBoundingClientRect();return {left:box.left+quilt.left+quilt.width*PATTERN.left,top:box.top+quilt.top+quilt.height*PATTERN.top,width:quilt.width*(PATTERN.right-PATTERN.left),height:quilt.height*(PATTERN.bottom-PATTERN.top)};},
+  patternRect(){const q=quiltRect();return {left:q.left+q.width*PATTERN.left,top:q.top+q.height*PATTERN.top,width:q.width*(PATTERN.right-PATTERN.left),height:q.height*(PATTERN.bottom-PATTERN.top)};},
   quiltRect,
   press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
   release(id){pointers.delete(id);wake();},

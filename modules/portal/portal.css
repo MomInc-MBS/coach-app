@@ -2,7 +2,54 @@
 #portalHome[hidden]{display:none}
 #portalHome.no-board{background:radial-gradient(ellipse at 50% 30%,#2a1c38,#100a17 70%)}
 #portalHome.no-board #portalBoardHost,#portalHome.no-board #portalOverlay,#portalHome.no-board #portalShadows{display:none}
-#portalBoardHost{position:absolute;inset:0;z-index:1}
+/* #111 MOM Inc metal frame. The board face sits --portal-inset inside the safe screen edges, below the Pod button and
+   above --portal-bottom-reserve (the Menu button; lane 2A's bottom bar sets it), so a full-size trace stays clear of
+   edge swipes. The frame's rail fills that margin. A board sets --face-* (its face box in the host; default: the whole
+   host) and the frame wraps it, above the board canvas, under the glass bezel and the trace canvas: it never takes a
+   pointer, and it scales with #portalHome in a dive to a home/nav destination (a dialog destination keeps the frame
+   still: see #portalChrome). Metal after the pod capsule and control board: CSS only. */
+#portalHome,#portalChrome{--portal-inset:20px;--portal-rail:15px;--portal-top-reserve:calc(max(12px,env(safe-area-inset-top)) + 48px);--portal-bottom-reserve:calc(max(16px,env(safe-area-inset-bottom)) + 56px)}
+#portalBoardHost{position:absolute;z-index:1;left:calc(env(safe-area-inset-left,0px) + var(--portal-inset));right:calc(env(safe-area-inset-right,0px) + var(--portal-inset));top:calc(var(--portal-top-reserve) + var(--portal-rail));bottom:calc(var(--portal-bottom-reserve) + var(--portal-rail))}
+.portal-frame{--screw:#cbbab0 0 1.4px,#57474f 1.9px 3px,#0000 3.5px;position:absolute;z-index:1;box-sizing:border-box;left:var(--face-left,0px);top:var(--face-top,0px);width:var(--face-width,100%);height:var(--face-height,100%);border-radius:3px;pointer-events:none;box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b}
+.portal-frame:before{content:'';position:absolute;inset:calc(-1*var(--portal-rail));padding:var(--portal-rail);border-radius:calc(var(--portal-rail)/2 + 3px);background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),repeating-linear-gradient(0deg,#0000 0 2px,#00000010 2px 3px),linear-gradient(160deg,#7e6a7c,#4d3d4f 26%,#3b2f42 52%,#2b2132 78%,#564458);box-shadow:inset 0 1px #e6d2da99,inset 1px 0 #d6c0cc44,inset 0 -2px #000a,inset -1px 0 #0007;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+/* The lip: a dark seam, a back-lit bevel line on the rail's inner edge, and the rail's shadow falling onto the board. */
+.portal-frame:after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 1px #0e0a12,0 0 0 2.5px #bba4b355,inset 0 4px 6px #000b,inset 3px 0 5px #0007,inset -2px 0 4px #0006,inset 0 -2px 4px #0007}
+/* Hex bolts on washers at the rail's centre line: --x/--y are 0/1 for the sides, fractions along them. */
+.portal-frame i{position:absolute;width:10px;height:10px;margin:-5px;left:calc(var(--x)*(100% + var(--portal-rail)) - var(--portal-rail)/2);top:calc(var(--y)*(100% + var(--portal-rail)) - var(--portal-rail)/2);border-radius:50%;background:radial-gradient(circle at 50% 40%,#3a2d3e,#150f19 70%);box-shadow:0 1px 1px #000a,0 -1px #e6d2da40}
+.portal-frame i:before{content:'';position:absolute;inset:1px;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);background:radial-gradient(circle at 34% 28%,#f4e8dd,#bca6b2 32%,#6d5a6b 68%,#3a2d3e)}
+/* Energy (Ian 23 Sept): a recessed channel down the middle of each rail, each holding a neon stripe (JS sets --energy,
+   hard colour stops; --energy-px, one cycle) that slides along it by transform. Faint at rest, bright (.hot) while a
+   portal opens or closes; the joins sit under the corner bolts. */
+.portal-energy{position:absolute;inset:calc(var(--portal-rail)/-2);opacity:.55;transition:opacity .4s}
+.portal-energy.hot{opacity:1}
+.portal-energy>span{position:absolute;overflow:hidden;border-radius:2px;background:#0d0a10;box-shadow:0 0 0 1px #0000004d,0 0 5px #b026ff40}
+.portal-energy>span:nth-child(odd){left:0;right:0;height:4px}
+.portal-energy>span:nth-child(1){top:-2px}
+.portal-energy>span:nth-child(3){bottom:-2px}
+.portal-energy>span:nth-child(even){top:0;bottom:0;width:4px}
+.portal-energy>span:nth-child(2){right:-2px}
+.portal-energy>span:nth-child(4){left:-2px}
+.portal-energy>span>span{position:absolute;left:0;top:0;background:repeating-linear-gradient(var(--dir),var(--energy));box-shadow:inset 0 0 1px 1px #0d0a10b0}
+.portal-energy>span:nth-child(odd)>span{--dir:90deg;height:100%;width:calc(100% + var(--energy-px))}
+.portal-energy>span:nth-child(even)>span{--dir:180deg;width:100%;height:calc(100% + var(--energy-px))}
+/* Engraved nameplate, top centre on the rail (clear of Menu and the bottom bar), screwed on, a status LED either side. */
+.portal-frame b{position:absolute;left:50%;top:calc(var(--portal-rail)/-2);translate:-50% -50%;height:17px;padding:0 11px 0 14px;box-sizing:border-box;border:1px solid #120d16;border-radius:3px;background:radial-gradient(circle at 6px 50%,var(--screw)),radial-gradient(circle at calc(100% - 6px) 50%,var(--screw)),repeating-linear-gradient(90deg,#0000 0 2px,#ffffff0a 2px 3px),linear-gradient(#ae99a5,#806b7c 48%,#5f4c5f);box-shadow:inset 0 1px #f1e1e7aa,inset 0 -1px #0007,0 2px 3px #000b;font:800 8.5px/15px ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.34em;color:#281e2c;text-shadow:0 1px #eadae199,0 -1px #0005;white-space:nowrap}
+.portal-frame b:before,.portal-frame b:after{content:'';position:absolute;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:var(--led);box-shadow:0 0 0 1px #0d0a10,0 0 5px var(--led);animation:portal-led 3.2s ease-in-out infinite alternate}
+.portal-frame b:before{--led:#39ff14;left:-11px}
+.portal-frame b:after{--led:#b026ff;right:-11px;animation-delay:-1.6s}
+@keyframes portal-led{from{opacity:.4}to{opacity:.85}}
+@media (prefers-reduced-motion:reduce){.portal-frame b:before,.portal-frame b:after{animation:none;opacity:.7}}
+/* The border stays when a destination opens: #portalChrome, a top-layer copy of the frame at the board's rest box (JS sets
+   --face-*) above the destination dialog, with a matte of the board colour over the rest of the screen, so the dive
+   plays in the frame's window and the dialog (.portal-framed) sits in it. Camera-only mode hides it with every other
+   body child. A persistent bar below the frame (--portal-bottom-reserve) has to sit above it in the top layer. */
+#portalChrome{position:fixed;inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;padding:0;border:0;background:none;overflow:hidden;pointer-events:none}
+#portalChrome::backdrop{display:none}
+#portalChrome .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b,0 0 0 100vmax #17111e}
+dialog.portal-framed{position:fixed!important;inset:auto!important;left:var(--face-left)!important;top:var(--face-top)!important;width:var(--face-width)!important;height:var(--face-height)!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:3px!important;box-sizing:border-box!important}
+dialog.portal-framed::backdrop{background:#17111e!important}
+/* Closing: the destination's empty shell, shrinking into the wormhole core over the reverse dive. */
+dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:none!important;overflow:hidden!important}
 #portalShadows{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:multiply;opacity:.12}
 #portalShadows i{position:absolute;width:60%;height:60%;border-radius:50%;background:radial-gradient(circle,#000 0%,transparent 70%);filter:blur(30px)}
 #portalShadows i:nth-child(1){left:-10%;top:-10%;animation:portal-drift-a 34s ease-in-out infinite alternate}
