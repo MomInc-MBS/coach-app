@@ -1,0 +1,21 @@
+.containment-pod{isolation:isolate}
+.ship-scene{position:absolute;inset:0;z-index:2;overflow:hidden;border-radius:inherit;background:#100b1a}
+.ship-scene-background,.ship-scene-vignette,.ship-scene-beam,.ship-scene-canvas{position:absolute;inset:0}
+.ship-scene-background{background:#171020 center/cover no-repeat;image-rendering:pixelated;transform:scale(1.02);filter:saturate(1.08) contrast(1.03)}
+.ship-scene-vignette{pointer-events:none;background:linear-gradient(#130b2430 0 34%,#12091f00 55%,#07040dcc),radial-gradient(circle at 50% 42%,transparent 30%,#08040d99 100%)}
+.ship-scene-canvas{z-index:3;width:100%;height:100%;outline:0}
+.ship-scene-canvas.is-over-ship{cursor:pointer;filter:drop-shadow(0 0 10px #ffd86f)}
+.ship-scene-canvas:focus-visible{outline:3px solid #ffd76d;outline-offset:-5px}
+.ship-scene-beam{z-index:2;inset:31% 18% -12%;opacity:0;clip-path:polygon(43% 0,57% 0,92% 100%,8% 100%);background:radial-gradient(ellipse at 50% 0,#fff 0 5%,#fff4ba 9%,#ffc641a8 34%,#ffad1820 70%,transparent 74%);filter:blur(5px);transform:scaleX(.18);transform-origin:50% 0;transition:opacity .28s,transform .55s cubic-bezier(.15,.8,.2,1)}
+.ship-scene-beam.is-charging{opacity:.46}
+.ship-scene-beam.is-open{opacity:1;transform:scaleX(1)}
+.ship-scene-status{position:absolute;z-index:4;left:12px;right:12px;bottom:9px;margin:0;text-align:center;color:#fff0c0;font:700 10px/1.4 ui-monospace,monospace;letter-spacing:.06em;text-shadow:0 2px 3px #000}
+.ship-scene-flash{position:fixed;inset:0;z-index:2147483000;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 48%,#fff 0 40%,#fffdf0 63%,#ffd65a 100%);transition:opacity .31s ease-in}
+.ship-scene-flash.is-on{opacity:1;transition-timing-function:cubic-bezier(.1,.9,.1,1)}
+#view.ship-intro-conceals-coach .coach-mount,#view.ship-intro-conceals-coach .myr5-companion-card{opacity:0!important}
+#view.ship-intro-revealed .coach-mount{position:absolute;z-index:4;background:transparent!important;pointer-events:none}
+#view.ship-intro-revealed .myr5-companion-card{position:absolute;z-index:4;left:18%;right:18%;top:29%;bottom:-2%;width:auto;height:auto;border:0;background:transparent;overflow:visible;backdrop-filter:none;pointer-events:none}
+#view.ship-intro-revealed .myr5-companion-stage{width:100%;height:100%;background:transparent;filter:drop-shadow(0 9px 12px #0009)}
+#view.ship-intro-revealed .myr5-companion-status,#view.ship-intro-revealed .myr5-customize,#view.ship-intro-revealed .myr5-hide{display:none!important}
+.ship-scene~.pod-floor,.ship-scene~.pod-nameplate,.ship-scene~.camera-preview{z-index:5}
+@media(prefers-reduced-motion:reduce){.ship-scene-beam,.ship-scene-flash{transition-duration:.01ms!important}.ship-scene-background{transform:none}}

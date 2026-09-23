@@ -1,0 +1,10 @@
+CC0 1.0 Universal
+
+All source materials represented in this packet were published by ambientCG under
+Creative Commons CC0 1.0 Universal. To the extent possible under law, the source
+authors have waived all copyright and related or neighboring rights.
+
+License: https://creativecommons.org/publicdomain/zero/1.0/
+ambientCG license information: https://ambientcg.com/index.php?content=license
+
+The included manifest preserves source asset identifiers and URLs for provenance.

@@ -1,0 +1,4611 @@
+{
+  "schemaVersion": 1,
+  "additive": true,
+  "colorSpace": {
+    "basecolor": "srgb",
+    "tintMask": "srgb",
+    "normal": "linear",
+    "roughness": "linear",
+    "height": "linear",
+    "ao": "linear",
+    "metalness": "linear",
+    "opacity": "linear",
+    "emissive": "srgb"
+  },
+  "normalConvention": "OpenGL +Y",
+  "tinting": "tint-mask multiplied by selected creature palette",
+  "collections": [
+    {
+      "id": "creature-forged-realms",
+      "packetId": "coach-creature-forged-realms-v1",
+      "displayName": "Coach Creature Skins — Forged Realms",
+      "description": "Additional fantasy–science-fiction creature skin unlocks for the Coach app. Separate from the original fitness-material battle-pass set.",
+      "runtimeNotes": {
+        "normalConvention": "OpenGL (+Y)",
+        "tinting": "Use tint-mask.webp as a neutral grayscale base multiplied by the creature palette.",
+        "recommendedColorSpace": {
+          "basecolor": "sRGB",
+          "tintMask": "sRGB",
+          "normal": "linear",
+          "roughness": "linear",
+          "height": "linear",
+          "ao": "linear",
+          "metalness": "linear",
+          "opacity": "linear",
+          "emissive": "sRGB"
+        }
+      }
+    },
+    {
+      "id": "creature-celestial-rift",
+      "packetId": "coach-creature-celestial-rift-v1",
+      "displayName": "Coach Creature Skins — Celestial Rift",
+      "description": "A second non-overlapping set of fantasy–science-fiction creature skin unlocks for the Coach app. Additive to Forged Realms and the original fitness-material set.",
+      "runtimeNotes": {
+        "normalConvention": "OpenGL (+Y)",
+        "tinting": "Use tint-mask.webp as a neutral grayscale base multiplied by the creature palette.",
+        "recommendedColorSpace": {
+          "basecolor": "sRGB",
+          "tintMask": "sRGB",
+          "normal": "linear",
+          "roughness": "linear",
+          "height": "linear",
+          "ao": "linear",
+          "metalness": "linear",
+          "opacity": "linear",
+          "emissive": "sRGB"
+        }
+      }
+    }
+  ],
+  "skins": [
+    {
+      "id": "creature-starforged-plate",
+      "displayName": "Starforged Plate",
+      "track": "chest",
+      "realm": "sci-fi",
+      "rarity": "rare",
+      "sourceAssetId": "Metal009",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Metal009",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-starforged-plate/basecolor.webp",
+          "bytes": 8170,
+          "sha256": "c4c112d6a9ef20989d9cc048ec1bd4680e25df03fa9a99e4d124b0058ffe66e9"
+        },
+        "normal": {
+          "file": "textures/creature-starforged-plate/normal.webp",
+          "bytes": 878,
+          "sha256": "a69782b9e6c01a41c9bde8e47c4f67490bf97869cf4fa332454e1d371ce0e1af"
+        },
+        "roughness": {
+          "file": "textures/creature-starforged-plate/roughness.webp",
+          "bytes": 16326,
+          "sha256": "eb8bf7a214631382971d470f7566e664167f395d27a51428c02edb7e9065ad39"
+        },
+        "height": {
+          "file": "textures/creature-starforged-plate/height.webp",
+          "bytes": 37602,
+          "sha256": "520bb285c4862740f48d076d49320b74f196bd7463e4dd0c338a0bcb181a103e"
+        },
+        "metalness": {
+          "file": "textures/creature-starforged-plate/metalness.webp",
+          "bytes": 528,
+          "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+        },
+        "tintMask": {
+          "file": "textures/creature-starforged-plate/tint-mask.webp",
+          "bytes": 47604,
+          "sha256": "4faadbe93f4126eac9cfba939acd1db3c3d4b5ff7a954ca33ae72ee128555b6c"
+        },
+        "preview": {
+          "file": "textures/creature-starforged-plate/preview.webp",
+          "bytes": 9336,
+          "sha256": "0493936cdccec9486471163fb6b3a2fdc7195fc9535653cb714ed32fd5e32d15"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "chest"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-starforged-plate/basecolor",
+            "bytes": 8170,
+            "sha256": "c4c112d6a9ef20989d9cc048ec1bd4680e25df03fa9a99e4d124b0058ffe66e9"
+          },
+          "normal": {
+            "entry": "creature-starforged-plate/normal",
+            "bytes": 878,
+            "sha256": "a69782b9e6c01a41c9bde8e47c4f67490bf97869cf4fa332454e1d371ce0e1af"
+          },
+          "roughness": {
+            "entry": "creature-starforged-plate/roughness",
+            "bytes": 16326,
+            "sha256": "eb8bf7a214631382971d470f7566e664167f395d27a51428c02edb7e9065ad39"
+          },
+          "height": {
+            "entry": "creature-starforged-plate/height",
+            "bytes": 37602,
+            "sha256": "520bb285c4862740f48d076d49320b74f196bd7463e4dd0c338a0bcb181a103e"
+          },
+          "metalness": {
+            "entry": "creature-starforged-plate/metalness",
+            "bytes": 528,
+            "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+          },
+          "tintMask": {
+            "entry": "creature-starforged-plate/tintMask",
+            "bytes": 47604,
+            "sha256": "4faadbe93f4126eac9cfba939acd1db3c3d4b5ff7a954ca33ae72ee128555b6c"
+          },
+          "preview": {
+            "entry": "creature-starforged-plate/preview",
+            "bytes": 9336,
+            "sha256": "0493936cdccec9486471163fb6b3a2fdc7195fc9535653cb714ed32fd5e32d15"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-obsidian-carapace",
+      "displayName": "Obsidian Carapace",
+      "track": "chest",
+      "realm": "hybrid",
+      "rarity": "epic",
+      "sourceAssetId": "Onyx013",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Onyx013",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-obsidian-carapace/basecolor.webp",
+          "bytes": 50752,
+          "sha256": "1bf15ad9d98a4c5dfdc03623a52b62995659ca592d832652f17cc26e873d093c"
+        },
+        "normal": {
+          "file": "textures/creature-obsidian-carapace/normal.webp",
+          "bytes": 596,
+          "sha256": "72e8331843ae2e2d4018ef40d888cbc1ddeb7d46786874eea50ca36837b3b1a7"
+        },
+        "roughness": {
+          "file": "textures/creature-obsidian-carapace/roughness.webp",
+          "bytes": 1382,
+          "sha256": "a66f044c77d913409a96ef8eaf4a0e59df22ac3bec63b89a3484259269aa33cc"
+        },
+        "height": {
+          "file": "textures/creature-obsidian-carapace/height.webp",
+          "bytes": 2988,
+          "sha256": "760380dff035f707b917266f6bbf72ffe671fde8394b243652398b543dd71046"
+        },
+        "tintMask": {
+          "file": "textures/creature-obsidian-carapace/tint-mask.webp",
+          "bytes": 65032,
+          "sha256": "c50038331782d6ddd1dcfac8df9158043eb5efd085a0fe56e1074d55123a10c5"
+        },
+        "preview": {
+          "file": "textures/creature-obsidian-carapace/preview.webp",
+          "bytes": 58128,
+          "sha256": "eb650060773ef1a11f0f8dcaf310735f709ba3e05d2d3158148524113c7013e9"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "chest"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-obsidian-carapace/basecolor",
+            "bytes": 50752,
+            "sha256": "1bf15ad9d98a4c5dfdc03623a52b62995659ca592d832652f17cc26e873d093c"
+          },
+          "normal": {
+            "entry": "creature-obsidian-carapace/normal",
+            "bytes": 596,
+            "sha256": "72e8331843ae2e2d4018ef40d888cbc1ddeb7d46786874eea50ca36837b3b1a7"
+          },
+          "roughness": {
+            "entry": "creature-obsidian-carapace/roughness",
+            "bytes": 1382,
+            "sha256": "a66f044c77d913409a96ef8eaf4a0e59df22ac3bec63b89a3484259269aa33cc"
+          },
+          "height": {
+            "entry": "creature-obsidian-carapace/height",
+            "bytes": 2988,
+            "sha256": "760380dff035f707b917266f6bbf72ffe671fde8394b243652398b543dd71046"
+          },
+          "tintMask": {
+            "entry": "creature-obsidian-carapace/tintMask",
+            "bytes": 65032,
+            "sha256": "c50038331782d6ddd1dcfac8df9158043eb5efd085a0fe56e1074d55123a10c5"
+          },
+          "preview": {
+            "entry": "creature-obsidian-carapace/preview",
+            "bytes": 58128,
+            "sha256": "eb650060773ef1a11f0f8dcaf310735f709ba3e05d2d3158148524113c7013e9"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-hive-armor",
+      "displayName": "Hive Armor",
+      "track": "chest",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "MetalPlates013",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/MetalPlates013",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-hive-armor/basecolor.webp",
+          "bytes": 24764,
+          "sha256": "a98dcfd52d19fc449d94a1a151f8281f1eda86ad6c7d0bce7719dddc1e50e34f"
+        },
+        "normal": {
+          "file": "textures/creature-hive-armor/normal.webp",
+          "bytes": 14104,
+          "sha256": "50f6713c0ed2ec0b1c5b4ba589011499e92d4645550b79ec6a41b6727b8bd521"
+        },
+        "roughness": {
+          "file": "textures/creature-hive-armor/roughness.webp",
+          "bytes": 44122,
+          "sha256": "083f43ab705595a824e70ec97f4afc0670bca3e929b180cb374212a25715c18a"
+        },
+        "height": {
+          "file": "textures/creature-hive-armor/height.webp",
+          "bytes": 9344,
+          "sha256": "fb5d1b4c2c1732a3e5f42fb6e16a6a5b3ad24955069a5adbe3908f3619ea6b82"
+        },
+        "ao": {
+          "file": "textures/creature-hive-armor/ao.webp",
+          "bytes": 5394,
+          "sha256": "7c97ef834a1bc65cc2a61419a1d6730dca231c912edf0572f06ecfe3157250ab"
+        },
+        "metalness": {
+          "file": "textures/creature-hive-armor/metalness.webp",
+          "bytes": 38740,
+          "sha256": "62aa9640f463a8866fdd53a961041ff6d6b8c14415b31f241d85658544a2c5aa"
+        },
+        "tintMask": {
+          "file": "textures/creature-hive-armor/tint-mask.webp",
+          "bytes": 61850,
+          "sha256": "d2e7066bad7574d1b694d8186212ce56dcc4757033b061f6b6e3b08251c5046c"
+        },
+        "preview": {
+          "file": "textures/creature-hive-armor/preview.webp",
+          "bytes": 30780,
+          "sha256": "a7c7bb3c7d17804bd44ce5d54e57681f2036b9758e1d3ac34dc2b238a7aab250"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "chest"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-hive-armor/basecolor",
+            "bytes": 24764,
+            "sha256": "a98dcfd52d19fc449d94a1a151f8281f1eda86ad6c7d0bce7719dddc1e50e34f"
+          },
+          "normal": {
+            "entry": "creature-hive-armor/normal",
+            "bytes": 14104,
+            "sha256": "50f6713c0ed2ec0b1c5b4ba589011499e92d4645550b79ec6a41b6727b8bd521"
+          },
+          "roughness": {
+            "entry": "creature-hive-armor/roughness",
+            "bytes": 44122,
+            "sha256": "083f43ab705595a824e70ec97f4afc0670bca3e929b180cb374212a25715c18a"
+          },
+          "height": {
+            "entry": "creature-hive-armor/height",
+            "bytes": 9344,
+            "sha256": "fb5d1b4c2c1732a3e5f42fb6e16a6a5b3ad24955069a5adbe3908f3619ea6b82"
+          },
+          "ao": {
+            "entry": "creature-hive-armor/ao",
+            "bytes": 5394,
+            "sha256": "7c97ef834a1bc65cc2a61419a1d6730dca231c912edf0572f06ecfe3157250ab"
+          },
+          "metalness": {
+            "entry": "creature-hive-armor/metalness",
+            "bytes": 38740,
+            "sha256": "62aa9640f463a8866fdd53a961041ff6d6b8c14415b31f241d85658544a2c5aa"
+          },
+          "tintMask": {
+            "entry": "creature-hive-armor/tintMask",
+            "bytes": 61850,
+            "sha256": "d2e7066bad7574d1b694d8186212ce56dcc4757033b061f6b6e3b08251c5046c"
+          },
+          "preview": {
+            "entry": "creature-hive-armor/preview",
+            "bytes": 30780,
+            "sha256": "a7c7bb3c7d17804bd44ce5d54e57681f2036b9758e1d3ac34dc2b238a7aab250"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-magma-scale",
+      "displayName": "Magma Scale",
+      "track": "quads",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Lava004",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Lava004",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-magma-scale/basecolor.webp",
+          "bytes": 34804,
+          "sha256": "e57fb5ed1a1449ba5a46535e62b14c73781e4e768d837ea5d80e241995ab3fb7"
+        },
+        "normal": {
+          "file": "textures/creature-magma-scale/normal.webp",
+          "bytes": 55692,
+          "sha256": "873ead60d1c158910ffee486bc6a55ee4cb4ad1d73cea2f351a9d095a1798ef9"
+        },
+        "roughness": {
+          "file": "textures/creature-magma-scale/roughness.webp",
+          "bytes": 22680,
+          "sha256": "f4eab6ab6dac73119e8e36c4f880115fc6e3a65252084a7412a811066110c103"
+        },
+        "height": {
+          "file": "textures/creature-magma-scale/height.webp",
+          "bytes": 12946,
+          "sha256": "8ddb62676ce447fb46030d7e65d9a6290ae993126dac3dc57b8faecd7dc7f662"
+        },
+        "emissive": {
+          "file": "textures/creature-magma-scale/emissive.webp",
+          "bytes": 41142,
+          "sha256": "3c0b9641bd6fe9465085ee4ce1f7657fa6fe5dd80f49c667498bdb96c7b4b5c8"
+        },
+        "tintMask": {
+          "file": "textures/creature-magma-scale/tint-mask.webp",
+          "bytes": 41404,
+          "sha256": "2248005bce453ca3c2f57f4a460b7a561a697537d6e921766d3b45d156211cb3"
+        },
+        "preview": {
+          "file": "textures/creature-magma-scale/preview.webp",
+          "bytes": 38666,
+          "sha256": "411d36c7435a414cb7e304b9099e0db9f35f95e24fc1f281a380020b51ddf180"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "quads"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-magma-scale/basecolor",
+            "bytes": 34804,
+            "sha256": "e57fb5ed1a1449ba5a46535e62b14c73781e4e768d837ea5d80e241995ab3fb7"
+          },
+          "normal": {
+            "entry": "creature-magma-scale/normal",
+            "bytes": 55692,
+            "sha256": "873ead60d1c158910ffee486bc6a55ee4cb4ad1d73cea2f351a9d095a1798ef9"
+          },
+          "roughness": {
+            "entry": "creature-magma-scale/roughness",
+            "bytes": 22680,
+            "sha256": "f4eab6ab6dac73119e8e36c4f880115fc6e3a65252084a7412a811066110c103"
+          },
+          "height": {
+            "entry": "creature-magma-scale/height",
+            "bytes": 12946,
+            "sha256": "8ddb62676ce447fb46030d7e65d9a6290ae993126dac3dc57b8faecd7dc7f662"
+          },
+          "emissive": {
+            "entry": "creature-magma-scale/emissive",
+            "bytes": 41142,
+            "sha256": "3c0b9641bd6fe9465085ee4ce1f7657fa6fe5dd80f49c667498bdb96c7b4b5c8"
+          },
+          "tintMask": {
+            "entry": "creature-magma-scale/tintMask",
+            "bytes": 41404,
+            "sha256": "2248005bce453ca3c2f57f4a460b7a561a697537d6e921766d3b45d156211cb3"
+          },
+          "preview": {
+            "entry": "creature-magma-scale/preview",
+            "bytes": 38666,
+            "sha256": "411d36c7435a414cb7e304b9099e0db9f35f95e24fc1f281a380020b51ddf180"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-frost-veins",
+      "displayName": "Frost Veins",
+      "track": "quads",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Ice003",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Ice003",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-frost-veins/basecolor.webp",
+          "bytes": 22338,
+          "sha256": "7d21627868aba7ad76ba80359897464cee48faef462a06974e24c823a19d06b4"
+        },
+        "normal": {
+          "file": "textures/creature-frost-veins/normal.webp",
+          "bytes": 4622,
+          "sha256": "95179159bbe6d580b6e3e12de417064e65fe8fb287dbab1756a0ff47dfe337c0"
+        },
+        "roughness": {
+          "file": "textures/creature-frost-veins/roughness.webp",
+          "bytes": 13946,
+          "sha256": "dfbbd3f6e4293432dbd9c2d1cdd6904d3523223507c9a0f8d781c1f0fd2d9c25"
+        },
+        "height": {
+          "file": "textures/creature-frost-veins/height.webp",
+          "bytes": 12916,
+          "sha256": "ef9943193c04a33123c42d3af2d4a3a2fc06b0d2ac46c8fd12d4b17b745d1359"
+        },
+        "tintMask": {
+          "file": "textures/creature-frost-veins/tint-mask.webp",
+          "bytes": 26114,
+          "sha256": "8c9a1385824ab96b15c42f0afccf237a40507b427af4bc6b827e50b984cf2097"
+        },
+        "preview": {
+          "file": "textures/creature-frost-veins/preview.webp",
+          "bytes": 26196,
+          "sha256": "7462a4fb4044ae6e6521d79829b7dac42766c3e87f4092567829d7e0f93bb951"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "quads"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-frost-veins/basecolor",
+            "bytes": 22338,
+            "sha256": "7d21627868aba7ad76ba80359897464cee48faef462a06974e24c823a19d06b4"
+          },
+          "normal": {
+            "entry": "creature-frost-veins/normal",
+            "bytes": 4622,
+            "sha256": "95179159bbe6d580b6e3e12de417064e65fe8fb287dbab1756a0ff47dfe337c0"
+          },
+          "roughness": {
+            "entry": "creature-frost-veins/roughness",
+            "bytes": 13946,
+            "sha256": "dfbbd3f6e4293432dbd9c2d1cdd6904d3523223507c9a0f8d781c1f0fd2d9c25"
+          },
+          "height": {
+            "entry": "creature-frost-veins/height",
+            "bytes": 12916,
+            "sha256": "ef9943193c04a33123c42d3af2d4a3a2fc06b0d2ac46c8fd12d4b17b745d1359"
+          },
+          "tintMask": {
+            "entry": "creature-frost-veins/tintMask",
+            "bytes": 26114,
+            "sha256": "8c9a1385824ab96b15c42f0afccf237a40507b427af4bc6b827e50b984cf2097"
+          },
+          "preview": {
+            "entry": "creature-frost-veins/preview",
+            "bytes": 26196,
+            "sha256": "7462a4fb4044ae6e6521d79829b7dac42766c3e87f4092567829d7e0f93bb951"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-storm-carbon",
+      "displayName": "Storm Carbon",
+      "track": "quads",
+      "realm": "sci-fi",
+      "rarity": "legendary",
+      "sourceAssetId": "Fabric004",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Fabric004",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-storm-carbon/basecolor.webp",
+          "bytes": 4186,
+          "sha256": "2f8c8777cc5df50ebb81c63fd5e09f3a4ec572b19b47e6c1f04fd7d5c4641b27"
+        },
+        "normal": {
+          "file": "textures/creature-storm-carbon/normal.webp",
+          "bytes": 21570,
+          "sha256": "0364397ee006f2e0cfd26a8b05fc43f3604acef539de8e53d85aaa679eae80d5"
+        },
+        "roughness": {
+          "file": "textures/creature-storm-carbon/roughness.webp",
+          "bytes": 13466,
+          "sha256": "cbd3523dfa84268974de80205d042b4339b9bea70ebe19c3b5827f3f500484b0"
+        },
+        "height": {
+          "file": "textures/creature-storm-carbon/height.webp",
+          "bytes": 10398,
+          "sha256": "46d6212cbedabf6bc51bcc61c7d03bb1711f574fbcb70c47cfbef46c9521dffb"
+        },
+        "metalness": {
+          "file": "textures/creature-storm-carbon/metalness.webp",
+          "bytes": 528,
+          "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+        },
+        "tintMask": {
+          "file": "textures/creature-storm-carbon/tint-mask.webp",
+          "bytes": 11298,
+          "sha256": "3e5019a042c69df2b895973c0678b05b0ae9d6d8c1673ca5fde515d19e37b318"
+        },
+        "preview": {
+          "file": "textures/creature-storm-carbon/preview.webp",
+          "bytes": 4638,
+          "sha256": "813c9f6903f3fe0f9c7a4306a319e33e6b255237722607f5ca96d067bb59be4c"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "quads"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-storm-carbon/basecolor",
+            "bytes": 4186,
+            "sha256": "2f8c8777cc5df50ebb81c63fd5e09f3a4ec572b19b47e6c1f04fd7d5c4641b27"
+          },
+          "normal": {
+            "entry": "creature-storm-carbon/normal",
+            "bytes": 21570,
+            "sha256": "0364397ee006f2e0cfd26a8b05fc43f3604acef539de8e53d85aaa679eae80d5"
+          },
+          "roughness": {
+            "entry": "creature-storm-carbon/roughness",
+            "bytes": 13466,
+            "sha256": "cbd3523dfa84268974de80205d042b4339b9bea70ebe19c3b5827f3f500484b0"
+          },
+          "height": {
+            "entry": "creature-storm-carbon/height",
+            "bytes": 10398,
+            "sha256": "46d6212cbedabf6bc51bcc61c7d03bb1711f574fbcb70c47cfbef46c9521dffb"
+          },
+          "metalness": {
+            "entry": "creature-storm-carbon/metalness",
+            "bytes": 528,
+            "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+          },
+          "tintMask": {
+            "entry": "creature-storm-carbon/tintMask",
+            "bytes": 11298,
+            "sha256": "3e5019a042c69df2b895973c0678b05b0ae9d6d8c1673ca5fde515d19e37b318"
+          },
+          "preview": {
+            "entry": "creature-storm-carbon/preview",
+            "bytes": 4638,
+            "sha256": "813c9f6903f3fe0f9c7a4306a319e33e6b255237722607f5ca96d067bb59be4c"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-ancient-bark",
+      "displayName": "Ancient Bark",
+      "track": "glutes",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Bark015",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Bark015",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-ancient-bark/basecolor.webp",
+          "bytes": 76532,
+          "sha256": "4f104cc845070e5952eef5428e55cf37871a53b920539509d127484ef56fc492"
+        },
+        "normal": {
+          "file": "textures/creature-ancient-bark/normal.webp",
+          "bytes": 81960,
+          "sha256": "6805d1f6c82e7aeadfbbee3fe039c35773d49f26b527266ac0b8122c65e55f7c"
+        },
+        "roughness": {
+          "file": "textures/creature-ancient-bark/roughness.webp",
+          "bytes": 30736,
+          "sha256": "4fc3cf417cb8c3621f49bb36eb8c0e1f41ac501d2bdab16e768dc8eebccc617b"
+        },
+        "height": {
+          "file": "textures/creature-ancient-bark/height.webp",
+          "bytes": 12470,
+          "sha256": "8364e839245b1a832ae8f2195ff212f4fb0e4d6bd8b58909b90389e261eea9b5"
+        },
+        "ao": {
+          "file": "textures/creature-ancient-bark/ao.webp",
+          "bytes": 62736,
+          "sha256": "1490dc238669befa434ed5bd28336b865c8869a75b9db742272e60541ae99b68"
+        },
+        "tintMask": {
+          "file": "textures/creature-ancient-bark/tint-mask.webp",
+          "bytes": 84688,
+          "sha256": "b1a08d54081eb2e811acf490187e2be77186e366d82ddd18f68c6ef240ddf1ed"
+        },
+        "preview": {
+          "file": "textures/creature-ancient-bark/preview.webp",
+          "bytes": 85306,
+          "sha256": "95d00c586199990218c99d2366252ed877877885be164ce7e3186421cb339ea1"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "glutes"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-ancient-bark/basecolor",
+            "bytes": 76532,
+            "sha256": "4f104cc845070e5952eef5428e55cf37871a53b920539509d127484ef56fc492"
+          },
+          "normal": {
+            "entry": "creature-ancient-bark/normal",
+            "bytes": 81960,
+            "sha256": "6805d1f6c82e7aeadfbbee3fe039c35773d49f26b527266ac0b8122c65e55f7c"
+          },
+          "roughness": {
+            "entry": "creature-ancient-bark/roughness",
+            "bytes": 30736,
+            "sha256": "4fc3cf417cb8c3621f49bb36eb8c0e1f41ac501d2bdab16e768dc8eebccc617b"
+          },
+          "height": {
+            "entry": "creature-ancient-bark/height",
+            "bytes": 12470,
+            "sha256": "8364e839245b1a832ae8f2195ff212f4fb0e4d6bd8b58909b90389e261eea9b5"
+          },
+          "ao": {
+            "entry": "creature-ancient-bark/ao",
+            "bytes": 62736,
+            "sha256": "1490dc238669befa434ed5bd28336b865c8869a75b9db742272e60541ae99b68"
+          },
+          "tintMask": {
+            "entry": "creature-ancient-bark/tintMask",
+            "bytes": 84688,
+            "sha256": "b1a08d54081eb2e811acf490187e2be77186e366d82ddd18f68c6ef240ddf1ed"
+          },
+          "preview": {
+            "entry": "creature-ancient-bark/preview",
+            "bytes": 85306,
+            "sha256": "95d00c586199990218c99d2366252ed877877885be164ce7e3186421cb339ea1"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-mossback",
+      "displayName": "Mossback",
+      "track": "glutes",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Bark013",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Bark013",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-mossback/basecolor.webp",
+          "bytes": 62984,
+          "sha256": "1dbaed4381988af8d7145a14a15163047e8bd1ecbd0222101ba8f66c4109b88a"
+        },
+        "normal": {
+          "file": "textures/creature-mossback/normal.webp",
+          "bytes": 74686,
+          "sha256": "d8c6fdbf999eae4f19b5f6e62acfcadbb0ba8d61d98302898438c307083f1ddb"
+        },
+        "roughness": {
+          "file": "textures/creature-mossback/roughness.webp",
+          "bytes": 42160,
+          "sha256": "daa3d7d0555e81d07ff13fbb1f481d805a79ae991712b1dde396ad8a43bf4190"
+        },
+        "height": {
+          "file": "textures/creature-mossback/height.webp",
+          "bytes": 23126,
+          "sha256": "1977403ce1a9ad3b3606d20ec8d367df41647947291a8a6baef85f6d64933b3a"
+        },
+        "ao": {
+          "file": "textures/creature-mossback/ao.webp",
+          "bytes": 44736,
+          "sha256": "3b536128f80b296e091ea080d2fb8ac53ca06ea2c44d21b34168333f4410e22f"
+        },
+        "tintMask": {
+          "file": "textures/creature-mossback/tint-mask.webp",
+          "bytes": 71276,
+          "sha256": "58497e16f8e9e8986f08381ba4482586d0d1e5b5714d4f17b058d93de724fc17"
+        },
+        "preview": {
+          "file": "textures/creature-mossback/preview.webp",
+          "bytes": 71140,
+          "sha256": "478378a5c04eea0df87ba8d939215f04475914d38b3dba3a75fdcf99cf7f5985"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "glutes"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-mossback/basecolor",
+            "bytes": 62984,
+            "sha256": "1dbaed4381988af8d7145a14a15163047e8bd1ecbd0222101ba8f66c4109b88a"
+          },
+          "normal": {
+            "entry": "creature-mossback/normal",
+            "bytes": 74686,
+            "sha256": "d8c6fdbf999eae4f19b5f6e62acfcadbb0ba8d61d98302898438c307083f1ddb"
+          },
+          "roughness": {
+            "entry": "creature-mossback/roughness",
+            "bytes": 42160,
+            "sha256": "daa3d7d0555e81d07ff13fbb1f481d805a79ae991712b1dde396ad8a43bf4190"
+          },
+          "height": {
+            "entry": "creature-mossback/height",
+            "bytes": 23126,
+            "sha256": "1977403ce1a9ad3b3606d20ec8d367df41647947291a8a6baef85f6d64933b3a"
+          },
+          "ao": {
+            "entry": "creature-mossback/ao",
+            "bytes": 44736,
+            "sha256": "3b536128f80b296e091ea080d2fb8ac53ca06ea2c44d21b34168333f4410e22f"
+          },
+          "tintMask": {
+            "entry": "creature-mossback/tintMask",
+            "bytes": 71276,
+            "sha256": "58497e16f8e9e8986f08381ba4482586d0d1e5b5714d4f17b058d93de724fc17"
+          },
+          "preview": {
+            "entry": "creature-mossback/preview",
+            "bytes": 71140,
+            "sha256": "478378a5c04eea0df87ba8d939215f04475914d38b3dba3a75fdcf99cf7f5985"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-rootbound",
+      "displayName": "Rootbound Hide",
+      "track": "glutes",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "Ground076",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Ground076",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-rootbound/basecolor.webp",
+          "bytes": 80318,
+          "sha256": "e7ea9cf40442e9784dddc75399ee818a56b32110b70c7c97f5160f66a8468227"
+        },
+        "normal": {
+          "file": "textures/creature-rootbound/normal.webp",
+          "bytes": 68262,
+          "sha256": "6619d18b0159c1c6433224079bd8c7af4427330312fd95bf4dc3f8817ddf06bb"
+        },
+        "roughness": {
+          "file": "textures/creature-rootbound/roughness.webp",
+          "bytes": 52578,
+          "sha256": "35f4e9ae25db1ab566e1585b50a0e16d6568c5bc28854b701f56fb32635d47f9"
+        },
+        "height": {
+          "file": "textures/creature-rootbound/height.webp",
+          "bytes": 23352,
+          "sha256": "197ddfca9c4d2eaf8ad0abfe1487d3c28e7b6bb3ce2b84805c5ba41cebb440a1"
+        },
+        "ao": {
+          "file": "textures/creature-rootbound/ao.webp",
+          "bytes": 66244,
+          "sha256": "67b002796100a011fdf5502f8245981fd3cdb9b932968be285611e8a4f0bbffd"
+        },
+        "tintMask": {
+          "file": "textures/creature-rootbound/tint-mask.webp",
+          "bytes": 88550,
+          "sha256": "f3be9091137218b440b1b58b0cb826863a1f3bff4cbd8a46d8d91413912c8fd7"
+        },
+        "preview": {
+          "file": "textures/creature-rootbound/preview.webp",
+          "bytes": 86566,
+          "sha256": "d0d304a702c7e9ea486a4cd7432e90d6d82272dfe8e59468060525a17474e12f"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "glutes"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-rootbound/basecolor",
+            "bytes": 80318,
+            "sha256": "e7ea9cf40442e9784dddc75399ee818a56b32110b70c7c97f5160f66a8468227"
+          },
+          "normal": {
+            "entry": "creature-rootbound/normal",
+            "bytes": 68262,
+            "sha256": "6619d18b0159c1c6433224079bd8c7af4427330312fd95bf4dc3f8817ddf06bb"
+          },
+          "roughness": {
+            "entry": "creature-rootbound/roughness",
+            "bytes": 52578,
+            "sha256": "35f4e9ae25db1ab566e1585b50a0e16d6568c5bc28854b701f56fb32635d47f9"
+          },
+          "height": {
+            "entry": "creature-rootbound/height",
+            "bytes": 23352,
+            "sha256": "197ddfca9c4d2eaf8ad0abfe1487d3c28e7b6bb3ce2b84805c5ba41cebb440a1"
+          },
+          "ao": {
+            "entry": "creature-rootbound/ao",
+            "bytes": 66244,
+            "sha256": "67b002796100a011fdf5502f8245981fd3cdb9b932968be285611e8a4f0bbffd"
+          },
+          "tintMask": {
+            "entry": "creature-rootbound/tintMask",
+            "bytes": 88550,
+            "sha256": "f3be9091137218b440b1b58b0cb826863a1f3bff4cbd8a46d8d91413912c8fd7"
+          },
+          "preview": {
+            "entry": "creature-rootbound/preview",
+            "bytes": 86566,
+            "sha256": "d0d304a702c7e9ea486a4cd7432e90d6d82272dfe8e59468060525a17474e12f"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-hammered-bronze",
+      "displayName": "Hammered Bronze Golem",
+      "track": "arms",
+      "realm": "hybrid",
+      "rarity": "rare",
+      "sourceAssetId": "Metal008",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Metal008",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-hammered-bronze/basecolor.webp",
+          "bytes": 21270,
+          "sha256": "beb51e4c3e9cbc126c7e684904a9848d6c49f593c7351c77df7d838a0b3031a2"
+        },
+        "normal": {
+          "file": "textures/creature-hammered-bronze/normal.webp",
+          "bytes": 1860,
+          "sha256": "343ca61b6eac8a6ed0f1c8ece185543a57e19af2890393100da77b8c208df81f"
+        },
+        "roughness": {
+          "file": "textures/creature-hammered-bronze/roughness.webp",
+          "bytes": 22538,
+          "sha256": "d2b4ab3952757b6e165e5b131865e89312daa81f2e7b20f4533d424b1d5d2846"
+        },
+        "height": {
+          "file": "textures/creature-hammered-bronze/height.webp",
+          "bytes": 3670,
+          "sha256": "966a3de7da93c1aa338a7d5fd25b8b8b60e1b0eae492c6633a5256091e803520"
+        },
+        "metalness": {
+          "file": "textures/creature-hammered-bronze/metalness.webp",
+          "bytes": 3062,
+          "sha256": "c94836b0fd1152b518b7f126528630d10c215c8cf1d8927d91652496844311bb"
+        },
+        "tintMask": {
+          "file": "textures/creature-hammered-bronze/tint-mask.webp",
+          "bytes": 69154,
+          "sha256": "977b36bfb25617394eda6993fe98972e87575b0a4f20c638fd7816627c50530c"
+        },
+        "preview": {
+          "file": "textures/creature-hammered-bronze/preview.webp",
+          "bytes": 26964,
+          "sha256": "ac7d9a6bd1fef3088df0196c355462a24ae5f59276c31b2a84f32277e5174093"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "arms"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-hammered-bronze/basecolor",
+            "bytes": 21270,
+            "sha256": "beb51e4c3e9cbc126c7e684904a9848d6c49f593c7351c77df7d838a0b3031a2"
+          },
+          "normal": {
+            "entry": "creature-hammered-bronze/normal",
+            "bytes": 1860,
+            "sha256": "343ca61b6eac8a6ed0f1c8ece185543a57e19af2890393100da77b8c208df81f"
+          },
+          "roughness": {
+            "entry": "creature-hammered-bronze/roughness",
+            "bytes": 22538,
+            "sha256": "d2b4ab3952757b6e165e5b131865e89312daa81f2e7b20f4533d424b1d5d2846"
+          },
+          "height": {
+            "entry": "creature-hammered-bronze/height",
+            "bytes": 3670,
+            "sha256": "966a3de7da93c1aa338a7d5fd25b8b8b60e1b0eae492c6633a5256091e803520"
+          },
+          "metalness": {
+            "entry": "creature-hammered-bronze/metalness",
+            "bytes": 3062,
+            "sha256": "c94836b0fd1152b518b7f126528630d10c215c8cf1d8927d91652496844311bb"
+          },
+          "tintMask": {
+            "entry": "creature-hammered-bronze/tintMask",
+            "bytes": 69154,
+            "sha256": "977b36bfb25617394eda6993fe98972e87575b0a4f20c638fd7816627c50530c"
+          },
+          "preview": {
+            "entry": "creature-hammered-bronze/preview",
+            "bytes": 26964,
+            "sha256": "ac7d9a6bd1fef3088df0196c355462a24ae5f59276c31b2a84f32277e5174093"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-rope-sinew",
+      "displayName": "Rope Sinew",
+      "track": "arms",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Rope001",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Rope001",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-rope-sinew/basecolor.webp",
+          "bytes": 29552,
+          "sha256": "2100056331b8dd71fa4df45d64142272a4eda355df847f835e1f4a45ec0215ac"
+        },
+        "normal": {
+          "file": "textures/creature-rope-sinew/normal.webp",
+          "bytes": 58934,
+          "sha256": "5a2f64efff064472eee99a9f2ad9e727a2f34807df7f4e4d1ee13cbd57eb9f87"
+        },
+        "roughness": {
+          "file": "textures/creature-rope-sinew/roughness.webp",
+          "bytes": 12446,
+          "sha256": "d95a57e890f030607ebc323ca242cc89a64f380f4f13edf12435a486f8892923"
+        },
+        "height": {
+          "file": "textures/creature-rope-sinew/height.webp",
+          "bytes": 8678,
+          "sha256": "41492b35711c17826fe23f1b06e4f61880ee084c5184ba8e7ad2a4bae058ce1b"
+        },
+        "metalness": {
+          "file": "textures/creature-rope-sinew/metalness.webp",
+          "bytes": 530,
+          "sha256": "0d61075921f8ced6ab09e8ff7a70d4732d0bbfa62467afcdb18dce2231550116"
+        },
+        "tintMask": {
+          "file": "textures/creature-rope-sinew/tint-mask.webp",
+          "bytes": 45544,
+          "sha256": "760c9886d716bb31396be5d943f4547dc05090e4c787ff15245c260306ee268f"
+        },
+        "preview": {
+          "file": "textures/creature-rope-sinew/preview.webp",
+          "bytes": 35204,
+          "sha256": "b59e86c79490250b094d7857eeffb5b2c716bb2896394643247f805e509fd9c8"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "arms"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-rope-sinew/basecolor",
+            "bytes": 29552,
+            "sha256": "2100056331b8dd71fa4df45d64142272a4eda355df847f835e1f4a45ec0215ac"
+          },
+          "normal": {
+            "entry": "creature-rope-sinew/normal",
+            "bytes": 58934,
+            "sha256": "5a2f64efff064472eee99a9f2ad9e727a2f34807df7f4e4d1ee13cbd57eb9f87"
+          },
+          "roughness": {
+            "entry": "creature-rope-sinew/roughness",
+            "bytes": 12446,
+            "sha256": "d95a57e890f030607ebc323ca242cc89a64f380f4f13edf12435a486f8892923"
+          },
+          "height": {
+            "entry": "creature-rope-sinew/height",
+            "bytes": 8678,
+            "sha256": "41492b35711c17826fe23f1b06e4f61880ee084c5184ba8e7ad2a4bae058ce1b"
+          },
+          "metalness": {
+            "entry": "creature-rope-sinew/metalness",
+            "bytes": 530,
+            "sha256": "0d61075921f8ced6ab09e8ff7a70d4732d0bbfa62467afcdb18dce2231550116"
+          },
+          "tintMask": {
+            "entry": "creature-rope-sinew/tintMask",
+            "bytes": 45544,
+            "sha256": "760c9886d716bb31396be5d943f4547dc05090e4c787ff15245c260306ee268f"
+          },
+          "preview": {
+            "entry": "creature-rope-sinew/preview",
+            "bytes": 35204,
+            "sha256": "b59e86c79490250b094d7857eeffb5b2c716bb2896394643247f805e509fd9c8"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-runic-leather",
+      "displayName": "Runic Leather",
+      "track": "arms",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "Leather032",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Leather032",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-runic-leather/basecolor.webp",
+          "bytes": 28382,
+          "sha256": "bfd8b97143b2df95e1209492ae5d4b2c6bc61b33d82e5d5382a5162392065c66"
+        },
+        "normal": {
+          "file": "textures/creature-runic-leather/normal.webp",
+          "bytes": 7148,
+          "sha256": "ddd41e34b6d8ec05f19374ff263344b38c811564f6e7882b5cb48ca71f6cb371"
+        },
+        "roughness": {
+          "file": "textures/creature-runic-leather/roughness.webp",
+          "bytes": 85118,
+          "sha256": "651e177fa84f3e1f9eebe5a7e7514a28d1bebab1867ec0f495a10aec997353ef"
+        },
+        "height": {
+          "file": "textures/creature-runic-leather/height.webp",
+          "bytes": 90332,
+          "sha256": "66a3c469fd1cb3c120082855bfcef6dadc921e01e3d4a36b1994ee0ea4bf642b"
+        },
+        "tintMask": {
+          "file": "textures/creature-runic-leather/tint-mask.webp",
+          "bytes": 89338,
+          "sha256": "5332d654a93dc4f4992f571fd2e5caccad444aa84670cb96da497acca8c9f72f"
+        },
+        "preview": {
+          "file": "textures/creature-runic-leather/preview.webp",
+          "bytes": 35058,
+          "sha256": "09b7cf1f2654343134c9e0a795afbab3881ba0d10b62c5a006cade89eae4eae3"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "arms"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-runic-leather/basecolor",
+            "bytes": 28382,
+            "sha256": "bfd8b97143b2df95e1209492ae5d4b2c6bc61b33d82e5d5382a5162392065c66"
+          },
+          "normal": {
+            "entry": "creature-runic-leather/normal",
+            "bytes": 7148,
+            "sha256": "ddd41e34b6d8ec05f19374ff263344b38c811564f6e7882b5cb48ca71f6cb371"
+          },
+          "roughness": {
+            "entry": "creature-runic-leather/roughness",
+            "bytes": 85118,
+            "sha256": "651e177fa84f3e1f9eebe5a7e7514a28d1bebab1867ec0f495a10aec997353ef"
+          },
+          "height": {
+            "entry": "creature-runic-leather/height",
+            "bytes": 90332,
+            "sha256": "66a3c469fd1cb3c120082855bfcef6dadc921e01e3d4a36b1994ee0ea4bf642b"
+          },
+          "tintMask": {
+            "entry": "creature-runic-leather/tintMask",
+            "bytes": 89338,
+            "sha256": "5332d654a93dc4f4992f571fd2e5caccad444aa84670cb96da497acca8c9f72f"
+          },
+          "preview": {
+            "entry": "creature-runic-leather/preview",
+            "bytes": 35058,
+            "sha256": "09b7cf1f2654343134c9e0a795afbab3881ba0d10b62c5a006cade89eae4eae3"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-crystal-core",
+      "displayName": "Crystal Core",
+      "track": "yoga",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Onyx006",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Onyx006",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-crystal-core/basecolor.webp",
+          "bytes": 50726,
+          "sha256": "b40390dfbd54cd5582d63d154fc924302d6c04acb1722ce2219f8b67ddaeb36d"
+        },
+        "normal": {
+          "file": "textures/creature-crystal-core/normal.webp",
+          "bytes": 572,
+          "sha256": "b913752028fa3b5d7d102f5eba23aa17b9e0ee1324f52765cb249e36e189ded5"
+        },
+        "roughness": {
+          "file": "textures/creature-crystal-core/roughness.webp",
+          "bytes": 15314,
+          "sha256": "88749dba30f831a86dadbe7bca39039297837646ee2d5330085019eaa7fa4074"
+        },
+        "height": {
+          "file": "textures/creature-crystal-core/height.webp",
+          "bytes": 2740,
+          "sha256": "196a000792095c5dfa85554a2395e8bc1ffc856039b62eacbdd666f587a38c2a"
+        },
+        "tintMask": {
+          "file": "textures/creature-crystal-core/tint-mask.webp",
+          "bytes": 51868,
+          "sha256": "22ef052c4767e7be3f3e6187fa7e6a1e5baf2a0131d47c45cee616ef082b9df6"
+        },
+        "preview": {
+          "file": "textures/creature-crystal-core/preview.webp",
+          "bytes": 56978,
+          "sha256": "ee40a473889f2844fa35a8057a6001827945dd43863c9c12da092039b2b8c76a"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "yoga"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-crystal-core/basecolor",
+            "bytes": 50726,
+            "sha256": "b40390dfbd54cd5582d63d154fc924302d6c04acb1722ce2219f8b67ddaeb36d"
+          },
+          "normal": {
+            "entry": "creature-crystal-core/normal",
+            "bytes": 572,
+            "sha256": "b913752028fa3b5d7d102f5eba23aa17b9e0ee1324f52765cb249e36e189ded5"
+          },
+          "roughness": {
+            "entry": "creature-crystal-core/roughness",
+            "bytes": 15314,
+            "sha256": "88749dba30f831a86dadbe7bca39039297837646ee2d5330085019eaa7fa4074"
+          },
+          "height": {
+            "entry": "creature-crystal-core/height",
+            "bytes": 2740,
+            "sha256": "196a000792095c5dfa85554a2395e8bc1ffc856039b62eacbdd666f587a38c2a"
+          },
+          "tintMask": {
+            "entry": "creature-crystal-core/tintMask",
+            "bytes": 51868,
+            "sha256": "22ef052c4767e7be3f3e6187fa7e6a1e5baf2a0131d47c45cee616ef082b9df6"
+          },
+          "preview": {
+            "entry": "creature-crystal-core/preview",
+            "bytes": 56978,
+            "sha256": "ee40a473889f2844fa35a8057a6001827945dd43863c9c12da092039b2b8c76a"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-moon-marble",
+      "displayName": "Moon Marble",
+      "track": "yoga",
+      "realm": "hybrid",
+      "rarity": "epic",
+      "sourceAssetId": "Marble016",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Marble016",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-moon-marble/basecolor.webp",
+          "bytes": 60346,
+          "sha256": "30857f841da460f9f6878279498e11805b26bb1b9387302bd2a74d2f11f850fe"
+        },
+        "normal": {
+          "file": "textures/creature-moon-marble/normal.webp",
+          "bytes": 558,
+          "sha256": "0abacb9ea21b4e643690ae88919a195040b0c0a22994003cddc2ea40a078e242"
+        },
+        "roughness": {
+          "file": "textures/creature-moon-marble/roughness.webp",
+          "bytes": 3740,
+          "sha256": "78bd9171c82cef1e9ab5b6f4df1f0b36021fcb76487af7c187aada745e346795"
+        },
+        "height": {
+          "file": "textures/creature-moon-marble/height.webp",
+          "bytes": 54702,
+          "sha256": "2ba36b84ef5e549ede30e4203ce6e8e2d415d6f0f2c095d40bb0a13aa4cf81bb"
+        },
+        "tintMask": {
+          "file": "textures/creature-moon-marble/tint-mask.webp",
+          "bytes": 74936,
+          "sha256": "a72497a56824baa0bab493baae6ce2b814f204b1b870426ff8eccddcc5f46030"
+        },
+        "preview": {
+          "file": "textures/creature-moon-marble/preview.webp",
+          "bytes": 68934,
+          "sha256": "977f080377efdb814dc01a6a825d1df941566fe6298699a9ee191eaafa866553"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "yoga"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-moon-marble/basecolor",
+            "bytes": 60346,
+            "sha256": "30857f841da460f9f6878279498e11805b26bb1b9387302bd2a74d2f11f850fe"
+          },
+          "normal": {
+            "entry": "creature-moon-marble/normal",
+            "bytes": 558,
+            "sha256": "0abacb9ea21b4e643690ae88919a195040b0c0a22994003cddc2ea40a078e242"
+          },
+          "roughness": {
+            "entry": "creature-moon-marble/roughness",
+            "bytes": 3740,
+            "sha256": "78bd9171c82cef1e9ab5b6f4df1f0b36021fcb76487af7c187aada745e346795"
+          },
+          "height": {
+            "entry": "creature-moon-marble/height",
+            "bytes": 54702,
+            "sha256": "2ba36b84ef5e549ede30e4203ce6e8e2d415d6f0f2c095d40bb0a13aa4cf81bb"
+          },
+          "tintMask": {
+            "entry": "creature-moon-marble/tintMask",
+            "bytes": 74936,
+            "sha256": "a72497a56824baa0bab493baae6ce2b814f204b1b870426ff8eccddcc5f46030"
+          },
+          "preview": {
+            "entry": "creature-moon-marble/preview",
+            "bytes": 68934,
+            "sha256": "977f080377efdb814dc01a6a825d1df941566fe6298699a9ee191eaafa866553"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-fae-petal",
+      "displayName": "Fae Petal",
+      "track": "yoga",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "FlowerSet001",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/FlowerSet001",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-fae-petal/basecolor.webp",
+          "bytes": 17208,
+          "sha256": "53bc7d03952fb1244b75ba1e015cf36173c326271005c3330c01fccb63d74946"
+        },
+        "normal": {
+          "file": "textures/creature-fae-petal/normal.webp",
+          "bytes": 19898,
+          "sha256": "bb402d8c39e986a0ba5fd1bbdcbcb8cbbdba29a75d4e932b39c5851b2350f75f"
+        },
+        "roughness": {
+          "file": "textures/creature-fae-petal/roughness.webp",
+          "bytes": 6054,
+          "sha256": "4b66923e2349ed42ebbf202c8a42aa33fb759c1713cea678dbd0ac93bd175aec"
+        },
+        "height": {
+          "file": "textures/creature-fae-petal/height.webp",
+          "bytes": 6176,
+          "sha256": "4dd774718a94f5b87de223c8ab27b18bde4df1249e76f7df7a9627143ca4b830"
+        },
+        "ao": {
+          "file": "textures/creature-fae-petal/ao.webp",
+          "bytes": 8140,
+          "sha256": "9eabbf557041b2bdcc58f52cc5821de36470b43f44aac3a6cb87cee3aee645eb"
+        },
+        "opacity": {
+          "file": "textures/creature-fae-petal/opacity.webp",
+          "bytes": 9784,
+          "sha256": "7e7d2e3432143c925e111a2e763d3230fa88cc2512155059b020d4516d68cbad"
+        },
+        "tintMask": {
+          "file": "textures/creature-fae-petal/tint-mask.webp",
+          "bytes": 15026,
+          "sha256": "255ef36fc492b422a991192efead4b414f0a3ccd57bdcd3212033c82a4533608"
+        },
+        "preview": {
+          "file": "textures/creature-fae-petal/preview.webp",
+          "bytes": 19274,
+          "sha256": "afc9fe5d4f588ca9c78e54032aedbdfcd97c991d384f8dbc6ca803f5c6eada5a"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "yoga"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-fae-petal/basecolor",
+            "bytes": 17208,
+            "sha256": "53bc7d03952fb1244b75ba1e015cf36173c326271005c3330c01fccb63d74946"
+          },
+          "normal": {
+            "entry": "creature-fae-petal/normal",
+            "bytes": 19898,
+            "sha256": "bb402d8c39e986a0ba5fd1bbdcbcb8cbbdba29a75d4e932b39c5851b2350f75f"
+          },
+          "roughness": {
+            "entry": "creature-fae-petal/roughness",
+            "bytes": 6054,
+            "sha256": "4b66923e2349ed42ebbf202c8a42aa33fb759c1713cea678dbd0ac93bd175aec"
+          },
+          "height": {
+            "entry": "creature-fae-petal/height",
+            "bytes": 6176,
+            "sha256": "4dd774718a94f5b87de223c8ab27b18bde4df1249e76f7df7a9627143ca4b830"
+          },
+          "ao": {
+            "entry": "creature-fae-petal/ao",
+            "bytes": 8140,
+            "sha256": "9eabbf557041b2bdcc58f52cc5821de36470b43f44aac3a6cb87cee3aee645eb"
+          },
+          "opacity": {
+            "entry": "creature-fae-petal/opacity",
+            "bytes": 9784,
+            "sha256": "7e7d2e3432143c925e111a2e763d3230fa88cc2512155059b020d4516d68cbad"
+          },
+          "tintMask": {
+            "entry": "creature-fae-petal/tintMask",
+            "bytes": 15026,
+            "sha256": "255ef36fc492b422a991192efead4b414f0a3ccd57bdcd3212033c82a4533608"
+          },
+          "preview": {
+            "entry": "creature-fae-petal/preview",
+            "bytes": 19274,
+            "sha256": "afc9fe5d4f588ca9c78e54032aedbdfcd97c991d384f8dbc6ca803f5c6eada5a"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-dragon-scale",
+      "displayName": "Dragon Scale",
+      "track": "martial-arts",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "RoofingTiles013A",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/RoofingTiles013A",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-dragon-scale/basecolor.webp",
+          "bytes": 2668,
+          "sha256": "663af0ac46b5c88304bf252b913714ee7315062ffaf8d41e1f98437436cfe933"
+        },
+        "normal": {
+          "file": "textures/creature-dragon-scale/normal.webp",
+          "bytes": 20688,
+          "sha256": "9bdd90ed2cbf7eaa94c24f290906c764b4a4c16ceb184114dbb22b749209d3a8"
+        },
+        "roughness": {
+          "file": "textures/creature-dragon-scale/roughness.webp",
+          "bytes": 16142,
+          "sha256": "8edb0acad8dfa41c361067e49cc1aa13a23cd1e179b9fd02621c6a49cf5f4ee6"
+        },
+        "height": {
+          "file": "textures/creature-dragon-scale/height.webp",
+          "bytes": 8400,
+          "sha256": "f53bd1a0068dd2cc2cd31b67f2bd6800680c4d58443418bfdb2f1998ea78fbcb"
+        },
+        "ao": {
+          "file": "textures/creature-dragon-scale/ao.webp",
+          "bytes": 14048,
+          "sha256": "5e9e5483fdea8249867c9532a991b11b2518e1c725e43e84835428d13d0791e5"
+        },
+        "opacity": {
+          "file": "textures/creature-dragon-scale/opacity.webp",
+          "bytes": 528,
+          "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+        },
+        "tintMask": {
+          "file": "textures/creature-dragon-scale/tint-mask.webp",
+          "bytes": 33612,
+          "sha256": "d77eb358cbfb4252db8a6df4ff0536bb5d45e7f74dbac6fa6ead5c2c6fb30adf"
+        },
+        "preview": {
+          "file": "textures/creature-dragon-scale/preview.webp",
+          "bytes": 3430,
+          "sha256": "f2ff67b80aedfbb8c3c5e1e2412b54c6b6d88ba256e80d9604103fe4ac90435b"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "martial-arts"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-dragon-scale/basecolor",
+            "bytes": 2668,
+            "sha256": "663af0ac46b5c88304bf252b913714ee7315062ffaf8d41e1f98437436cfe933"
+          },
+          "normal": {
+            "entry": "creature-dragon-scale/normal",
+            "bytes": 20688,
+            "sha256": "9bdd90ed2cbf7eaa94c24f290906c764b4a4c16ceb184114dbb22b749209d3a8"
+          },
+          "roughness": {
+            "entry": "creature-dragon-scale/roughness",
+            "bytes": 16142,
+            "sha256": "8edb0acad8dfa41c361067e49cc1aa13a23cd1e179b9fd02621c6a49cf5f4ee6"
+          },
+          "height": {
+            "entry": "creature-dragon-scale/height",
+            "bytes": 8400,
+            "sha256": "f53bd1a0068dd2cc2cd31b67f2bd6800680c4d58443418bfdb2f1998ea78fbcb"
+          },
+          "ao": {
+            "entry": "creature-dragon-scale/ao",
+            "bytes": 14048,
+            "sha256": "5e9e5483fdea8249867c9532a991b11b2518e1c725e43e84835428d13d0791e5"
+          },
+          "opacity": {
+            "entry": "creature-dragon-scale/opacity",
+            "bytes": 528,
+            "sha256": "ce7a484a8cfe1a10a88aa05beaa84c80880572df797dfe8664e43f7a51a32c27"
+          },
+          "tintMask": {
+            "entry": "creature-dragon-scale/tintMask",
+            "bytes": 33612,
+            "sha256": "d77eb358cbfb4252db8a6df4ff0536bb5d45e7f74dbac6fa6ead5c2c6fb30adf"
+          },
+          "preview": {
+            "entry": "creature-dragon-scale/preview",
+            "bytes": 3430,
+            "sha256": "f2ff67b80aedfbb8c3c5e1e2412b54c6b6d88ba256e80d9604103fe4ac90435b"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-bamboo-hide",
+      "displayName": "Bamboo Hide",
+      "track": "martial-arts",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Bamboo001A",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Bamboo001A",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-bamboo-hide/basecolor.webp",
+          "bytes": 11654,
+          "sha256": "8a26d7c21793d2d02c4b6d3313ec4fb4646d48dc97d3a3d0e9a51e6787fd5337"
+        },
+        "normal": {
+          "file": "textures/creature-bamboo-hide/normal.webp",
+          "bytes": 20194,
+          "sha256": "0c249768ad2e7285a506a67b932f96e7a0472bec4a5e7b26f0b672ca34eab9b6"
+        },
+        "roughness": {
+          "file": "textures/creature-bamboo-hide/roughness.webp",
+          "bytes": 12634,
+          "sha256": "3e57e47e22afa27294a0137519906146e27444654a0d02765b7c414ede8bc154"
+        },
+        "height": {
+          "file": "textures/creature-bamboo-hide/height.webp",
+          "bytes": 7926,
+          "sha256": "17c7dce94d4eae86698c08537620db4ba94534200acfa3f8cc1323a5c824473b"
+        },
+        "ao": {
+          "file": "textures/creature-bamboo-hide/ao.webp",
+          "bytes": 7788,
+          "sha256": "20df27a385c6cac19c1c083d8938d7c3e76e117e19bc1087c33dd4f4634b3c3c"
+        },
+        "opacity": {
+          "file": "textures/creature-bamboo-hide/opacity.webp",
+          "bytes": 2412,
+          "sha256": "b7de9d512266f259b7910820d03689d0680fea8a7d1f865cfb28dc3010652be7"
+        },
+        "tintMask": {
+          "file": "textures/creature-bamboo-hide/tint-mask.webp",
+          "bytes": 37906,
+          "sha256": "e6b2ebfedeb9ab63529780556808f7397d3db969fc5862e78d70e6cbdc78ffed"
+        },
+        "preview": {
+          "file": "textures/creature-bamboo-hide/preview.webp",
+          "bytes": 14130,
+          "sha256": "468e73ebe9c1552645ec4bfa0e9a417a8976210005686772416d8a142b74b3d7"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "martial-arts"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-bamboo-hide/basecolor",
+            "bytes": 11654,
+            "sha256": "8a26d7c21793d2d02c4b6d3313ec4fb4646d48dc97d3a3d0e9a51e6787fd5337"
+          },
+          "normal": {
+            "entry": "creature-bamboo-hide/normal",
+            "bytes": 20194,
+            "sha256": "0c249768ad2e7285a506a67b932f96e7a0472bec4a5e7b26f0b672ca34eab9b6"
+          },
+          "roughness": {
+            "entry": "creature-bamboo-hide/roughness",
+            "bytes": 12634,
+            "sha256": "3e57e47e22afa27294a0137519906146e27444654a0d02765b7c414ede8bc154"
+          },
+          "height": {
+            "entry": "creature-bamboo-hide/height",
+            "bytes": 7926,
+            "sha256": "17c7dce94d4eae86698c08537620db4ba94534200acfa3f8cc1323a5c824473b"
+          },
+          "ao": {
+            "entry": "creature-bamboo-hide/ao",
+            "bytes": 7788,
+            "sha256": "20df27a385c6cac19c1c083d8938d7c3e76e117e19bc1087c33dd4f4634b3c3c"
+          },
+          "opacity": {
+            "entry": "creature-bamboo-hide/opacity",
+            "bytes": 2412,
+            "sha256": "b7de9d512266f259b7910820d03689d0680fea8a7d1f865cfb28dc3010652be7"
+          },
+          "tintMask": {
+            "entry": "creature-bamboo-hide/tintMask",
+            "bytes": 37906,
+            "sha256": "e6b2ebfedeb9ab63529780556808f7397d3db969fc5862e78d70e6cbdc78ffed"
+          },
+          "preview": {
+            "entry": "creature-bamboo-hide/preview",
+            "bytes": 14130,
+            "sha256": "468e73ebe9c1552645ec4bfa0e9a417a8976210005686772416d8a142b74b3d7"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-ivory-chitin",
+      "displayName": "Ivory Chitin",
+      "track": "martial-arts",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Marble021",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Marble021",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-ivory-chitin/basecolor.webp",
+          "bytes": 15470,
+          "sha256": "81219c6653e2322483827286ce187f288c370e953d63768758d5ab1d5f139f01"
+        },
+        "normal": {
+          "file": "textures/creature-ivory-chitin/normal.webp",
+          "bytes": 546,
+          "sha256": "bb0dca1732b8beac8a047157a25c3325d0e82ee854775c9b30a3d0d3bb1c84d4"
+        },
+        "roughness": {
+          "file": "textures/creature-ivory-chitin/roughness.webp",
+          "bytes": 3860,
+          "sha256": "cbe0b85ba9dd43d3a8de3e2b1f49ea26f078836685ab9fcbb6012adaf3186259"
+        },
+        "height": {
+          "file": "textures/creature-ivory-chitin/height.webp",
+          "bytes": 50360,
+          "sha256": "f1baf51d0f8bbebdd08b037b41dc0a52e8cdbe1d3ee3f3c8e229e10ecceaad8b"
+        },
+        "tintMask": {
+          "file": "textures/creature-ivory-chitin/tint-mask.webp",
+          "bytes": 97890,
+          "sha256": "dab2a9ef91fbfd6e0563073bcd2594c15a12037a215e5e4a206c850585d0a4a0"
+        },
+        "preview": {
+          "file": "textures/creature-ivory-chitin/preview.webp",
+          "bytes": 19758,
+          "sha256": "57ca0354c5b20b764d90bc4f8d55f0a4c5f505e55f46ac3165f4268ccaf52317"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "martial-arts"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-ivory-chitin/basecolor",
+            "bytes": 15470,
+            "sha256": "81219c6653e2322483827286ce187f288c370e953d63768758d5ab1d5f139f01"
+          },
+          "normal": {
+            "entry": "creature-ivory-chitin/normal",
+            "bytes": 546,
+            "sha256": "bb0dca1732b8beac8a047157a25c3325d0e82ee854775c9b30a3d0d3bb1c84d4"
+          },
+          "roughness": {
+            "entry": "creature-ivory-chitin/roughness",
+            "bytes": 3860,
+            "sha256": "cbe0b85ba9dd43d3a8de3e2b1f49ea26f078836685ab9fcbb6012adaf3186259"
+          },
+          "height": {
+            "entry": "creature-ivory-chitin/height",
+            "bytes": 50360,
+            "sha256": "f1baf51d0f8bbebdd08b037b41dc0a52e8cdbe1d3ee3f3c8e229e10ecceaad8b"
+          },
+          "tintMask": {
+            "entry": "creature-ivory-chitin/tintMask",
+            "bytes": 97890,
+            "sha256": "dab2a9ef91fbfd6e0563073bcd2594c15a12037a215e5e4a206c850585d0a4a0"
+          },
+          "preview": {
+            "entry": "creature-ivory-chitin/preview",
+            "bytes": 19758,
+            "sha256": "57ca0354c5b20b764d90bc4f8d55f0a4c5f505e55f46ac3165f4268ccaf52317"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-circuit-hide",
+      "displayName": "Circuit Hide",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "rare",
+      "sourceAssetId": "Chip001",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Chip001",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-circuit-hide/basecolor.webp",
+          "bytes": 40778,
+          "sha256": "096cd7675f3b9908bea4f2414e1c2c36d5b7f11c80055647805b0ffea3aeca4d"
+        },
+        "normal": {
+          "file": "textures/creature-circuit-hide/normal.webp",
+          "bytes": 27864,
+          "sha256": "d8064a373c7c347760ecb731bb61b203e1893d8db280062d6bfdc180ebb044d9"
+        },
+        "roughness": {
+          "file": "textures/creature-circuit-hide/roughness.webp",
+          "bytes": 26718,
+          "sha256": "350c942f434549bafd6a47f4e6d4acef03e666eea5f284779cf533591562663d"
+        },
+        "height": {
+          "file": "textures/creature-circuit-hide/height.webp",
+          "bytes": 23204,
+          "sha256": "f31a4005001a2319418f6de50e502f80e48f04c77fd725bd55270843c1d6a049"
+        },
+        "metalness": {
+          "file": "textures/creature-circuit-hide/metalness.webp",
+          "bytes": 24542,
+          "sha256": "7fdd6b09dfdd23b2c362218a3f98a5af3291367c2b3f58da3bd1cd29a37da8b9"
+        },
+        "tintMask": {
+          "file": "textures/creature-circuit-hide/tint-mask.webp",
+          "bytes": 37986,
+          "sha256": "efe041e77fbd766eefec21bca9b2ddfedb2acb20d43955ea44a46ad42065f22c"
+        },
+        "preview": {
+          "file": "textures/creature-circuit-hide/preview.webp",
+          "bytes": 44810,
+          "sha256": "2b020253316ab4d3084073de0b90cf4c4575317475207998ee5cf8c4ae093c16"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "cardio"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-circuit-hide/basecolor",
+            "bytes": 40778,
+            "sha256": "096cd7675f3b9908bea4f2414e1c2c36d5b7f11c80055647805b0ffea3aeca4d"
+          },
+          "normal": {
+            "entry": "creature-circuit-hide/normal",
+            "bytes": 27864,
+            "sha256": "d8064a373c7c347760ecb731bb61b203e1893d8db280062d6bfdc180ebb044d9"
+          },
+          "roughness": {
+            "entry": "creature-circuit-hide/roughness",
+            "bytes": 26718,
+            "sha256": "350c942f434549bafd6a47f4e6d4acef03e666eea5f284779cf533591562663d"
+          },
+          "height": {
+            "entry": "creature-circuit-hide/height",
+            "bytes": 23204,
+            "sha256": "f31a4005001a2319418f6de50e502f80e48f04c77fd725bd55270843c1d6a049"
+          },
+          "metalness": {
+            "entry": "creature-circuit-hide/metalness",
+            "bytes": 24542,
+            "sha256": "7fdd6b09dfdd23b2c362218a3f98a5af3291367c2b3f58da3bd1cd29a37da8b9"
+          },
+          "tintMask": {
+            "entry": "creature-circuit-hide/tintMask",
+            "bytes": 37986,
+            "sha256": "efe041e77fbd766eefec21bca9b2ddfedb2acb20d43955ea44a46ad42065f22c"
+          },
+          "preview": {
+            "entry": "creature-circuit-hide/preview",
+            "bytes": 44810,
+            "sha256": "2b020253316ab4d3084073de0b90cf4c4575317475207998ee5cf8c4ae093c16"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-reactor-rust",
+      "displayName": "Reactor Rust",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "epic",
+      "sourceAssetId": "Metal063",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Metal063",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-reactor-rust/basecolor.webp",
+          "bytes": 11264,
+          "sha256": "ffdb6f1feeaac227647437e25e4d06291c6ee547061c60b61819277cfc37d932"
+        },
+        "normal": {
+          "file": "textures/creature-reactor-rust/normal.webp",
+          "bytes": 550,
+          "sha256": "f0f42188a939998becdd27cc27174e355f5fe0cffff56f440af5183fce757854"
+        },
+        "roughness": {
+          "file": "textures/creature-reactor-rust/roughness.webp",
+          "bytes": 29148,
+          "sha256": "8a34c7db1239c7127956f7daa263fe89cb5d7f05614938c12b5da82098408907"
+        },
+        "height": {
+          "file": "textures/creature-reactor-rust/height.webp",
+          "bytes": 37754,
+          "sha256": "0ce87e82026e669fb796708337c3e1614cef174134b7ecb9bb901f2fccf439ae"
+        },
+        "metalness": {
+          "file": "textures/creature-reactor-rust/metalness.webp",
+          "bytes": 43140,
+          "sha256": "47ca127726b3e24b6c07713a7f50fe6baf5a3d3e99f925e3c47d0fd5c01a2ab9"
+        },
+        "tintMask": {
+          "file": "textures/creature-reactor-rust/tint-mask.webp",
+          "bytes": 97766,
+          "sha256": "9190d9c0246cb5e52f8e2e6ffe9b99f604681bc96c6d9bf86cf5a93a7c4b9abc"
+        },
+        "preview": {
+          "file": "textures/creature-reactor-rust/preview.webp",
+          "bytes": 17150,
+          "sha256": "1537f736edba5d9c5f78988cbb50e49ab83a293b9c94aad49c25fdccad94bfe8"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "cardio"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-reactor-rust/basecolor",
+            "bytes": 11264,
+            "sha256": "ffdb6f1feeaac227647437e25e4d06291c6ee547061c60b61819277cfc37d932"
+          },
+          "normal": {
+            "entry": "creature-reactor-rust/normal",
+            "bytes": 550,
+            "sha256": "f0f42188a939998becdd27cc27174e355f5fe0cffff56f440af5183fce757854"
+          },
+          "roughness": {
+            "entry": "creature-reactor-rust/roughness",
+            "bytes": 29148,
+            "sha256": "8a34c7db1239c7127956f7daa263fe89cb5d7f05614938c12b5da82098408907"
+          },
+          "height": {
+            "entry": "creature-reactor-rust/height",
+            "bytes": 37754,
+            "sha256": "0ce87e82026e669fb796708337c3e1614cef174134b7ecb9bb901f2fccf439ae"
+          },
+          "metalness": {
+            "entry": "creature-reactor-rust/metalness",
+            "bytes": 43140,
+            "sha256": "47ca127726b3e24b6c07713a7f50fe6baf5a3d3e99f925e3c47d0fd5c01a2ab9"
+          },
+          "tintMask": {
+            "entry": "creature-reactor-rust/tintMask",
+            "bytes": 97766,
+            "sha256": "9190d9c0246cb5e52f8e2e6ffe9b99f604681bc96c6d9bf86cf5a93a7c4b9abc"
+          },
+          "preview": {
+            "entry": "creature-reactor-rust/preview",
+            "bytes": 17150,
+            "sha256": "1537f736edba5d9c5f78988cbb50e49ab83a293b9c94aad49c25fdccad94bfe8"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-aero-mesh",
+      "displayName": "Aero Mesh",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "legendary",
+      "sourceAssetId": "MetalWalkway013",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/MetalWalkway013",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-aero-mesh/basecolor.webp",
+          "bytes": 9048,
+          "sha256": "efd7e746572308d9717ac3ff5f401830ca4202b89e9b731598e0011cff27300f"
+        },
+        "normal": {
+          "file": "textures/creature-aero-mesh/normal.webp",
+          "bytes": 55928,
+          "sha256": "4517755111af640a8fcd23b09769a51d97356b3595320ec249b3e6d0286c28c9"
+        },
+        "roughness": {
+          "file": "textures/creature-aero-mesh/roughness.webp",
+          "bytes": 27652,
+          "sha256": "bda6c12306cb56d53cd964083db281078eaedb32e0588d2e39ff3619c73b4721"
+        },
+        "height": {
+          "file": "textures/creature-aero-mesh/height.webp",
+          "bytes": 29354,
+          "sha256": "0d4e1d671a7d57525e21e35cbfc83d89d824c7b89f3a9c85188be87243afc118"
+        },
+        "metalness": {
+          "file": "textures/creature-aero-mesh/metalness.webp",
+          "bytes": 1340,
+          "sha256": "365eb05114bf220e641ba92ffe9c2032041e050f5fa03e856479edadfca04ce4"
+        },
+        "opacity": {
+          "file": "textures/creature-aero-mesh/opacity.webp",
+          "bytes": 28608,
+          "sha256": "fd306eedd40b7130a73447594b0b2889735a722f85b8fb74e91024e0bb48653e"
+        },
+        "tintMask": {
+          "file": "textures/creature-aero-mesh/tint-mask.webp",
+          "bytes": 23612,
+          "sha256": "7d4e51edf8c6e2961a92d10fd204e03676f1a886dcc3f94f80ec7f5bf934a756"
+        },
+        "preview": {
+          "file": "textures/creature-aero-mesh/preview.webp",
+          "bytes": 11188,
+          "sha256": "e249038b305943c5cc58fdaceed7307e77515a33d88c7fb020e832b0ba6a1a75"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "cardio"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-aero-mesh/basecolor",
+            "bytes": 9048,
+            "sha256": "efd7e746572308d9717ac3ff5f401830ca4202b89e9b731598e0011cff27300f"
+          },
+          "normal": {
+            "entry": "creature-aero-mesh/normal",
+            "bytes": 55928,
+            "sha256": "4517755111af640a8fcd23b09769a51d97356b3595320ec249b3e6d0286c28c9"
+          },
+          "roughness": {
+            "entry": "creature-aero-mesh/roughness",
+            "bytes": 27652,
+            "sha256": "bda6c12306cb56d53cd964083db281078eaedb32e0588d2e39ff3619c73b4721"
+          },
+          "height": {
+            "entry": "creature-aero-mesh/height",
+            "bytes": 29354,
+            "sha256": "0d4e1d671a7d57525e21e35cbfc83d89d824c7b89f3a9c85188be87243afc118"
+          },
+          "metalness": {
+            "entry": "creature-aero-mesh/metalness",
+            "bytes": 1340,
+            "sha256": "365eb05114bf220e641ba92ffe9c2032041e050f5fa03e856479edadfca04ce4"
+          },
+          "opacity": {
+            "entry": "creature-aero-mesh/opacity",
+            "bytes": 28608,
+            "sha256": "fd306eedd40b7130a73447594b0b2889735a722f85b8fb74e91024e0bb48653e"
+          },
+          "tintMask": {
+            "entry": "creature-aero-mesh/tintMask",
+            "bytes": 23612,
+            "sha256": "7d4e51edf8c6e2961a92d10fd204e03676f1a886dcc3f94f80ec7f5bf934a756"
+          },
+          "preview": {
+            "entry": "creature-aero-mesh/preview",
+            "bytes": 11188,
+            "sha256": "e249038b305943c5cc58fdaceed7307e77515a33d88c7fb020e832b0ba6a1a75"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-zen-sand",
+      "displayName": "Zen Sand",
+      "track": "meditation",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Ground097",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Ground097",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-zen-sand/basecolor.webp",
+          "bytes": 2566,
+          "sha256": "0913f83f5a430d643903700a9ddba413618b974d1284ab5bb33235e09bef6d6f"
+        },
+        "normal": {
+          "file": "textures/creature-zen-sand/normal.webp",
+          "bytes": 25542,
+          "sha256": "acf6ca0faf928441a99d871c6bcc05fe1b1644e8cd5a4cd12c807b8572aa5219"
+        },
+        "roughness": {
+          "file": "textures/creature-zen-sand/roughness.webp",
+          "bytes": 9672,
+          "sha256": "89cd80ff7f889b753fb059e427bc082c02f223da30cf388d3ac41c1ada5e3cc9"
+        },
+        "height": {
+          "file": "textures/creature-zen-sand/height.webp",
+          "bytes": 14040,
+          "sha256": "55c05b9ab62b320dc74c5e37d871ec9f2a63804e654b3bac2d3df4dc045a9246"
+        },
+        "ao": {
+          "file": "textures/creature-zen-sand/ao.webp",
+          "bytes": 2322,
+          "sha256": "0d241c3387cc7d877016d4db9225cc0aae6fed59f7d9fff78797f6b204466697"
+        },
+        "tintMask": {
+          "file": "textures/creature-zen-sand/tint-mask.webp",
+          "bytes": 27572,
+          "sha256": "92f6c6974aa9641af624ac98c6acc383ca0094ffd8c60c43c81c4e94781d1441"
+        },
+        "preview": {
+          "file": "textures/creature-zen-sand/preview.webp",
+          "bytes": 3032,
+          "sha256": "965d0ecf578a8d912910f99fba4bc09e5a61ba069d5fb2be14cbd02e4d133a86"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "meditation"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-zen-sand/basecolor",
+            "bytes": 2566,
+            "sha256": "0913f83f5a430d643903700a9ddba413618b974d1284ab5bb33235e09bef6d6f"
+          },
+          "normal": {
+            "entry": "creature-zen-sand/normal",
+            "bytes": 25542,
+            "sha256": "acf6ca0faf928441a99d871c6bcc05fe1b1644e8cd5a4cd12c807b8572aa5219"
+          },
+          "roughness": {
+            "entry": "creature-zen-sand/roughness",
+            "bytes": 9672,
+            "sha256": "89cd80ff7f889b753fb059e427bc082c02f223da30cf388d3ac41c1ada5e3cc9"
+          },
+          "height": {
+            "entry": "creature-zen-sand/height",
+            "bytes": 14040,
+            "sha256": "55c05b9ab62b320dc74c5e37d871ec9f2a63804e654b3bac2d3df4dc045a9246"
+          },
+          "ao": {
+            "entry": "creature-zen-sand/ao",
+            "bytes": 2322,
+            "sha256": "0d241c3387cc7d877016d4db9225cc0aae6fed59f7d9fff78797f6b204466697"
+          },
+          "tintMask": {
+            "entry": "creature-zen-sand/tintMask",
+            "bytes": 27572,
+            "sha256": "92f6c6974aa9641af624ac98c6acc383ca0094ffd8c60c43c81c4e94781d1441"
+          },
+          "preview": {
+            "entry": "creature-zen-sand/preview",
+            "bytes": 3032,
+            "sha256": "965d0ecf578a8d912910f99fba4bc09e5a61ba069d5fb2be14cbd02e4d133a86"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-river-stone",
+      "displayName": "River Stone",
+      "track": "meditation",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Rock020",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-river-stone/basecolor.webp",
+          "bytes": 49168,
+          "sha256": "e8cdd973998441e09a8dc4b44ff9da77dec6fad11f8523138ced65b1e9e4a3f9"
+        },
+        "normal": {
+          "file": "textures/creature-river-stone/normal.webp",
+          "bytes": 99336,
+          "sha256": "f31db446c61f36d6775548bff4d04ea21b54dfc1e3271d39b719ab6c48b9c208"
+        },
+        "roughness": {
+          "file": "textures/creature-river-stone/roughness.webp",
+          "bytes": 13096,
+          "sha256": "65ca034f5f657db0fcf502c93b2bacc3f1a66a572ed3e24d09ba3fadbbb80757"
+        },
+        "height": {
+          "file": "textures/creature-river-stone/height.webp",
+          "bytes": 9202,
+          "sha256": "8e5b35579dce02cbb1fbfa415762a6b65724ef86898c3cc53de36b37398f90ce"
+        },
+        "ao": {
+          "file": "textures/creature-river-stone/ao.webp",
+          "bytes": 22322,
+          "sha256": "985e2218cda815c2549c0a926df7d26f050ba1e34eccb4a859fba17c6ec9489e"
+        },
+        "tintMask": {
+          "file": "textures/creature-river-stone/tint-mask.webp",
+          "bytes": 76542,
+          "sha256": "b603234beb199542b602fd2a8823ba1416f4be342b69168bc85e6bfc15a76e4f"
+        },
+        "preview": {
+          "file": "textures/creature-river-stone/preview.webp",
+          "bytes": 57812,
+          "sha256": "09b86e6e3c10f2c1581c3a46507d593fe561e8bfed7628d35665d695ae4926a7"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "meditation"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-river-stone/basecolor",
+            "bytes": 49168,
+            "sha256": "e8cdd973998441e09a8dc4b44ff9da77dec6fad11f8523138ced65b1e9e4a3f9"
+          },
+          "normal": {
+            "entry": "creature-river-stone/normal",
+            "bytes": 99336,
+            "sha256": "f31db446c61f36d6775548bff4d04ea21b54dfc1e3271d39b719ab6c48b9c208"
+          },
+          "roughness": {
+            "entry": "creature-river-stone/roughness",
+            "bytes": 13096,
+            "sha256": "65ca034f5f657db0fcf502c93b2bacc3f1a66a572ed3e24d09ba3fadbbb80757"
+          },
+          "height": {
+            "entry": "creature-river-stone/height",
+            "bytes": 9202,
+            "sha256": "8e5b35579dce02cbb1fbfa415762a6b65724ef86898c3cc53de36b37398f90ce"
+          },
+          "ao": {
+            "entry": "creature-river-stone/ao",
+            "bytes": 22322,
+            "sha256": "985e2218cda815c2549c0a926df7d26f050ba1e34eccb4a859fba17c6ec9489e"
+          },
+          "tintMask": {
+            "entry": "creature-river-stone/tintMask",
+            "bytes": 76542,
+            "sha256": "b603234beb199542b602fd2a8823ba1416f4be342b69168bc85e6bfc15a76e4f"
+          },
+          "preview": {
+            "entry": "creature-river-stone/preview",
+            "bytes": 57812,
+            "sha256": "09b86e6e3c10f2c1581c3a46507d593fe561e8bfed7628d35665d695ae4926a7"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-biolume-moss",
+      "displayName": "Biolume Moss",
+      "track": "meditation",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Moss002",
+      "collection": "creature-forged-realms",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Moss002",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-biolume-moss/basecolor.webp",
+          "bytes": 73648,
+          "sha256": "269fd39b656f9e882f9b6ce516b3f0ae5ea9017a03b6851260618786f9263be6"
+        },
+        "normal": {
+          "file": "textures/creature-biolume-moss/normal.webp",
+          "bytes": 87824,
+          "sha256": "9d94ac281cdfc8297c1dd5b49be3270eee9464bfa9a0e2c39339efab2c89a21b"
+        },
+        "roughness": {
+          "file": "textures/creature-biolume-moss/roughness.webp",
+          "bytes": 39816,
+          "sha256": "4583d9d7365e367dde4f2dea9a4cbc3f4e96670a46fa16d808f8378bb2a9ea62"
+        },
+        "height": {
+          "file": "textures/creature-biolume-moss/height.webp",
+          "bytes": 25618,
+          "sha256": "f4f5a28835d31558f808f1889a69753b478f09a169d28ac51d44bc5971776836"
+        },
+        "ao": {
+          "file": "textures/creature-biolume-moss/ao.webp",
+          "bytes": 78346,
+          "sha256": "99d195c2cc601acfbf776b793ca98cb79eceab56bdafc50b788e3231734cf773"
+        },
+        "tintMask": {
+          "file": "textures/creature-biolume-moss/tint-mask.webp",
+          "bytes": 99630,
+          "sha256": "45f5f81dd4fe98c3df7bfd5fd912fbd239d2e53e2d8bde98b3f724c83eefebda"
+        },
+        "preview": {
+          "file": "textures/creature-biolume-moss/preview.webp",
+          "bytes": 77278,
+          "sha256": "4da02ca977708a4ebfa784dd8d51012455c1d85071a6074748db15f5c3d9744d"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "meditation"
+        },
+        "pack": "creature-forged-realms",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-biolume-moss/basecolor",
+            "bytes": 73648,
+            "sha256": "269fd39b656f9e882f9b6ce516b3f0ae5ea9017a03b6851260618786f9263be6"
+          },
+          "normal": {
+            "entry": "creature-biolume-moss/normal",
+            "bytes": 87824,
+            "sha256": "9d94ac281cdfc8297c1dd5b49be3270eee9464bfa9a0e2c39339efab2c89a21b"
+          },
+          "roughness": {
+            "entry": "creature-biolume-moss/roughness",
+            "bytes": 39816,
+            "sha256": "4583d9d7365e367dde4f2dea9a4cbc3f4e96670a46fa16d808f8378bb2a9ea62"
+          },
+          "height": {
+            "entry": "creature-biolume-moss/height",
+            "bytes": 25618,
+            "sha256": "f4f5a28835d31558f808f1889a69753b478f09a169d28ac51d44bc5971776836"
+          },
+          "ao": {
+            "entry": "creature-biolume-moss/ao",
+            "bytes": 78346,
+            "sha256": "99d195c2cc601acfbf776b793ca98cb79eceab56bdafc50b788e3231734cf773"
+          },
+          "tintMask": {
+            "entry": "creature-biolume-moss/tintMask",
+            "bytes": 99630,
+            "sha256": "45f5f81dd4fe98c3df7bfd5fd912fbd239d2e53e2d8bde98b3f724c83eefebda"
+          },
+          "preview": {
+            "entry": "creature-biolume-moss/preview",
+            "bytes": 77278,
+            "sha256": "4da02ca977708a4ebfa784dd8d51012455c1d85071a6074748db15f5c3d9744d"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-mirror-knight",
+      "displayName": "Mirror Knight",
+      "track": "chest",
+      "realm": "sci-fi",
+      "rarity": "rare",
+      "sourceAssetId": "Metal048A",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Metal048A",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-mirror-knight/basecolor.webp",
+          "bytes": 998,
+          "sha256": "cf989101d5f5483fe0618ff51ec7b02ff6ab0afa5f01ff3f7fa2b3bba49e0f3f"
+        },
+        "normal": {
+          "file": "textures/creature-mirror-knight/normal.webp",
+          "bytes": 594,
+          "sha256": "5a32ff9d82106a7811bf45e72645c15d9a8e2609a262c106ffb75126f8911156"
+        },
+        "roughness": {
+          "file": "textures/creature-mirror-knight/roughness.webp",
+          "bytes": 732,
+          "sha256": "cc0c496cd6cc5503fab83d82acd8ae3f1a7b5b25657ee25fffbed6308e26b5d5"
+        },
+        "height": {
+          "file": "textures/creature-mirror-knight/height.webp",
+          "bytes": 526,
+          "sha256": "abb51cd0690994d97aff0ad32ab12896592506ffd61886f569963b2f71e20c0f"
+        },
+        "metalness": {
+          "file": "textures/creature-mirror-knight/metalness.webp",
+          "bytes": 532,
+          "sha256": "cf3db3d5638b9b2a0d343c9db9efb673235385846a75c8edd0a88a7fb6bec60a"
+        },
+        "tintMask": {
+          "file": "textures/creature-mirror-knight/tint-mask.webp",
+          "bytes": 67594,
+          "sha256": "b444a54a2f7db6df7e4afc8c80fecd82887db13cb7052f78fafd1e2593d31d06"
+        },
+        "preview": {
+          "file": "textures/creature-mirror-knight/preview.webp",
+          "bytes": 1298,
+          "sha256": "ae8103593152bf336133fc8752255d8b40652633bb8bab142cf9c6c24d7927f6"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "chest"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-mirror-knight/basecolor",
+            "bytes": 998,
+            "sha256": "cf989101d5f5483fe0618ff51ec7b02ff6ab0afa5f01ff3f7fa2b3bba49e0f3f"
+          },
+          "normal": {
+            "entry": "creature-mirror-knight/normal",
+            "bytes": 594,
+            "sha256": "5a32ff9d82106a7811bf45e72645c15d9a8e2609a262c106ffb75126f8911156"
+          },
+          "roughness": {
+            "entry": "creature-mirror-knight/roughness",
+            "bytes": 732,
+            "sha256": "cc0c496cd6cc5503fab83d82acd8ae3f1a7b5b25657ee25fffbed6308e26b5d5"
+          },
+          "height": {
+            "entry": "creature-mirror-knight/height",
+            "bytes": 526,
+            "sha256": "abb51cd0690994d97aff0ad32ab12896592506ffd61886f569963b2f71e20c0f"
+          },
+          "metalness": {
+            "entry": "creature-mirror-knight/metalness",
+            "bytes": 532,
+            "sha256": "cf3db3d5638b9b2a0d343c9db9efb673235385846a75c8edd0a88a7fb6bec60a"
+          },
+          "tintMask": {
+            "entry": "creature-mirror-knight/tintMask",
+            "bytes": 67594,
+            "sha256": "b444a54a2f7db6df7e4afc8c80fecd82887db13cb7052f78fafd1e2593d31d06"
+          },
+          "preview": {
+            "entry": "creature-mirror-knight/preview",
+            "bytes": 1298,
+            "sha256": "ae8103593152bf336133fc8752255d8b40652633bb8bab142cf9c6c24d7927f6"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-tarnished-crown",
+      "displayName": "Tarnished Crown",
+      "track": "chest",
+      "realm": "hybrid",
+      "rarity": "epic",
+      "sourceAssetId": "Metal048C",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Metal048C",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-tarnished-crown/basecolor.webp",
+          "bytes": 10056,
+          "sha256": "454f8c9a4fd90d206920b5c41beb67ddc47d36867a2d36a48798b7ddfc630acf"
+        },
+        "normal": {
+          "file": "textures/creature-tarnished-crown/normal.webp",
+          "bytes": 902,
+          "sha256": "7542c0e567980a2a46af77aeadd5c76784dc4347c4fc691e87b9c751c5a6d1af"
+        },
+        "roughness": {
+          "file": "textures/creature-tarnished-crown/roughness.webp",
+          "bytes": 23264,
+          "sha256": "3be7019d924a77751fbbf4665ea1db70ebccc721303c8d247094af69a16df282"
+        },
+        "height": {
+          "file": "textures/creature-tarnished-crown/height.webp",
+          "bytes": 6612,
+          "sha256": "9c8916c0d96e11bbc8e1d67b8d343fd2f99d8f8d97ff49469ee319cd36c19239"
+        },
+        "metalness": {
+          "file": "textures/creature-tarnished-crown/metalness.webp",
+          "bytes": 9582,
+          "sha256": "b9fcaedd9ea3a6871f2d74879ca30ca16f75e359544654ee54ee5792ba3887f5"
+        },
+        "tintMask": {
+          "file": "textures/creature-tarnished-crown/tint-mask.webp",
+          "bytes": 48438,
+          "sha256": "caf136c6c920e0d4e7f52274c82d49b8e9474ec7d3c85534fae44cf7a50700d5"
+        },
+        "preview": {
+          "file": "textures/creature-tarnished-crown/preview.webp",
+          "bytes": 11978,
+          "sha256": "ef892c02b1101c732a7f015956460d93fe490fc0507a4263d723c0bc4f0dbbf4"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "chest"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-tarnished-crown/basecolor",
+            "bytes": 10056,
+            "sha256": "454f8c9a4fd90d206920b5c41beb67ddc47d36867a2d36a48798b7ddfc630acf"
+          },
+          "normal": {
+            "entry": "creature-tarnished-crown/normal",
+            "bytes": 902,
+            "sha256": "7542c0e567980a2a46af77aeadd5c76784dc4347c4fc691e87b9c751c5a6d1af"
+          },
+          "roughness": {
+            "entry": "creature-tarnished-crown/roughness",
+            "bytes": 23264,
+            "sha256": "3be7019d924a77751fbbf4665ea1db70ebccc721303c8d247094af69a16df282"
+          },
+          "height": {
+            "entry": "creature-tarnished-crown/height",
+            "bytes": 6612,
+            "sha256": "9c8916c0d96e11bbc8e1d67b8d343fd2f99d8f8d97ff49469ee319cd36c19239"
+          },
+          "metalness": {
+            "entry": "creature-tarnished-crown/metalness",
+            "bytes": 9582,
+            "sha256": "b9fcaedd9ea3a6871f2d74879ca30ca16f75e359544654ee54ee5792ba3887f5"
+          },
+          "tintMask": {
+            "entry": "creature-tarnished-crown/tintMask",
+            "bytes": 48438,
+            "sha256": "caf136c6c920e0d4e7f52274c82d49b8e9474ec7d3c85534fae44cf7a50700d5"
+          },
+          "preview": {
+            "entry": "creature-tarnished-crown/preview",
+            "bytes": 11978,
+            "sha256": "ef892c02b1101c732a7f015956460d93fe490fc0507a4263d723c0bc4f0dbbf4"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-golden-scarab",
+      "displayName": "Golden Scarab",
+      "track": "chest",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "Metal007",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Metal007",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-golden-scarab/basecolor.webp",
+          "bytes": 18264,
+          "sha256": "2daf24017e791d9cc0aa9cc72faf573da795869f14ecf318afee20f960bbfb83"
+        },
+        "normal": {
+          "file": "textures/creature-golden-scarab/normal.webp",
+          "bytes": 1042,
+          "sha256": "a709a2db3fe891ed772681bfaa2a15d31dd1be3dd4e363b5a596b56fe5f9ad2c"
+        },
+        "roughness": {
+          "file": "textures/creature-golden-scarab/roughness.webp",
+          "bytes": 15890,
+          "sha256": "114f37f6188582bfa8b3dc368f523139c85eeca8383c90e812b40e7e2e96e0a1"
+        },
+        "height": {
+          "file": "textures/creature-golden-scarab/height.webp",
+          "bytes": 1714,
+          "sha256": "36bb936c56b9bc9f9edfe115c07c6f45d9be80864ab3f1aace77e5477ca92a65"
+        },
+        "metalness": {
+          "file": "textures/creature-golden-scarab/metalness.webp",
+          "bytes": 1280,
+          "sha256": "d01c0d2347828b7537974009e32fb25d455bb447ea01f459bdc02840e81d3c31"
+        },
+        "tintMask": {
+          "file": "textures/creature-golden-scarab/tint-mask.webp",
+          "bytes": 65652,
+          "sha256": "43a5c55a78fa3ed7f775c0ca959082b2463f0e48ae75d273468169abf0f50c5d"
+        },
+        "preview": {
+          "file": "textures/creature-golden-scarab/preview.webp",
+          "bytes": 22470,
+          "sha256": "99ddd90d95b9b01691fad6aff7e60cef3335c570d3bb30641fa73b29af0631b7"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "chest"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/chest.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-golden-scarab/basecolor",
+            "bytes": 18264,
+            "sha256": "2daf24017e791d9cc0aa9cc72faf573da795869f14ecf318afee20f960bbfb83"
+          },
+          "normal": {
+            "entry": "creature-golden-scarab/normal",
+            "bytes": 1042,
+            "sha256": "a709a2db3fe891ed772681bfaa2a15d31dd1be3dd4e363b5a596b56fe5f9ad2c"
+          },
+          "roughness": {
+            "entry": "creature-golden-scarab/roughness",
+            "bytes": 15890,
+            "sha256": "114f37f6188582bfa8b3dc368f523139c85eeca8383c90e812b40e7e2e96e0a1"
+          },
+          "height": {
+            "entry": "creature-golden-scarab/height",
+            "bytes": 1714,
+            "sha256": "36bb936c56b9bc9f9edfe115c07c6f45d9be80864ab3f1aace77e5477ca92a65"
+          },
+          "metalness": {
+            "entry": "creature-golden-scarab/metalness",
+            "bytes": 1280,
+            "sha256": "d01c0d2347828b7537974009e32fb25d455bb447ea01f459bdc02840e81d3c31"
+          },
+          "tintMask": {
+            "entry": "creature-golden-scarab/tintMask",
+            "bytes": 65652,
+            "sha256": "43a5c55a78fa3ed7f775c0ca959082b2463f0e48ae75d273468169abf0f50c5d"
+          },
+          "preview": {
+            "entry": "creature-golden-scarab/preview",
+            "bytes": 22470,
+            "sha256": "99ddd90d95b9b01691fad6aff7e60cef3335c570d3bb30641fa73b29af0631b7"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-emberflow",
+      "displayName": "Emberflow",
+      "track": "quads",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Lava001",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Lava001",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-emberflow/basecolor.webp",
+          "bytes": 55502,
+          "sha256": "8d7c4615eb329d5255a75792a997eb8ecae3102fb0782a5a2c46e11f9b4341fe"
+        },
+        "normal": {
+          "file": "textures/creature-emberflow/normal.webp",
+          "bytes": 105598,
+          "sha256": "1873609c656f2b3764003fbc9b97b91ad3f5e3e69a2aaa4d201d9e7cdc4aec4c"
+        },
+        "roughness": {
+          "file": "textures/creature-emberflow/roughness.webp",
+          "bytes": 12882,
+          "sha256": "d48539733cedaf93bdad6b4c4c30708479a743c4fcbef499b3e362e312d021e0"
+        },
+        "height": {
+          "file": "textures/creature-emberflow/height.webp",
+          "bytes": 13998,
+          "sha256": "306286c666118aa7da6fc4b8f769a9b3735b40c0003d154d942ca9363f0acb46"
+        },
+        "emissive": {
+          "file": "textures/creature-emberflow/emissive.webp",
+          "bytes": 52850,
+          "sha256": "bda5fa0ee23d6b225e2782f34061a4e017831e2e78287a3d781e1a2ac02cd01d"
+        },
+        "tintMask": {
+          "file": "textures/creature-emberflow/tint-mask.webp",
+          "bytes": 51236,
+          "sha256": "5b3f83b8fa0c50e04da28b1f8a6ad0789cd376613700502a023e1775b3ec66ac"
+        },
+        "preview": {
+          "file": "textures/creature-emberflow/preview.webp",
+          "bytes": 57834,
+          "sha256": "e4df8266f2fadc583a59d6357a024597de261bfb24bb316c7933ead30de08530"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "quads"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-emberflow/basecolor",
+            "bytes": 55502,
+            "sha256": "8d7c4615eb329d5255a75792a997eb8ecae3102fb0782a5a2c46e11f9b4341fe"
+          },
+          "normal": {
+            "entry": "creature-emberflow/normal",
+            "bytes": 105598,
+            "sha256": "1873609c656f2b3764003fbc9b97b91ad3f5e3e69a2aaa4d201d9e7cdc4aec4c"
+          },
+          "roughness": {
+            "entry": "creature-emberflow/roughness",
+            "bytes": 12882,
+            "sha256": "d48539733cedaf93bdad6b4c4c30708479a743c4fcbef499b3e362e312d021e0"
+          },
+          "height": {
+            "entry": "creature-emberflow/height",
+            "bytes": 13998,
+            "sha256": "306286c666118aa7da6fc4b8f769a9b3735b40c0003d154d942ca9363f0acb46"
+          },
+          "emissive": {
+            "entry": "creature-emberflow/emissive",
+            "bytes": 52850,
+            "sha256": "bda5fa0ee23d6b225e2782f34061a4e017831e2e78287a3d781e1a2ac02cd01d"
+          },
+          "tintMask": {
+            "entry": "creature-emberflow/tintMask",
+            "bytes": 51236,
+            "sha256": "5b3f83b8fa0c50e04da28b1f8a6ad0789cd376613700502a023e1775b3ec66ac"
+          },
+          "preview": {
+            "entry": "creature-emberflow/preview",
+            "bytes": 57834,
+            "sha256": "e4df8266f2fadc583a59d6357a024597de261bfb24bb316c7933ead30de08530"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-volcanic-heart",
+      "displayName": "Volcanic Heart",
+      "track": "quads",
+      "realm": "hybrid",
+      "rarity": "epic",
+      "sourceAssetId": "Lava005",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Lava005",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-volcanic-heart/basecolor.webp",
+          "bytes": 52804,
+          "sha256": "24781f33f16d0161ca0485e6a732e97c1b9d4a91540c189bf8f748769a27f635"
+        },
+        "normal": {
+          "file": "textures/creature-volcanic-heart/normal.webp",
+          "bytes": 54736,
+          "sha256": "ddd24a1373442f4b842c73a45b771aa149357a9d82faf8be149a61c0b9348418"
+        },
+        "roughness": {
+          "file": "textures/creature-volcanic-heart/roughness.webp",
+          "bytes": 20200,
+          "sha256": "cf52abbc709aefd88e4329ff6804d850235f0532933ec1d3cd103f0016daabfe"
+        },
+        "height": {
+          "file": "textures/creature-volcanic-heart/height.webp",
+          "bytes": 11990,
+          "sha256": "467c8ffc3521c5ca0450ebc4160b392c1f758d4d7222abbc2d3845006af5fe98"
+        },
+        "emissive": {
+          "file": "textures/creature-volcanic-heart/emissive.webp",
+          "bytes": 61420,
+          "sha256": "e2651a8d3fa04f74745ccad8f023e5bbe5129e500002f88fb3097fe9ae3aa06f"
+        },
+        "tintMask": {
+          "file": "textures/creature-volcanic-heart/tint-mask.webp",
+          "bytes": 53772,
+          "sha256": "eebca000a86cc39d9763ce73e65b718bceda6680db69695b2cf997d625db79cc"
+        },
+        "preview": {
+          "file": "textures/creature-volcanic-heart/preview.webp",
+          "bytes": 51986,
+          "sha256": "53c8262cb4b87704104d0bb9e484a5140c839a3bf051a0adbd962306c6e06b84"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "quads"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-volcanic-heart/basecolor",
+            "bytes": 52804,
+            "sha256": "24781f33f16d0161ca0485e6a732e97c1b9d4a91540c189bf8f748769a27f635"
+          },
+          "normal": {
+            "entry": "creature-volcanic-heart/normal",
+            "bytes": 54736,
+            "sha256": "ddd24a1373442f4b842c73a45b771aa149357a9d82faf8be149a61c0b9348418"
+          },
+          "roughness": {
+            "entry": "creature-volcanic-heart/roughness",
+            "bytes": 20200,
+            "sha256": "cf52abbc709aefd88e4329ff6804d850235f0532933ec1d3cd103f0016daabfe"
+          },
+          "height": {
+            "entry": "creature-volcanic-heart/height",
+            "bytes": 11990,
+            "sha256": "467c8ffc3521c5ca0450ebc4160b392c1f758d4d7222abbc2d3845006af5fe98"
+          },
+          "emissive": {
+            "entry": "creature-volcanic-heart/emissive",
+            "bytes": 61420,
+            "sha256": "e2651a8d3fa04f74745ccad8f023e5bbe5129e500002f88fb3097fe9ae3aa06f"
+          },
+          "tintMask": {
+            "entry": "creature-volcanic-heart/tintMask",
+            "bytes": 53772,
+            "sha256": "eebca000a86cc39d9763ce73e65b718bceda6680db69695b2cf997d625db79cc"
+          },
+          "preview": {
+            "entry": "creature-volcanic-heart/preview",
+            "bytes": 51986,
+            "sha256": "53c8262cb4b87704104d0bb9e484a5140c839a3bf051a0adbd962306c6e06b84"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-aurora-ice",
+      "displayName": "Aurora Ice",
+      "track": "quads",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "Ice004",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Ice004",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-aurora-ice/basecolor.webp",
+          "bytes": 28102,
+          "sha256": "a0538e8060a8e9c00a04c5f7ac9234416cd40f85a1f5be2e6a7419d890eadf47"
+        },
+        "normal": {
+          "file": "textures/creature-aurora-ice/normal.webp",
+          "bytes": 9418,
+          "sha256": "c933ddbc26012694f81f9533fcf670782c573daf6c300317b0ee70807d7474f6"
+        },
+        "roughness": {
+          "file": "textures/creature-aurora-ice/roughness.webp",
+          "bytes": 16912,
+          "sha256": "aa50ef45b5034739a1f48d34a8c842ad2444596d1bb7f60ce3f71be88c1dff65"
+        },
+        "height": {
+          "file": "textures/creature-aurora-ice/height.webp",
+          "bytes": 24584,
+          "sha256": "ff582e80c4af2ac6b52e235055a6d19ddc34213b22fe6ac90beb6c09b8788ef9"
+        },
+        "tintMask": {
+          "file": "textures/creature-aurora-ice/tint-mask.webp",
+          "bytes": 33120,
+          "sha256": "b89c0d07aae4bccea7ac26b589e72ff5ececca87bc166d2dc23406dd943d51b4"
+        },
+        "preview": {
+          "file": "textures/creature-aurora-ice/preview.webp",
+          "bytes": 33622,
+          "sha256": "fec978367e0c56323ce5b3f91bef4c1a624e8934e6d2933174b957264fc5229a"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "quads"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/quads.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-aurora-ice/basecolor",
+            "bytes": 28102,
+            "sha256": "a0538e8060a8e9c00a04c5f7ac9234416cd40f85a1f5be2e6a7419d890eadf47"
+          },
+          "normal": {
+            "entry": "creature-aurora-ice/normal",
+            "bytes": 9418,
+            "sha256": "c933ddbc26012694f81f9533fcf670782c573daf6c300317b0ee70807d7474f6"
+          },
+          "roughness": {
+            "entry": "creature-aurora-ice/roughness",
+            "bytes": 16912,
+            "sha256": "aa50ef45b5034739a1f48d34a8c842ad2444596d1bb7f60ce3f71be88c1dff65"
+          },
+          "height": {
+            "entry": "creature-aurora-ice/height",
+            "bytes": 24584,
+            "sha256": "ff582e80c4af2ac6b52e235055a6d19ddc34213b22fe6ac90beb6c09b8788ef9"
+          },
+          "tintMask": {
+            "entry": "creature-aurora-ice/tintMask",
+            "bytes": 33120,
+            "sha256": "b89c0d07aae4bccea7ac26b589e72ff5ececca87bc166d2dc23406dd943d51b4"
+          },
+          "preview": {
+            "entry": "creature-aurora-ice/preview",
+            "bytes": 33622,
+            "sha256": "fec978367e0c56323ce5b3f91bef4c1a624e8934e6d2933174b957264fc5229a"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-ironbark",
+      "displayName": "Ironbark",
+      "track": "glutes",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Bark014",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Bark014",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-ironbark/basecolor.webp",
+          "bytes": 60524,
+          "sha256": "60f5086a4946ae52491ea871bbec6dde8a4209cad3dc6711c66d0f520e9bd1c7"
+        },
+        "normal": {
+          "file": "textures/creature-ironbark/normal.webp",
+          "bytes": 39240,
+          "sha256": "9e83a63d061651cfaa0892d55ed76762d8493589327db6fb2724254afffad688"
+        },
+        "roughness": {
+          "file": "textures/creature-ironbark/roughness.webp",
+          "bytes": 61578,
+          "sha256": "ff1bfd55ebc76fc610082d172138cc5b971c2de306a7626696fddd2ac2c0e304"
+        },
+        "height": {
+          "file": "textures/creature-ironbark/height.webp",
+          "bytes": 11624,
+          "sha256": "24dca043922c977d7cd8b58a7a9f8aa5132919693a5d666e4a358a3216a66b15"
+        },
+        "ao": {
+          "file": "textures/creature-ironbark/ao.webp",
+          "bytes": 46376,
+          "sha256": "3df1b05d4423870ddf7ab97338ad860ec2f87924492fa008c28e4ac3225c1484"
+        },
+        "tintMask": {
+          "file": "textures/creature-ironbark/tint-mask.webp",
+          "bytes": 71852,
+          "sha256": "d1e6acc31473ff62d8dd0022ddad5b542067eea35877b051a1460929d7934ee4"
+        },
+        "preview": {
+          "file": "textures/creature-ironbark/preview.webp",
+          "bytes": 68160,
+          "sha256": "8ba5961f132720e02a894e9da7228305ca5ee4a2c2fc720406f8505055a56dd6"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "glutes"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-ironbark/basecolor",
+            "bytes": 60524,
+            "sha256": "60f5086a4946ae52491ea871bbec6dde8a4209cad3dc6711c66d0f520e9bd1c7"
+          },
+          "normal": {
+            "entry": "creature-ironbark/normal",
+            "bytes": 39240,
+            "sha256": "9e83a63d061651cfaa0892d55ed76762d8493589327db6fb2724254afffad688"
+          },
+          "roughness": {
+            "entry": "creature-ironbark/roughness",
+            "bytes": 61578,
+            "sha256": "ff1bfd55ebc76fc610082d172138cc5b971c2de306a7626696fddd2ac2c0e304"
+          },
+          "height": {
+            "entry": "creature-ironbark/height",
+            "bytes": 11624,
+            "sha256": "24dca043922c977d7cd8b58a7a9f8aa5132919693a5d666e4a358a3216a66b15"
+          },
+          "ao": {
+            "entry": "creature-ironbark/ao",
+            "bytes": 46376,
+            "sha256": "3df1b05d4423870ddf7ab97338ad860ec2f87924492fa008c28e4ac3225c1484"
+          },
+          "tintMask": {
+            "entry": "creature-ironbark/tintMask",
+            "bytes": 71852,
+            "sha256": "d1e6acc31473ff62d8dd0022ddad5b542067eea35877b051a1460929d7934ee4"
+          },
+          "preview": {
+            "entry": "creature-ironbark/preview",
+            "bytes": 68160,
+            "sha256": "8ba5961f132720e02a894e9da7228305ca5ee4a2c2fc720406f8505055a56dd6"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-oakscale",
+      "displayName": "Oakscale",
+      "track": "glutes",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Bark012",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Bark012",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-oakscale/basecolor.webp",
+          "bytes": 71646,
+          "sha256": "8d3becd0bdfbd0af4b40925b5f8f2d29ea593f1116656a871e6f1c84be542b1a"
+        },
+        "normal": {
+          "file": "textures/creature-oakscale/normal.webp",
+          "bytes": 122322,
+          "sha256": "3ea9636011eea9ee7e49d4cfa6010271004abb65356a9c700d9ef3a9ddbdf8c1"
+        },
+        "roughness": {
+          "file": "textures/creature-oakscale/roughness.webp",
+          "bytes": 56118,
+          "sha256": "99e51498071e74aa167b77ec90fe99834061c115f521b11aedb61e742ef15883"
+        },
+        "height": {
+          "file": "textures/creature-oakscale/height.webp",
+          "bytes": 36178,
+          "sha256": "92ee5632dde0de291489635709bc55a45ac89d3cb6f834362c52ca1546954303"
+        },
+        "ao": {
+          "file": "textures/creature-oakscale/ao.webp",
+          "bytes": 59772,
+          "sha256": "fdf1d31853c9c9629dddd9c705f24058b8b75ab120ac6d7a017382aa3e45917d"
+        },
+        "tintMask": {
+          "file": "textures/creature-oakscale/tint-mask.webp",
+          "bytes": 89244,
+          "sha256": "2d996f056ca9fa7a6b1ecd25d85fca69c1de2c609dc44e6caea2873a03452060"
+        },
+        "preview": {
+          "file": "textures/creature-oakscale/preview.webp",
+          "bytes": 80436,
+          "sha256": "8f988fc7f1ebbae37fcb79fd405acbc22d377985fe7fa26e1eefb7f0dbc7d157"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "glutes"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-oakscale/basecolor",
+            "bytes": 71646,
+            "sha256": "8d3becd0bdfbd0af4b40925b5f8f2d29ea593f1116656a871e6f1c84be542b1a"
+          },
+          "normal": {
+            "entry": "creature-oakscale/normal",
+            "bytes": 122322,
+            "sha256": "3ea9636011eea9ee7e49d4cfa6010271004abb65356a9c700d9ef3a9ddbdf8c1"
+          },
+          "roughness": {
+            "entry": "creature-oakscale/roughness",
+            "bytes": 56118,
+            "sha256": "99e51498071e74aa167b77ec90fe99834061c115f521b11aedb61e742ef15883"
+          },
+          "height": {
+            "entry": "creature-oakscale/height",
+            "bytes": 36178,
+            "sha256": "92ee5632dde0de291489635709bc55a45ac89d3cb6f834362c52ca1546954303"
+          },
+          "ao": {
+            "entry": "creature-oakscale/ao",
+            "bytes": 59772,
+            "sha256": "fdf1d31853c9c9629dddd9c705f24058b8b75ab120ac6d7a017382aa3e45917d"
+          },
+          "tintMask": {
+            "entry": "creature-oakscale/tintMask",
+            "bytes": 89244,
+            "sha256": "2d996f056ca9fa7a6b1ecd25d85fca69c1de2c609dc44e6caea2873a03452060"
+          },
+          "preview": {
+            "entry": "creature-oakscale/preview",
+            "bytes": 80436,
+            "sha256": "8f988fc7f1ebbae37fcb79fd405acbc22d377985fe7fa26e1eefb7f0dbc7d157"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-mosswood",
+      "displayName": "Mosswood",
+      "track": "glutes",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Bark008",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Bark008",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-mosswood/basecolor.webp",
+          "bytes": 59368,
+          "sha256": "890bb90b337f9a4663ed45f17530a98f5bc40f04abd9a29cc780b5ac830e49e7"
+        },
+        "normal": {
+          "file": "textures/creature-mosswood/normal.webp",
+          "bytes": 115452,
+          "sha256": "20240bb5ea158afe45c86d472671e936b74115dcc7dbab57e512f3614bca4b65"
+        },
+        "roughness": {
+          "file": "textures/creature-mosswood/roughness.webp",
+          "bytes": 14720,
+          "sha256": "52fa0eddcfb1857471dfc86cce4be8a75dd36181f9ed10c0a0252257022611b8"
+        },
+        "height": {
+          "file": "textures/creature-mosswood/height.webp",
+          "bytes": 14968,
+          "sha256": "3ca291939907de9d57ae256ee4a017ab3f225ef10ef246b1769a53d4368fe38e"
+        },
+        "ao": {
+          "file": "textures/creature-mosswood/ao.webp",
+          "bytes": 30290,
+          "sha256": "5d159bd50f689dd5550f5ddf1a1b043f79e3f17b72f50ddbfdb7af704967e84a"
+        },
+        "tintMask": {
+          "file": "textures/creature-mosswood/tint-mask.webp",
+          "bytes": 71764,
+          "sha256": "12749b87113aadaa3e904354fd91a46d0b2f7b1fd3bbb080f68ebdb27c12fc69"
+        },
+        "preview": {
+          "file": "textures/creature-mosswood/preview.webp",
+          "bytes": 68928,
+          "sha256": "cd7f6299839d2cd701535eba1526d1054b9f763539668a9aa7b6dd7d7460ea71"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "glutes"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/glutes.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-mosswood/basecolor",
+            "bytes": 59368,
+            "sha256": "890bb90b337f9a4663ed45f17530a98f5bc40f04abd9a29cc780b5ac830e49e7"
+          },
+          "normal": {
+            "entry": "creature-mosswood/normal",
+            "bytes": 115452,
+            "sha256": "20240bb5ea158afe45c86d472671e936b74115dcc7dbab57e512f3614bca4b65"
+          },
+          "roughness": {
+            "entry": "creature-mosswood/roughness",
+            "bytes": 14720,
+            "sha256": "52fa0eddcfb1857471dfc86cce4be8a75dd36181f9ed10c0a0252257022611b8"
+          },
+          "height": {
+            "entry": "creature-mosswood/height",
+            "bytes": 14968,
+            "sha256": "3ca291939907de9d57ae256ee4a017ab3f225ef10ef246b1769a53d4368fe38e"
+          },
+          "ao": {
+            "entry": "creature-mosswood/ao",
+            "bytes": 30290,
+            "sha256": "5d159bd50f689dd5550f5ddf1a1b043f79e3f17b72f50ddbfdb7af704967e84a"
+          },
+          "tintMask": {
+            "entry": "creature-mosswood/tintMask",
+            "bytes": 71764,
+            "sha256": "12749b87113aadaa3e904354fd91a46d0b2f7b1fd3bbb080f68ebdb27c12fc69"
+          },
+          "preview": {
+            "entry": "creature-mosswood/preview",
+            "bytes": 68928,
+            "sha256": "cd7f6299839d2cd701535eba1526d1054b9f763539668a9aa7b6dd7d7460ea71"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-blood-onyx",
+      "displayName": "Blood Onyx",
+      "track": "arms",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Onyx010",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Onyx010",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-blood-onyx/basecolor.webp",
+          "bytes": 49258,
+          "sha256": "1e4ece1d137a8e59717dedb50696af52443a48bca8f6ed704c3bcb477e237bd2"
+        },
+        "normal": {
+          "file": "textures/creature-blood-onyx/normal.webp",
+          "bytes": 570,
+          "sha256": "89b1d318ca9930effc69d7231739e063be9589e63823131668f65fcb7151fa25"
+        },
+        "roughness": {
+          "file": "textures/creature-blood-onyx/roughness.webp",
+          "bytes": 3160,
+          "sha256": "933156eac22cd38b2a55f39ff1af0eeb4cfd5fa3e09e29677c108d7ca0e5fd4e"
+        },
+        "height": {
+          "file": "textures/creature-blood-onyx/height.webp",
+          "bytes": 2910,
+          "sha256": "028bb3656a9f50c23a20d3985793c1d1629ad2164d8ec53a04fc333944d41dd9"
+        },
+        "tintMask": {
+          "file": "textures/creature-blood-onyx/tint-mask.webp",
+          "bytes": 55394,
+          "sha256": "4d6ba964d297a4329ffdf69a3dbede66982b83703d2e44187ee233f062cbe69d"
+        },
+        "preview": {
+          "file": "textures/creature-blood-onyx/preview.webp",
+          "bytes": 56594,
+          "sha256": "d6b36ee15022c78d7b968d51451e912ac91e4952fb46d8d9fe0a017d72a5fe31"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "arms"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-blood-onyx/basecolor",
+            "bytes": 49258,
+            "sha256": "1e4ece1d137a8e59717dedb50696af52443a48bca8f6ed704c3bcb477e237bd2"
+          },
+          "normal": {
+            "entry": "creature-blood-onyx/normal",
+            "bytes": 570,
+            "sha256": "89b1d318ca9930effc69d7231739e063be9589e63823131668f65fcb7151fa25"
+          },
+          "roughness": {
+            "entry": "creature-blood-onyx/roughness",
+            "bytes": 3160,
+            "sha256": "933156eac22cd38b2a55f39ff1af0eeb4cfd5fa3e09e29677c108d7ca0e5fd4e"
+          },
+          "height": {
+            "entry": "creature-blood-onyx/height",
+            "bytes": 2910,
+            "sha256": "028bb3656a9f50c23a20d3985793c1d1629ad2164d8ec53a04fc333944d41dd9"
+          },
+          "tintMask": {
+            "entry": "creature-blood-onyx/tintMask",
+            "bytes": 55394,
+            "sha256": "4d6ba964d297a4329ffdf69a3dbede66982b83703d2e44187ee233f062cbe69d"
+          },
+          "preview": {
+            "entry": "creature-blood-onyx/preview",
+            "bytes": 56594,
+            "sha256": "d6b36ee15022c78d7b968d51451e912ac91e4952fb46d8d9fe0a017d72a5fe31"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-honey-crystal",
+      "displayName": "Honey Crystal",
+      "track": "arms",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Onyx007",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Onyx007",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-honey-crystal/basecolor.webp",
+          "bytes": 22816,
+          "sha256": "98aa336fb9c96553927f664e9b78d7664389e93a81555ef84870111fa958c67a"
+        },
+        "normal": {
+          "file": "textures/creature-honey-crystal/normal.webp",
+          "bytes": 560,
+          "sha256": "bf3e55e83aeb3bce5033fd00ac0fb19ac787e3ca01d8573930809f453872035a"
+        },
+        "roughness": {
+          "file": "textures/creature-honey-crystal/roughness.webp",
+          "bytes": 3020,
+          "sha256": "b0000cf36bad38e720c4b5cbffa50bf28ee5a251b2cf0117ed531803a55dc886"
+        },
+        "height": {
+          "file": "textures/creature-honey-crystal/height.webp",
+          "bytes": 2954,
+          "sha256": "0a16ca42ec013f3eafc4342ed4940eb005379adbd6d879720a0969b5a37e8e89"
+        },
+        "tintMask": {
+          "file": "textures/creature-honey-crystal/tint-mask.webp",
+          "bytes": 34036,
+          "sha256": "71cca8020dd06078c658313ddadf4d214f870a5264891bdb1f93d1773d03c789"
+        },
+        "preview": {
+          "file": "textures/creature-honey-crystal/preview.webp",
+          "bytes": 26820,
+          "sha256": "6c9b3fcc76753d66a1059cfce8c6b0a1594eca5077ed9a55cfa747ce1892bae2"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "arms"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-honey-crystal/basecolor",
+            "bytes": 22816,
+            "sha256": "98aa336fb9c96553927f664e9b78d7664389e93a81555ef84870111fa958c67a"
+          },
+          "normal": {
+            "entry": "creature-honey-crystal/normal",
+            "bytes": 560,
+            "sha256": "bf3e55e83aeb3bce5033fd00ac0fb19ac787e3ca01d8573930809f453872035a"
+          },
+          "roughness": {
+            "entry": "creature-honey-crystal/roughness",
+            "bytes": 3020,
+            "sha256": "b0000cf36bad38e720c4b5cbffa50bf28ee5a251b2cf0117ed531803a55dc886"
+          },
+          "height": {
+            "entry": "creature-honey-crystal/height",
+            "bytes": 2954,
+            "sha256": "0a16ca42ec013f3eafc4342ed4940eb005379adbd6d879720a0969b5a37e8e89"
+          },
+          "tintMask": {
+            "entry": "creature-honey-crystal/tintMask",
+            "bytes": 34036,
+            "sha256": "71cca8020dd06078c658313ddadf4d214f870a5264891bdb1f93d1773d03c789"
+          },
+          "preview": {
+            "entry": "creature-honey-crystal/preview",
+            "bytes": 26820,
+            "sha256": "6c9b3fcc76753d66a1059cfce8c6b0a1594eca5077ed9a55cfa747ce1892bae2"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-void-mirror",
+      "displayName": "Void Mirror",
+      "track": "arms",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Onyx014",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Onyx014",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-void-mirror/basecolor.webp",
+          "bytes": 53930,
+          "sha256": "cb69edc751c1c91fd28bd9904ad3c097d8dcf6edaaa570694c3fb9d6d6422a9d"
+        },
+        "normal": {
+          "file": "textures/creature-void-mirror/normal.webp",
+          "bytes": 576,
+          "sha256": "17b7ad457b39e89d3b2da88be6dd5af7465bfd2a687e6e9574dd876d1c7f0d8c"
+        },
+        "roughness": {
+          "file": "textures/creature-void-mirror/roughness.webp",
+          "bytes": 3126,
+          "sha256": "616b3ba7e46a502a1bcfe1c280e30dd8c743f7e18d7f51aea0fec96372e9e14c"
+        },
+        "height": {
+          "file": "textures/creature-void-mirror/height.webp",
+          "bytes": 3520,
+          "sha256": "511981c03b2b6d5113991eeb75a42ffdda63e10637f05485fec7cbe6a2340df5"
+        },
+        "tintMask": {
+          "file": "textures/creature-void-mirror/tint-mask.webp",
+          "bytes": 62026,
+          "sha256": "26cb90d6461d7324ab564e1e3bc9b587b7429cd5f4aad544ba0629a7b641b405"
+        },
+        "preview": {
+          "file": "textures/creature-void-mirror/preview.webp",
+          "bytes": 61294,
+          "sha256": "5d17783eb003707e0ee546300ccd46d645db2b6743e0f68d7ed7c965440fd2d9"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "arms"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/arms.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-void-mirror/basecolor",
+            "bytes": 53930,
+            "sha256": "cb69edc751c1c91fd28bd9904ad3c097d8dcf6edaaa570694c3fb9d6d6422a9d"
+          },
+          "normal": {
+            "entry": "creature-void-mirror/normal",
+            "bytes": 576,
+            "sha256": "17b7ad457b39e89d3b2da88be6dd5af7465bfd2a687e6e9574dd876d1c7f0d8c"
+          },
+          "roughness": {
+            "entry": "creature-void-mirror/roughness",
+            "bytes": 3126,
+            "sha256": "616b3ba7e46a502a1bcfe1c280e30dd8c743f7e18d7f51aea0fec96372e9e14c"
+          },
+          "height": {
+            "entry": "creature-void-mirror/height",
+            "bytes": 3520,
+            "sha256": "511981c03b2b6d5113991eeb75a42ffdda63e10637f05485fec7cbe6a2340df5"
+          },
+          "tintMask": {
+            "entry": "creature-void-mirror/tintMask",
+            "bytes": 62026,
+            "sha256": "26cb90d6461d7324ab564e1e3bc9b587b7429cd5f4aad544ba0629a7b641b405"
+          },
+          "preview": {
+            "entry": "creature-void-mirror/preview",
+            "bytes": 61294,
+            "sha256": "5d17783eb003707e0ee546300ccd46d645db2b6743e0f68d7ed7c965440fd2d9"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-snow-wraith",
+      "displayName": "Snow Wraith",
+      "track": "yoga",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Snow014",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Snow014",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-snow-wraith/basecolor.webp",
+          "bytes": 6634,
+          "sha256": "b44309b17f88a5dfe5afb6ae11d38eff932fc4ca31cf57de57dd177c7ad690cc"
+        },
+        "normal": {
+          "file": "textures/creature-snow-wraith/normal.webp",
+          "bytes": 25340,
+          "sha256": "c660422b765aca94ffbe27547a70572642798298148e138a175c775efb8d7b83"
+        },
+        "roughness": {
+          "file": "textures/creature-snow-wraith/roughness.webp",
+          "bytes": 11026,
+          "sha256": "cf39931b6ecaacadf1f308870a1d6e1eb45a73e2b46e117f4b4e0a76d7b44ce1"
+        },
+        "height": {
+          "file": "textures/creature-snow-wraith/height.webp",
+          "bytes": 11568,
+          "sha256": "6075c35c42067b2b476a0ba6aae9c727b946ae75b3afd5b6e168d9bd3f51385b"
+        },
+        "ao": {
+          "file": "textures/creature-snow-wraith/ao.webp",
+          "bytes": 4376,
+          "sha256": "08233059a6af6b3c8c14077b17b6d7325895eda0b725b91e55fcead6f887c042"
+        },
+        "tintMask": {
+          "file": "textures/creature-snow-wraith/tint-mask.webp",
+          "bytes": 47502,
+          "sha256": "21fa7be4a5d63492a2a37787d68d3ceb586c995715fa1668f07f338998ef7b1e"
+        },
+        "preview": {
+          "file": "textures/creature-snow-wraith/preview.webp",
+          "bytes": 8238,
+          "sha256": "b3ad0d3e51855f8bc66f7f2064d4a8e220b9bd6bbb85113ce7e12249f3b4c151"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "yoga"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-snow-wraith/basecolor",
+            "bytes": 6634,
+            "sha256": "b44309b17f88a5dfe5afb6ae11d38eff932fc4ca31cf57de57dd177c7ad690cc"
+          },
+          "normal": {
+            "entry": "creature-snow-wraith/normal",
+            "bytes": 25340,
+            "sha256": "c660422b765aca94ffbe27547a70572642798298148e138a175c775efb8d7b83"
+          },
+          "roughness": {
+            "entry": "creature-snow-wraith/roughness",
+            "bytes": 11026,
+            "sha256": "cf39931b6ecaacadf1f308870a1d6e1eb45a73e2b46e117f4b4e0a76d7b44ce1"
+          },
+          "height": {
+            "entry": "creature-snow-wraith/height",
+            "bytes": 11568,
+            "sha256": "6075c35c42067b2b476a0ba6aae9c727b946ae75b3afd5b6e168d9bd3f51385b"
+          },
+          "ao": {
+            "entry": "creature-snow-wraith/ao",
+            "bytes": 4376,
+            "sha256": "08233059a6af6b3c8c14077b17b6d7325895eda0b725b91e55fcead6f887c042"
+          },
+          "tintMask": {
+            "entry": "creature-snow-wraith/tintMask",
+            "bytes": 47502,
+            "sha256": "21fa7be4a5d63492a2a37787d68d3ceb586c995715fa1668f07f338998ef7b1e"
+          },
+          "preview": {
+            "entry": "creature-snow-wraith/preview",
+            "bytes": 8238,
+            "sha256": "b3ad0d3e51855f8bc66f7f2064d4a8e220b9bd6bbb85113ce7e12249f3b4c151"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-moon-drift",
+      "displayName": "Moon Drift",
+      "track": "yoga",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Snow008A",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Snow008A",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-moon-drift/basecolor.webp",
+          "bytes": 1988,
+          "sha256": "a0a0deef40357c248c3cd25b62c94196dee75bda282579f2f0af607091ecddd7"
+        },
+        "normal": {
+          "file": "textures/creature-moon-drift/normal.webp",
+          "bytes": 19748,
+          "sha256": "b41d538eb2be50037fc7646838ff397a30bad39e2c215c8e6ec0f7cc5aab3abb"
+        },
+        "roughness": {
+          "file": "textures/creature-moon-drift/roughness.webp",
+          "bytes": 42334,
+          "sha256": "940f50573bb0c93f00b1716d5fc8351aaea5cfd688248ab7e3b69555a68fedf4"
+        },
+        "height": {
+          "file": "textures/creature-moon-drift/height.webp",
+          "bytes": 10336,
+          "sha256": "00cda68ddb767c0578a91423d56f9f0ca59a30c24a5663c2c720a135a522f8dc"
+        },
+        "ao": {
+          "file": "textures/creature-moon-drift/ao.webp",
+          "bytes": 5248,
+          "sha256": "638072ac50033602f96649275c9d1ff2cc406c5a371fdaac55408ff476dd03a5"
+        },
+        "tintMask": {
+          "file": "textures/creature-moon-drift/tint-mask.webp",
+          "bytes": 62850,
+          "sha256": "2bea2a3b58ed3f2a1b1179cd07e38f556e4c592607461c32f4cba4f1dbb0d21d"
+        },
+        "preview": {
+          "file": "textures/creature-moon-drift/preview.webp",
+          "bytes": 2558,
+          "sha256": "425a6acfc362bfe037e494df1adb4d6676d8c3825a6dcd3d5a0d8f488bc65f87"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "yoga"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-moon-drift/basecolor",
+            "bytes": 1988,
+            "sha256": "a0a0deef40357c248c3cd25b62c94196dee75bda282579f2f0af607091ecddd7"
+          },
+          "normal": {
+            "entry": "creature-moon-drift/normal",
+            "bytes": 19748,
+            "sha256": "b41d538eb2be50037fc7646838ff397a30bad39e2c215c8e6ec0f7cc5aab3abb"
+          },
+          "roughness": {
+            "entry": "creature-moon-drift/roughness",
+            "bytes": 42334,
+            "sha256": "940f50573bb0c93f00b1716d5fc8351aaea5cfd688248ab7e3b69555a68fedf4"
+          },
+          "height": {
+            "entry": "creature-moon-drift/height",
+            "bytes": 10336,
+            "sha256": "00cda68ddb767c0578a91423d56f9f0ca59a30c24a5663c2c720a135a522f8dc"
+          },
+          "ao": {
+            "entry": "creature-moon-drift/ao",
+            "bytes": 5248,
+            "sha256": "638072ac50033602f96649275c9d1ff2cc406c5a371fdaac55408ff476dd03a5"
+          },
+          "tintMask": {
+            "entry": "creature-moon-drift/tintMask",
+            "bytes": 62850,
+            "sha256": "2bea2a3b58ed3f2a1b1179cd07e38f556e4c592607461c32f4cba4f1dbb0d21d"
+          },
+          "preview": {
+            "entry": "creature-moon-drift/preview",
+            "bytes": 2558,
+            "sha256": "425a6acfc362bfe037e494df1adb4d6676d8c3825a6dcd3d5a0d8f488bc65f87"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-pearl-spirit",
+      "displayName": "Pearl Spirit",
+      "track": "yoga",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Onyx015",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Onyx015",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-pearl-spirit/basecolor.webp",
+          "bytes": 29558,
+          "sha256": "ecd31972e0f2bd3dcbb56dd83966989cbaa724514cc57576769886ee69277bc4"
+        },
+        "normal": {
+          "file": "textures/creature-pearl-spirit/normal.webp",
+          "bytes": 578,
+          "sha256": "bc6c55f9b7c548eb294b544cffd95bead865725a62e2b07b26a954175f8f7de2"
+        },
+        "roughness": {
+          "file": "textures/creature-pearl-spirit/roughness.webp",
+          "bytes": 2712,
+          "sha256": "e4d14e77c9b45e27f077ba5a1a549ce863650380a48babb5c3b02a6d9322c2d8"
+        },
+        "height": {
+          "file": "textures/creature-pearl-spirit/height.webp",
+          "bytes": 2632,
+          "sha256": "5b01611a42e4e95216112bc1c263ad8c730fb412d74ed44f5e07085eecf24432"
+        },
+        "tintMask": {
+          "file": "textures/creature-pearl-spirit/tint-mask.webp",
+          "bytes": 70938,
+          "sha256": "000adcbc57cc83e8e2205c13dc421e9b8929d602006c2e3ca780725819dbf3c6"
+        },
+        "preview": {
+          "file": "textures/creature-pearl-spirit/preview.webp",
+          "bytes": 36178,
+          "sha256": "5494688e1ef1a80ddce772b1391f81c43c666d3595cc4dd567b807b393aafcda"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "yoga"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/yoga.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-pearl-spirit/basecolor",
+            "bytes": 29558,
+            "sha256": "ecd31972e0f2bd3dcbb56dd83966989cbaa724514cc57576769886ee69277bc4"
+          },
+          "normal": {
+            "entry": "creature-pearl-spirit/normal",
+            "bytes": 578,
+            "sha256": "bc6c55f9b7c548eb294b544cffd95bead865725a62e2b07b26a954175f8f7de2"
+          },
+          "roughness": {
+            "entry": "creature-pearl-spirit/roughness",
+            "bytes": 2712,
+            "sha256": "e4d14e77c9b45e27f077ba5a1a549ce863650380a48babb5c3b02a6d9322c2d8"
+          },
+          "height": {
+            "entry": "creature-pearl-spirit/height",
+            "bytes": 2632,
+            "sha256": "5b01611a42e4e95216112bc1c263ad8c730fb412d74ed44f5e07085eecf24432"
+          },
+          "tintMask": {
+            "entry": "creature-pearl-spirit/tintMask",
+            "bytes": 70938,
+            "sha256": "000adcbc57cc83e8e2205c13dc421e9b8929d602006c2e3ca780725819dbf3c6"
+          },
+          "preview": {
+            "entry": "creature-pearl-spirit/preview",
+            "bytes": 36178,
+            "sha256": "5494688e1ef1a80ddce772b1391f81c43c666d3595cc4dd567b807b393aafcda"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-red-desert-scale",
+      "displayName": "Red Desert Scale",
+      "track": "martial-arts",
+      "realm": "fantasy",
+      "rarity": "rare",
+      "sourceAssetId": "Rock029",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Rock029",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-red-desert-scale/basecolor.webp",
+          "bytes": 51964,
+          "sha256": "7160db9a779efc4fb62326be77ba443ee4ae5604884e1ed691e902e47323b156"
+        },
+        "normal": {
+          "file": "textures/creature-red-desert-scale/normal.webp",
+          "bytes": 120276,
+          "sha256": "450837f83a5ebbb2b9f31970d1c575fc18084358a7bf8fcf3912b5d5eddc3ec3"
+        },
+        "roughness": {
+          "file": "textures/creature-red-desert-scale/roughness.webp",
+          "bytes": 28424,
+          "sha256": "dd03959c9520cc2b6025073ef096c089b0f2d38b9f984ef1820d95caafc1992d"
+        },
+        "height": {
+          "file": "textures/creature-red-desert-scale/height.webp",
+          "bytes": 8842,
+          "sha256": "0e342c324ce19607da0bd50a966fa94b5c2e38fad0f37da848c7d666ed4518fe"
+        },
+        "ao": {
+          "file": "textures/creature-red-desert-scale/ao.webp",
+          "bytes": 19082,
+          "sha256": "7ab01e1e8509a7d83f58c00ae0f702834d99120a4070ed92cedb6710a802a766"
+        },
+        "tintMask": {
+          "file": "textures/creature-red-desert-scale/tint-mask.webp",
+          "bytes": 83596,
+          "sha256": "19a1bbac2eb458c1c6c36968566ac8e43e52cc62e5f57e9d1e47bfc81734e315"
+        },
+        "preview": {
+          "file": "textures/creature-red-desert-scale/preview.webp",
+          "bytes": 57218,
+          "sha256": "d84d2ea7022224cea294456c3c8656abf0979856274bcc64be90a8b1378b39d2"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "martial-arts"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-red-desert-scale/basecolor",
+            "bytes": 51964,
+            "sha256": "7160db9a779efc4fb62326be77ba443ee4ae5604884e1ed691e902e47323b156"
+          },
+          "normal": {
+            "entry": "creature-red-desert-scale/normal",
+            "bytes": 120276,
+            "sha256": "450837f83a5ebbb2b9f31970d1c575fc18084358a7bf8fcf3912b5d5eddc3ec3"
+          },
+          "roughness": {
+            "entry": "creature-red-desert-scale/roughness",
+            "bytes": 28424,
+            "sha256": "dd03959c9520cc2b6025073ef096c089b0f2d38b9f984ef1820d95caafc1992d"
+          },
+          "height": {
+            "entry": "creature-red-desert-scale/height",
+            "bytes": 8842,
+            "sha256": "0e342c324ce19607da0bd50a966fa94b5c2e38fad0f37da848c7d666ed4518fe"
+          },
+          "ao": {
+            "entry": "creature-red-desert-scale/ao",
+            "bytes": 19082,
+            "sha256": "7ab01e1e8509a7d83f58c00ae0f702834d99120a4070ed92cedb6710a802a766"
+          },
+          "tintMask": {
+            "entry": "creature-red-desert-scale/tintMask",
+            "bytes": 83596,
+            "sha256": "19a1bbac2eb458c1c6c36968566ac8e43e52cc62e5f57e9d1e47bfc81734e315"
+          },
+          "preview": {
+            "entry": "creature-red-desert-scale/preview",
+            "bytes": 57218,
+            "sha256": "d84d2ea7022224cea294456c3c8656abf0979856274bcc64be90a8b1378b39d2"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-cave-drake",
+      "displayName": "Cave Drake",
+      "track": "martial-arts",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Rock035",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Rock035",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-cave-drake/basecolor.webp",
+          "bytes": 42954,
+          "sha256": "891a196afba62375788c0b090019fd19941c04d25f9d760f135d57e60a1de00a"
+        },
+        "normal": {
+          "file": "textures/creature-cave-drake/normal.webp",
+          "bytes": 126116,
+          "sha256": "8283888c871969dfe2b35f0cebd352a66a2cc46ad64bcb2bb5c5f8663b9c146e"
+        },
+        "roughness": {
+          "file": "textures/creature-cave-drake/roughness.webp",
+          "bytes": 37152,
+          "sha256": "ad45c8e7102239aef39f0154e1c57b3932742255f5799c0074a8b5435cecc5c5"
+        },
+        "height": {
+          "file": "textures/creature-cave-drake/height.webp",
+          "bytes": 10778,
+          "sha256": "bef40f1f39e9bf0e716195a417fa0fcaeb67ed09ec43b2ee5fb59030648e34d4"
+        },
+        "ao": {
+          "file": "textures/creature-cave-drake/ao.webp",
+          "bytes": 20824,
+          "sha256": "e085d1a569564fdbe39a9dd18fa133a14ffa83117e8cdda10425bace18a70bd6"
+        },
+        "tintMask": {
+          "file": "textures/creature-cave-drake/tint-mask.webp",
+          "bytes": 59714,
+          "sha256": "febea8d8da737dd8127c8049724d22d621219c483682ded32a4169c1f651c63a"
+        },
+        "preview": {
+          "file": "textures/creature-cave-drake/preview.webp",
+          "bytes": 52250,
+          "sha256": "fd405d3986dd0eea39be9f341ec58591aa6e6ab66e25787adf3b2e16c62e634a"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "martial-arts"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-cave-drake/basecolor",
+            "bytes": 42954,
+            "sha256": "891a196afba62375788c0b090019fd19941c04d25f9d760f135d57e60a1de00a"
+          },
+          "normal": {
+            "entry": "creature-cave-drake/normal",
+            "bytes": 126116,
+            "sha256": "8283888c871969dfe2b35f0cebd352a66a2cc46ad64bcb2bb5c5f8663b9c146e"
+          },
+          "roughness": {
+            "entry": "creature-cave-drake/roughness",
+            "bytes": 37152,
+            "sha256": "ad45c8e7102239aef39f0154e1c57b3932742255f5799c0074a8b5435cecc5c5"
+          },
+          "height": {
+            "entry": "creature-cave-drake/height",
+            "bytes": 10778,
+            "sha256": "bef40f1f39e9bf0e716195a417fa0fcaeb67ed09ec43b2ee5fb59030648e34d4"
+          },
+          "ao": {
+            "entry": "creature-cave-drake/ao",
+            "bytes": 20824,
+            "sha256": "e085d1a569564fdbe39a9dd18fa133a14ffa83117e8cdda10425bace18a70bd6"
+          },
+          "tintMask": {
+            "entry": "creature-cave-drake/tintMask",
+            "bytes": 59714,
+            "sha256": "febea8d8da737dd8127c8049724d22d621219c483682ded32a4169c1f651c63a"
+          },
+          "preview": {
+            "entry": "creature-cave-drake/preview",
+            "bytes": 52250,
+            "sha256": "fd405d3986dd0eea39be9f341ec58591aa6e6ab66e25787adf3b2e16c62e634a"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-sandstone-titan",
+      "displayName": "Sandstone Titan",
+      "track": "martial-arts",
+      "realm": "fantasy",
+      "rarity": "legendary",
+      "sourceAssetId": "Rock061",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Rock061",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-sandstone-titan/basecolor.webp",
+          "bytes": 19630,
+          "sha256": "bb2d67e9addc03ae6dd1052db82b6f36d03d5af77cc2a63d48921844b652a3e0"
+        },
+        "normal": {
+          "file": "textures/creature-sandstone-titan/normal.webp",
+          "bytes": 59070,
+          "sha256": "a9f2c10deb50d06074111b4f3cf220edb876633fae81c239f1c99718d1d07d46"
+        },
+        "roughness": {
+          "file": "textures/creature-sandstone-titan/roughness.webp",
+          "bytes": 55850,
+          "sha256": "d32bb23773fd03bedc81edeec043c823319e295e48198016095ff29ff988c373"
+        },
+        "height": {
+          "file": "textures/creature-sandstone-titan/height.webp",
+          "bytes": 8100,
+          "sha256": "cf13bbcf1fad8c96f467f178d905fb55f4d254fdcc8fa52f506f80de8362f264"
+        },
+        "ao": {
+          "file": "textures/creature-sandstone-titan/ao.webp",
+          "bytes": 15348,
+          "sha256": "454cc3f34a0c059b046ee536585296a9195bb1259bc1ebb98b3377aeb19ad750"
+        },
+        "tintMask": {
+          "file": "textures/creature-sandstone-titan/tint-mask.webp",
+          "bytes": 41274,
+          "sha256": "168d8de923125957c85b30e3e378b0586a7fd91d270a8c19042bea518d1d2529"
+        },
+        "preview": {
+          "file": "textures/creature-sandstone-titan/preview.webp",
+          "bytes": 24198,
+          "sha256": "b379980f2c2907823755986994431b2fbe0d8e2a254616a89cefa1c3f1a810c3"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "martial-arts"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/martial-arts.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-sandstone-titan/basecolor",
+            "bytes": 19630,
+            "sha256": "bb2d67e9addc03ae6dd1052db82b6f36d03d5af77cc2a63d48921844b652a3e0"
+          },
+          "normal": {
+            "entry": "creature-sandstone-titan/normal",
+            "bytes": 59070,
+            "sha256": "a9f2c10deb50d06074111b4f3cf220edb876633fae81c239f1c99718d1d07d46"
+          },
+          "roughness": {
+            "entry": "creature-sandstone-titan/roughness",
+            "bytes": 55850,
+            "sha256": "d32bb23773fd03bedc81edeec043c823319e295e48198016095ff29ff988c373"
+          },
+          "height": {
+            "entry": "creature-sandstone-titan/height",
+            "bytes": 8100,
+            "sha256": "cf13bbcf1fad8c96f467f178d905fb55f4d254fdcc8fa52f506f80de8362f264"
+          },
+          "ao": {
+            "entry": "creature-sandstone-titan/ao",
+            "bytes": 15348,
+            "sha256": "454cc3f34a0c059b046ee536585296a9195bb1259bc1ebb98b3377aeb19ad750"
+          },
+          "tintMask": {
+            "entry": "creature-sandstone-titan/tintMask",
+            "bytes": 41274,
+            "sha256": "168d8de923125957c85b30e3e378b0586a7fd91d270a8c19042bea518d1d2529"
+          },
+          "preview": {
+            "entry": "creature-sandstone-titan/preview",
+            "bytes": 24198,
+            "sha256": "b379980f2c2907823755986994431b2fbe0d8e2a254616a89cefa1c3f1a810c3"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-neon-mainframe",
+      "displayName": "Neon Mainframe",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "rare",
+      "sourceAssetId": "Chip002",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Chip002",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-neon-mainframe/basecolor.webp",
+          "bytes": 56744,
+          "sha256": "7af9b36dc24154d4dfe3b151dcafe44c1488643845a380e97d44c61d495c4b03"
+        },
+        "normal": {
+          "file": "textures/creature-neon-mainframe/normal.webp",
+          "bytes": 37362,
+          "sha256": "413a59522d8e711071777b6a026805d22fb848881e396ae2e55892c47d3e621e"
+        },
+        "roughness": {
+          "file": "textures/creature-neon-mainframe/roughness.webp",
+          "bytes": 41338,
+          "sha256": "911155142f0e2266a6df466e0993e44b5039ac75e0d3489e37e0cffaa49df930"
+        },
+        "height": {
+          "file": "textures/creature-neon-mainframe/height.webp",
+          "bytes": 33104,
+          "sha256": "d1a60696213f4e3bb1af2d335aa37c7358fb9efa8877cd4b465422cba460ddcd"
+        },
+        "metalness": {
+          "file": "textures/creature-neon-mainframe/metalness.webp",
+          "bytes": 45012,
+          "sha256": "d8294af74841524440d65a0fc0390f11fb1e46fa9086b5adcae23f00e760b7bd"
+        },
+        "tintMask": {
+          "file": "textures/creature-neon-mainframe/tint-mask.webp",
+          "bytes": 50140,
+          "sha256": "e0c65204a15a3f678c15e017fb84817d1d2f8e7f7184450cd85034303ad844e9"
+        },
+        "preview": {
+          "file": "textures/creature-neon-mainframe/preview.webp",
+          "bytes": 61118,
+          "sha256": "6b904429406f8ff2f6decf39552837fbb1a69b51f6bd1f84ac1ae51b7b1ece44"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "cardio"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-neon-mainframe/basecolor",
+            "bytes": 56744,
+            "sha256": "7af9b36dc24154d4dfe3b151dcafe44c1488643845a380e97d44c61d495c4b03"
+          },
+          "normal": {
+            "entry": "creature-neon-mainframe/normal",
+            "bytes": 37362,
+            "sha256": "413a59522d8e711071777b6a026805d22fb848881e396ae2e55892c47d3e621e"
+          },
+          "roughness": {
+            "entry": "creature-neon-mainframe/roughness",
+            "bytes": 41338,
+            "sha256": "911155142f0e2266a6df466e0993e44b5039ac75e0d3489e37e0cffaa49df930"
+          },
+          "height": {
+            "entry": "creature-neon-mainframe/height",
+            "bytes": 33104,
+            "sha256": "d1a60696213f4e3bb1af2d335aa37c7358fb9efa8877cd4b465422cba460ddcd"
+          },
+          "metalness": {
+            "entry": "creature-neon-mainframe/metalness",
+            "bytes": 45012,
+            "sha256": "d8294af74841524440d65a0fc0390f11fb1e46fa9086b5adcae23f00e760b7bd"
+          },
+          "tintMask": {
+            "entry": "creature-neon-mainframe/tintMask",
+            "bytes": 50140,
+            "sha256": "e0c65204a15a3f678c15e017fb84817d1d2f8e7f7184450cd85034303ad844e9"
+          },
+          "preview": {
+            "entry": "creature-neon-mainframe/preview",
+            "bytes": 61118,
+            "sha256": "6b904429406f8ff2f6decf39552837fbb1a69b51f6bd1f84ac1ae51b7b1ece44"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-reactor-grid",
+      "displayName": "Reactor Grid",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "epic",
+      "sourceAssetId": "Chip004",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Chip004",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-reactor-grid/basecolor.webp",
+          "bytes": 68780,
+          "sha256": "87f6c7fad31ff2a102dd430f1b8e6a37efb6ea41d28c7c43ecd96a8ecff4ba87"
+        },
+        "normal": {
+          "file": "textures/creature-reactor-grid/normal.webp",
+          "bytes": 30258,
+          "sha256": "29097e24c7f4977faa6b8de2cab3968aeb0d786f3304c5c30392e7217afa944a"
+        },
+        "roughness": {
+          "file": "textures/creature-reactor-grid/roughness.webp",
+          "bytes": 28938,
+          "sha256": "b259990ff0909332bf236b4be50db3aa119887ebcd2f9d59d28c20e0cf529da1"
+        },
+        "height": {
+          "file": "textures/creature-reactor-grid/height.webp",
+          "bytes": 18820,
+          "sha256": "2b43a252f9398122436a011c785fb684ef15b181442db3c784aebda559e57bb4"
+        },
+        "metalness": {
+          "file": "textures/creature-reactor-grid/metalness.webp",
+          "bytes": 8980,
+          "sha256": "07523450a21492207c75694b9a6413499417262e6439b07ddd21604ac728d05c"
+        },
+        "tintMask": {
+          "file": "textures/creature-reactor-grid/tint-mask.webp",
+          "bytes": 50226,
+          "sha256": "730ad1404d4067b92705945e94980c58f8e069e3badf53f288b0559f27d2a386"
+        },
+        "preview": {
+          "file": "textures/creature-reactor-grid/preview.webp",
+          "bytes": 70556,
+          "sha256": "b8d73dfa85b4af6399099734708bd705cfe9d9cf88942a6844a737c0a7c9e3f2"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "cardio"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-reactor-grid/basecolor",
+            "bytes": 68780,
+            "sha256": "87f6c7fad31ff2a102dd430f1b8e6a37efb6ea41d28c7c43ecd96a8ecff4ba87"
+          },
+          "normal": {
+            "entry": "creature-reactor-grid/normal",
+            "bytes": 30258,
+            "sha256": "29097e24c7f4977faa6b8de2cab3968aeb0d786f3304c5c30392e7217afa944a"
+          },
+          "roughness": {
+            "entry": "creature-reactor-grid/roughness",
+            "bytes": 28938,
+            "sha256": "b259990ff0909332bf236b4be50db3aa119887ebcd2f9d59d28c20e0cf529da1"
+          },
+          "height": {
+            "entry": "creature-reactor-grid/height",
+            "bytes": 18820,
+            "sha256": "2b43a252f9398122436a011c785fb684ef15b181442db3c784aebda559e57bb4"
+          },
+          "metalness": {
+            "entry": "creature-reactor-grid/metalness",
+            "bytes": 8980,
+            "sha256": "07523450a21492207c75694b9a6413499417262e6439b07ddd21604ac728d05c"
+          },
+          "tintMask": {
+            "entry": "creature-reactor-grid/tintMask",
+            "bytes": 50226,
+            "sha256": "730ad1404d4067b92705945e94980c58f8e069e3badf53f288b0559f27d2a386"
+          },
+          "preview": {
+            "entry": "creature-reactor-grid/preview",
+            "bytes": 70556,
+            "sha256": "b8d73dfa85b4af6399099734708bd705cfe9d9cf88942a6844a737c0a7c9e3f2"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-quantum-core",
+      "displayName": "Quantum Core",
+      "track": "cardio",
+      "realm": "sci-fi",
+      "rarity": "legendary",
+      "sourceAssetId": "Chip007",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Chip007",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-quantum-core/basecolor.webp",
+          "bytes": 51286,
+          "sha256": "60c77e1451ddd9d4acf761146d68273493a07ef74320e893906f896883e7f933"
+        },
+        "normal": {
+          "file": "textures/creature-quantum-core/normal.webp",
+          "bytes": 31990,
+          "sha256": "adf7da0427d32ab38dace38c6656e873a6b9e345d6f2a41c42cfc640d437c46a"
+        },
+        "roughness": {
+          "file": "textures/creature-quantum-core/roughness.webp",
+          "bytes": 31284,
+          "sha256": "d489ea08a4eafc75c5c7c1af6cb535e6d56516906f9a2210b0313407b48713fd"
+        },
+        "height": {
+          "file": "textures/creature-quantum-core/height.webp",
+          "bytes": 29580,
+          "sha256": "7d44a79d77ba776128ff8836156b73f010c56ff8543d7fe1bf6994f21686efd7"
+        },
+        "metalness": {
+          "file": "textures/creature-quantum-core/metalness.webp",
+          "bytes": 38108,
+          "sha256": "2845ad0fae0dc3dd3c07aafe5e1758fb322dea33ec636e8036cebbb3f5e7c66b"
+        },
+        "tintMask": {
+          "file": "textures/creature-quantum-core/tint-mask.webp",
+          "bytes": 41968,
+          "sha256": "5ec244d327e08f7f5cc6022500a829fb2ce697a6749506ca09de5c832efc8493"
+        },
+        "preview": {
+          "file": "textures/creature-quantum-core/preview.webp",
+          "bytes": 56764,
+          "sha256": "51f0687bf78e65155d2e6e156e21bb6c2ce6f64b35fc7e7e9623fc94752b52f5"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "cardio"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/cardio.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-quantum-core/basecolor",
+            "bytes": 51286,
+            "sha256": "60c77e1451ddd9d4acf761146d68273493a07ef74320e893906f896883e7f933"
+          },
+          "normal": {
+            "entry": "creature-quantum-core/normal",
+            "bytes": 31990,
+            "sha256": "adf7da0427d32ab38dace38c6656e873a6b9e345d6f2a41c42cfc640d437c46a"
+          },
+          "roughness": {
+            "entry": "creature-quantum-core/roughness",
+            "bytes": 31284,
+            "sha256": "d489ea08a4eafc75c5c7c1af6cb535e6d56516906f9a2210b0313407b48713fd"
+          },
+          "height": {
+            "entry": "creature-quantum-core/height",
+            "bytes": 29580,
+            "sha256": "7d44a79d77ba776128ff8836156b73f010c56ff8543d7fe1bf6994f21686efd7"
+          },
+          "metalness": {
+            "entry": "creature-quantum-core/metalness",
+            "bytes": 38108,
+            "sha256": "2845ad0fae0dc3dd3c07aafe5e1758fb322dea33ec636e8036cebbb3f5e7c66b"
+          },
+          "tintMask": {
+            "entry": "creature-quantum-core/tintMask",
+            "bytes": 41968,
+            "sha256": "5ec244d327e08f7f5cc6022500a829fb2ce697a6749506ca09de5c832efc8493"
+          },
+          "preview": {
+            "entry": "creature-quantum-core/preview",
+            "bytes": 56764,
+            "sha256": "51f0687bf78e65155d2e6e156e21bb6c2ce6f64b35fc7e7e9623fc94752b52f5"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-celestial-mosaic",
+      "displayName": "Celestial Mosaic",
+      "track": "meditation",
+      "realm": "hybrid",
+      "rarity": "rare",
+      "sourceAssetId": "Tiles070",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 1,
+      "sourceUrl": "https://ambientcg.com/a/Tiles070",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-celestial-mosaic/basecolor.webp",
+          "bytes": 72806,
+          "sha256": "2e293d1642aa668793919b7d46bb50e94bcc36c0ce5d1f775463269a949f0978"
+        },
+        "normal": {
+          "file": "textures/creature-celestial-mosaic/normal.webp",
+          "bytes": 40154,
+          "sha256": "995e3446cf6f85eb57d7925922e187fc497a69355b82dfd069bcbd3f0029a175"
+        },
+        "roughness": {
+          "file": "textures/creature-celestial-mosaic/roughness.webp",
+          "bytes": 47808,
+          "sha256": "29cbfb28025d5943765276c118b38d186b9294c6458bb6dc7a7da886ed989dd3"
+        },
+        "height": {
+          "file": "textures/creature-celestial-mosaic/height.webp",
+          "bytes": 38486,
+          "sha256": "15cace7739e375a6dad5f5251d1b4e9cc8495abbba9f1560844e272cc5401ef0"
+        },
+        "ao": {
+          "file": "textures/creature-celestial-mosaic/ao.webp",
+          "bytes": 46104,
+          "sha256": "0da24064e9f490c342bf09e2149b58945e0ef0c555aa95b8c542615cf82b9fc1"
+        },
+        "tintMask": {
+          "file": "textures/creature-celestial-mosaic/tint-mask.webp",
+          "bytes": 63262,
+          "sha256": "c73737938011dfd0894b37e613d9de159b672e2813a34cd0f134080961935268"
+        },
+        "preview": {
+          "file": "textures/creature-celestial-mosaic/preview.webp",
+          "bytes": 76982,
+          "sha256": "06b94f2aed6383bdcd79769cc0649b71ac08fb0dcdf26d7aa5c578f66ff974ca"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 1,
+          "track": "meditation"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-celestial-mosaic/basecolor",
+            "bytes": 72806,
+            "sha256": "2e293d1642aa668793919b7d46bb50e94bcc36c0ce5d1f775463269a949f0978"
+          },
+          "normal": {
+            "entry": "creature-celestial-mosaic/normal",
+            "bytes": 40154,
+            "sha256": "995e3446cf6f85eb57d7925922e187fc497a69355b82dfd069bcbd3f0029a175"
+          },
+          "roughness": {
+            "entry": "creature-celestial-mosaic/roughness",
+            "bytes": 47808,
+            "sha256": "29cbfb28025d5943765276c118b38d186b9294c6458bb6dc7a7da886ed989dd3"
+          },
+          "height": {
+            "entry": "creature-celestial-mosaic/height",
+            "bytes": 38486,
+            "sha256": "15cace7739e375a6dad5f5251d1b4e9cc8495abbba9f1560844e272cc5401ef0"
+          },
+          "ao": {
+            "entry": "creature-celestial-mosaic/ao",
+            "bytes": 46104,
+            "sha256": "0da24064e9f490c342bf09e2149b58945e0ef0c555aa95b8c542615cf82b9fc1"
+          },
+          "tintMask": {
+            "entry": "creature-celestial-mosaic/tintMask",
+            "bytes": 63262,
+            "sha256": "c73737938011dfd0894b37e613d9de159b672e2813a34cd0f134080961935268"
+          },
+          "preview": {
+            "entry": "creature-celestial-mosaic/preview",
+            "bytes": 76982,
+            "sha256": "06b94f2aed6383bdcd79769cc0649b71ac08fb0dcdf26d7aa5c578f66ff974ca"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-shellborn",
+      "displayName": "Shellborn",
+      "track": "meditation",
+      "realm": "fantasy",
+      "rarity": "epic",
+      "sourceAssetId": "Ground060",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 2,
+      "sourceUrl": "https://ambientcg.com/a/Ground060",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-shellborn/basecolor.webp",
+          "bytes": 9684,
+          "sha256": "2ffb18fed343bdcf0b2ba3d4b0dea9e8e53711fb266563af356fc940dc129a40"
+        },
+        "normal": {
+          "file": "textures/creature-shellborn/normal.webp",
+          "bytes": 23222,
+          "sha256": "d1a9e0f90dce9c6a37afe8819f96ce7af37ca19f8a3ed035bb2f2dc262695f83"
+        },
+        "roughness": {
+          "file": "textures/creature-shellborn/roughness.webp",
+          "bytes": 8118,
+          "sha256": "c7356a52eed60b3dd71af8ef399b497c5a984b1f076df5c12f07e1a2a57a3971"
+        },
+        "height": {
+          "file": "textures/creature-shellborn/height.webp",
+          "bytes": 17122,
+          "sha256": "7731dee5c6bafef91432e5df689468c0bd108baee671021effef7fdd6fed8545"
+        },
+        "ao": {
+          "file": "textures/creature-shellborn/ao.webp",
+          "bytes": 9036,
+          "sha256": "8bb1e0ef1415f81b31b967d8df9c22dbcad3160a17e7410fcd85ad5819c7c60e"
+        },
+        "tintMask": {
+          "file": "textures/creature-shellborn/tint-mask.webp",
+          "bytes": 50694,
+          "sha256": "655e52806a1abc2750780ffa28d94b85cd1ebef231624f83b8ff41c345960e89"
+        },
+        "preview": {
+          "file": "textures/creature-shellborn/preview.webp",
+          "bytes": 12672,
+          "sha256": "3f5d1a52e02032ce1513807c7e03898af630842323e99f12948f40da880c23d3"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 3,
+          "track": "meditation"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-shellborn/basecolor",
+            "bytes": 9684,
+            "sha256": "2ffb18fed343bdcf0b2ba3d4b0dea9e8e53711fb266563af356fc940dc129a40"
+          },
+          "normal": {
+            "entry": "creature-shellborn/normal",
+            "bytes": 23222,
+            "sha256": "d1a9e0f90dce9c6a37afe8819f96ce7af37ca19f8a3ed035bb2f2dc262695f83"
+          },
+          "roughness": {
+            "entry": "creature-shellborn/roughness",
+            "bytes": 8118,
+            "sha256": "c7356a52eed60b3dd71af8ef399b497c5a984b1f076df5c12f07e1a2a57a3971"
+          },
+          "height": {
+            "entry": "creature-shellborn/height",
+            "bytes": 17122,
+            "sha256": "7731dee5c6bafef91432e5df689468c0bd108baee671021effef7fdd6fed8545"
+          },
+          "ao": {
+            "entry": "creature-shellborn/ao",
+            "bytes": 9036,
+            "sha256": "8bb1e0ef1415f81b31b967d8df9c22dbcad3160a17e7410fcd85ad5819c7c60e"
+          },
+          "tintMask": {
+            "entry": "creature-shellborn/tintMask",
+            "bytes": 50694,
+            "sha256": "655e52806a1abc2750780ffa28d94b85cd1ebef231624f83b8ff41c345960e89"
+          },
+          "preview": {
+            "entry": "creature-shellborn/preview",
+            "bytes": 12672,
+            "sha256": "3f5d1a52e02032ce1513807c7e03898af630842323e99f12948f40da880c23d3"
+          }
+        }
+      }
+    },
+    {
+      "id": "creature-cracked-starlight",
+      "displayName": "Cracked Starlight",
+      "track": "meditation",
+      "realm": "hybrid",
+      "rarity": "legendary",
+      "sourceAssetId": "Paint002",
+      "collection": "creature-celestial-rift",
+      "collectionSlot": 3,
+      "sourceUrl": "https://ambientcg.com/a/Paint002",
+      "license": "CC0-1.0",
+      "author": "ambientCG",
+      "resolution": 512,
+      "maps": {
+        "basecolor": {
+          "file": "textures/creature-cracked-starlight/basecolor.webp",
+          "bytes": 2308,
+          "sha256": "212ef8ce6348eab7babafd1302f6de8e0ff645ded3417c37b0c14c368bd5d3c3"
+        },
+        "normal": {
+          "file": "textures/creature-cracked-starlight/normal.webp",
+          "bytes": 36906,
+          "sha256": "7363169a2812312622da8ea9802490d0f121523a63f797d7da80f3e6599b06cc"
+        },
+        "roughness": {
+          "file": "textures/creature-cracked-starlight/roughness.webp",
+          "bytes": 27138,
+          "sha256": "e34af0b29b2da65da14698dd33851295fbd1c00d02220613487de2bab8cb15a1"
+        },
+        "height": {
+          "file": "textures/creature-cracked-starlight/height.webp",
+          "bytes": 21122,
+          "sha256": "d6bceaf4d67569f417fcef6bd23e17458e885bbd77faff67b77c5254a50fc7a0"
+        },
+        "ao": {
+          "file": "textures/creature-cracked-starlight/ao.webp",
+          "bytes": 39506,
+          "sha256": "3fbaf579d17290d907480db250ee33863f169674e1f57f66a51b05d725e54f02"
+        },
+        "tintMask": {
+          "file": "textures/creature-cracked-starlight/tint-mask.webp",
+          "bytes": 37962,
+          "sha256": "92b4eed22f7d0a3af5233adb61c825b286e7553f65eafdc0557de5f1e8d2d9a2"
+        },
+        "preview": {
+          "file": "textures/creature-cracked-starlight/preview.webp",
+          "bytes": 2858,
+          "sha256": "07c798d4bde111c432f31209c9a960b7525f34922813203a1be22d5220493fe1"
+        }
+      },
+      "runtime": {
+        "unlock": {
+          "level": 5,
+          "track": "meditation"
+        },
+        "pack": "creature-celestial-rift",
+        "bundle": "assets/meditation.m5bundle",
+        "maps": {
+          "basecolor": {
+            "entry": "creature-cracked-starlight/basecolor",
+            "bytes": 2308,
+            "sha256": "212ef8ce6348eab7babafd1302f6de8e0ff645ded3417c37b0c14c368bd5d3c3"
+          },
+          "normal": {
+            "entry": "creature-cracked-starlight/normal",
+            "bytes": 36906,
+            "sha256": "7363169a2812312622da8ea9802490d0f121523a63f797d7da80f3e6599b06cc"
+          },
+          "roughness": {
+            "entry": "creature-cracked-starlight/roughness",
+            "bytes": 27138,
+            "sha256": "e34af0b29b2da65da14698dd33851295fbd1c00d02220613487de2bab8cb15a1"
+          },
+          "height": {
+            "entry": "creature-cracked-starlight/height",
+            "bytes": 21122,
+            "sha256": "d6bceaf4d67569f417fcef6bd23e17458e885bbd77faff67b77c5254a50fc7a0"
+          },
+          "ao": {
+            "entry": "creature-cracked-starlight/ao",
+            "bytes": 39506,
+            "sha256": "3fbaf579d17290d907480db250ee33863f169674e1f57f66a51b05d725e54f02"
+          },
+          "tintMask": {
+            "entry": "creature-cracked-starlight/tintMask",
+            "bytes": 37962,
+            "sha256": "92b4eed22f7d0a3af5233adb61c825b286e7553f65eafdc0557de5f1e8d2d9a2"
+          },
+          "preview": {
+            "entry": "creature-cracked-starlight/preview",
+            "bytes": 2858,
+            "sha256": "07c798d4bde111c432f31209c9a960b7525f34922813203a1be22d5220493fe1"
+          }
+        }
+      }
+    }
+  ]
+}

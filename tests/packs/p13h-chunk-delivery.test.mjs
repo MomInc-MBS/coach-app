@@ -23,8 +23,9 @@ test('32 MiB generated local HTTP transfer retries an interruption using bounded
   try {
     const manifest = await signedManifest(httpd.base, privateKey), store = memoryChunkStore({ maxBytes: 40 * MiB });
     const downloader = new ChunkDownloader({ store, manifestPublicKey: publicKey.export({ format: 'jwk' }), expectedVersion: '2.0.0', ownership: async () => 'account-test', policy: { ...DEFAULT_LOCAL_RESOURCE_POLICY, maxAssetBytes: 40 * MiB, maxPackBytes: 40 * MiB, trustedOrigins: [httpd.base.slice(0, -1)], allowedProtocols: ['http:'], pathPrefix: '/chunk/' } });
-    const result = await downloader.download(manifest, { retry: 1 });
+    const progress=[];const result = await downloader.downloadWithProgress(manifest, { retry: 1,onProgress:value=>progress.push(value) });
     assert.equal(result.receivedBytes, TOTAL); assert.ok(result.maxAccountedAllocationBytes <= 3 * CHUNK); assert.equal((await downloader.verifyStored(manifest)).verified, true);
+    assert.equal(progress.at(-1).percent,1);assert.ok(progress.every((value,index)=>index===0||value.receivedBytes>=progress[index-1].receivedBytes),'progress reflects only verified persisted chunks and is monotone');
     assert.equal(httpd.stats().calls, 33); assert.equal(httpd.stats().sent, TOTAL + 16384); // first interrupted request plus 32 durable chunks
   } finally { await httpd.close(); }
 });

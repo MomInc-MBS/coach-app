@@ -2,7 +2,7 @@
 // boss looks, specials, auras, Food bonuses (D32). Textures/colours/palettes stay in unlock-store.ts. Same API
 // shape as unlock-store.ts, one localStorage key, not per-coach (unlocks are global).
 export const LEDGER_KEY='myr5-battle-pass-ledger-v1';
-export const LEDGER_KINDS=Object.freeze(['weapon','pet','boss-texture','boss-skin','special','aura','bonus']);
+export const LEDGER_KINDS=Object.freeze(['weapon','pet','boss-texture','boss-skin','special','aura','bonus','creature-skin','ship']);
 
 function read(){
  try{

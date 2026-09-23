@@ -68,6 +68,8 @@ test('the offer appears after opening, snoozes with Later, returns next open, an
   browser=await launch();const context=await installed(browser,server.base);
   const page=await home(context,server.base);
   await page.waitForFunction(()=>document.getElementById('fullDownloadOffer')?.open,null,{timeout:10000});
+  await page.waitForTimeout(250);
+  assert.equal(await page.evaluate(()=>document.querySelector('.post-download-sections')),null,'anonymous users retain the legacy package only; unsigned optional sections stay hidden');
   const title=await page.locator('#fullDownloadTitle').textContent();
   assert.match(title,/^Download the full MyR5 \((\d+) MB\)$/);
   const total=PACKAGE.reduce((n,a)=>n+a.bytes+(a.contains||0),0);

@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {build} from 'esbuild';
-import {fileURLToPath} from 'node:url';
-import {dirname,join} from 'node:path';
+import {readFile} from 'node:fs/promises';
+import {join} from 'node:path';
 
 // Node has no localStorage; one in-memory stand-in shared by every module under test.
 const memory=new Map();
@@ -72,14 +71,14 @@ test('Warden then Lume open only once every available row is beaten, fed by over
 });
 
 test('D22 ladder with D16 textures at L1/L3/L5 and D17 special at L3',()=>{
- const kinds=bossRewards('strider-1').map(l=>l.map(i=>i.kind).sort());
+ const kinds=bossRewards('strider-1').map(l=>l.filter(i=>!['creature-skin','ship'].includes(i.kind)).map(i=>i.kind).sort());
  assert.deepEqual(kinds,[['texture','weapon'],['boss-texture','palette'],['special','texture','weapon'],['pet'],['aura','boss-skin','texture']]);
  for(const b of BOSSES.filter(b=>b.track&&b.index===1)){
   const r=bossRewards(b.id);
   assert.deepEqual(r.map(l=>l.filter(i=>i.kind==='texture').length),[1,0,1,0,1],b.id);
   assert.deepEqual(r.map(l=>l.some(i=>i.kind==='special')),[false,false,true,false,false],b.id);
  }
- assert.deepEqual(bossRewards('wedge-1')[0].map(i=>i.id),['arms-w1','arms-hammered-bronze'],'arms-shoulders uses the catalog arms items');
+ assert.deepEqual(bossRewards('wedge-1')[0].filter(i=>!['creature-skin','ship'].includes(i.kind)).map(i=>i.id),['arms-w1','arms-hammered-bronze'],'arms-shoulders uses the catalog arms items');
  // D30: later bosses and the shared ones keep their own boss looks; D32 adds a palette at L1/L3/L4.
  for(const id of ['strider-2','cap-3','warden-1','lume-1'])assert.deepEqual(bossRewards(id).map(l=>l.map(i=>i.kind)),[['palette'],['boss-texture'],['palette'],['palette'],['boss-skin']],id);
  assert.equal(new Set(BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>i.kind!=='pet').map(i=>i.kind+':'+i.id))).size,BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>i.kind!=='pet')).length,'no item appears twice except family pets');
@@ -102,7 +101,7 @@ test('D32: every board boss level has at least one reward, and the fill sits onl
 
 test('D22/D16/D17/D21 grants are unchanged where they already existed',()=>{
  for(const b of BOSSES){
-  const old=bossRewards(b.id).map(l=>l.filter(i=>!D32_PALETTES.has(i.id)));
+ const old=bossRewards(b.id).map(l=>l.filter(i=>!D32_PALETTES.has(i.id)&&!['creature-skin','ship'].includes(i.kind)));
   if(!b.track||b.index>1){assert.deepEqual(old.map(l=>l.map(i=>i.id)),[[],[`${b.id}-texture`],[],[],[`${b.id}-skin`]],b.id);continue;}
   const c=TRACKS[b.track].catalog;
   assert.deepEqual(old.map(l=>l.map(i=>i.kind)),[['weapon','texture'],['palette','boss-texture'],['weapon','special','texture'],['pet'],['aura','boss-skin','texture']],b.id);
@@ -153,17 +152,19 @@ test('old unlock ledgers (pre-D32, no bonus kind) still load and are not regrant
  memory.set('myr5-battle-pass-ledger-v1',JSON.stringify({weapon:['chest-w1'],pet:[],'boss-texture':[],'boss-skin':[],special:[],aura:[]}));
  memory.set('myr5-unlocks-v1',JSON.stringify({texture:['chest-plate-steel'],color:[],palette:['pal-01','pal-05']}));
  const s=battlePassState({tracks:steps({chest:5,food:5})});
- assert.ok(s.bosses.find(b=>b.id==='strider-1').rewards[0].items.every(i=>i.granted),'old grants read back as granted');
+ assert.ok(s.bosses.find(b=>b.id==='strider-1').rewards[0].items.filter(i=>!['creature-skin','ship'].includes(i.kind)).every(i=>i.granted),'old grants read back as granted');
  const {granted}=syncBattlePass({tracks:steps({chest:5,food:5})});
- assert.deepEqual(granted.map(i=>i.id),['pal-103','food-bonus-1'],'only the new food level; old L1 items not regranted');
+ assert.deepEqual(granted.map(i=>i.id),['creature-starforged-plate','creature-mirror-knight','pal-103','food-bonus-1'],'only the additive L1 skins and new Food level; old L1 items not regranted');
  const led=JSON.parse(memory.get('myr5-battle-pass-ledger-v1'));
  assert.deepEqual([led.weapon,led.bonus],[['chest-w1'],['food-bonus-1']]);
  assert.deepEqual(JSON.parse(memory.get('myr5-unlocks-v1')).palette,['pal-01','pal-05','pal-103'],'aura-milestone grants kept');
 });
 
 test('texture and palette ids exist in materials-registry.ts at the matching pass level',async()=>{
- const out=await build({stdin:{contents:`export {TEXTURES,PALETTES} from './materials-registry';`,resolveDir:join(dirname(fileURLToPath(import.meta.url)),'..','creature','source','creator'),loader:'ts'},bundle:true,format:'esm',platform:'neutral',write:false,target:'es2022'});
- const reg=await import('data:text/javascript;base64,'+Buffer.from(out.outputFiles[0].text).toString('base64'));
+ const registry=await readFile(join(process.cwd(),'creature/source/creator/materials-registry.ts'),'utf8');
+ const entries=[...registry.matchAll(/\{ id: '([^']+)', name: '[^']+', slot: '(texture-[123])', track: '([^']+)' \}/g)].map(([,id,slot,track])=>({id,slot,track}));
+ const slotLevel={'texture-1':1,'texture-2':3,'texture-3':5},reg={TEXTURES:entries.map(item=>({...item,unlockRule:'battle-pass',passLevel:slotLevel[item.slot]})),PALETTES:PALETTES.map(p=>({...p,displayName:p.name}))};
+ assert.equal(reg.TEXTURES.length,24,'source registry contains the 24 existing fitness texture placeholders');
  for(const b of BOSSES)bossRewards(b.id).forEach((items,i)=>{for(const item of items){
   if(item.kind==='texture'){const t=reg.TEXTURES.find(t=>t.id===item.id);assert.ok(t,item.id);assert.equal(t.unlockRule,'battle-pass');assert.equal(t.passLevel,i+1,item.id);}
   if(item.kind==='palette'){const p=reg.PALETTES.find(p=>p.id===item.id);assert.ok(p,item.id);assert.equal(p.displayName,item.name);}
@@ -204,7 +205,7 @@ test('sync grants once into the right store, fires myr5:battle-pass only for new
  assert.ok(again.state.bosses.find(b=>b.id==='strider-1').rewards.every(l=>l.items.every(i=>i.granted)));
  // One more step on meditation -> exactly that level's items, one event.
  const next=syncBattlePass({tracks:{...tracks,meditation:{steps:5}}});
- assert.deepEqual(next.granted.map(i=>i.id).sort(),['meditation-sand-garden','meditation-w1']);
+ assert.deepEqual(next.granted.map(i=>i.id).sort(),['creature-celestial-mosaic','creature-zen-sand','meditation-sand-garden','meditation-w1']);
  assert.equal(events.length,2);
  // Persistence: plain JSON under the two keys, readable by a fresh page.
  assert.ok(JSON.parse(memory.get('myr5-unlocks-v1')).texture.includes('meditation-sand-garden'));

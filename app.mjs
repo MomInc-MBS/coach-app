@@ -14,6 +14,7 @@ import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs'
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
+import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -187,6 +188,7 @@ soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+window.addEventListener('myr5:ship-scene-ready',event=>{acceptShipRevealComplete(event);});
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
 window.myr5Menus={...window.myr5Menus,portal:async()=>{try{const {openQuiltPortal}=await import('./modules/portal/portal-entry.mjs');await openQuiltPortal();}catch(error){console.warn('Quilt portal could not be opened.',error);}}};

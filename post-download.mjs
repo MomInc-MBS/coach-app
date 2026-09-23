@@ -22,6 +22,8 @@ export function mountPostDownload({host}){
  bar.innerHTML=status+'<button type="button" data-hide aria-label="Hide download status">Hide</button>';
  settings.innerHTML='<h3 id="fullDownloadSettingsTitle">Full download</h3>'+status;
  host.append(settings);document.body.append(offer,bar);
+ // Account-bound, signed optional packets live beside (not inside) the legacy anonymous package.
+ void import('./modules/materials/post-download-ui.mjs').then(({mountPostDownloadSections})=>mountPostDownloadSections({host:settings,account:window.myr5AuthenticatedAccount})).catch(()=>{});
 
  let plan=null,phase='checking',message='',got=0,controller=null,wantOffer=false,doneTimer=0;
  const busy=()=>document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||BUSY.includes(window.myr5TestState?.phase);

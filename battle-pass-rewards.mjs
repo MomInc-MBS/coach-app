@@ -18,6 +18,7 @@
 //    gets that family's substitute palette at L4 instead (resolved in battle-pass.mjs).
 
 import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
+import SKIN_CATALOG from './creature/source/creator/creature-skins.json' with {type:'json'};
 import {FOOD_BONUS_DAMAGE_MULTIPLIER} from './combat-config.mjs';
 
 // D30 rows, top to bottom — ids/order/counts must match achievements-board.mjs TIERS.
@@ -53,6 +54,24 @@ export const TRACKS=Object.freeze({
  meditation:{circuit:'meditation',catalog:'meditation',family:'meditation',name:'Meditation',palette:'pal-08'},
 });
 export const PET_SUBSTITUTE_PALETTE=Object.freeze({push:'pal-09',legs:'pal-10',motion:'pal-11'});
+
+// Two additive post-download skin collections: all collection slots repeat at L1/L3/L5.
+// This distribution depends only on each track's own ladder, never family grouping.
+export const CREATURE_SKIN_REWARDS=Object.freeze(SKIN_CATALOG.skins.map(skin=>Object.freeze({
+ kind:'creature-skin',id:skin.id,name:skin.displayName,line:`${skin.realm} creature finish · ${skin.rarity}`,
+ track:skin.track,level:skin.runtime.unlock.level,pack:skin.runtime.pack,collection:skin.collection,
+})));
+
+// Ship assignments use board track order, not D21 family grouping: three midpoint and three
+// end-of-ladder rewards. Ship ownership is global and grant idempotence deduplicates repeats.
+export const SHIP_DEFINITIONS=Object.freeze([
+ {id:'ship-supportive',ship:'supportive',name:'Supportive Ship',track:'chest',level:3},
+ {id:'ship-direct',ship:'direct',name:'Direct Ship',track:'quads',level:3},
+ {id:'ship-analytical',ship:'analytical',name:'Analytical Ship',track:'glutes',level:3},
+ {id:'ship-playful',ship:'playful',name:'Playful Ship',track:'arms',level:5},
+ {id:'ship-calm',ship:'calm',name:'Calm Ship',track:'yoga',level:5},
+ {id:'ship-mom',ship:'mom',name:'MOM Ship',track:'martial-arts',level:5},
+].map(item=>Object.freeze(item)));
 
 // --- item-catalog.json `weapons` (D21: 2 per style) ---
 const WEAPONS=[
@@ -116,6 +135,8 @@ export function bossRewards(bossId){
  levels[3].push(petItem(meta.family));
  levels[4].unshift({kind:'aura',id:`${c}-aura`,name:`${meta.name} Aura`,line:'Your first aura look.'});
  levels[4].push(item('texture',tex[2]));
+ for(const skin of CREATURE_SKIN_REWARDS.filter(row=>row.track===c))levels[skin.level-1].push(skin);
+ for(const ship of SHIP_DEFINITIONS.filter(row=>row.track===c))levels[ship.level-1].push({kind:'ship',id:ship.id,name:ship.name,line:`Reveals the ${ship.ship} ship.`,ship:ship.ship,pack:'coach-ships-biomes'});
  return levels;
 }
 
