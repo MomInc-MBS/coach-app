@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,writeFile,rm,mkdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname,basename} from 'node:path';
 import {safeToUpdate,releaseNotice,requestActivation} from '../update-policy.mjs';
@@ -22,4 +22,18 @@ test('activation requires worker approval and times out without forcing an updat
 test('every changed app build gets an update identity without manually editing release notes',async()=>{
  const root=await mkdtemp(join(tmpdir(),'coach-release-'));
  try{await writeFile(join(root,'app.mjs'),'one');const a=await prepareReleaseBuild(root);assert.equal(await releaseBuildId(root),a);await writeFile(join(root,'app.mjs'),'two');assert.notEqual(await releaseBuildId(root),a);}finally{assert.equal(dirname(resolve(root)),resolve(tmpdir()));assert.ok(basename(root).startsWith('coach-release-'));await rm(root,{recursive:true,force:true});}
+});
+
+test('lazy food and renderer assets participate in the release identity',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'coach-release-'));
+ try{
+  for(const folder of ['food','vendor'])await mkdir(join(root,folder));
+  await writeFile(join(root,'food/pyramid-scanner.glb'),'model one');
+  await writeFile(join(root,'vendor/three.js'),'renderer one');
+  const first=await releaseBuildId(root);
+  await writeFile(join(root,'food/pyramid-scanner.glb'),'model two');
+  const second=await releaseBuildId(root);assert.notEqual(second,first);
+  await writeFile(join(root,'vendor/three.js'),'renderer two');
+  assert.notEqual(await releaseBuildId(root),second);
+ }finally{assert.equal(dirname(resolve(root)),resolve(tmpdir()));assert.ok(basename(root).startsWith('coach-release-'));await rm(root,{recursive:true,force:true});}
 });

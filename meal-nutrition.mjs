@@ -2,7 +2,8 @@ import {NUTRIENTS,findFoods,portionNutrition,displayNutrient} from './nutrition.
 export function mountMealNutrition(){
  const $=id=>document.getElementById(id),form=$('mealForm');let foods=null,reference=null,generation=0,mode='estimate',queryTimer;
  const data=()=>{const nutrients=Object.fromEntries(NUTRIENTS.map(([k])=>[k,form.elements[k].value===''?null:Number(form.elements[k].value)]));return {...nutrients,micros:Object.fromEntries(NUTRIENTS.slice(4).map(([k])=>[k,nutrients[k]])),nutritionSource:mode==='estimate'&&reference?`USDA SR28 ${reference.id}`:'User entered'};};
- function render(){const values=data();for(const [k,,unit]of NUTRIENTS)$('nutrient-'+k).textContent=displayNutrient(values[k],unit);}
+ const snapshot=()=>({name:$('mealConfirmation').hidden?null:$('mealName').value,nutrients:data()});
+ function render(){const values=data();for(const [k,,unit]of NUTRIENTS)$('nutrient-'+k).textContent=displayNutrient(values[k],unit);window.dispatchEvent(new CustomEvent('myr5:meal-nutrition',{detail:snapshot()}));}
  function calculate(){mode='estimate';const grams=Number($('mealGrams').value),values=portionNutrition(reference,grams);for(const [k]of NUTRIENTS)form.elements[k].value=values[k]??'';form.elements.portion.value=`${grams} g`;$('nutritionBasis').textContent=reference?`Estimate · ${grams} g`:'No match. Enter the food or label values.';render();}
  async function search(query){const run=++generation;reference=null;calculate();$('foodReference').replaceChildren();try{foods??=(await import('./nutrition-data.mjs')).default;if(run!==generation)return;const matches=findFoods(foods,query);for(const f of matches){const o=document.createElement('option');o.value=f.id;o.textContent=f.name;$('foodReference').append(o);}reference=matches[0]||null;$('foodReferenceLabel').hidden=!matches.length;calculate();}catch{if(run===generation)$('nutritionBasis').textContent='Food reference could not load. Reconnect or enter nutrition from its label.';}}
  function open(name=''){clearTimeout(queryTimer);$('mealConfirmation').hidden=false;$('mealSaveControls').hidden=false;$('mealName').value=name;$('mealGrams').value=100;$('nutritionAdjust').open=false;search(name);}
@@ -14,5 +15,5 @@ export function mountMealNutrition(){
  window.addEventListener('myr5:food-selected',e=>open(e.detail?.name||''));
  window.addEventListener('myr5:food-reset',reset);
  window.addEventListener('pagehide',()=>{generation++;clearTimeout(queryTimer);});
- return {data,reset};
+ return {data,reset,snapshot};
 }

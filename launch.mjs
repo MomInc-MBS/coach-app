@@ -156,7 +156,7 @@ async function mountPyramid(){
  const run=++pyramidGen;if(pyramidScanner)return;
  try{
   const {mountPyramidScanner}=await import('./food/pyramid-scanner.mjs');if(run!==pyramidGen||!$('mealsPanel').open)return;
-  const instance=await mountPyramidScanner($('foodCamera'));if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
+  const instance=await mountPyramidScanner($('foodCamera'),{getNutrition:mealNutrition.snapshot});if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
   pyramidScanner=instance;
  }catch(error){console.warn('Pyramid scanner unavailable',error);}
 }

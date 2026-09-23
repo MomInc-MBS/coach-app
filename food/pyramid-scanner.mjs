@@ -3,7 +3,6 @@
 // panel opens (same pattern as hologram.mjs); the GLB is fetched at that point too.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {findFoods,portionNutrition} from '../nutrition.mjs';
 import {pyramidTiles} from './pyramid-tiles.mjs';
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
@@ -46,9 +45,9 @@ function softDotTexture(tint=1){
 // this lazy-loaded scanner mounts itself just before. Building the host div and its
 // styling here, instead of shipping them in launch-shell.mjs/food-live.css, keeps
 // three.js and its container fully out of the core offline bundle.
-export async function mountPyramidScanner(anchor){
+export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,nutrients:null})}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- let disposed=false,raf=0,observer,searchGen=0,tileState=pyramidTiles(null,null);
+ let disposed=false,raf=0,observer,tileState=pyramidTiles(null,null);
  const host=document.createElement('div');host.id='pyramidScanner';host.setAttribute('aria-hidden','true');
  host.style.cssText='position:relative;width:100%;height:230px;border-radius:10px;overflow:hidden;margin-bottom:12px;background:radial-gradient(circle at 50% 28%,#332a42,#150f1c);touch-action:none';
  anchor.before(host);
@@ -56,7 +55,9 @@ export async function mountPyramidScanner(anchor){
  scene.add(stage);stage.add(pivot);
  scene.add(new THREE.AmbientLight(0xffffff,0.95));
  const key=new THREE.DirectionalLight(0xffffff,0.75);key.position.set(0.6,1.4,1.2);scene.add(key);
- const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});
+ let renderer;
+ try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});}
+ catch(error){host.remove();throw error;}
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);
  renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none';host.append(renderer.domElement);
  const camera=new THREE.PerspectiveCamera(35,1,0.01,20);camera.position.set(0,0.05,2.2);camera.lookAt(0,0.05,0);
@@ -69,27 +70,17 @@ export async function mountPyramidScanner(anchor){
 
  function disposeMat(mat){for(const m of [mat].flat())if(m){for(const v of Object.values(m))if(v?.isTexture)v.dispose();m.dispose();}}
  function dispose(){
-  if(disposed)return;disposed=true;searchGen++;cancelAnimationFrame(raf);observer?.disconnect();
-  window.removeEventListener('myr5:food-selected',onSelected);window.removeEventListener('myr5:food-reset',onReset);
+  if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
+  window.removeEventListener('myr5:meal-nutrition',onNutrition);
   const dom=renderer.domElement;dom.removeEventListener('pointerdown',onDown);dom.removeEventListener('pointermove',onMove);dom.removeEventListener('pointerup',onUp);dom.removeEventListener('pointercancel',onUp);
   scene.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});
+  for(const p of steamPool)if(!p.sprite.parent)p.sprite.material.dispose();
   steamTex.dispose();renderer.dispose();renderer.forceContextLoss();host.remove();
  }
 
  function repaint(){for(const [meshName,key,label,bg] of TILES){const s=screens[meshName];if(!s)continue;paintTile(s.canvas,bg,label,tileState[key]);s.tex.needsUpdate=true;}}
- async function applyScan(name){
-  const gen=++searchGen;
-  if(!name){tileState=pyramidTiles('',null);repaint();return;}
-  tileState=pyramidTiles(name,null);repaint();
-  try{
-   const foods=(await import('../nutrition-data.mjs')).default;if(gen!==searchGen||disposed)return;
-   const match=findFoods(foods,name)[0];const nutrients=match?portionNutrition(match,100):null;
-   if(gen!==searchGen||disposed)return;tileState=pyramidTiles(name,nutrients);repaint();
-  }catch{/* keep the name-only tiles */}
- }
- function onSelected(e){void applyScan(e.detail?.name||'');}
- function onReset(){searchGen++;tileState=pyramidTiles(null,null);repaint();}
- window.addEventListener('myr5:food-selected',onSelected);window.addEventListener('myr5:food-reset',onReset);
+ function onNutrition(e){if(disposed)return;const current=e?.detail||getNutrition();tileState=pyramidTiles(current.name,current.nutrients);repaint();}
+ window.addEventListener('myr5:meal-nutrition',onNutrition);
 
  function spawnSteam(k){
   if(reduced)return;
@@ -159,6 +150,9 @@ export async function mountPyramidScanner(anchor){
   const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),scale=1.6/Math.max(size.x,size.y,size.z);
   const offset=new THREE.Group();offset.position.copy(center).multiplyScalar(-1);offset.add(model);
   const normalized=new THREE.Group();normalized.scale.setScalar(scale);normalized.add(offset);pivot.add(normalized);
+  // Knob coordinates and their steam share the model's local coordinate space.
+  // Add effects only after measuring the actual model for its camera framing.
+  for(const p of steamPool)model.add(p.sprite);
 
   for(const [meshName] of TILES){
    const mesh=model.getObjectByName(meshName);if(!mesh)continue;
@@ -184,7 +178,7 @@ export async function mountPyramidScanner(anchor){
    lensHalo.scale.setScalar(lensRadius*2.6);lens.add(lensHalo);
   }
 
-  const existingName=document.getElementById('mealName')?.value;if(existingName)void applyScan(existingName);
+  onNutrition();
 
   observer=new ResizeObserver(resize);observer.observe(host);resize();
   let last=performance.now();
