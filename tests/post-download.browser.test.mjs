@@ -141,6 +141,41 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
  }finally{await browser?.close();await server.close();}
 });
 
+test('W2-FIX risk 1: a first-open menu that opens before the quilt finishes mounting still shows the quilt once it closes',async()=>{
+ const server=await serve();let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);
+  const page=await context.newPage();
+  // portal.css is core, so it's already in the service worker's cache by the time this page loads —
+  // holding it at the network layer (like the download-resume tests do for package files) would not
+  // delay anything. Delay it at the DOM layer instead, exactly where portal-entry.mjs waits on it
+  // (the <link>'s load event), so openQuiltPortal's mount is still in flight when the Downloads menu's
+  // own 1s ticker opens first (post-download.mjs's portalUp() sees no portal yet). Releasing it once
+  // the menu is open reproduces the exact review race (risk 1): the mount finishes in the background,
+  // window.myr5Portal exists, but shouldShow() sees the still-open menu and bails without showing.
+  await page.addInitScript(()=>{
+   window.__portalCssGate=new Promise(resolve=>{window.__releasePortalCss=resolve;});
+   const append=Element.prototype.append;
+   Element.prototype.append=function(...nodes){
+    const held=nodes.find(n=>n?.tagName==='LINK'&&typeof n.href==='string'&&n.href.includes('/modules/portal/portal.css'));
+    if(held){window.__portalCssGate.then(()=>append.apply(this,nodes));return;}
+    return append.apply(this,nodes);
+   };
+  });
+  await page.goto(server.base+'/pose.html');
+  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&navigator.serviceWorker.controller&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning,null,{timeout:30000});
+  await waitMenu(page);
+  assert.equal(await quiltUp(page),false,'the quilt has not mounted yet when the menu opens');
+  await page.evaluate(()=>window.__releasePortalCss());
+  await page.waitForFunction(()=>!!window.myr5Portal,null,{timeout:10000});
+  assert.equal(await menuOpen(page),true,'the menu is still open when the mount finishes in the background');
+  assert.equal(await quiltUp(page),false,'still hidden: the in-flight mount saw the open dialog and bailed');
+  await page.getByRole('button',{name:'Not now'}).click();
+  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false,null,{timeout:10000});
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
 test('picking one group downloads only its files',{timeout:300000},async()=>{
  const server=await serve({gate:async()=>new Promise(r=>setTimeout(r,400))});let browser;
  try{

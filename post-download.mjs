@@ -169,7 +169,10 @@ export function mountPostDownload({host}){
   if(menu.returnValue==='busy'){wantMenu=autoMenu;restorePortal=false;return;}
   // First open: the quilt waited for this menu (app.mjs skips it while a dialog is open).
   if(restorePortal)window.myr5Portal?.show?.();
-  else if(autoMenu&&!window.myr5Portal&&window.coachPlan&&!new URLSearchParams(location.search).has('panel')&&!['#pod','#ship'].includes(location.hash))void window.myr5Menus?.portal?.({shouldShow:idle});
+  // Not just "not mounted yet": the mount can finish (window.myr5Portal set, still hidden) while this
+  // menu was open, since shouldShow() only gets one check, at mount time, and this menu wasn't open
+  // yet then. Always route through the shared opener; it no-ops fast when already mounted (#risk 1).
+  else if(autoMenu&&window.coachPlan&&!new URLSearchParams(location.search).has('panel')&&!['#pod','#ship'].includes(location.hash))void window.myr5Menus?.portal?.({shouldShow:idle});
   restorePortal=false;autoMenu=false;
  });
  for(const button of [settings,entry].map(node=>node.querySelector('[data-open]')).filter(Boolean))button.onclick=()=>openMenu(false);

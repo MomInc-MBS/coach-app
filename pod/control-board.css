@@ -24,7 +24,7 @@
 /* The deck: stencilled plates over each part, a panel seam above */
 .control-board .cb-deck{display:flex;justify-content:space-between;align-items:flex-end;gap:4px;margin-top:8px;padding-top:7px;border-top:1px solid #150f19;box-shadow:inset 0 1px #c8b0bd30}
 .control-board .cb-part{display:flex;flex-direction:column;align-items:center;gap:5px}
-.control-board .cb-label{padding:3px 5px 2px;border-radius:2px;background:#1a141f;box-shadow:inset 0 1px 2px #000a,0 1px #c8b0bd33}
+.control-board .cb-label{padding:3px 5px 2px;border-radius:2px;background:#1a141f;box-shadow:inset 0 1px 2px #000a,0 1px #c8b0bd33;font-size:10px}
 
 /* Rotaries: recessed well, detent ticks, a cap that turns to --angle and snaps with a little overshoot */
 .control-board .cb-rotary{--size:76px;--angle:-135deg;position:relative;flex:none;width:var(--size);height:var(--size);border-radius:50%;touch-action:none;cursor:grab;background:radial-gradient(closest-side,#0d0a10 76%,#2f2536 79% 87%,#0000 89%)}
@@ -47,12 +47,12 @@
 .control-board .cb-knob i:before{content:'';position:absolute;left:calc(50% - 6px);top:-5px;bottom:-5px;width:12px;border-radius:6px;background:linear-gradient(90deg,#1e1822,#65536a 45%,#2b2231);box-shadow:0 2px 3px #000a}
 .control-board .cb-knob i:after{content:'';position:absolute;left:calc(50% - 1px);top:-3px;width:2px;height:15px;border-radius:1px;background:#fbefd9}
 .control-board .cb-knob:after{inset:9px}
-.control-board .cb-scale{display:flex;justify-content:space-between;width:58px;margin-top:-9px;padding:0 1px;color:var(--cb-dim);font-size:7px;letter-spacing:0}
+.control-board .cb-scale{display:flex;justify-content:space-between;width:58px;margin-top:-9px;padding:0 1px;color:var(--cb-dim);font-size:10px;letter-spacing:0}
 
 /* Lever: spring-loaded T-handle in a slot; HARDER above, EASIER below */
 .control-board .cb-lever{--pull:0px;position:relative;gap:0;width:46px;height:94px;border-radius:8px;background:linear-gradient(90deg,#19131e,#2c2332 50%,#19131e);box-shadow:inset 0 2px 5px #000c,0 1px #c8b0bd44;touch-action:none}
 .control-board .cb-lever:before{content:'';position:absolute;left:calc(50% - 3px);top:21px;bottom:21px;width:6px;border-radius:3px;background:#060408;box-shadow:inset 0 1px 2px #000,0 1px #c8b0bd33}
-.control-board .cb-lever button{position:relative;z-index:1;display:flex;justify-content:center;width:100%;height:47px;min-height:0;padding:5px 0;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--cb-ink);font-size:7px;letter-spacing:.06em}
+.control-board .cb-lever button{position:relative;z-index:1;display:flex;justify-content:center;width:100%;height:47px;min-height:0;padding:5px 0;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--cb-ink);font-size:10px;letter-spacing:.02em}
 .control-board .cb-lever #harder{align-items:flex-start}.control-board .cb-lever #easier{align-items:flex-end}
 .control-board .cb-lever button:focus-visible{outline-offset:-3px}
 .control-board .cb-lever button:active:not(:disabled){border-color:transparent;box-shadow:none;background:#ffd36e14}

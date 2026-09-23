@@ -12,12 +12,17 @@ export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // file that the first-run pages name, directly or through other core files. The scan is conservative:
 // any path string counts. Bundled sources that no page requests, and everything else, ship in the
 // post-download package (sw.js OPTIONAL_ASSETS): fetched on demand online, offline once downloaded.
-const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html','/install.html','/privacy.html','/manifest.webmanifest'];
+const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html','/install.html','/privacy.html','/manifest.webmanifest',
+ // #108 starter ship + wonder: built from a template literal (meditation-backgrounds.mjs, ship-view.mjs),
+ // so the closure scan below can never discover them by grepping for a literal path. Listed here instead,
+ // so the offline first run (and offline meditation) never falls back to a blank gradient (risk 2).
+ '/pod/worlds/starter/supportive.glb','/pod/worlds/starter/colosseum-a.webp','/pod/worlds/starter/great-pyramid-of-giza-a.webp','/pod/worlds/starter/great-wall-of-china-a.webp','/pod/worlds/starter/machu-picchu-a.webp','/pod/worlds/starter/mount-fuji-a.webp','/pod/worlds/starter/taj-mahal-a.webp','/pod/worlds/great-wall.webp'];
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB), rest/meditation backgrounds and Records handwriting fonts (swap).
-// The quilt is the starter portal and stays in core so it remains available after an offline install.
-const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/|pod\/fonts\/)/;
-const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+// The quilt is the starter portal, and the starter ship/wonders/great-wall backdrop, stay in core so
+// they remain available after an offline install (#108, risk 2).
+const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/(?!starter\/|great-wall\.webp$|quilt\.webp$)|pod\/fonts\/)/;
+const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url.startsWith('/pod/worlds/starter/')&&url.endsWith('.glb')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
@@ -32,7 +37,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
-  if(core.has(url)||!urls.has(url)||!coreFolder(url)||(DEFERRED.test(url)&&url!=='/pod/worlds/quilt.webp'))continue;
+  if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));

@@ -527,6 +527,10 @@ function drawIdle(now){
 
 // now: the trail probe draws a frozen frame at a chosen time (rAF's own timestamp arrives first and is ignored).
 function drawFrame(_,now=performance.now()){
+ // #104 risk 4: eligibility (no open dialog, tab visible, etc.) is otherwise only rechecked when the
+ // cycle arms/starts, so a dialog opened over a running cycle (setup gate, a reward reveal) would keep
+ // flashing underneath it. Catch that on the very next drawn frame instead.
+ if(idleCycle&&!idleEligible())scheduleIdle();
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
  if(outlineFlash){
@@ -912,9 +916,13 @@ export async function mountPortal({visible=false}={}){
  addEventListener('pageshow',e=>{if(e.persisted&&resumeAfterPageShow)setVisible(true);},{signal:lifecycle.signal});
  // #104: pause/resume the idle cycle with the tab (a backgrounded tab must not keep animating).
  document.addEventListener('visibilitychange',scheduleIdle,{signal:lifecycle.signal});
+ // Risk 4: a dialog over the quilt (setup gate, a reward reveal) that doesn't hide the portal still
+ // blocks idleEligible() while open, but nothing then re-arms the 3s timer once it closes. 'close'
+ // doesn't bubble, but it still reaches a capturing listener on document for any dialog in the page.
+ document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;setVisible(false);clearTimeout(idleTimer);idleTimer=0;idleCycle=null;fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),

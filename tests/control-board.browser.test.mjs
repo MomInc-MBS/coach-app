@@ -3,11 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
 import {detentAngle,detentFor} from '../pod/hardware.mjs';
 import {GROUP_EXERCISES} from '../exercise-library.mjs';
+
+const SHOTS=resolve('.frames');
 
 test('rotary detents sweep 270° and a relative turn snaps to the nearest detent',()=>{
  assert.equal(detentAngle(0,10),-135);assert.equal(detentAngle(9,10),135);assert.equal(detentAngle(0,1),0);
@@ -38,9 +40,11 @@ initHardware();window.ready=true;
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  let browser;try{
+  await mkdir(SHOTS,{recursive:true});
   browser=await chromium.launch({channel:'msedge',headless:true});
   const page=await browser.newPage({viewport:{width:375,height:812}});
   await page.goto(`http://127.0.0.1:${server.address().port}/__board__`);await page.waitForFunction(()=>window.ready);
+  await page.screenshot({path:resolve(SHOTS,'control-board-375x812.png')});
   const state=()=>page.evaluate(()=>{const a=(id,n)=>document.getElementById(id).getAttribute(n);return {movement:document.getElementById('movement').value,dial:a('exerciseDial','aria-valuenow'),dialText:a('exerciseDial','aria-valuetext'),knob:a('difficultySlider','aria-valuenow'),knobMax:a('difficultySlider','aria-valuemax'),knobText:a('difficultySlider','aria-valuetext'),readout:document.getElementById('difficultySetting').textContent,sound:a('toggleVoice','aria-checked'),changes:window.changes};});
   const chest=GROUP_EXERCISES.chest,legs=GROUP_EXERCISES.legs;
   assert.deepEqual((({dial,dialText,knob,knobMax})=>({dial,dialText,knob,knobMax}))(await state()),{dial:'0',dialText:'Chest',knob:'1',knobMax:String(chest.length)});
@@ -86,6 +90,14 @@ initHardware();window.ready=true;
   const lever=await page.locator('.cb-lever').boundingBox(),lx=lever.x+lever.width/2,ly=lever.y+lever.height/2;
   await page.mouse.move(lx,ly);await page.mouse.down();await page.mouse.move(lx,ly-12);await page.mouse.move(lx,ly-24);await page.mouse.up();
   assert.equal((await state()).knob,'2');
+
+  // Review risk 3: labels were 7-8px, unreadable at 375px wide. 10px minimum, board height barely moves.
+  const px=selector=>page.evaluate(sel=>parseFloat(getComputedStyle(document.querySelector(sel)).fontSize),selector);
+  assert.ok(await px('.cb-label')>=10,'.cb-label is at least 10px');
+  assert.ok(await px('.cb-lever button')>=10,'.cb-lever button is at least 10px');
+  assert.ok(await px('.cb-scale')>=10,'.cb-scale is at least 10px');
+  const boardHeight=(await page.locator('.control-board').boundingBox()).height;
+  assert.ok(boardHeight<=204,`board height ${boardHeight} stays within +8px of 196px`);
 
   // During a set (#goal disabled) the board locks.
   await page.evaluate(()=>{document.getElementById('goal').disabled=true;});await page.waitForFunction(()=>document.getElementById('exerciseDial').getAttribute('aria-disabled')==='true');

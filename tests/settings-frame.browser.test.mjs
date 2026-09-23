@@ -49,6 +49,10 @@ test('SATCOM frame: acquiring -> locked status strip, and a static locked frame 
   await page.waitForFunction(()=>document.querySelector('#settings .satcom-top')?.classList.contains('locked'),{timeout:5000});
   assert.equal(await page.locator('#settings .satcom-top [data-link]').textContent(),'UPLINK ESTABLISHED','settles to locked shortly after opening');
   assert.match(await page.locator('#settings .satcom-bottom [data-build]').textContent(),/^BUILD /);
+  // Risk 5: the BUILD/clock strip used to sit below the fold at 375x812, reachable only by scrolling.
+  assert.equal(await page.locator('#settings .satcom-bottom [data-build]').isVisible(),true,'the BUILD strip is visible without scrolling');
+  const buildBox=await page.locator('#settings .satcom-bottom [data-build]').boundingBox();
+  assert.ok(buildBox.y+buildBox.height<=812,`BUILD strip bottom ${buildBox.y+buildBox.height} must be within the 812px viewport`);
   await page.screenshot({path:resolve(FRAMES,'settings-locked.png')});
   await normal.close();
 

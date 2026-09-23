@@ -101,3 +101,50 @@ test('#104 reduced motion shows every idle outline and label at once, no cycling
  assert.equal(await page.evaluate(()=>window.__labels.length),0,'hidden tab must not keep drawing the idle hint');
  await page.close();
 }));
+
+test('W2-FIX risk 4: a dialog opened over the quilt without going through setVisible freezes the idle flash, and closing it re-arms the cycle',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});
+ await recordLabels(page);
+ await page.goto(url);
+ assert(await open(page));
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ const armedAt=await page.evaluate(()=>performance.now());
+ await waitUntil(page,armedAt,3000+200);
+ assert((await page.evaluate(()=>window.__labels.length))>0,'idle cycle is running before the dialog opens');
+
+ // Setup gate / reward-reveal style dialogs open directly (not through portal's own setVisible or
+ // openMenu) and sit over the quilt without hiding it; idleEligible() is the only thing that notices.
+ await page.evaluate(()=>{const d=document.createElement('dialog');d.id='__probe';document.body.append(d);d.showModal();});
+ await page.evaluate(()=>window.__labels.length=0);
+ await page.waitForTimeout(200);
+ assert.equal(await page.evaluate(()=>window.__labels.length),0,'the idle flash must stop within a frame of a dialog opening over the quilt');
+
+ // Nothing re-checks eligibility once the loop is idle; closing the dialog must re-arm the 3s timer.
+ await page.evaluate(()=>document.getElementById('__probe').close());
+ const closedAt=await page.evaluate(()=>performance.now());
+ await waitUntil(page,closedAt,3000+200);
+ assert((await page.evaluate(()=>window.__labels.length))>0,'the idle cycle must re-arm once the dialog closes');
+ await page.close();
+}));
+
+test('W2-FIX: dispose leaves no stray rAF drawing a frame after teardown',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});
+ // drawFrame always clears the canvas first, whether or not it goes on to draw an idle hint, so this
+ // catches the stray-rAF bug even where the idle-hint check (idleCycle already null by the time it
+ // fires) would not: dispose() used to hide the portal *before* nulling idleCycle, so setVisible's own
+ // trailing scheduleIdle() saw a still-live cycle and requested one more frame that dispose never cancels.
+ await page.addInitScript(()=>{window.__clears=0;const orig=CanvasRenderingContext2D.prototype.clearRect;CanvasRenderingContext2D.prototype.clearRect=function(...a){window.__clears++;return orig.apply(this,a);};});
+ await page.goto(url);
+ assert(await open(page));
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ const armedAt=await page.evaluate(()=>performance.now());
+ await waitUntil(page,armedAt,3000+200);
+ // Capture the baseline in the SAME round trip as dispose(): the stray rAF (when the bug is present)
+ // fires on the very next frame, which can land before a separate, later evaluate() reads the count —
+ // making a post-dispose "before" snapshot already include the stray draw and hide the bug.
+ const before=await page.evaluate(()=>{const n=window.__clears;window.portal.dispose();return n;});
+ assert(before>0,'the render loop is running before dispose');
+ await page.waitForTimeout(200);
+ assert.equal(await page.evaluate(()=>window.__clears),before,'no frame should render again after dispose (no stray rAF)');
+ await page.close();
+}));
