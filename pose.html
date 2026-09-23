@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="/food-live.css">
 <link rel="stylesheet" href="/pod/whiteboard.css">
 <link rel="stylesheet" href="/focus-library.css">
+<link rel="stylesheet" href="/pod/control-board.css">
 <link rel="stylesheet" href="/arcade/tub-flight/style.css">
 <link rel="stylesheet" href="/meditation.css"><link rel="stylesheet" href="/pod/rest-arena.css">
 <link rel="stylesheet" href="/personal-tracker.css"><link rel="stylesheet" href="/scoreboard.css">
@@ -51,9 +52,17 @@
  <div class="coach-line"><span class="voice-led" aria-hidden="true"></span><p id="coachCaption" aria-live="polite">Ready when you are.</p></div>
  <section id="controls" class="workout-console" aria-label="Your set">
 
-  <div class="calibration-grid"><div class="exercise-control"><label id="exerciseDialLabel">FOCUS</label><div class="dial-controls"><button id="previousExercise" aria-label="Previous focus group">−</button><div id="exerciseDial" class="exercise-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Squats"><i aria-hidden="true"></i></div><button id="nextExercise" aria-label="Next focus group">+</button></div><strong id="exerciseName">Squats</strong><select id="movement" aria-label="Movement" hidden></select><button id="openLibrary" class="manual-button" aria-label="Open movement library">MOVEMENTS ↗</button></div>
-  <div class="signal-control"><label>SOUND</label><button id="toggleVoice" class="rocker-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div></div>
-  <div class="goal-control difficulty-control"><div><label for="difficultySlider">DIFFICULTY</label><output id="difficultySetting" for="difficultySlider">1 / 8</output></div><button type="button" id="variationName" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement">Knee push-up</button><input id="difficultySlider" type="range" min="0" max="7" step="1" value="0" aria-label="Exercise difficulty"><div class="slider-scale" aria-hidden="true"><span>EASIER</span><span>HARDER</span></div><details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details></div>
+  <div class="control-board difficulty-control" role="group" aria-label="Workout selector">
+   <div class="cb-top"><div class="cb-readout"><div class="cb-line"><strong id="exerciseName">Chest</strong><output id="difficultySetting" for="difficultySlider">LV 1/8</output></div><button type="button" id="variationName" aria-live="polite" aria-haspopup="dialog" aria-controls="library" title="See this movement">Knee push-up</button></div><button id="openLibrary" class="cb-key" aria-label="Open movement library">MOVE&shy;MENTS ↗</button></div>
+   <select id="movement" aria-label="Movement" hidden></select>
+   <div class="cb-deck">
+    <div class="cb-part"><span class="cb-label" id="exerciseDialLabel">FOCUS</span><div id="exerciseDial" class="cb-rotary cb-dial" role="slider" tabindex="0" aria-labelledby="exerciseDialLabel" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" aria-valuetext="Chest"><span class="cb-ticks" aria-hidden="true"></span><i aria-hidden="true"></i></div></div>
+    <div class="cb-part"><span class="cb-label" id="difficultyLabel">LEVEL</span><div id="difficultySlider" class="cb-rotary cb-knob" role="slider" tabindex="0" aria-labelledby="difficultyLabel" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" aria-valuetext="Knee push-up, level 1 of 8"><span class="cb-ticks" aria-hidden="true"></span><i aria-hidden="true"></i></div><span class="cb-scale" aria-hidden="true"><span>1</span><span id="difficultyMax">8</span></span></div>
+    <div class="cb-part cb-lever" role="group" aria-label="Difficulty lever"><button type="button" id="harder">HARDER</button><i aria-hidden="true"></i><button type="button" id="easier">EASIER</button></div>
+    <div class="cb-part"><span class="cb-label" aria-hidden="true">SOUND</span><button id="toggleVoice" class="cb-switch" role="switch" aria-label="Coach sound" aria-checked="true" data-on="true">ON</button></div>
+   </div>
+   <details class="movement-scope"><summary>Tracking details</summary><p id="variationHint"></p><p id="trackingScope"></p></details>
+  </div>
   <p>During camera workouts, tap the counter to stop.</p>
   <div class="set-actions"><button id="start" aria-label="Begin set" class="primary-action"><strong>BEGIN</strong></button><button id="stop" disabled>STOP</button></div>
   <div id="bar" class="set-track" aria-hidden="true"><div id="activity"></div></div>
