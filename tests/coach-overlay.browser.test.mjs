@@ -29,6 +29,9 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
   await page.waitForFunction(()=>document.querySelector('#coachOverlay .coach-overlay-box'),null,{timeout:60000});
   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#coachOverlay .coach-overlay-box')).visibility),'hidden','hidden before any reps count');
   assert.equal(await page.evaluate(()=>window.myr5CoachOverlay.state()?.phase??'offstage'),'offstage');
+  // Hotfix 2026-09-23: off frame the coach's WebGL loop is paused (its IntersectionObserver sees no layout),
+  // so it can't slow the CPU pose tracker while the user sets their start.
+  await page.waitForFunction(()=>window.myr5Creature?.stats?.().visible===false,null,{timeout:10000}).catch(async()=>assert.fail('offstage coach still renders: '+JSON.stringify(await page.evaluate(()=>window.myr5Creature?.stats?.()))));
 
   // Drive the coach with a fake pose stream through the test hooks (screen-fraction landmarks, the
   // same shape used by coach-hit.test.mjs), layered on top of the real camera-only shell and real tracker loop.
@@ -62,6 +65,7 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
   assert.equal(result.awayPhase,'away','it flies off screen after the spin');
   assert.equal(result.backPhase,'pausing','it walks back in and settles again');
   assert.equal(result.cardInsideOverlay,true,'the coach card lives inside the overlay while tracking, not #coachMount');
+  await page.waitForFunction(()=>window.myr5Creature.stats().visible===true,null,{timeout:10000});
 
   // Camera-only (D24): only the video, the counter and the AR coach may be visible — no skeleton, no stop button.
   const shell=await page.evaluate(()=>({

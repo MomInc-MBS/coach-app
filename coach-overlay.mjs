@@ -27,16 +27,20 @@ export function mountCoachOverlay(){
   if(!box){box=document.createElement('div');box.className='coach-overlay-box';box.style.cssText='position:absolute;left:0;top:0;transform-origin:50% 50%';overlay.append(box);}
  }
  const walk=on=>{if(on!==walking){walking=on;window.myr5Creature?.walk?.(on);}};
+ // Off frame the box leaves layout (display:none), not just visibility:hidden: only then does the coach
+ // viewer's IntersectionObserver pause its WebGL loop, which otherwise competes with the CPU pose tracker
+ // (main thread and its per-frame GPU readback) while the user is still setting their start.
+ const shown=on=>{box.style.visibility=on?'visible':'hidden';box.style.display=on?'':'none';};
  async function enter(){
   await ensureCard();if(!card||!tracking)return;
   ensureOverlay();if(!box)return;if(card.parentElement!==box)box.append(card);
-  boxH=0;laughed=false;lastState=null;box.style.visibility='hidden';
+  boxH=0;laughed=false;lastState=null;shown(false);
   motion=new CoachMotion({aspect:innerWidth/innerHeight,now:performance.now()});if(begun)motion.begin();
   window.myr5Creature?.stage('overlay');
  }
  function leave(){
   motion=null;lastState=null;walk(false);window.myr5Creature?.face?.(0);if(!card)return;
-  card.style.cssText='';if(box)box.style.visibility='';
+  card.style.cssText='';if(box)box.style.visibility=box.style.display='';
   const mount=document.body.dataset.screen==='rest'?$('restCoachMount'):$('coachMount');
   if(mount&&card.parentElement!==mount)mount.append(card);
   window.myr5Creature?.stage(document.body.dataset.screen==='rest'?'encounter':'pod');
@@ -44,7 +48,7 @@ export function mountCoachOverlay(){
  function place(state){
   if(!box)return;
   const hidden=state.phase==='offstage'||state.phase==='away';
-  box.style.visibility=hidden?'hidden':'visible';
+  shown(!hidden);
   walk(state.phase==='walking');window.myr5Creature?.face?.(state.yaw);
   if(state.phase==='spun'){if(!laughed){laughed=true;window.myr5Creature?.play('laugh');}}else laughed=false;
   if(hidden||!state.baseHeight)return;
