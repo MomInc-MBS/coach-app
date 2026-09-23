@@ -42,12 +42,19 @@
 /* The border stays when a destination opens: #portalChrome, a top-layer copy of the frame at the board's rest box (JS sets
    --face-*) above the destination dialog, with a matte of the board colour over the rest of the screen, so the dive
    plays in the frame's window and the dialog (.portal-framed) sits in it. Camera-only mode hides it with every other
-   body child. A persistent bar below the frame (--portal-bottom-reserve) has to sit above it in the top layer. */
+   body child. The app's bottom bar sits below the frame: see the release 5 rules after these. */
 #portalChrome{position:fixed;inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;padding:0;border:0;background:none;overflow:hidden;pointer-events:none}
 #portalChrome::backdrop{display:none}
 #portalChrome .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b,0 0 0 100vmax #17111e}
 dialog.portal-framed{position:fixed!important;inset:auto!important;left:var(--face-left)!important;top:var(--face-top)!important;width:var(--face-width)!important;height:var(--face-height)!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:3px!important;box-sizing:border-box!important}
 dialog.portal-framed::backdrop{background:#17111e!important}
+/* Release 5: the app's bottom bar (routes.mjs; --myr5-bar in launch.css) is the reserve under the frame. The board face
+   stops above it, and while a destination is framed the chrome's matte and the dialog's backdrop end at the bar's top
+   edge, so the bar (inside the open route's dialog, or on the page while the dialog is still arriving) stays visible and
+   tappable below the frame and never sits in its window. */
+body:has(#coachDock) :is(#portalHome,#portalChrome){--portal-bottom-reserve:var(--myr5-bar)}
+body:has(#coachDock) #portalChrome{bottom:var(--myr5-bar)}
+body:has(#coachDock) dialog.portal-framed::backdrop{bottom:var(--myr5-bar)}
 /* Closing: the destination's empty shell, shrinking into the wormhole core over the reverse dive. */
 dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:none!important;overflow:hidden!important}
 #portalShadows{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:multiply;opacity:.12}

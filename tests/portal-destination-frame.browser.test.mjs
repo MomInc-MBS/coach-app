@@ -105,7 +105,8 @@ test('energy surges through the dive, Food opens inside the frame, and closing f
   s=await state(page);
   assert(!s.chrome&&!s.framed&&!s.ghost&&!s.hidden,`the quilt is back and the chrome handed back to its frame: ${JSON.stringify(s)}`);
   e=await energy(page);assert(e.every(a=>a.state==='running'&&a.rate===1),'energy back to rest');
-  assert.equal(await page.evaluate(()=>{const b=document.getElementById('portalMenuButton').getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.id;}),'portalMenuButton');
+  // Release 5: the bottom bar's Portal button replaced the floating Menu button (W2-2A).
+  assert.equal(await page.evaluate(()=>{const p=document.querySelector('#coachDock [data-route="portal"]'),b=p.getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)===p;}),true);
  }finally{await context.close();}
 });
 
@@ -115,7 +116,7 @@ test('reduced motion: static energy, destinations still framed, a quick fade bac
   assert.deepEqual(await energy(page),[],'no energy animation under reduced motion');
   assert.equal(await page.evaluate(()=>document.querySelector('#portalHome .portal-energy').style.getPropertyValue('--energy').split(',').length),6,'the six neons sit static in the channel');
   // Menu sheet -> Ship (no gesture): the ship view sits in the frame's window too.
-  await page.locator('#portalMenuButton').click();
+  await page.locator('#coachDock [data-route="portal"]').click();
   await page.locator('#portalMenu [data-menu="ship"]').click();
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed');
   const ship=await page.evaluate(()=>{const r=document.querySelector('dialog.ship-view').getBoundingClientRect(),c=document.getElementById('portalChrome');return{box:{left:r.left,top:r.top,width:r.width,height:r.height},face:Object.fromEntries(['left','top','width','height'].map(k=>[k,parseFloat(c.style.getPropertyValue('--face-'+k))])),chrome:c.matches(':popover-open')};});

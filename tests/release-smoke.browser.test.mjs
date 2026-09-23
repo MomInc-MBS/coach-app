@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
 import {completeCoach} from './onboarding-fixture.mjs';
@@ -329,5 +329,118 @@ test('7. a traced route sets its hash; back returns to the quilt, the bar Portal
   // On the quilt it opens the Menu sheet (#share).
   await page.locator(PORTAL_BUTTON).click();
   await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true&&location.hash==='#share');
+ }finally{await context.close();}
+});
+
+// Release 5 (W2-2A + W2-2B + W2-2K + W3-3A together): a traced destination dives in and opens INSIDE the metal frame with
+// the bottom bar below it, visible, lit and tappable (never in the frame's window, never under its matte); closing
+// reverse-dives out of the wormhole; the oval's ship view and Food (the pyramid) both sit in the frame; the square is the
+// workout start page. Frames for the conductor land in .frames/ (untracked).
+const FRAMES=resolve('.frames');
+const frameBar=page=>page.evaluate(()=>{
+ const dock=document.getElementById('coachDock'),chrome=document.getElementById('portalChrome'),open=chrome.matches(':popover-open');
+ const framed=document.querySelector('dialog.portal-framed[open]'),face=Object.fromEntries(['left','top','width','height'].map(k=>[k,parseFloat(chrome.style.getPropertyValue('--face-'+k))]));
+ const rail=parseFloat(getComputedStyle(chrome).getPropertyValue('--portal-rail')),box=el=>{const r=el.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height};};
+ return {barTop:dock.getBoundingClientRect().top,chrome:open,chromeBottom:open?chrome.getBoundingClientRect().bottom:null,frameBottom:face.top+face.height+rail,face,
+  backdropBottom:framed?parseFloat(getComputedStyle(framed,'::backdrop').bottom):null,box:framed?box(framed):null};
+});
+function assertBarBelowFrame(f,where){
+ assert.equal(f.chrome,true,`${where}: the frame stays up`);
+ assert.ok(f.frameBottom<=f.barTop+.5,`${where}: the frame ends above the bar (${f.frameBottom} vs ${f.barTop})`);
+ assert.ok(Math.abs(f.chromeBottom-f.barTop)<1,`${where}: the frame's matte stops at the bar's top edge (${f.chromeBottom} vs ${f.barTop})`);
+}
+test('8. traced destinations dive into the frame with the bar lit below it, the oval arrives by ship, and closing reverse-dives out',{timeout:240000},async()=>{
+ const {context,page}=await openApp(browser,base,{reducedMotion:'no-preference'});
+ try{
+  await mkdir(FRAMES,{recursive:true});
+  await page.evaluate(()=>{
+   try{localStorage.setItem('myr5.portalHintShown','1');}catch{} // a clean quilt: the first-run hint has its own test
+   // Hold each reverse dive (the portal flying back out) so a frame can be taken half way; count them.
+   const animate=Element.prototype.animate;window.__backs=[];
+   Element.prototype.animate=function(frames,timing){const a=animate.call(this,frames,timing);if(this.id==='portalHome'&&timing?.direction==='reverse'){a.pause();window.__backs.push(a);}return a;};
+  });
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+  await page.evaluate(()=>document.querySelector('.app-update-banner [data-later]')?.click()); // the update toast is not part of these frames
+  await page.waitForTimeout(2800); // one lap of the first-run hint, if it started before the flag was set
+  // The quilt in its frame, the bar below it with the Portal lit.
+  const quilt=await page.evaluate(()=>{const frame=document.querySelector('#portalBoardHost .portal-frame'),f=frame.getBoundingClientRect(),rail=parseFloat(getComputedStyle(frame).getPropertyValue('--portal-rail'));return {frameBottom:f.bottom+rail,barTop:document.getElementById('coachDock').getBoundingClientRect().top};});
+  assert.ok(quilt.frameBottom<=quilt.barTop,`the quilt's frame clears the bar (${quilt.frameBottom} vs ${quilt.barTop})`);
+  let b=await bar(page);
+  assert.deepEqual(b.lit,['portal']);assert.equal(b.visible&&b.tappable,true,'the bar is up and tappable on the quilt');
+  await page.screenshot({path:resolve(FRAMES,'r5-1-quilt-frame-bar.png')});
+
+  // Triangle -> Food: dives in, the pyramid opens inside the frame, the bar below it lit for Food.
+  await page.evaluate(()=>{window.r5Run=window.myr5Portal.open('up');});
+  // While Food grows out of the core (scaled), the bar waits on the page, still showing below the frame.
+  await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-arriving'),null,{timeout:20000,polling:16});
+  const arriving=await page.evaluate(()=>{const d=document.getElementById('coachDock'),r=d.getBoundingClientRect(),m=document.getElementById('mealsPanel');return {parent:d.parentElement.tagName,bottom:r.bottom,backdrop:parseFloat(getComputedStyle(m,'::backdrop').bottom)};});
+  assert.deepEqual(arriving,{parent:'BODY',bottom:812,backdrop:64},'mid-arrival: the bar is on the page at the bottom, clear of the backdrop');
+  await page.waitForFunction(()=>{const m=document.getElementById('mealsPanel');return m.open&&m.classList.contains('portal-framed')&&document.getElementById('portalHome').hidden;},null,{timeout:20000});
+  await page.evaluate(()=>window.r5Run);
+  await page.waitForFunction(()=>!document.querySelector('.portal-arriving')&&document.getElementById('coachDock').parentElement?.id==='mealsPanel',null,{timeout:5000});
+  await page.waitForFunction(()=>document.querySelector('#mealsPanel.pyramid-mode #pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:20000});
+  await page.waitForTimeout(600);
+  let f=await frameBar(page);
+  assertBarBelowFrame(f,'Food');
+  for(const k of ['left','top','width','height'])assert.ok(Math.abs(f.box[k]-f.face[k])<1,`Food fits the frame's window (${k}: ${f.box[k]} vs ${f.face[k]})`);
+  assert.ok(Math.abs(f.backdropBottom-(812-f.barTop))<1,`the framed backdrop ends at the bar (${f.backdropBottom})`);
+  b=await bar(page);
+  assert.deepEqual(b.lit,['food'],'the bar lights Food');assert.equal(b.visible&&b.tappable,true,'the bar is up and tappable under framed Food');
+  assert.equal(await page.evaluate(()=>location.hash),'#food');
+  await page.screenshot({path:resolve(FRAMES,'r5-2-food-in-frame-bar.png')});
+  // The lens's full-screen photo flow stays in the frame's window too.
+  const stage=await page.evaluate(()=>{const s=document.getElementById('mealScanStage');s.hidden=false;const r=s.getBoundingClientRect();s.hidden=true;return {left:r.left,top:r.top,width:r.width,height:r.height};});
+  for(const k of ['left','top','width','height'])assert.ok(Math.abs(stage[k]-f.face[k])<1,`the photo flow fits the frame's window (${k}: ${stage[k]} vs ${f.face[k]})`);
+
+  // Close: the reverse dive, held half way. The bar stays showing below the frame throughout.
+  await page.locator('#mealsPanel [data-close]').click();
+  await page.waitForFunction(()=>window.__backs.length===1,null,{timeout:10000});
+  await page.evaluate(()=>new Promise(r=>{const a=window.__backs[0],d=a.effect.getTiming().duration;a.currentTime=d*.5;const g=document.querySelector('.portal-ghost')?.getAnimations()[0];if(g){g.pause();g.currentTime=Math.min(d*.5,g.effect.getTiming().duration);}requestAnimationFrame(()=>requestAnimationFrame(r));}));
+  const scale=await page.evaluate(()=>new DOMMatrix(getComputedStyle(document.getElementById('portalHome')).transform).a);
+  assert.ok(scale>1,`half way out, the portal is still scaled from the dive (${scale})`);
+  f=await frameBar(page);assertBarBelowFrame(f,'reverse dive');
+  assert.equal((await bar(page)).visible,true,'the bar shows through the reverse dive');
+  await page.screenshot({path:resolve(FRAMES,'r5-4-reverse-dive-50.png')});
+  await page.evaluate(()=>{window.__backs[0].play();document.querySelector('.portal-ghost')?.getAnimations()[0]?.play();});
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&getComputedStyle(document.getElementById('portalHome')).transform==='none'&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:10000});
+  await page.waitForFunction(()=>location.hash==='');
+  assert.deepEqual((await bar(page)).lit,['portal'],'back on the quilt, the Portal is lit again');
+
+  // Oval -> the coach's arrival: the ship view dives in inside the frame (#select) and its entrance plays.
+  await page.evaluate(()=>{window.r5Run=window.myr5Portal.open('oval');});
+  await page.waitForFunction(()=>{const d=document.querySelector('dialog.ship-view');return d?.open&&d.classList.contains('portal-framed')&&location.hash==='#select';},null,{timeout:20000});
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view .ship-scene-beam.is-charging'),null,{timeout:20000});
+  await page.waitForFunction(()=>!document.querySelector('.portal-arriving'),null,{timeout:5000});
+  await page.waitForTimeout(500);
+  f=await frameBar(page);assertBarBelowFrame(f,'ship view');
+  for(const k of ['left','top','width','height'])assert.ok(Math.abs(f.box[k]-f.face[k])<1,`the ship view fits the frame's window (${k})`);
+  assert.equal((await bar(page)).tappable,true,'the bar is tappable under the ship view');
+  await page.screenshot({path:resolve(FRAMES,'r5-3-ship-from-oval-mid-entrance.png')});
+  await page.evaluate(()=>window.r5Run);
+  await page.locator('.ship-view-close').click();
+  await page.waitForFunction(()=>window.__backs.length===2,null,{timeout:10000});
+  await page.evaluate(()=>window.__backs[1].play());
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.querySelector('dialog.ship-view').open&&location.hash!=='#select',null,{timeout:10000});
+
+  // A line (Reminders) opens straight into the frame; the bar's Portal takes it home the same way, out of the wormhole.
+  await page.evaluate(()=>window.myr5Portal.open('line-rl'));
+  await page.waitForFunction(()=>{const d=document.getElementById('remindersPanel');return d.open&&d.classList.contains('portal-framed')&&location.hash==='#reminders';},null,{timeout:10000});
+  f=await frameBar(page);assertBarBelowFrame(f,'Reminders');
+  assert.deepEqual((await bar(page)).lit,['reminders']);
+  await page.locator(PORTAL_BUTTON).click();
+  await page.waitForFunction(()=>window.__backs.length===3,null,{timeout:10000});
+  await page.evaluate(()=>window.__backs[2].play());
+  await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.getElementById('remindersPanel').open&&location.hash===''&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:10000});
+  assert.deepEqual((await bar(page)).lit,['portal']);
+
+  // Square -> the workout start page: the pod from the top, BEGIN not pressed, the bar still there.
+  await page.evaluate(()=>{scrollTo(0,400);window.r5Run=window.myr5Portal.open('rect');});
+  await page.waitForFunction(()=>document.getElementById('portalHome').hidden&&location.hash==='#workout'&&scrollY===0,null,{timeout:20000});
+  await page.evaluate(()=>window.r5Run);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle','the square does not start the workout');
+  b=await bar(page);assert.equal(b.visible&&b.tappable,true,'the bar is on the workout start page');
+  await page.waitForTimeout(400);
+  await page.screenshot({path:resolve(FRAMES,'r5-5-workout-start-from-square.png')});
  }finally{await context.close();}
 });

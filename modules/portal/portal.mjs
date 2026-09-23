@@ -965,11 +965,15 @@ function dive(pts,back=false){
  return phase.dive.finished.catch(()=>{});
 }
 // The destination dialog grows out of the tunnel's core; its backdrop fades in so the dive stays visible behind it.
+// Release 5: the bottom bar (routes.mjs moves it into the open route's dialog) must not ride the arrival's scale. It waits
+// on the page, still showing below the frame (portal.css ends the framed backdrop above it), and goes back in once the
+// dialog has landed, unless the route moved on meanwhile (routes.mjs then already re-homed it).
 function arriveFromCore(dialog,core,ms){
  if(prefersReducedMotion())return;
+ const bar=dialog.querySelector(':scope>#coachDock');if(bar)document.body.append(bar);
  dialog.style.setProperty('--portal-arrive',ms+'ms');dialog.classList.add('portal-arriving');
  revealDialogFromPoint(dialog,core,ms);
- setTimeout(()=>{dialog.classList.remove('portal-arriving');dialog.style.removeProperty('--portal-arrive');motion(dialog,'');dialog.style.transformOrigin='';},ms+100);
+ setTimeout(()=>{dialog.classList.remove('portal-arriving');dialog.style.removeProperty('--portal-arrive');motion(dialog,'');dialog.style.transformOrigin='';if(bar?.parentNode===document.body&&dialog.open)dialog.append(bar);},ms+100);
 }
 
 function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}

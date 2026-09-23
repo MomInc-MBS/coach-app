@@ -27,3 +27,9 @@
 #mealsPanel.pyramid-mode .scan-actions{justify-content:center}
 #mealsPanel.pyramid-mode #mealConfirmation{gap:8px}#mealsPanel.pyramid-mode #mealConfirmation .fields{gap:10px}#mealsPanel.pyramid-mode #mealForm input,#mealsPanel.pyramid-mode #mealForm select{padding:9px 11px}#mealsPanel.pyramid-mode #nutritionBasis{margin:0}
 #mealsPanel.pyramid-mode #mealSaveControls:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:8px}#mealsPanel.pyramid-mode #mealSaveControls>:not(button){grid-column:1/-1}#mealsPanel.pyramid-mode #mealSaveControls>button{width:100%;margin:0}#mealsPanel.pyramid-mode .food-source{margin:0;font-size:12px}
+/* Release 5: as a route Food stops at the bottom bar's top edge (routes.mjs keeps the bar inside the open route); opened
+   from the portal it fits the metal frame's window (portal.css .portal-framed sets the box and --face-*), and so does the
+   full-screen photo flow. */
+#mealsPanel.pyramid-mode[data-route]{height:calc(100vh - var(--myr5-bar));height:calc(100dvh - var(--myr5-bar))}
+#mealsPanel.pyramid-mode[data-route] #mealScanStage{bottom:var(--myr5-bar)}
+#mealsPanel.pyramid-mode.portal-framed #mealScanStage{inset:auto;left:var(--face-left);top:var(--face-top);width:var(--face-width);height:var(--face-height)}

@@ -69,7 +69,11 @@ test('#3/#38 Food is one full-screen pyramid scene: no Camera button or lists on
  assert.deepEqual(returned,{id:'mealsPanel',open:true,dialog:true},'myr5Menus.food() opens Food and returns its dialog');
  await ready(page);
  assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'TAP THE LENS');
- assert.deepEqual(await box(page,'#mealsPanel'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
+ // Release 5: Food is a route, so it fills the screen down to the bottom bar (W2-2A), which stays showing, lit for Food.
+ const barTop=(await box(page,'#coachDock')).top;
+ assert.equal(barTop,812-64);
+ assert.deepEqual(await box(page,'#mealsPanel'),{left:0,top:0,right:375,bottom:barTop,width:375,height:barTop});
+ assert.equal(await page.evaluate(()=>{const b=document.querySelector('#coachDock [data-route="food"]'),r=b.getBoundingClientRect();return b.getAttribute('aria-current')==='page'&&document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===b;}),true,'the bar is lit for Food and tappable');
  assert.equal(await page.locator('#foodCamera').isVisible(),false,'the lens is the camera');
  for(const title of ['#macroTitle','#microTitle']){
   const section=await page.evaluate(s=>{const el=document.querySelector(s).closest('section'),r=el.getBoundingClientRect();return {w:r.width,h:r.height,text:el.textContent};},title);
@@ -78,7 +82,7 @@ test('#3/#38 Food is one full-screen pyramid scene: no Camera button or lists on
  const header=await box(page,'#mealsPanel>header');
  for(const poster of ['#pyramidScanner .paper-poster','#pyramidScanner .paper-note']){
   const r=await box(page,poster);
-  assert(r.left>=0&&r.right<=375&&r.bottom<=812&&r.top>=header.bottom-2,`${poster} is fully in frame: ${JSON.stringify(r)}`);
+  assert(r.left>=0&&r.right<=375&&r.bottom<=barTop&&r.top>=header.bottom-2,`${poster} is fully in frame: ${JSON.stringify(r)}`);
  }
  const clipped=await page.evaluate(()=>[...document.querySelectorAll('#pyramidScanner .paper-poster,#pyramidScanner .paper-note')].filter(el=>el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1).length);
  assert.equal(clipped,0,'poster text is not cropped');
@@ -180,7 +184,7 @@ test('#31 a sample food photo runs the real scan path onto the screens, then Sav
   });
   // Full-screen photo flow while the worker analyses the resized photo.
   await page.waitForFunction(()=>/Worker got data:image\/jpeg;base64/.test(document.getElementById('scanDetail').textContent));
-  assert.deepEqual(await box(page,'#mealScanStage'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
+  assert.deepEqual(await box(page,'#mealScanStage'),{left:0,top:0,right:375,bottom:812-64,width:375,height:812-64},'full screen down to the bottom bar');
   assert.equal(await page.locator('#scanPhase').textContent(),'ANALYZING FOOD');
   assert(await page.locator('#scanPhase').isVisible(),'the scan read-out shows without the optional pocket-hardware skin');
   // Result -> USDA match -> the numbers fly onto the screens.
