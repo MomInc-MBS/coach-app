@@ -177,7 +177,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
-  <button id="portalMenuButton" type="button">Menu</button><button id="portalExitButton" type="button">Back to Coach</button>`;
+  <button id="portalMenuButton" type="button">Menu</button><button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  boardHost=portalHome.querySelector('#portalBoardHost');
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
@@ -194,13 +194,20 @@ function buildDom(){
  // The fallback menu sheet lives outside portalHome too: a dialog nested in a hidden ancestor
  // would be hidden along with it while open (e.g. mid-fade during the "all" portal reveal).
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
- menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Menu</h2><button type="button" data-close>Close</button></header><div class="portal-menu-grid">${menuButtonsHtml()}</div><div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div><p id="portalMenuStatus" role="status"></p>`;
+ // The board picker row only earns its place once a second board ships; one option is nothing to pick from.
+ const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div>`;
+ menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Menu</h2><button type="button" data-close>Close</button></header><div class="portal-menu-grid">${menuButtonsHtml()}</div>${boardRow}<p id="portalMenuStatus" role="status"></p>`;
  document.body.append(menuSheet);
  menuSheet.querySelector('[data-close]').onclick=()=>menuSheet.close();
  menuSheet.querySelectorAll('[data-menu]').forEach(btn=>btn.onclick=()=>{
   const menu=MENUS[btn.dataset.menu];
   if(menu.locked?.()){menuSheet.querySelector('#portalMenuStatus').textContent=menu.lockedMessage;return;}
-  menuSheet.querySelector('#portalMenuStatus').textContent='';menuChosen=true;menuSheet.close();setVisible(false);menu.open?.();
+  menuSheet.querySelector('#portalMenuStatus').textContent='';menuChosen=true;menuSheet.close();
+  // A traced-shape dialog open fades back to the quilt when its dialog closes (openDirect). Route the
+  // same destinations opened from the Menu sheet through the same flow, or closing leaves the pod
+  // showing instead of the quilt. kind:'home' and kind:'nav' keep their plain setVisible+open.
+  if(menu.kind==='dialog'){const run=++sequence;openDirect(menu,()=>run===sequence&&!lifecycle.signal.aborted);return;}
+  setVisible(false);menu.open?.();
  });
  menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=()=>{menuSheet.close();loadBoard(btn.dataset.board);});
 }
@@ -208,9 +215,12 @@ function buildDom(){
 function backgroundBlocked(block){
  // Dialogs that are open or hidden are never made inert: one opened as a modal while the quilt is up (the full-download
  // offer, setup gate, reward reveals) sits in the top layer and must stay tappable, or the app freezes. A closed dialog
- // that is still drawn (styled display:grid) stays inert so it can't catch taps meant for the quilt.
+ // that is still drawn (styled display:grid) stays inert so it can't catch taps meant for the quilt. The "Updated: …"
+ // toast (app-updates.mjs) is a non-dialog element sitting over the portal's own controls; it's exempt too, or its
+ // "Got it" tap falls through to whatever is underneath (portal.css raises it above the Menu button while up).
  const liveDialog=el=>el.tagName==='DIALOG'&&(el.open||getComputedStyle(el).display==='none');
- if(block){for(const el of document.body.children)if(el!==portalHome&&el!==menuSheet&&!liveDialog(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
+ const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner');
+ if(block){for(const el of document.body.children)if(!exempt(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
 function openMenu(){
