@@ -5,8 +5,8 @@ const output=resolve(process.argv[2]||'../../outputs/Weapon-Lab.html');
 const js=await build({entryPoints:['pod/weapon-review.mjs'],bundle:true,format:'iife',target:'es2022',write:false,minify:true});
 const weapons=await readFile('pod/gala-weapons.js','utf8');
 const training=await readFile('workout-tracks.js','utf8');
-const world=(await readFile('pod/worlds/great-wall.png')).toString('base64');
-const css=(await readFile('pod/weapon-review.css','utf8')).replace("url('worlds/great-wall.png')",`url('data:image/png;base64,${world}')`);
+const world=(await readFile('pod/worlds/great-wall.webp')).toString('base64');
+const css=(await readFile('pod/weapon-review.css','utf8')).replace("url('worlds/great-wall.webp')",`url('data:image/webp;base64,${world}')`);
 const html=(await readFile('pod/weapon-review.html','utf8'))
  .replace('<link rel="stylesheet" href="weapon-review.css">',`<style>${css}</style>`)
  .replace('href="../pose.html"','href="https://myr5.mominc.online/pose.html"')

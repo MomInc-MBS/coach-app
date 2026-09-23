@@ -1,5 +1,5 @@
 /* The original pixel world, with the current coach, Gala equipment and Helping Hand. */
-:root{--room-world:url('/pod/worlds/great-wall.png');--room-pixel:ui-monospace,SFMono-Regular,Consolas,monospace}
+:root{--room-world:url('/pod/worlds/great-wall.webp');--room-pixel:ui-monospace,SFMono-Regular,Consolas,monospace}
 body[data-screen=rest]{overflow:hidden;max-width:none}
 body[data-screen=rest]>.ship-header,body[data-screen=rest]>.coach-dock,body[data-screen=rest]>.sync-badge{display:none}
 #restScreen{position:fixed;inset:0;z-index:30;min-height:0;padding:0;overflow:hidden;display:block;background:#211b32;font-family:var(--room-pixel)}
