@@ -18,3 +18,15 @@
 .unlock-board{margin-top:26px}.unlock-board h3{font-size:17px;margin:0 0 6px;color:#f5d49e}.unlock-board ul{padding:0;list-style:none;margin:0}
 .unlock-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #52395e;font-size:14px}.unlock-row>span:last-child{font-size:12px;color:#bda6c9}.unlock-row[data-unlocked=true]>span:last-child{color:#f5cf87}
 .account-settings{margin-top:25px;padding-top:8px;border-top:1px solid #6c4b7b}.account-settings summary{cursor:pointer;min-height:44px;align-content:center;font-size:14px;color:#cebad9}.account-settings p{overflow-wrap:anywhere}.account-settings .actions{margin:12px 0}.account-settings .hint{font-size:13px}
+/* D34 post-download package: offer sheet, progress strip and Settings section; see the post-download module. */
+.full-download-sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:min(560px,100vw);max-width:100vw;box-sizing:border-box;padding:22px 20px max(20px,env(safe-area-inset-bottom));border:2px solid #a6d4bb;border-bottom:0;border-radius:18px 18px 0 0;background:#163e34;color:#eefff5;font:16px/1.45 Arial,sans-serif}
+.full-download-sheet::backdrop{background:#0c0b15b3}.full-download-sheet h2{margin:0 0 8px;font-size:21px;line-height:1.25}.full-download-sheet p{margin:0 0 12px;font-size:16px;line-height:1.45;color:#eefff5}.full-download-sheet .hint{color:#cfe9dc}
+.full-download-sheet .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.full-download-sheet button{min-height:48px;padding:10px 18px;border-radius:10px;font:700 16px Arial,sans-serif}
+.full-download-sheet [data-download]{flex:1 1 60%;background:#b8f0cf;color:#10281f;border:0}.full-download-sheet [data-later]{flex:1 1 30%;background:transparent;color:#eefff5;border:2px solid #a6d4bb}
+.full-download-sheet button:focus-visible,.full-download-bar button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media (prefers-reduced-motion:no-preference){.full-download-sheet[open]{animation:full-download-in .25s ease-out}@keyframes full-download-in{from{transform:translateY(100%)}}}
+.full-download-bar{position:fixed;top:max(8px,env(safe-area-inset-top));left:12px;right:12px;z-index:9998;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;background:#163e34;color:#eefff5;border:2px solid #a6d4bb;border-radius:12px;box-shadow:0 8px 30px #0009;font:14px/1.3 Arial,sans-serif}
+.full-download-bar[hidden],body[data-tracking=true] .full-download-bar,body[data-screen=rest] .full-download-bar{display:none}
+.full-download-bar p{margin:0;flex:1 1 100%}.full-download-bar span{flex:1}.full-download-bar button{min-height:44px;padding:8px 12px;font:14px Arial,sans-serif}
+.full-download-bar progress,.full-download-settings progress{display:block;width:100%;height:10px;accent-color:#b8f0cf}.full-download-bar progress[hidden],.full-download-settings progress[hidden]{display:none}
+.full-download-settings{margin-top:20px;border-top:1px solid #917885;padding-top:8px;font:16px/1.5 Arial,sans-serif}.full-download-settings span{display:block;font-size:14px}

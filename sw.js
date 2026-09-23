@@ -1,8 +1,12 @@
 const SHELL='myr5-shell-22d1026e5a1d6f2441dd',VOICE='myr5-voice-approved-v2';
 // Filled from the complete production asset inventory, with content identities.
 const ASSETS=/* OFFLINE_ASSETS */ [];
+// D34 post-download package: every other deployed runtime file. Fetched on demand into a small LRU
+// until the user downloads the whole package into this release's own package cache.
 const OPTIONAL_ASSETS=/* OPTIONAL_ASSETS */ [];
-const OPTIONAL='myr5-optional-'+SHELL.slice('myr5-shell-'.length),OPTIONAL_LIMIT=64*1024*1024;
+const BUILD=SHELL.slice('myr5-shell-'.length);
+const OPTIONAL='myr5-optional-'+BUILD,OPTIONAL_LIMIT=64*1024*1024;
+const PACKAGE='myr5-package-'+BUILD,PACKAGE_INDEX='/__myr5_package__';
 const OPTIONAL_BY_URL=new Map(OPTIONAL_ASSETS.map(asset=>[asset.url,asset]));
 let optionalWrite=Promise.resolve();
 async function saveOptional(asset,response){
@@ -18,6 +22,49 @@ async function saveOptional(asset,response){
  optionalWrite=write.catch(()=>{});return optionalWrite;
 }
 const INDEX='/__myr5_offline_assets__';
+// Every shell and package cache records what it holds (url and integrity). A file is reused across
+// releases only when its integrity is unchanged, so a package is never half old and half new.
+const indexes=new Map();
+function cacheIndex(name){
+ if(!indexes.has(name))indexes.set(name,caches.open(name).then(cache=>cache.match(name.startsWith('myr5-shell-')?INDEX:PACKAGE_INDEX)).then(saved=>saved.json()).then(list=>new Map(list.map(asset=>[asset.url,asset.integrity])),()=>new Map()));
+ return indexes.get(name);
+}
+async function localCopy(asset,lru=true){
+ for(const name of await caches.keys())if(name!==PACKAGE&&/^myr5-(?:shell|package)-/.test(name)&&(await cacheIndex(name)).get(asset.url)===asset.integrity){
+  const hit=await caches.match(asset.url,{cacheName:name});if(hit)return {name,hit};
+ }
+ const hit=lru&&await caches.match(asset.url,{cacheName:OPTIONAL});return hit&&{name:OPTIONAL,hit};
+}
+const sri=async body=>'sha256-'+btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',body))));
+// What this release's package still needs from the network. Unchanged files already on the device
+// (older package, older shell) are moved in first; the on-demand LRU (64 MiB, kept for people who
+// never asked for the package) is adopted only once the user has chosen to download.
+async function packagePlan(adopt){
+ const cache=await caches.open(PACKAGE);
+ if(!await cache.match(PACKAGE_INDEX))await cache.put(PACKAGE_INDEX,new Response(JSON.stringify(OPTIONAL_ASSETS),{headers:{'Content-Type':'application/json'}}));
+ const have=new Set((await cache.keys()).map(key=>new URL(key.url).pathname)),missing=[];let total=0;
+ for(const asset of OPTIONAL_ASSETS){
+  total+=asset.bytes+(asset.contains||0);
+  if(asset.contains!==undefined){missing.push(...await voiceMissing(asset));continue;}
+  if(have.has(asset.url))continue;
+  const copy=await localCopy(asset,adopt);
+  if(!copy){missing.push(asset);continue;}
+  await cache.put(asset.url,copy.hit);
+  if(!copy.name.startsWith('myr5-shell-'))await(await caches.open(copy.name)).delete(asset.url);
+ }
+ if(!missing.length)for(const name of await caches.keys())if(name!==PACKAGE&&/^myr5-(?:package|optional)-/.test(name))await caches.delete(name);
+ return {type:'PACKAGE_PLAN',cache:PACKAGE,total,missing,remaining:missing.reduce((sum,asset)=>sum+asset.bytes+(asset.contains||0),0)};
+}
+// Voice clips live in the update-stable voice cache. Their identities come from this release's
+// verified voice manifest; until that is saved, the manifest itself is what is missing.
+async function voiceMissing(entry){
+ const voice=await caches.open(VOICE),key=entry.url+'?v='+BUILD,saved=await voice.match(key);
+ let files;try{const body=await saved.arrayBuffer();if(await sri(body)===entry.integrity)files=JSON.parse(new TextDecoder().decode(body)).files;}catch{}
+ if(!Array.isArray(files))return [{...entry,cache:VOICE,key}];
+ const have=new Set((await voice.keys()).map(request=>request.url));
+ return files.filter(file=>!have.has(new URL(file.url,self.location.origin).href)).map(file=>({...file,cache:VOICE}));
+}
+let planning=Promise.resolve();
 const ASSET_BY_URL=new Map(ASSETS.map(asset=>[asset.url,asset]));
 const downloadProgress={type:'OFFLINE_PROGRESS',files:0,totalFiles:ASSETS.length,bytes:0,totalBytes:ASSETS.reduce((n,a)=>n+a.bytes,0)};
 async function reportDownload(){
@@ -84,6 +131,10 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
   if(name.startsWith('myr5-shell-')&&name!==SHELL&&name!==previous)await caches.delete(name);
   if(name.startsWith('myr5-optional-')&&name!==OPTIONAL&&name!=='myr5-optional-'+previous?.slice('myr5-shell-'.length))await caches.delete(name);
  }
+ // Keep the newest older package until this release's package is complete (its files move over).
+ for(const name of names.filter(name=>name.startsWith('myr5-package-')&&name!==PACKAGE).slice(0,-1))await caches.delete(name);
+ const voice=await caches.open(VOICE);
+ for(const key of await voice.keys()){const url=new URL(key.url);if(url.pathname==='/voice/manifest.json'&&url.searchParams.get('v')!==BUILD)await voice.delete(key);}
  await self.clients.claim();
 })()));
 let updateAttempt=null;
@@ -109,6 +160,10 @@ async function prepareUpdate(source){
 }
 self.addEventListener('message',event=>{
  if(event.data?.type==='OFFLINE_STATUS'){event.source?.postMessage(downloadProgress);return;}
+ if(event.data?.type==='PACKAGE_PLAN'){
+  const plan=planning.then(()=>packagePlan(event.data.adopt===true));planning=plan.catch(()=>{});
+  event.waitUntil(plan.then(value=>event.ports[0]?.postMessage(value),()=>event.ports[0]?.postMessage({type:'PACKAGE_PLAN',error:true})));return;
+ }
  if(event.data?.type!=='PREPARE_UPDATE')return;
  if(updateAttempt){event.ports[0]?.postMessage({activated:false,reason:'busy'});return;}
  updateAttempt=prepareUpdate(event.source).catch(()=>({activated:false,reason:'busy'}));
@@ -116,7 +171,7 @@ self.addEventListener('message',event=>{
 });
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
- if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname.startsWith('/source.json')||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html')return;
+ if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname.startsWith('/source.json')||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html'||request.headers.has('x-myr5-package'))return;
  if(url.pathname.startsWith('/voice/')){
   event.respondWith((async()=>{const cache=await caches.open(VOICE),cached=await cache.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok&&!response.redirected)await cache.put(request,response.clone());return response;})());return;
  }
@@ -127,14 +182,15 @@ self.addEventListener('fetch',event=>{
  if(!asset)return;
  const optional=OPTIONAL_BY_URL.has(path);
  event.respondWith((async()=>{
-  const cache=await caches.open(optional?OPTIONAL:SHELL),cached=await cache.match(path);
+  // Opening a cache creates it, so the package cache is only read by name here.
+  const cached=optional?await caches.match(path,{cacheName:PACKAGE})||(await localCopy(asset))?.hit:await(await caches.open(SHELL)).match(path);
   if(cached)return offlineResponse(cached);
   let response;
   try{response=await downloadAsset(asset);}catch{
    // Never mix an unverified new executable into an older installed shell.
    return new Response('This resource is unavailable. Reconnect or update Coach.',{status:503});
   }
-  if(optional)event.waitUntil(saveOptional(asset,response));else try{await cache.put(path,response.clone());}catch{}
+  if(optional)event.waitUntil(saveOptional(asset,response));else try{await(await caches.open(SHELL)).put(path,response.clone());}catch{}
   return response;
  })());
 });
