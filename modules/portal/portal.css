@@ -38,6 +38,8 @@
 .portal-bezel .mid{stop-color:color-mix(in srgb,var(--glass) 22%,#140e1e)}
 .portal-bezel .far{stop-color:color-mix(in srgb,var(--glass) 12%,#08050c)}
 .portal-ripple{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:3px solid color-mix(in srgb,var(--glass) 15%,#fff);box-shadow:0 0 0 2px color-mix(in srgb,var(--glass) 55%,#000),0 0 22px 3px #ffffff90,inset 0 0 26px #ffffffa0;opacity:0;pointer-events:none}
+/* A destination dialog growing out of the wormhole's core: its backdrop fades in over the dive (JS sets class + duration). */
+.portal-arriving::backdrop{animation:portal-glass-in var(--portal-arrive,.6s) ease both}
 @keyframes portal-sheen{from{transform:translateX(-28%)}to{transform:translateX(28%)}}
 @keyframes portal-glass-in{from{opacity:0}}
 @keyframes portal-ripple{from{transform:scale(.12);opacity:.95}to{transform:scale(2.2);opacity:0}}

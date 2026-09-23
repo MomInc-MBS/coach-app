@@ -32,5 +32,5 @@ test('lens map: signed rim distance in b, outward normal in rg',()=>{
 
 test('portal is longer and every timing stays a named knob',()=>{
  assert.equal(PORTAL.cutMs,1300);assert.equal(PORTAL.loadMinMs,3500);assert.equal(PORTAL.revealMs,1100);
- assert(PORTAL.tunnelTo>PORTAL.tunnelFrom,'the wormhole speeds up across the glass phase');
+ assert(PORTAL.tunnelTo>PORTAL.tunnelFrom,'the wormhole speeds up across the glass phase');assert(PORTAL.tunnelDive>0,'and faster still during the dive');
 });
