@@ -8,6 +8,7 @@ import {initAppUpdates} from './app-updates.mjs';
 import {mountPostDownload} from './post-download.mjs';
 import {mountCoachHub} from './coach-hub.mjs';
 import {authFetch,signOut} from './auth-client.mjs';
+import {mountCreatureSkinRewardReveal} from './creature-skin-reward-reveal.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
@@ -27,6 +28,7 @@ import {hasPackGrant} from './packs/pack-entitlements.mjs';
 import {createPackGrantCache} from './packs/pack-grant-cache.mjs';
 const accountTransitions=authTransitions();
 mountLaunch();
+mountCreatureSkinRewardReveal();
 mountCoachHub({api});
 mountGalaReturn();
 mountMeditation({api,onComplete:refresh,getAccount:()=>account});
