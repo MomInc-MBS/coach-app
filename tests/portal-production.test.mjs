@@ -17,6 +17,10 @@ test('Quilt is the sole production portal and the fixed starter',async()=>{
  const app=await readFile(new URL('../app.mjs',import.meta.url),'utf8');
  assert.match(app,/import\('\.\/modules\/portal\/portal-entry\.mjs'\)/);
  assert.match(app,/myr5Menus=.*portal/);
+ assert.match(app,/addEventListener\('myr5:coach-plan'/);
+ assert.match(app,/isInstalled\(\).*route\.has\('panel'\)/s);
+ assert.match(app,/shouldShow:starterPortalReady/);
+ assert.match(entry,/if\(!shouldShow\(\)\)return null/);
 });
 
 test('production build contains quilt but no experimental portal board runtime or models',async t=>{
