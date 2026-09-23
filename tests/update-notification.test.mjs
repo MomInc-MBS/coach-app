@@ -21,3 +21,15 @@ test('update notifications offer download, open a closed app, and preserve an op
  handlers.push({data:{json:()=>({title:'Water reminder',url:'/pose.html?panel=reminders'})},waitUntil:p=>pending=p});await pending;
  assert.equal(shown[1].options.actions,undefined);await click(shown[1].options.data);assert.equal(navigated,1);
 });
+
+test('W2-2A #18: reminder taps open their app route (meal -> #food, workout -> #workout, old ?panel= links too)',async()=>{
+ const handlers={},navigated=[];
+ const self={location:{origin:'https://coach.test'},addEventListener:(type,handler)=>handlers[type]=handler,registration:{showNotification:async()=>{}},clients:{matchAll:async()=>[{url:'https://coach.test/pose.html',focus:async()=>{},navigate:async url=>navigated.push(url)}],openWindow:async()=>{}}};
+ runInNewContext(await readFile('sw.js','utf8'),{self,URL,MessageChannel,setTimeout,clearTimeout});
+ const click=async data=>{let pending;handlers.notificationclick({notification:{close(){},data},waitUntil:p=>pending=p});await pending;return navigated.at(-1);};
+ assert.equal(await click({url:'/pose.html?panel=meals',kind:'reminder-meal'}),'https://coach.test/pose.html#food');
+ assert.equal(await click({url:'/pose.html?panel=reminders',kind:'reminder-workout'}),'https://coach.test/pose.html#workout');
+ assert.equal(await click({url:'/pose.html?panel=reminders',kind:'reminder-water'}),'https://coach.test/pose.html#reminders');
+ assert.equal(await click({url:'/pose.html?panel=meals'}),'https://coach.test/pose.html#food');
+ assert.equal(await click({url:'/pose.html?panel=armie',kind:'myr5-armie-letter'}),'https://coach.test/pose.html?panel=armie');
+});

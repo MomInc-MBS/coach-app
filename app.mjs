@@ -16,6 +16,9 @@ import {mountCoachOverlay} from './coach-overlay.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
+import {mountRoutes,hashRoute} from './modules/routes.mjs';
+// W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
+mountRoutes();
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -200,9 +203,10 @@ function starterPortalReady(){
  // No isInstalled() gate: a browser visitor who has already finished setup (window.coachPlan set)
  // gets the same quilt-first landing as an installed one. New/signed-out visitors never reach this
  // point with a coachPlan, so they still see setup first.
+ // A #route deep link (#pod, #ship, #food…) came for that scene; the quilt waits.
  // #15: a bounced ?optional= route (launch.mjs) must stay on the visible pod long enough to read
  // why, not get covered by the starter portal the instant a coachPlan resolves.
- return !route.has('panel')&&!route.has('optional')&&location.hash!=='#pod'&&location.hash!=='#ship'&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
+ return !route.has('panel')&&!route.has('optional')&&!hashRoute()&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
 }
 window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalAttempted)return;
@@ -210,7 +214,8 @@ window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalReady())void showQuiltPortal({shouldShow:starterPortalReady});
 });
 // D-ship-route: full-screen ship view, same coach capsule renderer as "Show my coach" below.
-window.myr5Menus={...window.myr5Menus,ship:async()=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds,mountArrival:mountFirstShipArrival});}};
+// W2-2A: options pass through ({entrance:'always',hash:'#select'} is the oval's coach arrival).
+window.myr5Menus={...window.myr5Menus,ship:async(options={})=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds,mountArrival:mountFirstShipArrival,...options});}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();

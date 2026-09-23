@@ -40,7 +40,7 @@ export async function runReminders(env,now=Date.now()){
    }catch(error){if(staleError(error))continue;throw error;}
    if(!claimed)continue;
    let deliveryStatus='sent';
-   try{await sendPush(env,JSON.parse(s.data),{title:'MOM // POD CHECK',body:message,tag:`${r.id}-${day}`,url:`/pose.html?panel=${r.kind==='meal'?'meals':'reminders'}`},{ownerId:r.user_id,dataEpoch:r.data_epoch,subscriptionData:s.data,subscriptionCreatedAt:s.created_at});sent++;}
+   try{await sendPush(env,JSON.parse(s.data),{title:'MOM // POD CHECK',body:message,tag:`${r.id}-${day}`,url:`/pose.html?panel=${r.kind==='meal'?'meals':'reminders'}`,kind:'reminder-'+r.kind},{ownerId:r.user_id,dataEpoch:r.data_epoch,subscriptionData:s.data,subscriptionCreatedAt:s.created_at});sent++;}
    catch(error){if(staleError(error))continue;failed++;deliveryStatus='failed';}
    try{await commit([database.prepare('UPDATE deliveries SET status=?,updated_at=? WHERE reminder_id=? AND day=? AND endpoint=? AND updated_at=? AND EXISTS(SELECT 1 FROM subscriptions WHERE endpoint=? AND user_id=? AND data=? AND created_at=?)').bind(deliveryStatus,now,r.id,day,s.endpoint,now,s.endpoint,r.user_id,s.data,s.created_at)]);}catch(error){if(!staleError(error))throw error;}
   }

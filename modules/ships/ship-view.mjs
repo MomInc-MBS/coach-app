@@ -75,19 +75,19 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
 
 let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null;
 let viewOwner = null;
-let realShip = null, pushedHash = false, openEpoch = 0, coachStage = null;
+let realShip = null, pushedHash = false, openEpoch = 0, coachStage = null, openHash = HASH;
 
 function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
 
 /** No verified pack: the starter ship over today's starter wonder. The upgrade line shows only when
  * signed in; the download button only when they own a ship. Reduced motion or a repeat open idles. */
-async function showStarter({ signedIn, owned, isCurrent }) {
+async function showStarter({ signedIn, owned, isCurrent, always = false }) {
  const background = starterWonderUrl(backgroundForDay(STARTER_WONDERS));
  bgEl.style.backgroundImage = `url("${background}")`;
  fallback.querySelector('p').textContent = UPGRADE_TEXT; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
  const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL, getBackgroundUrl: () => background };
  try {
-  if (!starterEntranceDone && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if ((always || !starterEntranceDone) && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
    if (!isCurrent()) return;
    const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
@@ -105,7 +105,7 @@ async function waitForCard(timeoutMs = 8000) {
  return document.querySelector('.myr5-companion-card');
 }
 
-function onPopState() { if (dialog?.open && location.hash !== HASH) dialog.close(); }
+function onPopState() { if (dialog?.open && location.hash !== openHash) dialog.close(); }
 
 function onClose() {
  openEpoch++; clearShipVisual();
@@ -113,7 +113,7 @@ function onClose() {
  if (coachStage) window.myr5Creature?.stage?.(coachStage); coachStage = null;
  const card = coachMount.querySelector('.myr5-companion-card');
  if (card) document.getElementById('coachMount')?.append(card); // pod.mjs's own observer re-homes it (rest vs pod)
- if (location.hash === HASH) { if (pushedHash) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
+ if (location.hash === openHash) { if (pushedHash) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
  pushedHash = false;
 }
 
@@ -142,16 +142,18 @@ function build() {
  * is app.mjs's existing coach-capsule loader (same function "Show my coach" uses); `getBridge` and
  * `ownedShipIds` come from app.mjs's statically-bundled modules/ships/ship-view-bridge.mjs (this
  * file is served unbundled and cannot import that chain itself — see the header comment). Both are
- * overridable for tests. */
-export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [], mountArrival = () => null } = {}) {
+ * overridable for tests. W2-2A: `entrance: 'always'` plays the ship's fly-in and beam-down on every open (the
+ * portal's oval, Ian 2026-09-23) instead of once per session / once per ship; `hash` is the route this open
+ * owns in history (the oval's is '#select'; Menu -> Ship keeps '#ship' and the once-per-session entrance). */
+export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [], mountArrival = () => null, entrance = 'first', hash = HASH } = {}) {
  if (!dialog) build();
  const epoch = ++openEpoch;
  const owner = viewOwner = globalThis.myr5AuthenticatedAccount?.user?.id;
  const isCurrent = () => epoch === openEpoch && dialog.open && globalThis.myr5AuthenticatedAccount?.user?.id === owner;
  clearShipVisual(); note.textContent = 'Preparing your coach…';
  const firstOpen = !dialog.open;
- if (firstOpen) dialog.showModal();
- if (location.hash !== HASH) { pushedHash = true; history.pushState({ myr5Ship: true }, '', HASH); } else if (firstOpen) pushedHash = false;
+ if (firstOpen) { openHash = hash; dialog.showModal(); }
+ if (location.hash !== openHash) { pushedHash = true; history.pushState({ myr5Ship: true }, '', openHash); } else if (firstOpen) pushedHash = false;
  document.body.dataset.shipView = 'true';
  try { await loadCoachViewer?.(); } catch { /* surfaced below via the missing card */ }
  const card = await waitForCard();
@@ -163,7 +165,8 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
  if (!isCurrent()) { bridge?.dispose?.(); return dialog; }
- if (!bridge) { await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent }); return dialog; }
+ const always = entrance === 'always';
+ if (!bridge) { await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }); return dialog; }
  try {
   const owned = bridge.ownedShipIds();
   const arrival = await mountArrival({host:stage,assetBridge:bridge,isCurrent});
@@ -177,9 +180,16 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
   }
   const scene = initialScene(readJSON(RECIPE_KEY)), custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
   const shipId = owned.includes(custom.ship) ? custom.ship : owned.includes(scene.ship) ? scene.ship : owned[0];
+  if (always && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+   const { mountShipScene } = await import('./ship-intro.mjs');
+   if (!isCurrent()) { bridge.dispose?.(); return dialog; }
+   const intro = mountShipScene({ host: stage, assetBridge: bridge, ship: shipId });
+   realShip = { dispose() { intro.dispose(); bridge.dispose?.(); } };
+   await intro.ready; if (isCurrent()) fallback.hidden = true; return dialog;
+  }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
   if (!isCurrent()) { mounted.dispose(); return dialog; }
   realShip = mounted; fallback.hidden = true;
- } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent }); }
+ } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }); }
  return dialog;
 }

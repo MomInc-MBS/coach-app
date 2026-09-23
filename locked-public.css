@@ -53,8 +53,8 @@ html[data-public-state="locked"] .coach-mission .mission-strip{color:#315c72;bac
 html[data-public-state="locked"] .coach-mission .mission-tag,html[data-public-state="locked"] .coach-mission .mission-readouts,html[data-public-state="locked"] .coach-mission .mission-streak,html[data-public-state="locked"] .coach-mission .mission-head p{color:#4e5e61}
 html[data-public-state="locked"] .meditation-entry{display:none}
 html[data-public-state="locked"] .crew-footer{display:none}
-html[data-public-state="locked"] .coach-dock{background:#f7f1e5;border-top:2px solid #c6b9a4;backdrop-filter:none}
-html[data-public-state="locked"] .coach-dock button{color:#24313a;background:#e4eee8;border:1px solid #91aa9d;border-radius:6px}
+html[data-public-state="locked"] #coachDock.coach-dock{background:#f7f1e5;border-top:2px solid #c6b9a4;backdrop-filter:none}
+html[data-public-state="locked"] #coachDock.coach-dock button:not(.dock-portal){color:#24313a;background:#e4eee8;border:1px solid #91aa9d;border-radius:6px}
 html[data-public-state="locked"] .launch-panel{color:#24313a;background:#f7f1e5;border:2px solid #b7a994;border-radius:10px;box-shadow:0 5px 0 #b3a995}
 html[data-public-state="locked"] .launch-panel h2,html[data-public-state="locked"] .launch-panel h3{color:#315c72}
 html[data-public-state="locked"] .launch-panel button,html[data-public-state="locked"] .launch-panel input,html[data-public-state="locked"] .launch-panel select{color:#24313a;background:#e4eee8;border-color:#91aa9d;border-radius:6px}

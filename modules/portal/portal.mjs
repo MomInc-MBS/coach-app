@@ -57,25 +57,31 @@ const ICONS={
 // `hidden:true` keeps an id routable (gesture lookup, MENUS[id]) without adding a duplicate row to the
 // Menu sheet grid — used for the second diamond (same destination as the first) and line-up (opens the
 // sheet itself, so it can't also be a row in it).
-const LEADERBOARD={label:'Leaderboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');}};
+// W2-2A: each destination opens through the app's router (modules/routes.mjs, window.myr5Routes): it sets the
+// route's #hash, lights the bottom bar and hands back the dialog for the dive and fade-back. A page without the
+// router (a bare portal page) keeps the direct opener.
+const via=(route,direct)=>()=>window.myr5Routes?window.myr5Routes.go(route):direct();
+const LEADERBOARD={label:'Leaderboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open:via('scoreboard',()=>{document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');})};
 // Exported so tests can check the gesture -> destination table without a DOM.
 export const MENUS={
- rect:{label:'Workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open(){document.getElementById('start')?.click();}},
- oval:{label:'Choose Workout',color:'#1f51ff',icon:ICONS.dumbbell,kind:'home',open(){document.getElementById('controls')?.scrollIntoView({behavior:prefersReducedMotion()?'auto':'smooth',block:'center'});}},
- up:{label:'Food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');}},
- down:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:()=>window.myr5Menus?.achievements?.()},
+ // Ian 2026-09-23: the square opens the workout start page (the pod scrolled to its viewing port, control board and
+ // BEGIN; no auto-start); the oval is the coach's arrival in the ship view, its entrance played every time.
+ rect:{label:'Workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open:via('workout',()=>scrollTo({top:0,behavior:prefersReducedMotion()?'auto':'smooth'}))},
+ oval:{label:'Choose Workout',color:'#1f51ff',icon:ICONS.dumbbell,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
+ up:{label:'Food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
+ down:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
  hdiamond:{...LEADERBOARD,hidden:true},
- x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:()=>location.assign('/creature/index.html')},
- 'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
- 'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open(){document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');}},
- 'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open(){document.getElementById('openSettings')?.click();return document.getElementById('settings');}},
+ x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:via('customize',()=>location.assign('/creature/index.html'))},
+ 'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
+ 'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
+ 'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},
  // Line-up opens the Menu sheet; it is hidden from the sheet grid itself.
  'line-up':{label:'Menu',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
  // Full-screen ship view (Ian 2026-09-22: the coach capsule view, full screen, with the ship and pixel planet). Menu sheet only.
- ship:{label:'Ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:()=>window.myr5Menus?.ship?.()},
+ ship:{label:'Ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:via('ship',()=>window.myr5Menus?.ship?.())},
  // War Room/Arcade has no gesture: Menu sheet only, same lock as before.
- warroom:{label:'Arcade / War Room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:()=>location.assign('/war-room/index.html')},
+ warroom:{label:'Arcade / War Room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
 };
 
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
@@ -186,9 +192,15 @@ function buildDom(){
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
  objectsLayer=portalHome.querySelector('#portalObjects');
  statusEl=portalHome.querySelector('#portalStatus');
- menuBtn=portalHome.querySelector('#portalMenuButton');
+ // W2-2A: the app's bottom bar (routes.mjs) is up on the quilt; its centre Portal button replaces the floating Menu
+ // button, and the focus trap cycles the whole bar plus Pod.
+ const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
+ menuBtn=barPortal||portalHome.querySelector('#portalMenuButton');
+ if(bar)portalHome.querySelector('#portalMenuButton').remove();
  portalHome.querySelector('#portalExitButton').onclick=()=>setVisible(false);
- portalHome.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[menuBtn,portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}});
+ const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
+ portalHome.addEventListener('keydown',trap);
+ bar?.addEventListener('keydown',e=>{if(boardShown&&!bar.closest('dialog'))trap(e);},{signal:lifecycle.signal});
  boardBtn=document.getElementById('openBoard');
  // The fallback menu sheet lives outside portalHome too: a dialog nested in a hidden ancestor
  // would be hidden along with it while open (e.g. mid-fade during the "all" portal reveal).
@@ -218,7 +230,7 @@ function backgroundBlocked(block){
  // toast (app-updates.mjs) is a non-dialog element sitting over the portal's own controls; it's exempt too, or its
  // "Got it" tap falls through to whatever is underneath (portal.css raises it above the Menu button while up).
  const liveDialog=el=>el.tagName==='DIALOG'&&(el.open||getComputedStyle(el).display==='none');
- const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner');
+ const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner')||el.classList.contains('coach-dock');
  if(block){for(const el of document.body.children)if(!exempt(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
@@ -904,7 +916,7 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
- menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();});
+ menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  if(!boardFailed){wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL();});} // compile the wormhole while idle, not at the first cut
