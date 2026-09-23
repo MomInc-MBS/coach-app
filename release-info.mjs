@@ -1,12 +1,13 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-09-22-fullscreen-camera-'+BUILD_ID,title:'Full-screen camera workouts',date:'2026-09-22',url:'https://myr5.mominc.online/repair-coach',notes:[
- 'During camera workouts, the camera fills the screen with only the counter over it. Tap the counter to stop.',
- 'The coach display now opens its viewer instead of remaining on Loading.',
- 'The missing customizer model is restored.',
- 'The remaining visual redesign and portal changes are still in progress.',
- 'Downloaded updates save your progress and restart Coach automatically when you are idle.',
- 'Active workouts and unsaved forms postpone updates. You can also choose Update now when ready.',
- 'The smaller offline app keeps completed local workouts available after reopening without a connection.',
- 'Optional models download separately from the core app.',
- 'Settings includes About & licenses. Saved progress stays on this device during an update.'
+export const RELEASE=Object.freeze({id:'2026-09-22-ar-coach-'+BUILD_ID,title:'Coach joins your camera workouts',date:'2026-09-22',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'Redesigned coach customizer: pick a body first, then a texture dropdown, colour swatches, and sparkle or metallic finish. Finger, toe and fluff options are only on the original coach.',
+ 'Tidier coach eyes and facing across many creatures.',
+ 'A daily circuit meter with coach voice lines.',
+ 'Your coach walks around with you during camera workouts.',
+ 'Two new meditation breathing modes.',
+ 'A new achievements board.',
+ 'Streak forgiveness, with letters from Armie.',
+ 'Beatable bosses with rewards and colour palettes.',
+ 'A "download the full MyR5" offer so the app works fully offline.',
+ 'Still coming: portals, the Coach Lab app, battle-pass art (textures, weapons, pets), rest-battle scenes, landmark trace challenges, letter notifications, voice styles and QR sharing are not in this release yet.'
 ]});
