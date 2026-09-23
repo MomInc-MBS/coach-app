@@ -18,7 +18,7 @@ async function withPortal(run){
 }
 async function open(page){return await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
 
-test('Quilt traps focus, exposes a working Menu, honors reduced motion and returns from Nutrition',async()=>withPortal(async(browser,url)=>{
+test('Quilt traps focus, exposes a working Menu, honors reduced motion and returns from Food',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url);await page.locator('#background').focus();
  await page.evaluate(async()=>{const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;THREE.Scene.prototype.add=function(...nodes){window.quiltScene=this;return add.apply(this,nodes);};});
  assert(await open(page),'real WebGL Quilt must load');
@@ -30,7 +30,7 @@ test('Quilt traps focus, exposes a working Menu, honors reduced motion and retur
  assert.deepEqual(calm.after,calm.before);assert.equal(calm.svg,false);
  await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="rect"]').click();
  await page.waitForFunction(()=>document.querySelector('#portalHome').hidden);assert.equal(await page.locator('#background').evaluate(n=>n.inert),false);
- await open(page);await page.evaluate(()=>portal.open('down'));
+ await open(page);await page.evaluate(()=>portal.open('up'));
  await page.waitForFunction(()=>document.querySelector('#portalHome').hidden&&document.querySelector('#mealsPanel').open);
  await page.locator('#mealsPanel button').click();await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden);
  await page.keyboard.press('Escape');assert.equal(await page.locator('#portalHome').evaluate(n=>n.hidden),true);
@@ -42,7 +42,7 @@ test('Back to Coach cancels a pending destination and flash duration/completion 
  const page=await browser.newPage();await page.goto(url);
  await page.evaluate(async()=>{const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;THREE.Scene.prototype.add=function(...nodes){window.quiltScene=this;return add.apply(this,nodes);};});
  assert(await open(page));
- await page.evaluate(()=>{window.sequenceDone=portal.open('down');});
+ await page.evaluate(()=>{window.sequenceDone=portal.open('up');});
  await page.waitForFunction(()=>document.querySelector('.portal-glass')&&!window.quiltScene.children.some(n=>n.isGroup));
  await page.locator('#portalExitButton').click();await page.evaluate(()=>window.sequenceDone);
  assert.equal(await page.evaluate(()=>window.nutritionOpens||0),0);assert.equal(await page.locator('#portalHome').evaluate(n=>n.hidden),true);
@@ -61,7 +61,7 @@ test('renderer and texture failures leave a usable menu without orphaned canvase
   else await page.route('**/pod/worlds/quilt.webp',route=>route.fulfill({status:503,body:'offline'}));
   await page.goto(url);assert.equal(await open(page),false);
   assert.equal(await page.locator('#portalBoardHost canvas').count(),0);
-  await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="down"]').click();
+  await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
   await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
   await page.close();
  }
