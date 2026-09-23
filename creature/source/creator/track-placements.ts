@@ -1,5 +1,5 @@
 // Rank 7b track-placement registry: the approved 50-model / 51-placement creature roster,
-// keyed by stable model id (roster.ts `id`). DATA ONLY -- no renderer/UI code reads this yet.
+// keyed by stable model id (roster.ts `id`). The customizer's Creature list groups and locks by it (#102).
 //
 // Source of truth: plan/PLAN.md §2b rank 7b; plan/DECISIONS.md D6 (incl. its 22 Sept revision),
 // D21, D25; plan/reports/roster-sheet.md; and mom-program-control/outputs/visual-boards/
@@ -18,10 +18,10 @@
 // Monolith · Tanka 4, Four-legged 8) are not in this roster at all -- see design.ts
 // REJECTED_BODY_IDS, reused below as the "no rejected id present" guard.
 //
-// unlockRule/renderRecipe are placeholders: D26 leaves exact unlock thresholds unauthorized and
-// the production pixel-art recipe is a later rank (handoff §9 step 2). Nothing here invents a
-// number or a recipe.
+// unlockRule: 'section-complete' (Ian, 23 Sept, #102) -- see sectionComplete() at the end. renderRecipe
+// is still a placeholder: the production pixel-art recipe is a later rank (handoff §9 step 2).
 import {REJECTED_BODY_IDS} from './design';
+import {ROWS as BOARD_ROWS,TRACKS,LEVELS_PER_BOSS} from '../../../battle-pass-rewards.mjs';
 export {REJECTED_BODY_IDS};
 
 export const TRACK_IDS = ['chest', 'quads', 'glutes', 'arms', 'yoga', 'martial-arts', 'cardio', 'meditation'] as const;
@@ -36,7 +36,7 @@ export type TrackPlacement = {
  bossOf?: TrackId; // starting-boss assignment per 06-workout-bosses-and-meditation-pets.png, if any
  sourceAsset: string; // GLB path, relative to the repo root
  license: string;
- unlockRule: 'tbd'; // placeholder -- D26 has not authorized thresholds yet
+ unlockRule: 'section-complete'; // unlocks when one of its sections is complete (sectionComplete below)
  renderRecipe: 'tbd'; // placeholder -- production sprite recipe not authorized yet
 };
 
@@ -117,6 +117,23 @@ const ROWS: readonly Row[] = [
 export const TRACK_PLACEMENTS: readonly TrackPlacement[] = ROWS.map(
  ([stableId, displayName, tracks, petEligible, mountEligible, bossOf]) => ({
   stableId, displayName, tracks, petEligible, mountEligible, bossOf,
-  sourceAsset: glb(stableId), license: LICENSE, unlockRule: 'tbd', renderRecipe: 'tbd',
+  sourceAsset: glb(stableId), license: LICENSE, unlockRule: 'section-complete', renderRecipe: 'tbd',
  }),
 );
+
+// #102: a section's bodies unlock when that section is complete. `state` is the achievements board's
+// progress map, battle-pass.mjs loadProgress() = {bossId: levels beaten}. Ian's default meaning of
+// "complete" is the one line below: every boss in the section's board row has every level beaten.
+const rowOf=(track:TrackId)=>BOARD_ROWS.find(row=>row.track&&TRACKS[row.track].catalog===track);
+export function sectionComplete(track:TrackId,state:Record<string,number>){
+ const row=rowOf(track);if(!row)return false;
+ return Array.from({length:row.bosses},(_,i)=>state[`${row.id}-${i+1}`]??0).every(levels=>levels>=LEVELS_PER_BOSS);
+}
+/** Section names as the board shows them, in dial order (TRACK_IDS). */
+export const SECTION_NAMES=Object.fromEntries(TRACK_IDS.map(t=>[t,TRACKS[rowOf(t)!.track!].name])) as Record<TrackId,string>;
+/** What to complete to unlock a body ("Chest", "Chest or Martial Arts"), or null for a starter body
+ * (Original MYR5 and unplaced roster bodies) or one with a completed section. */
+export function bodyLockSection(id:string,state:Record<string,number>):string|null{
+ const placement=TRACK_PLACEMENTS.find(p=>p.stableId===id);
+ return !placement||placement.tracks.some(t=>sectionComplete(t,state))?null:placement.tracks.map(t=>SECTION_NAMES[t]).join(' or ');
+}

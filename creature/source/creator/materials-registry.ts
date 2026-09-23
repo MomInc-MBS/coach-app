@@ -96,11 +96,23 @@ export const findPalette = (id: string) => PALETTES.find(p => p.id === id);
 
 function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent }; }
 
-/** The tint triad for a colour or palette id, or undefined if it doesn't exist or isn't unlocked yet. */
-export function colorTriad(id: string): { primary: string; secondary: string; accent: string } | undefined {
- const c = findColor(id); if (c) return isColorUnlocked(c) ? { primary: c.primary, secondary: c.secondary, accent: c.accent } : undefined;
- const p = findPalette(id); if (p) return isPaletteUnlocked(p) ? triadFromPalette(p) : undefined;
+/** The tint triad for a colour or palette id, or undefined if it doesn't exist or isn't unlocked yet
+ * (`preview` paints a locked one too — the editor's look-before-you-unlock layer, never saved). */
+export function colorTriad(id: string, preview = false): { primary: string; secondary: string; accent: string } | undefined {
+ const c = findColor(id); if (c) return preview || isColorUnlocked(c) ? { primary: c.primary, secondary: c.secondary, accent: c.accent } : undefined;
+ const p = findPalette(id); if (p) return preview || isPaletteUnlocked(p) ? triadFromPalette(p) : undefined;
  return undefined;
+}
+
+// Section names as the achievements board shows them (battle-pass-rewards.mjs TRACKS).
+const TRACK_NAMES: Record<Track, string> = { chest: 'Chest', quads: 'Quads', glutes: 'Glutes', arms: 'Arms & Shoulders', yoga: 'Yoga', 'martial-arts': 'Martial Arts', cardio: 'Cardio', meditation: 'Meditation' };
+/** Where a locked texture/colour/palette unlocks ("Chest L1", "Aura day 5", "Battle pass"), or
+ * null when the player owns it or it isn't a registry item (installed creature skins guard themselves). */
+export function lockSource(id: string): string | null {
+ const t = findTexture(id); if (t) return isTextureUnlocked(t) ? null : t.track ? `${TRACK_NAMES[t.track]} L${t.passLevel}` : 'Battle pass';
+ const c = findColor(id); if (c) return isColorUnlocked(c) ? null : 'Battle pass';
+ const p = findPalette(id); if (p) return isPaletteUnlocked(p) ? null : p.unlockAtDay ? `Aura day ${p.unlockAtDay}` : 'Battle pass';
+ return null;
 }
 
 /**
@@ -109,13 +121,14 @@ export function colorTriad(id: string): { primary: string; secondary: string; ac
  * No `choice` (old recipes, or a region nobody has re-customized) -> renders byte-for-byte
  * like today's STYLES[legacyIndex]. A `choice` resolves texture+colour independently and
  * always falls back to Flat/its default colour rather than ever throwing or loading nothing.
+ * `preview` lets a locked texture/colour paint (editor preview only; save-look.ts guards saves).
  */
-export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice) {
+export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false) {
  if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0 };
  const texture = findTexture(choice.textureId);
- const safeTexture = texture && isTextureUnlocked(texture) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
+ const safeTexture = texture && (preview || isTextureUnlocked(texture)) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
  const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : FLAT_BASE;
- const triad = colorTriad(choice.colorId) ?? colorTriad(safeTexture.defaultColorId) ?? base;
+ const triad = colorTriad(choice.colorId, preview) ?? colorTriad(safeTexture.defaultColorId) ?? base;
  const metalness = Number.isFinite(choice.metallic) ? Math.max(0, Math.min(1, choice.metallic)) : base.metalness;
  const sparkle = Number.isFinite(choice.sparkle) ? Math.max(0, Math.min(1, choice.sparkle)) : 0;
  return { ...base, ...triad, metalness, sparkle };

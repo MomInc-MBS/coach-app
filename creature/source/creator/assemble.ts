@@ -23,8 +23,10 @@ const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
 function boxOf(object:THREE.Object3D|undefined){const box=new THREE.Box3();if(object){object.updateWorldMatrix(true,true);box.setFromObject(object);}return box;}
 
 export type InstalledSkinResolver=(id:string)=>Promise<InstalledSkin|null>;
-export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver){
+// `preview` paints locked textures/colours (the editor's unsaved look-before-you-unlock layer).
+export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver,preview=false){
  const loader=new GLTFLoader();
+ const look=(region:Region)=>resolveRegionMaterial(d.styles[region],d.materials?.[region],preview);
  const load=async(name:string)=>loader.parseAsync(await bytes(assetBase+'models/'+name+'.glb'),assetBase+'models/');
  // Each region can come from a different creature. A GLTF scene can only give each node away once,
  // so every distinct source id is parsed once and reused across the regions that name it.
@@ -102,7 +104,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  const hologram=false,parts=false;
    if(e.eyeCopies){e.regions.eye.remove(e.eyeCopies);e.eyeCopies=null;}e.eyeTemplate.visible=true;
   for(const [region,key] of [['head','head_'+d.eyeLayout],['arms','arms_'+d.fingers],['feet','feet_'+d.toes]] as const){if(from[region]!=='myr5')continue;const variant=e.variants.get(key);if(variant&&e.regions[region].children[0]!==variant){e.regions[region].clear();e.regions[region].add(variant);}if(region==='head')variant?.traverse(o=>{o.userData.eyeSockets=EYE_LAYOUTS[d.eyeLayout].eyes;});}
-  for(const region of REGIONS){const style=resolveRegionMaterial(d.styles[region],d.materials?.[region]),group=e.regions[region];
+  for(const region of REGIONS){const style=look(region),group=e.regions[region];
    // The eye region is placed by arrangeEyes below, so its wrapper stays at the origin.
    group.position.set(0,0,0);group.scale.setScalar(1);if(region!=='eye'){group.position.copy(fits[region].t);group.scale.setScalar(fits[region].s);}
    if(parts){const offsets:Record<Region,number[]>={head:[0,.65,0],eye:[0,.18,1.0],collar:[0,-.1,0],body:[0,-.45,0],arms:[.45,0,0],feet:[0,-.65,0]};group.position.add(new THREE.Vector3().fromArray(offsets[region]));}
@@ -118,12 +120,12 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
    });
   }
-  const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':resolveRegionMaterial(d.styles.head,d.materials?.head).primary);
+  const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':look('head').primary);
   if(d.eyeLayout!=='single'||eyeMoved){e.eyeCopies=arrangeEyes(e.eyeTemplate,d.eyeLayout,eyeOffset,eyeScale,surfaceZ);e.regions.eye.add(e.eyeCopies);e.eyeTemplate.visible=false;}
   const key=JSON.stringify([d.styles,d.detail,d.eyeLayout,d.fingers,d.toes,d.body,d.headFrom,d.armsFrom,d.feetFrom,hologram,parts]);e.details.userData.key=key;
   e.details.children.slice().forEach(o=>{o.traverse(c=>{if(c instanceof THREE.Mesh){c.geometry.dispose();(c.material as THREE.Material).dispose();}});e.details.remove(o);});
   for(const region of REGIONS){
-   const style=resolveRegionMaterial(d.styles[region],d.materials?.[region]),original=e.regions[region];
+   const style=look(region),original=e.regions[region];
    // Bone and robot structures are sculpted around MYR5's own proportions, so roster parts keep their mesh.
    const own=from[region]==='myr5';
    if(own&&style.id===7&&region!=='head'&&region!=='eye'){original.visible=false;e.details.add(skeletalStructure(region,d));continue;}
@@ -134,7 +136,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
    if(own&&region==='collar'&&style.id>0&&style.id<=22&&style.id!==20){original.visible=false;surface=materialCollar(style.id);e.details.add(surface);}
    const growth=growMaterial(surface,style,region,1,d.detail);growth.position.copy(surface.position);growth.scale.copy(surface.scale);e.details.add(growth);
   }
-  if(from.head==='myr5'&&resolveRegionMaterial(d.styles.head,d.materials?.head).id===7){e.regions.eye.visible=false;e.details.add(boneSockets(d));}
+  if(from.head==='myr5'&&look('head').id===7){e.regions.eye.visible=false;e.details.add(boneSockets(d));}
  // Animation pivots fitted to this creature's measured parts; the rig falls back to MYR5's own numbers.
  root.updateMatrixWorld(true);
  const measured=(r:Region)=>boxOf(e.regions[r]);
@@ -146,7 +148,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
  const disposeAssembly=()=>{const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());};
  try{
-  for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate')??colorTriad('default-slate')!;const group=e.regions[region];
+  for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate',preview)??colorTriad('default-slate')!;const group=e.regions[region];
    const tasks:Promise<boolean>[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)tasks.push(applyInstalledSkin(object,skin,triad,skinTextures));});const results=await Promise.allSettled(tasks),failed=results.find(result=>result.status==='rejected');if(failed?.status==='rejected')throw failed.reason;
   }
  }catch(error){skinTextures.forEach(texture=>texture.dispose());disposeAssembly();throw error;}

@@ -13,7 +13,10 @@ import {podCameraFrame} from './pod-camera';
 
 export class CreatureViewer {
  regionBoxes=new Map<Region,T.Box3>();focused:Region|null=null;
- focusRegion(region:Region){this.focused=region;const box=this.regionBoxes.get(region);return box?frameRegion(this.camera,this.orbit,box):false;}
+ // #9: 'body' frames the whole creature (every region) plus a little headroom for raised arms and hops;
+ // side 1 is the front view, -1 the back (kept for later part focus so Back stays Back).
+ side=1;
+ focusRegion(region:Region){this.focused=region;const box=region==='body'?this.bodyBounds.clone():this.regionBoxes.get(region);if(region==='body'&&box&&!box.isEmpty())box.max.y+=(box.max.y-box.min.y)*.08;return box?frameRegion(this.camera,this.orbit,box,1.2,this.side):false;}
  homeElapsed=0;homeMoving=false;bodyBounds=new T.Box3();
  setHomeMotion(moving:boolean){this.homeMoving=moving;}
  homeView(){
@@ -45,9 +48,9 @@ export class CreatureViewer {
   const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const dt=Math.min(.05,(now-this.last)/1000);if(now-this.last<32)return;this.last=now;if(!this.visible||document.hidden)return;this.motion?.update(dt);if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=dt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);};this.frame=requestAnimationFrame(tick);
  }
  resize(){const {width,height}=this.mount.getBoundingClientRect();if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}}}
- async setRecipe(raw:unknown){
+ async setRecipe(raw:unknown,preview=false){
   const recipe=importCreature(JSON.stringify(raw)),generation=++this.generation;
-  const assembly=await assembleCreature(recipe,this.assetBase,this.skinResolver);let rig:CreatureRig|undefined;
+  const assembly=await assembleCreature(recipe,this.assetBase,this.skinResolver,preview);let rig:CreatureRig|undefined;
   try{if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}this.regionBoxes=new Map(REGIONS.map(region=>[region,regionBounds(assembly.root,region)]));if(this.regionBoxes.get('eye')!.isEmpty())this.regionBoxes.set('eye',this.regionBoxes.get('head')!.clone());this.bodyBounds.makeEmpty();for(const box of this.regionBoxes.values())this.bodyBounds.union(box);rig=createRig(assembly.root,recipe);}catch(error){assembly.skinTextures.forEach(texture=>texture.dispose());throw error;}finally{assembly.dispose();}
   if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}
   if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);}
@@ -65,7 +68,7 @@ export class CreatureViewer {
  // Workout overlay: the whole body fills the canvas with the feet on its bottom edge (the user's knee line).
  fitBody(){const box=this.bodyBounds;if(box.isEmpty())return;const size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3()),half=T.MathUtils.degToRad(this.camera.fov/2),distance=Math.max(size.y/2/Math.tan(half),size.x/2/(Math.tan(half)*this.camera.aspect))+size.z/2;this.orbit.minDistance=.1;this.orbit.maxDistance=distance*2;this.orbit.target.copy(center);this.camera.position.set(center.x,center.y,center.z+distance);this.orbit.update();}
  setStage(stage:'pod'|'encounter'|'overlay'){this.stage=stage;this.focused=null;this.homeElapsed=0;this.floorObjects.forEach(o=>o.visible=stage==='pod');if(!this.cinematicKind)this.resetStageView();this.resize();}
- resetView(){this.focused=null;this.orbit.minDistance=6;this.camera.position.set(0,2.65,8.9);this.orbit.target.set(0,1.95,0);this.orbit.update();}
+ resetView(side=1){this.side=side;return this.focusRegion('body');}
  async exportGLB(){
   if(!this.rig||!this.motion)throw Error('Wait for your creature to load.');
   // Export a clean neutral clone and the same reusable clips used in the app.

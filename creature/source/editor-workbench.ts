@@ -4,7 +4,10 @@ import {GESTURES,type Gesture} from './motion';
 import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region,MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,resolveRegionMaterial,type TextureDef} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,lockSource,resolveRegionMaterial} from './creator/materials-registry';
+import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,type TrackId} from './creator/track-placements';
+import {saveRecipe,BODY_KEYS} from './save-look';
+import {loadProgress} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
@@ -20,6 +23,10 @@ const MOM_ONLY_FIELD_IDS=['fingersField','toesField','furField','digitsHelp'];
 let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='body',ready=false,activeRange:string|null=null;
 let settings=motionSettings(null),initialError='';
 try{recipe=loadRecipe(localStorage);settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
+let saved=recipe; // the last recipe written to storage: the owned look saveRecipe() falls back to
+// #102: bodies already saved stay usable even if their section is locked (only new picks lock).
+const grandfathered=new Set<string>(BODY_KEYS.map(key=>recipe[key]));
+const progress=loadProgress(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress);
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBase,location.href).href:new URL('../',import.meta.url).href;
 let viewer:CreatureViewer|undefined;
@@ -30,68 +37,91 @@ function coachPreview(){const coach=getCoach(recipe.coach);$('coachTone').textCo
 const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'default-slate',sparkle:0,metallic:0};
 function materialChoice():MaterialChoice{return recipe.materials?.[selected]??DEFAULT_MATERIAL;}
 function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){commit({...recipe,materials:{...recipe.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
+// #1/#102 Preview locked looks: a locked texture, colour or body paints the model from this layer
+// only. It never enters `recipe`, undo/redo or storage (saveRecipe() also rejects locked ids).
+let preview:Partial<Record<Region,Partial<MaterialChoice>>>={},previewBody='',lastShown='';
+const strip=document.createElement('p');strip.className='preview-strip';strip.hidden=true;document.querySelector('.preview-bay')!.append(strip); // over the LIVE PREVIEW readout, clear of the model
+const previewing=()=>Object.keys(preview).length>0||!!previewBody;
+function clearPreview(){preview={};previewBody='';}
+function shown():Design{
+ let look=recipe;
+ if(Object.keys(preview).length){const materials={...recipe.materials};for(const [region,patch] of Object.entries(preview) as [Region,Partial<MaterialChoice>][])materials[region]={...(recipe.materials?.[region]??DEFAULT_MATERIAL),...patch};look={...look,materials};}
+ return previewBody?{...look,body:previewBody,headFrom:previewBody,armsFrom:previewBody,feetFrom:previewBody}:look;
+}
+// A locked pick joins the preview; an owned pick drops the whole preview and applies to the owned look.
+function pick(patch:Partial<MaterialChoice>){const source=lockSource(patch.textureId??patch.colorId??'');if(source){preview={...preview,[selected]:{...preview[selected],...patch}};render('Preview only · unlocks at '+source);return;}clearPreview();setMaterial(patch);}
+function endPreview(){if(!previewing())return false;clearPreview();render('Back to your look');return true;}
 function syncMaterials(){
- const mc=materialChoice();
+ const mc={...materialChoice(),...preview[selected]};
  ($('textureId') as HTMLSelectElement).value=mc.textureId;
  const texture=TEXTURES.find(t=>t.id===mc.textureId);
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
  for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===mc.colorId));
  ($('sparkle') as HTMLInputElement).value=String(mc.sparkle);$('sparkleValue').textContent=mc.sparkle.toFixed(2);
  ($('metallic') as HTMLInputElement).value=String(mc.metallic);$('metallicValue').textContent=mc.metallic.toFixed(2);
- ($('materialClear') as HTMLButtonElement).disabled=!recipe.materials?.[selected];
+ ($('materialClear') as HTMLButtonElement).disabled=!recipe.materials?.[selected]&&!preview[selected];
 }
 function syncMomOnly(){
- const show=recipe.body===MOM_APPROVED_BODY_ID;
+ const show=shown().body===MOM_APPROVED_BODY_ID;
  for(const id of MOM_ONLY_FIELD_IDS){const el=document.getElementById(id);if(el)el.style.display=show?'':'none';}
 }
 function sync(){
- for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(recipe[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
+ const look=shown();
+ for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){const region=b.dataset.region as Region;b.setAttribute('aria-pressed',String(region===selected));b.querySelector('i')!.style.background=resolveRegionMaterial(recipe.styles[region],recipe.materials?.[region]).primary;}
  $('partLabel').textContent=LABELS[selected];
  syncMomOnly();
  syncMaterials();
  syncSkinChoice();
- ($('undo') as HTMLButtonElement).disabled=!undo.length;($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
+ const unlocks=[...new Set(Object.values(preview).flatMap(p=>[p?.textureId,p?.colorId]).map(id=>id&&lockSource(id)).filter(Boolean))].map(source=>'unlocks at '+source);
+ if(previewBody)unlocks.push('unlocks when you complete '+bodyLock(previewBody));
+ strip.hidden=!unlocks.length;strip.textContent='Preview · '+unlocks.join(' · ');
+ ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
-const queue=new LatestPreview<{recipe:Design;message:string}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe))throw Error('Preview was interrupted.');},(job,error)=>{
+const queue=new LatestPreview<{recipe:Design;message:string;preview:boolean}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe,job.preview))throw Error('Preview was interrupted.');},(job,error)=>{
  if(error){tell('Could not update the preview. '+(error instanceof Error?error.message:String(error)));return;}
- ready=true;($('exportGLB') as HTMLButtonElement).disabled=false;tell(job.message);
+ ready=true;($('exportGLB') as HTMLButtonElement).disabled=job.preview;tell(job.message);
 });
 function render(message:string,persist=false){
- ready=false;($('exportGLB') as HTMLButtonElement).disabled=true;sync();
- if(persist)try{persistSkinSettings();localStorage.setItem(RECIPE_KEY,JSON.stringify(recipe));window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));message='Saved on this device';}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
- tell('Updating preview…');queue.request({recipe,message});
+ ready=false;($('exportGLB') as HTMLButtonElement).disabled=true;
+ if(persist)try{persistSkinSettings();const owned=saveRecipe(localStorage,recipe,saved,grandfathered);message=owned===recipe?'Saved on this device':'Locked looks stay in preview until you unlock them';recipe=saved=owned;window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
+ sync();const look=shown();lastShown=JSON.stringify(look);
+ tell('Updating preview…');queue.request({recipe:look,message,preview:previewing()});
 }
 function commit(next:Design,rangeId:string|null=null){
- if(JSON.stringify(next)===JSON.stringify(recipe))return;
+ if(JSON.stringify(next)===JSON.stringify(recipe)){if(JSON.stringify(shown())!==lastShown)render('Back to your look');return;}
  if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;render('Coach updated',true);
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
-// Creatures grouped by design family so 70+ bodies stay scannable in a phone picker.
+// #102: creatures grouped by workout section in dial order, after a Starter group (Original MYR5 and
+// unplaced bodies, never locked). A locked section's bodies show a lock and preview when picked.
 // Rank 5: body is the only body-family select left — head/arms/legs mixing is gone from the UI
 // (see the 'body' change handler below, which still forces headFrom/armsFrom/feetFrom to match).
-{const groups=new Map<string,HTMLOptGroupElement>();for(const b of PICKER_BODIES){if(!groups.has(b.group)){const g=document.createElement('optgroup');g.label=b.group;groups.set(b.group,g);$('body').append(g);}const o=document.createElement('option');o.value=b.id;o.textContent=b.label;groups.get(b.group)!.append(o);}}
+{const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(id:string,track:TrackId)=>TRACK_PLACEMENTS.some(p=>p.stableId===id&&p.tracks.includes(track));
+ for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],PICKER_BODIES.filter(b=>inSection(b.id,t))])] as [string,typeof PICKER_BODIES][]){
+  const g=document.createElement('optgroup');g.label=label;for(const b of bodies){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;g.append(o);}$('body').append(g);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
 function focusPart(region:Region){selected=region;sync();viewer?.focusRegion(region);}
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
-// Rank 4: texture dropdown (registry-driven; battle-pass entries show locked and can't be
-// picked - there are no files behind them yet) and colour/palette swatch grid, separate axes.
-const textureLabel=(t:TextureDef)=>t.displayName+(isTextureUnlocked(t)?'':` (locked — ${t.unlockRule}${t.track?' · '+t.track+' L'+t.passLevel:''})`);
-for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=textureLabel(t);o.disabled=!isTextureUnlocked(t);$('textureId').append(o);}
-$('textureId').addEventListener('change',()=>setMaterial({textureId:($('textureId') as HTMLSelectElement).value}));
-type Swatch={id:string;title:string;background:string;unlocked:boolean};
-const colorSwatches:Swatch[]=[
- ...COLORS.map(c=>({id:c.id,title:c.displayName+(isColorUnlocked(c)?'':' (locked)'),background:c.primary,unlocked:isColorUnlocked(c)})),
- ...PALETTES.map(p=>({id:p.id,title:p.displayName+(isPaletteUnlocked(p)?'':` (locked — ${p.unlockAtDay?`aura day ${p.unlockAtDay}`:'battle pass'})`),background:`linear-gradient(90deg,${p.colors.join(',')})`,unlocked:isPaletteUnlocked(p)})),
+// Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
+// entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
+const lockedLabel=(name:string,id:string)=>{const source=lockSource(id);return source?`${name} (locked — ${source})`:name;};
+for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(lockSource(t.id)?'🔒 ':'')+lockedLabel(t.displayName,t.id);$('textureId').append(o);}
+$('textureId').addEventListener('change',()=>pick({textureId:($('textureId') as HTMLSelectElement).value}));
+const colorSwatches=[
+ ...COLORS.map(c=>({id:c.id,name:c.displayName,background:c.primary})),
+ ...PALETTES.map(p=>({id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.title;b.style.background=s.background;b.style.height='34px';b.disabled=!s.unlocked;b.onclick=()=>setMaterial({colorId:s.id});$('colorSwatches').append(b);}
-$('materialClear').onclick=()=>{const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
+for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>pick({colorId:s.id});$('colorSwatches').append(b);}
+$('materialClear').onclick=()=>{delete preview[selected];const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
 for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
 for(const id of ['body','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
+ // #102: a locked body previews like a locked texture; an owned body ends any preview.
+ if(id==='body'){const section=bodyLock(String(value));if(section){previewBody=String(value);render('Preview only · unlocks when you complete '+section);return;}clearPreview();}
  // Choosing a body always resets head, arms and legs to match it — Rank 5 removed the UI that
  // let them diverge. A recipe saved before this change (with mismatched headFrom/armsFrom/feetFrom)
  // still loads and renders mixed (assemble.ts/parseRecipe are unchanged); picking a body here just
@@ -138,22 +168,24 @@ function openMenu(tab:HTMLButtonElement){if(tab.hidden)return;activeRange=null;f
 tabs.forEach(b=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{const enabled=tabs.filter(tab=>!tab.hidden),index=enabled.indexOf(b);let next=index;if(event.key==='ArrowRight')next=(index+1)%enabled.length;else if(event.key==='ArrowLeft')next=(index+enabled.length-1)%enabled.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=enabled.length-1;else return;event.preventDefault();openMenu(enabled[next]);enabled[next].focus();};});
 // Rank 5: the grid's "apply to all parts" copied a legacy style index; with the grid gone, this
 // copies the selected part's actual texture+colour+sparkle+metallic choice to every part instead.
-$('applyAll').onclick=()=>commit({...recipe,materials:Object.fromEntries(REGIONS.map(r=>[r,materialChoice()])) as Design['materials']});
-$('undo').onclick=()=>{if(!undo.length)return;activeRange=null;redo.push(recipe);recipe=undo.pop()!;render('Undo applied',true);};
-$('redo').onclick=()=>{if(!redo.length)return;activeRange=null;undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
-$('original').onclick=()=>commit(fresh());
+$('applyAll').onclick=()=>{if(preview[selected])preview=Object.fromEntries(REGIONS.map(r=>[r,preview[selected]]));commit({...recipe,materials:Object.fromEntries(REGIONS.map(r=>[r,materialChoice()])) as Design['materials']});};
+$('undo').onclick=()=>{if(endPreview()||!undo.length)return;activeRange=null;redo.push(recipe);recipe=undo.pop()!;render('Undo applied',true);};
+$('redo').onclick=()=>{if(!redo.length)return;activeRange=null;clearPreview();undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
+$('original').onclick=()=>{clearPreview();commit(fresh());};
+// Done (or the brand link) leaves on the owned look; the preview was never saved.
+for(const a of document.querySelectorAll('.editor-header a'))a.addEventListener('click',()=>{endPreview();});
 $('importFile').addEventListener('change',async event=>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;try{if(file.size>MAX_IMPORT_BYTES)throw Error('Choose a MYR5 recipe smaller than 64 KB.');commit(importCreature(await file.text()));}catch(error){tell((error as Error).message);}finally{input.value='';}});
 $('exportRecipe').onclick=()=>download(new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}),'myr5-recipe.json');
-$('exportGLB').onclick=async()=>{if(!ready||!viewer)return;try{tell('Preparing your animated model…');download(await viewer.exportGLB(),'myr5-animated.glb');tell('Animated model downloaded');}catch(error){tell((error as Error).message);}};
+$('exportGLB').onclick=async()=>{if(!ready||!viewer||previewing())return;try{tell('Preparing your animated model…');download(await viewer.exportGLB(),'myr5-animated.glb');tell('Animated model downloaded');}catch(error){tell((error as Error).message);}};
 $('front').onclick=()=>viewer?.resetView();
-$('back').onclick=()=>{if(!viewer)return;viewer.resetView();viewer.camera.position.set(0,2.65,-8.9);viewer.orbit.update();};
+$('back').onclick=()=>viewer?.resetView(-1);
 $('pauseMotion').onclick=()=>{if(!viewer)return;viewer.setPaused(!viewer.paused);$('pauseMotion').textContent=viewer.paused?'Play motion':'Pause motion';$('pauseMotion').setAttribute('aria-pressed',String(viewer.paused));};
 function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced||systemMotion.matches});}
 ($('amount') as HTMLInputElement).value=String(settings.amount);$('amountValue').textContent=settings.amount.toFixed(2);($('ambient') as HTMLInputElement).checked=settings.ambient;($('reduced') as HTMLInputElement).checked=settings.reduced;
 function changeMotion(){settings={amount:Number(($('amount') as HTMLInputElement).value),ambient:($('ambient') as HTMLInputElement).checked,reduced:($('reduced') as HTMLInputElement).checked};$('amountValue').textContent=settings.amount.toFixed(2);applyMotion();try{localStorage.setItem(MOTION_KEY,JSON.stringify(settings));}catch{tell('Motion changed for this visit. Storage is unavailable.');}}
 $('amount').addEventListener('input',changeMotion);for(const id of ['ambient','reduced'])$(id).addEventListener('change',changeMotion);
 systemMotion.addEventListener('change',applyMotion);
-window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=importCreature(event.newValue);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
+window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=importCreature(event.newValue);for(const key of BODY_KEYS)grandfathered.add(recipe[key]);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;document.querySelectorAll<HTMLButtonElement>('[data-gesture]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gesture===current)));},250);
 window.addEventListener('pagehide',()=>{skinEpoch++;skinSource?.dispose();skinSource=null;clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
