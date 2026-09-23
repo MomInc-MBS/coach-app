@@ -49,8 +49,8 @@ export function createRig(source:T.Group,recipe:Design){
   geometry.applyMatrix4(node.matrixWorld.clone().invert());
   const mat=mesh.material as T.MeshStandardMaterial;
   const physical=mat as T.MeshPhysicalMaterial;
-  const key=node.name+JSON.stringify([mat.type,mat.color.getHex(),mat.emissive.getHex(),mat.emissiveIntensity,mat.roughness,mat.metalness,mat.opacity,mat.side,mat.map?.uuid,mat.normalMap?.uuid,mat.bumpMap?.uuid,mat.roughnessMap?.uuid,mat.emissiveMap?.uuid,mat.bumpScale,physical.transmission,physical.thickness,physical.ior,physical.clearcoat,physical.sheen]);
-  if(!buckets.has(key)){const material=mat.clone();material.vertexColors=true;material.userData={};buckets.set(key,{node,material,geometries:[]});}
+  const key=node.name+JSON.stringify([mat.type,mat.color.getHex(),mat.emissive.getHex(),mat.emissiveIntensity,mat.roughness,mat.metalness,mat.opacity,mat.side,mat.map?.uuid,mat.normalMap?.uuid,mat.bumpMap?.uuid,mat.roughnessMap?.uuid,mat.emissiveMap?.uuid,mat.bumpScale,physical.transmission,physical.thickness,physical.ior,physical.clearcoat,physical.sheen,mat.userData.installedSkinId?mat.uuid:null]);
+  if(!buckets.has(key)){const material=mat.clone();material.vertexColors=true;material.userData={};if(mat.userData.installedSkinId){material.onBeforeCompile=mat.onBeforeCompile;material.customProgramCacheKey=mat.customProgramCacheKey;material.userData.installedSkinId=mat.userData.installedSkinId;material.userData.normalConvention=mat.userData.normalConvention;}buckets.set(key,{node,material,geometries:[]});}
   buckets.get(key)!.geometries.push(geometry);
  }
  function visit(obj:T.Object3D,region:string,eyeIndex=0){

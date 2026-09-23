@@ -1,6 +1,7 @@
 import CATALOG from '../../creature/source/creator/creature-skins.json' with { type:'json' };
 import { ACCOUNT_SCOPED_LEDGER_KINDS, isGranted, grantedIds } from '../../unlock-ledger.mjs';
-import { ChunkDownloader, DEFAULT_LOCAL_RESOURCE_POLICY, indexedDbChunkStore, sha256Chunk } from './chunk-delivery.mjs';
+import { ChunkDownloader, DEFAULT_LOCAL_RESOURCE_POLICY, indexedDbChunkStore, sha256Chunk, verifyChunkManifest } from './chunk-delivery.mjs';
+import { productionMaterialTrust } from './material-config.mjs';
 import { resolvePostDownloadSection } from './post-download-sections.mjs';
 import { unpackVerifiedBundle } from './verified-bundle.mjs';
 
@@ -9,21 +10,30 @@ const mapNames=Object.freeze({basecolor:'basecolor',normal:'normal',roughness:'r
 
 /** Read-only installed-pack seam. It verifies the hosted signature and already-stored chunks;
  * it never downloads missing chunks. The caller owns disposal and must replace it on account changes. */
-export function createInstalledCreatureSkinSource({account=globalThis.myr5AuthenticatedAccount,fetchImpl=globalThis.fetch,store,policy=DEFAULT_LOCAL_RESOURCE_POLICY,trust}={}){
+export function createInstalledCreatureSkinSource({account=globalThis.myr5AuthenticatedAccount,fetchImpl=globalThis.fetch,store,policy=DEFAULT_LOCAL_RESOURCE_POLICY,trust=productionMaterialTrust()}={}){
  const owner=typeof account==='string'?account:account?.user?.id;
- if(!safeOwner(owner))return Object.freeze({owner:null,list:async()=>[],resolve:async()=>null,dispose(){}});
+ if(!safeOwner(owner)||!trust)return Object.freeze({owner:null,list:async()=>[],resolve:async()=>null,dispose(){}});
  if(!ACCOUNT_SCOPED_LEDGER_KINDS?.includes('creature-skin'))return Object.freeze({owner:null,list:async()=>[],resolve:async()=>null,dispose(){}});
- let disposed=false;const tracks=new Map(),available=new Map();
+ let disposed=false,sectionStore=store;const tracks=new Map(),available=new Map(),abort=new AbortController();
  const current=()=>!disposed&&(typeof globalThis.myr5AuthenticatedAccount==='string'?globalThis.myr5AuthenticatedAccount:globalThis.myr5AuthenticatedAccount?.user?.id)===owner;
  const owned=id=>current()&&isGranted('creature-skin',id,{account:owner});
  async function loadTrack(track){
   if(tracks.has(track))return tracks.get(track);
   const work=(async()=>{
    if(!current())throw new Error('Skin owner changed.');
-   const sectionId=`track-${track}`,resolved=await resolvePostDownloadSection(sectionId,{fetchImpl,policy,...(trust?{trust}:{})});
-   const sectionStore=store??indexedDbChunkStore();
+   sectionStore??=indexedDbChunkStore();
+   const sectionId=`track-${track}`,manifestKey=`material-manifest/${owner}/${sectionId}/1.0.0`;let resolved,networkFailed=false;
+   try{resolved=await resolvePostDownloadSection(sectionId,{fetchImpl:async(...args)=>{try{return await fetchImpl(...args);}catch(error){networkFailed=true;throw error;}},policy,trust,signal:abort.signal});
+    if(!current())throw new Error('Skin owner changed.');await sectionStore.put(manifestKey,new TextEncoder().encode(JSON.stringify(resolved.manifest)));
+   }catch(error){
+    // Offline fallback may use only this owner's previously verified signed metadata.
+    // A responding server with invalid signatures/version must never be bypassed.
+    if(!networkFailed||!current())throw error;
+    const cached=await sectionStore.get(manifestKey);if(!cached||cached.byteLength>1024*1024)throw error;
+    const manifest=JSON.parse(new TextDecoder().decode(cached));if(manifest.packId!==sectionId||manifest.version!=='1.0.0')throw error;
+    await verifyChunkManifest(manifest,trust,policy);resolved={manifest,trust};
+   }
    const downloader=new ChunkDownloader({store:sectionStore,fetchImpl,policy,expectedVersion:resolved.manifest.version,manifestPublicKey:resolved.trust,ownership:async info=>current()&&info.packId===sectionId?owner:false});
-   await downloader.verifyStored(resolved.manifest);
    const path=`assets/${track}.m5bundle`,asset=await downloader.readVerifiedAsset(resolved.manifest,path);
    const entries=await unpackVerifiedBundle(asset.bytes);
    if(!current())throw new Error('Skin owner changed.');
@@ -39,7 +49,7 @@ export function createInstalledCreatureSkinSource({account=globalThis.myr5Authen
   const found=[];
   for(const [track,skins] of groups){
    let bundle;try{bundle=await loadTrack(track)}catch{continue;}
-   for(const skin of skins){if(!owned(skin.id))continue;const maps={};let valid=true;for(const name of Object.keys(mapNames)){const expected=skin.maps[name],bytes=bundle.get(`${skin.id}/${name}`);if(!bytes)continue;if(!expected||bytes.byteLength!==expected.bytes||await sha256Chunk(bytes)!==expected.sha256){valid=false;break;}maps[name]=bytes;}
+   for(const skin of skins){if(!owned(skin.id))continue;const maps={};let valid=true;for(const [name,expected] of Object.entries(skin.maps)){const bytes=bundle.get(`${skin.id}/${name}`);if(!mapNames[name]||!bytes||bytes.byteLength!==expected.bytes||await sha256Chunk(bytes)!==expected.sha256){valid=false;break;}maps[name]=bytes;}
     if(valid&&Object.keys(maps).length){const item=Object.freeze({id:skin.id,displayName:skin.displayName,track,collection:skin.collection,maps:Object.freeze(maps)});available.set(skin.id,item);found.push(item);}
    }
   }
@@ -52,7 +62,7 @@ export function createInstalledCreatureSkinSource({account=globalThis.myr5Authen
   if(!owned(id))return null;
   return available.get(id)??null;
  }
- return Object.freeze({owner,list,resolve,dispose(){disposed=true;available.clear();tracks.clear();}});
+ return Object.freeze({owner,list,resolve,dispose(){disposed=true;abort.abort();available.clear();tracks.clear();}});
 }
 
 export const CREATURE_SKIN_MAP_SEMANTICS=Object.freeze({
