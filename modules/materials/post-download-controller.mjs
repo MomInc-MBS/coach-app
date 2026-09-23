@@ -16,6 +16,10 @@ export async function downloadPostDownloadSection({id,account=globalThis.myr5Aut
  const resolved=await resolvePostDownloadSection(id,{fetchImpl,policy,trust,signal});
  const downloader=new ChunkDownloader({store,fetchImpl,policy,expectedVersion:resolved.manifest.version,manifestPublicKey:resolved.trust,ownership:async info=>info.packId===id&&allowed()?owner:false});
  const result=await downloader.downloadWithProgress(resolved.manifest,{signal,onProgress});await downloader.verifyStored(resolved.manifest);
+ if(signal?.aborted||!allowed())throw new Error('Section download cancelled or account changed.');
+ const manifestKey=`material-manifest/${owner}/${id}/${resolved.manifest.version}`;
+ await store.put(manifestKey,resolved.manifestBytes);
+ if(signal?.aborted||!allowed()){await store.removePrefix(manifestKey);throw new Error('Section download cancelled or account changed.');}
  return Object.freeze({section:resolved.section,manifest:resolved.manifest,downloader,result,isOwned:()=>allowed()});
 }
 

@@ -20,8 +20,8 @@ export function fullPostDownloadSectionIds(){ return Object.freeze(POST_DOWNLOAD
 const base64Signature = value => typeof value === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(value) && value.length >= 80;
 async function boundedManifest(response){
   const limit=1024*1024,reader=response.body?.getReader();if(!reader)throw new Error('Streaming manifest response is required.');
-  const decoder=new TextDecoder();let total=0,text='';
-  try{for(;;){const part=await reader.read();if(part.done)break;total+=part.value.byteLength;if(total>limit)throw new Error('Section manifest exceeds local size policy.');text+=decoder.decode(part.value,{stream:true});}return JSON.parse(text+decoder.decode());}
+  let total=0;const parts=[];
+  try{for(;;){const part=await reader.read();if(part.done)break;total+=part.value.byteLength;if(total>limit)throw new Error('Section manifest exceeds local size policy.');parts.push(part.value);}const bytes=new Uint8Array(total);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.byteLength;}return {manifest:JSON.parse(new TextDecoder().decode(bytes)),bytes};}
   finally{await reader.cancel().catch(()=>{});}
 }
 
@@ -31,10 +31,10 @@ export async function resolvePostDownloadSection(id, { fetchImpl = globalThis.fe
   if (!trust) throw new Error('This section is unavailable until a production signing key is configured.');
   const response = await fetchImpl(section.path, { credentials:'same-origin', redirect:'error', cache:'no-store', signal });
   if (!response.ok || response.redirected) throw new Error('The signed section manifest could not be loaded.');
-  const manifest = await boundedManifest(response);
+  const {manifest,bytes:manifestBytes} = await boundedManifest(response);
   if (manifest.packId !== section.id || manifest.version !== section.version || !base64Signature(manifest.signature)) throw new Error('The section has no valid published signature.');
   await verifyChunkManifest(manifest, trust, policy);
-  return Object.freeze({ section, manifest, trust, policy });
+  return Object.freeze({ section, manifest, manifestBytes, trust, policy });
 }
 
 export function postDownloadSectionStatus(id, { trust = productionMaterialTrust(), manifest = null } = {}) {
