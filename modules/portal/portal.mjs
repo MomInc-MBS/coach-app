@@ -130,7 +130,7 @@ function growHole(el,pts,box,current=()=>true,ms=PORTAL.revealMs){
  });
 }
 
-let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle;
+let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome;
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
@@ -171,19 +171,42 @@ async function loadBoard(id){
  return board;
 }
 
-// #111 metal frame bolts (portal.css .portal-frame i): the four corners, then two down each long side.
+// #111 metal frame (portal.css .portal-frame): the energy channel, bolts at the four corners and two down each long side,
+// the nameplate. One copy sits on the board; #portalChrome holds another that stays around an open destination.
 const FRAME_BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
+const frameHtml=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${FRAME_BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div>`;
+// Energy around the frame (Ian 23 Sept): the neons flow clockwise along a channel in the rail, one clipped channel per
+// side, each a neon stripe (ENERGY.px per colour cycle) sliding by transform: compositor-only, no repaint per frame.
+// Gentle at rest; the cut and glass surge it with the shape's colour leading, the dive (both ways) faster still.
+// Reduced motion: static. Both frame copies share timing and rate, so handing over to the chrome is seamless; the
+// loops pause while neither copy is on screen.
+const ENERGY={px:360,loopMs:9000,surge:4,dive:10};
+const ENERGY_MOVES=[['X',1],['Y',1],['X',-1],['Y',-1]]; // top →, right ↓, bottom ←, left ↑
+const energyAnims=[];
+function energize(seq,rate=1,hot=false){
+ const seg=seq&&ENERGY.px/seq.length,stops=seq?.map((c,i)=>`${c} ${i*seg}px ${(i+1)*seg}px`).join(',');
+ for(const el of document.querySelectorAll('.portal-energy')){if(seq)el.style.setProperty('--energy',stops);el.classList.toggle('hot',hot);}
+ energyAnims.forEach(a=>a.updatePlaybackRate(rate));
+}
+function syncEnergy(){const on=boardShown||!!framed;energyAnims.forEach(a=>on?a.play():a.pause());}
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
  portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
  portalHome.innerHTML=`
   <div id="portalShadows" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div id="portalBoardHost"><div class="portal-frame" aria-hidden="true"><s></s><s></s>${FRAME_BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div></div>
+  <div id="portalBoardHost">${frameHtml()}</div>
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
   <button id="portalMenuButton" type="button">Menu</button><button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
+ chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
+ energize(NEONS);
+ for(const el of document.querySelectorAll('.portal-energy')){
+  el.style.setProperty('--energy-px',ENERGY.px+'px');
+  if(!prefersReducedMotion())[...el.children].forEach((channel,i)=>{const [axis,dir]=ENERGY_MOVES[i],from=`translate${axis}(${-ENERGY.px*(dir>0)}px)`,to=`translate${axis}(${-ENERGY.px*(dir<0)}px)`;energyAnims.push(channel.firstElementChild.animate([{transform:from},{transform:to}],{duration:ENERGY.loopMs,iterations:Infinity}));});
+ }
+ syncEnergy();
  boardHost=portalHome.querySelector('#portalBoardHost');
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
  objectsLayer=portalHome.querySelector('#portalObjects');
@@ -238,23 +261,84 @@ function setVisible(v){
  if(boardBtn)boardBtn.hidden=v;
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
- boardShown=v;
+ boardShown=v;frameOff();syncEnergy();
  scheduleIdle();
 }
 function fadeOutBoard(){
  const run=++visibilityRun;
  backgroundBlocked(false);
  motion(portalHome,'opacity .3s ease');portalHome.style.opacity='0';
- return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;scheduleIdle();}r();},prefersReducedMotion()?0:300));
+ return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();scheduleIdle();}r();},prefersReducedMotion()?0:300));
 }
 function fadeInBoard(){
  visibilityRun++;
  endPhase();board?.heal();
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
- board?.resume();boardShown=true;backgroundBlocked(true);menuBtn.focus();scheduleIdle();
+ board?.resume();boardShown=true;frameOff();syncEnergy();backgroundBlocked(true);menuBtn.focus();scheduleIdle();
  const run=visibilityRun;
  settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
+}
+// The border stays when a destination opens (Ian 23 Sept): #portalChrome shows a copy of the frame at the board's rest box
+// in the top layer, with a matte outside it, and the destination dialog is fitted into its window (.portal-framed).
+// ponytail: the box is measured once per destination, so a rotation while one is open keeps the old box until it closes.
+let framed=null,ghostEl=null;
+function restFace(){const hidden=portalHome.hidden;portalHome.hidden=false;const face=board?.faceRect(),pattern=board?.patternRect();portalHome.hidden=hidden;return {face,pattern};}
+const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el.style.setProperty('--face-'+k,face[k]+'px'):el.style.removeProperty('--face-'+k);};
+function frameOn(face){
+ frameOff();
+ if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
+ framed={face};setFace(chrome,face);chrome.showPopover();syncEnergy();
+ return true;
+}
+function frameDialog(dialog){
+ if(!framed||!(dialog instanceof HTMLDialogElement)||framed.dialog===dialog)return;
+ unframe(framed.dialog);framed.dialog=dialog;dialog.classList.add('portal-framed');setFace(dialog,framed.face);
+ chrome.hidePopover();chrome.showPopover(); // back above the dialog, which opened on top of it
+}
+// A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
+// its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
+function watchDialog(){
+ if(!framed)return null;
+ const watch=new MutationObserver(records=>{for(const {target} of records)if(target instanceof HTMLDialogElement&&target.open)frameDialog(target);});
+ watch.observe(document.body,{subtree:true,attributeFilter:['open']});
+ return ()=>watch.disconnect();
+}
+function unframe(dialog){if(!dialog)return;dialog.classList.remove('portal-framed');setFace(dialog,null);}
+function frameOff(){
+ if(!framed)return;
+ unframe(framed.dialog);ghostEl?.remove();ghostEl=null;framed=null;chrome.hidePopover();syncEnergy();
+}
+// The closed destination's empty shell (a shallow copy keeps its own look), shrinking into the wormhole core.
+function shrinkShell(dialog,[cx,cy],ms){
+ if(!framed||dialog!==framed.dialog)return;
+ const shell=dialog.cloneNode(false),f=framed.face;shell.removeAttribute('open');shell.inert=true;shell.classList.add('portal-ghost');
+ shell.style.transformOrigin=`${cx-f.left}px ${cy-f.top}px`;document.body.append(shell);ghostEl=shell;
+ shell.animate([{transform:'none',opacity:1},{transform:'scale(.05)',opacity:0}],{duration:ms,easing:'cubic-bezier(.7,0,.8,1)',fill:'forwards'}).finished.then(()=>shell.remove(),()=>{});
+}
+// Closing a destination flies back OUT of the wormhole (Ian 23 Sept): the destination shrinks into the tunnel core while
+// the portal scales back down from the dive and the tunnel slows, then the cut heals and the chrome hands back to the
+// board's own frame. Same revealMs as the dive in; reduced motion is the plain quick fade.
+async function diveBack({dialog,pts,color},current){
+ if(prefersReducedMotion()||!board||!pts){fadeInBoard();return;}
+ const run=++visibilityRun;
+ shrinkShell(dialog,centroidOf(pts),PORTAL.revealMs*.55);unframe(dialog);
+ busy=true;
+ try{
+  portalHome.hidden=false;motion(portalHome,'none');portalHome.style.opacity='';portalHome.style.clipPath='';
+  if(boardBtn)boardBtn.hidden=true;
+  board.resume();boardShown=true;syncEnergy();backgroundBlocked(true);
+  showGlass(pts,color);
+  for(const el of [phase.glass,phase.bezel])el?.style.setProperty('animation','none','important'); // already there
+  phase.t0-=PORTAL.cutMs+PORTAL.loadMinMs; // the tunnel is already at full speed
+  cutBoard(pts,color,0);
+  await dive(pts,true);
+  if(run!==visibilityRun||!current())return;
+  board.heal();
+  await phase?.bezel?.animate([{opacity:1},{opacity:0}],{duration:PORTAL.healMs}).finished.catch(()=>{});
+  if(run!==visibilityRun||!current())return;
+  endPhase();frameOff();menuBtn.focus();scheduleIdle();
+ }finally{if(run===visibilityRun)busy=false;}
 }
 function status(text){statusEl.textContent=text;}
 
@@ -689,7 +773,7 @@ function startTunnel(ph,poly,color,all){
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   // Graceful degrade: if frames 10-40 run slow (median under ~45 fps), drop resolution and the fringe.
   if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);size();ph.glass.dataset.lite='1';}
-  const d=ph.diveT0?Math.min(1,(now-ph.diveT0)/PORTAL.revealMs):0; // the dive adds up to tunnelDive rings/s
+  const d=ph.diveT0?Math.min(1,(now-ph.diveT0)/PORTAL.revealMs):ph.backT0?Math.max(0,1-(now-ph.backT0)/PORTAL.revealMs):0; // the dive adds up to tunnelDive rings/s (the dive back sheds it)
   travel=(travel+dt*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(PORTAL.cutMs+PORTAL.loadMinMs))+PORTAL.tunnelDive*d*d))%seq.length;
   const finger=[...pointers.values()].at(-1)?.pts.at(-1);let tx=(tilt?.[0]||0)+(finger?(finger.x-left-cx)*.12:0),ty=(tilt?.[1]||0)+(finger?(finger.y-top-cy)*.12:0);
   const k=Math.min(1,.2*R/(Math.hypot(tx,ty)||1));par[0]+=(tx*k-par[0])*Math.min(1,dt*5);par[1]+=(ty*k-par[1])*Math.min(1,dt*5);
@@ -726,8 +810,9 @@ function showGlass(pts,color,all=false,edge=pts){
  }
  phase={glass:el,bezel,pts,color,t0:performance.now(),pulse:false,box:{left,top,w,h}};
  startTunnel(phase,poly,color,all);
+ energize(ringColours(color,all),ENERGY.surge,true);
 }
-function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;}
+function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;energize(NEONS);}
 function ripple(x,y){
  if(!phase||prefersReducedMotion())return;
  const r=document.createElement('i');r.className='portal-ripple';r.style.left=(x-phase.box.left)+'px';r.style.top=(y-phase.box.top)+'px';
@@ -735,9 +820,9 @@ function ripple(x,y){
  phase.glass.append(r);setTimeout(()=>r.remove(),PORTAL.rippleMs);
 }
 // Cuts a client-px polygon out of the board (board.cut takes face coords, v down) and resolves once the piece has fallen in.
-function cutBoard(pts,color){
+function cutBoard(pts,color,ms=prefersReducedMotion()?0:PORTAL.cutMs){
  const f=board?.faceRect();if(!f)return Promise.resolve();
- return board.cut(pts.map(([x,y])=>[(x-f.left)/f.width,(y-f.top)/f.height]),color,prefersReducedMotion()?0:PORTAL.cutMs);
+ return board.cut(pts.map(([x,y])=>[(x-f.left)/f.width,(y-f.top)/f.height]),color,ms);
 }
 function revealDialogFromPoint(dialog,[cx,cy],ms=500){
  if(prefersReducedMotion())return;
@@ -748,14 +833,15 @@ function revealDialogFromPoint(dialog,[cx,cy],ms=500){
 // Dive into the wormhole (Ian 2026-09-23, #103 "zoom into each portal once opened"): the whole portal scales up about the
 // vanishing point until the shape covers the screen, easing in over revealMs while the tunnel speeds up. A compositor-only
 // Web Animation: the locked theme can't switch it off and it leaves `transition` free for the hole/fade. Reduced motion: a
-// quick fade. endPhase() cancels it.
-function dive(pts){
+// quick fade. endPhase() cancels it. back: the same dive played in reverse, out of the wormhole (diveBack).
+function dive(pts,back=false){
  if(!phase)return Promise.resolve();
  const c=centroidOf(pts);let rIn=Infinity;
  for(let k=0;k<pts.length-1;k++){const [ax,ay]=pts[k],[bx,by]=pts[k+1],dx=bx-ax,dy=by-ay,t=Math.max(0,Math.min(1,((c[0]-ax)*dx+(c[1]-ay)*dy)/(dx*dx+dy*dy||1)));rIn=Math.min(rIn,Math.hypot(ax+t*dx-c[0],ay+t*dy-c[1]));}
  const far=Math.max(...[[0,0],[innerWidth,0],[0,innerHeight],[innerWidth,innerHeight]].map(([x,y])=>Math.hypot(x-c[0],y-c[1]))),reduced=prefersReducedMotion();
- portalHome.style.transformOrigin=`${c[0]}px ${c[1]}px`;phase.diveT0=performance.now();
- phase.dive=portalHome.animate(reduced?[{opacity:1},{opacity:0}]:[{transform:'none'},{transform:`scale(${Math.max(1.5,1.05*far/Math.max(rIn,1))})`}],{duration:reduced?200:PORTAL.revealMs,easing:reduced?'ease':'cubic-bezier(.55,0,.9,.5)',fill:'forwards'});
+ portalHome.style.transformOrigin=`${c[0]}px ${c[1]}px`;phase[back?'backT0':'diveT0']=performance.now();
+ energize(null,ENERGY.dive,true);
+ phase.dive=portalHome.animate(reduced?[{opacity:1},{opacity:0}]:[{transform:'none'},{transform:`scale(${Math.max(1.5,1.05*far/Math.max(rIn,1))})`}],{duration:reduced?200:PORTAL.revealMs,easing:reduced?'ease':'cubic-bezier(.55,0,.9,.5)',fill:back?'none':'forwards',direction:back?'reverse':'normal'});
  return phase.dive.finished.catch(()=>{});
 }
 // The destination dialog grows out of the tunnel's core; its backdrop fades in so the dive stays visible behind it.
@@ -780,17 +866,23 @@ async function runShape(id){
 const LINE_IDS=new Set(['line-lr','line-rl','line-down','line-up']);
 const lineTemplatePts=id=>SHAPES.line[(id==='line-lr'||id==='line-rl')?1:0].points;
 async function openDirect(menu,current){
+ // No dive in, but the way back out is still the wormhole: the destination's own shape, or the full square.
+ const id=Object.keys(MENUS).find(k=>MENUS[k]===menu),{face,pattern}=restFace(),pts=pattern&&shapeClipPts(SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect',pattern);
  let dialog=null;
  backgroundBlocked(false);
- try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}
+ frameOn(face);const unwatch=watchDialog();
+ try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}finally{unwatch?.();}
  if(!current())return;
  const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
  if(!shown){status(`${menu.label} isn't available here yet.`);await fadeOutBoard();fadeInBoard();return;}
- if(dialog instanceof HTMLDialogElement)dialog.addEventListener('close',()=>{if(current())fadeInBoard();},{once:true});
+ if(dialog instanceof HTMLDialogElement){
+  frameDialog(dialog);
+  dialog.addEventListener('close',()=>{if(current())diveBack({dialog,pts,color:menu.color},current);},{once:true});
+ }else frameOff();
  await fadeOutBoard();
 }
 async function portalSequence(id,current){
- const rect=board?board.patternRect():fallbackRect();
+ const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
  if(id==='cross'){
   flashOutline(SHAPES.cross.map(p=>toClientPts(p.points,rect)),'#ffffff');
   const center=[rect.left+rect.width/2,rect.top+rect.height/2];
@@ -836,14 +928,16 @@ async function portalSequence(id,current){
  if(!current())return;
  // Reveal: dive into the wormhole; the destination appears from its core over the last `arrive` ms of the dive.
  const dove=dive(pts),core=centroidOf(pts),arrive=PORTAL.revealMs*.55;
+ if(menu.kind==='dialog')frameOn(face); // the frame stays put and the dive happens in its window
  if(prefersReducedMotion()||menu.kind==='nav')await dove;else await sleep(PORTAL.revealMs-arrive);
  if(!current())return;
  if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome),current,arrive);if(current()){setVisible(false);menu.open?.();}return;}
  if(menu.kind==='nav'){menu.open();return;} // the glass stays up while the next page loads
  let dialog=null;
  backgroundBlocked(false);
- try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}
- if(dialog instanceof HTMLDialogElement&&dialog.open&&current())arriveFromCore(dialog,core,arrive); // before its first paint: no full-size flash
+ const unwatch=watchDialog();
+ try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}finally{unwatch?.();}
+ if(dialog instanceof HTMLDialogElement&&dialog.open&&current()){frameDialog(dialog);arriveFromCore(dialog,core,arrive);} // before its first paint: no full-size flash
  await settle();
  if(!current())return;
  const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
@@ -853,8 +947,8 @@ async function portalSequence(id,current){
   await dove;
   if(!current())return;
   if(!dialog.open){fadeInBoard();return;} // closed mid-reveal
-  dialog.addEventListener('close',()=>{if(current())fadeInBoard();},{once:true});
- }
+  dialog.addEventListener('close',()=>{if(current())diveBack({dialog,pts,color:menu.color},current);},{once:true});
+ }else frameOff();
  fadeOutBoard();
 }
 
@@ -924,7 +1018,7 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),

@@ -186,7 +186,7 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
  }finally{await context.close();}
 });
 
-test('4. Menu sheet -> Ship opens the full-screen ship view, and the phone back button closes it',async()=>{
+test('4. Menu sheet -> Ship opens the ship view inside the metal frame, and the phone back button closes it',async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>window.myr5Menus.portal());
@@ -195,11 +195,12 @@ test('4. Menu sheet -> Ship opens the full-screen ship view, and the phone back 
   await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
   await page.locator('#portalMenu [data-menu="ship"]').click();
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true);
-  // ship-view.css loads via a dynamically-appended <link>; wait for it so the full-screen layout
-  // (position:fixed;inset:0) is actually applied before measuring the box.
+  // ship-view.css loads via a dynamically-appended <link>; wait for it before measuring the box.
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed');
+  // W2-2K (Ian 23 Sept): the metal frame stays on screen and the ship view fills its window, not the whole screen.
   const box=await page.locator('dialog.ship-view').boundingBox();
-  assert.ok(box&&box.width>=370&&box.height>=800,'the ship view must fill the screen');
+  assert.ok(box&&box.width>=330&&box.height>=600&&box.x>=20&&375-box.x-box.width>=20,`the ship view must fill the frame's window: ${JSON.stringify(box)}`);
+  assert.equal(await page.evaluate(()=>document.getElementById('portalChrome').matches(':popover-open')),true,'the frame stays up around it');
   assert.equal(await page.evaluate(()=>location.hash),'#ship');
   await page.goBack();
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open);
