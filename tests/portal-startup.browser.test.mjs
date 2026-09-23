@@ -21,7 +21,9 @@ test('installed Coach starts at Quilt only after setup and preserves panel deep 
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   async function installedContext(){const context=await browser.newContext({serviceWorkers:'block'});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));return context;}
   async function browserContext(){return browser.newContext({serviceWorkers:'block'});}
-  async function seed(context){const page=await context.newPage();await page.goto(base+'/onboarding.html');await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await page.close();}
+  // Seed from a script-free page: onboarding.html redirects a non-installed tab to /install.html mid-evaluate
+  // (destroyed context, or an evaluate that never settles).
+  async function seed(context){const page=await context.newPage();await page.goto(base+'/privacy.html');await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await page.close();}
 
   const ready=await installedContext();await seed(ready);const home=await ready.newPage();await home.goto(base+'/pose.html');await home.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);assert.equal(await home.locator('#portalHome').getAttribute('aria-label'),'Quilt portal');await ready.close();
 
