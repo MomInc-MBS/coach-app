@@ -71,6 +71,16 @@ async function start(page,mode){
 
 test('open: three black-and-white peering layers, the big meditation coach borrowed asleep; drag peers by depth; close hands it back',async()=>{
  const {context,page}=await openRoom();
+ const layout=await page.evaluate(()=>{
+  const panel=document.querySelector('.meditation-panel'),character=panel.querySelector('.meditation-character');
+  const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};};
+  return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,far:getComputedStyle(panel.querySelector('.meditation-far')).backgroundColor,
+   character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]'))};
+ });
+ assert.deepEqual(layout.room,{left:0,right:375,top:0,bottom:812},'the room fills the phone viewport');
+ assert.equal(layout.background,'rgb(0, 0, 0)');assert.equal(layout.far,'rgb(0, 0, 0)');
+ assert.ok(layout.left.right<layout.character.left&&layout.right.left>layout.character.right,'thought bubbles flank the character');
+ assert.ok(layout.left.top>=0&&layout.left.bottom<=812&&layout.right.top>=0&&layout.right.bottom<=812,'both choices fit on screen');
  const open=await layers(page);
  assert.deepEqual(open.map(l=>l.depth),['far','mid','near']);
  for(const l of open)assert.match(l.filter,/^grayscale\(1\)/,l.depth+' starts black and white');

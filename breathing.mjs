@@ -28,6 +28,9 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onEarlyExit,ge
  scene.append(controls);
  const $=selector=>controls.querySelector(selector);
  const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),seated=$('[data-seated]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),exit=$('[data-breath-exit]'),retry=$('[data-retry]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]');
+ // Keep the same mode buttons and handlers, but place them beside the seated character.
+ // Their position in the scene also lets the whole choice remain in the monochrome layer.
+ scene.querySelector('.meditation-near')?.append(modesEl);
  const speech=scene.querySelector?.('.meditation-speech'),reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
  let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='';
  function renderPhase(ms){
@@ -65,7 +68,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onEarlyExit,ge
    ticket=value;clock=new BreathingSession();pause.disabled=false;pause.hidden=false;statusEl.textContent='3:00 remaining';
   }catch(error){if(current===run){reset();statusEl.textContent=error.message;}}
  }
- for(const id of MODE_IDS)$(`[data-mode="${id}"]`).onclick=()=>startSession(id);
+ for(const id of MODE_IDS)modesEl.querySelector(`[data-mode="${id}"]`).onclick=()=>startSession(id);
  // Immediate exit: abandons the session (nothing is saved) and never waits on the network. Stopping before the time is up
  // (not "Done" after it) also tells the room, where the sleeping coach wakes (#149).
  exit.onclick=()=>{if(script&&!clock.complete)onEarlyExit?.();reset();};
