@@ -51,7 +51,9 @@ export class CreatureViewer {
   // coach's own animation covers the same ground in fewer, bigger steps rather than slow motion.
   const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,dt=Math.min(this.maxFps?gate/1000:.05,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;this.motion?.update(dt);if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=dt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(tick);
  }
- resize(){const {width,height}=this.mount.getBoundingClientRect();if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}}}
+ // Layout size, not getBoundingClientRect(): a portal destination arrives scaled from the wormhole's core (2N), and a
+ // resize read mid-arrival would keep a thumbnail-sized canvas once it lands (the meditation room's borrowed coach).
+ resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}}}
  async setRecipe(raw:unknown,preview=false){
   const recipe=importCreature(JSON.stringify(raw)),generation=++this.generation;
   const assembly=await assembleCreature(recipe,this.assetBase,this.skinResolver,preview);let rig:CreatureRig|undefined;
