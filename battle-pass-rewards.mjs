@@ -91,6 +91,19 @@ const TEXTURES=[
  ['cardio-mesh','Mesh','Maximum airflow. Minimum excuses.'],['cardio-terry-cloth','Terry Cloth','Absorbs sweat and bad decisions.'],['cardio-pebble-path','Pebble Path','A tiny trail, wherever you go.'],
  ['meditation-sand-garden','Sand Garden','Raked by a very patient rake.'],['meditation-river-stone','River Stone','Smooth. Unbothered. Goals.'],['meditation-moss','Moss','Grows on you. Literally, now.'],
 ];
+// #140 (D45; slots approved D47): the once-free legacy textures (materials-registry.ts `legacy-<n>`,
+// names = catalog.ts STYLES) are battle-pass rewards now, each in the slot of a catalog texture above,
+// which became free instead. The ONE swap table; materials-registry.ts derives its locks from it.
+// Reshuffle = move a legacy row to another freed id. freed catalog id -> [legacy id, name, line].
+export const TEXTURE_SWAP=Object.freeze({
+ 'chest-rubber-grip':['legacy-15','Magma','Runs hot. Cools never.'], // Chest L3
+ 'glutes-sweatshirt-fleece':['legacy-13','Stone Golem','Built slow. Built to last.'], // Glutes L1 (Ian's "rock golem")
+ 'arms-rope':['legacy-14','Crystal','Clear eyes. Sharp facets.'], // Arms L3
+ 'arms-leather':['legacy-8','Spectral','Here in spirit. Also in body.'], // Arms L5
+ 'yoga-cork':['legacy-20','Fluffy','Maximum floof. Minimum mercy.'], // Yoga L1
+ 'yoga-woven-mat':['legacy-21','Jelly','Wobbles. Never falls.'], // Yoga L3
+ 'cardio-terry-cloth':['legacy-16','Glacial','Cool under pressure. Very cool.'], // Cardio L3
+});
 // --- item-catalog.json `bosses` (unlock lines reused for every board boss of that family) ---
 const BOSS_LINES={
  push:['Forged from lost remote controls.','For the comfiest conqueror.'],
@@ -124,7 +137,7 @@ export function bossRewards(bossId){
  levels[1].push({kind:'boss-texture',id:`${boss.id}-texture`,name:`${boss.name} Texture`,line:lines[0]});
  levels[4].push({kind:'boss-skin',id:`${boss.id}-skin`,name:`${boss.name} Skin`,line:lines[1]});
  if(!meta||boss.index!==1)return levels;
- const c=meta.catalog,tex=TEXTURES.filter(t=>t[0].startsWith(c+'-')); // catalog order = texture-1/2/3
+ const c=meta.catalog,tex=TEXTURES.filter(t=>t[0].startsWith(c+'-')).map(t=>TEXTURE_SWAP[t[0]]??t); // catalog order = texture-1/2/3
  levels[0].unshift(item('weapon',find(WEAPONS,`${c}-w1`)),item('texture',tex[0]));
  levels[1].unshift(paletteItem(meta.palette));
  levels[2].push(item('weapon',find(WEAPONS,`${c}-w2`)),{kind:'special',id:`${c}-special`,name:`${meta.name} Special`,line:'Unlocked at level 3.'},item('texture',tex[1]));

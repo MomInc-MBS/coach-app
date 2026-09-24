@@ -54,7 +54,10 @@ test('parseRecipe accepts a valid optional materials override and rejects malfor
 test('registry has Flat+Clay (always unlocked) plus every legacy family plus the 24 battle-pass textures, all locked by default',()=>{
  assert.equal(isTextureUnlocked(FLAT_TEXTURE),true);
  assert.equal(TEXTURES.filter(t=>t.legacy).length,STYLES.length);
- for(const t of TEXTURES.filter(t=>t.legacy))assert.equal(isTextureUnlocked(t),true);
+ // #140: 7 legacy families moved into the battle pass; 7 catalog placeholders took their place as open textures.
+ for(const t of TEXTURES.filter(t=>t.legacy))assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
+ assert.deepEqual(TEXTURES.filter(t=>t.legacy&&t.unlockRule==='battle-pass').map(t=>t.displayName).sort(),['Crystal','Fluffy','Glacial','Jelly','Magma','Spectral','Stone Golem']);
+ assert.deepEqual(TEXTURES.filter(t=>!t.legacy&&t.familyId<0&&t.unlockRule==='default').map(t=>t.displayName).sort(),['Cork','Leather','Rope','Rubber Grip','Sweatshirt Fleece','Terry Cloth','Woven Mat']);
  const battlePass=TEXTURES.filter(t=>t.unlockRule==='battle-pass');
  assert.equal(battlePass.length,24);
  for(const t of battlePass){assert.equal(isTextureUnlocked(t),false);assert.ok(t.track&&[1,3,5].includes(t.passLevel));}

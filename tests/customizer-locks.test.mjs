@@ -11,7 +11,7 @@ const result=await build({
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,lockSource,resolveRegionMaterial,grantUnlock,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,frameRegion,T}=m;
+const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,lockSource,resolveRegionMaterial,grantUnlock,grandfatherSwappedTextures,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
@@ -22,7 +22,9 @@ const owned={...fresh(),materials:{body:{textureId:'flat',colorId:'default-sapph
 test('lock sources read like the board: texture track level, aura day, battle pass; owned is null',()=>{
  memory.clear();
  assert.equal(lockSource('chest-plate-steel'),'Chest L1');
- assert.equal(lockSource('arms-rope'),'Arms & Shoulders L3');
+ // #140: the legacy textures take the freed slots; the "lame" ones are open.
+ assert.equal(lockSource('legacy-15'),'Chest L3');assert.equal(lockSource('legacy-14'),'Arms & Shoulders L3');assert.equal(lockSource('legacy-13'),'Glutes L1');
+ assert.equal(lockSource('arms-rope'),null);assert.equal(lockSource('chest-rubber-grip'),null);assert.equal(lockSource('legacy-3'),null);
  const aura=findPalette('pal-01');assert.equal(lockSource('pal-01'),`Aura day ${aura.unlockAtDay}`);
  assert.equal(lockSource('flat'),null);assert.equal(lockSource('default-ruby'),null);assert.equal(lockSource('creature-anything'),null);
 });
@@ -67,6 +69,18 @@ test('save guard keeps what is owned: granted items, clean recipes unchanged',()
  assert.deepEqual(saveRecipe(localStorage,next,owned).materials,next.materials);
 });
 
+test('#140 grandfather: a coach saved with a newly locked texture keeps it, once per device, and nothing else is granted',()=>{
+ memory.clear();
+ const magma={textureId:'legacy-15',colorId:'legacy-color-15',sparkle:0,metallic:0},before={...fresh(),materials:{body:magma,head:{...magma,textureId:'flat'}}};
+ assert.equal(resolveRegionMaterial(0,magma).detail,'flat','locked for a user who never had it');
+ grandfatherSwappedTextures(before);
+ assert.equal(lockSource('legacy-15'),null);assert.equal(resolveRegionMaterial(0,magma).detail,'magma');
+ assert.deepEqual(saveRecipe(localStorage,before,before).materials,before.materials,'the save guard keeps it');
+ grandfatherSwappedTextures({...fresh(),materials:{body:{...magma,textureId:'legacy-14'}}});
+ assert.equal(lockSource('legacy-14'),'Arms & Shoulders L3','one-time: a later recipe grants nothing');
+ assert.deepEqual(JSON.parse(localStorage.getItem('myr5-unlocks-v1')).texture,['legacy-15']);
+});
+
 test('sectionComplete: every boss in the section row fully beaten (sample board progress)',()=>{
  assert.equal(sectionComplete('chest',{}),false);
  assert.equal(sectionComplete('chest',row('strider',6,5)),true);
@@ -83,6 +97,14 @@ test('body locks: starter bodies never lock, a section body unlocks with its sec
  assert.equal(bodyLockSection(DUAL_BODY,{}),'Chest or Martial Arts');
  assert.equal(bodyLockSection(DUAL_BODY,row('cap',3,5)),null);
  assert.ok(TRACK_PLACEMENTS.every(p=>p.unlockRule==='section-complete'));
+});
+
+test('#138 save guard: a new user\'s allowed body saves, a locked one is rejected',()=>{
+ memory.clear();localStorage.setItem('myr5-selected-tracks-v1',JSON.stringify(['chest','quads']));
+ const ridge='roster/06-ridge-triad--geometric_robot_3d_model1',shard='roster/08-shard-asym--geometric_robot_3d_model';
+ const as=id=>({...fresh(),body:id,headFrom:id,armsFrom:id,feetFrom:id});
+ assert.equal(saveRecipe(localStorage,as(ridge),fresh()).body,ridge,'first Chest body: allowed');
+ assert.equal(saveRecipe(localStorage,as(shard),as(ridge)).body,ridge,'second Chest body: locked, falls back to the last owned body');
 });
 
 test('a grandfathered saved body still loads and stays saved; a new locked pick is rejected',()=>{
