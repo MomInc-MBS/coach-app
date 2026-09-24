@@ -32,7 +32,7 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,worker
    res.end(JSON.stringify({items:[...meals].sort((x,y)=>y.eaten_at.localeCompare(x.eaten_at))}));return;
   }
   if(path.startsWith('/api/')){res.writeHead(path==='/api/auth/config'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/auth/config'?{enabled:false}:{error:'Sign in'}));return;}
-  try{const base=path.startsWith('/food/')||path==='/food-live.css'?source:root,file=resolve(base,'.'+path);if(!file.startsWith(base+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
+  try{const base=path.startsWith('/food/')||path.startsWith('/modules/portal/')||path==='/food-live.css'?source:root,file=resolve(base,'.'+path);if(!file.startsWith(base+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
@@ -303,3 +303,28 @@ test('#40 no food during a workout: myr5Routes.go(\'food\') opens nothing while 
  assert.equal(await page.evaluate(()=>document.getElementById('mealsPanel').open),false,'#mealsPanel stays closed');
  assert.equal(await page.evaluate(()=>location.hash),hashBefore,'no hash change');
 }));
+
+test('portal Food peers at the whole pyramid until a decoded photo enters fullscreen',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.portal());
+ await page.waitForFunction(()=>window.myr5Portal?.current()&&!document.querySelector('#portalHome').hidden);
+ await page.evaluate(()=>{window.foodPortalRun=window.myr5Portal.open('up');});await ready(page);await page.evaluate(()=>window.foodPortalRun);
+ assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-shaped')&&!el.classList.contains('portal-fullscreen')),true);
+ await page.screenshot({path:resolve('.frames','food-initial-whole.png')});
+ await page.evaluate(async()=>{
+  const c=document.createElement('canvas');c.width=c.height=32;c.getContext('2d').fillRect(0,0,32,32);const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const files=new DataTransfer();files.items.add(new File([blob],'meal.png',{type:'image/png'}));const input=document.getElementById('foodPhoto');input.files=files.files;input.dispatchEvent(new Event('change'));
+ });
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-fullscreen'));
+ assert.deepEqual(await box(page,'#mealsPanel'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
+ assert.deepEqual(await box(page,'#mealScanStage'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
+ assert.equal(await page.locator('#mealsPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
+ assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')),false);
+ assert.equal(await page.locator('#coachDock').isVisible(),false,'photo scene uses the bottom of the viewport too');
+ await page.waitForFunction(()=>document.getElementById('mealScanStage').hidden);
+ assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-fullscreen')),true,'recognition result stays fullscreen');
+ await page.screenshot({path:resolve('.frames','food-photo-fullscreen.png')});
+ await page.locator('#mealsPanel [data-close]').click();
+ await page.waitForFunction(()=>!document.getElementById('portalHome').hidden&&!document.querySelector('.portal-glass'),null,{timeout:10000});
+ await page.evaluate(()=>{window.foodPortalRun=window.myr5Portal.open('up');});await ready(page);await page.evaluate(()=>window.foodPortalRun);
+ assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-shaped')&&!el.classList.contains('portal-fullscreen')),true,'reopen starts in the classroom view');
+ },{worker:BURGER_WORKER}));

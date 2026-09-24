@@ -420,7 +420,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   // px per world unit: the whole model at full width when it fits; when the sheet is up, keep the lens, screens
   // and dials whole at that size and let the base hang behind the sheet.
   const space=Math.max(60,bottom-top),ppuW=W/(modelSize.x*1.3);let ppu=Math.min(ppuW,space/(modelSize.y*1.08)),aim=0;
-  if(ppu<ppuW){ppu=Math.min(ppuW,space/(modelSize.y*FOCUS*1.08));aim=modelSize.y*(0.5-FOCUS/2);}
+  if(ppu<ppuW&&base<H-32){ppu=Math.min(ppuW,space/(modelSize.y*FOCUS*1.08));aim=modelSize.y*(0.5-FOCUS/2);}
   fitGoal={dist:H/(2*TAN*ppu),y:aim+(middle-H/2)/ppu};
   if(reduced||!fitNow)fitNow={...fitGoal};
  }

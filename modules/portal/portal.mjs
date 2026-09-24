@@ -404,6 +404,17 @@ function frameDialog(dialog){
  if(!full)peerOn(dialog);
  if(!full&&framed.look.shaped)shapeDialog(dialog);
 }
+// The room remains visible through its cut until an actual scene action steps inside.
+// Keep the route/dialog identity, so Back and Close still return through their original portal.
+function expandScene(dialog){
+ if(!dialog?.open||framed?.dialog!==dialog||framed.expanded)return false;
+ layoutInCut(dialog,false);peerOff();framed.expanded=true;framed.leaned=true;
+ dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');
+ dialog.style.removeProperty('clip-path');dialog.style.removeProperty('--inset-zoom');motion(dialog,'');
+ setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
+ dialog.querySelector(':scope>.portal-peer-ui')?.remove();hideAura();chrome.hidePopover();
+ stowBoard();return true;
+}
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
 // its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
 function watchDialog(){
@@ -429,7 +440,7 @@ function handOver(dialog){
  const route=dialog.dataset.route,[id,found]=menuFor(route),menu=found||{label:window.myr5Routes?.ROUTES?.[route]?.label};
  unframe(framed.dialog);
  if(framed.look.shaped)stowBoard(); // the quilt wall goes with the hole it framed
- Object.assign(framed,{look:windowLook(id,menu,framed.face),leaned:false,outlines:null});
+ Object.assign(framed,{look:windowLook(id,menu,framed.face),leaned:false,outlines:null,expanded:false});
  hideAura();frameDialog(dialog);
  const run=++sequence;
  dialog.addEventListener('close',()=>closed(dialog,{pts:backPts(id),color:menu?.color||'#b026ff'},()=>run===sequence&&!lifecycle.signal.aborted),{once:true});
@@ -442,7 +453,7 @@ function closed(dialog,back,current){
  if(!current()||(framed&&framed.dialog!==dialog))return; // never framed (no popover API, no board): still back out
  const now=window.myr5Routes?.current?.();
  if(now&&now!==dialog.dataset.route){frameOff();return;}
- (back.shaped?fizzleBack:diveBack)({dialog,...back},current);
+ (back.shaped&&!framed?.expanded?fizzleBack:diveBack)({dialog,...back},current);
 }
 // The closed destination's empty shell (a shallow copy keeps its own look), shrinking into the wormhole core.
 function shrinkShell(dialog,[cx,cy],ms){
@@ -748,7 +759,8 @@ const TILT_KEY='myr5.tiltPermission';
 // permission (the scenes always do); poke/fit: shapeDialog.
 const PEER_LAYER={far:14,mid:5,near:-4};
 const PEER_DEPTH=[
- ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom']}],
+ ['#accountPanel.classroom-panel',{scene:true,poke:['[data-room-board]']}],
+ ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom'],fit:{sel:'#pyramidScanner',band:[0,1]}}],
  ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]],poke:['.ship-view-note','.ship-view-fallback']}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
  ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-head','.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
@@ -1620,7 +1632,7 @@ async function openInHole(id,menu,pts,face,current){
  if(!(dialog instanceof HTMLDialogElement)){frameOff();fadeOutBoard();return;}
  dialog.addEventListener('close',()=>closed(dialog,{pts,color:menu.color,shaped:true},current),{once:true});
  await sleep(prefersReducedMotion()?0:700); // the wormhole shows round the destination while the hole opens out
- if(current()&&framed?.dialog===dialog){quietPhase();board?.pause();}
+ if(current()&&framed?.dialog===dialog&&!framed.expanded){quietPhase();board?.pause();}
 }
 
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}
@@ -1695,6 +1707,9 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
+ addEventListener('myr5:food-photo-ready',()=>expandScene(document.getElementById('mealsPanel')),{signal:lifecycle.signal});
+ document.addEventListener('myr5:classroom-board',e=>{if(e.target?.id==='accountPanel')expandScene(e.target);},{signal:lifecycle.signal});
+ document.addEventListener('room-ready',e=>{const f=framed;if(e.target?.id==='accountPanel'&&f?.dialog===e.target&&!f.expanded&&f.look.shaped){layoutInCut(e.target,true);clipTo(e.target,f.outlines.shape);}},{signal:lifecycle.signal});
  document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){setVisible(false);restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
  menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});

@@ -195,3 +195,8 @@ dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:10
 .portal-glass:not(.gl)[data-tunnel=grass]>b{background:radial-gradient(ellipse at center,#9d8257 0,#1a1006 9%,#2b190b 45%,#614122)}
 .portal-glass:not(.gl)[data-tunnel=wood]>b{background:radial-gradient(ellipse at center,#ffb054 0,#bb4116 5%,#261710 14%,#100e0d 68%)}
 .portal-glass:not(.gl)[data-tunnel=cogs]>b{background:radial-gradient(ellipse at center,#bdcbc8 0,#546763 5%,#151b1b 20%,#2b3030 68%)}
+
+/* A decoded meal photo and a classroom whiteboard tap step into the full destination. */
+#mealsPanel.portal-fullscreen #mealScanStage{inset:0!important;width:100vw!important;height:100dvh!important}
+#mealsPanel.portal-fullscreen .food-sheet{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{display:none!important}
