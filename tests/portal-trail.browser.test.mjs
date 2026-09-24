@@ -35,6 +35,23 @@ async function openProbePage(browser,url,{reduced=false,dpr=1}={}){
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  return page;
 }
+
+test('a scaled phone portal draws the touch trail beneath the finger, not at the canvas origin',async()=>withPortal(async(browser,url)=>{
+ const page=await openProbePage(browser,url,{dpr:2});
+ const pixels=await page.evaluate(()=>{
+  const home=document.getElementById('portalHome'),canvas=document.getElementById('portalOverlay');
+  home.style.transformOrigin='0 0';home.style.transform='scale(.75)';
+  const path=[[120,300],[150,300],[180,300]];
+  portal.trailProbe.draw(path,{dust:true}); // applies the live client-to-canvas transform
+  portal.trailProbe.draw(path,{dust:false});
+  const rect=canvas.getBoundingClientRect(),scaleX=canvas.width/rect.width,scaleY=canvas.height/rect.height,context=canvas.getContext('2d');
+  const alpha=(x,y)=>context.getImageData(Math.round(x),Math.round(y),1,1).data[3];
+  return {underFinger:alpha((150-rect.left)*scaleX,(300-rect.top)*scaleY),oldOffset:alpha(150*2,300*2)};
+ });
+ assert(pixels.underFinger>150,`trail must be bright under the finger: ${JSON.stringify(pixels)}`);
+ assert(pixels.oldOffset<40,`the old top-left offset must stay clear: ${JSON.stringify(pixels)}`);
+ await page.close();
+}));
 // A brisk ~350px swoop: a quarter arc up from lower left, then a straight run right to the tip, a point every
 // ~6px. The straight run sits on a pixel-row centre (y=420.5) so the cross-section is measured unblurred.
 const PROBE_PATH=(()=>{
