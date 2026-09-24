@@ -42,6 +42,7 @@ test('circuit meter advances per step, speaks the right line, stays silent for f
   await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
   await page.goto(base+'/pose.html');
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle');
+  await page.evaluate(()=>{document.getElementById('podGoals').open=true;}); // W2-2M: the circuit lives in the Goals drop-down
   await page.waitForSelector('.daily-circuit');
 
   const day=Math.floor(Date.now()/86400000);
@@ -55,6 +56,7 @@ test('circuit meter advances per step, speaks the right line, stays silent for f
    await publish(circuitAt(day,done));
    const meterValue=await page.locator('.daily-circuit meter').first().getAttribute('value');
    assert.equal(Number(meterValue),done,`meter should read ${done} of 5 after step ${done} completes`);
+   assert.equal(await page.locator('#podGoals [data-goals-status]').textContent(),`${done}/5`,'the folded Goals summary reads the same count');
    await page.locator('.daily-circuit').first().screenshot({path:`${SHOTS}/${String(done).padStart(2,'0')}-after-${ORDER[done-1]}.png`});
    const completedKey=ORDER[done-1],nextKey=ORDER[done]; // undefined once done===5
    const caption=await page.locator('#coachCaption').textContent();
@@ -76,6 +78,7 @@ test('circuit meter advances per step, speaks the right line, stays silent for f
   assert.equal(cachedDay,day,'the circuit snapshot must be mirrored into localStorage for offline reopen');
   await page.reload();
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle');
+  await page.evaluate(()=>{document.getElementById('podGoals').open=true;}); // W2-2M: the circuit lives in the Goals drop-down
   await page.waitForSelector('.daily-circuit');
   const meterAfterReload=await page.locator('.daily-circuit meter').first().getAttribute('value');
   assert.equal(Number(meterAfterReload),2,'circuit meter must resume mid-circuit after app close/reopen, from the cached snapshot alone');

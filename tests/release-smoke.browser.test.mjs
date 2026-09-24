@@ -54,6 +54,8 @@ async function openApp(browser,base,overrides){
 const portalUp=page=>page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
 // W2-2A: the bottom bar's centre Portal button replaced the quilt's floating Menu button.
 const PORTAL_BUTTON='#coachDock [data-route="portal"]';
+// W2-2M: BEGIN on the workout start page is above the bar and is what a tap there hits, without scrolling.
+const beginClear=page=>page.evaluate(()=>{const b=document.getElementById('start').getBoundingClientRect(),bar=document.getElementById('coachDock').getBoundingClientRect();return {above:b.height>0&&b.top>=0&&b.bottom<=bar.top,hit:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#start')!==null};});
 const centerHit=(page,selector)=>page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;},selector);
 
 let server,base,browser;
@@ -113,8 +115,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true&&location.hash==='#workout');
   await page.waitForFunction(()=>scrollY===0);
   assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle','rect must not start the workout');
-  const beginBox=await page.locator('#start').boundingBox();
-  assert.ok(beginBox,'BEGIN is on the start page');
+  assert.deepEqual(await beginClear(page),{above:true,hit:true},'BEGIN is on the start page, above the bar, without scrolling');
 
   // oval (Ian 2026-09-23): the coach's arrival -- the ship view opens (its entrance plays every time), and the
   // quilt comes back when it closes.
@@ -443,6 +444,9 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   await page.evaluate(()=>window.r5Run);
   assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle','the square does not start the workout');
   b=await bar(page);assert.equal(b.visible&&b.tappable,true,'the bar is on the workout start page');
+  // W2-2M #117: the page is the viewing port (your character), the control board and BEGIN; Goals is folded up.
+  assert.deepEqual(await beginClear(page),{above:true,hit:true},'BEGIN is visible without scrolling at 375x812');
+  assert.deepEqual(await page.evaluate(()=>({character:!!document.querySelector('#view #homeCharacter:not([hidden])'),goalsOpen:document.getElementById('podGoals').open,orders:!!document.querySelector('#homeScreen .coach-mission')})),{character:true,goalsOpen:false,orders:false});
   await page.waitForTimeout(400);
   await page.screenshot({path:resolve(FRAMES,'r5-5-workout-start-from-square.png')});
  }finally{await context.close();}

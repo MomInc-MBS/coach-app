@@ -3,7 +3,7 @@ import {exerciseFamily,nextChallenge,routeDay,ROUTE_LINES} from './workout-route
 export function mountWorkoutRoute({mode,busy,pending,onNext}){
  const card=document.createElement('section');card.className='workout-route';card.setAttribute('aria-label','Your exercise route');
  card.innerHTML='<small>YOUR NEXT CHALLENGE</small><p data-next role="status">Connecting your exercise route…</p><p data-rounds></p><button type="button" data-follow>Preview next level →</button><details><summary>Easy-to-hard route</summary><ol data-path></ol><p>Try the next level when ready. You can choose an easier variation or stop.</p></details>';
- document.querySelector('.difficulty-control').after(card);
+ document.querySelector('#podGoals .pod-goals-menu').append(card); // W2-2M #117: inside Goals, under the circuit
  const rest=document.createElement('section');rest.className='workout-route rest-challenge';rest.hidden=true;rest.setAttribute('aria-label','Next round challenge');rest.innerHTML='<p data-line></p><strong data-next></strong><p data-rounds></p>';
  document.querySelector('.rest-receipt').after(rest);
  function current(){const route=window.coachProgress?.exerciseRoute;return route&&route.day===routeDay(Date.now(),route.timezone)?route:null;}
