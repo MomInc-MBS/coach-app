@@ -243,6 +243,7 @@ function buildDom(){
   <button id="portalMenuButton" type="button">Menu</button><button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
+ if(!chrome.showPopover)chrome.remove(); // no Popover API (iOS Safari 16-): no UA hidden state, so it would sit over every screen; frameOn() skips framing
  energize(NEONS);
  for(const el of document.querySelectorAll('.portal-energy')){
   el.style.setProperty('--energy-px',ENERGY.px+'px');
@@ -357,8 +358,10 @@ function frameOn(face,look){
 function frameDialog(dialog){
  if(!framed||!(dialog instanceof HTMLDialogElement)||framed.dialog===dialog)return;
  unframe(framed.dialog);framed.dialog=dialog;dialog.classList.add('portal-framed');setFace(dialog,framed.face);
- chrome.hidePopover();chrome.showPopover(); // back above the dialog, which opened on top of it
- if(!aura)showAura(framed.look,'open'); // the rim bursts open as the destination lands (not under the dive's scale)
+ // Back above the dialog, which opened on top of it. Re-shown a frame later: a popover hidden and shown in one task can
+ // keep its old top-layer slot (under the dialog's backdrop) on WebKit. The rim is drawn then too, sized to the shown
+ // frame (a hidden popover measures 0x0): it bursts open as the destination lands (not under the dive's scale).
+ chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(aura?.look||framed.look,'open');});
  peerOn(dialog);
  if(framed.look.shaped)shapeDialog(dialog);
 }

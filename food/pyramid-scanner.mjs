@@ -512,6 +512,10 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   let last=performance.now();
   function animate(now){
    if(disposed)return;
+   // The opaque full-screen photo/scan stage covers the pyramid while a scan runs: no render or label writes under it
+   // (numbers still flying out of the lens keep moving).
+   const scanStage=document.getElementById('mealScanStage');
+   if(scanStage&&!scanStage.hidden&&!flights.length){last=now;raf=requestAnimationFrame(animate);return;}
    const dt=Math.min((now-last)/1000,0.05);last=now;
    if(spin){const t=Math.min(1,(now-spin.t0)/spin.ms);setRotation(spin.from+(spin.to-spin.from)*(1-(1-t)**3));if(t>=1)spin=null;}
    else if(!dragging&&velocity){setRotation(pivot.rotation.y+velocity);velocity*=INERTIA;if(Math.abs(velocity)<1e-4)velocity=0;}

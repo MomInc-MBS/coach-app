@@ -32,6 +32,10 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
   // Hotfix 2026-09-23: off frame the coach's WebGL loop is paused (its IntersectionObserver sees no layout),
   // so it can't slow the CPU pose tracker while the user sets their start.
   await page.waitForFunction(()=>window.myr5Creature?.stats?.().visible===false,null,{timeout:10000}).catch(async()=>assert.fail('offstage coach still renders: '+JSON.stringify(await page.evaluate(()=>window.myr5Creature?.stats?.()))));
+  // Release 5: once loaded, the offstage coach draws one hidden frame (viewer.warm) so its shaders are compiled while
+  // the set starts; its first-rep walk-in below must not compile anything (that was a 1.3-3.4 s stall mid-set).
+  await page.waitForFunction(()=>document.querySelector('.myr5-companion-card')?.dataset.ready==='true',null,{timeout:60000});
+  const offstagePrograms=await page.evaluate(()=>window.myr5Creature.stats().programs);
 
   // Drive the coach with a fake pose stream through the test hooks (screen-fraction landmarks, the
   // same shape used by coach-hit.test.mjs), layered on top of the real camera-only shell and real tracker loop.
@@ -66,6 +70,9 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
   assert.equal(result.backPhase,'pausing','it walks back in and settles again');
   assert.equal(result.cardInsideOverlay,true,'the coach card lives inside the overlay while tracking, not #coachMount');
   await page.waitForFunction(()=>window.myr5Creature.stats().visible===true,null,{timeout:10000});
+  const shownAt=await page.evaluate(()=>window.myr5Creature.stats().renders);
+  await page.waitForFunction(n=>window.myr5Creature.stats().renders>=n+3,shownAt,{timeout:10000});
+  assert.equal(await page.evaluate(()=>window.myr5Creature.stats().programs),offstagePrograms,'the walk-in draws with the shaders compiled offstage');
 
   // Camera-only (D24): only the video, the counter and the AR coach may be visible — no skeleton, no stop button.
   const shell=await page.evaluate(()=>({

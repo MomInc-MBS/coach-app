@@ -54,6 +54,7 @@ test('W2-2O: the portal scenes’ code (renderer, GLTF loader, ship view, pyrami
   await writeFile(join(root,'modules/portal/portal.mjs'),"import 'three';const texture='/pod/worlds/quilt.webp'");
   for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp','pod/worlds/starter/supportive.glb','food/pyramid-scanner.glb'])await writeFile(join(root,name),'fixture');
   const {core,optional}=await offlineInventory(root);
+ // GLTFLoader is shared by the hologram, the ships and the Food pyramid, so it can't sit in one optional group (release 5 review #6).
   for(const url of ['/modules/portal/portal-entry.mjs','/modules/portal/portal.mjs','/vendor/three/three.module.js','/vendor/three/GLTFLoader.js','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs'])assert(core.some(a=>a.url===url),url);
   assert.deepEqual(optional.map(a=>[a.url,a.group]),[['/food/pyramid-scanner.glb','starter'],['/pod/worlds/quilt.webp','starter'],['/pod/worlds/starter/supportive.glb','starter']]);
  }finally{await rm(root,{recursive:true,force:true});}
@@ -84,5 +85,6 @@ test('W2-2I: every placed body goes to its first workout section; the rest are S
  assert.equal(groupOf('/creature/models/roster/16-spade-arch--pyramid_head_figure_3d_model.glb',sections),'bodies-chest','the Chest/Martial Arts dual lives with Chest');
  assert.equal(new Set([...sections.values()]).size,8,'all eight sections have bodies');
  assert.equal(groupOf('/creature/models/myr5.glb',sections),'coach');
+ assert.equal(groupOf('/vendor/three/meshopt_decoder.module.js',sections),'food','the pyramid decoder comes with a Food-only pick');
  assert.equal(groupOf('/creature/models/roster/unknown.glb',sections),'bodies-starter');
 });

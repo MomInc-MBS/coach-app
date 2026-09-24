@@ -62,7 +62,9 @@ const GROUPS=[
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
- ['food',/^\/(?:food\/|nutrition-data\.mjs$|food-live\.css$|meal-)/],
+ // The meshopt decoder is the pyramid's alone (release 5): core here through the pyramid scanner (W2-2O keeps the scenes'
+ // code core), and with Food should it ever leave core. GLTFLoader is shared (hologram, ships, pyramid): core (coreFolder).
+ ['food',/^\/(?:food\/|vendor\/three\/meshopt_decoder\.module\.js$|nutrition-data\.mjs$|food-live\.css$|meal-)/],
  ['meditation',/^\/(?:meditation|breathing)/],
  ['games',/^\/(?:arcade|war-room)\//],
 ];

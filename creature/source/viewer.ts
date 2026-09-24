@@ -75,7 +75,12 @@ export class CreatureViewer {
  resetStageView(){if(this.stage==='overlay'){this.fitBody();return;}const giant=this.stage==='encounter';this.orbit.minDistance=giant?4:6;this.orbit.maxDistance=14;this.camera.fov=giant?32:36;this.camera.position.set(0,giant?2.1:2.65,giant?5.8:8.9);this.orbit.target.set(0,giant?2.25:1.95,0);this.camera.updateProjectionMatrix();this.orbit.update();this.homeView();}
  // Workout overlay: the whole body fills the canvas with the feet on its bottom edge (the user's knee line).
  fitBody(){const box=this.bodyBounds;if(box.isEmpty())return;const size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3()),half=T.MathUtils.degToRad(this.camera.fov/2),distance=Math.max(size.y/2/Math.tan(half),size.x/2/(Math.tan(half)*this.camera.aspect))+size.z/2;this.orbit.minDistance=.1;this.orbit.maxDistance=distance*2;this.orbit.target.copy(center);this.camera.position.set(center.x,center.y,center.z+distance);this.orbit.update();}
- setStage(stage:'pod'|'encounter'|'overlay'){this.stage=stage;this.focused=null;this.homeElapsed=0;this.floorObjects.forEach(o=>o.visible=stage==='pod');if(!this.cinematicKind)this.resetStageView();this.resize();}
+ setStage(stage:'pod'|'encounter'|'overlay'){this.stage=stage;this.focused=null;this.homeElapsed=0;this.floorObjects.forEach(o=>o.visible=stage==='pod');if(!this.cinematicKind)this.resetStageView();this.resize();if(stage==='overlay')this.warm();}
+ // The workout coach waits offstage (display:none, so tick() skips it) until the first rep counts. Its first real frame
+ // compiled every shader and uploaded every texture and buffer right then, a 1.3-3.4 s main-thread stall in the middle
+ // of the set that cost the next rep (tests/camera-counting). Draw one hidden frame as soon as it is staged and loaded
+ // (phone.ts re-stages it after every load), while the set is still starting, so the walk-in only draws.
+ warm(){if(!this.rig||this.disposed)return;this.renderer.compile(this.scene,this.camera);this.renderer.render(this.scene,this.camera);}
  resetView(side=1){this.side=side;return this.focusRegion('body');}
  async exportGLB(){
   if(!this.rig||!this.motion)throw Error('Wait for your creature to load.');
@@ -85,6 +90,6 @@ export class CreatureViewer {
  }
  // renders is a cumulative count of actual renderer.render() calls (D43.5's setMaxFps skips both the render
  // and this increment) — tests diff two readings over a real wall-clock window to get an actual renders/s.
- stats(){return {awake:!!this.frame,gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
+ stats(){return {awake:!!this.frame,gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,programs:this.renderer.info.programs?.length??0,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
  dispose(){this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();disposeObject(this.scene);this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
