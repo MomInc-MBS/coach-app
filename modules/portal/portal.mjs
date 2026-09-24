@@ -306,6 +306,11 @@ function openMenu(){
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
 function setVisible(v){
  visibilityRun++;
+ // Routes can put the quilt back while its destination's reverse dive is still awaiting its
+ // animation. Invalidate and remove that return phase now; otherwise its glass stays mounted
+ // until the old animation resolves. A forward phase has no backT0, so showing the quilt does
+ // not interrupt a newly-started portal sequence.
+ if(v&&phase?.backT0){endPhase();portalHome.style.transformOrigin='';}
  if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
  board?.heal();
  portalHome.hidden=!v;
