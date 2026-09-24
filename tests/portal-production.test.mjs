@@ -35,7 +35,7 @@ test('production build contains quilt but no experimental portal board runtime o
  for(const name of forbidden)assert(!names.includes(name),`${name} must not ship`);
  for(const name of ['portal.mjs','portal-board.mjs','portal-shapes.mjs','portal-cut.mjs','portal.css'])assert(names.includes(name),`${name} ships for Quilt`);
  const {core,optional}=await offlineInventory(client);
- assert(core.some(asset=>asset.url==='/pod/worlds/quilt.webp'),'offline core includes the starter portal art');
+ assert(optional.some(asset=>asset.url==='/pod/worlds/quilt.webp'&&asset.group==='starter'),'the quilt art is the Starter download (W2-2O), not core');
  assert(core.some(asset=>asset.url==='/vendor/three/three.module.js'),'offline core includes the starter portal renderer');
  assert(!optional.some(asset=>/\/(?:ice|grass|jelly|wood|cogs|cog-kit|parts-kit)\.glb$/i.test(asset.url)),'experimental board models are absent from the post-download package');
 });

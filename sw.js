@@ -193,10 +193,10 @@ self.addEventListener('fetch',event=>{
  const path=assetPath(url.pathname);
  const asset=ASSET_BY_URL.get(path)||OPTIONAL_BY_URL.get(path);
  if(!asset)return;
- const optional=OPTIONAL_BY_URL.has(path),body=asset.group?.startsWith('bodies-');
- // A roster body that isn't on the device yet: its page shows "Downloading this body…", or says it's
- // missing when offline (post-download.mjs).
- const tell=state=>body&&event.clientId&&event.waitUntil(self.clients.get(event.clientId).then(client=>client?.postMessage({type:'BODY_DOWNLOAD',url:path,state}),()=>{}));
+ const optional=OPTIONAL_BY_URL.has(path),body=asset.group?.startsWith('bodies-'),kept=body||asset.group==='starter';
+ // A roster body, or a portal scene's Starter art (W2-2O), that isn't on the device yet: fetched alone and
+ // kept in the package; its page shows "Downloading…", or says it's missing when offline (post-download.mjs).
+ const tell=state=>kept&&event.clientId&&event.waitUntil(self.clients.get(event.clientId).then(client=>client?.postMessage({type:body?'BODY_DOWNLOAD':'STARTER_DOWNLOAD',url:path,state}),()=>{}));
  event.respondWith((async()=>{
   // Opening a cache creates it, so the package cache is only read by name here.
   const cached=optional?await caches.match(path,{cacheName:PACKAGE})||(await localCopy(asset))?.hit:await(await caches.open(SHELL)).match(path);
@@ -208,7 +208,7 @@ self.addEventListener('fetch',event=>{
    // Never mix an unverified new executable into an older installed shell.
    return new Response('This resource is unavailable. Reconnect or update Coach.',{status:503});
   }
-  if(body){const copy=response.clone();event.waitUntil(packageCache().then(cache=>cache.put(path,copy)).catch(()=>{}).then(()=>tell('done')));}
+  if(kept){const copy=response.clone();event.waitUntil(packageCache().then(cache=>cache.put(path,copy)).catch(()=>{}).then(()=>tell('done')));}
   else if(optional)event.waitUntil(saveOptional(asset,response));else try{await(await caches.open(SHELL)).put(path,response.clone());}catch{}
   return response;
  })());

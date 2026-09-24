@@ -16,6 +16,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import * as THREE from 'three';
 import {splitIndexByPolygon,pieceMaterial,fallPieces} from './portal-cut.mjs';
+import {SHAPES} from './portal-shapes.mjs';
 
 const IMAGE='/pod/worlds/quilt.webp',IMAGE_W=1024,IMAGE_H=1666;
 // Stitched pattern (the eight shapes) inside the quilt image, as image fractions.
@@ -23,6 +24,19 @@ const PATTERN={left:22/IMAGE_W,top:22/IMAGE_H,right:1002/IMAGE_W,bottom:1575/IMA
 // Ian: heavier, calmer (2026-09-22)
 export const QUILT={segX:24,substeps:6,compliance:3e-6,restore:1.0,stretch:1.15,damping:.955,radius:60,depth:40,drag:.7,sleepMs:1500};
 const BACKGROUND='#17111e';
+// W2-2O: the quilt texture is Starter-pack art. Without it (offline, not downloaded) the board is a plain
+// stitched quilt, same layout: cream cloth in its dark binding, the traceable shapes stitched where the art has them.
+const STITCHES=[['oval','#c42a3c'],['x','#e0388f'],['up','#2c5cc2'],['down','#2f8a4c'],['cross','#4ea6da']];
+function plainQuilt(){
+ const canvas=document.createElement('canvas'),g=canvas.getContext('2d');canvas.width=IMAGE_W/2;canvas.height=IMAGE_H/2;g.scale(.5,.5);
+ g.fillStyle='#3b3441';g.fillRect(0,0,IMAGE_W,IMAGE_H);g.fillStyle='#efe6d3';g.fillRect(22,22,IMAGE_W-44,IMAGE_H-44);
+ const x=PATTERN.left*IMAGE_W,y=PATTERN.top*IMAGE_H,w=(PATTERN.right-PATTERN.left)*IMAGE_W,h=(PATTERN.bottom-PATTERN.top)*IMAGE_H;
+ g.lineWidth=8;g.lineCap='round';g.setLineDash([18,10]);
+ for(const [id,color] of STITCHES)for(const {points} of SHAPES[id]){
+  g.strokeStyle=color;g.beginPath();points.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](x+u*w,y+v*h));if(id==='oval')g.closePath();g.stroke();
+ }
+ return canvas;
+}
 
 export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -32,7 +46,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
  let texture;
  try{texture=await new THREE.TextureLoader().loadAsync(IMAGE);}
- catch(error){renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
+ catch{texture=new THREE.CanvasTexture(plainQuilt());}
  texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));

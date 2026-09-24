@@ -90,19 +90,27 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   assert.equal(await quiltUp(page),false,'the quilt is not up behind the menu');
   const rows=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#downloadsMenu [data-group]')].map(box=>[box.dataset.group,{size:box.closest('label').querySelector('[data-size]').textContent,checked:box.checked}])));
   assert.deepEqual(Object.keys(rows).sort(),[...new Set(PACKAGE.map(a=>a.group))].sort(),'a toggle for every group the build has');
-  for(const [group,row] of Object.entries(rows))if(group!=='voices')assert.equal(row.size,mb(bytes(groupOf(group))),group);
-  assert.deepEqual(Object.entries(rows).filter(([,row])=>row.checked).map(([group])=>group),['coach'],'only Your coach (recommended) starts picked');
-  assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(bytes(groupOf('coach')))}`);
+  for(const [group,row] of Object.entries(rows))if(!['voices','starter'].includes(group))assert.equal(row.size,mb(bytes(groupOf(group))),group);
+  // W2-2O: the menu leads with the Starter pack (the portal scenes' art), recommended and picked, with its size.
+  assert.deepEqual(Object.entries(rows).filter(([,row])=>row.checked).map(([group])=>group),['starter','coach'],'Starter and Your coach (both recommended) start picked');
+  const lead=page.locator('#downloadsMenu .download-row').first();
+  assert.equal(await lead.locator('input').getAttribute('data-group'),'starter','Starter leads');
+  assert.match(await lead.textContent(),/^Starter: portal, pyramid, ship and worldsRecommended.+ MB(?: left)?$/);
+  // The quilt mounts, hidden, behind the menu and may already have fetched its texture on demand.
+  const starterLeft=rows.starter.size===mb(bytes(groupOf('starter')))?bytes(groupOf('starter')):bytes(groupOf('starter').filter(a=>a.url!=='/pod/worlds/quilt.webp'));
+  assert.equal(rows.starter.size,starterLeft===bytes(groupOf('starter'))?mb(starterLeft):`${mb(starterLeft)} left`);
+  assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(starterLeft+bytes(groupOf('coach')))}`);
   assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Download selected','focus moves into the menu');
   assert.equal(await page.getByRole('dialog',{name:'Downloads'}).isVisible(),true,'the menu is labelled by its title');
   assert.deepEqual(await page.evaluate(()=>{const r=document.getElementById('downloadsMenu').getBoundingClientRect();return [r.width,r.height];}),[375,812],'its own full screen');
   await page.screenshot({path:resolve(SHOTS,'first-open-menu-375x812.png')});
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-first-open-menu-375x812.png')});
   // Extra coach bodies: sections open by workout, the ones not yet complete marked locked (still downloadable).
   await page.locator('#downloadsMenu details summary').click();
   assert.equal(await page.locator('#downloadsMenu [data-group="bodies-starter"]').isEnabled(),true);
   await page.waitForFunction(()=>!document.querySelector('#downloadsMenu [data-group="bodies-chest"]').closest('label').querySelector('[data-lock]').hidden);
   await page.locator('#downloadsMenu [data-all="bodies"]').check();
-  assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(bytes(PACKAGE.filter(a=>a.group==='coach'||a.group.startsWith('bodies-'))))}`);
+  assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(starterLeft+bytes(PACKAGE.filter(a=>a.group==='coach'||a.group.startsWith('bodies-'))))}`);
   await page.locator('#downloadsMenu [data-all="bodies"]').uncheck();
   await page.getByRole('button',{name:'Not now'}).click();
   assert.equal(await menuOpen(page),false);
@@ -366,6 +374,120 @@ test('an app update keeps the package and saved data, and refreshes only the fil
   assert.equal(await cold.evaluate(async url=>(await fetch(url)).text(),changed.url),body,'offline serves the new file, never the old one');
   const ids=await cold.evaluate(async()=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach(),rows=await repo.forOwner(repo.guestOwnerId).listWorkouts();repo.close();return rows.map(r=>r.id);});
   assert(ids.includes(savedId),'saved workouts survive the update');
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+// W2-2O (#136): the portal scenes' art is the Starter download. Without it each scene still works: online it
+// fetches its art on demand (a small "Downloading…" note, kept for offline); offline it shows a clean
+// placeholder that offers the Starter pack.
+const STARTER=groupOf('starter');
+async function launchGL(){return chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});}
+const kept=(page,url)=>page.evaluate(async url=>{const pkg=(await caches.keys()).find(n=>n.startsWith('myr5-package-'));return !!pkg&&!!await caches.match(url,{cacheName:pkg});},url);
+const noteShows=(page,text)=>page.waitForFunction(text=>{const n=document.querySelector('.body-download-note');return n?.textContent===text&&!n.hidden&&n.matches(':popover-open');},text,{timeout:15000});
+const noteGone=page=>page.waitForFunction(()=>document.querySelector('.body-download-note').hidden,null,{timeout:30000});
+
+test('W2-2O without the Starter pack, online: each scene fetches its art on demand with a note, and keeps it',{timeout:240000},async()=>{
+ assert.deepEqual(STARTER.map(a=>a.url).filter(u=>CORE.some(c=>c.url===u)),[],'no Starter art in core');
+ const server=await serve();let browser;
+ try{
+  browser=await launchGL();const context=await installed(browser,server.base);
+  // Quilt: first open, Not now; the portal fetches the quilt texture by itself.
+  server.slow.add('/pod/worlds/quilt.webp');
+  let page=await home(context,server.base);
+  await waitMenu(page);await page.getByRole('button',{name:'Not now'}).click();
+  await noteShows(page,'Downloading…');
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-online-quilt-downloading-375x812.png')});
+  await noteGone(page);
+  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&document.querySelector('#portalBoardHost canvas'),null,{timeout:15000});
+  assert.equal(await kept(page,'/pod/worlds/quilt.webp'),true,'the quilt is kept for offline');
+  assert.equal(server.seen.some(r=>r.pkg),false,'on demand, not a group download');
+  await page.close();
+  // The ship, over its own dialog: the note is a popover, so it shows above the scene.
+  page=await home(context,server.base,'/pose.html#pod');
+  server.slow.add('/pod/worlds/starter/supportive.glb');
+  await page.evaluate(()=>{window.myr5Menus.ship();});
+  await noteShows(page,'Downloading…');
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-online-ship-downloading-375x812.png')});
+  await noteGone(page);
+  await page.waitForFunction(()=>caches.keys().then(async names=>{const pkg=names.find(n=>n.startsWith('myr5-package-'));return !!pkg&&!!await caches.match('/pod/worlds/starter/supportive.glb',{cacheName:pkg});}),null,{timeout:30000});
+  assert.equal(await page.locator('.ship-view-fallback').isVisible(),false,'no Starter offer once the ship is here');
+  await page.close();
+  // Achievements, meditation and the Food pyramid fetch theirs too (a fresh window each, clear of the routes' history).
+  page=await home(context,server.base,'/pose.html#pod');
+  await page.evaluate(()=>window.myr5Menus.achievements());
+  await page.waitForFunction(()=>{const img=document.querySelector('.ach-art');return img?.complete&&img.naturalWidth>0;},null,{timeout:30000});
+  assert.equal(await page.evaluate(()=>document.querySelector('.ach-board').classList.contains('no-art')),false);
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  await page.evaluate(()=>document.querySelector('.meditation-entry').click());
+  await page.waitForFunction(()=>document.querySelector('.meditation-panel').classList.contains('has-wonder-art'),null,{timeout:30000});
+  assert.equal(await page.locator('.meditation-starter').isVisible(),false);
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  await page.evaluate(()=>document.querySelector('.coach-dock [data-panel="meals"]').click());
+  await page.waitForFunction(()=>document.querySelector('#mealsPanel.pyramid-mode #pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:60000});
+  assert.equal(await page.locator('#pyramidStarter').count(),0);
+  for(const url of ['/pod/worlds/achievements.jpg','/food/pyramid-scanner.glb'])assert.equal(await kept(page,url),true,url+' is kept for offline');
+  assert(server.seen.filter(r=>r.path.startsWith('/pod/worlds/starter/')&&r.path.endsWith('.webp')).length>=1,'today\'s starter wonder came on demand');
+  // The menu counts them: the Starter row shows only what is left.
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  await page.evaluate(()=>window.myr5Packs.open());await waitMenu(page);
+  await page.waitForFunction(()=>/ left$|^Saved$/.test(document.querySelector('#downloadsMenu [data-group="starter"]').closest('label').querySelector('[data-size]').textContent),null,{timeout:10000});
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+test('W2-2O without the Starter pack, offline: plain quilt, and each scene shows a clean placeholder offering the pack',{timeout:240000},async()=>{
+ const server=await serve();let browser;
+ try{
+  browser=await launchGL();const context=await installed(browser,server.base);
+  await context.setOffline(true);
+  const unavailable=new Set();context.on('response',r=>{if(r.status()===503)unavailable.add(new URL(r.url()).pathname);});
+  // The quilt: no menu offline; the board is a plain stitched quilt.
+  let page=await home(context,server.base);
+  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&document.querySelector('#portalBoardHost canvas'),null,{timeout:20000});
+  assert.equal(await page.evaluate(()=>document.getElementById('portalHome').classList.contains('no-board')),false,'the board is up, not the menu sheet');
+  assert.equal(await menuOpen(page),false);
+  await page.waitForTimeout(500);
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-plain-quilt-375x812.png')});
+  assert.equal(await page.locator('.body-download-note').isVisible(),false,'a scene without its Starter art shows its own placeholder, not a note');
+  await page.close();
+  page=await home(context,server.base,'/pose.html#pod');
+  // Achievements: the bosses on the plain starfield, and the offer.
+  await page.evaluate(()=>window.myr5Menus.achievements());
+  await page.waitForFunction(()=>document.querySelector('.ach-board').classList.contains('no-art'),null,{timeout:15000});
+  assert.equal(await page.locator('.ach-starter button').isVisible(),true);
+  assert.equal(await page.locator('.ach-art').isVisible(),false,'no broken image');
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-achievements-375x812.png')});
+  // Its button opens the Downloads menu with the Starter pack picked and focused.
+  await page.locator('.ach-starter button').click();await waitMenu(page);
+  assert.equal(await page.locator('#downloadsMenu [data-group="starter"]').isChecked(),true);
+  assert.equal(await page.evaluate(()=>document.activeElement?.dataset.group),'starter');
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-offer-opens-menu-375x812.png')});
+  await page.locator('#downloadsMenu [data-later]').click();
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  // Meditation: the plain room, and the offer.
+  await page.evaluate(()=>document.querySelector('.meditation-entry').click());
+  await page.waitForFunction(()=>!document.querySelector('.meditation-starter').hidden,null,{timeout:15000});
+  assert.equal(await page.evaluate(()=>document.querySelector('.meditation-panel').classList.contains('has-wonder-art')),false);
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-meditation-375x812.png')});
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  // Food: the plain panel (Camera, lists) and the offer, instead of the pyramid.
+  await page.evaluate(()=>document.querySelector('.coach-dock [data-panel="meals"]').click());
+  await page.waitForFunction(()=>document.getElementById('pyramidStarter')&&!document.getElementById('mealsPanel').classList.contains('pyramid-mode'),null,{timeout:30000});
+  assert.equal(await page.locator('#pyramidStarter button').isVisible(),true);assert.equal(await page.locator('#foodCamera').isVisible(),true);
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-food-375x812.png')});
+  await page.close();page=await home(context,server.base,'/pose.html#pod');
+  // The ship: the plain backdrop and the offer (the coach group isn't here either, so its card waits out first).
+  await page.evaluate(()=>{window.myr5Menus.ship();});
+  await page.waitForFunction(()=>{const f=document.querySelector('.ship-view-fallback');return f&&!f.hidden&&f.querySelector('.ship-view-download').textContent==='Download the Starter pack';},null,{timeout:45000});
+  assert.match(await page.locator('.ship-view-fallback p').textContent(),/Starter pack/);
+  assert.equal(await page.locator('.ship-view .ship-scene-beam').count(),0,'the arrival scene steps aside for the plain backdrop');
+  await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-ship-375x812.png')});
+  await page.locator('.ship-view-download').click();await waitMenu(page);
+  assert.equal(await page.locator('#downloadsMenu [data-group="starter"]').isChecked(),true);
+  await page.locator('#downloadsMenu [data-later]').click();
+  for(const url of ['/pod/worlds/quilt.webp','/pod/worlds/achievements.jpg','/food/pyramid-scanner.glb','/pod/worlds/starter/supportive.glb'])assert(unavailable.has(url),url+' was asked for and cleanly refused');
+  assert([...unavailable].every(p=>PACKAGE.some(a=>a.url===p)),'only package files are unavailable: every scene\'s code is core');
   await context.close();
  }finally{await browser?.close();await server.close();}
 });

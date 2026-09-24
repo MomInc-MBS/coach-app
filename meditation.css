@@ -13,3 +13,7 @@
 .meditation-panel.has-wonder-art{background:var(--wonder-base,#101b29)!important}
 .meditation-panel.has-wonder-art .meditation-stage{height:auto;aspect-ratio:var(--wonder-ratio,.86);place-items:end center;padding-bottom:8px;box-sizing:border-box;background:linear-gradient(transparent 72%,var(--wonder-base,#101b29)),var(--wonder-url) top/100% 100% no-repeat;image-rendering:pixelated}
 .meditation-panel.has-wonder-art .meditation-character{height:170px}.meditation-panel.has-wonder-art .breathing-ring{width:180px;height:180px}.meditation-panel.has-wonder-art .meditation-speech{text-shadow:0 1px 3px #000}
+/* W2-2O: offered when today's starter wonder isn't on this phone (the Starter pack). */
+.meditation-starter{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin:0 16px 14px;font-size:14px;text-align:center}
+.meditation-starter[hidden]{display:none}
+.meditation-starter button{min-height:44px}

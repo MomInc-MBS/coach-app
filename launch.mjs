@@ -182,9 +182,17 @@ async function mountPyramid(){
  try{
   const {mountPyramidScanner}=await import('./food/pyramid-scanner.mjs');if(run!==pyramidGen||!$('mealsPanel').open)return;
   const instance=await mountPyramidScanner($('foodCamera'),{getNutrition:mealNutrition.snapshot,getMeals:()=>mealItems,onDial:foodDial,frame:foodFrame,signal:request.signal});if(run!==pyramidGen||!$('mealsPanel').open){instance.dispose();return;}
-  pyramidScanner=instance;pyramidBroken=false;$('mealsPanel').classList.add('pyramid-mode');
- }catch(error){if(!request.signal.aborted){pyramidBroken=true;$('mealsPanel').classList.remove('pyramid-mode');console.warn('Pyramid scanner unavailable',error);}}
+  pyramidScanner=instance;pyramidBroken=false;$('mealsPanel').classList.add('pyramid-mode');$('pyramidStarter')?.remove();
+ }catch(error){if(!request.signal.aborted){pyramidBroken=true;$('mealsPanel').classList.remove('pyramid-mode');console.warn('Pyramid scanner unavailable',error);void offerPyramidStarter();}}
  finally{if(pyramidRequest===request)pyramidRequest=null;}
+}
+// W2-2O: the pyramid model is Starter-pack art. When it isn't on this phone (offline, never downloaded; not a WebGL
+// failure), the plain Food panel (Camera, Macros/Micros) offers the pack; online, the service worker fetches it on demand.
+async function offerPyramidStarter(){
+ if(navigator.onLine||await globalThis.caches?.match('/food/pyramid-scanner.glb').catch(()=>null)||$('pyramidStarter'))return;
+ const offer=document.createElement('p');offer.id='pyramidStarter';offer.className='hint';
+ offer.append('The Food pyramid comes with the Starter pack. ',button('Download the Starter pack',()=>window.myr5Packs?.open('starter')));
+ $('foodCamera').after(offer);
 }
 function releasePyramid(){pyramidGen++;pyramidRequest?.abort();pyramidRequest=null;pyramidScanner?.dispose();pyramidScanner=null;}
 // The pyramid fits between the Food header and whatever the bottom sheet is showing.

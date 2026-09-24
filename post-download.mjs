@@ -15,6 +15,8 @@ const write=(store,key,value)=>{try{value==null?store.removeItem(key):store.setI
 const say=text=>Object.assign(Error(text),{shown:true});
 // Group ids come from scripts/offline-assets.mjs; a row shows only when this build has that group.
 const GROUPS=[
+ // W2-2O (#136): the portal experience's art, offered first (and picked) on the first open.
+ ['starter','Starter: portal, pyramid, ship and worlds','The quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
  ['coach','Your coach','The regular coach models, the customizer and exercise demos.'],
  ['bodies','Extra coach bodies','More body shapes for the customizer, by workout section. A body you pick also downloads by itself.'],
  ['hand','Helping Hand','Your hand companion and all its looks.'],
@@ -42,7 +44,7 @@ export function mountPostDownload({host}){
  settings.className='full-download-settings';settings.setAttribute('aria-labelledby','fullDownloadSettingsTitle');
  bar.innerHTML=status+'<button type="button" data-hide aria-label="Hide download status">Hide</button>';
  settings.innerHTML='<h3 id="fullDownloadSettingsTitle">Downloads</h3><button type="button" data-open>Choose downloads</button>'+status;
- note.className='body-download-note';note.setAttribute('role','status');note.hidden=true;
+ note.className='body-download-note';note.setAttribute('role','status');note.setAttribute('popover','manual');note.hidden=true;
  host.append(settings);document.body.append(menu,bar,note);
  const list=menu.querySelector('[data-groups]'),packsHost=menu.querySelector('[data-packs]'),menuStatus=menu.querySelector('.downloads-status');
  // Settings reaches the same menu (the pod Settings dialog, when this page has one).
@@ -69,11 +71,13 @@ export function mountPostDownload({host}){
  window.addEventListener('myr5:account-ready',sectionsReady);window.addEventListener('myr5:account-cleared',sectionsCleared);
  void mountSections(window.myr5AuthenticatedAccount);
  // Any part of the app (e.g. the ship scene, when its pack isn't installed yet) can open the menu,
- // optionally pointing at one signed section's button.
+ // optionally pointing at one group (a scene without its Starter art: 'starter', picked for them) or one
+ // signed section's button.
  window.myr5Packs=Object.freeze({open(sectionId){
   openMenu(false);
-  const packs=sectionControls?.panel;
-  const target=typeof sectionId==='string'&&/^[a-z0-9-]+$/.test(sectionId)?packs?.querySelector(`[data-actions] [data-sections~="${sectionId}"]`):null;
+  const id=typeof sectionId==='string'&&/^[a-z0-9-]+$/.test(sectionId)?sectionId:null,group=id&&list.querySelector(`[data-group="${id}"]`);
+  if(group&&!group.disabled){group.checked=true;sync();}
+  const target=group||(id&&sectionControls?.panel?.querySelector(`[data-actions] [data-sections~="${id}"]`));
   if(target){target.scrollIntoView({block:'center',behavior:'smooth'});target.focus({preventScroll:true});}
   return !!target;
  }});
@@ -103,6 +107,8 @@ export function mountPostDownload({host}){
   const groups=plan?.groups||{},sizes=id=>groups[id];
   const bodies=SECTIONS.filter(section=>sizes(section.id));
   const current=new Map(boxes().map(box=>[box.dataset.group,box.checked])),expanded=menu.open&&!!list.querySelector('details')?.open;
+  // A re-render keeps keyboard focus on the same row (e.g. the Starter row a scene asked for).
+  const focused=list.contains(document.activeElement)&&document.activeElement.dataset,refocus=focused&&(focused.group?`[data-group="${focused.group}"]`:focused.all?`[data-all="${focused.all}"]`:null);
   list.querySelectorAll('.download-row,.download-bodies').forEach(node=>node.remove());
   for(const [id,title,text] of GROUPS){
    if(id==='bodies'){
@@ -111,17 +117,18 @@ export function mountPostDownload({host}){
     wrap.innerHTML=row('*bodies',title,text)+'<details><summary>By workout section</summary>'+bodies.map(section=>row(section.id,section.name,section.row?`${sizes(section.id).files} bodies`:`${sizes(section.id).files} bodies, open to everyone`,'<em data-lock hidden>Locked · preview</em>')).join('')+'</details>';
     wrap.querySelector('details').open=expanded;list.append(wrap);continue;
    }
-   if(sizes(id))list.insertAdjacentHTML('beforeend',row(id,title,text,id==='coach'?'<em>Recommended</em>':''));
+   if(sizes(id))list.insertAdjacentHTML('beforeend',row(id,title,text,id==='coach'||id==='starter'?'<em>Recommended</em>':''));
   }
   if(Object.keys(groups).length>1)list.insertAdjacentHTML('beforeend',row('*everything','Everything','Every group above.'));
   // A re-render while the menu is up (a fresher plan) keeps what the user has toggled so far.
   const picked=chosen(),kept=menu.open?current:null;
   for(const box of boxes()){
    const info=sizes(box.dataset.group),label=box.closest('label');label.dataset.saved=String(!info.remaining);
-   box.checked=!info.remaining||(kept?.has(box.dataset.group)?kept.get(box.dataset.group):firstPick?box.dataset.group==='coach':!picked||picked.includes(box.dataset.group));
+   box.checked=!info.remaining||(kept?.has(box.dataset.group)?kept.get(box.dataset.group):firstPick?['starter','coach'].includes(box.dataset.group):!picked||picked.includes(box.dataset.group));
    label.querySelector('[data-size]').textContent=!info.remaining?'Saved':info.remaining<info.total?`${mb(info.remaining)} left`:mb(info.total);
   }
   paintLocks();sync();
+  if(refocus)list.querySelector(refocus)?.focus({preventScroll:true});
  }
  function paintLocks(){
   if(progress)for(const section of SECTIONS){const badge=list.querySelector(`[data-group="${section.id}"]`)?.closest('label').querySelector('[data-lock]');if(badge)badge.hidden=!sectionLocked(section.row,progress);}
@@ -223,19 +230,24 @@ export function mountPostDownload({host}){
  }
  for(const box of [bar,settings,menuStatus])box.querySelector('[data-toggle]').onclick=()=>controller?controller.abort():void start();
  bar.querySelector('[data-hide]').onclick=()=>{bar.hidden=true;};
- // A roster body that isn't on this phone downloads by itself when it's previewed or picked (sw.js).
- const pendingBodies=new Set();let noteTimer=0;
+ // A roster body, or a portal scene's Starter art, that isn't on this phone downloads by itself when it's
+ // needed (sw.js). The note is a popover so it also shows over a scene's dialog; never over a workout.
+ // Offline, a scene without its Starter art shows its own placeholder, so only a body says it's missing.
+ const pending=new Map();let noteTimer=0;
+ const showNote=text=>{note.textContent=text;note.hidden=!text||busy();try{note.hidden?note.hidePopover():note.showPopover();}catch{}};
  worker.addEventListener?.('message',({data})=>{
-  if(data?.type!=='BODY_DOWNLOAD')return;
+  const starter=data?.type==='STARTER_DOWNLOAD';
+  if(data?.type!=='BODY_DOWNLOAD'&&!starter)return;
   clearTimeout(noteTimer);
-  if(data.state==='start')pendingBodies.add(data.url);else pendingBodies.delete(data.url);
-  note.textContent=data.state==='unavailable'?'This body isn’t on this phone yet. Connect to the internet to download it.':pendingBodies.size?'Downloading this body…':'';
-  note.hidden=!note.textContent;
-  if(data.state==='unavailable')noteTimer=setTimeout(()=>{note.hidden=true;},6000);
+  if(data.state==='start')pending.set(data.url,starter);else pending.delete(data.url);
+  const missing=data.state==='unavailable'&&!starter;
+  showNote(missing?'This body isn’t on this phone yet. Connect to the internet to download it.':!pending.size?'':[...pending.values()].every(Boolean)?'Downloading…':'Downloading this body…');
+  if(missing)noteTimer=setTimeout(()=>showNote(''),6000);
  });
  // Nothing appears over a workout or camera-only mode; the menu waits until the app is idle.
  const ticker=setInterval(()=>{
   if(menu.open&&busy())menu.close('busy');
+  if(!note.hidden&&busy())showNote('');
   if(wantMenu&&idle()&&navigator.onLine){wantMenu=false;openMenu(true);}
   if(phase==='done'&&!bar.hidden&&!doneTimer&&idle())doneTimer=setTimeout(()=>{bar.hidden=true;},6000);
  },1000);

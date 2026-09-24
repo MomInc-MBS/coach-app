@@ -13,9 +13,13 @@ export function mountMeditation({api,onComplete,getAccount,backgroundLookup}={})
  async function applyBackground(){
   const {id,url}=await todaysBackground(backgroundLookup);let art=null;
   if(url)try{const img=new Image();img.src=url;await img.decode();art={url:`url("${url}")`,ratio:String(img.naturalWidth/img.naturalHeight),base:bottomColour(img)};}catch{}
-  dialog.dataset.wonder=art?id:'';dialog.classList.toggle('has-wonder-art',!!art);
+  dialog.dataset.wonder=art?id:'';dialog.classList.toggle('has-wonder-art',!!art);starter.hidden=!!art;
   for(const key of ['url','ratio','base'])art?.[key]?dialog.style.setProperty('--wonder-'+key,art[key]):dialog.style.removeProperty('--wonder-'+key);
  }
+ // W2-2O: the starter wonders are Starter-pack art; without today's (offline, not downloaded) the plain room shows and the pack is offered.
+ const starter=document.createElement('p'),get=document.createElement('button');starter.className='meditation-starter';starter.hidden=true;
+ get.type='button';get.textContent='Download the Starter pack';get.onclick=()=>window.myr5Packs?.open('starter');
+ starter.append('Backgrounds come with the Starter pack. ',get);speech.after(starter);
  function bottomColour(img){try{const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=1;const g=c.getContext('2d');g.drawImage(img,0,img.naturalHeight-1,img.naturalWidth,1,0,0,img.naturalWidth,1);return averageRgb(g.getImageData(0,0,c.width,1).data);}catch{return null;}}
  open.onclick=()=>{document.getElementById('stop')?.click();reset();void applyBackground();dialog.showModal();};
  dialog.querySelector('[data-meditation-close]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{reset();open.focus();});

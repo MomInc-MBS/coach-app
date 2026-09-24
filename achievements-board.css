@@ -47,3 +47,10 @@ html[data-public-state] .ach-board .ach-boss.selected{animation:ach-pulse 1.4s e
 html[data-public-state] .ach-board .ach-detail{animation:ach-rise .5s ease!important}
 html[data-public-state] .ach-board .ach-stage{transition:transform .9s cubic-bezier(.22,.61,.36,1)!important}
 @media (prefers-reduced-motion:reduce){.ach-board .ach-stage{transition:none!important}.ach-board *,.ach-board ::before,.ach-board ::after{animation:none!important}.ach-stars i{opacity:.8}}
+/* W2-2O: without the Starter pack's art (offline, not downloaded): the bosses outlined on the starfield, and the pack offered. */
+.ach-starter{display:none}
+.ach-board.no-art .ach-art{visibility:hidden}
+.ach-board.no-art .ach-boss:not([data-state=locked]){box-shadow:0 0 14px var(--glow),inset 0 0 0 1px var(--glow)}
+.ach-board.no-art:not(.zoomed) .ach-starter{position:absolute;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#05030ccc;text-align:center}
+.ach-starter p{margin:0;font-size:15px;letter-spacing:.08em;color:#d9d2ee}
+.ach-starter button{min-height:44px;padding:0 18px;border:1px solid #fff9;border-radius:22px;background:#ffffff1f;color:#fff;font:inherit;font-size:15px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
