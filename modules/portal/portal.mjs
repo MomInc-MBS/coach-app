@@ -1295,9 +1295,10 @@ function tunnelGL(){
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // Runs the wormhole for one glass phase: speed ramps up across the cut + loading phase, the vanishing point drifts
-// toward the finger (and with device tilt where that needs no permission prompt). Reduced motion draws one still frame.
+// toward the finger (and with device tilt where that needs no permission prompt). Reduced motion uses static CSS glass.
 // ph.stop() freezes it (at the reveal) and endPhase() always stops it.
 function startTunnel(ph,poly,color,all){
+ if(prefersReducedMotion())return; // the static CSS glass avoids a costly WebGL resize on an instant transition
  const t=tunnelGL();if(!t)return;
  const {gl,u,canvas}=t,{left,top,w,h}=ph.box,reduced=prefersReducedMotion(),seq=ringColours(color,all);
  const tex=lensMap(bleedPts(poly,-GLASS.rimInset).map(([x,y])=>[x-left,y-top]),w,h);
