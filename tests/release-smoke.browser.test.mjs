@@ -454,6 +454,7 @@ test('9. the rest exit goes home to the quilt, a Settings link is a real route, 
   await mkdir(FRAMES,{recursive:true});
   await page.evaluate(()=>window.myr5Menus.portal());
   await portalUp(page);
+  await page.evaluate(()=>document.querySelector('.app-update-banner [data-later]')?.click()); // clear of every later frame
 
   // #56: reach rest from the pod (quilt hidden) so the exit's own trip back to the quilt is what's under test.
   await page.evaluate(()=>{location.hash='pod';});
@@ -471,11 +472,36 @@ test('9. the rest exit goes home to the quilt, a Settings link is a real route, 
   await page.goBack();
   await portalUp(page);
 
-  // #19: the chip's own spot and look above the bar (unfinished()'s data rule -- the newest paused/interrupted
-  // row from today -- has its own node test beside the local-coach tests).
-  await page.evaluate(()=>{const chip=document.querySelector('#coachDock .dock-continue');chip.textContent='Continue · Squats';chip.dataset.mode='squat';chip.hidden=false;});
+  // #19: a real interrupted set from today (seeded from a second, throwaway page on the same origin so it
+  // never contends for the live page's workout lease), surfaced by reloading -- the boot path unfinished()'s
+  // own data rule has a node test beside the local-coach tests; this checks the chip's spot and look.
+  const seedPage=await context.newPage();
+  await seedPage.goto(base+'/onboarding.html');
+  await seedPage.evaluate(async()=>{
+   const {openGuestWorkoutAdapter}=await import('/local-coach-runtime.mjs');
+   const adapter=await openGuestWorkoutAdapter({exerciseKeys:['squat']});
+   const workout=await adapter.start({mode:'squat',goal:12,restSeconds:60,metadata:{name:'Squats'},control:'camera'});
+   await adapter.interrupt(workout.id,{value:4});
+   adapter.close();
+  });
+  await seedPage.close();
+  await page.reload();
+  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
+  await page.evaluate(()=>document.querySelector('.app-update-banner [data-later]')?.click());
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+  const chip=page.locator('#coachDock .dock-continue');
+  await chip.waitFor({state:'visible',timeout:10000});
+  assert.match(await chip.textContent(),/Continue.*Squats/,'the chip names the interrupted movement');
+  // .portal-frame's own box is the metal frame's face (its rail is a box-shadow that extends --portal-rail
+  // further out still, per portal.css); the chip must clear the face, well short of the rail.
+  const [chipBox,dockBox,frame]=await Promise.all([chip.boundingBox(),page.locator('#coachDock').boundingBox(),
+   page.evaluate(()=>{const host=document.querySelector('#portalBoardHost .portal-frame');return host?host.getBoundingClientRect().bottom:null;})]);
+  assert.ok(chipBox&&dockBox,'the chip and the bar both have a box');
+  assert.ok(chipBox.y+chipBox.height<=dockBox.y+.5,`the chip sits above the bar, not over it (${chipBox.y+chipBox.height} vs ${dockBox.y})`);
+  assert.ok(chipBox.x>=0&&chipBox.x+chipBox.width<=375,'the chip stays inside the 375-wide viewport');
+  if(frame)assert.ok(chipBox.y+chipBox.height<=frame-.5,`the chip sits clear of the quilt's frame face (${chipBox.y+chipBox.height} vs frame face bottom ${frame})`);
   await page.screenshot({path:resolve(FRAMES,'r5-7-continue-chip.png')});
-  await page.evaluate(()=>{document.querySelector('#coachDock .dock-continue').hidden=true;});
 
   // #79: every Settings link but HOW TO PLAY is a route now; ACHIEVEMENTS sets #achievements and the bar stays
   // up under it (test 6 already covers that no dock item lights for achievements -- it isn't one of the six).

@@ -10,8 +10,10 @@
 #coachDock.coach-dock .dock-portal[aria-current=page]{background:radial-gradient(circle,#2c1d3d 0 60%,transparent 62%),conic-gradient(#ff5f1f,#ffff33,#39ff14,#1f51ff,#b026ff,#ff10f0,#ff5f1f);box-shadow:0 0 0 2px #fff,0 0 18px #ff10f0,0 0 30px #1f51ffaa}
 #coachDock .dock-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 #coachDock.coach-dock[data-hint]:before{content:attr(data-hint);position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:#1c1428f2;border:1px solid #ffffff44;color:#f5eaff;white-space:nowrap;font-size:13px;box-shadow:0 4px 16px #0008}
-/* #19: a Continue chip above the bar, same pill look as the [data-hint] hint above. */
-#coachDock.coach-dock .dock-continue{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:#1c1428f2;border:1px solid #ffffff44;color:#f5eaff;white-space:nowrap;font-size:13px;font-weight:600;box-shadow:0 4px 16px #0008;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* #19: a Continue chip above the bar, same pill look as the [data-hint] hint above. It sits higher than that
+   hint (+40px, not +10px): on the quilt the metal frame leaves only ~16px clear above the bar including its
+   rail, not enough for a real button, so the chip floats over the framed glass clear of the frame and rail. */
+#coachDock.coach-dock .dock-continue{position:absolute;left:50%;bottom:calc(100% + 40px);transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:#1c1428f2;border:1px solid #ffffff44;color:#f5eaff;white-space:nowrap;font-size:13px;font-weight:600;box-shadow:0 4px 16px #0008;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #coachDock.coach-dock .dock-continue:focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
 #coachDock.coach-dock .dock-continue[hidden]{display:none}
 body[data-tracking=true] #coachDock.coach-dock,body[data-screen=rest] #coachDock.coach-dock{display:none}
