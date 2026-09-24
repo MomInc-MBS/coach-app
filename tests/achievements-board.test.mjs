@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSSES,TIERS,MAX_LEVEL,bossStates,selectedTracks} from '../achievements-board.mjs';
+import {BOSSES,TIERS,MAX_LEVEL,bossStates,selectedTracks,layerTransform} from '../achievements-board.mjs';
 const byTier=(states,id)=>states.filter(b=>b.id.startsWith(id+'-'));
 const beat=ids=>Object.fromEntries(ids.map(id=>[id,MAX_LEVEL]));
 test('every boss has a box inside the art and a unique id',()=>{
@@ -33,4 +33,12 @@ test('selected tracks come from the onboarding movements plus meditation',()=>{
  assert.deepEqual([...selectedTracks(null)],['meditation']);
  const account={onboarding:{data:{profile:{exercises:['squat','pushup','boxing','jumping','tree']}}}};
  assert.deepEqual([...selectedTracks(account)].sort(),['cardio','chest','martial-arts','meditation','quads']);
+});
+test('layerTransform: identity at no zoom, far moves less than near',()=>{
+ for(const depth of ['far','mid','near'])assert.deepEqual(layerTransform(depth,{}),{tx:0,ty:0,scale:1});
+ const far=layerTransform('far',{tx:120,ty:-40,scale:3}),mid=layerTransform('mid',{tx:120,ty:-40,scale:3}),near=layerTransform('near',{tx:120,ty:-40,scale:3});
+ assert(Math.abs(far.tx)<Math.abs(mid.tx)&&Math.abs(mid.tx)<Math.abs(near.tx),'far < mid < near translate');
+ assert(Math.abs(far.ty)<Math.abs(near.ty));
+ assert(far.scale<mid.scale&&mid.scale<near.scale,'far < mid < near scale');
+ assert(near.tx>far.tx*2,'near overshoots the stage translate (foreground rushes past faster)');
 });

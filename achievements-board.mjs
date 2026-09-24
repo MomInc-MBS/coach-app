@@ -137,12 +137,22 @@ function paint(){
   host.append(btn);
  }
 }
+// Pure helper: how far each depth layer moves for a given stage translate/scale (far moves least, near most).
+export function layerTransform(depth,{tx=0,ty=0,scale=1}={}){
+ const f=DEPTH[depth]??1;
+ return {tx:tx*f,ty:ty*f,scale:1+(scale-1)*f};
+}
 function zoom(b,btn){
  stage.querySelector('.ach-boss.selected')?.classList.remove('selected');btn.classList.add('selected');
  const r=stage.getBoundingClientRect(),[x,y,w,h]=b.box;
  const cx=r.width*(x+w/2)/100,cy=r.height*(y+h/2)/100,scale=Math.min(4,Math.max(2,r.height*.26/(r.height*h/100)));
- stage.style.transformOrigin=`${cx}px ${cy}px`;
- stage.style.transform=`translate(${r.width/2-cx}px,${r.height*.3-cy}px) scale(${scale})`;
+ const tx=r.width/2-cx,ty=r.height*.3-cy;
+ // Art + boss tap targets keep today's transform exactly, unscaled by depth, so nothing shifts under a finger.
+ for(const el of [artEl,bossesEl]){el.style.transformOrigin=`${cx}px ${cy}px`;el.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;}
+ for(const depth of ['far','mid','near']){
+  const t=layerTransform(depth,{tx,ty,scale}),el=layers[depth];
+  el.style.transformOrigin=`${cx}px ${cy}px`;el.style.transform=`translate(${t.tx}px,${t.ty}px) scale(${t.scale})`;
+ }
  dialog.classList.add('zoomed');
  detail.style.setProperty('--glow',b.color);
  const path=b.track?TRACK_NAMES[b.track]:'Shared';
@@ -151,10 +161,14 @@ function zoom(b,btn){
  const rewards=levelRewardsForBoss(b.id);
  detail.querySelectorAll('ol li span').forEach((span,i)=>{const items=rewards[i]||[];span.textContent=items.length?items.map(item=>`${item.name}${item.line?` — ${item.line}`:''}`).join(' · '):'No reward';});
 }
-function unzoom(){stage.style.transform='';dialog.classList.remove('zoomed');detail.hidden=true;stage.querySelector('.ach-boss.selected')?.classList.remove('selected');}
+function unzoom(){
+ for(const el of [artEl,bossesEl,layers?.far,layers?.mid,layers?.near])if(el)el.style.transform='';
+ dialog.classList.remove('zoomed');detail.hidden=true;stage.querySelector('.ach-boss.selected')?.classList.remove('selected');
+}
 export function openAchievements(){
  if(!dialog)build();
  paint();
  if(!dialog.open)dialog.showModal();
+ fitLayers();draw(performance.now()-t0);startLoop();
  return dialog;
 }

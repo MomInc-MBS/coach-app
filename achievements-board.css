@@ -4,9 +4,11 @@
 .ach-board{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#05030c;color:#fff;overflow:hidden;font:16px/1.4 'Barlow Condensed',var(--font,system-ui);letter-spacing:.04em}
 .ach-board[open]{display:grid;place-items:center}
 .ach-board::backdrop{background:#000}
-.ach-stage{position:relative;aspect-ratio:1141/2000;height:min(100dvh,calc(100vw * 2000 / 1141));transition:transform .9s cubic-bezier(.22,.61,.36,1);will-change:transform}
+.ach-stage{position:relative;aspect-ratio:1141/2000;height:min(100dvh,calc(100vw * 2000 / 1141))}
+/* Art, bosses and the three star layers each carry their own zoom transform (parallax factor per layer). */
+.ach-parallax{transition:transform .9s cubic-bezier(.22,.61,.36,1);will-change:transform}
 .ach-art{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
-.ach-stars{position:absolute;inset:0;pointer-events:none}
+.ach-stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .5s}
 .ach-stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px #fff;opacity:0;animation:ach-star 3s ease-in-out infinite alternate;animation-delay:var(--d)}
 .ach-bosses{position:absolute;inset:0}
 .ach-boss{position:absolute;margin:0;padding:0;border:0;background:none;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -22,7 +24,8 @@
 .ach-head p{margin:2px 0 0;font-size:14px;letter-spacing:.14em;color:#cfc8e6}
 .ach-head::after{content:'';display:block;height:1px;margin-top:8px;background:linear-gradient(90deg,#fffc,transparent)}
 .ach-board.zoomed .ach-head{opacity:0}
-.ach-stars{transition:opacity .5s}.ach-board.zoomed .ach-stars{opacity:0}
+/* Zoomed: dim the far/mid star layers so the detail card stays legible; near debris keeps flying over it. */
+.ach-board.zoomed [data-depth=far],.ach-board.zoomed [data-depth=mid]{opacity:.5}
 .ach-detail{position:absolute;left:0;right:0;bottom:0;max-height:56%;padding:34px 24px calc(24px + env(safe-area-inset-bottom));overflow:auto;text-align:center;background:linear-gradient(#0000,#05030cd9 24%,#05030cf5);animation:ach-rise .5s ease}
 .ach-detail[hidden]{display:none}
 .ach-detail h2{margin:0;font-size:36px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 0 18px var(--glow),0 0 2px #fff}
@@ -45,5 +48,6 @@
 html[data-public-state] .ach-board .ach-stars i{animation:ach-star 3s ease-in-out infinite alternate!important}
 html[data-public-state] .ach-board .ach-boss.selected{animation:ach-pulse 1.4s ease-in-out infinite alternate!important}
 html[data-public-state] .ach-board .ach-detail{animation:ach-rise .5s ease!important}
-html[data-public-state] .ach-board .ach-stage{transition:transform .9s cubic-bezier(.22,.61,.36,1)!important}
-@media (prefers-reduced-motion:reduce){.ach-board .ach-stage{transition:none!important}.ach-board *,.ach-board ::before,.ach-board ::after{animation:none!important}.ach-stars i{opacity:.8}}
+html[data-public-state] .ach-board .ach-parallax{transition:transform .9s cubic-bezier(.22,.61,.36,1)!important}
+/* Reduced motion: no drift/debris flight, no rAF loop (gated in JS); dots sit at .8 opacity, same as before. */
+@media (prefers-reduced-motion:reduce){.ach-board .ach-parallax{transition:none!important}.ach-board *,.ach-board ::before,.ach-board ::after{animation:none!important}.ach-stars i,.ach-stars[data-depth]{opacity:.8}}
