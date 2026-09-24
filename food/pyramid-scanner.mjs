@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {pyramidTiles,mealNutrients,todayTiles} from './pyramid-tiles.mjs';
+import {offAxis} from '../modules/portal/peer.mjs'; // #135: tilt looks round the pyramid through the portal window
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
 // Reuse the lightweight striped wall + paper notices from
@@ -416,7 +417,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
    if(spin){const t=Math.min(1,(now-spin.t0)/spin.ms);setRotation(spin.from+(spin.to-spin.from)*(1-(1-t)**3));if(t>=1)spin=null;}
    else if(!dragging&&velocity){setRotation(pivot.rotation.y+velocity);velocity*=INERTIA;if(Math.abs(velocity)<1e-4)velocity=0;}
    if(!reduced){const t=now/1000;stage.position.y=Math.sin(t*1.1)*0.035;stage.rotation.z=Math.sin(t*0.7)*0.035;stage.rotation.x=Math.sin(t*0.5)*0.02;}
-   if(fitNow){const ease=reduced?1:0.2;fitNow.dist+=(fitGoal.dist-fitNow.dist)*ease;fitNow.y+=(fitGoal.y-fitNow.y)*ease;camera.position.set(0,fitNow.y,fitNow.dist);}
+   if(fitNow){const ease=reduced?1:0.2;fitNow.dist+=(fitGoal.dist-fitNow.dist)*ease;fitNow.y+=(fitGoal.y-fitNow.y)*ease;camera.position.set(0,fitNow.y,fitNow.dist);offAxis(camera,fitNow.dist);}
    for(const k of knobs)animateKnob(k,now);
    updateSteam(dt);pulseGlow(now);
    renderer.render(scene,camera);placeUI();moveFlights(now);raf=requestAnimationFrame(animate);

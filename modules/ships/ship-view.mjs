@@ -6,6 +6,7 @@
 // `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
 // scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
 // must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
+import {offAxis} from '../portal/peer.mjs'; // #135: tilt looks round the ship through the portal window
 import {initialScene,SHIP_ANCHOR_Y,coachBand,shipPoseAbove,measureShip} from './ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 
@@ -61,7 +62,7 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  function tick(now) {
   if (disposed) return;
   if (!reduced) { group.position.y = pose.y + Math.sin((now - start) / 820) * .07 * pose.scale; group.rotation.y = -.32 + Math.sin((now - start) / 1700) * .055; }
-  renderer.render(scene, camera); raf = requestAnimationFrame(tick);
+  offAxis(camera, 7); renderer.render(scene, camera); raf = requestAnimationFrame(tick);
  }
  raf = requestAnimationFrame(tick);
  return {

@@ -29,7 +29,7 @@ test('production build contains quilt but no experimental portal board runtime o
  const forbidden=['portal-board-glb.mjs','portal-board-ice.mjs','portal-board-grass.mjs','portal-board-cogs.mjs','portal-board-jelly.mjs','portal-board-wood.mjs','parts-kit.glb','cog-kit.glb','ice.glb','grass.glb','jelly.glb','wood.glb','cogs.glb'];
  async function files(dir){let out=[];for(const e of await readdir(dir,{withFileTypes:true})){const path=join(dir,e.name);out=e.isDirectory()?out.concat(await files(path)):[...out,path];}return out;}
  const paths=await files(client),portable=paths.map(path=>path.replaceAll('\\','/')),names=portable.map(path=>decodeURIComponent(path.split('/').at(-1)));
- assert.deepEqual((await readdir(join(client,'modules/portal'))).sort(),['portal-board.mjs','portal-cut.mjs','portal-entry.mjs','portal-shapes.mjs','portal.css','portal.mjs']);
+ assert.deepEqual((await readdir(join(client,'modules/portal'))).sort(),['peer.mjs','portal-board.mjs','portal-cut.mjs','portal-entry.mjs','portal-shapes.mjs','portal.css','portal.mjs']); // peer.mjs: #135's shared eye (W2-2N)
  assert(!portable.some(path=>path.includes('/plan/')),'authoring prototypes must not be deployed');
  assert(portable.some(path=>path.endsWith('/pod/worlds/quilt.webp')),'quilt texture ships');
  for(const name of forbidden)assert(!names.includes(name),`${name} must not ship`);

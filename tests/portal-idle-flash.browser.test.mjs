@@ -1,5 +1,5 @@
-// #104 (W2-2E): shapes flash ambiently after 3s idle — fast pass (0.5s/shape, in order), then a
-// gentler slow pass (2.5s/shape) until the next touch; reduced motion shows every outline+label at
+// #104 (W2-2E): shapes flash ambiently after 3s idle — fast pass (0.5s/shape, in order), then (#133) a 4s pause, then a
+// gentler slow pass (2.5s/shape, 0.6s apart) until the next touch; reduced motion shows every outline+label at
 // once instead. Frame captures land in .frames/ (untracked) per the brief's Verify section.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,7 +28,7 @@ async function open(page){return page.evaluate(async()=>{try{localStorage.setIte
 // Labels are drawn via ctx.fillText once per idle-hint entry per frame; patched before any page script
 // runs so every draw (cycling or static) is recorded with its timestamp.
 async function recordLabels(page){
- await page.addInitScript(()=>{window.__labels=[];const orig=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...rest){window.__labels.push(text);return orig.call(this,text,...rest);};});
+ await page.addInitScript(()=>{window.__labels=[];const orig=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...rest){window.__labels.push(text);(window.__first??={})[text]??=performance.now();return orig.call(this,text,...rest);};});
 }
 // Waits until `targetMs` has elapsed since `armedAt` (a performance.now() sample taken right after the
 // portal was shown), resampling the page's own clock each time so per-step overhead (screenshots,
@@ -60,9 +60,13 @@ test('#104 idle ambient flash: fast pass order/timing, slow pass continues, a to
  labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Achievements'),`expected Achievements by 1.7s into the fast pass, got ${JSON.stringify(labels)}`);
 
- // Past the full fast pass (11 * 0.5s = 5.5s): the slow pass restarts the same order at a gentler pace.
+ // #133: past the full fast pass (11 * 0.5s = 5.5s) nothing is lit for a clear pause (IDLE.pauseMs, 4s). Watched on the
+ // page's own clock from the fast pass's first flash, so a slow round-trip (or a late armedAt) can't blur the window.
+ const drawnBetween=(from,to)=>page.evaluate(async([from,to])=>{const t0=window.__first.Workout,at=t=>new Promise(r=>setTimeout(r,Math.max(0,t0+t-performance.now())));await at(from);const n=window.__labels.length;await at(to);return window.__labels.slice(n);},[from,to]);
+ assert.deepEqual(await drawnBetween(5500+300,5500+3600),[],'a clear pause between the fast pass and the slow cycle');
+ // ...then the slow pass restarts the same order at a gentler pace.
  await page.evaluate(()=>window.__labels.length=0);
- await waitUntil(page,armedAt,3000+5500+500);
+ await waitUntil(page,armedAt,3000+5500+4000+500);
  await page.screenshot({path:resolve(FRAMES_DIR,'idle-slow-pass.png')});
  labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Workout'),`slow pass should restart at the same order (rect first), got ${JSON.stringify(labels)}`);
@@ -70,6 +74,11 @@ test('#104 idle ambient flash: fast pass order/timing, slow pass continues, a to
  await page.waitForTimeout(400);
  const after=await page.evaluate(()=>window.__labels.length);
  assert(after>before,'the slow pass keeps drawing (still cycling, not stuck)');
+ // #133: a short gap (IDLE.gapMs, 0.6s) of nothing between the slow cycle's shapes (2.5s each).
+ assert.deepEqual(await drawnBetween(5500+4000+2500+120,5500+4000+2500+480),[],'a gap between slow-cycle shapes');
+ await waitUntil(page,armedAt,3000+5500+4000+3100+300);
+ labels=await page.evaluate(()=>window.__labels.slice());
+ assert(labels.includes('Choose Workout'),`the next slow shape follows the gap, got ${JSON.stringify(labels)}`);
 
  // Any touch stops it instantly: reset the counter right as the touch lands (a still-cycling frame or
  // two may legitimately land in the round-trip *before* pointerdown fires — that's not the thing under

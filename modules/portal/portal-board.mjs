@@ -117,7 +117,9 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   if(pointers.size||now<awakeUntil||cutting?.fall.live)frame=requestAnimationFrame(tick);
  }
  const local=(x,y)=>{const box=host.getBoundingClientRect();return [x-box.left,y-box.top];};
- const observer=new ResizeObserver(entries=>layout(entries.at(-1).contentRect));observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
+ // Hidden (display:none) reads as 0x0: keep the last layout rather than shrink the renderer and reset the cloth, only to
+ // rebuild both at full size the moment the quilt shows again.
+ const observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
  // Measured fresh from the host box (not the last layout), so it's right before the ResizeObserver runs and mid-dive.
  const quiltRect=()=>{const box=host.getBoundingClientRect(),q=fit(box.width,box.height);return {left:box.left+q.left,top:box.top+q.top,width:q.width,height:q.height};};
  // Cut-away: grid triangles whose centroid (in quilt-image fractions, v down) is inside poly leave the
