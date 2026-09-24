@@ -137,7 +137,11 @@ async function installAssets(){
  }catch(error){await caches.delete(SHELL);throw error;}
 }
 self.addEventListener('install',event=>event.waitUntil(installAssets()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{
+// skipWaiting() only activates once the old worker has finished its in-flight fetches, and a coach model
+// downloading on a phone can hold it for minutes. Pages stay frozen for the update only this long; after
+// that they are released (UPDATE_ABORT) and the update lands by itself once the old worker is idle.
+const ACTIVATION_WAIT=8000;let markActivated;const activation=new Promise(resolve=>markActivated=resolve);
+self.addEventListener('activate',event=>{markActivated(true);event.waitUntil((async()=>{
  const names=await caches.keys();let previous=null;
  for(const name of [...names].reverse())if(name.startsWith('myr5-shell-')&&name!==SHELL&&await(await caches.open(name)).match(INDEX)){previous=name;break;}
  for(const name of names){
@@ -149,7 +153,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
  const voice=await caches.open(VOICE);
  for(const key of await voice.keys()){const url=new URL(key.url);if(url.pathname==='/voice/manifest.json'&&url.searchParams.get('v')!==BUILD)await voice.delete(key);}
  await self.clients.claim();
-})()));
+})());});
 let updateAttempt=null;
 function updateReply(client,type,id){return new Promise(resolve=>{
  const channel=new MessageChannel();let done=false;
@@ -168,7 +172,10 @@ async function prepareUpdate(source){
   // New or navigated windows must take part in their own fresh preparation.
   const current=await self.clients.matchAll({type:'window',includeUncontrolled:true});
   if(current.length!==clients.length||current.some(client=>!clients.some(old=>old.id===client.id&&old.url===client.url)))return {activated:false,reason:'busy'};
-  await self.skipWaiting();activated=true;return {activated:true};
+  // Not awaited: Chromium resolves skipWaiting() only when activation starts, WebKit at once.
+  self.skipWaiting().catch(()=>{});
+  if(!await Promise.race([activation,new Promise(resolve=>setTimeout(()=>resolve(!self.registration.waiting),ACTIVATION_WAIT))]))return {activated:false,reason:'busy'};
+  activated=true;return {activated:true};
  }finally{if(!activated)for(const client of clients)try{client.postMessage({type:'UPDATE_ABORT',id});}catch{}}
 }
 self.addEventListener('message',event=>{

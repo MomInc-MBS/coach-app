@@ -10,6 +10,8 @@ export async function checkUpdateSources(registration,loadNotes){
  if(!await notes)throw Error('Release information is unavailable.');
 }
 
+// Longer than the worker's own worst case (two 4 s replies + ACTIVATION_WAIT in sw.js).
+const UPDATE_BARRIER_MS=25000;
 export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) {
  const panel=document.getElementById('installPanel'),section=document.createElement('details');
  section.className='release-settings';
@@ -28,8 +30,9 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
  const ready=()=>!!reg?.waiting||switched||(!('serviceWorker' in navigator)&&latest.id!==RELEASE.id);
  function showNotes(r){$('releaseVersion').textContent=r.title+' · '+r.date;$('releaseNotes').replaceChildren(...r.notes.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));}
  function paint(){
-  applyButton.hidden=!ready();banner.hidden=ready()?dismissed:!notice.visible;
-  banner.querySelector('span').textContent=ready()?'Coach will update when you are idle.':'Updated: '+RELEASE.title;
+  // Under the update barrier (a modal) the banner's buttons can't be tapped, so it isn't shown there.
+  applyButton.hidden=!ready();banner.hidden=!!document.getElementById('coachUpdateBarrier')||(ready()?dismissed:!notice.visible);
+  banner.querySelector('span').textContent=ready()?error||'Coach will update when you are idle.':'Updated: '+RELEASE.title;
   const b=banner.querySelector('[data-update]');b.hidden=!ready();b.disabled=!safe(false)||applying;applyButton.disabled=b.disabled;
   b.textContent=!safe(false)?'Finish what you’re doing':applying?'Updating…':'Update now';
   banner.querySelector('[data-later]').textContent=ready()?'Later':'Got it';
@@ -49,7 +52,14 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
   canPrepare:()=>safe(!applying,true),
   acquire:()=>{const owner=window.myr5WorkoutOwner,lease=owner?.acquireIdleLease();return lease?()=>owner.releaseIdleLease(lease):null;},
   save:async()=>{await onBeforeUpdate?.();if(!await window.myr5WorkoutOwner.save())throw Error('Progress could not be saved.');},
-  freeze:()=>{const barrier=document.createElement('dialog');barrier.id='coachUpdateBarrier';barrier.textContent='Saving and updating Coach…';barrier.addEventListener('cancel',event=>event.preventDefault());document.body.append(barrier);barrier.showModal();return ()=>barrier.remove();},
+  freeze:id=>{const barrier=document.createElement('dialog');barrier.id='coachUpdateBarrier';barrier.textContent='Saving and updating Coach…';barrier.addEventListener('cancel',event=>event.preventDefault());document.body.append(barrier);barrier.showModal();
+   // Never a trap: the worker can be stopped mid-update (iOS) or still be waiting on the old one. If the
+   // new worker took over without telling this page, reload into it; otherwise hand the app back with a retry.
+   const timer=setTimeout(async()=>{
+    const r=await navigator.serviceWorker.getRegistration().catch(()=>null);if(r&&!r.waiting)return location.reload();
+    await participant.message({type:'UPDATE_ABORT',id});applying=false;dismissed=false;retryAt=Date.now()+60000;error='Coach couldn’t finish updating. Tap Update now to try again.';paint();
+   },UPDATE_BARRIER_MS);
+   return ()=>{clearTimeout(timer);barrier.remove();paint();};},
   reload:()=>location.reload()
  });
  applyButton.onclick=()=>apply(false);banner.querySelector('[data-update]').onclick=()=>apply(false);
@@ -89,7 +99,7 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
    reg.addEventListener('updatefound',()=>{const w=reg.installing;w?.addEventListener('statechange',()=>{if(w.state==='installed'){dismissed=false;paint();}});});check();
   }).catch(()=>{error='Updates could not initialize. Refresh Coach to retry.';paint();});
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
-   if(!hadController&&!applying)return;
+   if(!hadController&&!applying&&!participant.prepared)return;
    switched=true;if(participant.activated())return;
    if(applying&&safe(false))location.reload();
    else {applying=false;paint();}

@@ -1,6 +1,6 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-09-23-portal-ship-downloads-'+BUILD_ID,title:'Portal, Ship and Downloads',date:'2026-09-23',url:'https://myr5.mominc.online/repair-coach',notes:[
- 'Trace a shape and the portal opens into a glowing wormhole and flies you through it; your finger paints a neon trail, and the quilt shows its shapes when you pause.',
- 'Original MYR5 flies in on his starter ship over a wonder of the world, and in Design your coach you can try on any locked colour, texture or body before you earn it.',
- 'A new Downloads menu lets you choose what to keep offline, and the workout selector is now a compact control board.'
+export const RELEASE=Object.freeze({id:'2026-09-23-update-food-tracking-hotfix-'+BUILD_ID,title:'Updates, food scans and counting fixed',date:'2026-09-23',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'Fixed: an update could freeze the app on "Saving and updating Coach…" and leave the update message impossible to dismiss.',
+ 'Fixed: food photo scanning now recognises your meal instead of stopping with "Photo recognition could not finish".',
+ 'Fixed: camera workouts count your reps again.'
 ]});

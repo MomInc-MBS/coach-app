@@ -89,7 +89,9 @@ export class MovementSession {
   }
   calibrate(sample,ready,t){
     if(!ready){this.calibration=[];this.setupProgress=0;this.setupReason='Starting position not yet detected';return false;}
-    this.calibration.push({t,...sample});this.calibration=this.calibration.filter(v=>t-v.t<=1.1);
+    // Three samples must fit the window at any continuous rate (gaps up to MAX_FRAME_GAP). A fixed 1.1 s
+    // window silently needed 2 updates/s: a phone tracking at 1.4–1.9/s stayed on "Setting start" forever.
+    this.calibration.push({t,...sample});this.calibration=this.calibration.filter(v=>t-v.t<=2*MAX_FRAME_GAP);
     this.setupProgress=Math.min(1,this.calibration.length/3,(t-this.calibration[0].t)/.7);this.setupReason='Hold steady';
     if(this.calibration.length<3||t-this.calibration[0].t<.7)return false;
     // A moving starting position is not a useful baseline.

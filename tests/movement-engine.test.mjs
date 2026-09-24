@@ -37,10 +37,12 @@ test('boxing timer completes and new movement clears prior statistics',()=>{cons
 
 // Regression: the old seven-frames-within-1.1-seconds gate never calibrated at
 // five updates/s; its 350 ms interruption gate also reset every 2 Hz frame.
-for(const fps of [5,3,2]){
- test(`squats calibrate and count continuous slow tracking at ${fps} updates/s`,()=>{
-   const session=new MovementSession('squat');let t=0;const feed=(p,seconds)=>{for(let i=0;i<Math.ceil(seconds*fps);i++){t+=1000/fps;session.update(p.map(({presence,...point})=>point),t);}};
-   feed(standing(),2);assert.ok(session.base,'steady starting position calibrated');for(let i=0;i<3;i++){feed(squat(),1.5);feed(standing(),1.5);}assert.equal(session.count,3);
+// 1.6/s: a phone slowed by the AR coach. The old fixed 1.1 s calibration window needed 2/s and never
+// finished "Setting start" below it, so no rep ever counted (hotfix 2026-09-23).
+for(const [mode,top,bottom] of [['squat',standing,squat],['pushup',pushup,()=>pushup(true)],['wide-squat',standing,squat],['knee-pushup',pushup,()=>pushup(true)]])for(const fps of [5,3,2,1.6]){
+ test(`${mode} calibrates and counts continuous slow tracking at ${fps} updates/s`,()=>{
+   const session=new MovementSession(mode);let t=0;const feed=(p,seconds)=>{for(let i=0;i<Math.ceil(seconds*fps);i++){t+=1000/fps;session.update(p.map(({presence,...point})=>point),t);}};
+   feed(top(),2);assert.ok(session.base,'steady starting position calibrated');for(let i=0;i<3;i++){feed(bottom(),1.5);feed(top(),1.5);}assert.equal(session.count,3);
  });
 }
 test('a yoga hold at two updates/s accrues real tracked time',()=>{const session=new MovementSession('tree');for(let t=0;t<=4000;t+=500)session.update(tree(),t);assert.ok(session.hold>=3.5);const held=session.totalHold;session.update(tree(),6000);assert.equal(session.totalHold,held);assert.equal(session.hold,0);});
