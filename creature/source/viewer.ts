@@ -32,7 +32,7 @@ export class CreatureViewer {
   if(this.cinematicKind!==kind){this.cinematicKind=kind;this.play(SHOTS[kind].gesture);}
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
- scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();
+ scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
  constructor(public mount:HTMLElement,public assetBase:string,public interactive=true,skinResolver?:InstalledSkinResolver){this.skinResolver=skinResolver;
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
   this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;
@@ -45,7 +45,11 @@ export class CreatureViewer {
   this.floorObjects=[floor,ring];
   this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(mount);this.resize();
   this.visibilityObserver=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;});this.visibilityObserver.observe(mount);
-  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const dt=Math.min(.05,(now-this.last)/1000);if(now-this.last<32)return;this.last=now;if(!this.visible||document.hidden)return;this.motion?.update(dt);if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=dt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);};this.frame=requestAnimationFrame(tick);
+  // D43.5: coach-overlay can cap this below the native ~31fps (setMaxFps) while a counted set is
+  // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. dt still
+  // reflects the real gap between accepted frames (matching whatever gate is active), so a capped
+  // coach's own animation covers the same ground in fewer, bigger steps rather than slow motion.
+  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,dt=Math.min(this.maxFps?gate/1000:.05,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;this.motion?.update(dt);if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=dt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.frame=requestAnimationFrame(tick);
  }
  resize(){const {width,height}=this.mount.getBoundingClientRect();if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}}}
  async setRecipe(raw:unknown,preview=false){
@@ -64,6 +68,8 @@ export class CreatureViewer {
  face(yaw:number){if(this.rig)this.rig.root.rotation.y=yaw;}
  setSettings(settings:ReturnType<typeof motionSettings>){this.settings=settings;if(this.motion)Object.assign(this.motion,settings);if(settings.reduced||settings.amount===0){this.homeElapsed=0;if(!this.cinematicKind)this.homeView();}}
  setPaused(paused:boolean){this.paused=paused;if(this.motion)this.motion.paused=paused;}
+ // D43.5: null/0 restores the native ~31fps gate (see tick()).
+ setMaxFps(fps:number|null){this.maxFps=fps&&fps>0?fps:null;}
  resetStageView(){if(this.stage==='overlay'){this.fitBody();return;}const giant=this.stage==='encounter';this.orbit.minDistance=giant?4:6;this.orbit.maxDistance=14;this.camera.fov=giant?32:36;this.camera.position.set(0,giant?2.1:2.65,giant?5.8:8.9);this.orbit.target.set(0,giant?2.25:1.95,0);this.camera.updateProjectionMatrix();this.orbit.update();this.homeView();}
  // Workout overlay: the whole body fills the canvas with the feet on its bottom edge (the user's knee line).
  fitBody(){const box=this.bodyBounds;if(box.isEmpty())return;const size=box.getSize(new T.Vector3()),center=box.getCenter(new T.Vector3()),half=T.MathUtils.degToRad(this.camera.fov/2),distance=Math.max(size.y/2/Math.tan(half),size.x/2/(Math.tan(half)*this.camera.aspect))+size.z/2;this.orbit.minDistance=.1;this.orbit.maxDistance=distance*2;this.orbit.target.copy(center);this.camera.position.set(center.x,center.y,center.z+distance);this.orbit.update();}
@@ -75,6 +81,8 @@ export class CreatureViewer {
   const clone=this.rig.root.clone(true);for(const [name,rest] of Object.entries(this.rig.rest)){const node=clone.getObjectByName(name)!;node.position.copy(rest.position);node.quaternion.copy(rest.quaternion);node.scale.copy(rest.scale);}clone.updateMatrixWorld(true);
   const result=await new GLTFExporter().parseAsync(clone,{binary:true,animations:this.motion.clips});return new Blob([result as ArrayBuffer],{type:'model/gltf-binary'});
  }
- stats(){return {gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
+ // renders is a cumulative count of actual renderer.render() calls (D43.5's setMaxFps skips both the render
+ // and this increment) — tests diff two readings over a real wall-clock window to get an actual renders/s.
+ stats(){return {gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
  dispose(){this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();disposeObject(this.scene);this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
