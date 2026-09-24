@@ -24,7 +24,7 @@ async function withPortal(run){
  finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
 
-test('Menu-sheet dialog opens fade back to the quilt on close, exit button reads Pod, no board row for one board',async()=>withPortal(async(browser,url)=>{
+test('Menu-sheet dialog opens fade back to the quilt on close, exit button reads Pod, and the Boards packet is selectable',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  // The board's own WebGL rendering is irrelevant here; fail it so the test doesn't need swiftshader.
  await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
@@ -34,8 +34,9 @@ test('Menu-sheet dialog opens fade back to the quilt on close, exit button reads
 
  // #25: the exit button now leads to the pod.
  assert.equal(await page.locator('#portalExitButton').innerText(),'Pod');
- // #26: one production board -> no board picker row in the Menu sheet.
- assert.equal(await page.locator('.portal-board-chips').count(),0);
+ // The optional Boards packet adds five boards beside Quilt in the Menu sheet.
+ assert.equal(await page.locator('.portal-board-chips').count(),1);
+ assert.equal(await page.locator('.portal-board-chips [data-board]').count(),6);
 
  // #8: a dialog destination (Meditation, kind:'dialog') opened from the Menu sheet — not a traced shape —
  // must still fade back to the quilt when its dialog closes, same as a gesture open.

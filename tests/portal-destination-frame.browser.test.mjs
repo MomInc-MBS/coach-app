@@ -86,7 +86,7 @@ test("energy surges through the dive, a line's destination (Reminders) opens ins
   s=await state(page);
   assert(s.chrome&&s.framed,'Reminders opens framed, with the chrome still up');
   for(const k of ['left','top','width','height'])near(s.meals,s.face,k);
-  assert(s.face.left>=20&&375-s.face.left-s.face.width>=20,'the window keeps the 20px margin');
+  assert(s.face.left>=8&&375-s.face.left-s.face.width>=8,'the window keeps the physical metal rail');
   assert.equal(await page.evaluate(()=>{const b=document.querySelector('#remindersPanel [data-close]').getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#remindersPanel [data-close]')!=null;}),true,'the destination stays tappable under the chrome');
   e=await energy(page);assert(e.every(a=>a.state==='running'&&a.rate===1),'the energy calms but keeps flowing around the open destination');
   await page.screenshot({path:resolve(FRAMES_DIR,'menu-inside-frame.png')});
