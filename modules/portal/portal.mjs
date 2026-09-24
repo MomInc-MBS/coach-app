@@ -328,7 +328,7 @@ function backgroundBlocked(block){
 function openMenu(){
  const {face}=restFace();setVisible(false);menuChosen=false;menuSheet.showModal();
  if(face&&frameOn(face,windowLook('line-up',MENUS['line-up'],face)))frameDialog(menuSheet);
- menuSheet.addEventListener('close',()=>{frameOff();if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
+ menuSheet.addEventListener('close',()=>{if(framed?.dialog===menuSheet)frameOff();if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
 }
 
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
@@ -816,7 +816,11 @@ function stepPeer(now){
 // iOS 13+: DeviceOrientationEvent.requestPermission() needs a tap. A small chip in the window's corner, never a modal.
 function tiltChip(dialog){
  const chip=document.createElement('button'),f=framed?.face;chip.type='button';chip.className='portal-tilt-chip';chip.innerHTML='Tilt to look around <b>Allow</b>';
- if(f){chip.style.left=f.left+8+'px';chip.style.top=f.top+f.height-48+'px';}
+ if(f){
+  const dockEl=document.getElementById('coachDock'),dock=dockEl?.getClientRects().length?dockEl.getBoundingClientRect():null;
+  chip.style.left=f.left+8+'px';
+  chip.style.top=Math.max(f.top+8,Math.min(f.top+f.height-48,dock?.top==null?Infinity:dock.top-48))+'px';
+ }
  chip.onclick=async()=>{
   let answer='denied';try{answer=await DeviceOrientationEvent.requestPermission();}catch{}
   try{localStorage.setItem(TILT_KEY,answer==='granted'?'granted':'denied');}catch{}
