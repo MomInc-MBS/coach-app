@@ -33,7 +33,9 @@
 .ach-detail .ach-status{margin:0 0 16px;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#d9d2ee}
 .ach-detail ol{list-style:none;margin:0 auto;padding:0;display:grid;gap:8px;width:min(360px,100%);text-align:left}
 .ach-detail li{display:grid;grid-template-columns:18px 70px 1fr;gap:10px;align-items:baseline;font-size:17px}
-.ach-detail li::before{content:'✦';color:#5e5878;font-size:12px}
+/* \2726 (a CSS numeric escape, not the raw UTF-8 bytes) so the glyph can't mojibake if this file
+   is ever served/read without an explicit UTF-8 charset — the escape is pure ASCII in the source. */
+.ach-detail li::before{content:'\2726';color:#5e5878;font-size:12px}
 .ach-detail li[data-step=done]::before{color:#fff;text-shadow:0 0 8px var(--glow),0 0 14px var(--glow)}
 .ach-detail li[data-step=next]::before{color:var(--glow);animation:ach-twinkle 1.2s ease-in-out infinite alternate}
 .ach-detail li[data-step=todo]{color:#8f89a8}
