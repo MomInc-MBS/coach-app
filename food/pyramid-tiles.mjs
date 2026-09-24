@@ -5,7 +5,7 @@ const DASH='—';
 const has=v=>typeof v==='number'&&Number.isFinite(v);
 
 export function pyramidTiles(scan,nutrients){
- if(scan==null)return {name:'TAP THE LENS',calories:DASH,protein:DASH,fat:DASH,carbs:DASH,vitamins:DASH};
+ if(scan==null)return {name:'SCAN A MEAL',calories:DASH,protein:DASH,fat:DASH,carbs:DASH,vitamins:DASH};
  const round=(v,d=0)=>{const m=10**d;return Math.round(v*m)/m;};
  const amount=k=>has(nutrients?.[k])?`${round(nutrients[k],k==='calories'?0:1)} ${k==='calories'?'kcal':'g'}`:DASH;
  const top=Object.entries(VITAMIN_DV)

@@ -68,7 +68,7 @@ test('#3/#38 Food is one full-screen pyramid scene: no Camera button or lists on
  const returned=await page.evaluate(()=>{const d=window.myr5Menus.food();return {id:d?.id,open:d?.open,dialog:d instanceof HTMLDialogElement};});
  assert.deepEqual(returned,{id:'mealsPanel',open:true,dialog:true},'myr5Menus.food() opens Food and returns its dialog');
  await ready(page);
- assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'TAP THE LENS');
+ assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'SCAN A MEAL');
  // Release 5: Food is a route, so it fills the screen down to the bottom bar (W2-2A), which stays showing, lit for Food.
  const barTop=(await box(page,'#coachDock')).top;
  assert.equal(barTop,812-64);
@@ -86,7 +86,7 @@ test('#3/#38 Food is one full-screen pyramid scene: no Camera button or lists on
  }
  const clipped=await page.evaluate(()=>[...document.querySelectorAll('#pyramidScanner .paper-poster,#pyramidScanner .paper-note')].filter(el=>el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1).length);
  assert.equal(clipped,0,'poster text is not cropped');
- const tags=await page.evaluate(()=>[...document.querySelectorAll('.pyramid-tag')].map(t=>t.textContent));
+ const tags=await page.evaluate(()=>[...document.querySelectorAll('.pyramid-tag')].filter(t=>!t.hidden).map(t=>t.textContent));
  assert.deepEqual(tags,['Scan food','Log by hand','Water','Today']);
  assert(!warnings.some(w=>w.includes('Pyramid scanner unavailable')),warnings.join('\n'));
 }));
@@ -129,7 +129,7 @@ test('D36/#35 dials open Log by hand, Water and Today; a spin or the indicator f
  await page.waitForFunction(()=>!document.getElementById('mealConfirmation').hidden&&document.activeElement?.id==='mealName');
  assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'TYPE YOUR FOOD');
  await page.locator('#cancelMeal').click();
- await page.waitForFunction(()=>document.getElementById('mealConfirmation').hidden&&window.pyramidPaint.FOOD==='TAP THE LENS');
+ await page.waitForFunction(()=>document.getElementById('mealConfirmation').hidden&&window.pyramidPaint.FOOD==='SCAN A MEAL');
  await page.getByRole('button',{name:'Water',exact:true}).click();
  await page.waitForFunction(()=>!document.getElementById('foodDial').hidden);
  assert.equal(await page.locator('#foodDialTitle').textContent(),'Water');
@@ -148,7 +148,7 @@ test('D36/#35 dials open Log by hand, Water and Today; a spin or the indicator f
  await page.mouse.move(110,canvas.top+canvas.height*.66);await page.mouse.down();await page.mouse.move(320,canvas.top+canvas.height*.66,{steps:4});await page.mouse.up();
  await page.waitForFunction(()=>/today’s totals\./.test(document.querySelector('.pyramid-flip').getAttribute('aria-label'))&&window.pyramidPaint.FOOD==='TODAY',null,{timeout:5000});
  await flip.click();
- await page.waitForFunction(()=>/the last meal\./.test(document.querySelector('.pyramid-flip').getAttribute('aria-label'))&&window.pyramidPaint.FOOD==='TAP THE LENS',null,{timeout:5000});
+ await page.waitForFunction(()=>/the last meal\./.test(document.querySelector('.pyramid-flip').getAttribute('aria-label'))&&window.pyramidPaint.FOOD==='SCAN A MEAL',null,{timeout:5000});
 }));
 
 test('reduced motion: the indicator flips the screens at once and results land without flying',async()=>withFood(async page=>{
@@ -174,7 +174,7 @@ test('#31 a sample food photo runs the real scan path onto the screens, then Sav
  await withFood(async page=>{
   await page.evaluate(()=>window.myr5Menus.food());await ready(page);
   await page.waitForFunction(()=>window.coachPlan&&!document.getElementById('accountContent').hidden,null,{timeout:10000});
-  assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'TAP THE LENS');
+  assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'SCAN A MEAL');
   // The camera hands back a photo: a 1200x900 PNG drawn on a canvas, set on the real #foodPhoto input.
   await page.evaluate(async()=>{
    const c=document.createElement('canvas');c.width=1200;c.height=900;const g=c.getContext('2d');
@@ -210,3 +210,96 @@ test('#31 a sample food photo runs the real scan path onto the screens, then Sav
   assert.equal(await page.evaluate(()=>window.pyramidPaint.CALORIES),`${Math.round(form.calories)} kcal`);
  },{signedIn:true,worker:BURGER_WORKER,meals});
 });
+
+test('#34 the empty state invites a scan (SCAN A MEAL, dashes, a pulsing lens) and calms once a meal exists',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.food());await ready(page);
+ assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'SCAN A MEAL');
+ assert.equal(await page.evaluate(()=>window.pyramidPaint.CALORIES),'—');
+ assert.equal(await page.evaluate(()=>document.querySelector('[aria-label="Scan food: take a food photo"]').hasAttribute('data-pulse')),true,'idle lens pulses harder');
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('myr5:food-selected',{detail:{name:'banana'}})));
+ await page.waitForFunction(()=>Number(document.querySelector('[name="calories"]').value)>0&&!document.querySelector('#pyramidScanner .pyramid-fly'),null,{timeout:15000});
+ assert.equal(await page.evaluate(()=>document.querySelector('[aria-label="Scan food: take a food photo"]').hasAttribute('data-pulse')),false,'pulse drops back once a meal exists');
+}));
+
+const ERROR_WORKER=`self.onmessage=()=>{setTimeout(()=>postMessage({type:'error',text:'Photo recognition could not finish. Try again on Wi-Fi or type the food name.'}),50);};`;
+async function pickAPhoto(page){
+ await page.evaluate(async()=>{
+  const c=document.createElement('canvas');c.width=100;c.height=100;c.getContext('2d').fillRect(0,0,100,100);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png')),input=document.getElementById('foodPhoto'),files=new DataTransfer();
+  files.items.add(new File([blob],'x.png',{type:'image/png'}));input.files=files.files;input.dispatchEvent(new Event('change'));
+ });
+}
+
+test('#36 Type it appears after a scan error, opens Log by hand and focuses the name field, and hides on reset',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.food());await ready(page);
+ await pickAPhoto(page);
+ await page.waitForFunction(()=>document.getElementById('scanPhase').textContent==='SCAN INTERRUPTED');
+ const typeIt=page.getByRole('button',{name:'Type it',exact:true});
+ await typeIt.waitFor({state:'visible'});
+ await typeIt.click();
+ await page.waitForFunction(()=>!document.getElementById('mealConfirmation').hidden&&document.activeElement?.id==='mealName');
+ assert.equal(await page.getByRole('button',{name:'Log by hand',exact:true}).evaluate(el=>el.hasAttribute('data-on')),true,'the knob_0 label lights');
+ await page.locator('#cancelMeal').click();
+ await page.waitForFunction(()=>document.getElementById('mealConfirmation').hidden);
+ assert.equal(await typeIt.isVisible(),false,'hidden again once the scan is reset');
+},{worker:ERROR_WORKER}));
+
+const UNSURE_WORKER=`self.onmessage=()=>{setTimeout(()=>postMessage({type:'result',uncertain:true,items:[{label:'oatmeal',score:.42},{label:'porridge',score:.3},{label:'rice pudding',score:.1},{label:'cereal',score:.05}]}),50);};`;
+
+test('#37 an unsure result asks (pyramid full size, no sheet), Fix opens the sheet prefilled, Yes accepts directly',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.food());await ready(page);
+ await pickAPhoto(page);
+ const question=page.locator('#pyramidScanner .pyramid-question');
+ await question.waitFor({state:'visible',timeout:15000});
+ assert.match(await question.textContent(),/Looks like… oatmeal\?/);
+ await page.waitForFunction(()=>window.pyramidPaint.FOOD==='oatmeal',null,{timeout:15000}); // the plain guess flies in as usual; the question rides above it
+ const yes=page.getByRole('button',{name:'Yes',exact:true}),fix=page.getByRole('button',{name:'Fix',exact:true}),typeIt=page.getByRole('button',{name:'Type it',exact:true});
+ assert.equal(await yes.isVisible(),true);assert.equal(await fix.isVisible(),true);assert.equal(await typeIt.isVisible(),true);
+ for(const tag of [yes,fix,typeIt])assert((await tag.boundingBox()).height>=44,'a 44px tap target');
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),false,'#3: the pyramid, not the correction sheet, is the whole Food menu while unsure');
+ await fix.click();
+ assert.equal(await page.locator('#foodSuggestions').isVisible(),true,'Fix reveals the other matches');
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),true,'Fix opens the correction sheet');
+ assert.equal(await page.locator('#mealName').inputValue(),'oatmeal','the sheet is prefilled with the guess, not empty');
+ assert.equal(await question.isVisible(),false,'the question is resolved');
+ // A second unsure result: Yes accepts directly, without opening the candidate list.
+ await pickAPhoto(page);
+ await question.waitFor({state:'visible',timeout:15000});
+ await page.getByRole('button',{name:'Yes',exact:true}).click();
+ await page.waitForFunction(()=>window.pyramidPaint.FOOD==='oatmeal',null,{timeout:15000}); // Yes keeps the guess
+ assert.equal(await question.isVisible(),false);
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),true,'Yes opens the correction sheet too');
+},{worker:UNSURE_WORKER}));
+
+test('#39 a loading stand-in (silhouette + rising percent) shows while the model downloads, then the model swaps in',async()=>withFood(async page=>{
+ // No DevTools session in this harness: re-serve the real GLB in slow chunks with a Content-Length so the percent readout has something to compute from.
+ await page.evaluate(()=>{
+  const real=window.fetch;
+  window.fetch=async function(input,options){
+   if(String(input).endsWith('/food/pyramid-scanner.glb')){
+    const res=await real(input,options),buf=await res.arrayBuffer(),total=buf.byteLength,step=Math.max(1,Math.ceil(total/4));let sent=0;
+    const stream=new ReadableStream({async pull(controller){
+     if(sent>=total){controller.close();return;}
+     await new Promise(r=>setTimeout(r,150));
+     const end=Math.min(total,sent+step);controller.enqueue(new Uint8Array(buf.slice(sent,end)));sent=end;
+    }});
+    return new Response(stream,{headers:{'Content-Length':String(total)}});
+   }
+   return real(input,options);
+  };
+ });
+ await page.evaluate(()=>window.myr5Menus.food());
+ await page.waitForSelector('#pyramidScanner .pyramid-loading svg',{state:'attached'});
+ await page.waitForFunction(()=>/Loading the pyramid · \d+%/.test(document.querySelector('.pyramid-loading-text')?.textContent||''),null,{timeout:5000});
+ await ready(page);
+ await page.waitForSelector('#pyramidScanner .pyramid-loading',{state:'detached',timeout:5000}); // it fades out (CSS transition), then is removed
+}));
+
+test('#40 no food during a workout: myr5Routes.go(\'food\') opens nothing while camera tracking is active',async()=>withFood(async page=>{
+ await page.evaluate(()=>{document.body.dataset.cameraWorkout='true';});
+ const hashBefore=await page.evaluate(()=>location.hash);
+ await page.evaluate(()=>window.myr5Routes.go('food'));
+ await page.waitForTimeout(150);
+ assert.equal(await page.evaluate(()=>document.getElementById('mealsPanel').open),false,'#mealsPanel stays closed');
+ assert.equal(await page.evaluate(()=>location.hash),hashBefore,'no hash change');
+}));
