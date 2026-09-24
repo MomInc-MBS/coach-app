@@ -52,6 +52,7 @@ async function openApp(browser,base,overrides){
  return {context,page};
 }
 const portalUp=page=>page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+const portalSettled=page=>page.waitForFunction(()=>window.myr5Routes?.current?.()===''&&location.hash===''&&!document.querySelector('.portal-glass')&&!document.getElementById('portalChrome')?.matches(':popover-open'));
 // W2-2A: the bottom bar's centre Portal button replaced the quilt's floating Menu button.
 const PORTAL_BUTTON='#coachDock [data-route="portal"]';
 // W2-2M: BEGIN on the workout start page is above the bar and is what a tap there hits, without scrolling.
@@ -104,6 +105,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    await page.locator(closeSel).first().click();
    await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
    await portalUp(page);
+   await portalSettled(page);
   }
 
   // rect (Ian 2026-09-23): the workout start page -- hides the quilt and shows the pod from the top (viewing port,
@@ -289,6 +291,7 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   await page.evaluate(()=>{location.hash='war-room';});
   await page.waitForFunction(()=>document.getElementById('status')?.textContent==='Finish Coach setup to unlock the War Room.');
   assert.equal(new URL(page.url()).pathname,'/pose.html');
+  await portalSettled(page);
   // D24: nothing over the camera view (and no bar during a set).
   for(const flag of ['cameraWorkout','tracking']){
    const hidden=await page.evaluate(flag=>{document.body.dataset[flag]='true';const d=getComputedStyle(document.getElementById('coachDock')).display;delete document.body.dataset[flag];return d==='none';},flag);
