@@ -4,22 +4,27 @@
 // AGPL-3.0-or-later.
 import {createQuiltBoard,QUILT} from './portal-board.mjs';
 import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
+import {pointInPolygon} from './portal-cut.mjs';
+import {eye} from './peer.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dive into the wormhole (the destination appears from its core), the healed board fading back in, one touch ripple on
 // the glass. tunnelFrom/To: wormhole speed (rings per second) at the cut, ramping up to tunnelTo by the dive, which adds
-// up to tunnelDive more.
-export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs:900,tunnelFrom:.35,tunnelTo:1.5,tunnelDive:6};
+// up to tunnelDive more. short (#124): the lines' and the X's wormhole runs the same cut, glass and dive at this share of
+// the closed shapes' cut/loading/dive timings.
+export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs:900,tunnelFrom:.35,tunnelTo:1.5,tunnelDive:6,short:.58};
 // Liquid-glass slab over the wormhole (CSS px): lens-map texel, bevel depth, max refraction at the rim,
-// rim inset inside the cut (the cloth hole's edge is ragged by about half a grid cell).
-const GLASS={mapPx:3,bevel:30,bend:22,rimInset:8};
+// rim inset inside the cut (the cloth hole's edge is ragged by about half a grid cell). #125 (Ian: "stronger"): thicker
+// bevel and deeper bend; fringe: the red/blue sample spread at the rim (blue bends furthest); magnify: centre lens.
+const GLASS={mapPx:3,bevel:42,bend:36,rimInset:8,fringe:.3,magnify:.035};
 // #104/#105 (W2-2E): the six neons already used for the "all menus" glass (portal.css .portal-glass.all),
 // reused for the flowing finger-trail ribbon. IDLE: 3s of no touch arms the cycle; fast pass 0.5s/shape once
 // through the order below, then a gentler 2.5s/shape loop until the next touch. TRAIL_FADE_MS: how long a
-// trail segment (live or just-released) stays lit before it's fully faded.
+// trail segment (live or just-released) stays lit before it's fully faded. #133 (Ian 23 Sept): a clear pauseMs after the
+// fast pass before the slow cycle starts, and a gapMs of nothing between the slow cycle's shapes.
 const TRAIL_NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
 const TRAIL_NEON_RGB=TRAIL_NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
-const IDLE={armMs:3000,fastMs:500,slowMs:2500};
+const IDLE={armMs:3000,fastMs:500,slowMs:2500,pauseMs:4000,gapMs:600};
 // Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
 const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','line-up','cross'];
 const TRAIL_FADE_MS=800;
@@ -86,27 +91,27 @@ const ICONS={
 // route's #hash, lights the bottom bar and hands back the dialog for the dive and fade-back. A page without the
 // router (a bare portal page) keeps the direct opener.
 const via=(route,direct)=>()=>window.myr5Routes?window.myr5Routes.go(route):direct();
-const LEADERBOARD={label:'Leaderboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open:via('scoreboard',()=>{document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');})};
+const LEADERBOARD={label:'Leaderboard',route:'scoreboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open:via('scoreboard',()=>{document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');})};
 // Exported so tests can check the gesture -> destination table without a DOM.
 export const MENUS={
  // Ian 2026-09-23: the square opens the workout start page (the pod scrolled to its viewing port, control board and
  // BEGIN; no auto-start); the oval is the coach's arrival in the ship view, its entrance played every time.
- rect:{label:'Workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open:via('workout',()=>scrollTo({top:0,behavior:prefersReducedMotion()?'auto':'smooth'}))},
- oval:{label:'Choose Workout',color:'#1f51ff',icon:ICONS.dumbbell,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
- up:{label:'Food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
- down:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
+ rect:{label:'Workout',route:'workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open:via('workout',()=>scrollTo({top:0,behavior:prefersReducedMotion()?'auto':'smooth'}))},
+ oval:{label:'Choose Workout',route:'select',color:'#1f51ff',icon:ICONS.dumbbell,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
+ up:{label:'Food',route:'food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
+ down:{label:'Achievements',route:'achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
  hdiamond:{...LEADERBOARD,hidden:true},
- x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:via('customize',()=>location.assign('/creature/index.html'))},
- 'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
- 'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
- 'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},
+ x:{label:'Character Editor',route:'customize',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:via('customize',()=>location.assign('/creature/index.html'))},
+ 'line-lr':{label:'Meditation',route:'meditate',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
+ 'line-rl':{label:'Reminders',route:'reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
+ 'line-down':{label:'Settings',route:'settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},
  // Line-up opens the Menu sheet; it is hidden from the sheet grid itself.
  'line-up':{label:'Menu',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
  // Full-screen ship view (Ian 2026-09-22: the coach capsule view, full screen, with the ship and pixel planet). Menu sheet only.
- ship:{label:'Ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:via('ship',()=>window.myr5Menus?.ship?.())},
+ ship:{label:'Ship',route:'ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:via('ship',()=>window.myr5Menus?.ship?.())},
  // War Room/Arcade has no gesture: Menu sheet only, same lock as before.
- warroom:{label:'Arcade / War Room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
+ warroom:{label:'Arcade / War Room',route:'war-room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
 };
 
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
@@ -324,20 +329,36 @@ function fadeInBoard(){
 }
 // The border stays when a destination opens (Ian 23 Sept): #portalChrome shows a copy of the frame at the board's rest box
 // in the top layer, with a matte outside it, and the destination dialog is fitted into its window (.portal-framed).
+// look (#134): how the window reads: {id,color,label,pts: its outline (client px, closed),shaped,name: #132's rim path};
+// shaped (#131): the destination is seen through the cut in the quilt, which stays on as the wall around it.
 // ponytail: the box is measured once per destination, so a rotation while one is open keeps the old box until it closes.
 let framed=null,ghostEl=null;
 function restFace(){const hidden=portalHome.hidden;portalHome.hidden=false;const face=board?.faceRect(),pattern=board?.patternRect();portalHome.hidden=hidden;return {face,pattern};}
 const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el.style.setProperty('--face-'+k,face[k]+'px'):el.style.removeProperty('--face-'+k);};
-function frameOn(face){
+const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
+const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
+// A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the bottom rail.
+const windowLook=(id,menu,face)=>({id,color:menu?.color||'#b026ff',label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
+const shapeLook=(id,menu,pts,face,pattern)=>({id,color:menu.color,label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
+function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
- framed={face};setFace(chrome,face);chrome.showPopover();syncEnergy();
+ framed={face,look:look||windowLook(null,null,face),leaned:false,ctl:new AbortController()};setFace(chrome,face);chrome.showPopover();syncEnergy();
+ if(framed.look.shaped)framed.outlines=windowOutlines(framed.look.pts,face);
+ // Release 5 open item: switching routes from the bottom bar while a destination is framed used to open the next page
+ // unframed with the reverse dive playing behind it. The frame now moves to the next route's dialog (routes.mjs's
+ // observer, created first, has already adopted it, so it carries its data-route), and a page route puts it away (closed).
+ framed.watch=new MutationObserver(records=>{for(const {target} of records)if(framed?.dialog&&target!==framed.dialog&&target instanceof HTMLDialogElement&&target.open&&target.dataset.route)handOver(target);});
+ framed.watch.observe(document.body,{subtree:true,attributeFilter:['open']});
  return true;
 }
 function frameDialog(dialog){
  if(!framed||!(dialog instanceof HTMLDialogElement)||framed.dialog===dialog)return;
  unframe(framed.dialog);framed.dialog=dialog;dialog.classList.add('portal-framed');setFace(dialog,framed.face);
  chrome.hidePopover();chrome.showPopover(); // back above the dialog, which opened on top of it
+ if(!aura)showAura(framed.look,'open'); // the rim bursts open as the destination lands (not under the dive's scale)
+ peerOn(dialog);
+ if(framed.look.shaped)shapeDialog(dialog);
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
 // its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
@@ -347,10 +368,37 @@ function watchDialog(){
  watch.observe(document.body,{subtree:true,attributeFilter:['open']});
  return ()=>watch.disconnect();
 }
-function unframe(dialog){if(!dialog)return;dialog.classList.remove('portal-framed');setFace(dialog,null);}
+function unframe(dialog){
+ if(!dialog)return;
+ if(framed?.dialog===dialog){peerOff();framed.dialog=null;}
+ dialog.classList.remove('portal-framed','portal-shaped','portal-leaned');setFace(dialog,null);
+ dialog.style.removeProperty('clip-path');motion(dialog,'');
+ dialog.querySelector(':scope>.portal-peer-ui')?.remove();
+}
 function frameOff(){
  if(!framed)return;
- unframe(framed.dialog);ghostEl?.remove();ghostEl=null;framed=null;chrome.hidePopover();syncEnergy();
+ const f=framed;f.watch?.disconnect();f.ctl.abort();
+ unframe(f.dialog);ghostEl?.remove();ghostEl=null;framed=null;hideAura();chrome.hidePopover();syncEnergy();
+}
+// The bar switched routes: the next route's dialog takes the frame, full window, in its own colour and name.
+function handOver(dialog){
+ const route=dialog.dataset.route,[id,found]=menuFor(route),menu=found||{label:window.myr5Routes?.ROUTES?.[route]?.label};
+ unframe(framed.dialog);
+ if(framed.look.shaped)stowBoard(); // the quilt wall goes with the hole it framed
+ Object.assign(framed,{look:windowLook(id,menu,framed.face),leaned:false,outlines:null});
+ hideAura();frameDialog(dialog);
+ const run=++sequence;
+ dialog.addEventListener('close',()=>closed(dialog,{pts:backPts(id),color:menu?.color||'#b026ff'},()=>run===sequence&&!lifecycle.signal.aborted),{once:true});
+}
+function backPts(id){const {pattern}=restFace();return pattern&&shapeClipPts(id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect',pattern);}
+function stowBoard(){visibilityRun++;portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();}
+// A destination from the portal closed: back out to the quilt (the reverse dive, or #131's fizzle for a hole), unless the
+// frame already moved on (handOver) or the bar went to another route (it is the active route now).
+function closed(dialog,back,current){
+ if(!current()||(framed&&framed.dialog!==dialog))return; // never framed (no popover API, no board): still back out
+ const now=window.myr5Routes?.current?.();
+ if(now&&now!==dialog.dataset.route){frameOff();return;}
+ (back.shaped?fizzleBack:diveBack)({dialog,...back},current);
 }
 // The closed destination's empty shell (a shallow copy keeps its own look), shrinking into the wormhole core.
 function shrinkShell(dialog,[cx,cy],ms){
@@ -365,7 +413,7 @@ function shrinkShell(dialog,[cx,cy],ms){
 async function diveBack({dialog,pts,color},current){
  if(prefersReducedMotion()||!board||!pts){fadeInBoard();return;}
  const run=++visibilityRun;
- shrinkShell(dialog,centroidOf(pts),PORTAL.revealMs*.55);unframe(dialog);
+ auraOut();shrinkShell(dialog,centroidOf(pts),PORTAL.revealMs*.55);unframe(dialog);
  busy=true;
  try{
   portalHome.hidden=false;motion(portalHome,'none');portalHome.style.opacity='';portalHome.style.clipPath='';
@@ -383,10 +431,303 @@ async function diveBack({dialog,pts,color},current){
   endPhase();frameOff();menuBtn.focus();scheduleIdle();
  }finally{if(run===visibilityRun)busy=false;}
 }
+// #131/#130 closing a destination seen through the hole: it fizzles shut. The destination's shell shrinks into the
+// wormhole's core with a flash along the rim and sparks falling in, then the cut heals and the quilt is home again.
+async function fizzleBack({dialog,pts,color},current){
+ const run=++visibilityRun,ms=PORTAL.revealMs*.55;
+ if(prefersReducedMotion()||!board||!pts){unframe(dialog);homeAgain();return;}
+ busy=true;
+ try{
+  auraOut();shrinkShell(dialog,centroidOf(pts),ms);unframe(dialog);
+  showGlass(pts,color);phase.t0-=PORTAL.cutMs+PORTAL.loadMinMs;phase.backT0=performance.now();cutBoard(pts,color,0);board.resume();
+  await sleep(ms);
+  if(run!==visibilityRun||!current())return;
+  board.heal();
+  await phase?.bezel?.animate([{opacity:1},{opacity:0}],{duration:PORTAL.healMs}).finished.catch(()=>{});
+  if(run!==visibilityRun||!current())return;
+  homeAgain();
+ }finally{if(run===visibilityRun)busy=false;}
+}
+function homeAgain(){endPhase();board?.heal();board?.resume();frameOff();backgroundBlocked(true);menuBtn.focus();scheduleIdle();}
+
+// ---- #131 seen through the hole -------------------------------------------------------------------------------------
+// The oval, the diamonds and both triangles open INTO the cut: the quilt stays on screen as the wall around the hole and
+// the destination (fitted to the window as usual, so nothing inside it changes) is clipped to the cut outline, plus the
+// bottom bar and the portal's own buttons on the quilt beside the hole (children of the modal dialog, so they stay
+// tappable). ✕ closes through the destination's own Close; ⤢ "steps in" (#131's gentle zoom): the hole morphs out to the
+// whole window so all of the menu is in reach, and ⤡ steps back. Keyboard focus landing on something the wall hides
+// steps in too.
+const scalePts=(pts,k)=>{const [cx,cy]=centroidOf(pts);return pts.map(([x,y])=>[cx+(x-cx)*k,cy+(y-cy)*k]);};
+// The farthest crossing of a ray from c at angle a with a closed polygon (the shapes are star-shaped about their centroid).
+export function rayHit([cx,cy],a,poly){
+ const dx=Math.cos(a),dy=Math.sin(a);let best=0;
+ for(let i=0;i<poly.length-1;i++){
+  const [ax,ay]=poly[i],[bx,by]=poly[i+1],ex=bx-ax,ey=by-ay,den=dx*ey-dy*ex;if(Math.abs(den)<1e-9)continue;
+  const t=((ax-cx)*ey-(ay-cy)*ex)/den,u=((ax-cx)*dy-(ay-cy)*dx)/den;
+  if(t>0&&u>=-1e-9&&u<=1+1e-9)best=Math.max(best,t);
+ }
+ return [cx+dx*best,cy+dy*best];
+}
+// The hole and the whole window as matched outlines (the same rays from the shape's centroid, through every corner of
+// both), so a clip-path can morph one into the other.
+export function windowOutlines(shape,face,n=48){
+ const c=centroidOf(shape),box=rectPts(face),ang=([x,y])=>Math.atan2(y-c[1],x-c[0]);
+ const as=[...Array.from({length:n},(_,i)=>-Math.PI+2*Math.PI*i/n),...shape.slice(0,-1).map(ang),...box.slice(0,-1).map(ang)].sort((a,b)=>a-b).filter((a,i,s)=>!i||a-s[i-1]>1e-4);
+ return {shape:closeLoop(as.map(a=>rayHit(c,a,shape))),rect:closeLoop(as.map(a=>rayHit(c,a,box)))};
+}
+function peerUi(dialog){
+ const ui=dialog.querySelector(':scope>.portal-peer-ui')||dialog.appendChild(Object.assign(document.createElement('div'),{className:'portal-peer-ui'}));
+ if(framed)ui.style.setProperty('--peer-ui',framed.look.color);return ui;
+}
+function shapeDialog(dialog){
+ const {look,face}=framed,ui=peerUi(dialog);
+ ui.insertAdjacentHTML('beforeend',`<button type="button" data-peer-close aria-label="Close ${look.label}">✕</button><button type="button" data-peer-lean aria-pressed="false" aria-label="Step in to ${look.label}">⤢</button>`);
+ const close=ui.querySelector('[data-peer-close]'),step=ui.querySelector('[data-peer-lean]'),at=(el,x,y)=>{el.style.left=x+'px';el.style.top=y+'px';};
+ at(close,face.left+face.width-52,face.top+8);at(step,face.left+face.width-52,face.top+face.height-52);
+ close.onclick=()=>closeDestination(dialog);step.onclick=()=>lean(!framed?.leaned);
+ dialog.classList.add('portal-shaped');
+ dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
+ clipTo(dialog,framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
+}
+function throughCut(el){const r=el.getBoundingClientRect();return pointInPolygon(r.left+r.width/2,r.top+r.height/2,framed.outlines.shape);}
+// clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box and the portal's pill
+// buttons (separate subpaths; nonzero fill unions them).
+function clipFor(dialog,pts){
+ const r=dialog.getBoundingClientRect(),o=([x,y])=>`${d2(x-r.left)} ${d2(y-r.top)}`,box=el=>el?.getClientRects().length?el.getBoundingClientRect():null;
+ const bar=box(document.getElementById('coachDock')),parts=bar?[`M${o([bar.left,bar.top])}L${o([bar.right,bar.top])}L${o([bar.right,bar.bottom])}L${o([bar.left,bar.bottom])}Z`]:[];
+ for(const b of [...dialog.querySelectorAll(':scope>.portal-peer-ui>*')].map(box).filter(Boolean)){ // a pill round each
+  const k=Math.min(b.width,b.height)/2,arc=to=>`A${d2(k)} ${d2(k)} 0 0 1 ${o(to)}`;
+  parts.push(`M${o([b.left+k,b.top])}L${o([b.right-k,b.top])}${arc([b.right-k,b.bottom])}L${o([b.left+k,b.bottom])}${arc([b.left+k,b.top])}Z`);
+ }
+ return `path('M${pts.slice(0,-1).map(o).join('L')}Z${parts.join('')}')`;
+}
+function clipTo(dialog,pts,{from=null,ms=0,ease='ease'}={}){
+ const go=()=>{if(framed?.dialog!==dialog)return;motion(dialog,ms?`clip-path ${ms}ms ${ease}`:'none');dialog.style.clipPath=clipFor(dialog,pts);};
+ if(from){motion(dialog,'none');dialog.style.clipPath=clipFor(dialog,from);settle().then(go);}else go();
+}
+function lean(on){
+ const f=framed;if(!f?.look.shaped||!f.dialog||f.leaned===on)return;
+ f.leaned=on;const dialog=f.dialog,step=dialog.querySelector('[data-peer-lean]');
+ if(step){step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${f.look.label}`);step.textContent=on?'⤡':'⤢';}
+ dialog.classList.toggle('portal-leaned',on);
+ clipTo(dialog,on?f.outlines.rect:f.outlines.shape,{ms:prefersReducedMotion()?0:520,ease:'cubic-bezier(.3,0,.2,1)'});
+ showAura(on?{...f.look,pts:rectPts(f.face),shaped:false,name:namePath(null,null,f.face)}:f.look,'lean');
+}
+// The ✕ on the quilt: the destination's own Close when it has one (its own clean-up runs), else a plain close.
+function closeDestination(dialog){
+ const own=[...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));
+ if(own)own.click();else dialog.close();
+}
+// #132: where the destination's name rides the rim (client px, drawn left to right so it reads upright, the glyphs on the
+// side away from the window: on the quilt round a hole, on the bottom rail round the whole window).
+const d2=v=>(+v).toFixed(1);
+const pathD=pts=>`M${pts.slice(0,-1).map(([x,y])=>d2(x)+' '+d2(y)).join('L')}Z`;
+export function namePath(id,pattern,face,gap=7){
+ const line=pts=>'M'+pts.map(([x,y])=>d2(x)+' '+d2(y)).join('L');
+ if(pattern&&['up','down','vdiamond','hdiamond','oval'].includes(id)){
+  const P=([u,v])=>[pattern.left+u*pattern.width,pattern.top+v*pattern.height];
+  // a -> b, moved `off` px to the left of travel (the glyphs' up side)
+  const edge=(a,b,off)=>{const [ax,ay]=P(a),[bx,by]=P(b),l=Math.hypot(bx-ax,by-ay)||1,nx=(by-ay)/l,ny=-(bx-ax)/l;return line([[ax+nx*off,ay+ny*off],[bx+nx*off,by+ny*off]]);};
+  if(id==='up')return edge([0,.71],[1,.71],-(gap+10)); // under the base, the glyphs hanging between it and the line
+  if(id==='down')return edge([0,.29],[1,.29],gap);
+  if(id==='vdiamond')return edge([0,.5],[.5,0],gap);
+  if(id==='hdiamond')return edge([0,.5],[.5,.29],gap);
+  const [cx,cy]=P([.5,.5]),rx=pattern.width/2+gap,ry=pattern.height/2+gap; // the oval: its upper-left arc
+  return line(Array.from({length:17},(_,i)=>{const t=Math.PI*(1+i/32);return [cx+rx*Math.cos(t),cy+ry*Math.sin(t)];}));
+ }
+ const y=face.top+face.height+12;return line([[face.left,y],[face.left+face.width,y]]);
+}
+
+// ---- #134 the energy round the open destination ---------------------------------------------------------------------
+// Ian 23 Sept: "a vignetted colourful energy around the edge of the menu, in the shape of the portal that leads to it, but
+// not covering the menus". The six neons flow round the window's outline with the shape's colour leading, as #130's
+// Portal-style rim: round fire tongues, a burst on open and a fizzle on close. It never covers the menu: the colour sits
+// in a band on the window's edge, outward over the quilt (or the frame's rail) and inward only as a faint vignette that
+// is gone within ~20 px (inside the menus' own padding); nothing in it takes a pointer, and the name (#132) rides outside
+// the window. Built from masks drawn once; the flow is a conic gradient turning inside them by transform, so running it
+// costs the compositor, not a repaint. Static under reduced motion.
+const AURA={spinMs:16000,flickerMs:1300,sparks:18,sparkMs:800,specPx:40,maskScale:.5};
+let aura=null;
+// White-on-clear mask of the rim band: an inward vignette (clipped inside the outline), an outward glow (outside it) with
+// round fire tongues (a seeded dash rhythm on a wide round-capped stroke). A soft glow needs no detail, so it's drawn once
+// on a canvas at AURA.maskScale and handed over as a PNG: an SVG mask re-rasterised at the screen's full density cost
+// hundreds of ms on the first frame. The hot rim line is a crisp stroke in the aura's own svg instead.
+function rimMask(pts,w,h,seed,shaped){
+ const k=AURA.maskScale,c=document.createElement('canvas');c.width=Math.ceil(w*k);c.height=Math.ceil(h*k);
+ const g=c.getContext('2d'),path=new Path2D(pathD(pts)),outside=new Path2D(`M0 0H${w}V${h}H0Z${pathD(pts)}`);
+ let s=seed;const r=()=>(s=(s*16807)%2147483647)/2147483647,dash=(a,b)=>Array.from({length:12},()=>[a*(.3+r()),b*(.6+r())]).flat();
+ g.scale(k,k);g.strokeStyle='#fff';g.lineJoin='round';
+ const band=(width,alpha,dashes=null,cap='butt')=>{g.lineWidth=width;g.globalAlpha=alpha;g.lineCap=cap;g.setLineDash(dashes||[]);g.stroke(path);};
+ g.save();g.clip(path);for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);g.restore();
+ g.save();g.clip(outside,'evenodd');
+ if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,b);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
+ else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,b);band(11,.32,dash(3,26),'round');}
+ g.restore();
+ return `url("${c.toDataURL()}")`;
+}
+const setMask=(el,url)=>{el.style.webkitMaskImage=url;el.style.maskImage=url;};
+function hideAura(){aura?.anims.forEach(a=>a.cancel());aura?.el.remove();aura=null;}
+// Closing: the rim fizzles (burst) and goes out, so nothing but the frame rides the way back.
+function auraOut(){
+ burst('close');const a=aura;if(!a)return;aura=null;
+ a.el.animate([{opacity:1},{opacity:0}],{duration:prefersReducedMotion()?0:420,easing:'ease-in',fill:'forwards'}).finished.then(()=>{a.anims.forEach(x=>x.cancel());a.el.remove();},()=>{});
+}
+function showAura(look,why='open'){
+ hideAura();
+ if(!look?.pts)return;
+ const w=Math.max(1,chrome.clientWidth),h=Math.max(1,chrome.clientHeight),d=pathD(look.pts),[cx,cy]=centroidOf(look.pts),seq=ringColours(look.color),reduced=prefersReducedMotion();
+ const xs=look.pts.map(p=>p[0]),ys=look.pts.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys),bw=Math.max(...xs)-bx,bh=Math.max(...ys)-by;
+ const el=document.createElement('div');el.className='portal-aura';el.setAttribute('aria-hidden','true');el.classList.toggle('shaped',!!look.shaped);
+ el.style.cssText=`--aura:${look.color};--aura-seq:${[...seq,seq[0]].join(',')};--cx:${d2(cx)}px;--cy:${d2(cy)}px`;
+ const label=String(look.label||'').toUpperCase().replace(/[<&>]/g,'');
+ // One static svg (the aperture's depth inside the outline, the name outside it) and one masked layer holding the
+ // flow: two neon wheels turning against each other (the second flickering, for the fire) and the specular blob.
+ el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".2" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".28" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="color-mix(in srgb,${look.color} 45%,#fff)" stroke-width="2.5" stroke-linejoin="round"/>`
+  +(label&&look.name?`<text class="portal-aura-name"><textPath href="#portalAuraName" startOffset="50%" text-anchor="middle">${label}</textPath></text>`:'')+'</svg>'
+  +'<i class="portal-aura-fire"><i></i><i class="b"></i><i class="portal-aura-spec"></i></i>';
+ const fire=el.querySelector('.portal-aura-fire'),[wa,wb,blob]=fire.children;
+ setMask(fire,rimMask(look.pts,w,h,7,look.shaped));
+ const R=Math.max(bw,bh)*.45,far=Math.ceil(Math.max(...[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>Math.hypot(x-cx,y-cy))));
+ blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
+ for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
+ chrome.append(el);
+ aura={el,look,spec:blob,anims:[]};
+ if(reduced)return;
+ aura.anims.push(wa.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:AURA.spinMs,iterations:Infinity}),
+  wb.animate([{transform:'rotate(360deg)'},{transform:'rotate(0deg)'}],{duration:AURA.spinMs*.62,iterations:Infinity}),
+  wb.animate([{opacity:.15},{opacity:.7}],{duration:AURA.flickerMs,iterations:Infinity,direction:'alternate',easing:'ease-in-out'}),
+  el.animate([{opacity:0},{opacity:1}],{duration:why==='open'?420:260,easing:'ease-out'}));
+ if(why==='open')burst('open');
+}
+// #130's open burst / close fizzle: a white flash along the rim and sparks flying off it (open) or falling into the
+// core (close). Compositor-only (transform and opacity), gone in under a second.
+function burst(kind){
+ if(!aura||prefersReducedMotion())return;
+ const {el,look}=aura,pts=look.pts,[cx,cy]=centroidOf(pts),close=kind==='close';
+ const flash=document.createElement('i');flash.className='portal-aura-flash';setMask(flash,el.querySelector('.portal-aura-fire').style.maskImage);el.append(flash);
+ flash.animate([{opacity:close?.6:.95},{opacity:0}],{duration:close?420:620,easing:'ease-out',fill:'forwards'}).finished.then(()=>flash.remove(),()=>flash.remove());
+ for(let k=0;k<AURA.sparks;k++){
+  const i=Math.floor(Math.random()*(pts.length-1)),f=Math.random(),x=pts[i][0]+(pts[i+1][0]-pts[i][0])*f,y=pts[i][1]+(pts[i+1][1]-pts[i][1])*f;
+  const dx=x-cx,dy=y-cy,l=Math.hypot(dx,dy)||1,go=(close?-1:1)*(16+Math.random()*48),b=document.createElement('b');
+  b.style.left=d2(x)+'px';b.style.top=d2(y)+'px';b.style.background=k%3?'#fff':look.color;el.append(b);
+  b.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${d2(dx/l*go)}px,${d2(dy/l*go)}px) scale(.2)`,opacity:0}],{duration:AURA.sparkMs*(.55+Math.random()*.6),easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'}).finished.then(()=>b.remove(),()=>b.remove());
+ }
+}
+
+// ---- #135 #126 looking round the scene behind the window ------------------------------------------------------------
+// The eye follows the phone's tilt from a baseline caught when the destination opens (clamped to PEER.deg, smoothed, and
+// drifting back to centre once the phone has been held still for stillMs), or, on flat menus with no tilt, a finger drag
+// (springing back on release). It slides each destination's layers against the fixed frame (depths below) and drives the
+// 3D scenes' off-axis cameras through peer.mjs. iOS asks once, from a chip on the first 3D destination (never a modal),
+// and the answer is kept. Off under reduced motion and in camera-only mode (D24); paused while the page is hidden.
+const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160};
+const TILT_KEY='myr5.tiltPermission';
+// Any framed destination can mark its own layers data-peer-depth="far|mid|near": they slide PEER_LAYER px at full tilt
+// (far with the eye, near against it), times the destination's strength; the dialog also carries --peer-x/--peer-y
+// (-1..1) for its own CSS. Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
+// layers: [selector,px] for destinations that don't mark theirs (nested ones add up); scene: a 3D scene reading peer.mjs
+// (no drag look-around: a drag there turns the scene); chip: offer iOS's tilt permission (the scenes always do).
+const PEER_LAYER={far:14,mid:5,near:-4};
+const PEER_DEPTH=[
+ ['#mealsPanel',{scene:true}],
+ ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
+ ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]]}],
+ ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
+];
+const PEER_2D={move:4};
+const peer={dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
+const clamp1=v=>Math.max(-1,Math.min(1,v));
+function tiltAccess(){
+ if(typeof DeviceOrientationEvent==='undefined')return 'none';
+ if(typeof DeviceOrientationEvent.requestPermission!=='function')return 'free';
+ try{return localStorage.getItem(TILT_KEY)||'ask';}catch{return 'ask';}
+}
+// requestPermission() exists in Chrome too, where it only reports (granted, no prompt). Asked without a tap, it answers
+// there and rejects on iOS until the user has allowed it: only then does the chip show.
+function askTilt(dialog,signal){
+ DeviceOrientationEvent.requestPermission().then(answer=>answer==='granted',()=>false).then(granted=>{
+  if(signal.aborted)return;
+  if(granted)addEventListener('deviceorientation',onOrient,{signal});else if(peer.cfg?.scene||peer.cfg?.chip)tiltChip(dialog);
+ });
+}
+function peerOn(dialog){
+ peerOff();
+ if(prefersReducedMotion()||document.body.dataset.cameraWorkout==='true')return;
+ const cfg=PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D,signal=(peer.ctl=new AbortController()).signal;
+ Object.assign(peer,{dialog,cfg,x:0,y:0,tx:0,ty:0,base:null,drag:null,sensor:false});
+ peer.els=(cfg.layers||[]).flatMap(([s,px])=>[...dialog.querySelectorAll(s)].map(el=>[el,px]));
+ const access=tiltAccess();
+ if(access==='free'||access==='granted')addEventListener('deviceorientation',onOrient,{signal});
+ else if(access==='ask')askTilt(dialog,signal);
+ if(!cfg.scene){
+  dialog.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!peer.sensor)peer.drag={x:e.clientX,y:e.clientY,id:e.pointerId};},{signal,passive:true});
+  dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});
+  for(const type of ['pointerup','pointercancel'])dialog.addEventListener(type,e=>{if(peer.drag?.id===e.pointerId){peer.drag=null;peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
+ }
+ document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;}else kickPeer();},{signal});
+ addEventListener('orientationchange',()=>{peer.base=null;},{signal});
+}
+function peerOff(){
+ peer.ctl?.abort();peer.ctl=null;cancelAnimationFrame(peer.raf);peer.raf=0;
+ const {dialog}=peer;
+ if(dialog){
+  for(const k of ['left','top','--peer-x','--peer-y'])dialog.style.removeProperty(k);
+  dialog.querySelector(':scope>.portal-peer-ui>.portal-tilt-chip')?.remove();
+  for(const el of dialog.querySelectorAll('[data-peer-depth]'))el.style.translate='';
+ }
+ for(const [el] of peer.els)el.style.translate='';
+ Object.assign(peer,{dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,drag:null,sensor:false});eye.x=eye.y=0;
+ if(aura?.spec)aura.spec.style.translate='';
+}
+const wrap180=a=>((a+180)%360+360)%360-180;
+function onOrient(e){
+ if(e.beta==null||e.gamma==null||!peer.dialog)return;
+ const now=performance.now(),b=e.beta,g=e.gamma;peer.sensor=true;peer.drag=null;
+ if(!peer.base){peer.base={b,g};peer.prev={b,g};peer.stillT=now;}
+ if(Math.abs(b-peer.prev.b)+Math.abs(g-peer.prev.g)>.6)peer.stillT=now;
+ peer.prev={b,g};
+ if(now-peer.stillT>PEER.stillMs){peer.base.b+=wrap180(b-peer.base.b)*PEER.drift;peer.base.g+=wrap180(g-peer.base.g)*PEER.drift;}
+ let dB=clamp1(wrap180(b-peer.base.b)/PEER.deg),dG=clamp1(wrap180(g-peer.base.g)/PEER.deg);
+ if((screen.orientation?.angle||0)%180)[dB,dG]=[dG,-dB];
+ // As through a real window: turn the phone's face to the left (its right edge back) and the eye is now to the window's
+ // right, so the pyramid shows its right side (Ian); tip the top edge back and the eye drops below it.
+ peer.tx=dG;peer.ty=dB;kickPeer();
+}
+function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last)peer.last=performance.now();peer.raf=requestAnimationFrame(stepPeer);}}
+function stepPeer(now){
+ peer.raf=0;
+ const k=1-Math.exp(-Math.max(0,now-peer.last)/PEER.smoothMs);peer.last=now; // low-pass by time, the same at any frame rate
+ peer.x+=(peer.tx-peer.x)*k;peer.y+=(peer.ty-peer.y)*k;
+ if(Math.abs(peer.tx-peer.x)+Math.abs(peer.ty-peer.y)<.002){peer.x=peer.tx;peer.y=peer.ty;peer.last=0;}else kickPeer();
+ const {x,y,cfg,dialog}=peer;if(!dialog)return;
+ eye.x=x;eye.y=y;
+ if(cfg.move&&framed?.face&&!framed.look.shaped){dialog.style.setProperty('left',d2(framed.face.left+x*cfg.move)+'px','important');dialog.style.setProperty('top',d2(framed.face.top+y*cfg.move)+'px','important');}
+ dialog.style.setProperty('--peer-x',x.toFixed(3));dialog.style.setProperty('--peer-y',y.toFixed(3));
+ const slide=(el,px)=>{el.style.translate=`${d2(x*px)}px ${d2(y*px)}px`;};
+ for(const [el,px] of peer.els)slide(el,px);
+ for(const el of dialog.querySelectorAll('[data-peer-depth]'))slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1)); // queried live: a scene may add layers after it opens
+ if(aura?.spec)aura.spec.style.translate=`${d2(-x*AURA.specPx)}px ${d2(-y*AURA.specPx)}px`;
+}
+// iOS 13+: DeviceOrientationEvent.requestPermission() needs a tap. A small chip in the window's corner, never a modal.
+function tiltChip(dialog){
+ const chip=document.createElement('button'),f=framed?.face;chip.type='button';chip.className='portal-tilt-chip';chip.innerHTML='Tilt to look around <b>Allow</b>';
+ if(f){chip.style.left=f.left+8+'px';chip.style.top=f.top+f.height-48+'px';}
+ chip.onclick=async()=>{
+  let answer='denied';try{answer=await DeviceOrientationEvent.requestPermission();}catch{}
+  try{localStorage.setItem(TILT_KEY,answer==='granted'?'granted':'denied');}catch{}
+  chip.remove();if(framed?.dialog===dialog&&framed.look.shaped)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);
+  if(answer==='granted'&&peer.dialog===dialog)addEventListener('deviceorientation',onOrient,{signal:peer.ctl.signal});
+ };
+ peerUi(dialog).append(chip);
+ // A shaped window takes the chip into its clip once the open burst (650 ms) is over.
+ setTimeout(()=>{if(framed?.dialog===dialog&&framed.look.shaped&&chip.isConnected)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);},700);
+}
 function status(text){statusEl.textContent=text;}
 
+// Layout size, not the on-screen box: the observer also fires as the portal is shown mid-dive (scaled), and a backing
+// store sized from the scaled box drew every later trail and outline shrunk toward the corner.
 function resizeOverlay(){
- const dpr=Math.min(devicePixelRatio||1,2),r=overlay.getBoundingClientRect();
+ const dpr=Math.min(devicePixelRatio||1,2),r={width:overlay.clientWidth,height:overlay.clientHeight};
  overlay.width=Math.round(Math.max(1,r.width)*dpr);overlay.height=Math.round(Math.max(1,r.height)*dpr);
  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
@@ -594,10 +935,12 @@ const trailProbe={
 // #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
 function idleFrame(now){
  let elapsed=now-idleCycle.t0;
- if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='slow';idleCycle.t0=now;elapsed=0;}
- const dur=idleCycle.phase==='fast'?IDLE.fastMs:IDLE.slowMs,idx=Math.floor(elapsed/dur)%IDLE_ORDER.length,t=elapsed%dur;
- const envelope=Math.min(1,t/60,(dur-t)/60),peak=idleCycle.phase==='fast'?.9:.5;
- return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:idleCycle.phase==='fast'?4:3};
+ if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='pause';idleCycle.t0+=IDLE_ORDER.length*IDLE.fastMs;elapsed=now-idleCycle.t0;}
+ if(idleCycle.phase==='pause'){if(elapsed<IDLE.pauseMs)return null;idleCycle.phase='slow';idleCycle.t0+=IDLE.pauseMs;elapsed=now-idleCycle.t0;} // #133: nothing lit
+ const fast=idleCycle.phase==='fast',dur=fast?IDLE.fastMs:IDLE.slowMs,slot=fast?dur:dur+IDLE.gapMs,idx=Math.floor(elapsed/slot)%IDLE_ORDER.length,t=elapsed%slot;
+ if(t>=dur)return null; // #133: the gap between the slow cycle's shapes
+ const envelope=Math.min(1,t/60,(dur-t)/60),peak=fast?.9:.5;
+ return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:fast?4:3};
 }
 // Outline + label (+ arrow for a line) for one idle-flash entry; `rect` is the stitched-pattern rect.
 function idleShapeInfo(id,rect){
@@ -650,8 +993,8 @@ function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width,rect){
 function drawIdle(now){
  const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
  if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face));return;}
- const{id,alpha,width}=idleFrame(now);
- drawIdleShape(idleShapeInfo(id,rect),alpha,width,face);
+ const f=idleFrame(now);
+ if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,f.width,face);
 }
 
 // #22 first-run hint: a glowing fingertip traces the stitched square once, labelled, the first time the
@@ -816,7 +1159,7 @@ export function lensMap(poly,w,h,px=GLASS.mapPx,bevel=GLASS.bevel){
 const TUNNEL_VS='#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0,1);}';
 const TUNNEL_FS=`#version 300 es
 precision highp float;
-uniform vec2 uRes,uC;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uN;uniform vec3 uSeq[10],uCore;uniform sampler2D uMap;out vec4 o;
+uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore;uniform sampler2D uMap;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
 vec3 tunnel(vec2 p,float fz){
  float aa=1.-smoothstep(.25,.9,fz); // fade ring detail that gets finer than a pixel
@@ -830,20 +1173,24 @@ vec3 tunnel(vec2 p,float fz){
  return c*mix(1.,.78,smoothstep(1.,1.8,r));      // walls dim a little toward the opening (more turns neon yellow olive)
 }
 void main(){
- vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);vec4 m=texture(uMap,p/uRes);
- float fz=fwidth(3.4*uR/max(length(p-uC),1e-3)); // ring depth change per pixel
+ vec2 p0=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y);vec4 m=texture(uMap,p0/uRes);
  vec2 n=m.rg*2.-1.;n/=max(length(n),1e-3);
- float sd=(m.b-.5)*2.*uBevel,e=clamp(sd/uBevel,0.,1.),bend=(1.-e)*(1.-e);vec2 off=n*uLens*bend; // refraction: the rim shows the tunnel from further out
- vec3 c=uFringe>0.&&bend>.02?vec3(tunnel(p+off*1.12,fz).r,tunnel(p+off,fz).g,tunnel(p+off*.88,fz).b):tunnel(p+off,fz);
- float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.3)*.92+.06; // frosted: lifted, saturation boosted
- vec2 L=normalize(vec2(-1.,-1.3));float lit=max(dot(n,L),0.),far=max(-dot(n,L),0.);
- c+=(1.-smoothstep(0.,3.*uPr,abs(sd)))*(1.2*pow(lit,1.2)+.45*pow(far,3.)); // thin bright rim on the lit edge, faint glint opposite
- float inner=(1.-smoothstep(0.,24.*uPr,sd))*step(0.,sd);
- c=mix(c,c*.5+.1,inner*far*.75)+inner*inner*lit*.3; // softer, darker inner edge on the far side, glow inside the lit edge
- c+=.08*(1.-smoothstep(0.,.75,length(p/uRes-vec2(.2,.08))))*step(0.,sd); // broad glare on the slab's lit corner
+ float sd=(m.b-.5)*2.*uBevel,e=clamp(sd/uBevel,0.,1.),bend=(1.-e)*(1.-e);
+ vec2 p=uC+(p0-uC)/(1.+uMag*e);                  // #125: the flat middle magnifies a little, like a lens
+ float fz=fwidth(3.4*uR/max(length(p-uC),1e-3)); // ring depth change per pixel
+ vec2 off=n*uLens*bend;                           // refraction: the thick bevel shows the tunnel from further out
+ vec3 c=uFringe>0.&&bend>.02?vec3(tunnel(p+off*(1.-uFringe),fz).r,tunnel(p+off,fz).g,tunnel(p+off*(1.+uFringe),fz).b):tunnel(p+off,fz); // dispersion: blue bends furthest
+ float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.45)*.9+.07; // frosted: lifted, saturation boosted
+ c=mix(c,vec3(l)*.55+.42,.2*bend);                // frost in the bevel band only: a milky thick edge against the clear middle
+ vec2 L=normalize(uLP-p0);float lit=max(dot(n,L),0.),far=max(-dot(n,L),0.); // lit from the finger (or the top-left)
+ c+=(1.-smoothstep(0.,4.*uPr,abs(sd)))*(1.9*pow(lit,1.4)+.5*pow(far,3.)); // bright specular rim facing the light, faint glint opposite
+ c+=bend*(1.-e)*.3*(.5+.5*lit);                   // Fresnel: the whole bevel brightens toward the rim
+ float inner=(1.-smoothstep(0.,28.*uPr,sd))*step(0.,sd);
+ c=mix(c,c*.45+.08,inner*far*.8)+inner*inner*lit*.4; // darker inner edge on the far side, glow inside the lit edge
+ c+=.1*(1.-smoothstep(0.,.75,length((p0-uLP)/uRes*.6)))*step(0.,sd); // broad glare toward the light
  if(sd<0.)c*=.55;                                 // beyond the rim, under the cloth's ragged edge
- float s=dot(p/length(uRes),normalize(vec2(1.,.45)))-uSweep;c+=exp(-s*s*160.)*.18*step(0.,sd); // light sweep
- o=vec4(c+(fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453)-.5)/255.,1);
+ float s=dot(p0/length(uRes),normalize(vec2(1.,.45)))-uSweep;c+=exp(-s*s*160.)*.2*step(0.,sd); // light sweep
+ o=vec4(c+(fract(sin(dot(p0,vec2(12.9898,78.233)))*43758.5453)-.5)/255.,1);
 }`;
 // One WebGL2 context for the portal's life, created on the first glass and reused; null when unavailable (CSS glass then).
 let tunnel=null;
@@ -856,11 +1203,13 @@ function tunnelGL(){
  gl.linkProgram(prog);
  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.warn('Portal wormhole unavailable.',gl.getProgramInfoLog(prog));gl.getExtension('WEBGL_lose_context')?.loseContext();return null;}
  gl.useProgram(prog);
- const u={};for(const k of ['uRes','uC','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uN','uSeq','uCore'])u[k]=gl.getUniformLocation(prog,k);
+ const u={};for(const k of ['uRes','uC','uLP','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uMag','uN','uSeq','uCore'])u[k]=gl.getUniformLocation(prog,k);
  gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
  for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
  for(const k of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,k,gl.LINEAR);
  canvas.addEventListener('webglcontextlost',()=>{if(tunnel?.canvas===canvas)tunnel=null;canvas.parentNode?.classList.remove('gl');canvas.remove();});
+ // One 1px draw read back now: drivers compile lazily, at the first real draw, which would stall the first cut instead.
+ canvas.width=canvas.height=1;gl.viewport(0,0,1,1);gl.drawArrays(gl.TRIANGLES,0,3);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
  return tunnel={canvas,gl,u};
 }
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
@@ -878,25 +1227,26 @@ function startTunnel(ph,poly,color,all){
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  // ponytail: hardwareConcurrency is a coarse low-end hint (and capped on some browsers); the measured-frame check below is the real guard.
  let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,raf=0,tilt=null,tilt0=null;
- const par=[0,0],slow=[];
+ const par=[0,0],slow=[],rest=[-.35*w,-.55*h],light=[...rest]; // #125 the specular follows the finger, else sits up-left (and leans with tilt)
  const size=()=>{
   canvas.width=Math.max(1,Math.round(w*pr));canvas.height=Math.max(1,Math.round(h*pr));gl.viewport(0,0,canvas.width,canvas.height);
-  gl.uniform2f(u.uRes,canvas.width,canvas.height);gl.uniform1f(u.uPr,pr);gl.uniform1f(u.uR,Math.max(R,1)*pr);gl.uniform1f(u.uLens,GLASS.bend*pr);gl.uniform1f(u.uBevel,GLASS.bevel*pr);gl.uniform1f(u.uFringe,lite?0:1);
+  gl.uniform2f(u.uRes,canvas.width,canvas.height);gl.uniform1f(u.uPr,pr);gl.uniform1f(u.uR,Math.max(R,1)*pr);gl.uniform1f(u.uLens,GLASS.bend*pr);gl.uniform1f(u.uBevel,GLASS.bevel*pr);gl.uniform1f(u.uFringe,lite||reduced?0:GLASS.fringe);gl.uniform1f(u.uMag,GLASS.magnify);
  };
  const draw=now=>{
   const age=now-ph.t0;
   gl.uniform1f(u.uT,travel);gl.uniform1f(u.uSpin,reduced?0:(age*.00018)%(2*Math.PI));gl.uniform1f(u.uSweep,reduced?.45:-.35+1.7*((age/3200)%1));
-  gl.uniform2f(u.uC,(cx+par[0])*pr,(cy+par[1])*pr);gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.uniform2f(u.uC,(cx+par[0])*pr,(cy+par[1])*pr);gl.uniform2f(u.uLP,light[0]*pr,light[1]*pr);gl.drawArrays(gl.TRIANGLES,0,3);
  };
  const onTilt=e=>{if(e.gamma==null)return;tilt0??=[e.gamma,e.beta];tilt=[-(e.gamma-tilt0[0])*R*.012,-(e.beta-tilt0[1])*R*.012];};
  const frame=now=>{
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   // Graceful degrade: if frames 10-40 run slow (median under ~45 fps), drop resolution and the fringe.
   if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);size();ph.glass.dataset.lite='1';}
-  const d=ph.diveT0?Math.min(1,(now-ph.diveT0)/PORTAL.revealMs):ph.backT0?Math.max(0,1-(now-ph.backT0)/PORTAL.revealMs):0; // the dive adds up to tunnelDive rings/s (the dive back sheds it)
-  travel=(travel+dt*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(PORTAL.cutMs+PORTAL.loadMinMs))+PORTAL.tunnelDive*d*d))%seq.length;
+  const T=ph.T,d=ph.diveT0?Math.min(1,(now-ph.diveT0)/T.reveal):ph.backT0?Math.max(0,1-(now-ph.backT0)/T.reveal):0; // the dive adds up to tunnelDive rings/s (the dive back sheds it)
+  travel=(travel+dt*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(T.cut+T.load))+PORTAL.tunnelDive*d*d))%seq.length;
   const finger=[...pointers.values()].at(-1)?.pts.at(-1);let tx=(tilt?.[0]||0)+(finger?(finger.x-left-cx)*.12:0),ty=(tilt?.[1]||0)+(finger?(finger.y-top-cy)*.12:0);
   const k=Math.min(1,.2*R/(Math.hypot(tx,ty)||1));par[0]+=(tx*k-par[0])*Math.min(1,dt*5);par[1]+=(ty*k-par[1])*Math.min(1,dt*5);
+  const lx=finger?finger.x-left:rest[0]-(tilt?.[0]||0)*8,ly=finger?finger.y-top:rest[1]-(tilt?.[1]||0)*8;light[0]+=(lx-light[0])*Math.min(1,dt*9);light[1]+=(ly-light[1])*Math.min(1,dt*9);
   draw(now);raf=requestAnimationFrame(frame);
  };
  size();ph.glass.append(canvas);ph.glass.classList.add('gl');draw(ph.t0);
@@ -911,14 +1261,18 @@ function startTunnel(ph,poly,color,all){
 // bounds, so the wormhole only fills what can show. <b> is the CSS fallback when WebGL2 is unavailable.
 // edge: the cut outline. A static glass bezel is drawn along it ABOVE the board: the cut drops whole mesh
 // triangles, so the cloth's hole edge stair-steps up to ~12 px either side of the outline, and the bezel covers that.
-function showGlass(pts,color,all=false,edge=pts){
+// T: this sequence's {cut,load,reveal} ms (#124's lines and X run PORTAL.short of them); axis: a line's [a,b], whose
+// glowing bezel starts as a slit along it and opens into the lens over the cut, the wormhole pouring through the tear.
+const FULL_T={cut:PORTAL.cutMs,load:PORTAL.loadMinMs,reveal:PORTAL.revealMs};
+function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null}={}){
  endPhase();
  const poly=pts||closeLoop([[0,0],[innerWidth,0],[innerWidth,innerHeight],[0,innerHeight]]),clip=pts?bleedPts(pts):poly;
  const xs=clip.map(p=>p[0]),ys=clip.map(p=>p[1]),left=Math.floor(Math.min(...xs)),top=Math.floor(Math.min(...ys)),w=Math.ceil(Math.max(...xs))-left,h=Math.ceil(Math.max(...ys))-top;
  const el=document.createElement('div');el.className='portal-glass';el.setAttribute('aria-hidden','true');el.innerHTML='<b></b>';el.classList.toggle('all',all);
  el.style.cssText=`left:${left}px;top:${top}px;width:${w}px;height:${h}px`;el.style.setProperty('--glass',color);
+ const reduced=prefersReducedMotion(),slit=axis&&!reduced;
  if(pts)el.style.clipPath=`polygon(${clip.map(([x,y])=>`${x-left}px ${y-top}px`).join(',')})`;
- if(!prefersReducedMotion())el.style.setProperty('animation','portal-glass-in .6s ease both','important'); // beats the locked theme's animation:none
+ if(!reduced&&!slit)el.style.setProperty('animation','portal-glass-in .6s ease both','important'); // beats the locked theme's animation:none
  portalHome.append(el);
  let bezel=null;
  if(edge){
@@ -926,13 +1280,40 @@ function showGlass(pts,color,all=false,edge=pts){
   const B=1.55*(board?.faceRect().width||375)/QUILT.segX,p=edge.map(q=>q.join(',')).join(' '),ring=(cls,w,more='')=>`<polygon class="${cls}" stroke-width="${w}" ${more} points="${p}"/>`;
   portalHome.insertAdjacentHTML('beforeend',`<svg class="portal-bezel" aria-hidden="true" style="--glass:${color}"><defs><linearGradient id="portalBezelLit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lit"/><stop offset=".5" class="mid"/><stop offset="1" class="far"/></linearGradient><linearGradient id="portalBezelSpec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity=".6"/></linearGradient></defs>${ring('shade',B+10)+ring('shade',B+5)+ring('body',B)+ring('glow',B*.6)+ring('glow',B*.36)+ring('core',2.5)+ring('spec',2,`transform="translate(${-.3*B} ${-.3*B})"`)}</svg>`); // stacked strokes, no blur filters: those cost a ~100 ms first paint
   bezel=portalHome.lastElementChild;
-  if(!prefersReducedMotion())bezel.style.setProperty('animation','portal-glass-in .3s ease both','important');
+  if(!reduced&&!slit)bezel.style.setProperty('animation','portal-glass-in .3s ease both','important');
+  if(slit){ // squashed flat onto the line, then out to the lens
+   const [[ax,ay],[bx,by]]=axis,a=Math.atan2(by-ay,bx-ax)*180/Math.PI;bezel.style.transformOrigin=`${d2((ax+bx)/2)}px ${d2((ay+by)/2)}px`;
+   bezel.animate([{transform:`rotate(${d2(a)}deg) scale(1,.04) rotate(${d2(-a)}deg)`},{transform:'none'}],{duration:T.cut,easing:'cubic-bezier(.5,0,.2,1)'});
+  }
  }
- phase={glass:el,bezel,pts,color,t0:performance.now(),pulse:false,box:{left,top,w,h}};
+ phase={glass:el,bezel,pts,color,T,t0:performance.now(),pulse:false,box:{left,top,w,h}};
  startTunnel(phase,poly,color,all);
  energize(ringColours(color,all),ENERGY.surge,true);
 }
 function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;energize(NEONS);}
+// The wormhole on its own, for transitions elsewhere (a workout's rest <-> attack, leaving Meditation): 'in' opens it
+// from the centre of the screen until it covers everything (then it stays up, still flowing, while the caller swaps
+// what is under it); 'out' shrinks it back into its core and removes it. Resolves when that half is done. One wormhole
+// canvas is shared with the quilt's glass, so don't play it while the quilt is mid-portal. Reduced motion: instant.
+let wormhole=null;
+export async function playWormhole({direction='in',minMs=900,color='#b026ff'}={}){
+ const ms=prefersReducedMotion()?0:Math.max(0,minMs),R=Math.ceil(Math.hypot(innerWidth,innerHeight)/2);
+ if(!wormhole){
+  const el=document.createElement('div'),w=innerWidth,h=innerHeight;el.className='portal-glass portal-wormhole';el.setAttribute('aria-hidden','true');el.innerHTML='<b></b>';
+  el.style.cssText=`position:fixed;inset:0;width:${w}px;height:${h}px;margin:0;padding:0;border:0;max-width:none;max-height:none;overflow:hidden;background:#000;pointer-events:none;z-index:10000;--glass:${color}`;
+  if(direction==='out')el.style.clipPath=`circle(${R}px at 50% 50%)`;
+  document.body.append(el);if(el.showPopover){el.setAttribute('popover','manual');el.showPopover();}
+  const ph={glass:el,box:{left:0,top:0,w,h},T:{cut:Math.max(1,ms),load:0,reveal:Math.max(1,ms)},t0:performance.now()-(direction==='out'?ms:0),pulse:false};
+  startTunnel(ph,closeLoop([[0,0],[w,0],[w,h],[0,h]]),color,false);
+  wormhole={el,ph};
+ }
+ const {el,ph}=wormhole,out=direction==='out';
+ ph[out?'backT0':'diveT0']=performance.now();
+ await el.animate([{clipPath:'circle(0px at 50% 50%)'},{clipPath:`circle(${R}px at 50% 50%)`}],{duration:ms,easing:out?'cubic-bezier(.6,0,.9,.4)':'cubic-bezier(.2,.6,.3,1)',direction:out?'reverse':'normal',fill:'forwards'}).finished.catch(()=>{});
+ if(out&&wormhole?.el===el){ph.stop?.();el.remove();wormhole=null;}
+}
+// A destination seen through the hole covers the glass: stop the wormhole, keep the bezel over the cloth's ragged edge.
+function quietPhase(){if(!phase)return;phase.stop?.();phase.stop=null;phase.pulse=false;phase.glass.remove();energize(NEONS);}
 function ripple(x,y){
  if(!phase||prefersReducedMotion())return;
  const r=document.createElement('i');r.className='portal-ripple';r.style.left=(x-phase.box.left)+'px';r.style.top=(y-phase.box.top)+'px';
@@ -944,11 +1325,18 @@ function cutBoard(pts,color,ms=prefersReducedMotion()?0:PORTAL.cutMs){
  const f=board?.faceRect();if(!f)return Promise.resolve();
  return board.cut(pts.map(([x,y])=>[(x-f.left)/f.width,(y-f.top)/f.height]),color,ms);
 }
+// Resolves once it has landed (the transition's own end: a slow frame can hold its start back well past ms).
 function revealDialogFromPoint(dialog,[cx,cy],ms=500){
- if(prefersReducedMotion())return;
+ if(prefersReducedMotion())return Promise.resolve();
  const dbox=dialog.getBoundingClientRect();
  dialog.style.transformOrigin=`${cx-dbox.left}px ${cy-dbox.top}px`;motion(dialog,'none');dialog.style.transform='scale(.05)';dialog.style.opacity='0';
- settle().then(()=>{if(!dialog.open)return;motion(dialog,`transform ${ms}ms cubic-bezier(.2,0,.3,1),opacity ${ms*.8}ms ease`);dialog.style.transform='';dialog.style.opacity='';});
+ return settle().then(()=>{
+  if(!dialog.open)return;
+  motion(dialog,`transform ${ms}ms cubic-bezier(.2,0,.3,1),opacity ${ms*.8}ms ease`);dialog.style.transform='';dialog.style.opacity='';
+  getComputedStyle(dialog).transform; // starts the transition now, so it can be awaited
+  const grow=dialog.getAnimations().find(a=>a.transitionProperty==='transform');
+  return grow?grow.finished.catch(()=>{}):undefined;
+ });
 }
 // Dive into the wormhole (Ian 2026-09-23, #103 "zoom into each portal once opened"): the whole portal scales up about the
 // vanishing point until the shape covers the screen, easing in over revealMs while the tunnel speeds up. A compositor-only
@@ -961,7 +1349,7 @@ function dive(pts,back=false){
  const far=Math.max(...[[0,0],[innerWidth,0],[0,innerHeight],[innerWidth,innerHeight]].map(([x,y])=>Math.hypot(x-c[0],y-c[1]))),reduced=prefersReducedMotion();
  portalHome.style.transformOrigin=`${c[0]}px ${c[1]}px`;phase[back?'backT0':'diveT0']=performance.now();
  energize(null,ENERGY.dive,true);
- phase.dive=portalHome.animate(reduced?[{opacity:1},{opacity:0}]:[{transform:'none'},{transform:`scale(${Math.max(1.5,1.05*far/Math.max(rIn,1))})`}],{duration:reduced?200:PORTAL.revealMs,easing:reduced?'ease':'cubic-bezier(.55,0,.9,.5)',fill:back?'none':'forwards',direction:back?'reverse':'normal'});
+ phase.dive=portalHome.animate(reduced?[{opacity:1},{opacity:0}]:[{transform:'none'},{transform:`scale(${Math.max(1.5,1.05*far/Math.max(rIn,1))})`}],{duration:reduced?200:phase.T.reveal,easing:reduced?'ease':'cubic-bezier(.55,0,.9,.5)',fill:back?'none':'forwards',direction:back?'reverse':'normal'});
  return phase.dive.finished.catch(()=>{});
 }
 // The destination dialog grows out of the tunnel's core; its backdrop fades in so the dive stays visible behind it.
@@ -972,8 +1360,8 @@ function arriveFromCore(dialog,core,ms){
  if(prefersReducedMotion())return;
  const bar=dialog.querySelector(':scope>#coachDock');if(bar)document.body.append(bar);
  dialog.style.setProperty('--portal-arrive',ms+'ms');dialog.classList.add('portal-arriving');
- revealDialogFromPoint(dialog,core,ms);
- setTimeout(()=>{dialog.classList.remove('portal-arriving');dialog.style.removeProperty('--portal-arrive');motion(dialog,'');dialog.style.transformOrigin='';if(bar?.parentNode===document.body&&dialog.open)dialog.append(bar);},ms+100);
+ // The bar goes back in only once the scale has landed (a fixed bar inside a scaled dialog would ride the scale).
+ revealDialogFromPoint(dialog,core,ms).then(()=>{dialog.classList.remove('portal-arriving');dialog.style.removeProperty('--portal-arrive');motion(dialog,'');dialog.style.transformOrigin='';if(bar?.parentNode===document.body&&dialog.open)dialog.append(bar);});
 }
 
 function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}
@@ -984,26 +1372,41 @@ async function runShape(id){
  try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}
  finally{if(run===sequence){busy=false;scheduleIdle();}}
 }
-// Lines (and x) are open strokes with no enclosed area: no hole to cut. Flash the trace in the
-// destination colour, then open it directly — no glass phase, no forced loadMinMs wait, no porthole
-// reveal (Ian 2026-09-22: transitions for these are his own later work).
+// Lines are open strokes with no enclosed area; portalWindow() gives them (and the X) a window to cut (#124).
 const LINE_IDS=new Set(['line-lr','line-rl','line-down','line-up']);
 const lineTemplatePts=id=>SHAPES.line[(id==='line-lr'||id==='line-rl')?1:0].points;
 async function openDirect(menu,current){
  // No dive in, but the way back out is still the wormhole: the destination's own shape, or the full square.
- const id=Object.keys(MENUS).find(k=>MENUS[k]===menu),{face,pattern}=restFace(),pts=pattern&&shapeClipPts(SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect',pattern);
+ const id=Object.keys(MENUS).find(k=>MENUS[k]===menu),{face}=restFace(),pts=backPts(id);
  let dialog=null;
  backgroundBlocked(false);
- frameOn(face);const unwatch=watchDialog();
+ frameOn(face,face&&windowLook(id,menu,face));const unwatch=watchDialog();
  try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}finally{unwatch?.();}
  if(!current())return;
  const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
  if(!shown){status(`${menu.label} isn't available here yet.`);await fadeOutBoard();fadeInBoard();return;}
  if(dialog instanceof HTMLDialogElement){
   frameDialog(dialog);
-  dialog.addEventListener('close',()=>{if(current())diveBack({dialog,pts,color:menu.color},current);},{once:true});
+  dialog.addEventListener('close',()=>closed(dialog,{pts,color:menu.color},current),{once:true});
  }else frameOff();
  await fadeOutBoard();
+}
+// #131: the shapes that aren't full screen open INTO their cut, the quilt staying on as the wall; the rest dive until
+// the destination fills the frame. #124: the four lines and the X get the wormhole too, shorter (PORTAL.short): a line
+// has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
+const SHAPED=new Set(['oval','up','down','vdiamond','hdiamond']);
+// A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
+export function lensPts([ax,ay],[bx,by],half,n=24){
+ const l=Math.hypot(bx-ax,by-ay)||1,nx=-(by-ay)/l,ny=(bx-ax)/l;
+ const side=sign=>Array.from({length:n+1},(_,i)=>{const t=sign>0?i/n:1-i/n,w=sign*half*Math.sin(Math.PI*t);return [ax+(bx-ax)*t+nx*w,ay+(by-ay)*t+ny*w];});
+ return closeLoop([...side(1),...side(-1).slice(1,-1)]);
+}
+// The window a traced shape opens (client px): its stitched outline; a line's lens (and the line, its slit); the
+// X's diamond, centred where its arms cross, its edges parallel to them.
+export function portalWindow(id,rect){
+ if(LINE_IDS.has(id)){const [a,b]=toClientPts(lineTemplatePts(id),rect),len=Math.hypot(b[0]-a[0],b[1]-a[1]);return {pts:lensPts(a,b,Math.min(.17*len,.3*rect.width)),axis:[a,b]};}
+ if(id==='x'){const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=.3*Math.min(rect.width,rect.height);return {pts:closeLoop([[cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]])};}
+ return {pts:shapeClipPts(id,rect)};
 }
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
@@ -1022,41 +1425,34 @@ async function portalSequence(id,current){
   return;
  }
  const menu=MENUS[id];if(!menu)return;
- if(id==='x'){
-  // No area to cut (see LINE_IDS above); reuses the plain nav open Customizer used, so the glass/board
-  // stays up while the next page loads, same as any other kind:'nav' destination.
-  flashOutline(SHAPES.x.map(p=>toClientPts(p.points,rect)),menu.color);
-  if(menu.locked?.()){status(menu.lockedMessage);return;}
-  status('');menu.open();return;
- }
- if(LINE_IDS.has(id)){
-  flashOutline([toClientPts(lineTemplatePts(id),rect)],menu.color);
-  if(menu.locked?.()){status(menu.lockedMessage);return;}
-  status('');
-  if(menu.kind==='menu'){openMenu();return;} // Share QR isn't built: today's Menu sheet (openMenu hides the portal itself)
-  await openDirect(menu,current);
-  return;
- }
- if(!SHAPES[id]){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
- const pts=shapeClipPts(id,rect);
- flashOutline([pts],menu.color);
+ const line=LINE_IDS.has(id),short=line||id==='x';
+ if(!SHAPES[id]&&!line){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
+ const win=portalWindow(id,rect),pts=win.pts;
+ flashOutline(id==='x'?SHAPES.x.map(p=>toClientPts(p.points,rect)):line?[toClientPts(lineTemplatePts(id),rect)]:[pts],menu.color);
  if(menu.locked?.()){status(menu.lockedMessage);return;}
  status('');
- showGlass(pts,menu.color);
- await cutBoard(pts,menu.color);
+ const k=short?PORTAL.short:1,T={cut:PORTAL.cutMs*k,load:PORTAL.loadMinMs*k,reveal:PORTAL.revealMs*k},reduced=prefersReducedMotion();
+ showGlass(pts,menu.color,false,pts,{T,axis:win.axis});
+ await cutBoard(pts,menu.color,reduced?0:T.cut);
  if(!current())return;
- // Loading phase: the glass stays live (touch ripples, breathing outline) for at least loadMinMs.
- if(phase)phase.pulse=!prefersReducedMotion();
+ // Loading phase: the glass stays live (touch ripples, breathing outline) for at least T.load.
+ if(phase)phase.pulse=!reduced;
  if(phase?.pulse)kickRender();
- await sleep(prefersReducedMotion()?0:PORTAL.loadMinMs);
+ await sleep(reduced?0:T.load);
  if(!current())return;
+ if(SHAPED.has(id)&&menu.kind==='dialog'&&face){await openInHole(id,menu,pts,face,current);return;}
  // Reveal: dive into the wormhole; the destination appears from its core over the last `arrive` ms of the dive.
- const dove=dive(pts),core=centroidOf(pts),arrive=PORTAL.revealMs*.55;
- if(menu.kind==='dialog')frameOn(face); // the frame stays put and the dive happens in its window
- if(prefersReducedMotion()||menu.kind==='nav')await dove;else await sleep(PORTAL.revealMs-arrive);
+ const dove=dive(pts),core=centroidOf(pts),arrive=T.reveal*.55;
+ if(menu.kind==='dialog')frameOn(face,face&&windowLook(id,menu,face)); // the frame stays put and the dive happens in its window
+ if(reduced||menu.kind==='nav'||menu.kind==='menu')await dove;else await sleep(T.reveal-arrive);
  if(!current())return;
  if(menu.kind==='home'){await growHole(portalHome,pts,rectBox(portalHome),current,arrive);if(current()){setVisible(false);menu.open?.();}return;}
- if(menu.kind==='nav'){menu.open();return;} // the glass stays up while the next page loads
+ if(menu.kind==='nav'){menu.open();return;} // X -> the Character editor: dive, then navigate (the glass stays up while it loads)
+ if(menu.kind==='menu'){ // line-up: the Menu sheet grows out of the core (openMenu hides the portal itself)
+  openMenu();await settle();revealDialogFromPoint(menuSheet,core);
+  menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';},{once:true});
+  return;
+ }
  let dialog=null;
  backgroundBlocked(false);
  const unwatch=watchDialog();
@@ -1071,9 +1467,29 @@ async function portalSequence(id,current){
   await dove;
   if(!current())return;
   if(!dialog.open){fadeInBoard();return;} // closed mid-reveal
-  dialog.addEventListener('close',()=>{if(current())diveBack({dialog,pts,color:menu.color},current);},{once:true});
+  dialog.addEventListener('close',()=>closed(dialog,{pts,color:menu.color},current),{once:true});
  }else frameOff();
  fadeOutBoard();
+}
+// #131 the destination opens in the hole (Portal's "open"): the frame's chrome and the rim come up with a burst, the
+// dialog opens clipped to the cut, growing out of the core to the outline (shapeDialog), the wormhole under it stops and
+// the quilt stays on as the wall. Closing fizzles it shut (fizzleBack).
+async function openInHole(id,menu,pts,face,current){
+ frameOn(face,shapeLook(id,menu,pts,face,restFace().pattern));
+ let dialog=null;
+ backgroundBlocked(false);
+ const unwatch=watchDialog();
+ try{dialog=await menu.open?.();}catch(error){console.warn(`${menu.label} failed to open.`,error);}finally{unwatch?.();}
+ if(!current())return;
+ if(dialog instanceof HTMLDialogElement&&dialog.open)frameDialog(dialog);
+ await settle();
+ if(!current())return;
+ const shown=dialog instanceof HTMLDialogElement?dialog.open:dialog?.getClientRects?.().length>0;
+ if(!shown){frameOff();status(`${menu.label} isn't available here yet.`);await fadeOutBoard();fadeInBoard();return;}
+ if(!(dialog instanceof HTMLDialogElement)){frameOff();fadeOutBoard();return;}
+ dialog.addEventListener('close',()=>closed(dialog,{pts,color:menu.color,shaped:true},current),{once:true});
+ await sleep(prefersReducedMotion()?0:700); // the wormhole shows round the destination while the hole opens out
+ if(current()&&framed?.dialog===dialog){quietPhase();board?.pause();}
 }
 
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}

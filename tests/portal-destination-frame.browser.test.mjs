@@ -1,5 +1,6 @@
 // W2-2K additions (Ian 23 Sept), in the real app at 375x812 against `npm run build`: the energy flows around the metal
-// frame (gentle at rest, surging through the glass and dive, static under reduced motion); a destination opens INSIDE
+// frame (gentle at rest, surging through the glass and dive, static under reduced motion); a destination (W2-2N: a
+// line's, since the triangles, diamonds and oval now open in their cut, tests/portal-peering) opens INSIDE
 // the frame (#portalChrome stays on screen above it, the dialog fitted to its window); closing flies back out of the
 // wormhole (the reverse dive) and hands back to the quilt; camera-only mode hides the chrome. Harness from
 // release-smoke. Frames land in .frames/ (untracked).
@@ -41,7 +42,7 @@ async function openApp(browser,base,reducedMotion){
 // The energy animations (one per frame copy) and the chrome/dialog geometry.
 const energy=page=>page.evaluate(()=>document.getAnimations().filter(a=>a.effect?.target?.closest?.('.portal-energy')).map(a=>({state:a.playState,rate:a.playbackRate})));
 const state=page=>page.evaluate(()=>{
- const chrome=document.getElementById('portalChrome'),meals=document.getElementById('mealsPanel'),r=el=>{const q=el.getBoundingClientRect();return{left:q.left,top:q.top,width:q.width,height:q.height};};
+ const chrome=document.getElementById('portalChrome'),meals=document.getElementById('remindersPanel'),r=el=>{const q=el.getBoundingClientRect();return{left:q.left,top:q.top,width:q.width,height:q.height};};
  const face=Object.fromEntries(['left','top','width','height'].map(k=>[k,parseFloat(chrome.style.getPropertyValue('--face-'+k))]));
  return{chrome:chrome.matches(':popover-open'),chromeDisplay:getComputedStyle(chrome).display,face,meals:r(meals),mealsOpen:meals.open,framed:meals.classList.contains('portal-framed'),hot:!!document.querySelector('#portalChrome .portal-energy.hot'),ghost:!!document.querySelector('.portal-ghost'),glass:!!document.querySelector('.portal-glass'),transform:getComputedStyle(document.getElementById('portalHome')).transform,hidden:document.getElementById('portalHome').hidden};
 });
@@ -55,7 +56,7 @@ test.before(async()=>{
 });
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
 
-test('energy surges through the dive, Food opens inside the frame, and closing flies back out of the wormhole',{timeout:180000},async()=>{
+test("energy surges through the dive, a line's destination (Reminders) opens inside the frame, and closing flies back out of the wormhole",{timeout:180000},async()=>{
  const {context,page}=await openApp(browser,base,'no-preference');
  try{
   let e=await energy(page);
@@ -70,7 +71,7 @@ test('energy surges through the dive, Food opens inside the frame, and closing f
    window.__release=()=>{window.__hold=false;window.__dive.play();window.__held.splice(0).forEach(f=>f());};
    Element.prototype.animate=function(frames,timing){const a=animate.call(this,frames,timing);if(this.id==='portalHome'&&!window.__dive&&timing.direction!=='reverse'){a.pause();a.currentTime=timing.duration/3;window.__dive=a;window.__hold=true;}if(this.id==='portalHome'&&timing.direction==='reverse'){a.pause();window.__back=a;}return a;};
   });
-  await page.evaluate(()=>{window.portalRun=window.myr5Portal.open('up');});
+  await page.evaluate(()=>{window.portalRun=window.myr5Portal.open('line-rl');});
   await page.waitForFunction(()=>window.__dive,null,{timeout:20000});
   await page.waitForTimeout(100);
   let s=await state(page);e=await energy(page);
@@ -79,18 +80,18 @@ test('energy surges through the dive, Food opens inside the frame, and closing f
   assert.notEqual(s.transform,'none','the portal is diving');
   await page.screenshot({path:resolve(FRAMES_DIR,'energy-mid-dive.png')});
   await page.evaluate(()=>window.__release());
-  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open&&document.getElementById('portalHome').hidden,null,{timeout:20000});
+  await page.waitForFunction(()=>document.getElementById('remindersPanel')?.open&&document.getElementById('portalHome').hidden&&!document.querySelector('.portal-arriving'),null,{timeout:20000}); // landed
   await page.evaluate(()=>window.portalRun);
   await page.waitForTimeout(400);
   s=await state(page);
-  assert(s.chrome&&s.framed,'Food opens framed, with the chrome still up');
+  assert(s.chrome&&s.framed,'Reminders opens framed, with the chrome still up');
   for(const k of ['left','top','width','height'])near(s.meals,s.face,k);
   assert(s.face.left>=20&&375-s.face.left-s.face.width>=20,'the window keeps the 20px margin');
-  assert.equal(await page.evaluate(()=>{const b=document.querySelector('#mealsPanel [data-close]').getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#mealsPanel [data-close]')!=null;}),true,'the destination stays tappable under the chrome');
+  assert.equal(await page.evaluate(()=>{const b=document.querySelector('#remindersPanel [data-close]').getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#remindersPanel [data-close]')!=null;}),true,'the destination stays tappable under the chrome');
   e=await energy(page);assert(e.every(a=>a.state==='running'&&a.rate===1),'the energy calms but keeps flowing around the open destination');
   await page.screenshot({path:resolve(FRAMES_DIR,'menu-inside-frame.png')});
   // Close: the reverse dive, captured at three points.
-  await page.locator('#mealsPanel [data-close]').click();
+  await page.locator('#remindersPanel [data-close]').click();
   await page.waitForFunction(()=>window.__back,null,{timeout:10000});
   for(const [k,name] of [[.15,'reverse-dive-15'],[.5,'reverse-dive-50'],[.85,'reverse-dive-85']]){
    const scale=await page.evaluate(k=>{const d=window.__back.effect.getTiming().duration;window.__back.currentTime=d*k;const g=document.querySelector('.portal-ghost')?.getAnimations()[0];if(g){g.pause();g.currentTime=Math.min(d*k,g.effect.getTiming().duration);}return new Promise(r=>requestAnimationFrame(()=>r(new DOMMatrix(getComputedStyle(document.getElementById('portalHome')).transform).a)));},k);

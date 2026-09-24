@@ -55,6 +55,32 @@ dialog.portal-framed::backdrop{background:#17111e!important}
 body:has(#coachDock) :is(#portalHome,#portalChrome){--portal-bottom-reserve:var(--myr5-bar)}
 body:has(#coachDock) #portalChrome{bottom:var(--myr5-bar)}
 body:has(#coachDock) dialog.portal-framed::backdrop{bottom:var(--myr5-bar)}
+/* #134 the energy round an open destination, in its portal's shape (JS: portal.mjs showAura). All masks drawn once; in
+   each fire layer a wheel of the neons (a conic gradient round the outline's centre, JS sizes it) turns by transform.
+   Takes no pointer (the chrome takes none). */
+.portal-aura{position:absolute;z-index:2;inset:0;pointer-events:none;--aura:#fff}
+.portal-aura>*{position:absolute;inset:0;width:100%;height:100%}
+.portal-aura-fire,.portal-aura-flash{display:block;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.portal-aura-fire{overflow:hidden}
+.portal-aura-fire>i{position:absolute;background:conic-gradient(var(--aura-seq));will-change:transform}
+.portal-aura-fire>i.b{opacity:.45;background:conic-gradient(from 90deg,var(--aura-seq))}
+.portal-aura-fire>.portal-aura-spec{border-radius:50%;background:radial-gradient(circle,#fff 0,#ffffffa0 22%,#fff0 68%);opacity:.75}
+.portal-aura-flash{background:radial-gradient(circle at var(--cx) var(--cy),#fff,color-mix(in srgb,var(--aura) 55%,#fff))}
+.portal-aura>b{position:absolute;inset:auto;width:6px;height:6px;margin:-3px;border-radius:50%;box-shadow:0 0 8px 2px var(--aura)}
+/* #132 the name rides the rim, outside the window (on the quilt round a hole, on the bottom rail round the window). */
+.portal-aura>svg{overflow:visible}
+.portal-aura-name{font:800 13px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.32em;fill:color-mix(in srgb,var(--aura) 70%,#fff);stroke:#0b0710;stroke-width:4px;stroke-linejoin:round;paint-order:stroke}
+.portal-aura:not(.shaped) .portal-aura-name{font-size:9.5px;letter-spacing:.38em;stroke-width:3px}
+/* #131 seen through the hole: the quilt stays on as the wall, so a shaped destination's backdrop is clear (the dialog's
+   clip-path is JS's). */
+dialog.portal-framed.portal-shaped::backdrop{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.portal-peer-ui{position:fixed;left:0;top:0;width:0;height:0;z-index:60}
+.portal-peer-ui>button:not(#_){all:unset;position:fixed;box-sizing:border-box;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#140e1ee6;color:#fff;font:700 18px/1 system-ui,sans-serif;border:2px solid color-mix(in srgb,var(--peer-ui,#b026ff) 70%,#fff);box-shadow:0 0 0 1px #0008,0 0 14px var(--peer-ui,#b026ff),0 4px 10px #0009;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.portal-peer-ui>button:not(#_):focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
+.portal-peer-ui>.portal-tilt-chip:not(#_){width:auto;height:40px;padding:0 6px 0 14px;border-radius:999px;display:flex;gap:10px;font:600 13px/1 system-ui,sans-serif}
+.portal-tilt-chip b{padding:7px 12px;border-radius:999px;background:#fff;color:#1a1024}
+dialog.portal-leaned .portal-peer-ui>[data-peer-close]:not(#_){visibility:hidden}
+dialog.portal-leaned .portal-peer-ui>[data-peer-lean]:not(#_){width:36px;height:36px;font-size:15px;opacity:.85}
 /* Closing: the destination's empty shell, shrinking into the wormhole core over the reverse dive. */
 dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:none!important;overflow:hidden!important}
 #portalShadows{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:multiply;opacity:.12}
