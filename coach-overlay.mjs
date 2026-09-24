@@ -3,6 +3,14 @@
 import {CoachMotion,COACH} from './coach-hit.mjs';
 const $=id=>document.getElementById(id);
 
+// D43.5: while a set is counting, the coach gives up frames before the counter does. window.myr5TestState.rate
+// is the tracking loop's own pose-update measurement (app.mjs) — reused here, not remeasured, so this is the
+// same "updates/s" the counter and the calibration floor (9919c65) already see. When capped, this both caps
+// the creature viewer's own WebGL render loop (window.myr5Creature.setMaxFps, creature/source/viewer.ts —
+// the actual cost that competes with MediaPipe) and throttles coach-overlay's own per-pose work below (DOM
+// writes and the coach-hit wander/hit-test math, which run inline in the tracking loop's call stack).
+const COACH_CAP={minPoseHz:1.6,fps:15,recoverMs:2000};
+
 export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
  if(!point||!videoW||!videoH||!screenW||!screenH)return {x:0,y:0,visibility:0};
  const scale=Math.max(screenW/videoW,screenH/videoH),offX=(screenW-videoW*scale)/2,offY=(screenH-videoH*scale)/2;
@@ -12,6 +20,7 @@ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
 
 export function mountCoachOverlay(){
  let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,laughed=false,walking=false,begun=false,loading=null,lastState=null;
+ let capped=false,aboveSince=null,lastRenderAt=-Infinity;
  async function ensureCard(){
   card=document.querySelector('.myr5-companion-card');if(card)return;
   loading??=(async()=>{
@@ -34,12 +43,12 @@ export function mountCoachOverlay(){
  async function enter(){
   await ensureCard();if(!card||!tracking)return;
   ensureOverlay();if(!box)return;if(card.parentElement!==box)box.append(card);
-  boxH=0;laughed=false;lastState=null;shown(false);
+  boxH=0;laughed=false;lastState=null;capped=false;aboveSince=null;lastRenderAt=-Infinity;window.myr5Creature?.setMaxFps?.(null);shown(false);
   motion=new CoachMotion({aspect:innerWidth/innerHeight,now:performance.now()});if(begun)motion.begin();
   window.myr5Creature?.stage('overlay');
  }
  function leave(){
-  motion=null;lastState=null;walk(false);window.myr5Creature?.face?.(0);if(!card)return;
+  motion=null;lastState=null;walk(false);window.myr5Creature?.face?.(0);window.myr5Creature?.setMaxFps?.(null);if(!card)return;
   card.style.cssText='';if(box)box.style.visibility=box.style.display='';
   const mount=document.body.dataset.screen==='rest'?$('restCoachMount'):$('coachMount');
   if(mount&&card.parentElement!==mount)mount.append(card);
@@ -60,10 +69,32 @@ export function mountCoachOverlay(){
   box.style.transform=`translate(${state.x*w-boxH*COACH.boxWidth/2}px,${state.feetY*h-(k+1)*boxH/2}px) scale(${k}) rotate(${state.rotation}rad)`;
  }
  function apply(state){lastState=state;place(state);}
+ // Hysteresis: drop to capped the moment tracking is slow; only climb back out after minPoseHz has held
+ // for recoverMs straight, so a set hovering near the threshold doesn't flip the cap on and off. Flips the
+ // creature viewer's own render cap on transitions only (not every pose event).
+ function updateCap(counting,now){
+  const was=capped;
+  if(!counting){capped=false;aboveSince=null;}
+  else{
+   const rate=window.myr5TestState?.rate;
+   if(Number.isFinite(rate)&&rate<COACH_CAP.minPoseHz){capped=true;aboveSince=null;}
+   else{
+    if(aboveSince===null)aboveSince=now;
+    if(capped&&now-aboveSince>=COACH_CAP.recoverMs)capped=false;
+   }
+  }
+  if(capped!==was)window.myr5Creature?.setMaxFps?.(capped?COACH_CAP.fps:null);
+ }
  function onPose(event){
   if(!tracking||!motion||!box)return;
   const {points,width,height,mirrored,now,counting}=event.detail;
   if(counting&&!begun){begun=true;motion.begin();}
+  updateCap(counting,now);
+  // The WebGL cap above covers the render cost; this also skips this pose sample's own DOM writes and
+  // coach-hit math (still real-time, not frame-count, so a capped coach covers the same ground in fewer,
+  // bigger steps) since that work runs inline in the tracking loop's call stack too.
+  if(capped&&now-lastRenderAt<1000/COACH_CAP.fps)return;
+  lastRenderAt=now;
   const screenPoints=points?points.map(p=>videoToScreen(p,{videoW:width,videoH:height,screenW:innerWidth,screenH:innerHeight,mirrored})):null;
   apply(motion.update(screenPoints,now));
  }
