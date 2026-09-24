@@ -42,6 +42,8 @@ const ROOM_CSS=`
    searches and computes nutrients for the guess, so the numbers fly in and the eventual Food match is
    prefilled) but visually closed, so the pyramid — not this sheet — is the whole Food menu until resolved. */
 #mealsPanel.pyramid-mode[data-asking] #mealConfirmation,#mealsPanel.pyramid-mode[data-asking] #mealSaveControls{display:none!important}
+/* Release 6: while asking, the wall's poster and note step down below the question's Yes/Type it/Fix row (reframe() sets --ask-clear). */
+#mealsPanel[data-asking] #pyramidScanner .paper-poster{top:var(--ask-clear,120px)}#mealsPanel[data-asking] #pyramidScanner .paper-note{top:calc(var(--ask-clear,120px) + 14px)}
 #pyramidScanner .pyramid-screen-key{min-height:0;padding:0;border:0;border-radius:6px;background:none;opacity:0;pointer-events:none!important}
 #pyramidScanner .pyramid-screen-key:focus-visible{opacity:1;outline:3px solid #ffb24d;outline-offset:2px}
 #pyramidScanner .pyramid-flip{left:50%;top:auto;bottom:14px;translate:-50% 0;display:flex;white-space:nowrap;align-items:center;gap:9px;min-height:40px;padding:0 15px;border:1px solid #fff8;border-radius:999px;background:#1d1428e0;color:#b9a9c6;box-shadow:0 2px 8px #0006}
@@ -412,7 +414,8 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   renderer.setSize(W,H,false);camera.aspect=W/H;camera.updateProjectionMatrix();
   for(const tag of [lensTag,questionTag,yesTag,fixTag,typeItTag,...dialTags])tag.labelWidth=tag.offsetWidth;
   const f=frame?.()||{top:0,bottom:H},top=frameTop=Math.max(0,f.top)+6,base=Math.min(H,f.bottom),bottom=base-FLIP_SPACE,middle=(top+bottom)/2;
-  flip.style.bottom=`${Math.max(8,H-base+12)}px`;zoom.style.setProperty('--zoom-y',`${Math.max(top,middle)}px`);
+  flip.style.bottom=`${Math.max(8,H-base+12)}px`;host.style.setProperty('--ask-clear',`${top+108}px`); // under the ask row (placeUI: frameTop+56, 44px tall)
+  zoom.style.setProperty('--zoom-y',`${Math.max(top,middle)}px`);
   if(!modelSize)return;
   // px per world unit: the whole model at full width when it fits; when the sheet is up, keep the lens, screens
   // and dials whole at that size and let the base hang behind the sheet.
