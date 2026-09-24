@@ -132,7 +132,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
    const cx=strip.getContext('2d');cx.drawImage(source,side==='right'?source.width-span:0,side==='bottom'?source.height-span:0,strip.width,strip.height,0,0,strip.width,strip.height);
    const tex=new THREE.CanvasTexture(strip);tex.colorSpace=THREE.SRGBColorSpace;
    const mat=new THREE.MeshBasicMaterial({map:tex,color:0x777777,side:THREE.DoubleSide});
-   const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),mat);plane.position.z=-halfDepth-.1;
+   const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),mat);plane.position.z=halfDepth;
    group.add(plane);edgeFill.push({plane,side});
   }
  }
