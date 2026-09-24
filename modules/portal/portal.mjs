@@ -659,7 +659,7 @@ export function namePath(id,pattern,face,gap=7){
   if(id==='up')return edge([0,.71],[1,.71],-(gap+10)); // under the base, the glyphs hanging between it and the line
   if(id==='down')return edge([0,.29],[1,.29],gap);
   if(id==='vdiamond')return edge([0,.5],[.5,0],gap);
-  if(id==='hdiamond')return edge([0,.5],[.5,.29],gap);
+  if(id==='hdiamond')return line([[face.left,face.top-gap],[face.left+face.width,face.top-gap]]);
   const [cx,cy]=P([.5,.5]),rx=pattern.width/2+gap,ry=pattern.height/2+gap; // the oval: its upper-left arc
   return line(Array.from({length:17},(_,i)=>{const t=Math.PI*(1+i/32);return [cx+rx*Math.cos(t),cy+ry*Math.sin(t)];}));
  }

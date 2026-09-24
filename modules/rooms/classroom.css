@@ -1,6 +1,6 @@
 .classroom-panel[data-room=loading],.classroom-panel[data-room=ready]{height:min(100dvh - 28px,900px);overflow:hidden}
 .classroom-panel[data-room]:not([data-room-view=board])[open]{display:block;padding:0;position:relative}
-.classroom-panel[data-room]:not([data-room-view=board])>:not(header,.classroom-host){display:none!important}
+.classroom-panel[data-room]:not([data-room-view=board])>:not(header,.classroom-host,#coachDock,.portal-peer-ui){display:none!important}
 .classroom-panel[data-room]:not([data-room-view=board])>header{position:absolute;z-index:3;inset:0 0 auto;margin:0;padding:12px 14px 10px;background:transparent;border:0;box-shadow:none;pointer-events:none}
 .classroom-panel[data-room]:not([data-room-view=board])>header>*{pointer-events:auto}
 .classroom-host{position:relative}

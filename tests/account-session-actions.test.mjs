@@ -48,7 +48,7 @@ test('actual independent onboarding api preserves assertion headers and guards b
 
 const breathing=await readFile(new URL('../breathing.mjs',import.meta.url),'utf8');
 function breathingHarness(transitions,api){
- const els=new Map(),el=key=>{if(!els.has(key))els.set(key,{dataset:{},hidden:false,textContent:''});return els.get(key);},pause={},controls={dataset:{},querySelector:el},dialog={open:true,classList:{remove(){},contains(){return false;}},addEventListener(){},close(){}},scene={hidden:false,append(){}};let tick,completeNext=false,callbacks=0;
+ const els=new Map(),el=key=>{if(!els.has(key))els.set(key,{dataset:{},hidden:false,textContent:'',querySelector:selector=>el(selector)});return els.get(key);},pause={},controls={dataset:{},querySelector:el},dialog={open:true,classList:{remove(){},contains(){return false;}},addEventListener(){},close(){}},scene={hidden:false,append(){},querySelector(){return null;}};let tick,completeNext=false,callbacks=0;
  class Clock{constructor(){this.elapsed=0;}sample(){if(completeNext)this.elapsed=180000;}get complete(){return this.elapsed>=180000;}}
  const context={createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,...breathingModes,document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
  const mount=vm.runInNewContext(breathing.replace(/^import .*;\s*$/mg,'').replace('export function','function')+';mountBreathing;',context);

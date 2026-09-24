@@ -59,11 +59,9 @@ test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r)
 const SHAPED=[
  ['up','#mealsPanel','FOOD','food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-tag'],
  ['down','.ach-board','ACHIEVEMENTS','achievements','.ach-close','.ach-head h1','.ach-boss'],
- // W2-2M: Records now opens on the pod's extras (the personal tracker card, taller than the diamond's rectangle), so in the
- // cut only its title and Done are checked whole; the menu scrolls inside the rectangle (asserted below). Stepped in (the
- // squat diamond), its first control is whole.
+ // Records peers into the 3D classroom in either diamond; its whiteboard opens the full panel.
  ['vdiamond','#accountPanel','LEADERBOARD','leaderboard','#accountPanel [data-close]','#accountPanel h2',null],
- ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2','#accountPanel .tracker-brand'],
+ ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2',null],
  ['oval','dialog.ship-view','CHOOSE WORKOUT','ship','.ship-view-close',null,'.ship-view-close'],
 ];
 // The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
@@ -93,7 +91,7 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
    assert.equal(s.quilt,true,`${id}: the quilt stays on as the wall`);
    assert.equal(s.chrome,true,`${id}: the metal frame is up`);
    assert.match(s.clip,/^path\(/,`${id}: the destination is clipped to the cut`);
-   assert.equal(s.shaped,id!=='hdiamond',`${id}: the energy runs round the cut (the squat diamond is too small for a menu: it opens stepped in)`);
+   assert.equal(s.shaped,true,`${id}: the energy runs round the cut`);
    assert.equal(s.name,name,`${id}: the rim carries the name`);
    assert.equal(s.taps,true,`${id}: nothing in the energy takes a pointer`);
    assert.equal(s.flowing,true,`${id}: the neons flow round the rim`);
@@ -101,7 +99,14 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
    const middle=await page.evaluate(()=>{const p=document.querySelector('.portal-aura').style;return [parseFloat(p.getPropertyValue('--cx')),parseFloat(p.getPropertyValue('--cy'))];});
    assert.equal(await reaches(page,sel,middle),true,`${id}: the menu is reachable through the middle of the cut`);
    for(const part of [close,title,first].filter(Boolean))assert.equal(await fullyVisible(page,part),true,`${id}: fully visible and tappable`);
-   if(id==='vdiamond')assert.equal(await page.evaluate(()=>{const d=document.getElementById('accountPanel');return d.classList.contains('portal-inset')&&d.scrollHeight>d.clientHeight&&getComputedStyle(d).overflowY;}),'auto','a flat menu sits in the cut\'s rectangle and scrolls inside it');
+   if(id==='vdiamond'||id==='hdiamond'){
+    await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room="ready"] .classroom-canvas'),null,{timeout:30000});
+    assert.equal(await page.evaluate(()=>{
+     const d=document.getElementById('accountPanel');
+     return d.classList.contains('classroom-panel')&&d.querySelectorAll('.classroom-desk').length===2&&!!d.querySelector('[data-room-board]');
+    }),true,'the 3D classroom, two desks and tappable whiteboard sit in the diamond');
+    assert.equal(await page.evaluate(()=>{const board=document.querySelector('#accountPanel [data-room-board]'),r=board.getBoundingClientRect();return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('[data-room-board]');}),true,'the whiteboard center is tappable through the cut');
+   }
    assert.equal(await barTappable(page),true,`${id}: the bar stays tappable`);
    await page.screenshot({path:resolve(FRAMES,`134-${frame}.png`)});
    await page.screenshot({path:resolve(FRAMES,`131-inscribed-${id}.png`)});
