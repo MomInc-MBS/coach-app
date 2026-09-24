@@ -12,7 +12,7 @@ import {completeCoach} from './onboarding-fixture.mjs';
 const TYPES={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.glb':'model/gltf-binary'};
 // signedIn: a stub account (with finished setup) plus an in-memory /api/meals, so Save meal reaches today's log.
 // worker: replaces /food-worker.mjs (the on-device recognition model) with a scripted classifier.
-async function withFood(run,{reducedMotion='no-preference',signedIn=false,worker=null,meals=[]}={}){
+async function withFood(run,{reducedMotion='no-preference',signedIn=false,friends=false,worker=null,meals=[]}={}){
  const root=resolve('dist/client'),source=resolve('.');
  const account={user:{id:'food-owner',email:'food@test.local',provider:'chatgpt'},dataEpoch:1,revision:0,profile:{},entitlements:{},
   progress:{completedSets:0,xp:0,level:1,unlocks:{ember:false,arc:false,frost:false,shieldBreak:false},exerciseRoute:{groups:{}}},
@@ -26,6 +26,11 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,worker
   if(path==='/launch-runtime.mjs'){res.setHeader('Content-Type','text/javascript');res.end(bundle.outputFiles[0].text);return;}
   if(worker&&path==='/food-worker.mjs'){res.setHeader('Content-Type','text/javascript');res.end(worker);return;}
   if(signedIn&&path==='/api/account'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(account));return;}
+  if(friends&&path==='/api/scoreboard'){
+   const parts={body:0,skin:0,face:0,hair:0,facial:0,headwear:0,neck:0,torso:0,shoulders:0,arms:0,hands:0,legs:0,feet:0,held:0,back:0,base:0,pet:0};
+   const avatar=(dye,hair)=>({schema:'mominc-avatar',version:1,name:'',dye,parts:{...parts,hair}});
+   res.setHeader('Content-Type','application/json');res.end(JSON.stringify({targetAccountId:'food-owner',dataEpoch:1,updatedAt:new Date().toISOString(),inviteExpiresAt:null,members:[{name:'You',avatar:null,items:[]},{name:'Ari',link:'friend-1',avatar:avatar(1,1),items:[]},{name:'Bo',link:'friend-2',avatar:avatar(5,2),items:[]}]}));return;
+  }
   if(signedIn&&path==='/api/meals'){
    res.setHeader('Content-Type','application/json');
    if(req.method==='POST'){const m=await body(req);meals.push({id:m.id,name:m.name,portion:m.portion,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat,micros:JSON.stringify(m.micros),eaten_at:m.eatenAt});res.end(JSON.stringify({saved:true}));return;}
@@ -86,3 +91,20 @@ test('classroom peers through the diamond; tapping the real whiteboard fills the
  await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room=ready] .classroom-canvas'),null,{timeout:15000});await page.evaluate(()=>window.schoolRun);
  assert.equal(await page.locator('#accountPanel').evaluate(el=>el.classList.contains('portal-shaped')&&!el.classList.contains('portal-fullscreen')&&!el.dataset.roomView),true,'opening again starts in the classroom');
 }));
+
+test('two saved Gala friend heads sit over the classroom desks',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.portal());
+ await page.waitForFunction(()=>window.myr5Portal?.current()&&!document.querySelector('#portalHome').hidden);
+ await page.evaluate(()=>{window.schoolRun=window.myr5Portal.open('vdiamond');});
+ await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room=ready] .classroom-canvas'),null,{timeout:15000});
+ await page.evaluate(()=>window.schoolRun);
+ await page.waitForFunction(()=>[...document.querySelectorAll('.classroom-desk .crew-head canvas')].length===2,null,{timeout:15000});
+ await page.waitForTimeout(650);
+ const heads=await page.locator('.classroom-desk .crew-head canvas').evaluateAll(canvases=>canvases.map(canvas=>{const r=canvas.getBoundingClientRect(),corners=[[r.left+5,r.top+5],[r.right-5,r.top+5],[r.left+5,r.bottom-5],[r.right-5,r.bottom-5]];return {width:canvas.width,height:canvas.height,x:r.left+r.width/2,y:r.top+r.height/2,art:canvas.toDataURL(),visibleCorners:corners.map(([x,y])=>document.elementFromPoint(x,y)===canvas)};}));
+ assert.deepEqual(heads.map(({width,height})=>[width,height]),[[64,64],[64,64]]);
+ assert.ok(heads[0].x<110&&heads[1].x>265,'friend heads occupy the left and right diamond corners');
+ assert.ok(heads.every(head=>head.y>350&&head.y<480),'friend heads appear above the desks');
+ await page.screenshot({path:resolve('.frames','classroom-friends.png')});
+ assert.ok(heads.every(head=>head.visibleCorners.every(Boolean)),`all four corners of both friend heads remain visible inside the diamond: ${JSON.stringify(heads.map(({x,y,visibleCorners})=>({x,y,visibleCorners})))}`);
+ assert.notEqual(heads[0].art,heads[1].art,'friends render distinct saved Gala looks');
+},{signedIn:true,friends:true}));
