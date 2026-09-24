@@ -9,7 +9,8 @@ const $=id=>document.getElementById(id);
 // the creature viewer's own WebGL render loop (window.myr5Creature.setMaxFps, creature/source/viewer.ts —
 // the actual cost that competes with MediaPipe) and throttles coach-overlay's own per-pose work below (DOM
 // writes and the coach-hit wander/hit-test math, which run inline in the tracking loop's call stack).
-const COACH_CAP={minPoseHz:1.6,fps:15,recoverMs:2000};
+// Release 5 review: 1.6/s only engaged below the engine's own 1.33/s floor; phones stall in the 2-8/s band, so cap under 4/s.
+const COACH_CAP={minPoseHz:4,fps:10,recoverMs:2000};
 
 export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
  if(!point||!videoW||!videoH||!screenW||!screenH)return {x:0,y:0,visibility:0};

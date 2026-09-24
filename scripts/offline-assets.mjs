@@ -22,7 +22,7 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // The quilt is the starter portal, and the starter ship/wonders/great-wall backdrop, stay in core so
 // they remain available after an offline install (#108, risk 2).
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/(?!starter\/|great-wall\.webp$|quilt\.webp$)|pod\/fonts\/)/;
-const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url.startsWith('/pod/worlds/starter/')&&url.endsWith('.glb')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url==='/vendor/three/GLTFLoader.js'||url.startsWith('/pod/worlds/starter/')&&url.endsWith('.glb')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
@@ -59,7 +59,8 @@ export async function identifyVoice(root){
 const GROUPS=[
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
- ['food',/^\/(?:food\/|nutrition-data\.mjs$|food-live\.css$|meal-)/],
+ // The meshopt decoder is the pyramid's alone; GLTFLoader is shared (hologram, ships, pyramid), so it is core (coreFolder).
+ ['food',/^\/(?:food\/|vendor\/three\/meshopt_decoder\.module\.js$|nutrition-data\.mjs$|food-live\.css$|meal-)/],
  ['meditation',/^\/(?:pod\/worlds\/|meditation|breathing)/],
  ['games',/^\/(?:arcade|war-room)\//],
 ];

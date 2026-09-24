@@ -56,3 +56,14 @@
 .satcom-bolt-br::after{bottom:-1px;right:-1px}
 
 @media(max-width:380px){.satcom-strip{font-size:.62rem}}
+/* The Downloads menu is full screen with no padding of its own, so the frame would sit on the glass's
+   edges and rounded corners (the clock's first digit ran under the bottom-left bolt): pull the bolts in
+   from the corners and pad both strips clear of them. */
+.downloads-menu .satcom-strip{padding-left:max(32px,env(safe-area-inset-left));padding-right:max(32px,env(safe-area-inset-right))}
+.downloads-menu .satcom-top{margin-bottom:0;padding-top:max(9px,env(safe-area-inset-top))}
+.downloads-menu .satcom-top+.downloads-page{padding-top:16px} /* the strip already clears the notch */
+.downloads-menu .satcom-bottom{margin-top:0;padding-bottom:max(9px,env(safe-area-inset-bottom))}
+.downloads-menu .satcom-bolt-tl,.downloads-menu .satcom-bolt-tr{top:max(10px,env(safe-area-inset-top))}
+.downloads-menu .satcom-bolt-bl,.downloads-menu .satcom-bolt-br{bottom:max(10px,env(safe-area-inset-bottom))}
+.downloads-menu .satcom-bolt-tl,.downloads-menu .satcom-bolt-bl{left:max(10px,env(safe-area-inset-left))}
+.downloads-menu .satcom-bolt-tr,.downloads-menu .satcom-bolt-br{right:max(10px,env(safe-area-inset-right))}

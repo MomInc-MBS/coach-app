@@ -204,7 +204,8 @@ test('4. Menu sheet -> Ship opens the ship view inside the metal frame, and the 
   // W2-2K (Ian 23 Sept): the metal frame stays on screen and the ship view fills its window, not the whole screen.
   const box=await page.locator('dialog.ship-view').boundingBox();
   assert.ok(box&&box.width>=330&&box.height>=600&&box.x>=20&&375-box.x-box.width>=20,`the ship view must fill the frame's window: ${JSON.stringify(box)}`);
-  assert.equal(await page.evaluate(()=>document.getElementById('portalChrome').matches(':popover-open')),true,'the frame stays up around it');
+  // Re-stacked above the just-opened dialog one frame later (portal.mjs frameDialog: WebKit keeps a same-task re-show under the backdrop).
+  await page.waitForFunction(()=>document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:2000}).catch(()=>assert.fail('the frame stays up around it'));
   // Release 5: the bottom bar (W2-2A) stays visible and tappable below the frame, never inside its window.
   const barState=await bar(page),barTop=(await page.locator('#coachDock').boundingBox()).y;
   assert.equal(barState.visible&&barState.tappable,true,'the bar shows and takes taps under the framed ship view');

@@ -108,6 +108,11 @@ test('SATCOM frame on the Downloads menu: present at first open, Download select
   assert.equal(await page.locator('#downloadsMenu .satcom-top [data-link]').textContent(),'DOWNLOAD LINK');
   const buildBox=await page.locator('#downloadsMenu .satcom-bottom [data-build]').boundingBox();
   assert.ok(buildBox.y+buildBox.height<=812,'BUILD strip stays within the 812px viewport');
+  // Full screen, the frame sits on the glass's edges: the bolts keep off the corners and the strips' text keeps off the bolts.
+  const edge=await page.evaluate(()=>{const box=s=>document.querySelector('#downloadsMenu '+s).getBoundingClientRect();return {clock:box('[data-clock]'),radar:box('.satcom-radar'),sat:box('.satcom-sat'),bars:box('.satcom-bars'),tl:box('.satcom-bolt-tl'),tr:box('.satcom-bolt-tr'),bl:box('.satcom-bolt-bl'),br:box('.satcom-bolt-br')};});
+  for(const bolt of ['tl','tr','bl','br'])assert.ok(edge[bolt].left>=10&&edge[bolt].right<=365&&edge[bolt].top>=10&&edge[bolt].bottom<=802,bolt+' bolt keeps off the screen corner');
+  assert.ok(edge.clock.left>=edge.bl.right&&edge.radar.right<=edge.br.left,'the clock strip clears the bottom bolts (its first digit was under the left one)');
+  assert.ok(edge.sat.left>=edge.tl.right&&edge.bars.right<=edge.tr.left,'the SATCOM strip clears the top bolts');
   for(const selector of ['#downloadsMenu [data-download]','#downloadsMenu [data-later]']){
    assert.equal(await page.locator(selector).isVisible(),true,selector+' stays visible');
    assert.equal(await hitTests(page,selector),true,selector+' stays hit-testable');

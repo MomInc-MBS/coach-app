@@ -118,7 +118,7 @@ test('reduced motion: static energy, destinations still framed, a quick fade bac
   // Menu sheet -> Ship (no gesture): the ship view sits in the frame's window too.
   await page.locator('#coachDock [data-route="portal"]').click();
   await page.locator('#portalMenu [data-menu="ship"]').click();
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed');
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed'&&document.getElementById('portalChrome').matches(':popover-open'));
   const ship=await page.evaluate(()=>{const r=document.querySelector('dialog.ship-view').getBoundingClientRect(),c=document.getElementById('portalChrome');return{box:{left:r.left,top:r.top,width:r.width,height:r.height},face:Object.fromEntries(['left','top','width','height'].map(k=>[k,parseFloat(c.style.getPropertyValue('--face-'+k))])),chrome:c.matches(':popover-open')};});
   assert(ship.chrome,'the chrome frames the ship view');
   for(const k of ['left','top','width','height'])near(ship.box,ship.face,k);

@@ -54,14 +54,14 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
     return renders-before;
    };
    const fast=feed(30,2000); // starts uncapped: never drops below minPoseHz, so no change
-   const slow=feed(1.0,2000); // drops below minPoseHz immediately: capped for the whole phase
+   const slow=feed(3,2000); // 3/s is under minPoseHz (4, the band where phone sets stall): capped for the whole phase
    const recovered=feed(30,3000); // still capped entering this phase; only opens back up after ~2s sustained fast
    window.myr5Creature.face=origFace;
    return {fast,slow,recovered};
   });
 
   assert.ok(result.fast>=110,`uncapped (fast) coach should render close to every dispatched frame (saw ${result.fast}/120)`);
-  assert.ok(result.slow<=32,`capped coach should skip DOM writes down to ~15/s while tracking is slow (saw ${result.slow} over 2s)`);
+  assert.ok(result.slow<=22,`capped coach should skip DOM writes down to ~10/s while tracking is slow (saw ${result.slow} over 2s)`);
   assert.ok(result.recovered>=75,`coach should recover to native rate ~2s after tracking speeds back up (saw ${result.recovered} over 3s)`);
 
   // The conductor's follow-up: it's the creature viewer's own WebGL render loop (creature/source/viewer.ts)
@@ -91,10 +91,10 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
   };
   let cappedRate,uncappedRate;
   try{
-   cappedRate=await sample(1.0,1.2); // 3s of synthetic slow tracking first: setMaxFps(15) is engaged throughout
+   cappedRate=await sample(3,1.2); // 3s of synthetic slow tracking first: setMaxFps(10) is engaged throughout
    uncappedRate=await sample(30,1.2); // 3s of synthetic fast tracking: past the 2s hysteresis, setMaxFps(null)
   }finally{await page.evaluate(()=>window.__coachCapRestoreDispatch());}
-  assert.ok(cappedRate<=17,`WebGL renderer.render() should run at most ~15/s while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
+  assert.ok(cappedRate<=12,`WebGL renderer.render() should run at most ~10/s while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
   assert.ok(uncappedRate>=cappedRate+8,`WebGL renderer.render() should return to its native rate once tracking is fast again (capped ${cappedRate.toFixed(1)}/s vs uncapped ${uncappedRate.toFixed(1)}/s)`);
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });

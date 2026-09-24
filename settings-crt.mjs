@@ -45,9 +45,11 @@ export function mountSettingsCrt(settings){
   }
  }
  place();
- document.getElementById('openSettings')?.addEventListener('click',()=>requestAnimationFrame(place));
- settings.addEventListener('scroll',place,{passive:true});
- addEventListener('resize',place);
+ // Scroll/resize fire many times a frame: one place() (3 rect reads + 4 writes) per frame at most.
+ let queued=0;const queue=()=>{queued||=requestAnimationFrame(()=>{queued=0;place();});};
+ document.getElementById('openSettings')?.addEventListener('click',queue);
+ settings.addEventListener('scroll',queue,{passive:true});
+ addEventListener('resize',queue);
 
  settings.addEventListener('pointerdown',event=>{
   if(event.target.closest('.satcom-strip'))return;
