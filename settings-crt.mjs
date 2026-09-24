@@ -18,18 +18,23 @@
 // so nothing about the dialog itself moves.
 // ponytail: single CSS keyframe instead of the site's rAF hold-tracking loop — good enough for a
 // tap; add hold-based growth (mirroring tv.js grow()) if Ian wants press-and-hold sizing later.
-const PAD=8; // clears the corner bolts (settings-frame.css .satcom-bolt: 14px square, 6px inset)
+//
+// Conductor pass on 0a450a2: the first cut inset the overlay by the border width PLUS 8px to clear
+// the corner bolts, which left a visible seam — a strip of plain dialog background between the real
+// screen edge and the vignette's own (darker) edge. Insetting by the border width only makes the
+// overlay meet the screen edge cleanly, at the cost of the vignette's corner darkening sitting over
+// the bolts near the very corner — an acceptable trade since that's what buys the flush edge.
 
 export function mountSettingsCrt(settings){
  const screen=document.createElement('div');screen.className='crt-screen';screen.setAttribute('aria-hidden','true');
- screen.innerHTML='<div class="crt-vignette"></div><div class="crt-scanlines"></div>';
+ screen.innerHTML='<div class="crt-vignette"></div><div class="crt-scanlines"></div><div class="crt-scan-band"></div>';
  const touch=document.createElement('div');touch.className='crt-touch-layer';touch.setAttribute('aria-hidden','true');
  settings.append(screen,touch);
 
  function place(){
   const r=settings.getBoundingClientRect();
   if(!r.width){screen.style.width=touch.style.width='0px';return;}
-  const inset=(parseFloat(getComputedStyle(settings).borderTopWidth)||0)+PAD;
+  const inset=parseFloat(getComputedStyle(settings).borderTopWidth)||0;
   const top=settings.querySelector('.satcom-top')?.getBoundingClientRect()??{bottom:r.top+inset};
   const bottom=settings.querySelector('.satcom-bottom')?.getBoundingClientRect()??{top:r.bottom-inset};
   const left=r.left+inset,right=r.right-inset;
