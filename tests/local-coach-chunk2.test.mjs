@@ -105,3 +105,32 @@ test('camera hide and pagehide during held begin interrupt the new row before ad
 });
 
 test('manual branch bypasses camera, tracker import, WebGL, voice, packs, and network',async()=>{const app=await readFile(new URL('../app.mjs',import.meta.url),'utf8'),pod=await readFile(new URL('../pod/pod.mjs',import.meta.url),'utf8'),manual=app.slice(app.indexOf('function startManual(){'),app.indexOf('async function activateManual(){'));assert.match(app,/if\(\$\('camera'\)\.value==='manual'\)return startManual\(\);/);assert.match(app,/\$\('camera'\)\.value==='manual'\?start\(\):library\.introduce\(\)/);assert.match(pod,/if\(!manual\)warmVoice/);assert.ok(app.indexOf("if($('camera').value==='manual')return startManual();")<app.indexOf('navigator.mediaDevices?.getUserMedia'));for(const forbidden of ['getUserMedia','openCamera','import(','WebGL','voice.','fetch(','library.','packs/'])assert.equal(manual.includes(forbidden),false,forbidden);assert.match(app,/catch\(error\)\{[\s\S]*?await pod\.interruptCurrent\(state\.motion\)/);});
+
+// #19: the Continue chip's data rule -- the newest paused/interrupted row started today (local calendar day),
+// any control, regardless of movement. A separate repository `now` (not the adapter's lease clock) drives
+// startedAt so a day boundary can be crossed deliberately.
+test('unfinished() finds the newest paused or interrupted row started today and ignores other days and completed rows',async()=>{
+ const db=name(),clock={value:new Date('2026-09-20T09:00:00Z').getTime()};
+ const client=await adapter({db,clock,openRepository:options=>open(db)({...options,now:()=>clock.value})});
+ assert.equal(await client.unfinished(),null,'nothing started yet');
+
+ const day1=await client.start({mode:'squat',goal:3,restSeconds:60,metadata:{name:'Squats'},control:'camera'});
+ await client.interrupt(day1.id,{value:1});
+ assert.equal((await client.unfinished()).id,day1.id,'an interrupted row from today is found');
+
+ clock.value=new Date('2026-09-21T09:00:00Z').getTime(); // a new local day
+ assert.equal(await client.unfinished(),null,"yesterday's interrupted row is not surfaced once the day turns over");
+
+ const day2=await client.start({mode:'tree',goal:9,restSeconds:60,metadata:{name:'Tree pose'},control:'camera'});
+ await client.interrupt(day2.id,{value:2});
+ assert.equal((await client.unfinished()).id,day2.id,"today's interrupted row is found");
+
+ clock.value+=60_000;
+ const newer=await client.start({mode:'knee-pushup',goal:5,restSeconds:60,metadata:{name:'Knee push-up'},control:'manual'});
+ await client.pause(newer.id,{value:1});
+ assert.equal((await client.unfinished()).id,newer.id,'the newest unfinished row today wins over an older one');
+
+ await client.complete(newer.id,{value:5});
+ assert.equal((await client.unfinished()).id,day2.id,'a completed row drops out; the older interrupted row from today remains');
+ client.close();
+});

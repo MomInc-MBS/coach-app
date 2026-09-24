@@ -72,10 +72,20 @@ export async function openGuestWorkoutAdapter({
  try{const bootForeign=foreign();if(!bootForeign&&await acquire()){try{await scope.interruptActiveWorkouts({leaseToken:assertLease()});}finally{release();}}}
  catch(error){release();channel?.removeEventListener?.('message',receive);channel?.close?.();repository.close();throw error;}
  async function resumable(mode){const rows=await scope.listWorkouts();return rows.filter(row=>row.status==='paused'&&(mode===undefined||row.mode===mode)&&row.metadata?.control==='manual').at(-1)??null;}
+ // #19: the newest paused/interrupted row started today (any control). Only a manual row truly resumes its
+ // progress -- through paused()/resumable() above, gated by beginSet's pausedLocal check -- a paused or
+ // interrupted camera row just restarts the same movement from zero; the Continue chip still surfaces it so
+ // the cut-short set is not forgotten.
+ async function unfinishedToday(){
+  const rows=await scope.listWorkouts(),today=new Date(now());
+  const sameDay=t=>{const d=new Date(t);return d.getFullYear()===today.getFullYear()&&d.getMonth()===today.getMonth()&&d.getDate()===today.getDate();};
+  return rows.filter(row=>(row.status==='paused'||row.status==='interrupted')&&sameDay(row.startedAt)).at(-1)??null;
+ }
  return Object.freeze({
   ownerId:scope.ownerId,deviceId:scope.deviceId,
   hasForeignLease:foreign,
   async paused(mode){return resumable(mode);},
+  async unfinished(){return unfinishedToday();},
   async start({mode,goal,restSeconds,progress={},metadata={},control='camera'}){
    if(!await acquire())throw new LocalCoachStorageError('lease','This workout is active in another tab.',{recoverable:true});const token=assertLease();
    try{if(control==='manual'){const paused=await resumable(mode);if(paused){await scope.resumeWorkout(paused.id,{leaseToken:token});active={id:paused.id,control};return {...paused,status:'active',resumed:true};}}const workout=await scope.startWorkout({mode,goal,restSeconds,progress,metadata:{...metadata,control}},{leaseToken:token});active={id:workout.id,control};return workout;}catch(error){release();throw error;}

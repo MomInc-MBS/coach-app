@@ -94,7 +94,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  async function saveManual(m){const id=flow.active?.localId;if(!id)return null;const value=valueOf(m),progress={...flow.progress,value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0};await workouts.update(id,progress);flow.active.savedProgress=progress;return progress;}
  async function pauseManual(m){const id=flow.active?.localId;if(!id)return null;const progress=await saveManual(m),workout=await workouts.pause(id,progress);pausedLocal=workout;flow.leave();return workout;}
  async function interruptCurrent(m){const id=flow.active?.localId;if(id)await workouts.interrupt(id,{...flow.progress,value:m?valueOf(m):0,activeSeconds:m?.active||0,elapsedSeconds:m?.elapsed||0});if(flow.phase==='set')flow.leave();pausedLocal=null;workoutOwner.stop();route.render();circuit.render();}
- function leave(){pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();history.replaceState(null,'','#pod');$('start').disabled=!route.canStart(currentMode);route.render();circuit.render();$('start').focus();}
+ // #56: the ↗ exit goes home to the quilt (clears the hash, closes the route); "Next set →" stays in the pod.
+ function leave({home=false}={}){pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();if(home){history.replaceState(null,'',location.pathname+location.search);window.myr5Routes?.home?.();}else history.replaceState(null,'','#pod');$('start').disabled=!route.canStart(currentMode);route.render();circuit.render();$('start').focus();}
  document.querySelector('.encounter').addEventListener('pointerdown',()=>flow.touchRest(Date.now()),{passive:true});
  $('attackCoach').addEventListener('click',()=>{
   syncCombat();const now=Date.now(),hit=flow.tap(now,true);if(!hit)return;
@@ -106,7 +107,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.assisted?'Helping Hand lands a team strike! ':''}${hit.hits} hits. ${hit.totalDamage} damage.`;
   if(now-lastSpoken>10000){lastSpoken=now;window.myr5Creature?.play(hit.blocked?'agree':'encourage');voice.say(hit.blocked?'Nice teamwork. My shield is still intact. Keep training.':'You and that hand make quite a team. That one connected.',{key:'rest'});}
  });
- $('leaveRest').addEventListener('click',leave);$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
+ $('leaveRest').addEventListener('click',()=>leave({home:true}));$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
  $('weaponSpecial').addEventListener('click',async()=>{
   const activate=()=>{syncCombat();flow.abilities.merge(safeRead(COOLDOWN));const result=flow.special(arena.weapon,{now:Date.now(),progress:arena.progress,catalog:window.GalaWeapons});if(result.ok)store(COOLDOWN,JSON.stringify(flow.abilities.snapshot()));return result;};
   const hit=navigator.locks?.request?await navigator.locks.request('myr5-weapon-special',activate):activate();if(!hit.ok){specialControls();return;}

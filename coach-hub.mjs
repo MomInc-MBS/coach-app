@@ -67,8 +67,8 @@ export function mountCoachHub({api}){
  hub.querySelector('.mission-guide').onclick=openGuide;dialog.querySelector('[data-close-guide]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>opener?.focus());
  const settings=document.getElementById('settings');settings.classList.add('terminal-menu');document.getElementById('settingsTitle').textContent='MOM://POD CONTROL';
  const nav=document.createElement('nav');nav.className='terminal-links';nav.setAttribute('aria-label','Behind the scenes');
- // D30: Achievements opens through the same window.myr5Menus hook the owner's portal will call (app.mjs).
- for(const [label,target] of [['PORTAL','portal'],['ACHIEVEMENTS','achievements'],['REMINDERS','reminders'],['ACCOUNT','account'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']]){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():['achievements','portal'].includes(target)?window.myr5Menus?.[target]():document.querySelector('.coach-dock [data-panel='+target+']').click();};nav.append(b);}settings.append(nav);
+ // #79: every link but HOW TO PLAY is a real route now (W2-2A's router); PORTAL closes back to the quilt.
+ for(const [label,target] of [['PORTAL','portal'],['ACHIEVEMENTS','achievements'],['REMINDERS','reminders'],['ACCOUNT','scoreboard'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']]){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():target==='portal'?window.myr5Routes?.home?.():window.myr5Routes?.go(target);};nav.append(b);}settings.append(nav);
  mountSatcomFrame(settings);
  mountSettingsCrt(settings); // #137: TV touch effect + CRT curve + scan lines, screen area only
  for(const id of ['installPanel','remindersPanel'])document.getElementById(id).classList.add('terminal-menu');
