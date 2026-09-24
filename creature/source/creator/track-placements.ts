@@ -131,9 +131,21 @@ export function sectionComplete(track:TrackId,state:Record<string,number>){
 }
 /** Section names as the board shows them, in dial order (TRACK_IDS). */
 export const SECTION_NAMES=Object.fromEntries(TRACK_IDS.map(t=>[t,TRACKS[rowOf(t)!.track!].name])) as Record<TrackId,string>;
+// #138 (D45; owner answers D47): what a new user may use before completing any section -- the ONE
+// table to edit. Unplaced bodies (the Starter group) are always usable; everything else previews locked.
+export const NEW_USER_BODIES=Object.freeze({
+ meditation:['roster/23-blob-texture-bodies--blob_creature_3d_model'] as readonly string[], // Blob 1, Ian's "bulbous one"
+ paths:2, // the user's first N picked paths (battle-pass.mjs selectedTracks() order, meditation left out)...
+ perPath:1, // ...and the first N bodies of each (ROWS order above)
+});
+function newUserBody(id:string,tracks:Iterable<string>){
+ const paths=[...tracks].map(t=>(TRACKS as Record<string,{catalog:string}|undefined>)[t]?.catalog).filter(t=>t&&t!=='meditation').slice(0,NEW_USER_BODIES.paths);
+ return NEW_USER_BODIES.meditation.includes(id)||paths.some(t=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(t as TrackId)).slice(0,NEW_USER_BODIES.perPath).some(p=>p.stableId===id));
+}
 /** What to complete to unlock a body ("Chest", "Chest or Martial Arts"), or null for a starter body
- * (Original MYR5 and unplaced roster bodies) or one with a completed section. */
-export function bodyLockSection(id:string,state:Record<string,number>):string|null{
+ * (Original MYR5 and unplaced roster bodies), a new-user body for `tracks` (battle-pass.mjs
+ * selectedTracks(), D25 ids) or one with a completed section. */
+export function bodyLockSection(id:string,state:Record<string,number>,tracks:Iterable<string>=[]):string|null{
  const placement=TRACK_PLACEMENTS.find(p=>p.stableId===id);
- return !placement||placement.tracks.some(t=>sectionComplete(t,state))?null:placement.tracks.map(t=>SECTION_NAMES[t]).join(' or ');
+ return !placement||placement.tracks.some(t=>sectionComplete(t,state))||newUserBody(id,tracks)?null:placement.tracks.map(t=>SECTION_NAMES[t]).join(' or ');
 }

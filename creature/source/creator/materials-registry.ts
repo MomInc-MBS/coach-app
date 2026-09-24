@@ -4,6 +4,8 @@
 import {STYLES as LEGACY_STYLES, type MaterialChoice} from './design';
 import {isGranted, grantUnlock, type UnlockKind} from './unlock-store';
 import PALETTE_DATA from './palettes.json';
+import {TEXTURE_SWAP} from '../../../battle-pass-rewards.mjs';
+import {RECIPE_KEY} from '../profile';
 export {grantUnlock};
 
 export type UnlockRule = 'default' | 'battle-pass' | 'aura-milestone';
@@ -35,8 +37,8 @@ const CLAY_TEXTURE: TextureDef = { id: 'clay', displayName: 'Clay', unlockRule: 
 
 // --- The 22 (well, 23: 0-22) existing procedural surface families keep working exactly as
 // before for legacy `styles` recipes, and are also exposed as ordinary registry textures +
-// their historical colour, `legacy:true`, unlockRule 'default' (no owner decision to relock them yet). ---
-const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => ({ id: 'legacy-' + s.id, displayName: s.name, unlockRule: 'default', legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id }));
+// their historical colour, `legacy:true`, unlockRule 'default' -- except the 7 that #140 moved
+// into the battle pass (LEGACY_TEXTURES, below the battle-pass table they take slots from). ---
 const LEGACY_COLORS: ColorDef[] = LEGACY_STYLES.map(s => ({ id: 'legacy-color-' + s.id, displayName: s.name + ' (original)', unlockRule: 'default', primary: s.primary, secondary: s.secondary, accent: s.accent }));
 
 // --- Simple default colours: "basic colours auto" (audit M7). Any of these tints any texture. ---
@@ -81,7 +83,14 @@ const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: strin
  { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation' },
  { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation' },
 ];
-const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: -1, defaultColorId: 'default-slate' }));
+// #140: battle-pass-rewards.mjs TEXTURE_SWAP puts 7 legacy textures in the slots of 7 of these,
+// which are open now (still no art: familyId -1 renders Flat until their patterns ship).
+const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
+const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: -1, defaultColorId: 'default-slate' }));
+const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
+ const id = 'legacy-' + s.id, slot = BATTLE_PASS_TEXTURES.find(t => t.id === SWAPPED_IN.get(id));
+ return { id, displayName: s.name, unlockRule: slot ? 'battle-pass' : 'default', track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };
+});
 
 export const TEXTURES: TextureDef[] = [FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES];
 export const COLORS: ColorDef[] = [...SIMPLE_COLORS, ...LEGACY_COLORS];
@@ -114,6 +123,20 @@ export function lockSource(id: string): string | null {
  const p = findPalette(id); if (p) return isPaletteUnlocked(p) ? null : p.unlockAtDay ? `Aura day ${p.unlockAtDay}` : 'Battle pass';
  return null;
 }
+
+// #140 grandfather: a coach saved while the swapped-in legacy textures were still free keeps them.
+// Once per device, on the first saved recipe any renderer sees (this module's load in the customizer,
+// pod or ship, or a `myr5:recipe` handoff); grants only textures that recipe actually uses.
+const SWAP_MIGRATED_KEY = 'myr5-texture-swap-v1';
+export function grandfatherSwappedTextures(recipe?: { materials?: Record<string, { textureId?: string } | undefined> } | null) {
+ try {
+  if (!recipe || localStorage.getItem(SWAP_MIGRATED_KEY)) return;
+  for (const choice of Object.values(recipe.materials ?? {})) if (choice?.textureId && SWAPPED_IN.has(choice.textureId)) grantUnlock('texture', choice.textureId);
+  localStorage.setItem(SWAP_MIGRATED_KEY, '1');
+ } catch { /* no storage or unreadable recipe: nothing to keep */ }
+}
+try { const raw = localStorage.getItem(RECIPE_KEY); if (raw) grandfatherSwappedTextures(JSON.parse(raw)); } catch { /* no storage */ }
+globalThis.addEventListener?.('myr5:recipe', event => grandfatherSwappedTextures((event as CustomEvent).detail));
 
 /**
  * The single seam between the old `styles[region]` numeric recipe and the new decoupled

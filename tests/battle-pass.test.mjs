@@ -8,7 +8,7 @@ const memory=new Map();
 globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k),clear:()=>memory.clear()};
 
 const {levelsBeaten,loadProgress,selectedTracks,setSelectedTracks,battlePassState,syncBattlePass,STEPS_PER_LEVEL}=await import('../battle-pass.mjs');
-const {BOSSES,ROWS,TRACKS,FOOD_LEVELS,FOOD_BONUS,bossRewards,foodRewards}=await import('../battle-pass-rewards.mjs');
+const {BOSSES,ROWS,TRACKS,FOOD_LEVELS,FOOD_BONUS,TEXTURE_SWAP,bossRewards,foodRewards}=await import('../battle-pass-rewards.mjs');
 const {FOOD_BONUS_DAMAGE_MULTIPLIER}=await import('../combat-config.mjs');
 const {default:PALETTES}=await import('../creature/source/creator/palettes.json',{with:{type:'json'}});
 const D32_PALETTES=new Set(PALETTES.filter(p=>p.reward).map(p=>p.id)); // the D32 fill, board + food
@@ -160,13 +160,22 @@ test('old unlock ledgers (pre-D32, no bonus kind) still load and are not regrant
  assert.deepEqual(JSON.parse(memory.get('myr5-unlocks-v1')).palette,['pal-01','pal-05','pal-103'],'aura-milestone grants kept');
 });
 
+test('#140 the 7 legacy textures hold the 7 freed catalog slots; the freed ones are never rewards',()=>{
+ const rewards=BOSSES.flatMap(b=>bossRewards(b.id).flatMap((items,i)=>items.filter(x=>x.kind==='texture').map(x=>({...x,boss:b.id,level:i+1}))));
+ assert.deepEqual(rewards.find(x=>x.id==='legacy-15'),{kind:'texture',id:'legacy-15',name:'Magma',line:TEXTURE_SWAP['chest-rubber-grip'][2],boss:'strider-1',level:3});
+ assert.deepEqual(Object.values(TEXTURE_SWAP).map(([,name])=>name).sort(),['Crystal','Fluffy','Glacial','Jelly','Magma','Spectral','Stone Golem']);
+ for(const [freed,[legacy]] of Object.entries(TEXTURE_SWAP)){assert.ok(!rewards.some(x=>x.id===freed),freed);assert.equal(rewards.filter(x=>x.id===legacy).length,1,legacy);}
+ assert.equal(rewards.length,24);
+});
+
 test('texture and palette ids exist in materials-registry.ts at the matching pass level',async()=>{
  const registry=await readFile(join(process.cwd(),'creature/source/creator/materials-registry.ts'),'utf8');
  const entries=[...registry.matchAll(/\{ id: '([^']+)', name: '[^']+', slot: '(texture-[123])', track: '([^']+)' \}/g)].map(([,id,slot,track])=>({id,slot,track}));
  const slotLevel={'texture-1':1,'texture-2':3,'texture-3':5},reg={TEXTURES:entries.map(item=>({...item,unlockRule:'battle-pass',passLevel:slotLevel[item.slot]})),PALETTES:PALETTES.map(p=>({...p,displayName:p.name}))};
  assert.equal(reg.TEXTURES.length,24,'source registry contains the 24 existing fitness texture placeholders');
  for(const b of BOSSES)bossRewards(b.id).forEach((items,i)=>{for(const item of items){
-  if(item.kind==='texture'){const t=reg.TEXTURES.find(t=>t.id===item.id);assert.ok(t,item.id);assert.equal(t.unlockRule,'battle-pass');assert.equal(t.passLevel,i+1,item.id);}
+  if(item.kind==='texture'){const t=reg.TEXTURES.find(t=>t.id===item.id||TEXTURE_SWAP[t.id]?.[0]===item.id); // #140: a swapped-in legacy texture holds the freed slot's level
+assert.ok(t,item.id);assert.equal(t.unlockRule,'battle-pass');assert.equal(t.passLevel,i+1,item.id);}
   if(item.kind==='palette'){const p=reg.PALETTES.find(p=>p.id===item.id);assert.ok(p,item.id);assert.equal(p.displayName,item.name);}
  }});
  // D32: every battle-pass palette in the registry is granted by exactly the slot its `reward` names.

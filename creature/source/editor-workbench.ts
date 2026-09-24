@@ -4,10 +4,10 @@ import {GESTURES,type Gesture} from './motion';
 import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region,MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,lockSource,resolveRegionMaterial} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,lockSource,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,type TrackId} from './creator/track-placements';
 import {saveRecipe,BODY_KEYS} from './save-look';
-import {loadProgress} from '../../battle-pass.mjs';
+import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
@@ -26,7 +26,8 @@ try{recipe=loadRecipe(localStorage);settings=motionSettings(localStorage.getItem
 let saved=recipe; // the last recipe written to storage: the owned look saveRecipe() falls back to
 // #102: bodies already saved stay usable even if their section is locked (only new picks lock).
 const grandfathered=new Set<string>(BODY_KEYS.map(key=>recipe[key]));
-const progress=loadProgress(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress);
+// #138: the new-user allowance (first bodies of the user's picked paths) lives inside the same lock.
+const progress=loadProgress(),tracks=selectedTracks(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress,tracks);
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBase,location.href).href:new URL('../',import.meta.url).href;
 let viewer:CreatureViewer|undefined;
@@ -50,6 +51,14 @@ function shown():Design{
 }
 // A locked pick joins the preview; an owned pick drops the whole preview and applies to the owned look.
 function pick(patch:Partial<MaterialChoice>){const source=lockSource(patch.textureId??patch.colorId??'');if(source){preview={...preview,[selected]:{...preview[selected],...patch}};render('Preview only · unlocks at '+source);return;}clearPreview();setMaterial(patch);}
+// #139: an Adaptation (texture) covers the whole coach: every part gets the same textureId, colours stay
+// per part. A part with no material of its own yet takes the texture's own colour (TextureDef.defaultColorId).
+function pickTexture(textureId:string){
+ const texture=TEXTURES.find(t=>t.id===textureId),source=lockSource(textureId);
+ const patch=(r:Region):Partial<MaterialChoice>=>recipe.materials?.[r]?{textureId}:{textureId,colorId:texture?.defaultColorId??DEFAULT_MATERIAL.colorId};
+ if(source){preview=Object.fromEntries(REGIONS.map(r=>[r,{...preview[r],...patch(r)}]));render('Preview only · unlocks at '+source);return;}
+ clearPreview();commit({...recipe,materials:Object.fromEntries(REGIONS.map(r=>[r,{...(recipe.materials?.[r]??DEFAULT_MATERIAL),...patch(r)}])) as Design['materials']});
+}
 function endPreview(){if(!previewing())return false;clearPreview();render('Back to your look');return true;}
 function syncMaterials(){
  const mc={...materialChoice(),...preview[selected]};
@@ -82,7 +91,10 @@ function sync(){
   return parts;
  }))];
  if(previewBody)unlocks.push('unlocks when you complete '+bodyLock(previewBody));
- strip.hidden=!unlocks.length;strip.textContent='Preview · '+unlocks.join(' · ');
+ // #140: the textures the swap opened have no pattern files yet either -- say so for an owned pick too.
+ const own=TEXTURES.find(t=>t.id===recipe.materials?.[selected]?.textureId);
+ if(own&&own.familyId<0&&!preview[selected]?.textureId)unlocks.push(`${own.displayName} pattern is coming`);
+ strip.hidden=!unlocks.length;strip.textContent=(previewing()?'Preview · ':'')+unlocks.join(' · ');
  ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
 const queue=new LatestPreview<{recipe:Design;message:string;preview:boolean}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe,job.preview))throw Error('Preview was interrupted.');},(job,error)=>{
@@ -104,8 +116,9 @@ function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for
 // unplaced bodies, never locked). A locked section's bodies show a lock and preview when picked.
 // Rank 5: body is the only body-family select left — head/arms/legs mixing is gone from the UI
 // (see the 'body' change handler below, which still forces headFrom/armsFrom/feetFrom to match).
-{const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(id:string,track:TrackId)=>TRACK_PLACEMENTS.some(p=>p.stableId===id&&p.tracks.includes(track));
- for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],PICKER_BODIES.filter(b=>inSection(b.id,t))])] as [string,typeof PICKER_BODIES][]){
+// #138: a section lists its bodies in placement order, so the one a new user may use comes first.
+{const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(track:TrackId)=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(track)).flatMap(p=>PICKER_BODIES.filter(b=>b.id===p.stableId));
+ for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],inSection(t)])] as [string,typeof PICKER_BODIES][]){
   const g=document.createElement('optgroup');g.label=label;for(const b of bodies){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;g.append(o);}$('body').append(g);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
@@ -117,12 +130,13 @@ for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',p
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
 const lockedLabel=(name:string,id:string)=>{const source=lockSource(id);return source?`${name} (locked — ${source})`:name;};
 for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(lockSource(t.id)?'🔒 ':'')+lockedLabel(t.displayName,t.id);$('textureId').append(o);}
-$('textureId').addEventListener('change',()=>pick({textureId:($('textureId') as HTMLSelectElement).value}));
+$('textureId').addEventListener('change',()=>pickTexture(($('textureId') as HTMLSelectElement).value));
 const colorSwatches=[
  ...COLORS.map(c=>({id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>pick({colorId:s.id});$('colorSwatches').append(b);}
+function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>onPick(s.id);grid.append(b);}}
+swatchGrid($('colorSwatches'),id=>pick({colorId:id}));
 $('materialClear').onclick=()=>{delete preview[selected];const materials={...recipe.materials};delete materials[selected];commit({...recipe,materials:Object.keys(materials).length?materials:undefined});};
 for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
@@ -141,11 +155,12 @@ for(const id of ['fur','iris','pupilSize','detail']){
 }
 const tabs=[...document.querySelectorAll<HTMLButtonElement>('[data-menu]')];
 const skinTab=document.createElement('button');skinTab.type='button';skinTab.id='tab-skin';skinTab.setAttribute('role','tab');skinTab.setAttribute('aria-controls','panel-skin');skinTab.setAttribute('aria-selected','false');skinTab.tabIndex=-1;skinTab.dataset.menu='skin';skinTab.textContent='Skins';skinTab.hidden=true;
-const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><div><small>INSTALLED REWARDS</small><h2>Creature skins</h2></div></div><label>Owned and installed skin<select id="skinChoice"></select></label><p class="help">Only this account’s unlocked skins with verified offline files appear here. Choose a part in Texture to apply the skin to that part.</p>';
-document.querySelector('.menu-tabs')?.append(skinTab);document.querySelector('.console-scroll')?.append(skinPanel);tabs.push(skinTab);
+const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><div><small>INSTALLED REWARDS</small><h2>Creature skins</h2></div></div><label>Owned and installed skin<select id="skinChoice"></select></label><p class="help">Only this account’s unlocked skins with verified offline files appear here. A skin covers every part of your coach, like an Adaptation in Species.</p>';
+// #146: Skins and Ship sit after the option tabs, just above Files (Ian's "Downloads" tab).
+const filesTab=$('tab-files') as HTMLButtonElement;filesTab.before(skinTab);document.querySelector('.console-scroll')?.append(skinPanel);tabs.splice(tabs.indexOf(filesTab),0,skinTab);
 const shipTab=document.createElement('button');shipTab.type='button';shipTab.id='tab-ship';shipTab.setAttribute('role','tab');shipTab.setAttribute('aria-controls','panel-ship');shipTab.setAttribute('aria-selected','false');shipTab.tabIndex=-1;shipTab.dataset.menu='ship';shipTab.textContent='Ship';shipTab.hidden=true;
-const shipPanel=document.createElement('div');shipPanel.id='panel-ship';shipPanel.setAttribute('role','tabpanel');shipPanel.setAttribute('aria-labelledby','tab-ship');shipPanel.tabIndex=0;shipPanel.hidden=true;shipPanel.innerHTML='<div class="panel-heading"><div><small>YOUR ARRIVAL</small><h2>Ship</h2></div></div><div class="field-grid"><label>Owned ship<select id="shipChoice"></select></label><label>Ship tint<input id="shipTint" type="color" value="#ffffff"></label></div><p class="help">Choose an owned ship and tint. Your choice is saved separately from the coach recipe.</p>';
-document.querySelector('.menu-tabs')?.append(shipTab);document.querySelector('.console-scroll')?.append(shipPanel);tabs.push(shipTab);
+const shipPanel=document.createElement('div');shipPanel.id='panel-ship';shipPanel.setAttribute('role','tabpanel');shipPanel.setAttribute('aria-labelledby','tab-ship');shipPanel.tabIndex=0;shipPanel.hidden=true;shipPanel.innerHTML='<div class="panel-heading"><div><small>YOUR ARRIVAL</small><h2>Ship</h2></div></div><div class="field-grid"><label>Owned ship<select id="shipChoice"></select></label></div><div id="shipSwatches" class="material-grid" aria-label="Ship colours"></div><p class="help">Your ship takes any colour your coach has unlocked. It is saved separately from the coach recipe.</p>';
+filesTab.before(shipTab);document.querySelector('.console-scroll')?.append(shipPanel);tabs.splice(tabs.indexOf(filesTab),0,shipTab);
 const SHIP_SETTINGS_KEY='myr5-ship-customization-v1';
 const SKIN_SETTINGS_PREFIX='myr5-editor-skins-v1/account/';let skinOwner:string|null=null;
 // Persist from the current recipe for every edit, including Undo and Redo.
@@ -153,9 +168,11 @@ function persistSkinSettings(){if(skinOwner)localStorage.setItem(SKIN_SETTINGS_P
 function skinSettings(){if(!skinOwner)return{};try{const value=JSON.parse(localStorage.getItem(SKIN_SETTINGS_PREFIX+skinOwner)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 const editorOwner=()=>{const account=window.myr5AuthenticatedAccount;return typeof account==='string'?account:account?.user?.id;};
 function shipSettings(){try{const owner=editorOwner();if(!owner)return{};const value=JSON.parse(localStorage.getItem(`${SHIP_SETTINGS_KEY}/${owner}`)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}}
-function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=id[0].toUpperCase()+id.slice(1);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;($('shipTint') as HTMLInputElement).value=/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';}
-function persistShipEditor(){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,tint=($('shipTint') as HTMLInputElement).value;if(!ownerId||shipTab.hidden||!owned.includes(ship)||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
-syncShipEditor();$('shipChoice').addEventListener('change',persistShipEditor);$('shipTint').addEventListener('input',persistShipEditor);
+function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=id[0].toUpperCase()+id.slice(1);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;for(const b of document.querySelectorAll<HTMLButtonElement>('#shipSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===current.colorId));}
+// #147: the ship takes one of the coach's unlocked colours/palettes; `tint` stays its primary hex, so the ship scene reads it unchanged.
+function persistShipEditor(colorId?:string){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,current=shipSettings();colorId??=current.colorId;const tint=colorId?colorTriad(colorId)?.primary:/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';if(!ownerId||shipTab.hidden||!owned.includes(ship)||!tint||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint,colorId};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
+swatchGrid($('shipSwatches'),id=>{const source=lockSource(id);if(source){tell('Locked for your ship too · unlocks at '+source);return;}persistShipEditor(id);syncShipEditor();});
+syncShipEditor();$('shipChoice').addEventListener('change',()=>persistShipEditor());
 window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});
 let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,skinEpoch=0,skinChoices:{id:string;displayName:string}[]=[];
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}
@@ -169,7 +186,7 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
  if(!rows.length){source.dispose();render('Your coach is ready');return;}
  skinSource=source;skinChoices=rows.map(({id,displayName})=>({id,displayName}));viewer?.setSkinResolver(source.resolve);skinTab.hidden=false;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','false');const remembered=skinSettings();for(const region of REGIONS){const id=remembered[region];if(typeof id==='string'&&skinChoices.some(s=>s.id===id))recipe={...recipe,materials:{...recipe.materials,[region]:{...(recipe.materials?.[region]??DEFAULT_MATERIAL),textureId:id}}};}renderSkinChoices();render('Installed skins ready');
 }
-skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;setMaterial({textureId:id});});
+skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;pickTexture(id);});
 window.addEventListener('myr5:account-ready',event=>void refreshSkinEditor((event as CustomEvent).detail));window.addEventListener('myr5:account-cleared',()=>void refreshSkinEditor(null));window.addEventListener('myr5:battle-pass',()=>void refreshSkinEditor());window.addEventListener('storage',event=>{if(event.key?.startsWith('myr5-battle-pass-ledger-v1/account/')||event.key==='myr5-battle-pass-ledger-v1')void refreshSkinEditor();});
 function openMenu(tab:HTMLButtonElement){if(tab.hidden)return;activeRange=null;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye');else if(tab.dataset.menu==='body')focusPart('body');else if(tab.dataset.menu==='materials')focusPart(selected);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
 tabs.forEach(b=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{const enabled=tabs.filter(tab=>!tab.hidden),index=enabled.indexOf(b);let next=index;if(event.key==='ArrowRight')next=(index+1)%enabled.length;else if(event.key==='ArrowLeft')next=(index+enabled.length-1)%enabled.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=enabled.length-1;else return;event.preventDefault();openMenu(enabled[next]);enabled[next].focus();};});

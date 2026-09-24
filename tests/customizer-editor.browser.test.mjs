@@ -25,8 +25,9 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
   await page.goto(base+'/creature/index.html');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
 
-  // Body is the first tab and opens by default.
+  // Body (#139: labelled Species) is the first tab and opens by default; Files stays last (#146).
   assert.equal(await page.locator('#tab-body').getAttribute('aria-selected'),'true');
+  assert.deepEqual(await page.locator('.menu-tabs [role=tab]:not([hidden])').allTextContents(),['Species','Colour','Face','Motion','Coach','Files']);
   assert.equal(await page.locator('#panel-body').isHidden(),false);
   assert.equal(await page.locator('#panel-materials').isHidden(),true);
 
@@ -49,12 +50,14 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
   let recipe=await page.evaluate(()=>window.myr5Companion.recipe);
   assert.equal(recipe.headFrom,ROSTER_BODY);assert.equal(recipe.armsFrom,ROSTER_BODY);assert.equal(recipe.feetFrom,ROSTER_BODY);
 
-  // Pick a texture+colour on the body part, then switch bodies again: the choice survives.
+  // #139: an Adaptation picked under Species reaches every part; Colour still paints one part.
+  await page.selectOption('#textureId','clay');
+  await page.waitForFunction(()=>['head','eye','collar','body','arms','feet'].every(r=>window.myr5Companion?.recipe?.materials?.[r]?.textureId==='clay')&&window.myr5Companion?.ready===true,null,{timeout:60000});
   await page.click('#tab-materials');
   await page.click('[data-region="body"]');
-  await page.selectOption('#textureId','clay');
   await page.click('#colorSwatches [data-color="default-ruby"]');
-  await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.body?.textureId==='clay'&&window.myr5Companion?.ready===true,null,{timeout:60000});
+  await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.body?.colorId==='default-ruby'&&window.myr5Companion?.ready===true,null,{timeout:60000});
+  assert.notEqual(await page.evaluate(()=>window.myr5Companion.recipe.materials.head.colorId),'default-ruby');
   await page.click('#tab-body');
   await page.selectOption('#body','myr5');
   await page.waitForFunction(()=>window.myr5Companion?.recipe?.body==='myr5'&&window.myr5Companion?.ready===true,null,{timeout:60000});

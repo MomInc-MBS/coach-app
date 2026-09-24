@@ -61,14 +61,16 @@ test('signed installed skin survives the real rig shader handoff, offline reload
   const savedSkins=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-editor-skins-v1/account/owner-a')));
   const recipeSkin=()=>page.evaluate(()=>myr5Companion.recipe.materials?.body?.textureId);
   const noSkin=()=>page.waitForFunction(()=>myr5Companion.ready&&myr5Companion.viewer.skinTextures.size===0);
-  await page.click('#tab-materials');await page.selectOption('#textureId','flat');await noSkin();
-  await page.click('#tab-skin');assert.match(await page.locator('#panel-skin .help').textContent(),/Choose a part in Texture/);
+  // #139: the Adaptation (Species tab) and an installed skin both cover every part of the coach.
+  const everyPart=id=>Object.fromEntries(['head','eye','collar','body','arms','feet'].map(region=>[region,id]));
+  await page.click('#tab-body');await page.selectOption('#textureId','flat');await noSkin();
+  await page.click('#tab-skin');assert.match(await page.locator('#panel-skin .help').textContent(),/covers every part/);
   await page.selectOption('#skinChoice',fixture.skin.id);await ready();
-  assert.equal(await recipeSkin(),fixture.skin.id);assert.equal(await page.locator('#skinChoice').inputValue(),fixture.skin.id);assert.deepEqual(await savedSkins(),{body:fixture.skin.id});
+  assert.equal(await recipeSkin(),fixture.skin.id);assert.equal(await page.locator('#skinChoice').inputValue(),fixture.skin.id);assert.deepEqual(await savedSkins(),everyPart(fixture.skin.id));
   await page.click('#undo');await noSkin();
   assert.equal(await recipeSkin(),'flat');assert.equal(await page.locator('#skinChoice').inputValue(),'');assert.deepEqual(await savedSkins(),{});
   await page.click('#redo');await ready();
-  assert.equal(await recipeSkin(),fixture.skin.id);assert.equal(await page.locator('#skinChoice').inputValue(),fixture.skin.id);assert.deepEqual(await savedSkins(),{body:fixture.skin.id});
+  assert.equal(await recipeSkin(),fixture.skin.id);assert.equal(await page.locator('#skinChoice').inputValue(),fixture.skin.id);assert.deepEqual(await savedSkins(),everyPart(fixture.skin.id));
   await page.click('#undo');await noSkin();offline=true;await page.reload();await noSkin();
   await page.waitForFunction(()=>!document.querySelector('#tab-skin').hidden);
   assert.equal(await recipeSkin(),'flat');assert.equal(await page.locator('#skinChoice').inputValue(),'');assert.deepEqual(await savedSkins(),{});

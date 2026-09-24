@@ -4,7 +4,7 @@
 import type {Design,Region,MaterialChoice} from './creator/design';
 import {lockSource} from './creator/materials-registry';
 import {bodyLockSection} from './creator/track-placements';
-import {loadProgress} from '../../battle-pass.mjs';
+import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {RECIPE_KEY} from './profile';
 
 const ownedChoice=(c?:MaterialChoice):c is MaterialChoice=>!!c&&!lockSource(c.textureId)&&!lockSource(c.colorId);
@@ -13,8 +13,8 @@ export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 /** Locked material regions fall back to `lastOwned`'s choice for that region (or the original style);
  * locked bodies to `lastOwned`'s body (or Original MYR5). `grandfathered` bodies were already saved
  * before their section locked, so they stay usable. Returns `d` itself when nothing is locked. */
-export function keepOwned(d:Design,lastOwned?:Design,grandfathered:ReadonlySet<string>=new Set(),progress:Record<string,number>=loadProgress()):Design{
- const bodyOk=(id?:string):id is string=>!!id&&(grandfathered.has(id)||!bodyLockSection(id,progress));
+export function keepOwned(d:Design,lastOwned?:Design,grandfathered:ReadonlySet<string>=new Set(),progress:Record<string,number>=loadProgress(),tracks:Iterable<string>=selectedTracks()):Design{
+ const bodyOk=(id?:string):id is string=>!!id&&(grandfathered.has(id)||!bodyLockSection(id,progress,tracks));
  let next=d;
  if(d.materials&&!Object.values(d.materials).every(ownedChoice)){
   const materials:Design['materials']={};
