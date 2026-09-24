@@ -1,8 +1,8 @@
-// Full-app opening doors, followed by scenes using the live customized coach.
+// Full-app opening doors, followed by scenes using the live customized coach. Release 6: no pod "home" title film any
+// more ("Your coach. Your next move."); the oval's ship intro is the coach's arrival.
 const OPENING_SEEN='myr5-opening-doors-seen-v2';
 const SCENES={
  opening:{duration:4800,label:'MOM INC. / POD 005',title:'Something big is waking up.',beats:['CONTAINMENT ONLINE','COACH AWAKENING','MYR5 IS READY']},
- home:{duration:2400,label:'TRAINING DECK',title:'Your coach. Your next move.',beats:['WELCOME ABOARD','READY WHEN YOU ARE']},
  pre:{duration:3300,label:'MOVEMENT SELECTED',title:'Let’s make it count.',beats:['FIND YOUR SPACE','FIND YOUR FOCUS','LET’S GO']},
  post:{duration:3800,label:'SET COMPLETE',title:'You showed up.',beats:['EFFORT RECORDED','TAKE A BREATH','MEET YOUR GIANT']}
 };
@@ -31,20 +31,18 @@ export function initCinematics({voice}={}){
   if(!Object.hasOwn(SCENES,kind)||disposed)return Promise.resolve('cancelled');
   finish('cancelled');
   if(!enabled||lowMotion()||document.hidden)return Promise.resolve(document.hidden?'cancelled':'skipped');
-  const scene=SCENES[kind],home=kind==='home';
+  const scene=SCENES[kind];
   voice?.cancel();
   body.dataset.cinematic=kind;layer.dataset.scene=kind;layer.hidden=false;
   label.textContent=scene.label;title.textContent=scene.title;
   detail.textContent=kind==='pre'?(info.name||'Your next movement'):kind==='post'?(document.getElementById('setReceipt')?.textContent||'Your effort counts.'):kind==='opening'?'MAKING YOU READY.':'';
   beat.textContent=scene.beats[0];progress.style.transform='scaleX(0)';
   skip.textContent=kind==='pre'?'Start now →':kind==='post'?'Continue →':'Skip intro →';
-  layer.setAttribute('role',home?'region':'dialog');layer.setAttribute('aria-modal',String(!home));
+  layer.setAttribute('role','dialog');layer.setAttribute('aria-modal','true');
   const focus=document.activeElement;
-  if(!home){
-   // Keep the existing canvas mounted, while keyboard focus stays in the scene.
-   for(const node of body.children)if(node!==layer&&!['SCRIPT','LINK','STYLE'].includes(node.tagName)){inertNodes.push([node,node.inert]);node.inert=true;}
-   skip.focus({preventScroll:true});
-  }
+  // Keep the existing canvas mounted, while keyboard focus stays in the scene.
+  for(const node of body.children)if(node!==layer&&!['SCRIPT','LINK','STYLE'].includes(node.tagName)){inertNodes.push([node,node.inert]);node.inert=true;}
+  skip.focus({preventScroll:true});
   return new Promise(resolve=>{
    active={kind,resolve,focus,start:performance.now(),elapsed:0};
    const tick=now=>{
@@ -58,7 +56,7 @@ export function initCinematics({voice}={}){
   });
  }
  skip.addEventListener('click',()=>finish('skipped'));
- const keyboard=event=>{if(!active)return;if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();finish('skipped');}else if(event.key==='Tab'&&active.kind!=='home'){event.preventDefault();skip.focus();}};
+ const keyboard=event=>{if(!active)return;if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();finish('skipped');}else if(event.key==='Tab'){event.preventDefault();skip.focus();}};
  document.addEventListener('keydown',keyboard,true);
  const visibility=()=>{if(document.hidden)finish('cancelled');};document.addEventListener('visibilitychange',visibility);
  const motionChange=()=>{if(reduced.matches)finish('skipped');};reduced.addEventListener('change',motionChange);
@@ -72,15 +70,14 @@ export function initCinematics({voice}={}){
   replay.addEventListener('click',async()=>{settings.close();if(!enabled){enabled=true;paint();try{localStorage.setItem('myr5-cinematics-v1','on');}catch{}}await play('opening');});
   group.append(toggle,replay);settings.append(group);
  }
- const observer=new MutationObserver(()=>{const screen=body.dataset.screen;if(screen===lastScreen)return;lastScreen=screen;if(active&&((active.kind==='post'&&screen!=='rest')||(active.kind!=='post'&&screen!=='pod')))finish('cancelled');if(screen==='pod'&&!active)play('home');});
+ const observer=new MutationObserver(()=>{const screen=body.dataset.screen;if(screen===lastScreen)return;lastScreen=screen;if(active&&((active.kind==='post'&&screen!=='rest')||(active.kind!=='post'&&screen!=='pod')))finish('cancelled');});
  observer.observe(body,{attributes:true,attributeFilter:['data-screen']});
  // Doors cover the whole app while the coach loads beneath them.
  const bootTimer=setTimeout(async()=>{
   if(disposed||document.hidden||body.dataset.screen!=='pod'||document.querySelector('dialog[open]')||body.dataset.tracking==='true'||active)return;
-  if(read(sessionStorage,OPENING_SEEN)!=='yes'){const outcome=await play('opening');if(outcome==='cancelled')return;}
-  if(!disposed&&!document.hidden&&!active&&body.dataset.screen==='pod')play('home');
+  if(read(sessionStorage,OPENING_SEEN)!=='yes')await play('opening');
  },150);
- const interaction=()=>{clearTimeout(bootTimer);if(active?.kind==='home')finish('skipped');};
+ const interaction=()=>clearTimeout(bootTimer);
  for(const id of ['start','openLibrary','openSettings','openBreathing','visitRest','openIdentity','openAccomplishments'])document.getElementById(id)?.addEventListener('click',interaction,{capture:true});
  window.addEventListener('pagehide',()=>{disposed=true;clearTimeout(bootTimer);finish('cancelled');observer.disconnect();document.removeEventListener('keydown',keyboard,true);document.removeEventListener('visibilitychange',visibility);reduced.removeEventListener('change',motionChange);},{once:true});
  return {play,cancel:()=>finish('cancelled'),stats:()=>({active:active?.kind||null,enabled,reduced:lowMotion()})};
