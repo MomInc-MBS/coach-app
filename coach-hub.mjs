@@ -3,18 +3,22 @@ import {TRAINING_TRACKS} from './weapon-training.mjs';
 import {coachReminder} from './reminder-plan.mjs';
 import {RELEASE} from './release-info.mjs';
 
-// #107: military-satcom frame around the Settings dialog. Adds a top SATCOM status strip (with a
-// short acquiring -> locked animation each time the dialog opens), a bottom clock/BUILD strip, a
-// corner radar trace and corner bolts. Doesn't touch the dialog's existing items/nav.
-function mountSatcomFrame(settings){
+// #107/#120: military-satcom frame, usable on any dialog. Adds a top SATCOM status strip (an
+// ACQUIRING… -> {title} animation replayed every time the dialog opens), a bottom clock/BUILD
+// strip, a corner radar trace and corner bolts. Doesn't touch the dialog's existing items/nav.
+// Wrapping the dialog's own showModal() (rather than one known opener button) catches every route
+// in: Settings has one (#openSettings), but Install and the Downloads menu each open from several
+// places (the dock, Settings' Downloads button, a deep link, window.myr5Packs.open()...).
+export function mountSatcomFrame(dialog,{title='UPLINK ESTABLISHED'}={}){
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+ dialog.classList.add('satcom-frame');
  const top=document.createElement('div');top.className='satcom-strip satcom-top';top.setAttribute('aria-hidden','true');
  top.innerHTML='<svg class="satcom-sat" viewBox="0 0 24 24"><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 12H3M15 12h6M12 9V3M12 15v6"/><path d="m4.5 4.5 2.5 2.5M19.5 4.5 17 7"/></svg><span class="satcom-label">SATCOM // <em data-link>ACQUIRING…</em></span><span class="satcom-bars" data-bars><i></i><i></i><i></i><i></i></span>';
  const bottom=document.createElement('div');bottom.className='satcom-strip satcom-bottom';bottom.setAttribute('aria-hidden','true');
  bottom.innerHTML='<span class="satcom-clock" data-clock>--:--:--</span><span class="satcom-build" data-build></span><i class="satcom-radar"></i>';
  const build=bottom.querySelector('[data-build]');build.textContent='BUILD '+RELEASE.id;build.title=RELEASE.id;
- settings.prepend(top);settings.append(bottom);
- for(const pos of ['tl','tr','bl','br']){const bolt=document.createElement('i');bolt.className='satcom-bolt satcom-bolt-'+pos;bolt.setAttribute('aria-hidden','true');settings.append(bolt);}
+ dialog.prepend(top);dialog.append(bottom);
+ for(const pos of ['tl','tr','bl','br']){const bolt=document.createElement('i');bolt.className='satcom-bolt satcom-bolt-'+pos;bolt.setAttribute('aria-hidden','true');dialog.append(bolt);}
  const clock=bottom.querySelector('[data-clock]');
  const tick=()=>clock.textContent=new Date().toLocaleTimeString('en-GB',{hour12:false});
  tick();setInterval(tick,1000);
@@ -26,13 +30,14 @@ function mountSatcomFrame(settings){
   // moving there too, same trick as the portal (modules/portal/portal.mjs).
   if(!reduced())for(const [i,bar] of bars.entries())bar.style.setProperty('animation',`satcom-blink .5s ease ${i*110}ms infinite`,'important');
   const settle=()=>{
-   top.classList.add('locked');link.textContent='UPLINK ESTABLISHED';
+   top.classList.add('locked');link.textContent=title;
    for(const bar of bars)bar.style.removeProperty('animation');
    if(!reduced())top.style.setProperty('animation','satcom-flash .5s ease','important');
   };
   reduced()?settle():lockTimer=setTimeout(settle,900);
  }
- document.getElementById('openSettings').addEventListener('click',acquire);
+ const nativeShowModal=dialog.showModal.bind(dialog);
+ dialog.showModal=(...args)=>{acquire();return nativeShowModal(...args);};
 }
 
 const guide=[
@@ -59,7 +64,7 @@ export function mountCoachHub({api}){
  tabs.onkeydown=event=>{const move={ArrowRight:current+1,ArrowLeft:current-1,Home:0,End:guide.length-1};if(Object.hasOwn(move,event.key)){event.preventDefault();choose(move[event.key],true);}};
  function openGuide(){opener=document.activeElement;choose(0);dialog.showModal();tabs.children[0].focus();}
  hub.querySelector('.mission-guide').onclick=openGuide;dialog.querySelector('[data-close-guide]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>opener?.focus());
- const settings=document.getElementById('settings');settings.classList.add('terminal-menu','satcom-frame');document.getElementById('settingsTitle').textContent='MOM://POD CONTROL';
+ const settings=document.getElementById('settings');settings.classList.add('terminal-menu');document.getElementById('settingsTitle').textContent='MOM://POD CONTROL';
  const nav=document.createElement('nav');nav.className='terminal-links';nav.setAttribute('aria-label','Behind the scenes');
  // D30: Achievements opens through the same window.myr5Menus hook the owner's portal will call (app.mjs).
  for(const [label,target] of [['PORTAL','portal'],['ACHIEVEMENTS','achievements'],['REMINDERS','reminders'],['ACCOUNT','account'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']]){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():['achievements','portal'].includes(target)?window.myr5Menus?.[target]():document.querySelector('.coach-dock [data-panel='+target+']').click();};nav.append(b);}settings.append(nav);
