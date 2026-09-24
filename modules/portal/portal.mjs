@@ -378,7 +378,7 @@ function restFace(){const hidden=portalHome.hidden;portalHome.hidden=false;const
 const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el.style.setProperty('--face-'+k,face[k]+'px'):el.style.removeProperty('--face-'+k);};
 const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
 const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
-// A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the bottom rail.
+// A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the upper rail.
 const windowLook=(id,menu,face)=>({id,color:menu?.color||'#b026ff',label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
 const shapeLook=(id,menu,pts,face,pattern)=>({id,color:menu.color,label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
 function frameOn(face,look){
@@ -636,7 +636,7 @@ function leanButton(step,on,label){if(!step)return;step.setAttribute('aria-press
 // The ✕ on the quilt (a destination with no Close of its own).
 function closeDestination(dialog){const own=ownClose(dialog);if(own)own.click();else dialog.close();}
 // #132: where the destination's name rides the rim (client px, drawn left to right so it reads upright, the glyphs on the
-// side away from the window: on the quilt round a hole, on the bottom rail round the whole window).
+// side away from the window: on the quilt round a hole, on the upper rail round the whole window).
 const d2=v=>(+v).toFixed(1);
 const pathD=pts=>`M${pts.slice(0,-1).map(([x,y])=>d2(x)+' '+d2(y)).join('L')}Z`;
 export function namePath(id,pattern,face,gap=7){
@@ -652,7 +652,8 @@ export function namePath(id,pattern,face,gap=7){
   const [cx,cy]=P([.5,.5]),rx=pattern.width/2+gap,ry=pattern.height/2+gap; // the oval: its upper-left arc
   return line(Array.from({length:17},(_,i)=>{const t=Math.PI*(1+i/32);return [cx+rx*Math.cos(t),cy+ry*Math.sin(t)];}));
  }
- const y=face.top+face.height+12;return line([[face.left,y],[face.left+face.width,y]]);
+ // Whole-window names sit above the opening; the bottom rail is occupied by the physical dock.
+ const y=face.top-gap;return line([[face.left,y],[face.left+face.width,y]]);
 }
 
 // ---- #134 the energy round the open destination ---------------------------------------------------------------------
