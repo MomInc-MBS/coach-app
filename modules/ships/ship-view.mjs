@@ -79,24 +79,35 @@ let realShip = null, pushedHash = false, openEpoch = 0, coachStage = null, openH
 
 function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
 
+/** W2-2O: the starter ship and wonders are Starter-pack art. When the ship didn't load because it isn't on this
+ * phone (offline, never downloaded; not a WebGL failure), the plain backdrop and the coach stay, and the Starter
+ * pack is offered. */
+async function offerStarter(isCurrent) {
+ if (navigator.onLine || await globalThis.caches?.match(STARTER_SHIP_URL).catch(() => null) || !isCurrent()) return false;
+ fallback.querySelector('p').textContent = 'Your starter ship and its worlds come with the Starter pack.';
+ downloadBtn.textContent = 'Download the Starter pack'; downloadBtn.dataset.pack = 'starter'; downloadBtn.hidden = false; fallback.hidden = false;
+ return true;
+}
+
 /** No verified pack: the starter ship over today's starter wonder. The upgrade line shows only when
  * signed in; the download button only when they own a ship. Reduced motion or a repeat open idles. */
 async function showStarter({ signedIn, owned, isCurrent, always = false }) {
  const background = starterWonderUrl(backgroundForDay(STARTER_WONDERS));
  bgEl.style.backgroundImage = `url("${background}")`;
- fallback.querySelector('p').textContent = UPGRADE_TEXT; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
+ fallback.querySelector('p').textContent = UPGRADE_TEXT; downloadBtn.textContent = 'Download Ships & worlds'; downloadBtn.dataset.pack = 'coach-ships-biomes'; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
  const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL, getBackgroundUrl: () => background };
  try {
   if ((always || !starterEntranceDone) && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
    if (!isCurrent()) return;
    const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
-   if (await scene.ready && isCurrent()) starterEntranceDone = true;
+   // Offered: the arrival scene steps aside (its beam and status), leaving the plain backdrop, the coach and the offer.
+   if (await scene.ready) { if (isCurrent()) starterEntranceDone = true; } else if (await offerStarter(isCurrent) && realShip === scene) { scene.dispose(); realShip = null; }
    return;
   }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP });
   if (!isCurrent()) mounted.dispose(); else realShip = mounted;
- } catch { /* no WebGL or model: the wonder and the coach still show */ }
+ } catch { await offerStarter(isCurrent); /* no WebGL: the wonder and the coach still show */ }
 }
 
 async function waitForCard(timeoutMs = 8000) {
@@ -127,7 +138,7 @@ function build() {
  stage = dialog.querySelector('.ship-view-stage'); bgEl = dialog.querySelector('.ship-view-bg'); coachMount = dialog.querySelector('.ship-view-coach');
  note = dialog.querySelector('.ship-view-note'); fallback = dialog.querySelector('.ship-view-fallback'); downloadBtn = dialog.querySelector('.ship-view-download');
  dialog.querySelector('.ship-view-close').onclick = () => dialog.close();
- downloadBtn.onclick = () => { if (typeof window.myr5Packs?.open === 'function') window.myr5Packs.open('coach-ships-biomes'); else document.querySelector('.coach-dock [data-panel="install"]')?.click(); };
+ downloadBtn.onclick = () => { if (typeof window.myr5Packs?.open === 'function') window.myr5Packs.open(downloadBtn.dataset.pack || 'coach-ships-biomes'); else document.querySelector('.coach-dock [data-panel="install"]')?.click(); };
  dialog.addEventListener('close', onClose);
  window.addEventListener('popstate', onPopState);
  window.addEventListener('pagehide', () => { openEpoch++; clearShipVisual(); });

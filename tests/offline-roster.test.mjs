@@ -34,25 +34,28 @@ test('D34: core is only what first-run pages name; bundled sources, deferred fea
   await writeFile(join(root,'voice/manifest.json'),JSON.stringify({phrases:{hi:'/voice/a.mp3'}}));
   await identifyVoice(root);
   const {core,optional}=await offlineInventory(root);
-  assert.deepEqual(core.map(a=>a.url),['/app-runtime.mjs','/icons/used.png','/pod/mom-inc-mark.png','/pod/whiteboard.css','/pod/worlds/quilt.webp','/pose.html']);
-  assert.deepEqual(optional.map(a=>a.url),['/icons/unused.png','/meditation.mjs','/nutrition-data.mjs','/pod/fonts/hand-0.woff2','/pod/worlds/wall.png','/voice/manifest.json']);
+  assert.deepEqual(core.map(a=>a.url),['/app-runtime.mjs','/icons/used.png','/pod/mom-inc-mark.png','/pod/whiteboard.css','/pose.html']);
+  assert.deepEqual(optional.map(a=>a.url),['/icons/unused.png','/meditation.mjs','/nutrition-data.mjs','/pod/fonts/hand-0.woff2','/pod/worlds/quilt.webp','/pod/worlds/wall.png','/voice/manifest.json']);
+  assert.deepEqual(optional.filter(a=>a.group==='starter').map(a=>a.url),['/pod/worlds/quilt.webp','/pod/worlds/wall.png'],'W2-2O: portal scene art is the Starter download, named or not');
   const voice=optional.find(a=>a.url==='/voice/manifest.json'),{files}=JSON.parse(await readFile(join(root,'voice/manifest.json'),'utf8'));
   assert.deepEqual(files.map(f=>[f.url,f.bytes]),[['/voice/a.mp3',12]]);assert.match(files[0].integrity,/^sha256-/);assert.equal(voice.contains,12);
  }finally{await rm(root,{recursive:true,force:true});}
 });
 
-test('the starter portal renderer is available before the optional food model download',async()=>{
+test('W2-2O: the portal scenes’ code (renderer, GLTF loader, ship view, pyramid scanner) is core; their art is the Starter download',async()=>{
  const root=await mkdtemp(join(tmpdir(),'myr5-portal-core-'));
  try{
-  for(const folder of ['modules/portal','vendor/three','pod/worlds'])await mkdir(join(root,folder),{recursive:true});
+  for(const folder of ['modules/portal','modules/ships','vendor/three','pod/worlds/starter','food'])await mkdir(join(root,folder),{recursive:true});
   await writeFile(join(root,'pose.html'),'<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js"}}</script><script src="/app-runtime.mjs"></script>');
-  await writeFile(join(root,'app-runtime.mjs'),"import('./modules/portal/portal-entry.mjs')");
+  await writeFile(join(root,'app-runtime.mjs'),"import('./modules/portal/portal-entry.mjs');import('./modules/ships/ship-view.mjs');import('./food/pyramid-scanner.mjs')");
+  await writeFile(join(root,'modules/ships/ship-view.mjs'),"const ship='/pod/worlds/starter/supportive.glb'");
+  await writeFile(join(root,'food/pyramid-scanner.mjs'),"fetch('/food/pyramid-scanner.glb')");
   await writeFile(join(root,'modules/portal/portal-entry.mjs'),"import './portal.mjs'");
   await writeFile(join(root,'modules/portal/portal.mjs'),"import 'three';const texture='/pod/worlds/quilt.webp'");
-  for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp'])await writeFile(join(root,name),'fixture');
+  for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp','pod/worlds/starter/supportive.glb','food/pyramid-scanner.glb'])await writeFile(join(root,name),'fixture');
   const {core,optional}=await offlineInventory(root);
-  for(const url of ['/modules/portal/portal-entry.mjs','/modules/portal/portal.mjs','/vendor/three/three.module.js','/pod/worlds/quilt.webp'])assert(core.some(a=>a.url===url),url);
-  assert(optional.some(a=>a.url==='/vendor/three/GLTFLoader.js'),'food-only loader remains deferred');
+  for(const url of ['/modules/portal/portal-entry.mjs','/modules/portal/portal.mjs','/vendor/three/three.module.js','/vendor/three/GLTFLoader.js','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs'])assert(core.some(a=>a.url===url),url);
+  assert.deepEqual(optional.map(a=>[a.url,a.group]),[['/food/pyramid-scanner.glb','starter'],['/pod/worlds/quilt.webp','starter'],['/pod/worlds/starter/supportive.glb','starter']]);
  }finally{await rm(root,{recursive:true,force:true});}
 });
 
@@ -69,7 +72,7 @@ test('W2-2I: the package is grouped for the Downloads menu; the regular coach ne
   assert.deepEqual(groups,{
    coach:['/creature/assets/phone.js','/creature/models/anatomy.glb','/creature/models/myr5.glb','/creature/models/roster/manifest.json','/models/squat.glb'],
    'bodies-chest':[`/creature/models/${chest}.glb`],'bodies-meditation':[`/creature/models/${meditation}.glb`],'bodies-starter':[`/creature/models/${unplaced}.glb`],
-   hand:['/handborne/models/hand.glb'],food:['/food/pyramid-scanner.glb','/nutrition-data.mjs'],meditation:['/meditation.mjs','/pod/worlds/great-wall.png'],
+   hand:['/handborne/models/hand.glb'],food:['/nutrition-data.mjs'],meditation:['/meditation.mjs'],starter:['/food/pyramid-scanner.glb','/pod/worlds/great-wall.png'],
    games:['/arcade/tub-flight/game.mjs','/war-room/index.html'],voices:['/voice/manifest.json'],
   });
  }finally{await rm(root,{recursive:true,force:true});}

@@ -17,16 +17,19 @@ test('starter ship, six starter wonders and the still-room WebP fit their budget
  assert.equal(existsSync('pod/worlds/great-wall.png'),false);
  assert.match(await readFile('pod/retro-rooms.css','utf8'),/--room-world:url\('\/pod\/worlds\/great-wall\.webp'\)/);
 });
-test('W2-FIX risk 2: the starter ship, six starter wonders and the great-wall backdrop ship in core, not the optional Meditation group',async()=>{
+// W2-2O (#136) undoes W2-FIX risk 2: the portal experience's art is one optional Starter download, never core.
+const SCENE_ART=['/pod/worlds/quilt.webp','/food/pyramid-scanner.glb','/pod/worlds/starter/supportive.glb',...STARTER_WONDERS.map(starterWonderUrl),'/pod/worlds/great-wall.webp','/pod/worlds/achievements.jpg'];
+test('W2-2O: the core list has no heavy scene assets; the Starter group holds every one of them',async t=>{
  const {core,optional}=await offlineInventory('.');
- const coreUrls=new Set(core.map(a=>a.url)),optionalUrls=new Set(optional.map(a=>a.url));
- const expected=['/pod/worlds/starter/supportive.glb','/pod/worlds/great-wall.webp',...STARTER_WONDERS.map(starterWonderUrl)];
- for(const url of expected){
-  assert(coreUrls.has(url),`${url} must be in the core offline shell (offline first run needs it, D39)`);
-  assert(!optionalUrls.has(url),`${url} must not also sit in the optional package`);
- }
- const bytes=core.reduce((sum,a)=>sum+a.bytes,0);
+ const heavy=core.filter(a=>/\.(?:glb|gltf|bin)$/i.test(a.url)||a.url.startsWith('/pod/worlds/')||a.url==='/food/pyramid-scanner.glb');
+ assert.deepEqual(heavy.map(a=>a.url),[],'no scene model or world art in core');
+ const starter=optional.filter(a=>a.group==='starter');
+ assert.deepEqual(starter.map(a=>a.url).sort(),[...SCENE_ART].sort(),'Starter is exactly the portal scenes’ art');
+ for(const url of ['/modules/portal/portal-board.mjs','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs','/vendor/three/GLTFLoader.js','/achievements-board.mjs','/meditation.mjs'])assert(core.some(a=>a.url===url),`${url}: the scene code stays core, so it opens offline and shows its placeholder`);
+ const bytes=core.reduce((sum,a)=>sum+a.bytes,0),starterBytes=starter.reduce((sum,a)=>sum+a.bytes,0);
  assert.ok(bytes<=CORE_OFFLINE_BUDGET,`core ${(bytes/1048576).toFixed(2)} MiB stays under the 8 MiB budget`);
+ assert.ok(starterBytes>4*1048576,'the Starter download is the large one');
+ t.diagnostic(`source tree: core ${core.length} files ${bytes} B, Starter ${starter.length} files ${starterBytes} B`);
 });
 test('starter ship GLB uses only core glTF plus WebP textures, so the plain GLTFLoader reads it',async()=>{
  const raw=await readFile('pod/worlds/starter/supportive.glb'),json=JSON.parse(raw.subarray(20,20+raw.readUInt32LE(12)));

@@ -54,15 +54,36 @@ test('Back to Coach cancels a pending destination and flash duration/completion 
  assert.equal(await page.evaluate(()=>window.cancelledFlash),'AbortError');assert.equal(await page.locator('.portal-transition-flash').count(),0);
 }));
 
-test('renderer and texture failures leave a usable menu without orphaned canvases',async()=>withPortal(async(browser,url)=>{
- for(const failure of ['webgl','texture']){
-  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});
-  if(failure==='webgl')await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
-  else await page.route('**/pod/worlds/quilt.webp',route=>route.fulfill({status:503,body:'offline'}));
-  await page.goto(url);assert.equal(await open(page),false);
-  assert.equal(await page.locator('#portalBoardHost canvas').count(),0);
-  await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
-  await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
-  await page.close();
- }
+test('a renderer failure leaves a usable menu without orphaned canvases',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});
+ await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
+ await page.goto(url);assert.equal(await open(page),false);
+ assert.equal(await page.locator('#portalBoardHost canvas').count(),0);
+ await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
+ await page.close();
+}));
+// W2-2O: the quilt texture is Starter-pack art. Offline without it the board still mounts, as a plain stitched quilt.
+test('a missing quilt texture (no Starter pack, offline) gives a plain stitched board that still works',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});await page.emulateMedia({reducedMotion:'reduce'});
+ await page.route('**/pod/worlds/quilt.webp',route=>route.fulfill({status:503,body:'offline'}));
+ await page.goto(url);
+ await page.evaluate(async()=>{const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;THREE.Scene.prototype.add=function(...nodes){window.quiltScene=this;return add.apply(this,nodes);};});
+ assert.equal(await open(page),true,'the board mounts without its texture');
+ assert.equal(await page.locator('#portalBoardHost canvas').count(),1);
+ assert.equal(await page.evaluate(()=>document.getElementById('portalHome').classList.contains('no-board')),false);
+ const cloth=await page.evaluate(()=>{
+  const map=window.quiltScene.children.find(n=>n.isMesh).material.map,g=map.image.getContext('2d'),px=(x,y)=>[...g.getImageData(x,y,1,1).data].slice(0,3);
+  // Half-size quilt: the binding at the edge, cream cloth clear of every stitch, and the cross's blue stitches across the middle row.
+  const row=g.getImageData(0,399,map.image.width,1).data;let blue=0;for(let i=0;i<row.length;i+=4)if(row[i+2]>180&&row[i]<120)blue++;
+  return {canvas:!!map.isCanvasTexture,size:[map.image.width,map.image.height],binding:px(3,3),cream:px(50,30),blue};
+ });
+ assert.equal(cloth.canvas,true);assert.deepEqual(cloth.size,[512,833]);
+ assert.deepEqual(cloth.binding,[59,52,65]);assert.deepEqual(cloth.cream,[239,230,211]);
+ assert.ok(cloth.blue>150,`stitched cross across the middle (${cloth.blue} px)`);
+ await page.screenshot({path:resolve('.frames','w2-2o-plain-quilt-375x812.png')});
+ // Still a working board: the Menu opens Food.
+ await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
+ await page.close();
 }));

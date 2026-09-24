@@ -1,7 +1,7 @@
 // D28: meditation backgrounds are the "wonders" pack entries in plan/asset-manifest.json
 // (pack "wonders", files backgrounds/clean/<id>.webp). The full 48 ship through the signed pack host,
-// never core. Six starters are bundled in the site (pod/worlds/starter/) so meditation and the ship
-// view never start blank: todaysBackground() asks a caller-supplied lookup for today's pack copy and
+// never core. Six starters ship on the site (pod/worlds/starter/) in the optional Starter download (W2-2O),
+// fetched on demand when missing: todaysBackground() asks a caller-supplied lookup for today's pack copy and
 // falls back to today's starter. This module fetches nothing itself.
 // ponytail: no default pack-store lookup yet (no live pack host); wire one when packs ship.
 export const WONDERS_PACK = 'wonders';

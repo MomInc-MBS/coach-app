@@ -12,17 +12,16 @@ export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // file that the first-run pages name, directly or through other core files. The scan is conservative:
 // any path string counts. Bundled sources that no page requests, and everything else, ship in the
 // post-download package (sw.js OPTIONAL_ASSETS): fetched on demand online, offline once downloaded.
-const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html','/install.html','/privacy.html','/manifest.webmanifest',
- // #108 starter ship + wonder: built from a template literal (meditation-backgrounds.mjs, ship-view.mjs),
- // so the closure scan below can never discover them by grepping for a literal path. Listed here instead,
- // so the offline first run (and offline meditation) never falls back to a blank gradient (risk 2).
- '/pod/worlds/starter/supportive.glb','/pod/worlds/starter/colosseum-a.webp','/pod/worlds/starter/great-pyramid-of-giza-a.webp','/pod/worlds/starter/great-wall-of-china-a.webp','/pod/worlds/starter/machu-picchu-a.webp','/pod/worlds/starter/mount-fuji-a.webp','/pod/worlds/starter/taj-mahal-a.webp','/pod/worlds/great-wall.webp'];
+const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html','/install.html','/privacy.html','/manifest.webmanifest'];
+// W2-2O (#136): the portal experience's heavy art is ONE optional "Starter" download, never core: the quilt
+// texture, the pyramid model, the starter ship + six wonders, the still-room backdrop and the achievements
+// art (everything in pod/worlds/). Their small code (modules/portal, the ship view, the pyramid scanner,
+// the GLTF loader) stays core, so each scene opens offline and shows its own placeholder.
+export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$)/;
 // Named by first-run code, but used only by deferrable features that already cope without them:
-// food reference search (2.6 MB), rest/meditation backgrounds and Records handwriting fonts (swap).
-// The quilt is the starter portal, and the starter ship/wonders/great-wall backdrop, stay in core so
-// they remain available after an offline install (#108, risk 2).
-const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/worlds\/(?!starter\/|great-wall\.webp$|quilt\.webp$)|pod\/fonts\/)/;
-const coreFolder=url=>!url.slice(1).includes('/')||url.startsWith('/icons/')||url.startsWith('/modules/portal/')||url==='/vendor/three/three.module.js'||url.startsWith('/pod/worlds/starter/')&&url.endsWith('.glb')||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+// food reference search (2.6 MB) and Records handwriting fonts (swap).
+const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
+const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
@@ -37,7 +36,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
-  if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url))continue;
+  if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -52,15 +51,19 @@ export async function identifyVoice(root){
  await writeFile(join(root,'voice/manifest.json'),JSON.stringify(manifest));
 }
 
-// The Downloads menu picks the post-download package by group; every optional file carries one.
-// First match wins; whatever is left (regular coach models, customizer, exercise demos, app screens)
-// is "Your coach". Roster bodies never join it: each goes to its workout section from
-// track-placements.ts (#102), or Starter when it has no placement.
+// The group manifest: the Downloads menu picks the post-download package by group; every optional file
+// carries one. First match wins; whatever is left (regular coach models, customizer, exercise demos, app
+// screens) is "Your coach". Roster bodies never join it: each goes to its workout section from
+// track-placements.ts (#102), or the bodies' Starter section when it has no placement.
+// "starter" (W2-2O) is the portal experience's art, offered first on the first open. Site size rule: the
+// Sites archive has about 1.4 MB left. Files already on Sites stay there (D34), but NEW heavy art for the
+// portal scenes (later boards included) goes to the signed pack host (D1), never into pod/worlds/ here.
 const GROUPS=[
+ ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
  ['food',/^\/(?:food\/|nutrition-data\.mjs$|food-live\.css$|meal-)/],
- ['meditation',/^\/(?:pod\/worlds\/|meditation|breathing)/],
+ ['meditation',/^\/(?:meditation|breathing)/],
  ['games',/^\/(?:arcade|war-room)\//],
 ];
 const ROSTER_BODY=/^\/creature\/models\/roster\/[^/]+\.glb$/;

@@ -45,8 +45,12 @@ let dialog,stage,detail;
 const stars=()=>Array.from({length:36},()=>`<i style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*100).toFixed(1)}%;--d:${(Math.random()*4).toFixed(2)}s"></i>`).join('');
 function build(){
  dialog=document.createElement('dialog');dialog.className='ach-board';dialog.setAttribute('aria-label','Achievements');
- dialog.innerHTML=`<div class="ach-stage"><img class="ach-art" src="${IMAGE}" alt="Boss constellation" draggable="false"><div class="ach-stars" aria-hidden="true">${stars()}</div><div class="ach-bosses"></div></div><header class="ach-head"><h1>Achievements</h1><p class="ach-count"></p></header><section class="ach-detail" hidden></section><button type="button" class="ach-close" aria-label="Close">✕</button>`;
+ dialog.innerHTML=`<div class="ach-stage"><img class="ach-art" src="${IMAGE}" alt="Boss constellation" draggable="false"><div class="ach-stars" aria-hidden="true">${stars()}</div><div class="ach-bosses"></div></div><header class="ach-head"><h1>Achievements</h1><p class="ach-count"></p></header><section class="ach-detail" hidden></section><div class="ach-starter"><p>The constellation art comes with the Starter pack.</p><button type="button">Download the Starter pack</button></div><button type="button" class="ach-close" aria-label="Close">✕</button>`;
  document.body.append(dialog);
+ // W2-2O: the constellation is Starter-pack art. Without it (offline, not downloaded) the bosses glow on the plain
+ // starfield and the pack is offered (achievements-board.css .no-art).
+ dialog.querySelector('.ach-art').addEventListener('error',()=>dialog.classList.add('no-art'),{once:true});
+ dialog.querySelector('.ach-starter button').onclick=()=>window.myr5Packs?.open('starter');
  stage=dialog.querySelector('.ach-stage');detail=dialog.querySelector('.ach-detail');
  dialog.querySelector('.ach-close').onclick=()=>dialog.close();
  stage.addEventListener('click',e=>{if(dialog.classList.contains('zoomed')&&!e.target.closest('.ach-boss'))unzoom();});

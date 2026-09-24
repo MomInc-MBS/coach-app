@@ -121,3 +121,25 @@ test('on demand: a roster body that isn\'t downloaded is fetched alone, kept in 
  await response;for(const p of pending)await p;
  assert.equal(f.stores.get('myr5-optional-'+id).has('/creature/models/myr5.glb'),true);assert.equal(f.stores.has('myr5-package-'+id),false);assert.deepEqual(messages,[]);
 });
+
+// W2-2O: a portal scene's Starter art is fetched alone when a scene needs it, kept like an on-demand body.
+test('on demand: Starter art that isn\'t downloaded is fetched alone, kept in the package, and its page is told',async()=>{
+ const quilt={url:'/pod/worlds/quilt.webp',integrity:'sha256-quilt',bytes:5,group:'starter'},ship={url:'/pod/worlds/starter/supportive.glb',integrity:'sha256-ship',bytes:7,group:'starter'};
+ for(const online of [true,false]){
+  const messages=[],page={id:'page',postMessage:m=>messages.push(m)},f=fixture(async()=>{if(!online)throw TypeError('Failed to fetch');return new Response('quilt');},[...grouped,quilt,ship]),id=build(f.name);f.setClients([page]);
+  const pending=[];let response;
+  f.handlers.fetch({request:new Request('https://test/pod/worlds/quilt.webp'),clientId:'page',respondWith:p=>response=p,waitUntil:p=>pending.push(p)});
+  const reply=await response;for(let i=0;i<pending.length;i++)await pending[i];
+  assert.deepEqual(f.calls.map(r=>new URL(r.url).pathname),[quilt.url],'just that one file');
+  if(online){
+   assert.equal(await reply.text(),'quilt');
+   assert.equal(await f.stores.get('myr5-package-'+id).get(quilt.url).text(),'quilt','kept in this release\'s package, not the LRU');
+   assert.deepEqual(messages.map(m=>[m.type,m.url,m.state]),[['STARTER_DOWNLOAD',quilt.url,'start'],['STARTER_DOWNLOAD',quilt.url,'done']]);
+   const plan=await pick(f,['starter']);
+   assert.deepEqual(plan.missing.map(a=>a.url),[ship.url],'the menu counts it as downloaded');assert.deepEqual(plan.groups.starter,{files:2,total:12,remaining:7});
+  }else{
+   assert.equal(reply.status,503,'offline: the scene gets a clean failure and shows its placeholder');
+   assert.deepEqual(messages.map(m=>[m.type,m.state]),[['STARTER_DOWNLOAD','start'],['STARTER_DOWNLOAD','unavailable']]);
+  }
+ }
+});
