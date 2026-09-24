@@ -37,10 +37,15 @@ export function mountMealScanner(){
     }else if(data.type==='error')error(data.text);
     else if(data.type==='result'){
      stopClock();$('scanProgress').hidden=true;
-     const best=data.items[0];phase('result',data.uncertain?'CHECK THE MATCHES':'SCAN COMPLETE',best?`${best.label} · ${(best.score*100).toFixed(1)}% match score`:'No clear food match');
-     stage.hidden=true;trigger.hidden=!data.uncertain;status(data.uncertain?'Check the match & portion':'Check food & portion');
-     notify('myr5:food-selected',{name:best?.label||'',uncertain:!!(best&&data.uncertain),score:best?.score});
-     $('foodSuggestions').hidden=!data.uncertain;
+     const best=data.items[0],unsure=!!(best&&data.uncertain);
+     phase('result',data.uncertain?'CHECK THE MATCHES':'SCAN COMPLETE',best?`${best.label} · ${(best.score*100).toFixed(1)}% match score`:'No clear food match');
+     stage.hidden=true;
+     // #3/#37: a real guess with a question mark keeps the pyramid full size — the sheet, retry and candidates
+     // below stay closed until the pyramid's Fix or Type it opens them. No guess at all (empty items) shows them
+     // at once, same as before.
+     trigger.hidden=unsure||!data.uncertain;status(unsure?'':data.uncertain?'Check the match & portion':'Check food & portion');
+     notify('myr5:food-selected',{name:best?.label||'',uncertain:unsure,score:best?.score});
+     $('foodSuggestions').hidden=unsure||!data.uncertain;
      $('foodSuggestions').replaceChildren(...data.items.map(item=>{const b=document.createElement('button');b.type='button';b.textContent=`${item.label} · ${(item.score*100).toFixed(1)}%`;b.setAttribute('aria-label',`${item.label}, ${(item.score*100).toFixed(1)} percent model match score`);b.onclick=()=>{notify('myr5:food-selected',{name:item.label,uncertain:false,score:item.score});};return b;}));
     }
    };

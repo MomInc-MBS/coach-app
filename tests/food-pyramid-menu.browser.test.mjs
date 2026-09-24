@@ -246,17 +246,29 @@ test('#36 Type it appears after a scan error, opens Log by hand and focuses the 
 
 const UNSURE_WORKER=`self.onmessage=()=>{setTimeout(()=>postMessage({type:'result',uncertain:true,items:[{label:'oatmeal',score:.42},{label:'porridge',score:.3},{label:'rice pudding',score:.1},{label:'cereal',score:.05}]}),50);};`;
 
-test('#37 an unsure result asks, with Yes to accept and Fix to see the other matches',async()=>withFood(async page=>{
+test('#37 an unsure result asks (pyramid full size, no sheet), Fix opens the sheet prefilled, Yes accepts directly',async()=>withFood(async page=>{
  await page.evaluate(()=>window.myr5Menus.food());await ready(page);
  await pickAPhoto(page);
- await page.waitForFunction(()=>window.pyramidPaint.FOOD==='Looks like… oatmeal?',null,{timeout:15000});
- const yes=page.getByRole('button',{name:'Yes',exact:true}),fix=page.getByRole('button',{name:'Fix',exact:true});
- assert.equal(await yes.isVisible(),true);assert.equal(await fix.isVisible(),true);
+ const question=page.locator('#pyramidScanner .pyramid-question');
+ await question.waitFor({state:'visible',timeout:15000});
+ assert.match(await question.textContent(),/Looks like… oatmeal\?/);
+ await page.waitForFunction(()=>window.pyramidPaint.FOOD==='oatmeal',null,{timeout:15000}); // the plain guess flies in as usual; the question rides above it
+ const yes=page.getByRole('button',{name:'Yes',exact:true}),fix=page.getByRole('button',{name:'Fix',exact:true}),typeIt=page.getByRole('button',{name:'Type it',exact:true});
+ assert.equal(await yes.isVisible(),true);assert.equal(await fix.isVisible(),true);assert.equal(await typeIt.isVisible(),true);
+ for(const tag of [yes,fix,typeIt])assert((await tag.boundingBox()).height>=44,'a 44px tap target');
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),false,'#3: the pyramid, not the correction sheet, is the whole Food menu while unsure');
  await fix.click();
- assert.equal(await page.locator('#foodSuggestions').isVisible(),true,'Fix reveals the suggestions list');
- await yes.click();
- assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'oatmeal','Yes drops the question');
- assert.equal(await yes.isVisible(),false);assert.equal(await fix.isVisible(),false);
+ assert.equal(await page.locator('#foodSuggestions').isVisible(),true,'Fix reveals the other matches');
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),true,'Fix opens the correction sheet');
+ assert.equal(await page.locator('#mealName').inputValue(),'oatmeal','the sheet is prefilled with the guess, not empty');
+ assert.equal(await question.isVisible(),false,'the question is resolved');
+ // A second unsure result: Yes accepts directly, without opening the candidate list.
+ await pickAPhoto(page);
+ await question.waitFor({state:'visible',timeout:15000});
+ await page.getByRole('button',{name:'Yes',exact:true}).click();
+ await page.waitForFunction(()=>window.pyramidPaint.FOOD==='oatmeal',null,{timeout:15000}); // Yes keeps the guess
+ assert.equal(await question.isVisible(),false);
+ assert.equal(await page.locator('#mealConfirmation').isVisible(),true,'Yes opens the correction sheet too');
 },{worker:UNSURE_WORKER}));
 
 test('#39 a loading stand-in (silhouette + rising percent) shows while the model downloads, then the model swaps in',async()=>withFood(async page=>{

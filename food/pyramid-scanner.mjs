@@ -29,13 +29,17 @@ const ROOM_CSS=`
 #pyramidScanner .pyramid-loading svg{width:88px;height:88px;opacity:.6}
 #pyramidScanner canvas{position:absolute;inset:0;z-index:2}
 #pyramidScanner .pyramid-ui{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
-#pyramidScanner :where(.pyramid-ui>button){position:absolute;left:0;top:0;margin:0;pointer-events:auto;cursor:pointer;font:700 13px/1 system-ui,-apple-system,sans-serif;letter-spacing:.04em}
-#pyramidScanner .pyramid-tag{min-height:40px;padding:0 13px;border:1px solid #fff9;border-radius:999px;background:#1d1428e0;color:#fff4dc;white-space:nowrap;box-shadow:0 2px 8px #0006}
+#pyramidScanner :where(.pyramid-ui>button,.pyramid-ui>.pyramid-question){position:absolute;left:0;top:0;margin:0;pointer-events:auto;cursor:pointer;font:700 13px/1 system-ui,-apple-system,sans-serif;letter-spacing:.04em}
+#pyramidScanner .pyramid-tag{min-height:44px;padding:0 13px;border:1px solid #fff9;border-radius:999px;background:#1d1428e0;color:#fff4dc;white-space:nowrap;box-shadow:0 2px 8px #0006}
 #pyramidScanner .pyramid-tag[data-on]{background:#7fe6ff;color:#10121a;border-color:#dff9ff}
 #pyramidScanner .pyramid-tag[data-away]:not(:focus-visible){opacity:0;pointer-events:none}
 #pyramidScanner .pyramid-tag[data-pulse]{animation:pyramidPulseTag 2.1s ease-in-out infinite}
 @keyframes pyramidPulseTag{0%,100%{box-shadow:0 2px 8px #0006}50%{box-shadow:0 2px 8px #0006,0 0 16px 4px #7fe6ffcc}}
-#pyramidScanner .pyramid-tag-sm{min-height:30px;padding:0 10px;font-size:11px}
+#pyramidScanner .pyramid-question{white-space:normal;max-width:min(84vw,300px);text-align:center;line-height:1.3;pointer-events:none}
+/* #3/#37: while the pyramid is asking, the correction sheet stays logically open (meal-nutrition.mjs still
+   searches and computes nutrients for the guess, so the numbers fly in and the eventual Food match is
+   prefilled) but visually closed, so the pyramid — not this sheet — is the whole Food menu until resolved. */
+#mealsPanel.pyramid-mode[data-asking] #mealConfirmation,#mealsPanel.pyramid-mode[data-asking] #mealSaveControls{display:none!important}
 #pyramidScanner .pyramid-screen-key{min-height:0;padding:0;border:0;border-radius:6px;background:none;opacity:0;pointer-events:none!important}
 #pyramidScanner .pyramid-screen-key:focus-visible{opacity:1;outline:3px solid #ffb24d;outline-offset:2px}
 #pyramidScanner .pyramid-flip{left:50%;top:auto;bottom:14px;translate:-50% 0;display:flex;white-space:nowrap;align-items:center;gap:9px;min-height:40px;padding:0 15px;border:1px solid #fff8;border-radius:999px;background:#1d1428e0;color:#b9a9c6;box-shadow:0 2px 8px #0006}
@@ -113,7 +117,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  if(signal?.aborted)throw cancelled();
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  let disposed=false,raf=0,observer,timer;
- let meal=pyramidTiles(null,null),today=todayTiles(null),mode=0,dial=-1,typing=false,uncertain=false;
+ let meal=pyramidTiles(null,null),today=todayTiles(null),mode=0,dial=-1,typing=false,uncertain=false,guessName='';
  let zoomKey=null,zoomReturn=null,flyArmed=false,flyTimer=0,spin=null;
  const flights=[]; // numbers flying from the lens to the screens
  const pending=new Set(); // tile keys blank while their number is flying in
@@ -130,10 +134,13 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  const lensTag=control('pyramid-tag','Scan food');lensTag.setAttribute('aria-label','Scan food: take a food photo');
  const dialTags=DIALS.map(text=>control('pyramid-tag',text));
  for(const tag of dialTags.slice(1))tag.setAttribute('aria-pressed','false');
- // #37: an unsure result asks near the lens; #36: Type it is the always-available manual-entry fallback.
+ // #37: an unsure result asks above a clean Yes/Type it/Fix row near the lens (a flat 2D banner, not baked into
+ // the FOOD screen's 3D texture, so its layout never fights the model's geometry). #36: Type it is the
+ // always-available manual-entry fallback.
+ const questionTag=document.createElement('div');questionTag.className='pyramid-tag pyramid-question';questionTag.setAttribute('role','status');questionTag.hidden=true;ui.append(questionTag);
  const yesTag=control('pyramid-tag','Yes');yesTag.hidden=true;
  const fixTag=control('pyramid-tag','Fix');fixTag.hidden=true;
- const typeItTag=control('pyramid-tag pyramid-tag-sm','Type it');typeItTag.hidden=true;
+ const typeItTag=control('pyramid-tag','Type it');typeItTag.hidden=true;
  // Invisible keys over the six screens so a keyboard can zoom them too (pointer taps use the raycast).
  const screenKeys=Object.fromEntries(TILES.map(([meshName])=>[meshName,control('pyramid-screen-key')]));
  const flip=control('pyramid-flip');flip.innerHTML='<span>LAST MEAL</span><i></i><span>TODAY</span>';
@@ -162,7 +169,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  function disposeTree(root){root.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});}
  function dispose(){
   if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
-  releaseRoomStyle();
+  releaseRoomStyle();delete dialogEl?.dataset.asking;
   signal?.removeEventListener('abort',dispose);download.abort();clearTimeout(timer);clearTimeout(flyTimer);
   window.removeEventListener('myr5:meal-nutrition',onNutrition);window.removeEventListener('myr5:food-selected',onSelected);window.removeEventListener('myr5:food-reset',onReset);
   dialogEl?.removeEventListener('cancel',onCancel);
@@ -175,11 +182,8 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  // ---- Screens: "last meal" face (the meal being logged, else the newest saved one) or today's totals.
  function faces(){
   const current=getNutrition(),items=getMeals(),last=items?.[0];
-  if(current?.name!=null){
-   const name=current.name===''&&typing?'TYPE YOUR FOOD':current.name;
-   meal=pyramidTiles(name,current.nutrients);
-   if(uncertain&&!typing&&name)meal.name=`Looks like… ${name}?`; // #37: unsure result asks before it's confirmed
-  }else meal=last?pyramidTiles(last.name,mealNutrients(last)):pyramidTiles(null,null);
+  meal=current?.name!=null?pyramidTiles(current.name===''&&typing?'TYPE YOUR FOOD':current.name,current.nutrients)
+   :last?pyramidTiles(last.name,mealNutrients(last)):pyramidTiles(null,null);
   today=todayTiles(items);
  }
  const tileText=key=>mode?today[key]:pending.has(key)?'':meal[key];
@@ -189,28 +193,35 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   if(!s)return;paintTile(s.canvas,bg,label,value);s.tex.needsUpdate=true;
  }
  function repaint(){for(const tile of TILES)paint(tile);if(zoomKey)fillZoom();}
+ // #37: question + Yes/Type it/Fix travel together; a resolved or abandoned guess clears all four at once
+ // and lets the (already-computed) correction sheet show again.
+ function hideAsk(){questionTag.hidden=yesTag.hidden=fixTag.hidden=typeItTag.hidden=true;lensTag.hidden=!lens;delete dialogEl?.dataset.asking;}
  function onNutrition(){
   if(disposed)return;
   if(dial===0&&getNutrition()?.name==null)setDial(-1);
-  if(getNutrition()?.name==null)typeItTag.hidden=true; // #36: a saved/cleared meal drops the manual-entry fallback
+  if(getNutrition()?.name==null){uncertain=false;hideAsk();} // #36/#37: a saved/cleared meal drops the ask
   faces();if(!flyArmed)repaint();else if(meal.calories!=='—')fly();
  }
  // #31: a scan result (or a picked suggestion) blanks the screens, then its numbers fly out of the lens onto them.
  // #36/#37: no name (a scan error, a cancel or "no clear food match") offers Type it instead; an unsure result
- // asks first, with Yes/Fix and Type it all near the lens.
+ // asks first, with the question and Yes/Type it/Fix all near the lens (#3: the pyramid stays the whole menu —
+ // the correction sheet itself opens only once Yes, Fix or Type it resolves the guess).
  function onSelected(e){
   if(disposed)return;
   const name=e?.detail?.name;
-  if(!name){uncertain=false;yesTag.hidden=fixTag.hidden=true;typeItTag.hidden=false;return;} // error/cancel/no-match: the old guess is void
+  if(!name){uncertain=false;hideAsk();lensTag.hidden=true;typeItTag.hidden=false;return;} // error/cancel/no-match: the old guess is void, Type it remains (in the lens label's freed slot)
   uncertain=!!e.detail.uncertain;
-  typeItTag.hidden=!uncertain;yesTag.hidden=fixTag.hidden=!uncertain;
+  if(uncertain){guessName=name;questionTag.textContent=`Looks like… ${name}?`;dialogEl?.setAttribute('data-asking','');}
+  else delete dialogEl?.dataset.asking;
+  questionTag.hidden=yesTag.hidden=fixTag.hidden=typeItTag.hidden=!uncertain;
+  lensTag.hidden=uncertain; // frees its slot for the question/row, which take over the lens's job of triggering a rescan
   typing=false;flyArmed=true;clearFlights();for(const [,k] of TILES)pending.add(k);
   if(mode){spin=null;velocity=0;setRotation(pivot.rotation.y+TAU);} // same pose, other face: the result lands on "last meal"
   faces();repaint();clearTimeout(flyTimer);flyTimer=setTimeout(fly,2500); // no nutrition match: fly the name anyway
  }
  function onReset(){
   if(disposed)return;
-  typing=false;flyArmed=false;uncertain=false;typeItTag.hidden=true;yesTag.hidden=fixTag.hidden=true;
+  typing=false;flyArmed=false;uncertain=false;hideAsk();
   clearFlights();clearTimeout(flyTimer);pending.clear();faces();repaint();
  }
  window.addEventListener('myr5:meal-nutrition',onNutrition);window.addEventListener('myr5:food-selected',onSelected);window.addEventListener('myr5:food-reset',onReset);
@@ -304,13 +315,28 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   // Log by hand always opens; Water and Today toggle their cards.
   const on=i===0||dial!==i,k=knobs.find(k=>k.index===i);setDial(on?i:-1);
   if(k){k.tapT=performance.now();spawnSteam(k);}
-  if(i===0&&on){typing=true;uncertain=false;yesTag.hidden=fixTag.hidden=true;} // typing in by hand settles any "unsure" question
+  if(i===0&&on){typing=true;uncertain=false;hideAsk();} // typing in by hand settles any "unsure" question
   onDial(i,on);
  }
  dialTags.forEach((tag,i)=>tag.onclick=()=>pressDial(i));
- yesTag.onclick=()=>{uncertain=false;yesTag.hidden=fixTag.hidden=true;faces();repaint();}; // #37: keep the guess, drop the "?"
- fixTag.onclick=()=>{const suggestions=document.getElementById('foodSuggestions');if(suggestions)suggestions.hidden=false;}; // #37: show the other matches
- typeItTag.onclick=()=>pressDial(0); // #36: opens Log by hand, which already focuses #mealName
+ // #37: Yes/Fix both settle the guess through the normal food-selected path (same as a confident result), which
+ // opens the correction sheet with that name searched and re-hides the question/tags via onSelected above.
+ // Fix additionally surfaces the alternates, retry and status text the worker already prepared but held back.
+ const confirmGuess=()=>window.dispatchEvent(new CustomEvent('myr5:food-selected',{detail:{name:guessName,uncertain:false}}));
+ yesTag.onclick=confirmGuess; // #37: keep the guess, drop the "?"
+ fixTag.onclick=()=>{
+  const suggestions=document.getElementById('foodSuggestions'),retry=document.getElementById('recognizeFood'),status=document.getElementById('foodStatus');
+  if(suggestions)suggestions.hidden=false;
+  if(retry)retry.hidden=false;
+  if(status)status.textContent='Check the match & portion';
+  confirmGuess();
+ };
+ typeItTag.onclick=()=>{
+  // #36/#37: blank the guess first — launch.mjs's Log by hand only resets the name when the sheet was still
+  // closed, which an unsure result's (visually hidden, logically open) sheet no longer is.
+  window.dispatchEvent(new CustomEvent('myr5:food-selected',{detail:{name:''}}));
+  pressDial(0); // opens Log by hand, which focuses #mealName
+ };
  function scan(){lensFlashT=performance.now();document.getElementById('foodCamera')?.click();}
  lensTag.onclick=scan;
  function animateKnob(k,now){
@@ -382,7 +408,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   if(disposed)return;
   W=Math.max(host.clientWidth,1);H=Math.max(host.clientHeight,1); // layout size: the portal's arrival scale must not shrink the canvas
   renderer.setSize(W,H,false);camera.aspect=W/H;camera.updateProjectionMatrix();
-  for(const tag of [lensTag,yesTag,fixTag,typeItTag,...dialTags])tag.labelWidth=tag.offsetWidth;
+  for(const tag of [lensTag,questionTag,yesTag,fixTag,typeItTag,...dialTags])tag.labelWidth=tag.offsetWidth;
   const f=frame?.()||{top:0,bottom:H},top=frameTop=Math.max(0,f.top)+6,base=Math.min(H,f.bottom),bottom=base-FLIP_SPACE,middle=(top+bottom)/2;
   flip.style.bottom=`${Math.max(8,H-base+12)}px`;zoom.style.setProperty('--zoom-y',`${Math.max(top,middle)}px`);
   if(!modelSize)return;
@@ -396,10 +422,17 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  // Labels follow the lens and knobs; a knob turned to the back hides its label (focus still shows it).
  function place(tag,x,y){const w=tag.labelWidth||0;tag.style.transform=`translate(${Math.round(Math.min(Math.max(x-w/2,6),W-w-6))}px,${Math.round(Math.max(frameTop,Math.min(y,H-46)))}px)`;}
  function placeUI(){
+  // #37: the question and its row anchor to the top of the safe area (not the lens) — the lens's own screen
+  // position swings with the model's fit (how much room the correction sheet leaves it), so anything hung off
+  // it risks landing on top of itself; frameTop is stable, and stays clear of the header by construction.
+  const askX=lens?toScreen(lens.getWorldPosition(tmp2)).x:W/2;
+  if(uncertain){
+   place(questionTag,askX,frameTop+2);
+   place(yesTag,askX-104,frameTop+56);place(typeItTag,askX,frameTop+56);place(fixTag,askX+104,frameTop+56);
+  }else if(!typeItTag.hidden)place(typeItTag,askX,frameTop+2); // #36: a plain error/no-match offers just Type it
   if(lens){
-   const p=toScreen(lens.getWorldPosition(tmp2));place(lensTag,p.x,p.y-58);
-   if(uncertain){place(yesTag,p.x-50,p.y-98);place(fixTag,p.x+50,p.y-98);} // #37: Yes/Fix ride near the lens while unsure
-   if(!typeItTag.hidden)place(typeItTag,p.x,p.y-134); // #36: stacked above Yes/Fix, clear of the food-sheet below
+   const p=toScreen(lens.getWorldPosition(tmp2));
+   if(!lensTag.hidden)place(lensTag,p.x,p.y-58);
   }
   for(const k of knobs){
    k.mesh.getWorldPosition(tmp2);const p=toScreen(tmp2);
