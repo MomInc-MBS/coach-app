@@ -6,7 +6,7 @@ export function mountMealScanner(){
  function cancel(message){generation++;worker?.terminate();worker=null;stopClock();overlay.dataset.state='ready';$('scanProgress').hidden=true;if(message){$('scanPhase').textContent='SCAN PAUSED';status(message);}}
  function phase(state,title,detail){overlay.hidden=false;overlay.dataset.state=state;$('scanPhase').textContent=title;$('scanDetail').textContent=detail;}
  const notify=(type,detail)=>window.dispatchEvent(new CustomEvent(type,{detail}));
- function error(text){stopClock();phase('error','SCAN INTERRUPTED',text);$('scanProgress').hidden=true;trigger.hidden=false;status(text);worker?.terminate();worker=null;notify('myr5:food-selected',{name:''});}
+ function error(text){stopClock();phase('error','SCAN INTERRUPTED',text);stage.hidden=true;$('scanProgress').hidden=true;trigger.hidden=false;status(text);worker?.terminate();worker=null;notify('myr5:food-selected',{name:''});}
  $('foodCamera').onclick=()=>$('foodPhoto').click();
  $('foodPhoto').onchange=()=>{
   if(!$('foodPhoto').files[0])return;
@@ -39,9 +39,9 @@ export function mountMealScanner(){
      stopClock();$('scanProgress').hidden=true;
      const best=data.items[0];phase('result',data.uncertain?'CHECK THE MATCHES':'SCAN COMPLETE',best?`${best.label} · ${(best.score*100).toFixed(1)}% match score`:'No clear food match');
      stage.hidden=true;trigger.hidden=!data.uncertain;status(data.uncertain?'Check the match & portion':'Check food & portion');
-     notify('myr5:food-selected',{name:best?.label||''});
+     notify('myr5:food-selected',{name:best?.label||'',uncertain:!!(best&&data.uncertain),score:best?.score});
      $('foodSuggestions').hidden=!data.uncertain;
-     $('foodSuggestions').replaceChildren(...data.items.map(item=>{const b=document.createElement('button');b.type='button';b.textContent=`${item.label} · ${(item.score*100).toFixed(1)}%`;b.setAttribute('aria-label',`${item.label}, ${(item.score*100).toFixed(1)} percent model match score`);b.onclick=()=>{notify('myr5:food-selected',{name:item.label});};return b;}));
+     $('foodSuggestions').replaceChildren(...data.items.map(item=>{const b=document.createElement('button');b.type='button';b.textContent=`${item.label} · ${(item.score*100).toFixed(1)}%`;b.setAttribute('aria-label',`${item.label}, ${(item.score*100).toFixed(1)} percent model match score`);b.onclick=()=>{notify('myr5:food-selected',{name:item.label,uncertain:false,score:item.score});};return b;}));
     }
    };
    worker.postMessage({image:canvas.toDataURL('image/jpeg',.85)});

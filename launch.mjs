@@ -224,7 +224,10 @@ $('foodDialBack').onclick=()=>{pyramidScanner?.setDial(-1);setFoodDial(null);};
 $('cancelMeal').onclick=()=>{if(!$('cancelFoodScan').hidden)$('cancelFoodScan').click();window.dispatchEvent(new Event('myr5:food-reset'));for(const id of ['mealScanStage','foodSuggestions','recognizeFood'])$(id).hidden=true;set('foodStatus','');};
 $('mealsPanel').addEventListener('close',()=>{releasePyramid();setFoodDial(null);});window.addEventListener('pagehide',releasePyramid);
 // Router/portal hook (same contract as myr5Menus.ship): opens Food and returns its <dialog>.
-window.myr5Menus={...window.myr5Menus,food:()=>{if(!$('mealsPanel').open)document.querySelector('[data-panel="meals"]')?.click();return $('mealsPanel');}};
+window.myr5Menus={...window.myr5Menus,food:()=>{
+ if(document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true')return null; // #40: no meals over a workout
+ if(!$('mealsPanel').open)document.querySelector('[data-panel="meals"]')?.click();return $('mealsPanel');
+}};
  for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){$('mealsPanel').classList.toggle('pyramid-mode',!pyramidBroken);void mountPyramid();await meals();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
  window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>{guestHistoryChoice?.close();localHistoryRepository?.close();},{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));

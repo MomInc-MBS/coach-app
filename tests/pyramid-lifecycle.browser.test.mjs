@@ -94,7 +94,8 @@ test('reduced motion keeps knobs, glow, lens and released drag steady',async()=>
  const spot=await page.evaluate(()=>window.knobPosition());await page.mouse.click(spot.x,spot.y);
  const tapped=await page.evaluate(()=>window.sampleMotion());
  assert.equal(tapped[0].glow,.32,'tapping must still toggle the knob');
- for(const frame of tapped){assert.deepEqual(frame,tapped[0]);assert.deepEqual(frame.knob,idle[0].knob);assert.equal(frame.steam,0);assert.equal(frame.lens,.3);}
+ // #34: no meal is logged in this fixture, so the idle halo sits at its brighter "empty" static level under reduced motion.
+ for(const frame of tapped){assert.deepEqual(frame,tapped[0]);assert.deepEqual(frame.knob,idle[0].knob);assert.equal(frame.steam,0);assert.equal(frame.lens,.3+.35);}
  await page.mouse.move(210,115);await page.mouse.down();await page.mouse.move(240,115,{steps:3});await page.mouse.up();
  const dragged=await page.evaluate(()=>window.sampleMotion());assert.notEqual(dragged[0].rotation,tapped[0].rotation,'direct rotation stays available');for(const frame of dragged)assert.equal(frame.rotation,dragged[0].rotation,'no inertia after release');
 }));

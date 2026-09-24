@@ -5,7 +5,7 @@ import {pyramidTiles,mealNutrients,mealsOn,todayTiles} from '../food/pyramid-til
 
 test('idle state before any scan shows the prompt and dashes',()=>{
  const tiles=pyramidTiles(null,null);
- assert.equal(tiles.name,'TAP THE LENS');
+ assert.equal(tiles.name,'SCAN A MEAL');
  assert.equal(tiles.calories,'—');assert.equal(tiles.protein,'—');assert.equal(tiles.fat,'—');assert.equal(tiles.carbs,'—');assert.equal(tiles.vitamins,'—');
 });
 
