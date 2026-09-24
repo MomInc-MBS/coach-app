@@ -28,6 +28,9 @@ const admitShipEditor=(()=>{
  }catch{return false;}
 })();
 if(!admitShipEditor){location.replace('/pose.html#select');await new Promise(()=>{});}
+// Safari can restore this document from its back-forward cache without rerunning the admission
+// check above. A restored editor must return through the ship instead of reviving its old state.
+window.addEventListener('pageshow',event=>{if(event.persisted)location.replace('/pose.html#select');});
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
 const $=(id:string)=>document.getElementById(id)!;
 const SHORT:Record<Region,string>={head:'Crown',eye:'Eyes',collar:'Collar',body:'Body',arms:'Hands',feet:'Feet'};

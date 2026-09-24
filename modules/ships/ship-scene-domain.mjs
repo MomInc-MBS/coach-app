@@ -39,4 +39,4 @@ export function measureShip(THREE,object,camera){
 // #148: each ship activation writes a one-use, versioned admission token. The editor consumes it as
 // soon as it loads, so a typed URL cannot reuse an old visit's sessionStorage value.
 export const SHIP_GATE='myr5-ship-gate',SHIP_GATE_TOKEN='ship-admission-v2',SHIP_HISTORY_ADMISSION='myr5-ship-admitted-v2';
-export function openCustomizer(url='/creature/index.html'){try{sessionStorage.setItem(SHIP_GATE,SHIP_GATE_TOKEN);location.assign(url);}catch{location.assign('/pose.html#select');}}
+export function openCustomizer(url='/creature/index.html'){try{sessionStorage.setItem(SHIP_GATE,SHIP_GATE_TOKEN);location.assign(url);}catch{try{sessionStorage.removeItem(SHIP_GATE)}catch{}location.assign('/pose.html#select');}}
