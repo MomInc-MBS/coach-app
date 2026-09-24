@@ -12,7 +12,11 @@ import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
+import {SHIP_GATE} from '../../modules/ships/ship-scene-domain.mjs';
 export {CreatureViewer,GESTURES,importCreature};
+// #148: the customizer opens only from the arrival's ship (ship-intro.mjs sets the gate as it navigates here; it stays
+// set, so a reload in here works). Without it (a typed URL, a fresh tab) the arrival plays first and nothing boots.
+if((()=>{try{return sessionStorage.getItem(SHIP_GATE)!=='1';}catch{return false;}})()){location.replace('/pose.html#select');await new Promise(()=>{});}
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
 const $=(id:string)=>document.getElementById(id)!;
 const SHORT:Record<Region,string>={head:'Crown',eye:'Eyes',collar:'Collar',body:'Body',arms:'Hands',feet:'Feet'};
@@ -180,7 +184,7 @@ $('undo').onclick=()=>{if(endPreview()||!undo.length)return;activeRange=null;red
 $('redo').onclick=()=>{if(!redo.length)return;activeRange=null;clearPreview();undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
 $('original').onclick=()=>{clearPreview();commit(fresh());};
 // Done (or the brand link) leaves on the owned look; the preview was never saved.
-for(const a of document.querySelectorAll('.editor-header a'))a.addEventListener('click',()=>{endPreview();});
+for(const a of document.querySelectorAll('.editor-header a,.coach-dock a'))a.addEventListener('click',()=>{endPreview();try{sessionStorage.removeItem(SHIP_GATE);}catch{}});
 $('importFile').addEventListener('change',async event=>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;try{if(file.size>MAX_IMPORT_BYTES)throw Error('Choose a MYR5 recipe smaller than 64 KB.');commit(importCreature(await file.text()));}catch(error){tell((error as Error).message);}finally{input.value='';}});
 $('exportRecipe').onclick=()=>download(new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}),'myr5-recipe.json');
 $('exportGLB').onclick=async()=>{if(!ready||!viewer||previewing())return;try{tell('Preparing your animated model…');download(await viewer.exportGLB(),'myr5-animated.glb');tell('Animated model downloaded');}catch(error){tell((error as Error).message);}};

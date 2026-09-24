@@ -6,7 +6,7 @@
 // `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
 // scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
 // must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
-import {initialScene,SHIP_ANCHOR_Y,coachBand,shipPoseAbove,measureShip} from './ship-scene-domain.mjs';
+import {initialScene,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,coachBand,shipPoseAbove,measureShip,openCustomizer} from './ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 
 const HASH = '#ship';
@@ -50,12 +50,17 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  if (disposed) { disposeModel(loaded.scene); observer.disconnect(); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
  const box = new THREE.Box3().setFromObject(loaded.scene), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
  loaded.scene.position.sub(center);
- const group = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); group.add(loaded.scene); group.scale.setScalar(fit);
- group.position.set(0, SHIP_ANCHOR_Y, 0); group.rotation.set(.08, -.32, 0); scene.add(group);
+ const group = new THREE.Group(), model = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); model.rotation.y = SHIP_FACING; model.add(loaded.scene); group.add(model); group.scale.setScalar(fit);
+ group.position.set(0, SHIP_ANCHOR_Y, SHIP_REST_Z); group.rotation.set(.08, -.32, 0); scene.add(group);
  // Same hover pose as the arrival scene's end: the whole hull above the coach card.
  const measured = measureShip(THREE, group, camera); let pose;
  place = () => { pose = shipPoseAbove(coachBand(stage.getBoundingClientRect(), coachMount.getBoundingClientRect()), measured); group.position.y = pose.y; group.scale.setScalar(fit * pose.scale); };
  place();
+ // #148: the still ship opens the customizer exactly like the arrival's ship does (tap the hull, or Enter/Space).
+ const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+ canvas.tabIndex = 0; canvas.setAttribute('role', 'button'); canvas.setAttribute('aria-label', 'Customize this coach');
+ canvas.addEventListener('click', e => { const r = canvas.getBoundingClientRect(); pointer.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); raycaster.setFromCamera(pointer, camera); if (raycaster.intersectObject(group, true).length) openCustomizer(); });
+ canvas.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCustomizer(); } });
  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
  let raf = 0; const start = performance.now();
  function tick(now) {
@@ -73,30 +78,36 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  };
 }
 
-let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null;
+let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null, customizeBtn = null;
 let viewOwner = null;
 let realShip = null, pushedHash = false, openEpoch = 0, coachStage = null, openHash = HASH;
 
-function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; }
+function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; customizeBtn.hidden = true; }
+// #148: no ship to tap (no WebGL, or the model failed): the customizer is still one plain button away.
+function offerCustomizer() { fallback.hidden = false; customizeBtn.hidden = false; }
+// Inside the app modules/routes.mjs owns this view's #hash (it pushes and pops it: one owner of history). Standalone
+// (no router) the view keeps its own.
+const routed = () => !!window.myr5Routes;
 
 /** No verified pack: the starter ship over today's starter wonder. The upgrade line shows only when
  * signed in; the download button only when they own a ship. Reduced motion or a repeat open idles. */
 async function showStarter({ signedIn, owned, isCurrent, always = false }) {
  const background = starterWonderUrl(backgroundForDay(STARTER_WONDERS));
  bgEl.style.backgroundImage = `url("${background}")`;
- fallback.querySelector('p').textContent = UPGRADE_TEXT; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
+ const line = fallback.querySelector('p'); line.textContent = UPGRADE_TEXT; line.hidden = !signedIn; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
  const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL, getBackgroundUrl: () => background };
  try {
   if ((always || !starterEntranceDone) && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
    if (!isCurrent()) return;
    const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
-   if (await scene.ready && isCurrent()) starterEntranceDone = true;
+   const arrived = await scene.ready;
+   if (arrived && isCurrent()) starterEntranceDone = true; else if (isCurrent()) offerCustomizer();
    return;
   }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP });
   if (!isCurrent()) mounted.dispose(); else realShip = mounted;
- } catch { /* no WebGL or model: the wonder and the coach still show */ }
+ } catch { if (isCurrent()) offerCustomizer(); /* no WebGL or model: the wonder and the coach still show */ }
 }
 
 async function waitForCard(timeoutMs = 8000) {
@@ -105,15 +116,16 @@ async function waitForCard(timeoutMs = 8000) {
  return document.querySelector('.myr5-companion-card');
 }
 
-function onPopState() { if (dialog?.open && location.hash !== openHash) dialog.close(); }
+function onPopState() { if (!routed() && dialog?.open && location.hash !== openHash) dialog.close(); }
 
 function onClose() {
  openEpoch++; clearShipVisual();
  document.body.dataset.shipView = '';
  if (coachStage) window.myr5Creature?.stage?.(coachStage); coachStage = null;
+ window.myr5Creature?.sleep?.(); // the capsule stops drawing under the quilt; its next stage() (this view, a workout) wakes it
  const card = coachMount.querySelector('.myr5-companion-card');
  if (card) document.getElementById('coachMount')?.append(card); // pod.mjs's own observer re-homes it (rest vs pod)
- if (location.hash === openHash) { if (pushedHash) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
+ if (!routed() && location.hash === openHash) { if (pushedHash) history.back(); else history.replaceState(null, '', location.pathname + location.search); }
  pushedHash = false;
 }
 
@@ -121,11 +133,12 @@ function build() {
  dialog = document.createElement('dialog'); dialog.className = 'ship-view'; dialog.setAttribute('aria-label', 'Your ship');
  dialog.innerHTML = '<div class="ship-view-stage"><div class="ship-view-bg" aria-hidden="true"></div><div class="ship-view-coach"></div></div>'
   + '<p class="ship-view-note" role="status"></p>'
-  + '<div class="ship-view-fallback" hidden><p></p><button type="button" class="ship-view-download">Download Ships &amp; worlds</button></div>'
+  + '<div class="ship-view-fallback" hidden><p></p><button type="button" class="ship-view-download">Download Ships &amp; worlds</button><button type="button" class="ship-view-customize" hidden>Open the customizer</button></div>'
   + '<button type="button" class="ship-view-close" aria-label="Close">✕</button>';
  document.body.append(dialog);
  stage = dialog.querySelector('.ship-view-stage'); bgEl = dialog.querySelector('.ship-view-bg'); coachMount = dialog.querySelector('.ship-view-coach');
- note = dialog.querySelector('.ship-view-note'); fallback = dialog.querySelector('.ship-view-fallback'); downloadBtn = dialog.querySelector('.ship-view-download');
+ note = dialog.querySelector('.ship-view-note'); fallback = dialog.querySelector('.ship-view-fallback'); downloadBtn = dialog.querySelector('.ship-view-download'); customizeBtn = dialog.querySelector('.ship-view-customize');
+ customizeBtn.onclick = () => openCustomizer();
  dialog.querySelector('.ship-view-close').onclick = () => dialog.close();
  downloadBtn.onclick = () => { if (typeof window.myr5Packs?.open === 'function') window.myr5Packs.open('coach-ships-biomes'); else document.querySelector('.coach-dock [data-panel="install"]')?.click(); };
  dialog.addEventListener('close', onClose);
@@ -153,7 +166,7 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
  clearShipVisual(); note.textContent = 'Preparing your coach…';
  const firstOpen = !dialog.open;
  if (firstOpen) { openHash = hash; dialog.showModal(); }
- if (location.hash !== openHash) { pushedHash = true; history.pushState({ myr5Ship: true }, '', openHash); } else if (firstOpen) pushedHash = false;
+ if (routed()) pushedHash = false; else if (location.hash !== openHash) { pushedHash = true; history.pushState({ myr5Ship: true }, '', openHash); } else if (firstOpen) pushedHash = false;
  document.body.dataset.shipView = 'true';
  try { await loadCoachViewer?.(); } catch { /* surfaced below via the missing card */ }
  const card = await waitForCard();
@@ -185,7 +198,7 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
    if (!isCurrent()) { bridge.dispose?.(); return dialog; }
    const intro = mountShipScene({ host: stage, assetBridge: bridge, ship: shipId });
    realShip = { dispose() { intro.dispose(); bridge.dispose?.(); } };
-   await intro.ready; if (isCurrent()) fallback.hidden = true; return dialog;
+   const arrived = await intro.ready; if (isCurrent()) { if (arrived) fallback.hidden = true; else offerCustomizer(); } return dialog;
   }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
   if (!isCurrent()) { mounted.dispose(); return dialog; }

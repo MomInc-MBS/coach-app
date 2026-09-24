@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dominantFamily,initialScene,resolveSceneSwap,sampleApproach,SHIP_ANCHOR_Y,coachBand,shipPoseAbove } from '../modules/ships/ship-scene-domain.mjs';
+import { dominantFamily,initialScene,resolveSceneSwap,sampleApproach,SHIP_ANCHOR_Y,SHIP_REST_Z,APPROACH_MS,coachBand,shipPoseAbove } from '../modules/ships/ship-scene-domain.mjs';
 
 test('dominantFamily uses body 3x, head 2x and other parts 1x',()=>{
  assert.equal(dominantFamily({styles:{body:4,head:2,eye:2,collar:2,arms:2,feet:0}}),2);
@@ -18,8 +18,12 @@ test('initial scene derives its ship and biome from the design while keeping the
  assert.deepEqual(initialScene(design),{ship:'analytical',background:'lattice',coach:design});
 });
 test('approach animation begins offscreen and ends at the hover anchor',()=>{
- assert.ok(sampleApproach(0).x>3&&sampleApproach(0).scale<.2);
- assert.deepEqual(sampleApproach(1600),{x:0,y:1.82,z:0,scale:1,roll:0,done:true});
+ // #145: it starts above and behind the camera (z 7), so offscreen, and lands nearer the camera than the coach (z 0).
+ const start=sampleApproach(0),mid=sampleApproach(APPROACH_MS/2);
+ assert.ok(start.z>7&&start.y>SHIP_ANCHOR_Y+2,'starts above and behind the viewer');
+ assert.ok(mid.z<start.z&&mid.z>SHIP_REST_Z&&mid.y>SHIP_ANCHOR_Y&&!mid.done,'mid-flight it is still coming down and in');
+ assert.deepEqual(sampleApproach(APPROACH_MS),{x:0,y:1.82,z:1.5,scale:1,roll:0,done:true});
+ assert.equal(sampleApproach(APPROACH_MS-1).done,false,'the beam waits for done: only the full flight is done');
 });
 test('Original MYR5\'s fresh recipe (creature/source/creator/design.ts fresh()) maps to the supportive starter ship',()=>{
  const original={version:1,styles:{head:0,eye:0,collar:0,body:0,arms:0,feet:0},coach:'supportive',body:'myr5'};

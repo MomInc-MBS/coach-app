@@ -97,7 +97,7 @@ export const MENUS={
  down:{label:'Achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
  hdiamond:{...LEADERBOARD,hidden:true},
- x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'nav',open:via('customize',()=>location.assign('/creature/index.html'))},
+ x:{label:'Character Editor',color:'#ff10f0',icon:ICONS.brush,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))}, // #148: the editor's one door is the oval's ship
  'line-lr':{label:'Meditation',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
  'line-rl':{label:'Reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
  'line-down':{label:'Settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},

@@ -253,6 +253,7 @@ test('everything downloads, then a deferred feature works offline',{timeout:6000
   assert.equal(await cold.evaluate(async()=>{const m=await import('/nutrition-data.mjs');return Array.isArray(m.default)&&m.default.length>0;}),true,'food reference works offline');
   const clip=manifest.phrases['1'];
   assert.equal(await cold.evaluate(async url=>(await fetch(url)).status,clip),200,'voice works offline');
+  await cold.evaluate(()=>sessionStorage.setItem('myr5-ship-gate','1')); // #148: opened through the arrival's ship
   await cold.goto(server.base+'/creature/index.html');
   await cold.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
   const body='roster/01-seed-pearo--3d_character_model';
