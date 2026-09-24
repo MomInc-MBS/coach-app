@@ -9,6 +9,7 @@ import {build as bundleEditor} from 'esbuild';
 import {gzipSync} from 'node:zlib';
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
+import {packNutrition} from './pack-nutrition.mjs';
 import {copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
 if(publicExpansionKey && !(publicExpansionKey.kty==='OKP' && publicExpansionKey.crv==='Ed25519' && typeof publicExpansionKey.x==='string' && /^[A-Za-z0-9_-]{43}$/.test(publicExpansionKey.x) && !/^A+$/.test(publicExpansionKey.x))) throw new Error('PUBLIC_EXPANSION_SIGNING_JWK must be a non-placeholder Ed25519 public JWK');
@@ -32,6 +33,7 @@ await mkdir('dist/client',{recursive:true});
 await rm('dist/client/materials',{recursive:true,force:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
+console.log('Packed nutrition bytes removed:',await packNutrition());
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 if(materialRelease.configured){
  await copySignedMaterialManifests({sourceDir:materialManifestSource,siteRoot:'dist/client',baseUrl:process.env.MYR5_MATERIALS_BASE_URL,publicJwk:materialRelease.publicJwk});
