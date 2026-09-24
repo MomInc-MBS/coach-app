@@ -15,7 +15,7 @@ async function withPortal(run){
     // Minimal stand-in for the real app-updates.mjs banner (same class name, same fixed/bottom shape).
     '<aside class="app-update-banner" role="status" style="position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:9999"><span>Update</span><button type="button" id="toastGotIt">Got it</button></aside>'+
     '<dialog id="anyDialog"><button id="anyDialogClose">Close</button></dialog>'+
-    '<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script>');
+    '<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script>');
    return;
   }
   try{const root=path.startsWith('/modules/portal/')?source:built,file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.webp':'image/webp'})[extname(file)]||'application/octet-stream');res.end(await readFile(file));}catch{res.writeHead(404);res.end();}

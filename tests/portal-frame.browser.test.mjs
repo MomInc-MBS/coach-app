@@ -15,7 +15,7 @@ async function withPortal(run){
  const source=resolve('.'),built=resolve('dist/client');
  const server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://local').pathname;
-  if(path==='/__portal__'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><style>body{margin:0}</style><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script>');return;}
+  if(path==='/__portal__'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><style>body{margin:0}</style><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script>');return;}
   try{const root=path.startsWith('/modules/portal/')?source:built,file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.webp':'image/webp'})[extname(file)]||'application/octet-stream');res.end(await readFile(file));}catch{res.writeHead(404);res.end();}
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
@@ -55,10 +55,10 @@ test('#111 the frame wraps a full-screen board rail at 375x812 and never takes a
  // Nothing on the frame catches a pointer: the full-screen trace canvas is on top everywhere, rail included.
  const hits=await page.evaluate(({face,rail})=>[[face.left-rail/2,face.top+100],[face.left+face.width+rail/2,face.top+face.height/2],[187.5,face.top-rail/2],[face.left-rail/2,face.top-rail/2]].map(([x,y])=>document.elementFromPoint(x,y)?.id),{face:g.face,rail:g.rail});
  assert.deepEqual(hits,['portalOverlay','portalOverlay','portalOverlay','portalOverlay']);
- // A full square along the board's inner edge (the frame's lip) still reads as the rect shape.
+ // The proportional stitched outline remains the trace target after the material extends to the rail.
  const id=await page.evaluate(async({face,pattern})=>{
   const {recognizeShape}=await import('/modules/portal/portal-shapes.mjs'),n=([x,y])=>[(x-pattern.left)/pattern.width,(y-pattern.top)/pattern.height];
-  const l=face.left+2,t=face.top+2,r=face.left+face.width-2,b=face.top+face.height-2,pts=[];
+  const l=pattern.left+2,t=pattern.top+2,r=pattern.left+pattern.width-2,b=pattern.top+pattern.height-2,pts=[];
   for(const [[x0,y0],[x1,y1]] of [[[l,t],[r,t]],[[r,t],[r,b]],[[r,b],[l,b]],[[l,b],[l,t]]])for(let k=0;k<20;k++)pts.push(n([x0+(x1-x0)*k/20,y0+(y1-y0)*k/20]));
   pts.push(n([l,t]));return recognizeShape([pts]);
  },{face:g.face,pattern:g.pattern});
@@ -72,32 +72,20 @@ test('#111 the frame wraps a full-screen board rail at 375x812 and never takes a
  await zoom.close();
 }));
 
-test('#111 a square traced from the frame onto the board opens the rect portal, bezel on the stitched outline, frame diving with it',async()=>withPortal(async(browser,url)=>{
+test('#111 a square traced on the proportional stitched outline opens the rect portal, bezel on the outline and frame in place',async()=>withPortal(async(browser,url)=>{
  await mkdir(FRAMES_DIR,{recursive:true});
- const page=await openPage(browser,url,2),g=await geometry(page),f=g.face;
- const l=f.left+3,t=f.top+3,r=f.left+f.width-3,b=f.top+f.height-3;
- // Dive start gets frozen a third of the way in: headless WebGL frames are slow enough that a plain screenshot lands after
- // the reveal hole has opened. Frame capture only: from the dive on, the page's timers are dropped (it closes after).
- await page.evaluate(()=>{
-  const animate=Element.prototype.animate,setTimer=window.setTimeout;
-  window.setTimeout=(fn,ms,...rest)=>window.__diving?0:setTimer(fn,ms,...rest);
-  Element.prototype.animate=function(frames,timing){const a=animate.call(this,frames,timing);if(this.id==='portalHome'){a.pause();a.currentTime=timing.duration/3;window.__diving=true;}return a;};
- });
- await page.mouse.move(f.left-g.rail/2,t+40);await page.mouse.down(); // starts on the frame's rail
- await page.mouse.move(l,t,{steps:3});await page.mouse.move(r,t,{steps:6});await page.mouse.move(r,b,{steps:10});await page.mouse.move(l,b,{steps:6});await page.mouse.move(l,t,{steps:10});
+ const page=await openPage(browser,url,2),g=await geometry(page),f=g.face,p=g.pattern;
+ const l=p.left+3,t=p.top+3,r=p.left+p.width-3,b=p.top+p.height-3;
+ await page.mouse.move(l,t);await page.mouse.down();
+ await page.mouse.move(r,t,{steps:6});await page.mouse.move(r,b,{steps:10});await page.mouse.move(l,b,{steps:6});await page.mouse.move(l,t,{steps:10});
  await page.mouse.up();
  await page.waitForSelector('#portalHome .portal-glass',{timeout:10000});
  // The bezel is drawn on the exact rect outline: the pattern rect, which is where the stitches are.
  const bezel=await page.evaluate(()=>{const pts=document.querySelector('.portal-bezel polygon').getAttribute('points').split(' ').map(p=>p.split(',').map(Number)),xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return{left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)};});
- const p=boxOf(g.pattern);for(const k of ['left','top','right','bottom'])assert(Math.abs(bezel[k]-p[k])<.6,`bezel ${k} ${bezel[k]} on the stitched outline ${p[k]}`);
- await page.waitForTimeout(2000);
+ const pattern=boxOf(g.pattern);for(const k of ['left','top','right','bottom'])assert(Math.abs(bezel[k]-pattern[k])<.6,`bezel ${k} ${bezel[k]} on the stitched outline ${pattern[k]}`);
  await page.screenshot({path:resolve(FRAMES_DIR,'frame-square-glass.png')});
  await page.screenshot({path:resolve(FRAMES_DIR,'frame-square-glass-corner-zoom.png'),clip:{x:0,y:f.top-g.rail-6,width:90,height:90}});
- await page.waitForFunction(()=>window.__diving,null,{timeout:15000});
- const scale=await page.evaluate(()=>new DOMMatrix(getComputedStyle(document.getElementById('portalHome')).transform).a);
- await page.screenshot({path:resolve(FRAMES_DIR,'frame-dive-start.png')});
- // The frame lives inside #portalHome, so the dive's scale carries it along with the board.
- assert(scale>1,`the dive scales the portal (${scale})`);
+ // Shaped destinations keep the board and rail at phone size while the destination appears through the cut.
  assert(await page.evaluate(()=>document.getElementById('portalHome').contains(document.querySelector('.portal-frame'))));
  await page.close();
 }));
