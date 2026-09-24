@@ -37,7 +37,7 @@ test('standalone creature page hydrates a stable same-origin account before reve
   const open=async(responses,query='',clerk=false)=>{
    accountResponses=[...responses];clerkEnabled=clerk;const context=await browser.newContext(),page=await context.newPage();
    await page.addInitScript(clerk=>{
-    sessionStorage.setItem('myr5-ship-gate','1'); // #148: opened through the arrival's ship
+    sessionStorage.setItem('myr5-ship-gate','ship-admission-v2'); // #148: opened through the arrival's ship
     if(clerk){localStorage.setItem('myr5-login-provider','clerk');window.Clerk={load:async()=>{},addListener:()=>{},session:{id:'session-a',getToken:async()=>'fixture-clerk-token'},user:{id:'owner-a'}};}
     localStorage.setItem('myr5-battle-pass-ledger-v1/account/owner-a',JSON.stringify({ship:['ship-supportive','ship-direct']}));
     localStorage.setItem('myr5-battle-pass-ledger-v1/account/owner-b',JSON.stringify({ship:['ship-calm']}));

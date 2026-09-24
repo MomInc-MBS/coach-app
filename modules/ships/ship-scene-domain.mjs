@@ -36,7 +36,7 @@ export function measureShip(THREE,object,camera){
  const origin=object.position.clone().project(camera).y,above=object.position.clone().add(new THREE.Vector3(0,1,0)).project(camera).y;
  return {top,bottom,origin,unit:above-origin};
 }
-// #148 (Ian 2026-09-23): the customizer opens only from the arrival's ship. The editor (creature/source/editor-workbench.ts)
-// boots only with this per-tab gate set; without it (a typed URL, a fresh tab) it sends the user to the arrival first.
-export const SHIP_GATE='myr5-ship-gate';
-export function openCustomizer(url='/creature/index.html'){try{sessionStorage.setItem(SHIP_GATE,'1');}catch{}location.assign(url);}
+// #148: each ship activation writes a one-use, versioned admission token. The editor consumes it as
+// soon as it loads, so a typed URL cannot reuse an old visit's sessionStorage value.
+export const SHIP_GATE='myr5-ship-gate',SHIP_GATE_TOKEN='ship-admission-v2',SHIP_HISTORY_ADMISSION='myr5-ship-admitted-v2';
+export function openCustomizer(url='/creature/index.html'){try{sessionStorage.setItem(SHIP_GATE,SHIP_GATE_TOKEN);location.assign(url);}catch{location.assign('/pose.html#select');}}

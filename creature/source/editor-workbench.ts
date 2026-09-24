@@ -12,11 +12,22 @@ import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
-import {SHIP_GATE} from '../../modules/ships/ship-scene-domain.mjs';
+import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
 export {CreatureViewer,GESTURES,importCreature};
-// #148: the customizer opens only from the arrival's ship (ship-intro.mjs sets the gate as it navigates here; it stays
-// set, so a reload in here works). Without it (a typed URL, a fresh tab) the arrival plays first and nothing boots.
-if((()=>{try{return sessionStorage.getItem(SHIP_GATE)!=='1';}catch{return false;}})()){location.replace('/pose.html#select');await new Promise(()=>{});}
+// #148: the ship's admission is single-use. A reload can resume this exact editor history entry, but
+// navigating here again (including Back/Forward) needs another completed ship reveal and tap.
+const shipReload=performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming|undefined;
+const admitShipEditor=(()=>{
+ try{
+  const admitted=sessionStorage.getItem(SHIP_GATE)===SHIP_GATE_TOKEN;
+  sessionStorage.removeItem(SHIP_GATE);
+  if(shipReload?.type==='reload'&&history.state?.[SHIP_HISTORY_ADMISSION]===true)return true;
+  if(!admitted)return false;
+  history.replaceState({...history.state,[SHIP_HISTORY_ADMISSION]:true},'');
+  return true;
+ }catch{return false;}
+})();
+if(!admitShipEditor){location.replace('/pose.html#select');await new Promise(()=>{});}
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);};
 const $=(id:string)=>document.getElementById(id)!;
 const SHORT:Record<Region,string>={head:'Crown',eye:'Eyes',collar:'Collar',body:'Body',arms:'Hands',feet:'Feet'};

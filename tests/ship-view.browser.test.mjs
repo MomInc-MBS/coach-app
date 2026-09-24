@@ -189,6 +189,9 @@ test('first verified owned arrival completes the real beam/flash before enabling
  await primeArrival(page);
  await page.evaluate(()=>{window.opening=openArrival();});
  await page.waitForSelector('.ship-scene[data-phase="approach"]');
+ const arrivalCanvas=page.locator('.ship-scene-canvas');await arrivalCanvas.focus();await page.keyboard.press('Enter');await page.waitForTimeout(100);
+ assert.equal(new URL(page.url()).pathname,'/','the ship cannot admit the editor before its reveal is complete');
+ assert.equal(await page.evaluate(()=>sessionStorage.getItem('myr5-ship-gate')),null);
  assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),false);
  assert.equal(await page.locator('.ship-view-coach').evaluate(el=>getComputedStyle(el).opacity),'0');
  await page.evaluate(()=>window.opening);
@@ -280,10 +283,10 @@ test('the beam is hidden until the ship has flown in, charges, then opens',async
 }));
 
 // W2-2Q #148: nothing dead-ends. The still ship (reduced motion, repeat opens, Menu -> Ship) taps through to the
-// customizer like the arrival's ship; with no WebGL a plain button does. Both set the gate the editor checks.
+// customizer like the arrival's ship; with no WebGL a plain button does. Both set the admission token the editor checks.
 const stubEditor=page=>page.route('**/creature/index.html',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>editor</title>'}));
 const gate=page=>page.evaluate(()=>sessionStorage.getItem('myr5-ship-gate'));
-test('the still ship opens the customizer on a tap or Enter, with the gate set',async()=>withPage(async page=>{
+test('the still ship opens the customizer on a tap or Enter, with an admission token set',async()=>withPage(async page=>{
  await page.emulateMedia({reducedMotion:'reduce'});await stubEditor(page);
  assert(await mountFixtureWithShip(page));
  const canvas=page.locator('.ship-view-canvas');await canvas.waitFor();
@@ -293,12 +296,12 @@ test('the still ship opens the customizer on a tap or Enter, with the gate set',
  await page.waitForTimeout(200);assert.equal(new URL(page.url()).pathname,'/','a tap off the hull does nothing');
  await page.mouse.click(box.x+box.width/2,box.y+box.height*.21); // the hull hovers centred in the band above the coach
  await page.waitForURL('**/creature/index.html');
- assert.equal(await gate(page),'1');
+ assert.equal(await gate(page),'ship-admission-v2');
  await page.goBack();await primeFixture(page);assert(await mountFixtureWithShip(page));
  await page.evaluate(()=>sessionStorage.clear());
  await page.locator('.ship-view-canvas').focus();await page.keyboard.press('Enter');
  await page.waitForURL('**/creature/index.html');
- assert.equal(await gate(page),'1');
+ assert.equal(await gate(page),'ship-admission-v2');
 }));
 test('with WebGL blocked the ship view offers a plain "Open the customizer" button',async()=>withPage(async page=>{
  await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
@@ -309,7 +312,7 @@ test('with WebGL blocked the ship view offers a plain "Open the customizer" butt
  assert.equal(await page.locator('.ship-view-fallback p').isVisible(),false,'signed out: no upgrade line, just the button');
  await button.click();
  await page.waitForURL('**/creature/index.html');
- assert.equal(await gate(page),'1');
+ assert.equal(await gate(page),'ship-admission-v2');
 }));
 
 // Lane 2N: after the ship view closes nothing of it keeps drawing: no ship frame is scheduled and the coach capsule

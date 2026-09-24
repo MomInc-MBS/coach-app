@@ -302,6 +302,7 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   const ship=page.locator('dialog.ship-view canvas[role="button"]');
   await ship.waitFor({timeout:30000});await ship.focus();await page.keyboard.press('Enter');
   await page.waitForURL('**/creature/index.html');
+  await page.reload();await page.waitForURL('**/creature/index.html');
   // A typed editor URL in a fresh tab has no gate: the arrival plays first.
   const typed=await context.newPage();await typed.goto(base+'/creature/index.html');
   await typed.waitForURL('**/pose.html#select');
@@ -314,6 +315,11 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   await page.locator('.coach-dock a[href="/pose.html#food"]').click();
   await page.waitForURL('**/pose.html#food');
   await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,null,{timeout:15000});
+  // The admission was consumed on entry. A stale former gate cannot admit a direct editor URL in this same tab.
+  await page.evaluate(()=>sessionStorage.setItem('myr5-ship-gate','1'));
+  await page.goto(base+'/creature/index.html');
+  await page.waitForURL('**/pose.html#select');
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true,null,{timeout:30000});
  }finally{await context.close();}
 });
 

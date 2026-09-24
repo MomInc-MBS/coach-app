@@ -27,7 +27,7 @@ test('customizer body download listener updates footer status', async () => {
   try{
     browser=await chromium.launch({channel:'msedge',headless:true});
     const page=await browser.newPage();
-    await page.addInitScript(()=>sessionStorage.setItem('myr5-ship-gate','1')); // #148: opened through the arrival's ship
+    await page.addInitScript(()=>sessionStorage.setItem('myr5-ship-gate','ship-admission-v2')); // #148: opened through the arrival's ship
     const base='http://127.0.0.1:'+server.address().port;
 
     await page.goto(base+'/creature/index.html');
