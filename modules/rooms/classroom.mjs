@@ -1,5 +1,5 @@
 // Optional scoreboard classroom. Mounted only while the scoreboard dialog is open.
-const CLASS={fov:40,eye:[0,.5,1.6],look:[0,.5,0],desks:{at:[0,.15,.14],scale:.75},board:{min:[-.29,.52,-.42],max:[.29,.83,-.42]},heads:[[-.19,.475,.28],[.19,.475,.28]]};
+const CLASS={fov:40,eye:[0,.5,1.6],look:[0,.5,0],desks:{at:[0,.15,.14],scale:.75},board:{min:[-.29,.52,-.42],max:[.29,.83,-.42]},heads:[[-.19,.44,.28],[.19,.44,.28]]};
 let stylesheet;
 function loadStyle(){return stylesheet??=new Promise(resolve=>{const link=document.createElement('link');link.rel='stylesheet';link.href='/modules/rooms/classroom.css';link.onload=link.onerror=resolve;document.head.append(link);});}
 export function mountClassroom(panel,{host=panel.querySelector('[data-room-host]')}={}){

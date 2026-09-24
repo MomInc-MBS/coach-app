@@ -17,7 +17,7 @@
 .classroom-panel .classroom-board:hover,.classroom-panel .classroom-board:focus-visible{border-color:#174b92;outline:2px solid #174b92}
 .classroom-desk{position:absolute;top:63%;transform:translate(-50%,-100%);display:grid;justify-items:center}
 .classroom-desk:first-child{left:27%}.classroom-desk:nth-child(2){left:73%}
-.classroom-desk .crew-head{width:58px;height:58px;background:#efe6f3;box-shadow:0 4px 10px #0005}
+#accountPanel .classroom-desk .crew-head{width:58px;height:58px;background:transparent;border:0;box-shadow:none}
 .classroom-desk .crew-head canvas{width:54px;height:54px}
 .classroom-desk figure{margin:0;display:grid;justify-items:center;gap:3px}
 .classroom-desk figure{animation:classroom-pop .55s cubic-bezier(.2,.8,.2,1) both}
