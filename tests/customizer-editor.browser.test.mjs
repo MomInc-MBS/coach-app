@@ -80,5 +80,10 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
   recipe=await page.evaluate(()=>window.myr5Companion.recipe);
   assert.equal(recipe.body,'myr5');assert.equal(recipe.headFrom,ROSTER_BODY);
   assert.equal(await page.locator('#creatureStatus').textContent(),'Your coach is ready');
+
+  // A BFCache restore must return through the ship. The admission state still permits the
+  // explicit reload above, but it must not revive an already-disposed editor from history.
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+  await page.waitForURL(url=>url.pathname==='/pose.html'&&url.hash==='#select');
  } finally {await browser?.close();await new Promise(r=>server.close(r));}
 });

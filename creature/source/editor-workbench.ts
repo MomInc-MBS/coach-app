@@ -242,7 +242,6 @@ systemMotion.addEventListener('change',applyMotion);
 window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=importCreature(event.newValue);for(const key of BODY_KEYS)grandfathered.add(recipe[key]);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;document.querySelectorAll<HTMLButtonElement>('[data-gesture]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gesture===current)));},250);
 window.addEventListener('pagehide',()=>{skinEpoch++;skinSource?.dispose();skinSource=null;clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
-window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 // D34 post-download: listen for body download state from service worker
 const pendingBodyUrls=new Set<string>();let bodyDownloadTimer=0;const originalStatus='Your coach is ready';
 navigator.serviceWorker?.addEventListener('message',({data})=>{
