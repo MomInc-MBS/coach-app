@@ -41,16 +41,89 @@ export function bossStates(progress={},tracks=null){
  TIERS.forEach((tier,t)=>{if(tier.track!==null)return;out[t]=row(t,open);open=open&&out[t].every(b=>b.state==='done');});
  return out.flat();
 }
-let dialog,stage,detail;
-const stars=()=>Array.from({length:36},()=>`<i style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*100).toFixed(1)}%;--d:${(Math.random()*4).toFixed(2)}s"></i>`).join('');
+let dialog,stage,detail,artEl,bossesEl,layers,raf=0,t0=0,far,near;
+// Zoom parallax factor per depth: how much of the stage's translate/scale each layer gets (D45 #142).
+const DEPTH={far:.35,mid:.65,near:1.25};
+const prefersReducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const wrap=v=>v-Math.floor(v);
+const dots=n=>Array.from({length:n},()=>`<i style="left:${(Math.random()*100).toFixed(1)}%;top:${(Math.random()*100).toFixed(1)}%;--d:${(Math.random()*4).toFixed(2)}s"></i>`).join('');
+const asteroid=(r0,r1)=>({r:rand(r0,r1),rot:rand(0,7),vr:rand(-.3,.3),verts:Array.from({length:8},()=>rand(.55,1))});
+// Far layer (unit 0..1 space, positions wrap): a dust field plus a few slow drifting stars and dark asteroids.
+function makeFar(){
+ return {
+  dust:Array.from({length:60},()=>({x:Math.random(),y:Math.random(),r:rand(.5,1.2),a:rand(.3,.85)})),
+  stars:Array.from({length:Math.round(rand(4,6))},()=>({x:Math.random(),y:Math.random(),vx:rand(.01,.025)*(Math.random()<.5?-1:1),vy:rand(.005,.015)*(Math.random()<.5?-1:1),r:rand(1.1,1.8)})),
+  rocks:Array.from({length:Math.round(rand(2,3))},()=>({x:Math.random(),y:Math.random(),vx:rand(.004,.012)*(Math.random()<.5?-1:1),vy:rand(.002,.007)*(Math.random()<.5?-1:1),...asteroid(9,16)})),
+ };
+}
+// Near layer: 3-5 debris chunks, each a straight crossing of the art that loops every 6-14s.
+function makeNear(){
+ return Array.from({length:Math.round(rand(3,5))},()=>{
+  const alongX=Math.random()<.5,fwd=Math.random()<.5,a=fwd?-.2:1.2,b=fwd?1.2:-.2;
+  return {x0:alongX?a:rand(-.1,1.1),y0:alongX?rand(-.1,1.1):a,x1:alongX?b:rand(-.1,1.1),y1:alongX?rand(-.1,1.1):b,dur:rand(6,14),phase:Math.random(),...asteroid(16,30)};
+ });
+}
+function poly(ctx,cx,cy,r,rot,verts){
+ ctx.beginPath();
+ verts.forEach((v,i)=>{const a=rot+i/verts.length*Math.PI*2,x=cx+Math.cos(a)*r*v,y=cy+Math.sin(a)*r*v;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+ ctx.closePath();
+}
+// Irregular dark polygon with a lit rim (a directional gradient stroke) — cheap stand-in for a lit asteroid.
+function rock(ctx,cx,cy,r,rot,verts,alpha){
+ ctx.globalAlpha=alpha;poly(ctx,cx,cy,r,rot,verts);ctx.fillStyle='#0c0818';ctx.fill();
+ const g=ctx.createLinearGradient(cx-r,cy-r,cx+r*.2,cy+r*.2);
+ g.addColorStop(0,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');
+ ctx.strokeStyle=g;ctx.lineWidth=1.2;ctx.stroke();ctx.globalAlpha=1;
+}
+function drawFar(elapsed){
+ const {ctx,w,h,field}=far,t=elapsed/1000;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle='#fff';
+ for(const d of field.dust){ctx.globalAlpha=d.a;ctx.beginPath();ctx.arc(d.x*w,d.y*h,d.r,0,7);ctx.fill();}
+ ctx.globalAlpha=1;ctx.shadowColor='#fff';
+ for(const s of field.stars){ctx.shadowBlur=6;ctx.beginPath();ctx.arc(wrap(s.x+s.vx*t)*w,wrap(s.y+s.vy*t)*h,s.r,0,7);ctx.fill();}
+ ctx.shadowBlur=0;
+ for(const a of field.rocks)rock(ctx,wrap(a.x+a.vx*t)*w,wrap(a.y+a.vy*t)*h,a.r,a.rot+a.vr*t,a.verts,.8);
+}
+function drawNear(elapsed){
+ const {ctx,w,h,field}=near,t=elapsed/1000;
+ ctx.clearRect(0,0,w,h);
+ for(const p of field){const u=wrap(t/p.dur+p.phase);rock(ctx,(p.x0+(p.x1-p.x0)*u)*w,(p.y0+(p.y1-p.y0)*u)*h,p.r,p.rot+t*p.vr,p.verts,.85);}
+}
+function draw(elapsed){drawFar(elapsed);drawNear(elapsed);}
+// devicePixelRatio capped at 2; canvases are sized in real CSS px via setTransform so draw math stays unit-space.
+function fitLayers(){
+ const r=stage.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
+ for(const layer of [far,near]){
+  const c=layer.canvas;c.width=Math.max(1,Math.round(r.width*dpr));c.height=Math.max(1,Math.round(r.height*dpr));
+  layer.ctx=c.getContext('2d');layer.ctx.setTransform(dpr,0,0,dpr,0,0);layer.w=r.width;layer.h=r.height;
+ }
+}
+// One rAF loop for both canvases; stopped on dialog close and while the tab is hidden.
+function startLoop(){
+ if(raf||prefersReducedMotion()||!dialog?.open||document.hidden)return;
+ const tick=now=>{raf=requestAnimationFrame(tick);draw(now-t0);};
+ raf=requestAnimationFrame(tick);
+}
+function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;}
 function build(){
  dialog=document.createElement('dialog');dialog.className='ach-board';dialog.setAttribute('aria-label','Achievements');
- dialog.innerHTML=`<div class="ach-stage"><img class="ach-art" src="${IMAGE}" alt="Boss constellation" draggable="false"><div class="ach-stars" aria-hidden="true">${stars()}</div><div class="ach-bosses"></div></div><header class="ach-head"><h1>Achievements</h1><p class="ach-count"></p></header><section class="ach-detail" hidden></section><button type="button" class="ach-close" aria-label="Close">✕</button>`;
+ dialog.innerHTML=`<div class="ach-stage"><img class="ach-art ach-parallax" src="${IMAGE}" alt="Boss constellation" draggable="false">`+
+  `<canvas class="ach-stars ach-parallax" data-depth="far" data-peer-depth="far" aria-hidden="true"></canvas>`+
+  `<div class="ach-stars ach-parallax" data-depth="mid" data-peer-depth="mid" aria-hidden="true">${dots(40)}</div>`+
+  `<div class="ach-bosses ach-parallax"></div>`+
+  `<canvas class="ach-stars ach-parallax" data-depth="near" data-peer-depth="near" aria-hidden="true"></canvas>`+
+  `</div><header class="ach-head"><h1>Achievements</h1><p class="ach-count"></p></header><section class="ach-detail" hidden></section><button type="button" class="ach-close" aria-label="Close">✕</button>`;
  document.body.append(dialog);
  stage=dialog.querySelector('.ach-stage');detail=dialog.querySelector('.ach-detail');
+ artEl=dialog.querySelector('.ach-art');bossesEl=dialog.querySelector('.ach-bosses');
+ layers={far:dialog.querySelector('[data-depth=far]'),mid:dialog.querySelector('[data-depth=mid]'),near:dialog.querySelector('[data-depth=near]')};
+ far={canvas:layers.far,field:makeFar()};near={canvas:layers.near,field:makeNear()};t0=performance.now();
  dialog.querySelector('.ach-close').onclick=()=>dialog.close();
  stage.addEventListener('click',e=>{if(dialog.classList.contains('zoomed')&&!e.target.closest('.ach-boss'))unzoom();});
- dialog.addEventListener('close',unzoom);
+ dialog.addEventListener('close',()=>{unzoom();stopLoop();});
+ new ResizeObserver(()=>{fitLayers();draw(performance.now()-t0);}).observe(stage);
+ document.addEventListener('visibilitychange',()=>document.hidden?stopLoop():startLoop());
 }
 function paint(){
  const host=stage.querySelector('.ach-bosses'),states=bossStates(loadProgress(),selectedTracks());host.replaceChildren();
