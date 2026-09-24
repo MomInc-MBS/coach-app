@@ -1,5 +1,5 @@
-// #111 (W2-2K): the MOM Inc metal frame around the board. The board face sits at least 20px inside every
-// screen edge at 375x812, clear of the Pod button and the Menu reserve; the frame wraps the face exactly, never
+// #111 (W2-2K): the MOM Inc metal frame around the board. The board fills the rail at the physical perimeter at
+// 375x812; overlay controls remain above it. The frame wraps the face exactly, never
 // takes a pointer, and a square traced along its inner edge (starting on the frame) still opens the rect portal
 // with the glass bezel on the stitched outline. Frames land in .frames/ (untracked) per the brief's Verify section.
 import test from 'node:test';
@@ -39,16 +39,14 @@ async function geometry(page){
  });
 }
 
-test('#111 the frame wraps the board face 20px+ inside every edge at 375x812, clear of Pod and Menu, and never takes a pointer',async()=>withPortal(async(browser,url)=>{
+test('#111 the frame wraps a full-screen board rail at 375x812 and never takes a pointer',async()=>withPortal(async(browser,url)=>{
  await mkdir(FRAMES_DIR,{recursive:true});
  const page=await openPage(browser,url);
  const g=await geometry(page),face=boxOf(g.face),frame=boxOf(g.frame),outer={left:frame.left-g.rail,top:frame.top-g.rail,right:frame.right+g.rail,bottom:frame.bottom+g.rail};
- assert(face.left>=20&&face.top>=20&&375-face.right>=20&&812-face.bottom>=20,`board face must sit 20px+ inside every edge: ${JSON.stringify(face)}`);
+ assert(Math.abs(face.left-g.rail)<.6&&Math.abs(face.top-g.rail)<.6&&Math.abs(face.right-(375-g.rail))<.6&&Math.abs(face.bottom-(812-g.rail))<.6,`board face fills the rail interior: ${JSON.stringify(face)}`);
  for(const k of ['left','top','right','bottom'])assert(Math.abs(frame[k]-face[k])<.6,`the frame wraps the face exactly (${k}: ${frame[k]} vs ${face[k]})`);
  assert(g.rail>=12,'the rail takes the margin');
- assert(outer.left>=0&&outer.top>=0&&outer.right<=375&&outer.bottom<=812,`the whole frame is on screen: ${JSON.stringify(outer)}`);
- assert(outer.bottom<=g.menu.top,`the frame clears the Menu button (${outer.bottom} vs ${g.menu.top})`);
- assert(outer.top>=g.pod.top+g.pod.height,`the frame clears the Pod button (${outer.top})`);
+ assert(Math.abs(outer.left)<.6&&Math.abs(outer.top)<.6&&Math.abs(outer.right-375)<.6&&Math.abs(outer.bottom-812)<.6,`the rail reaches the physical perimeter: ${JSON.stringify(outer)}`);
  const pattern=boxOf(g.pattern);
  assert(pattern.left>=face.left&&pattern.top>=face.top&&pattern.right<=face.right&&pattern.bottom<=face.bottom,'the stitched pattern stays inside the face');
  assert.equal(g.bolts.length,8,'four corner bolts and two along each long edge');

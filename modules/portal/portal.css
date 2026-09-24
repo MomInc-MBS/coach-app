@@ -2,14 +2,13 @@
 #portalHome[hidden]{display:none}
 #portalHome.no-board{background:radial-gradient(ellipse at 50% 30%,#2a1c38,#100a17 70%)}
 #portalHome.no-board #portalBoardHost,#portalHome.no-board #portalOverlay,#portalHome.no-board #portalShadows{display:none}
-/* #111 MOM Inc metal frame. The board face sits --portal-inset inside the safe screen edges, below the Pod button and
-   above --portal-bottom-reserve (the Menu button; lane 2A's bottom bar sets it), so a full-size trace stays clear of
-   edge swipes. The frame's rail fills that margin. A board sets --face-* (its face box in the host; default: the whole
+/* #111 MOM Inc metal frame. The board fills the window behind the overlay controls; its rail runs at the physical
+   perimeter. A board sets --face-* (its face box in the host; default: the whole
    host) and the frame wraps it, above the board canvas, under the glass bezel and the trace canvas: it never takes a
    pointer, and it scales with #portalHome in a dive to a home/nav destination (a dialog destination keeps the frame
    still: see #portalChrome). Metal after the pod capsule and control board: CSS only. */
-#portalHome,#portalChrome{--portal-inset:20px;--portal-rail:15px;--portal-top-reserve:calc(max(12px,env(safe-area-inset-top)) + 48px);--portal-bottom-reserve:calc(max(16px,env(safe-area-inset-bottom)) + 56px)}
-#portalBoardHost{position:absolute;z-index:1;left:calc(env(safe-area-inset-left,0px) + var(--portal-inset));right:calc(env(safe-area-inset-right,0px) + var(--portal-inset));top:calc(var(--portal-top-reserve) + var(--portal-rail));bottom:calc(var(--portal-bottom-reserve) + var(--portal-rail))}
+#portalHome,#portalChrome{--portal-rail:15px}
+#portalBoardHost{position:absolute;z-index:1;inset:var(--portal-rail)}
 .portal-frame{--screw:#cbbab0 0 1.4px,#57474f 1.9px 3px,#0000 3.5px;position:absolute;z-index:1;box-sizing:border-box;left:var(--face-left,0px);top:var(--face-top,0px);width:var(--face-width,100%);height:var(--face-height,100%);border-radius:3px;pointer-events:none;box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b}
 .portal-frame:before{content:'';position:absolute;inset:calc(-1*var(--portal-rail));padding:var(--portal-rail);border-radius:calc(var(--portal-rail)/2 + 3px);background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),repeating-linear-gradient(0deg,#0000 0 2px,#00000010 2px 3px),linear-gradient(160deg,#7e6a7c,#4d3d4f 26%,#3b2f42 52%,#2b2132 78%,#564458);box-shadow:inset 0 1px #e6d2da99,inset 1px 0 #d6c0cc44,inset 0 -2px #000a,inset -1px 0 #0007;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 /* The lip: a dark seam, a back-lit bevel line on the rail's inner edge, and the rail's shadow falling onto the board. */
@@ -48,13 +47,7 @@
 #portalChrome .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b,0 0 0 100vmax #17111e}
 dialog.portal-framed{position:fixed!important;inset:auto!important;left:var(--face-left)!important;top:var(--face-top)!important;width:var(--face-width)!important;height:var(--face-height)!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:3px!important;box-sizing:border-box!important}
 dialog.portal-framed::backdrop{background:#17111e!important}
-/* Release 5: the app's bottom bar (routes.mjs; --myr5-bar in launch.css) is the reserve under the frame. The board face
-   stops above it, and while a destination is framed the chrome's matte and the dialog's backdrop end at the bar's top
-   edge, so the bar (inside the open route's dialog, or on the page while the dialog is still arriving) stays visible and
-   tappable below the frame and never sits in its window. */
-body:has(#coachDock) :is(#portalHome,#portalChrome){--portal-bottom-reserve:var(--myr5-bar)}
-body:has(#coachDock) #portalChrome{bottom:var(--myr5-bar)}
-body:has(#coachDock) dialog.portal-framed::backdrop{bottom:var(--myr5-bar)}
+/* The dock and portal controls float above the cloth. They no longer reserve a blank band inside the frame. */
 /* #134 the energy round an open destination, in its portal's shape (JS: portal.mjs showAura). All masks drawn once; in
    each fire layer a wheel of the neons (a conic gradient round the outline's centre, JS sizes it) turns by transform.
    Takes no pointer (the chrome takes none). */

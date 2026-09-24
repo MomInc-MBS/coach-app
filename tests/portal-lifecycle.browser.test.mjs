@@ -88,3 +88,29 @@ test('a missing quilt texture (no Starter pack, offline) gives a plain stitched 
  await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
  await page.close();
 }));
+
+test('the rectangular portal frames the live workout page, restores it on close, and restores it before BEGIN',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url);
+ await page.evaluate(()=>{const home=document.createElement('main'),start=document.createElement('button');home.id='homeScreen';start.id='start';start.textContent='BEGIN';home.append(start);document.body.append(home);start.addEventListener('click',()=>window.beginParent=start.closest('#homeScreen')?.parentElement===document.body);});
+ assert(await open(page));
+ await page.evaluate(()=>portal.open('rect'));
+ await page.waitForFunction(()=>document.getElementById('portalWorkoutHome')?.open&&document.getElementById('portalWorkoutHome')?.querySelector('#homeScreen'));
+ assert.equal(await page.evaluate(()=>document.getElementById('portalWorkoutHome').classList.contains('portal-framed')),true);
+ await page.evaluate(()=>document.getElementById('portalWorkoutHome').close());
+ await page.waitForFunction(()=>document.getElementById('homeScreen')?.parentElement===document.body);
+ await page.evaluate(()=>portal.open('rect'));
+ await page.waitForFunction(()=>document.getElementById('portalWorkoutHome')?.open);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>window.beginParent===true&&document.getElementById('homeScreen')?.parentElement===document.body&&!document.getElementById('portalWorkoutHome').open);
+ await page.close();
+}));
+
+test('line-up Menu opens inside the full portal frame',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url);assert(await open(page));
+ await page.evaluate(()=>portal.open('line-up'));
+ await page.waitForFunction(()=>document.getElementById('portalMenu')?.open&&document.getElementById('portalMenu').classList.contains('portal-framed'));
+ const geometry=await page.evaluate(()=>{const f=document.querySelector('#portalChrome .portal-frame')?.getBoundingClientRect(),m=document.getElementById('portalMenu').getBoundingClientRect();return {frame:{left:f.left,top:f.top,width:f.width,height:f.height},menu:{left:m.left,top:m.top,width:m.width,height:m.height}};});
+ assert.deepEqual(geometry.menu,geometry.frame);
+ await page.evaluate(()=>document.getElementById('portalMenu').close());await page.waitForFunction(()=>!document.getElementById('portalChrome').matches(':popover-open'));
+ await page.close();
+}));

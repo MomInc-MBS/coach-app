@@ -3,6 +3,12 @@
 // through the hole behind it for a short interactive loading phase — then opens the shape's menu.
 // AGPL-3.0-or-later.
 import {createQuiltBoard,QUILT} from './portal-board.mjs';
+import {createGlbBoard} from './portal-board-glb.mjs';
+import {ice} from './portal-board-ice.mjs';
+import {grass} from './portal-board-grass.mjs';
+import {cogs} from './portal-board-cogs.mjs';
+import {jelly} from './portal-board-jelly.mjs';
+import {wood} from './portal-board-wood.mjs';
 import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
 import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
@@ -44,8 +50,8 @@ const TAP_MS=350,TAP_MOVE_PX=32,TAP_HIT_PX=14,ALMOST_COVER=.65,ALMOST_MS=1200,HI
 const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes(id));
 
 // Board catalogue: add one line per wave-2 board here.
-export const PRODUCTION_PORTALS=Object.freeze(['quilt']);
-const BOARDS={quilt:{label:'Quilt',create:host=>createQuiltBoard(host)}};
+export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood']);
+const BOARDS={quilt:{label:'Quilt',create:host=>createQuiltBoard(host)},ice:{label:'Ice',create:host=>createGlbBoard(host,{effect:ice})},grass:{label:'Grass',create:host=>createGlbBoard(host,{effect:grass})},cogs:{label:'Cogs',create:host=>createGlbBoard(host,{effect:cogs})},jelly:{label:'Jelly',create:host=>createGlbBoard(host,{effect:jelly})},wood:{label:'Wood',create:host=>createGlbBoard(host,{effect:wood})}};
 // Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
 // a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module
 // is imported (window.__portalTrailProbe above is the same pattern). Its create() only touches `host` at
@@ -59,7 +65,7 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
  })};
 const BOARD_KEY='myr5.portalBoard';
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
-const store={get(){return 'quilt'},set(){}};
+const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 function initialBoardId(){
  const p=new URLSearchParams(location.search).get('board');if(p&&BOARDS[p])return p;
  const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored])return stored;
@@ -96,7 +102,7 @@ const LEADERBOARD={label:'Leaderboard',route:'scoreboard',color:'#ffff33',icon:I
 export const MENUS={
  // Ian 2026-09-23: the square opens the workout start page (the pod scrolled to its viewing port, control board and
  // BEGIN; no auto-start); the oval is the coach's arrival in the ship view, its entrance played every time.
- rect:{label:'Workout',route:'workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'home',open:via('workout',()=>scrollTo({top:0,behavior:prefersReducedMotion()?'auto':'smooth'}))},
+ rect:{label:'Workout',route:'workout',color:'#ff5f1f',icon:ICONS.dumbbell,kind:'dialog',open:via('workout',()=>openWorkoutHome())},
  oval:{label:'Choose Workout',route:'select',color:'#1f51ff',icon:ICONS.dumbbell,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
  up:{label:'Food',route:'food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
  down:{label:'Achievements',route:'achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
@@ -169,7 +175,7 @@ function growHole(el,pts,box,current=()=>true,ms=PORTAL.revealMs){
  });
 }
 
-let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome;
+let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome,workoutHome,workoutSource,workoutNode;
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
@@ -185,7 +191,7 @@ let idleTimer=0,idleCycle=null,fading=[];
 let hint=null,lastTap=null;
 
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
-function boardChipsHtml(){return '<span class="portal-board-label">Quilt portal</span>';}
+function boardChipsHtml(){return Object.entries(BOARDS).filter(([id])=>PRODUCTION_PORTALS.includes(id)).map(([id,b])=>`<button type="button" data-board="${id}" aria-pressed="${id===boardId}">${b.label}</button>`).join('');}
 function updateBoardChips(){menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));}
 // Swaps the mounted board: pauses/disposes the old one, creates the new one, falls back to the
 // quilt (then the no-board menu sheet) on failure. Pointer listeners read the `board` variable at
@@ -284,7 +290,20 @@ function buildDom(){
   if(menu.kind==='dialog'){const run=++sequence;openDirect(menu,()=>run===sequence&&!lifecycle.signal.aborted);return;}
   setVisible(false);menu.open?.();
  });
- menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=()=>{menuSheet.close();loadBoard(btn.dataset.board);});
+ menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected);if(!lifecycle.signal.aborted)setVisible(true);});
+ workoutHome=document.createElement('dialog');workoutHome.id='portalWorkoutHome';workoutHome.className='portal-workout-home';document.body.append(workoutHome);
+ workoutHome.addEventListener('close',restoreWorkoutHome);
+}
+
+function restoreWorkoutHome(){
+ if(workoutNode&&workoutSource){workoutSource.parent.insertBefore(workoutNode,workoutSource.next);workoutSource=null;workoutNode=null;}
+}
+function openWorkoutHome(){
+ if(!workoutHome)return null;
+ if(workoutHome.open)return workoutHome;
+ const home=document.getElementById('homeScreen');if(!home)return null;
+ backgroundBlocked(false);workoutNode=home;workoutSource={parent:home.parentNode,next:home.nextSibling};workoutHome.append(home);workoutHome.showModal();
+ return workoutHome;
 }
 
 function backgroundBlocked(block){
@@ -299,8 +318,9 @@ function backgroundBlocked(block){
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
 function openMenu(){
- setVisible(false);menuChosen=false;menuSheet.showModal();
- menuSheet.addEventListener('close',()=>{if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
+ const {face}=restFace();setVisible(false);menuChosen=false;menuSheet.showModal();
+ if(face&&frameOn(face,windowLook('line-up',MENUS['line-up'],face)))frameDialog(menuSheet);
+ menuSheet.addEventListener('close',()=>{frameOff();if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
 }
 
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
@@ -808,6 +828,10 @@ function resizeOverlay(){
  overlay.width=Math.round(Math.max(1,r.width)*dpr);overlay.height=Math.round(Math.max(1,r.height)*dpr);
  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
+function mapOverlayClientSpace(){
+ const dpr=Math.min(devicePixelRatio||1,2),r=overlay.getBoundingClientRect(),w=overlay.clientWidth||1,h=overlay.clientHeight||1,sx=w/Math.max(1,r.width),sy=h/Math.max(1,r.height);
+ ctx.setTransform(dpr*sx,0,0,dpr*sy,-r.left*dpr*sx,-r.top*dpr*sy);
+}
 function strokeGlow(pts,color,alpha,width){
  if(pts.length<2)return;
  ctx.save();ctx.globalAlpha=alpha;ctx.lineCap='round';ctx.lineJoin='round';
@@ -1146,6 +1170,7 @@ function drawFrame(_,now=performance.now()){
  if(idleCycle&&!idleEligible())scheduleIdle();
  rafId=0;
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,overlay.width,overlay.height);ctx.restore();
+ mapOverlayClientSpace();
  if(outlineFlash){
   const dur=outlineFlash.duration||350,t=now-outlineFlash.start;
   if(t<dur){
@@ -1473,7 +1498,7 @@ async function openDirect(menu,current){
 // #131: the shapes that aren't full screen open INTO their cut, the quilt staying on as the wall; the rest dive until
 // the destination fills the frame. #124: the four lines and the X get the wormhole too, shorter (PORTAL.short): a line
 // has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
-const SHAPED=new Set(['oval','up','down','vdiamond','hdiamond']);
+const SHAPED=new Set(['rect','oval','up','down','vdiamond','hdiamond']);
 // A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
 export function lensPts([ax,ay],[bx,by],half,n=24){
  const l=Math.hypot(bx-ax,by-ay)||1,nx=-(by-ay)/l,ny=(bx-ax)/l;
@@ -1643,6 +1668,7 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
+ document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
  menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
@@ -1661,12 +1687,13 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifetime.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
   trace(strokes){const id=recognizeShape(strokes);if(id)runShape(id);return id;},
   board:id=>loadBoard(id),
+  openWorkoutHome,
   flashTransition:async({duration=520}={})=>{
    duration=Number.isFinite(duration)?Math.max(0,Math.min(duration,10000)):520;
    if(prefersReducedMotion())duration=0;
