@@ -722,14 +722,6 @@ function tiltAccess(){
  if(typeof DeviceOrientationEvent.requestPermission!=='function')return 'free';
  try{return localStorage.getItem(TILT_KEY)||'ask';}catch{return 'ask';}
 }
-// requestPermission() exists in Chrome too, where it only reports (granted, no prompt). Asked without a tap, it answers
-// there and rejects on iOS until the user has allowed it: only then does the chip show.
-function askTilt(dialog,signal){
- DeviceOrientationEvent.requestPermission().then(answer=>answer==='granted',()=>false).then(granted=>{
-  if(signal.aborted)return;
-  if(granted)addEventListener('deviceorientation',onOrient,{signal});else if(peer.cfg?.scene||peer.cfg?.chip)tiltChip(dialog);
- });
-}
 function peerOn(dialog){
  peerOff();
  if(prefersReducedMotion()||document.body.dataset.cameraWorkout==='true')return;
@@ -738,7 +730,7 @@ function peerOn(dialog){
  peer.els=(cfg.layers||[]).flatMap(([s,px])=>[...dialog.querySelectorAll(s)].map(el=>[el,px]));
  const access=tiltAccess();
  if(access==='free'||access==='granted')addEventListener('deviceorientation',onOrient,{signal});
- else if(access==='ask')askTilt(dialog,signal);
+ else if(access==='ask'&&(cfg.scene||cfg.chip))tiltChip(dialog);
  if(!cfg.scene){
   dialog.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!peer.sensor)peer.drag={x:e.clientX,y:e.clientY,id:e.pointerId};},{signal,passive:true});
   dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});

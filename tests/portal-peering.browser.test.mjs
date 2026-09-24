@@ -151,14 +151,41 @@ test('release 5: switching routes from the bar while a destination is framed mov
  }finally{await context.close();}
 });
 
+test('iOS tilt permission waits for the Allow chip tap',{timeout:90000},async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  await page.evaluate(()=>{
+   localStorage.removeItem('myr5.tiltPermission');window.__tiltPermissionCalls=0;
+   Object.defineProperty(DeviceOrientationEvent,'requestPermission',{configurable:true,value:()=>{window.__tiltPermissionCalls++;return Promise.resolve('granted');}});
+   window.run=window.myr5Portal.open('up');
+  });
+  await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
+  await page.evaluate(()=>window.run);
+  await page.waitForFunction(()=>document.querySelector('.portal-tilt-chip'));
+  assert.equal(await page.evaluate(()=>window.__tiltPermissionCalls),0,'opening the scene does not request permission');
+  await page.locator('.portal-tilt-chip').click();
+  await page.waitForFunction(()=>window.__tiltPermissionCalls===1);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.tiltPermission')),'granted','the tap records the granted choice');
+ }finally{await context.close();}
+});
+
 test('#135 tilt looks round the pyramid through the triangle (the cut stays put), flat menus slide a little, reduced motion stays still',{timeout:240000},async()=>{
  const tilt=(page,gamma,beta=50)=>page.evaluate(([g,b])=>{for(let i=0;i<3;i++)dispatchEvent(new DeviceOrientationEvent('deviceorientation',{alpha:0,beta:b,gamma:g}));},[gamma,beta]);
  const settled=page=>page.waitForTimeout(1200);
  const {context,page}=await openApp(browser,base);
  try{
+  await page.evaluate(()=>{
+   localStorage.removeItem('myr5.tiltPermission');
+   Object.defineProperty(DeviceOrientationEvent,'requestPermission',{configurable:true,value:()=>Promise.resolve('granted')});
+  });
   await page.evaluate(()=>{window.run=window.myr5Portal.open('up');});
   await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
   await page.evaluate(()=>window.run);
+  const tiltChip=page.locator('.portal-tilt-chip');
+  if(await tiltChip.count()){
+   await tiltChip.click();
+   await page.waitForFunction(()=>localStorage.getItem('myr5.tiltPermission')==='granted');
+  }
   await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:30000});
   await page.waitForTimeout(900);
   const fixed=()=>page.evaluate(()=>({clip:document.getElementById('mealsPanel').style.clipPath.split('Z')[0],face:document.getElementById('portalChrome').style.cssText})); // the cut (its labels, in front of the wall, ride the pyramid)
