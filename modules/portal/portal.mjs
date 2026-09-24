@@ -1668,7 +1668,7 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
- document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
+ document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){setVisible(false);restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
  menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());

@@ -102,6 +102,9 @@ test('the rectangular portal frames the live workout page, restores it on close,
  await page.waitForFunction(()=>document.getElementById('portalWorkoutHome')?.open);
  await page.locator('#start').click();
  await page.waitForFunction(()=>window.beginParent===true&&document.getElementById('homeScreen')?.parentElement===document.body&&!document.getElementById('portalWorkoutHome').open);
+ await page.waitForTimeout(850);
+ assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),true);
+ assert.equal(await page.evaluate(()=>document.getElementById('homeScreen').inert),false);
  await page.close();
 }));
 
