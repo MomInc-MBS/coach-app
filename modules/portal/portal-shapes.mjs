@@ -56,6 +56,21 @@ const SHAPE_IDS = [
   'x',
 ];
 
+// Shape frame: the sub-rect of a board's face (UV, v down) where the templates above actually sit —
+// e.g. a painted door with a blank panel strip below the art, or a carved pattern inset from the
+// edges. toFrame maps a face-UV point into the frame's own 0..1 space (a raw trace, before
+// recognizeShape); fromFrame is the inverse (a template point, placed back onto the face for the
+// cut, the portal-glass clip, and guide drawing). Default = the whole face, a no-op.
+export const FULL_FRAME = { x0: 0, y0: 0, x1: 1, y1: 1 };
+export const toFrame = (u, v, frame = FULL_FRAME) => [
+  (u - frame.x0) / (frame.x1 - frame.x0),
+  (v - frame.y0) / (frame.y1 - frame.y0),
+];
+export const fromFrame = (u, v, frame = FULL_FRAME) => [
+  frame.x0 + u * (frame.x1 - frame.x0),
+  frame.y0 + v * (frame.y1 - frame.y0),
+];
+
 // ---------------------------------------------------------------------------
 // Utility helpers
 // ---------------------------------------------------------------------------
@@ -155,6 +170,73 @@ const registeredTemplate = (template, trace) => {
   return template.map(([x, y]) => [cx + (x - cx) * sx + dx, cy + (y - cy) * sy + dy]);
 };
 
+// Corner detection, used only to break ties when a trace passes the distance/coverage
+// check against more than one template (e.g. a rect traced a few % smaller than its
+// template happens to land closer, on raw mean distance alone, to the oval template than
+// to its own — see recognizeShape). A raw trace's per-point finger jitter (up to ~0.045 in
+// the sloppy-trace tests) is *larger* than the ~0.01 spacing between consecutive points, so
+// it must be smoothed — not just scanned at a coarser step — before direction can mean
+// anything: a box filter (smoothCorner) first, over a window well wider than the jitter,
+// then a scan that measures the turn at each point using a neighbour CORNER_REACH away
+// (rather than the adjacent sample) so a single noisy sample can't fake a corner, while a
+// real corner still reads as sharp regardless of exactly where the scan lands on it. Flag
+// direction changes sharper than CORNER_ANGLE and merge adjacent flags into one corner,
+// since a real corner stays sharp for a whole CORNER_REACH-ish stretch either side of it.
+// (Constants tuned against tests/portal-shapes.test.mjs's own jittered traces, amount<=.045.)
+const CORNER_SMOOTH_RADIUS = 10; // samples of the .01-spaced fine resample, each side (~.1 window)
+const CORNER_SCAN_STEP = 0.03;
+const CORNER_REACH = 0.15;
+const CORNER_ANGLE = 40; // degrees: real corners here are 47-90°, background noise stays well under this
+
+const smoothPolyline = (pts, radius) => {
+  const n = pts.length;
+  const out = [];
+  for (let i = 0; i < n; ++i) {
+    let sx = 0, sy = 0, c = 0;
+    for (let k = -radius; k <= radius; ++k) {
+      const j = i + k;
+      if (j < 0 || j >= n) continue;
+      sx += pts[j][0]; sy += pts[j][1]; ++c;
+    }
+    out.push([sx / c, sy / c]);
+  }
+  return out;
+};
+
+const countCorners = (points, angleDeg = CORNER_ANGLE) => {
+  const fine = samplePolyline(points, 0.01);
+  const smoothed = smoothPolyline(fine, CORNER_SMOOTH_RADIUS);
+  const pts = samplePolyline(smoothed, CORNER_SCAN_STEP);
+  const n = pts.length;
+  const reach = Math.round(CORNER_REACH / CORNER_SCAN_STEP);
+  if (n < reach * 2 + 3) return 0;
+  const closed = dist(pts[0], pts[n - 1]) < CORNER_SCAN_STEP * 3;
+  const idxs = [];
+  for (let i = 0; i < n; ++i) {
+    if (!closed && (i - reach < 0 || i + reach >= n)) continue; // no far-enough neighbour at open endpoints
+    idxs.push(i);
+  }
+  const isCorner = (i) => {
+    const prev = pts[(i - reach + n) % n];
+    const cur = pts[i];
+    const next = pts[(i + reach) % n];
+    const v1 = [cur[0] - prev[0], cur[1] - prev[1]];
+    const v2 = [next[0] - cur[0], next[1] - cur[1]];
+    const m1 = Math.hypot(v1[0], v1[1]);
+    const m2 = Math.hypot(v2[0], v2[1]);
+    if (m1 < 1e-6 || m2 < 1e-6) return false;
+    const cos = Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (m1 * m2)));
+    return (Math.acos(cos) * 180) / Math.PI >= angleDeg;
+  };
+  const flags = idxs.map(isCorner);
+  let count = 0;
+  for (let i = 0; i < flags.length; ++i) {
+    const prevFlag = i === 0 ? (closed ? flags[flags.length - 1] : false) : flags[i - 1];
+    if (flags[i] && !prevFlag) count++;
+  }
+  return count;
+};
+
 /**
  * Generate an ellipse as a polyline of `n` points.
  * The ellipse is centered at (cx,cy) with radii rx and ry.
@@ -239,6 +321,15 @@ const SHAPES = {
   ],
 };
 
+// Expected corner count per template, for the tie-break in recognizeShape: polygons carry
+// their real vertex count (closed `points` list repeats the first point, so length - 1
+// unique corners); oval and line are smooth/straight and never register a corner.
+const CORNER_COUNTS = Object.fromEntries(
+  ['rect', 'up', 'down', 'vdiamond', 'hdiamond'].map((id) => [id, SHAPES[id][0].points.length - 1])
+);
+CORNER_COUNTS.oval = 0;
+CORNER_COUNTS.line = 0;
+
 // ---------------------------------------------------------------------------
 // Recogniser
 // ---------------------------------------------------------------------------
@@ -292,63 +383,47 @@ export const recognizeShape = (strokes) => {
   const tolerance = TOLERANCE.dist;
   const traceLength = pathLength(strokes);
   const tooLong = (polys) => traceLength > TOLERANCE.maxLength * pathLength(polys.map((p) => p.points), 0);
+  // Corner count of the trace, computed once and used as the primary tie-break below: more
+  // than one template can pass the distance/coverage check at once (a board's carved
+  // pattern can sit a few % off the ideal template — see countCorners above), and on raw
+  // mean distance alone a smooth template (oval) can numerically edge out a cornered
+  // template that's the visually obvious match, or vice versa.
+  const traceCorners = strokeCount === 1 ? countCorners(tracePoints) : 0;
   let bestId = null;
-  let bestScore = Infinity; // lower mean distance is better
+  let bestCornerDiff = Infinity; // primary: |expected corners - trace corners|
+  let bestScore = Infinity; // secondary: mean distance, both ways
+
+  const consider = (id, templatePts) => {
+    const traceWithin =
+      tracePoints.filter((p) => minDistToSet(p, templatePts) <= tolerance).length /
+      tracePoints.length;
+    const templateWithin =
+      templatePts.filter((tp) => minDistToSet(tp, tracePoints) <= tolerance).length /
+      templatePts.length;
+    if (traceWithin < TOLERANCE.cover || templateWithin < TOLERANCE.cover) return;
+
+    let sum = 0;
+    for (const p of tracePoints) sum += minDistToSet(p, templatePts);
+    let sum2 = 0;
+    for (const tp of templatePts) sum2 += minDistToSet(tp, tracePoints);
+    const score = (sum / tracePoints.length + sum2 / templatePts.length) / 2;
+    const cornerDiff = strokeCount === 1 ? Math.abs((CORNER_COUNTS[id] ?? 0) - traceCorners) : 0;
+
+    if (cornerDiff < bestCornerDiff || (cornerDiff === bestCornerDiff && score < bestScore)) {
+      bestCornerDiff = cornerDiff;
+      bestScore = score;
+      bestId = id;
+    }
+  };
 
   for (const id of candidates) {
     if (id === 'line') {
-      // Evaluate vertical (orientations[0]) and horizontal (orientations[1]) templates separately.
+      // Evaluate vertical and horizontal orientations separately.
       if (tooLong(SHAPES['line'].slice(0, 1))) continue;
-      const orientations = SHAPES['line'].map((poly) => poly.sampled);
-      // Direction comes from the raw (un-filled-in) stroke's endpoints, not the template: normalized
-      // coords, y grows downward. A single-stroke candidate means strokes.length === 1 here.
-      const raw = strokes[0];
-      const first = raw[0], last = raw[raw.length - 1];
-      for (let i = 0; i < orientations.length; i++) {
-        const templatePts = orientations[i];
-        const traceWithin =
-          tracePoints.filter((p) => minDistToSet(p, templatePts) <= tolerance)
-            .length / tracePoints.length;
-        const templateWithin =
-          templatePts.filter(
-            (tp) => minDistToSet(tp, tracePoints) <= tolerance
-          ).length / templatePts.length;
-
-        if (traceWithin >= TOLERANCE.cover && templateWithin >= TOLERANCE.cover) {
-          let sum = 0;
-          for (const p of tracePoints)
-            sum += minDistToSet(p, templatePts);
-          const mean = sum / tracePoints.length;
-          if (mean < bestScore) {
-            bestScore = mean;
-            bestId = i === 0
-              ? (last[1] >= first[1] ? 'line-down' : 'line-up')
-              : (last[0] >= first[0] ? 'line-lr' : 'line-rl');
-          }
-        }
-      }
+      for (let i=0;i<SHAPES.line.length;i++) {const raw=strokes[0],first=raw[0],last=raw[raw.length-1];const name=i===0?(last[1]>=first[1]?'line-down':'line-up'):(last[0]>=first[0]?'line-lr':'line-rl');consider(name,SHAPES.line[i].sampled);}
     } else {
       if (tooLong(SHAPES[id])) continue;
-      const templatePts = SHAPES[id].flatMap((poly) => poly.sampled);
-
-      const traceWithin =
-        tracePoints.filter((p) => minDistToSet(p, templatePts) <= tolerance)
-          .length / tracePoints.length;
-      const templateWithin =
-        templatePts.filter(
-          (tp) => minDistToSet(tp, tracePoints) <= tolerance
-        ).length / templatePts.length;
-
-      if (traceWithin >= TOLERANCE.cover && templateWithin >= TOLERANCE.cover) {
-        const fitted = registeredTemplate(templatePts, tracePoints);
-        let sum = 0;
-        for (const p of tracePoints) sum += minDistToSet(p, fitted);
-        const mean = sum / tracePoints.length;
-        if (mean < bestScore) {
-          bestScore = mean;
-          bestId = id;
-        }
-      }
+      consider(id, SHAPES[id].flatMap((poly) => poly.sampled));
     }
   }
 

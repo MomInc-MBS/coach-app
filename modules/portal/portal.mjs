@@ -203,9 +203,16 @@ async function loadBoard(id){
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
  board?.pause();board?.dispose();board=null;boardFailed=false;
+ let failureMessage='';
+ // Effects place GLB details during init, so they must measure a real host even when startup
+ // keeps the portal closed. visibility:hidden lays it out without a content flash or input.
+ const hiddenForLoad=portalHome.hidden,priorVisibility=portalHome.style.visibility;
+ if(hiddenForLoad){portalHome.hidden=false;portalHome.style.visibility='hidden';}
+ try{
  try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
  catch(error){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
+  failureMessage=`${BOARDS[id].label} board art is unavailable. Choose Boards in Downloads to keep it offline.`;
   if(id!=='quilt'){
    try{board=await BOARDS.quilt.create(boardHost);id='quilt';}
    catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
@@ -215,8 +222,9 @@ async function loadBoard(id){
  if(!boardShown)board?.pause();
  portalHome.classList.toggle('no-board',boardFailed);
  portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
- status('');boardId=id;store.set(BOARD_KEY,id);updateBoardChips();
+ status(failureMessage);boardId=id;store.set(BOARD_KEY,id);updateBoardChips();
  return board;
+ }finally{if(hiddenForLoad){portalHome.style.visibility=priorVisibility;if(!boardShown)portalHome.hidden=true;}}
 }
 
 // #111 metal frame (portal.css .portal-frame): the energy channel, bolts at the four corners and two down each long side,

@@ -18,6 +18,7 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // art (everything in pod/worlds/). Their small code (modules/portal, the ship view, the pyramid scanner,
 // the GLTF loader) stays core, so each scene opens offline and shows its own placeholder.
 export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$)/;
+export const BOARDS=/^\/pod\/worlds\/boards\//;
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
@@ -36,7 +37,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
-  if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -56,9 +57,9 @@ export async function identifyVoice(root){
 // screens) is "Your coach". Roster bodies never join it: each goes to its workout section from
 // track-placements.ts (#102), or the bodies' Starter section when it has no placement.
 // "starter" (W2-2O) is the portal experience's art, offered first on the first open. Site size rule: the
-// Sites archive has about 1.4 MB left. Files already on Sites stay there (D34), but NEW heavy art for the
-// portal scenes (later boards included) goes to the signed pack host (D1), never into pod/worlds/ here.
+// The physics boards have their own opt-in group; quilt and other first-run art stay Starter.
 const GROUPS=[
+ ['boards',BOARDS],
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
