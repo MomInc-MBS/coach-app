@@ -42,5 +42,8 @@ test('production build keeps physics board art in an opt-in group',async t=>{
   for(const name of names)assert(optional.some(asset=>asset.url.endsWith('/'+name)&&asset.group===`grimoire-${id}`),`${name} belongs to ${id} grimoire`);
   assert(optional.some(asset=>asset.url===`/modules/portal/portal-tunnel-${id}.mjs`&&asset.group===`grimoire-${id}`),`${id} tunnel belongs to its device packet`);
  }
+ for(const name of ['classroom-wall.glb','classroom-desks.glb'])assert(optional.some(asset=>asset.url===`/pod/rooms/${name}`&&asset.group==='room-scoreboard'),`${name} belongs to the classroom packet`);
+ for(const name of ['classroom.mjs','classroom.css'])assert(optional.some(asset=>asset.url===`/modules/rooms/${name}`&&asset.group==='room-scoreboard'),`${name} belongs to the classroom packet`);
+ assert(!core.some(asset=>asset.url.startsWith('/pod/rooms/')||asset.url.startsWith('/modules/rooms/')),'classroom art and code stay out of the core install');
  assert(!core.some(asset=>asset.url.startsWith('/pod/worlds/boards/')),'physics board art stays out of the core install');
 });

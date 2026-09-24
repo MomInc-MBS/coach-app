@@ -22,6 +22,7 @@ const GROUPS=[
  ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],
  ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
  ['grimoire-wood','Wood grimoire portal','Wood board art and its ember, bark and charcoal wormhole.'],
+ ['room-scoreboard','Scoreboard classroom','The 3D classroom wall and desks, with friends at their seats and a whiteboard you can enter.'],
  ['coach','Your coach','The regular coach models, the customizer and exercise demos.'],
  ['bodies','Extra coach bodies','More body shapes for the customizer, by workout section. A body you pick also downloads by itself.'],
  ['hand','Helping Hand','Your hand companion and all its looks.'],

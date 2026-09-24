@@ -20,6 +20,7 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$)/;
 export const BOARDS=/^\/pod\/worlds\/boards\//;
 const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood)\.mjs$/;
+export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|modules\/rooms\/classroom\.(?:mjs|css))$/;
 const GRIMOIRE_GROUPS=['ice','grass','cogs','jelly','wood'].map(id=>[
  'grimoire-'+id,
  new RegExp(`^/(?:pod/worlds/boards/${id==='cogs'?'cogs/':id==='grass'?'(?:grass|flower)\\.glb$':id+'\\.glb$'}|modules/portal/portal-tunnel-${id}\\.mjs$)`),
@@ -42,7 +43,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
- if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -65,6 +66,7 @@ export async function identifyVoice(root){
 // Each grimoire device downloads its own board art and tunnel effect together. Quilt stays Starter.
 const GROUPS=[
  ...GRIMOIRE_GROUPS,
+ ['room-scoreboard',SCOREBOARD_ROOM],
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
