@@ -182,7 +182,7 @@ test('#24 reduced motion drops the wait: the glass phase (loadMinMs) and the fal
  assert(upMs<1500,`loadMinMs must be skipped under reduced motion: Food took ${upMs}ms (loadMinMs is 3500ms)`);
  assert.equal(await page.evaluate(()=>document.getElementById('mealsPanel').open),true);
 
- await page.locator('#mealsPanel [data-peer-close]').click();
+ await page.locator('#mealsPanel button',{hasText:'Close'}).click();
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&!document.getElementById('portalChrome').matches(':popover-open'));
  // 'cross' runs fallInAll, whose real (non-reduced) wait alone is 600ms.
  const crossMs=await page.evaluate(async()=>{const t0=performance.now();await window.portal.open('cross');return performance.now()-t0;});

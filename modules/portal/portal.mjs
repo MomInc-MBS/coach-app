@@ -370,8 +370,8 @@ function watchDialog(){
 }
 function unframe(dialog){
  if(!dialog)return;
- if(framed?.dialog===dialog){peerOff();framed.dialog=null;}
- dialog.classList.remove('portal-framed','portal-shaped','portal-leaned');setFace(dialog,null);
+ if(framed?.dialog===dialog){peerOff();if(framed.look.shaped)layoutInCut(dialog,false);framed.dialog=null;}
+ dialog.classList.remove('portal-framed','portal-shaped','portal-leaned','portal-inset');setFace(dialog,null);dialog.style.removeProperty('--inset-zoom');
  dialog.style.removeProperty('clip-path');motion(dialog,'');
  dialog.querySelector(':scope>.portal-peer-ui')?.remove();
 }
@@ -410,43 +410,51 @@ function shrinkShell(dialog,[cx,cy],ms){
 // Closing a destination flies back OUT of the wormhole (Ian 23 Sept): the destination shrinks into the tunnel core while
 // the portal scales back down from the dive and the tunnel slows, then the cut heals and the chrome hands back to the
 // board's own frame. Same revealMs as the dive in; reduced motion is the plain quick fade.
+// A way back that loses the screen to a newer show (routes' home-after-close can land first) drops its own glass and dive
+// on the way out, so none is left under the quilt, and always hands back busy (backRun: the latest way back owns it).
+let backRun=0;
+function stale(run,ph,current){
+ if(run===visibilityRun&&current())return false;
+ if(phase===ph){endPhase();portalHome.style.transformOrigin='';}
+ return true;
+}
 async function diveBack({dialog,pts,color},current){
  if(prefersReducedMotion()||!board||!pts){fadeInBoard();return;}
- const run=++visibilityRun;
+ const run=++visibilityRun;backRun=run;
  auraOut();shrinkShell(dialog,centroidOf(pts),PORTAL.revealMs*.55);unframe(dialog);
  busy=true;
  try{
   portalHome.hidden=false;motion(portalHome,'none');portalHome.style.opacity='';portalHome.style.clipPath='';
   if(boardBtn)boardBtn.hidden=true;
   board.resume();boardShown=true;syncEnergy();backgroundBlocked(true);
-  showGlass(pts,color);
+  showGlass(pts,color);const ph=phase;
   for(const el of [phase.glass,phase.bezel])el?.style.setProperty('animation','none','important'); // already there
   phase.t0-=PORTAL.cutMs+PORTAL.loadMinMs; // the tunnel is already at full speed
   cutBoard(pts,color,0);
   await dive(pts,true);
-  if(run!==visibilityRun||!current())return;
+  if(stale(run,ph,current))return;
   board.heal();
   await phase?.bezel?.animate([{opacity:1},{opacity:0}],{duration:PORTAL.healMs}).finished.catch(()=>{});
-  if(run!==visibilityRun||!current())return;
+  if(stale(run,ph,current))return;
   endPhase();frameOff();menuBtn.focus();scheduleIdle();
- }finally{if(run===visibilityRun)busy=false;}
+ }finally{if(backRun===run)busy=false;}
 }
 // #131/#130 closing a destination seen through the hole: it fizzles shut. The destination's shell shrinks into the
 // wormhole's core with a flash along the rim and sparks falling in, then the cut heals and the quilt is home again.
 async function fizzleBack({dialog,pts,color},current){
- const run=++visibilityRun,ms=PORTAL.revealMs*.55;
+ const run=++visibilityRun,ms=PORTAL.revealMs*.55;backRun=run;
  if(prefersReducedMotion()||!board||!pts){unframe(dialog);homeAgain();return;}
  busy=true;
  try{
   auraOut();shrinkShell(dialog,centroidOf(pts),ms);unframe(dialog);
-  showGlass(pts,color);phase.t0-=PORTAL.cutMs+PORTAL.loadMinMs;phase.backT0=performance.now();cutBoard(pts,color,0);board.resume();
+  showGlass(pts,color);const ph=phase;phase.t0-=PORTAL.cutMs+PORTAL.loadMinMs;phase.backT0=performance.now();cutBoard(pts,color,0);board.resume();
   await sleep(ms);
-  if(run!==visibilityRun||!current())return;
+  if(stale(run,ph,current))return;
   board.heal();
   await phase?.bezel?.animate([{opacity:1},{opacity:0}],{duration:PORTAL.healMs}).finished.catch(()=>{});
-  if(run!==visibilityRun||!current())return;
+  if(stale(run,ph,current))return;
   homeAgain();
- }finally{if(run===visibilityRun)busy=false;}
+ }finally{if(backRun===run)busy=false;}
 }
 function homeAgain(){endPhase();board?.heal();board?.resume();frameOff();backgroundBlocked(true);menuBtn.focus();scheduleIdle();}
 
@@ -479,15 +487,73 @@ function peerUi(dialog){
  const ui=dialog.querySelector(':scope>.portal-peer-ui')||dialog.appendChild(Object.assign(document.createElement('div'),{className:'portal-peer-ui'}));
  if(framed)ui.style.setProperty('--peer-ui',framed.look.color);return ui;
 }
+// A flat menu (conductor 24 Sept) is laid out in the largest rectangle inside the cut (insetRect), a little zoomed out and
+// scrolling inside it, the rest of the cut showing the destination's still depth; a scene fills the cut, its own title,
+// Close and first controls (cfg.poke) showing through the wall as if in front of it, and cfg.fit sizes a scene layer to
+// the cut (the constellation). Without an own Close the portal adds a ✕ on the quilt.
 function shapeDialog(dialog){
- const {look,face}=framed,ui=peerUi(dialog);
- ui.insertAdjacentHTML('beforeend',`<button type="button" data-peer-close aria-label="Close ${look.label}">✕</button><button type="button" data-peer-lean aria-pressed="false" aria-label="Step in to ${look.label}">⤢</button>`);
+ const {look,face}=framed,ui=peerUi(dialog),cfg=peerCfg(dialog);
+ framed.flat=!cfg.scene;framed.cfg=cfg;
+ const own=ownClose(dialog);
+ ui.insertAdjacentHTML('beforeend',`${own?'':`<button type="button" data-peer-close aria-label="Close ${look.label}">✕</button>`}<button type="button" data-peer-lean aria-pressed="false" aria-label="Step in to ${look.label}">⤢</button>`);
  const close=ui.querySelector('[data-peer-close]'),step=ui.querySelector('[data-peer-lean]'),at=(el,x,y)=>{el.style.left=x+'px';el.style.top=y+'px';};
- at(close,face.left+face.width-52,face.top+8);at(step,face.left+face.width-52,face.top+face.height-52);
- close.onclick=()=>closeDestination(dialog);step.onclick=()=>lean(!framed?.leaned);
+ if(close){at(close,face.left+face.width-52,face.top+8);close.onclick=()=>closeDestination(dialog);}
+ at(step,face.left+face.width-52,face.top+face.height-52);step.onclick=()=>lean(!framed?.leaned);
  dialog.classList.add('portal-shaped');
+ const r=framed.flat&&(framed.inset??=insetRect(framed.outlines.shape)),small=r&&(r.width-2*INSET.margin<INSET.minW||r.height-2*INSET.margin<INSET.minH);
+ if(small){framed.leaned=true;dialog.classList.add('portal-leaned');leanButton(step,true,look.label);showAura({...look,pts:rectPts(face),shaped:false,name:namePath(null,null,face)},'lean');}
+ else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
- clipTo(dialog,framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
+ clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
+ // A scene's own controls move with it (the pyramid's labels ride the model): keep the clip round them, a few times a
+ // second and only when one has moved, never mid-transition.
+ if(!framed.flat){
+  const f=framed,timer=setInterval(()=>{if(f!==framed||f.dialog!==dialog||f.leaned||performance.now()<f.clipBusy)return;if(pokeSig(dialog)!==f.pokeSig)clipTo(dialog,f.outlines.shape);},180);
+  framed.ctl.signal.addEventListener('abort',()=>clearInterval(timer));
+ }
+}
+function peerCfg(dialog){return PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D;}
+// The destination's own Close (its clean-up runs), if it has one.
+function ownClose(dialog){return [...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));}
+// What of a scene shows in front of the wall: its title, its own Close and cfg.poke (visible ones only).
+function pokes(dialog){
+ if(!framed||framed.flat||framed.leaned)return [];
+ const heading=[...dialog.querySelectorAll('h1,h2')].find(h=>h.getClientRects().length&&!h.closest('.portal-peer-ui'));
+ return [heading,ownClose(dialog),...(framed.cfg?.poke||[]).flatMap(s=>[...dialog.querySelectorAll(s)])].filter(el=>el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
+}
+const pokeSig=dialog=>pokes(dialog).map(el=>{const r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(v=>Math.round(v/3)).join(',');}).join(';');
+// Largest axis-aligned rectangle inside a convex outline (client px, closed), leaning a little toward width so a menu's
+// text column stays readable (scored width^1.5 x height). For a convex shape the rectangle's sides are bounded by the
+// chords at its top and bottom edges only, so every pair of sampled chords is a candidate.
+export function insetRect(poly,n=48){
+ const ys=poly.map(p=>p[1]),y0=Math.min(...ys),y1=Math.max(...ys);
+ const chord=y=>{let l=Infinity,r=-Infinity;for(let i=0;i<poly.length-1;i++){const [ax,ay]=poly[i],[bx,by]=poly[i+1];if(ay===by||(ay-y)*(by-y)>0)continue;const x=ax+(bx-ax)*(y-ay)/(by-ay);l=Math.min(l,x);r=Math.max(r,x);}return [l,r];};
+ const Y=Array.from({length:n+1},(_,i)=>y0+(y1-y0)*i/n),C=Y.map(chord);
+ let best=null;
+ for(let i=0;i<=n;i++)for(let j=i+1;j<=n;j++){
+  const l=Math.max(C[i][0],C[j][0]),r=Math.min(C[i][1],C[j][1]),w=r-l,h=Y[j]-Y[i],score=w**1.5*h;
+  if(w>0&&(!best||score>best.score))best={score,left:l,top:Y[i],width:w,height:h};
+ }
+ return best&&{left:best.left,top:best.top,width:best.width,height:best.height};
+}
+// px clear of the rim; the width a menu is laid out at and its floor zoom; below minW x minH the cut is too small to hold a
+// menu and the portal opens stepped in (the squat diamond).
+const INSET={margin:10,layoutPx:240,minZoom:.6,minW:150,minH:190};
+// on: lay the destination out for the cut (flat: into its rectangle; scene: fit cfg.fit); off: the whole window (step in).
+function layoutInCut(dialog,on){
+ const f=framed;if(!f)return;
+ if(f.flat){
+  if(!on){dialog.classList.remove('portal-inset');dialog.style.removeProperty('--inset-zoom');setFace(dialog,f.face);return;}
+  const r=f.inset??=insetRect(f.outlines.shape),m=INSET.margin,box={left:r.left+m,top:r.top+m,width:r.width-2*m,height:r.height-2*m};
+  setFace(dialog,box);dialog.classList.add('portal-inset');
+  dialog.style.setProperty('--inset-zoom',Math.max(INSET.minZoom,Math.min(1,(box.width-40)/INSET.layoutPx)).toFixed(3));
+  return;
+ }
+ const fit=f.cfg?.fit,el=fit&&dialog.querySelector(fit.sel);if(!el)return;
+ if(!on){for(const k of ['height','margin-top','align-self'])el.style.removeProperty(k);return;}
+ // The layer's band [top,bottom] (fractions of its height) spans the cut's height, its top at the cut's top.
+ const ys=f.look.pts.map(p=>p[1]),top=Math.min(...ys),H=(Math.max(...ys)-top)/(fit.band[1]-fit.band[0]);
+ el.style.setProperty('height',d2(H)+'px','important');el.style.setProperty('align-self','start','important');el.style.setProperty('margin-top',d2(top-f.face.top-fit.band[0]*H)+'px','important');
 }
 function throughCut(el){const r=el.getBoundingClientRect();return pointInPolygon(r.left+r.width/2,r.top+r.height/2,framed.outlines.shape);}
 // clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box and the portal's pill
@@ -499,25 +565,26 @@ function clipFor(dialog,pts){
   const k=Math.min(b.width,b.height)/2,arc=to=>`A${d2(k)} ${d2(k)} 0 0 1 ${o(to)}`;
   parts.push(`M${o([b.left+k,b.top])}L${o([b.right-k,b.top])}${arc([b.right-k,b.bottom])}L${o([b.left+k,b.bottom])}${arc([b.left+k,b.top])}Z`);
  }
+ for(const b of pokes(dialog).map(box)){const p=4;parts.push(`M${o([b.left-p,b.top-p])}L${o([b.right+p,b.top-p])}L${o([b.right+p,b.bottom+p])}L${o([b.left-p,b.bottom+p])}Z`);} // in front of the wall
+ if(framed?.dialog===dialog)framed.pokeSig=pokeSig(dialog);
  return `path('M${pts.slice(0,-1).map(o).join('L')}Z${parts.join('')}')`;
 }
 function clipTo(dialog,pts,{from=null,ms=0,ease='ease'}={}){
+ if(framed)framed.clipBusy=performance.now()+ms+60;
  const go=()=>{if(framed?.dialog!==dialog)return;motion(dialog,ms?`clip-path ${ms}ms ${ease}`:'none');dialog.style.clipPath=clipFor(dialog,pts);};
  if(from){motion(dialog,'none');dialog.style.clipPath=clipFor(dialog,from);settle().then(go);}else go();
 }
 function lean(on){
  const f=framed;if(!f?.look.shaped||!f.dialog||f.leaned===on)return;
- f.leaned=on;const dialog=f.dialog,step=dialog.querySelector('[data-peer-lean]');
- if(step){step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${f.look.label}`);step.textContent=on?'⤡':'⤢';}
+ f.leaned=on;const dialog=f.dialog;leanButton(dialog.querySelector('[data-peer-lean]'),on,f.look.label);
  dialog.classList.toggle('portal-leaned',on);
+ layoutInCut(dialog,!on);
  clipTo(dialog,on?f.outlines.rect:f.outlines.shape,{ms:prefersReducedMotion()?0:520,ease:'cubic-bezier(.3,0,.2,1)'});
  showAura(on?{...f.look,pts:rectPts(f.face),shaped:false,name:namePath(null,null,f.face)}:f.look,'lean');
 }
-// The ✕ on the quilt: the destination's own Close when it has one (its own clean-up runs), else a plain close.
-function closeDestination(dialog){
- const own=[...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));
- if(own)own.click();else dialog.close();
-}
+function leanButton(step,on,label){if(!step)return;step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${label}`);step.textContent=on?'⤡':'⤢';}
+// The ✕ on the quilt (a destination with no Close of its own).
+function closeDestination(dialog){const own=ownClose(dialog);if(own)own.click();else dialog.close();}
 // #132: where the destination's name rides the rim (client px, drawn left to right so it reads upright, the glyphs on the
 // side away from the window: on the quilt round a hole, on the bottom rail round the whole window).
 const d2=v=>(+v).toFixed(1);
@@ -554,7 +621,7 @@ let aura=null;
 // hundreds of ms on the first frame. The hot rim line is a crisp stroke in the aura's own svg instead.
 function rimMask(pts,w,h,seed,shaped){
  const k=AURA.maskScale,c=document.createElement('canvas');c.width=Math.ceil(w*k);c.height=Math.ceil(h*k);
- const g=c.getContext('2d'),path=new Path2D(pathD(pts)),outside=new Path2D(`M0 0H${w}V${h}H0Z${pathD(pts)}`);
+ const g=c.getContext('2d',{willReadFrequently:true}),path=new Path2D(pathD(pts)),outside=new Path2D(`M0 0H${w}V${h}H0Z${pathD(pts)}`);
  let s=seed;const r=()=>(s=(s*16807)%2147483647)/2147483647,dash=(a,b)=>Array.from({length:12},()=>[a*(.3+r()),b*(.6+r())]).flat();
  g.scale(k,k);g.strokeStyle='#fff';g.lineJoin='round';
  const band=(width,alpha,dashes=null,cap='butt')=>{g.lineWidth=width;g.globalAlpha=alpha;g.lineCap=cap;g.setLineDash(dashes||[]);g.stroke(path);};
@@ -626,12 +693,14 @@ const TILT_KEY='myr5.tiltPermission';
 // (far with the eye, near against it), times the destination's strength; the dialog also carries --peer-x/--peer-y
 // (-1..1) for its own CSS. Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
 // layers: [selector,px] for destinations that don't mark theirs (nested ones add up); scene: a 3D scene reading peer.mjs
-// (no drag look-around: a drag there turns the scene); chip: offer iOS's tilt permission (the scenes always do).
+// (no drag look-around: a drag there turns the scene; it fills its cut, see shapeDialog); chip: offer iOS's tilt
+// permission (the scenes always do); poke/fit: shapeDialog.
 const PEER_LAYER={far:14,mid:5,near:-4};
 const PEER_DEPTH=[
- ['#mealsPanel',{scene:true}],
- ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
- ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]]}],
+ ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom']}],
+ ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]],poke:['.ship-view-note','.ship-view-fallback']}],
+ // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
+ ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-head','.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
@@ -653,7 +722,7 @@ function askTilt(dialog,signal){
 function peerOn(dialog){
  peerOff();
  if(prefersReducedMotion()||document.body.dataset.cameraWorkout==='true')return;
- const cfg=PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D,signal=(peer.ctl=new AbortController()).signal;
+ const cfg=peerCfg(dialog),signal=(peer.ctl=new AbortController()).signal;
  Object.assign(peer,{dialog,cfg,x:0,y:0,tx:0,ty:0,base:null,drag:null,sensor:false});
  peer.els=(cfg.layers||[]).flatMap(([s,px])=>[...dialog.querySelectorAll(s)].map(el=>[el,px]));
  const access=tiltAccess();
@@ -1312,8 +1381,9 @@ export async function playWormhole({direction='in',minMs=900,color='#b026ff'}={}
  await el.animate([{clipPath:'circle(0px at 50% 50%)'},{clipPath:`circle(${R}px at 50% 50%)`}],{duration:ms,easing:out?'cubic-bezier(.6,0,.9,.4)':'cubic-bezier(.2,.6,.3,1)',direction:out?'reverse':'normal',fill:'forwards'}).finished.catch(()=>{});
  if(out&&wormhole?.el===el){ph.stop?.();el.remove();wormhole=null;}
 }
-// A destination seen through the hole covers the glass: stop the wormhole, keep the bezel over the cloth's ragged edge.
-function quietPhase(){if(!phase)return;phase.stop?.();phase.stop=null;phase.pulse=false;phase.glass.remove();energize(NEONS);}
+// A destination seen through the hole: stop the wormhole and leave its still depth (what a flat menu's rectangle sits in),
+// the bezel staying over the cloth's ragged edge.
+function quietPhase(){if(!phase)return;phase.stop?.();phase.stop=null;phase.pulse=false;phase.glass.classList.remove('gl');phase.glass.classList.add('still');phase.glass.querySelector('canvas')?.remove();energize(NEONS);}
 function ripple(x,y){
  if(!phase||prefersReducedMotion())return;
  const r=document.createElement('i');r.className='portal-ripple';r.style.left=(x-phase.box.left)+'px';r.style.top=(y-phase.box.top)+'px';

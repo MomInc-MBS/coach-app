@@ -82,12 +82,12 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   await portalUp(page);
 
   // id, the dialog it must open, the button that closes it. #131: the triangles and diamonds open in their cut with the
-  // quilt as the wall round them (the destination's own Close can sit behind the wall), so the portal's ✕ closes them.
+  // quilt as the wall round them; their own Close stays in reach (in front of the wall, or inside a flat menu's rectangle).
   const DIALOG_CASES=[
-   ['up','#mealsPanel','#mealsPanel [data-peer-close]'],
-   ['down','.ach-board','.ach-board [data-peer-close]'],
-   ['vdiamond','#accountPanel','#accountPanel [data-peer-close]'],
-   ['hdiamond','#accountPanel','#accountPanel [data-peer-close]'], // same destination as vdiamond, hidden from the Menu sheet grid
+   ['up','#mealsPanel','#mealsPanel [data-close]'],
+   ['down','.ach-board','.ach-board .ach-close'],
+   ['vdiamond','#accountPanel','#accountPanel [data-close]'],
+   ['hdiamond','#accountPanel','#accountPanel [data-close]'], // same destination as vdiamond, hidden from the Menu sheet grid
    ['line-lr','.meditation-panel','.meditation-panel [data-meditation-close]'],
    ['line-rl','#remindersPanel','#remindersPanel [data-close]'],
    ['line-down','#settings','#closeSettings'],
@@ -122,7 +122,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('oval'));
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',{timeout:10000});
-  await page.locator('dialog.ship-view [data-peer-close]').click(); // #131: seen through the oval cut
+  await page.locator('.ship-view-close').click(); // #131: seen through the oval cut, its Close in front of the wall
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash!=='#select');
   await portalUp(page);
 
@@ -395,7 +395,7 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   for(const k of ['left','top','width','height'])assert.ok(Math.abs(stage[k]-f.face[k])<1,`the photo flow fits the frame's window (${k}: ${stage[k]} vs ${f.face[k]})`);
 
   // Close: the hole fizzles shut (no reverse dive) and heals. The bar stays showing below the frame throughout.
-  await page.locator('#mealsPanel [data-peer-close]').click();
+  await page.locator('#mealsPanel [data-close]').click();
   await page.waitForFunction(()=>document.querySelector('.portal-ghost')&&document.querySelector('.portal-glass'),null,{timeout:20000,polling:16});
   f=await frameBar(page);assertBarBelowFrame(f,'fizzle');
   assert.equal((await bar(page)).visible,true,'the bar shows through the fizzle');
@@ -415,7 +415,7 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   assert.equal((await bar(page)).tappable,true,'the bar is tappable under the ship view');
   await page.screenshot({path:resolve(FRAMES,'r5-3-ship-from-oval-mid-entrance.png')});
   await page.evaluate(()=>window.r5Run);
-  await page.locator('dialog.ship-view [data-peer-close]').click();
+  await page.locator('.ship-view-close').click();
   await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.querySelector('dialog.ship-view').open&&location.hash!=='#select'&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:20000});
 
   // A line (Reminders) dives into the frame (#124's short wormhole); the bar's Portal takes it home the same way, out of it.

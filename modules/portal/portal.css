@@ -74,6 +74,15 @@ body:has(#coachDock) dialog.portal-framed::backdrop{bottom:var(--myr5-bar)}
 /* #131 seen through the hole: the quilt stays on as the wall, so a shaped destination's backdrop is clear (the dialog's
    clip-path is JS's). */
 dialog.portal-framed.portal-shaped::backdrop{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* A flat menu in a cut: its box is the cut's largest rectangle (JS sets --face-*), its content laid out zoomed out
+   (--inset-zoom) and scrolling inside it, sliding a little with tilt behind the fixed wall. The bar and the portal's
+   buttons are not its content. */
+dialog.portal-framed.portal-inset{padding:10px 8px!important;overflow:auto!important;overscroll-behavior:contain}
+dialog.portal-framed.portal-inset>:not(#coachDock):not(.portal-peer-ui){zoom:var(--inset-zoom,1);translate:calc(var(--peer-x,0)*3px) calc(var(--peer-y,0)*3px)}
+dialog.portal-framed.portal-inset :is(h1,h2){white-space:normal!important;overflow-wrap:break-word}
+/* The wormhole's still depth left in the cut round a flat menu (portal.mjs quietPhase). */
+.portal-glass.still{background:radial-gradient(ellipse at 50% 45%,color-mix(in srgb,var(--glass) 26%,#1b1229) 0,#110a19 62%,#08050c 100%)}
+.portal-glass.still>b,.portal-glass.still:after{display:none}
 .portal-peer-ui{position:fixed;left:0;top:0;width:0;height:0;z-index:60}
 .portal-peer-ui>button:not(#_){all:unset;position:fixed;box-sizing:border-box;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#140e1ee6;color:#fff;font:700 18px/1 system-ui,sans-serif;border:2px solid color-mix(in srgb,var(--peer-ui,#b026ff) 70%,#fff);box-shadow:0 0 0 1px #0008,0 0 14px var(--peer-ui,#b026ff),0 4px 10px #0009;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .portal-peer-ui>button:not(#_):focus-visible{outline:3px solid #ffb24d;outline-offset:2px}

@@ -53,15 +53,34 @@ test.before(async()=>{
 });
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
 
-const SHAPED=[['up','#mealsPanel','FOOD','food'],['down','.ach-board','ACHIEVEMENTS','achievements'],['vdiamond','#accountPanel','LEADERBOARD','leaderboard'],['oval','dialog.ship-view','CHOOSE WORKOUT','ship']];
+// [id, dialog, rim name, frame, its own Close, its title, its first control]. Conductor 24 Sept: title, Close and first
+// controls fully visible at 375x812 on every shaped route (a flat menu in the cut's largest rectangle, a scene's own
+// controls in front of the wall).
+const SHAPED=[
+ ['up','#mealsPanel','FOOD','food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-tag'],
+ ['down','.ach-board','ACHIEVEMENTS','achievements','.ach-close','.ach-head h1','.ach-boss'],
+ ['vdiamond','#accountPanel','LEADERBOARD','leaderboard','#accountPanel [data-close]','#accountPanel h2','#signIn'],
+ ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2','#signIn'],
+ ['oval','dialog.ship-view','CHOOSE WORKOUT','ship','.ship-view-close',null,'.ship-view-close'],
+];
+// The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
+// itself: nothing clips or covers it.
+const fullyVisible=(page,sel)=>page.evaluate(sel=>{
+ const el=document.querySelector(sel);if(!el?.getClientRects().length)return `${sel}: not shown`;
+ let rects=[el.getBoundingClientRect()];
+ if(/^H\d$/.test(el.tagName)){const range=document.createRange();range.selectNodeContents(el);rects=[...range.getClientRects()].filter(r=>r.width>2&&r.height>2);}
+ for(const r of rects){const k=Math.min(8,r.width/4,r.height/4);
+  for(const [x,y] of [[r.left+k,r.top+k],[r.right-k,r.top+k],[r.left+k,r.bottom-k],[r.right-k,r.bottom-k],[r.left+r.width/2,r.top+r.height/2]]){const hit=document.elementFromPoint(x,y);if(!hit||!(hit===el||el.contains(hit)))return `${sel}: ${Math.round(x)},${Math.round(y)} hits ${hit?.tagName}.${hit?.className}`;}}
+ return true;},sel);
 test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their cut, the energy in the portal\'s shape round them and the name on the rim, never covering the menu',{timeout:300000},async()=>{
  const {context,page}=await openApp(browser,base);
  try{
-  for(const [id,sel,name,frame] of SHAPED){
+  for(const [id,sel,name,frame,close,title,first] of SHAPED){
    await page.evaluate(id=>{window.run=window.myr5Portal.open(id);},id);
    await page.waitForFunction(sel=>document.querySelector(sel)?.open&&document.querySelector(sel).classList.contains('portal-shaped'),sel,{timeout:30000});
    await page.evaluate(()=>window.run);
-   await page.waitForTimeout(900);
+   if(id==='up')await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:30000});
+   await page.waitForTimeout(1200);
    const s=await page.evaluate(sel=>{
     const d=document.querySelector(sel),aura=document.querySelector('#portalChrome .portal-aura'),text=aura?.querySelector('.portal-aura-name'),t=text?.getBoundingClientRect();
     return {quilt:!document.getElementById('portalHome').hidden,chrome:document.getElementById('portalChrome').matches(':popover-open'),clip:d.style.clipPath,shaped:aura?.classList.contains('shaped'),
@@ -71,31 +90,34 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
    assert.equal(s.quilt,true,`${id}: the quilt stays on as the wall`);
    assert.equal(s.chrome,true,`${id}: the metal frame is up`);
    assert.match(s.clip,/^path\(/,`${id}: the destination is clipped to the cut`);
-   assert.equal(s.shaped,true,`${id}: the energy runs round the cut`);
+   assert.equal(s.shaped,id!=='hdiamond',`${id}: the energy runs round the cut (the squat diamond is too small for a menu: it opens stepped in)`);
    assert.equal(s.name,name,`${id}: the rim carries the name`);
    assert.equal(s.taps,true,`${id}: nothing in the energy takes a pointer`);
    assert.equal(s.flowing,true,`${id}: the neons flow round the rim`);
    assert.equal(await inside(page,sel,s.nameAt),false,`${id}: the name sits outside the window, not over the menu`);
    const middle=await page.evaluate(()=>{const p=document.querySelector('.portal-aura').style;return [parseFloat(p.getPropertyValue('--cx')),parseFloat(p.getPropertyValue('--cy'))];});
    assert.equal(await reaches(page,sel,middle),true,`${id}: the menu is reachable through the middle of the cut`);
+   for(const part of [close,title,first].filter(Boolean))assert.equal(await fullyVisible(page,part),true,`${id}: fully visible and tappable`);
+   if(id==='vdiamond')assert.equal(await page.evaluate(()=>{const d=document.getElementById('accountPanel');return d.classList.contains('portal-inset')&&d.scrollHeight>d.clientHeight&&getComputedStyle(d).overflowY;}),'auto','a flat menu sits in the cut\'s rectangle and scrolls inside it');
    assert.equal(await barTappable(page),true,`${id}: the bar stays tappable`);
    await page.screenshot({path:resolve(FRAMES,`134-${frame}.png`)});
+   await page.screenshot({path:resolve(FRAMES,`131-inscribed-${id}.png`)});
    if(id==='up'){
-    // #131 step in: the cut opens out to the whole window (the Food panel's own Close, behind the wall until now, is in
+    // #131 step in: the cut opens out to the whole window (the room beside the pyramid, behind the wall until now, is in
     // reach), then steps back to the triangle.
-    const close=await page.evaluate(()=>{const r=document.querySelector('#mealsPanel [data-close]').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];});
-    assert.equal(await reaches(page,'#mealsPanel [data-close]',close),false,'Food\'s own Close sits behind the wall');
+    const beside=await page.evaluate(()=>{const c=document.getElementById('portalChrome').style;return [parseFloat(c.getPropertyValue('--face-left'))+40,parseFloat(c.getPropertyValue('--face-top'))+200];});
+    assert.equal(await inside(page,'#mealsPanel',beside),false,'beside the triangle is the wall');
     await page.locator('#mealsPanel [data-peer-lean]').click();
     await page.waitForTimeout(900);
-    assert.equal(await reaches(page,'#mealsPanel [data-close]',close),true,'stepped in, the whole window is in reach');
+    assert.equal(await inside(page,'#mealsPanel',beside),true,'stepped in, the whole window is in reach');
     assert.equal(await page.evaluate(()=>document.querySelector('.portal-aura').classList.contains('shaped')),false,'the energy follows the window');
     await page.screenshot({path:resolve(FRAMES,'131-food-step-in.png')});
     await page.locator('#mealsPanel [data-peer-lean]').click();
     await page.waitForTimeout(900);
-    assert.equal(await reaches(page,'#mealsPanel [data-close]',close),false,'stepped back to the triangle');
+    assert.equal(await inside(page,'#mealsPanel',beside),false,'stepped back to the triangle');
    }
-   // #130/#131: ✕ fizzles the hole shut (the shell falls into the core over the wormhole) and the quilt heals.
-   await page.locator(`${sel} [data-peer-close]`).click();
+   // #130/#131: its Close fizzles the hole shut (the shell falls into the core over the wormhole) and the quilt heals.
+   await page.locator(close).first().click();
    await page.waitForFunction(()=>document.querySelector('.portal-ghost')&&document.querySelector('.portal-glass'),null,{timeout:20000,polling:16});
    if(id==='up')await page.screenshot({path:resolve(FRAMES,'131-food-fizzle.png')});
    await quiltHome(page);
@@ -136,7 +158,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   await page.evaluate(()=>window.run);
   await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:30000});
   await page.waitForTimeout(900);
-  const fixed=()=>page.evaluate(()=>({clip:document.getElementById('mealsPanel').style.clipPath,face:document.getElementById('portalChrome').style.cssText}));
+  const fixed=()=>page.evaluate(()=>({clip:document.getElementById('mealsPanel').style.clipPath.split('Z')[0],face:document.getElementById('portalChrome').style.cssText})); // the cut (its labels, in front of the wall, ride the pyramid)
   const before=await fixed(),eye=()=>page.evaluate(async()=>{const {eye}=await import('/modules/portal/peer.mjs');return {...eye};});
   await tilt(page,0);await settled(page); // the baseline, caught at the first reading
   const shots=[];
@@ -149,7 +171,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   }
   assert.notDeepEqual(shots[0],shots[2],'the pyramid shows a different side at each tilt');
   assert.deepEqual(await fixed(),before,'the cut and the frame never move');
-  await page.locator('#mealsPanel [data-peer-close]').click();
+  await page.locator('#mealsPanel [data-close]').click();
   await quiltHome(page);
   assert.deepEqual(await eye(),{x:0,y:0},'the eye is off once the destination closes');
   // A flat menu (Reminders, through a line): the whole menu slides a few px behind the fixed frame.
@@ -189,7 +211,12 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-framed')?.open,null,{timeout:20000});
   const dive=await page.evaluate(()=>window.__anims.find(a=>a.el==='portalHome')?.ms);
   assert.ok(Math.abs(dive-PORTAL.revealMs*PORTAL.short)<1,`a line dives on the short reveal (${dive} ms)`);
-  await page.evaluate(()=>window.run);await page.waitForTimeout(900);
+  await page.evaluate(()=>window.run);
+  // Landed (not mid-arrival): it fills the frame's window, moved at most the gentle 2 px.
+  await page.waitForFunction(()=>{const d=document.querySelector('.meditation-panel'),c=getComputedStyle(d);return !d.classList.contains('portal-arriving')&&c.transform==='none'&&c.opacity==='1';},null,{timeout:30000});
+  const med=await page.evaluate(()=>{const r=document.querySelector('.meditation-panel').getBoundingClientRect(),c=document.getElementById('portalChrome').style;return {w:r.width,h:r.height,fw:parseFloat(c.getPropertyValue('--face-width')),fh:parseFloat(c.getPropertyValue('--face-height'))};});
+  assert.ok(Math.abs(med.w-med.fw)<1&&Math.abs(med.h-med.fh)<1,`Meditation fills its frame (${JSON.stringify(med)})`);
+  await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'127-meditation.png')});
   await page.locator('.meditation-panel [data-meditation-close]').click();
   await quiltHome(page);
