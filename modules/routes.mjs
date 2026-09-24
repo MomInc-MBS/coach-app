@@ -30,7 +30,7 @@ export const ROUTES={
  // Ian 2026-09-23: the square is the workout start page (the pod's viewing port, control board and BEGIN, which
  // starts the camera as always) and the oval is the coach's arrival: its ship flies in and beams it down, every time.
  // W2-2M: from the top, but BEGIN never under the bar: the page fits at 375x812, a shorter phone scrolls just enough.
- workout:{label:'Workout',dialog:'#portalWorkoutHome',focus:'#view',open(){const portalHome=window.myr5Portal?.openWorkoutHome?.();if(portalHome)return portalHome;hideQuilt();const begin=$('start')?.getBoundingClientRect(),room=innerHeight-(dock()?.offsetHeight||0)-8;scrollTo({top:begin?.height?Math.max(0,scrollY+begin.bottom-room):0,behavior:reduced()?'auto':'smooth'});}},
+ workout:{label:'Workout',page:true,dialog:'#portalWorkoutHome',focus:'#view',open(){const portalHome=window.myr5Portal?.openWorkoutHome?.();if(portalHome)return portalHome;hideQuilt();const begin=$('start')?.getBoundingClientRect(),room=innerHeight-(dock()?.offsetHeight||0)-8;scrollTo({top:begin?.height?Math.max(0,scrollY+begin.bottom-room):0,behavior:reduced()?'auto':'smooth'});}},
  // W2-2Q: the router is the one owner of the ship view's #ship/#select history (the view only keeps its own standalone).
  select:{label:'Coach arrival',dialog:'dialog.ship-view',shared:true,open:()=>whenOpen('dialog.ship-view',window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
  food:{label:'Food',dialog:'#mealsPanel',open:()=>typeof window.myr5Menus?.food==='function'?window.myr5Menus.food():panel('meals')},
