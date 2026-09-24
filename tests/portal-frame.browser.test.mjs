@@ -39,14 +39,15 @@ async function geometry(page){
  });
 }
 
-test('#111 the frame wraps a full-screen board rail at 375x812 and never takes a pointer',async()=>withPortal(async(browser,url)=>{
+test('#111 the metal cap fills above the proportionate board and never takes a pointer',async()=>withPortal(async(browser,url)=>{
  await mkdir(FRAMES_DIR,{recursive:true});
  const page=await openPage(browser,url);
  const g=await geometry(page),face=boxOf(g.face),frame=boxOf(g.frame),outer={left:frame.left-g.rail,top:frame.top-g.rail,right:frame.right+g.rail,bottom:frame.bottom+g.rail};
- assert(Math.abs(face.left-g.rail)<.6&&Math.abs(face.top-g.rail)<.6&&Math.abs(face.right-(375-g.rail))<.6&&Math.abs(face.bottom-(812-g.rail))<.6,`board face fills the rail interior: ${JSON.stringify(face)}`);
+ assert(Math.abs(face.left-g.rail)<.6&&face.top>120&&Math.abs(face.right-(375-g.rail))<.6&&Math.abs(face.bottom-(812-88))<.6,`board retains its proportions above the hardware dock: ${JSON.stringify(face)}`);
  for(const k of ['left','top','right','bottom'])assert(Math.abs(frame[k]-face[k])<.6,`the frame wraps the face exactly (${k}: ${frame[k]} vs ${face[k]})`);
  assert(g.rail>=12,'the rail takes the margin');
- assert(Math.abs(outer.left)<.6&&Math.abs(outer.top)<.6&&Math.abs(outer.right-375)<.6&&Math.abs(outer.bottom-812)<.6,`the rail reaches the physical perimeter: ${JSON.stringify(outer)}`);
+ assert(Math.abs(outer.left)<.6&&Math.abs(outer.right-375)<.6,'side rails reach the physical perimeter');
+ const plateTop=await page.locator('#portalBoardHost .portal-frame').evaluate(el=>el.getBoundingClientRect().top+parseFloat(getComputedStyle(el,'::before').top));assert(Math.abs(plateTop)<.6,'extended metal cap reaches the top edge');
  const pattern=boxOf(g.pattern);
  assert(pattern.left>=face.left&&pattern.top>=face.top&&pattern.right<=face.right&&pattern.bottom<=face.bottom,'the stitched pattern stays inside the face');
  assert.equal(g.bolts.length,8,'four corner bolts and two along each long edge');

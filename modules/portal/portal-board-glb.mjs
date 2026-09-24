@@ -120,22 +120,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  const group=new THREE.Group();
  const meshObjs=geoms.map((g,i)=>{const mm=new THREE.Mesh(g,meshes[i].material);group.add(mm);return mm;});
  scene.add(group);
- const preservedAspect=true;
- // Several boards have carved or painted shape guides. Keep every slab at its source aspect
- // and extend edge texture into the host margins; stretching the slab moves those guides.
- const edgeFill=[];
- if(preservedAspect&&meshObjs[0].material.map?.image){
-  const source=meshObjs[0].material.map.image;
-  for(const side of ['top','bottom','left','right']){
-   const vertical=side==='left'||side==='right',span=Math.min(96,vertical?source.width:source.height);
-   const strip=document.createElement('canvas');strip.width=vertical?span:source.width;strip.height=vertical?source.height:span;
-   const cx=strip.getContext('2d');cx.drawImage(source,side==='right'?source.width-span:0,side==='bottom'?source.height-span:0,strip.width,strip.height,0,0,strip.width,strip.height);
-   const tex=new THREE.CanvasTexture(strip);tex.colorSpace=THREE.SRGBColorSpace;
-   const mat=new THREE.MeshBasicMaterial({map:tex,color:0x777777,side:THREE.DoubleSide});
-   const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),mat);plane.position.z=halfDepth;
-   group.add(plane);edgeFill.push({plane,side});
-  }
- }
+ const preservedAspect=true; // The mechanical cap fills the unused space; artwork retains its aspect.
 
  const texW=knobs.texSize,texH=Math.max(1,Math.round(knobs.texSize*fh/fw));
  // rim: the cut edge's neon outline, on its own half-res layer because effects clear `glow` every frame.
@@ -167,25 +152,12 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  let width=1,height=1,faceRect={left:0,top:0,width:1,height:1},scaleFit=1,viewFrame=frameOf(effect,knobs);
  function computeFit(){
   width=Math.max(1,host.clientWidth);height=Math.max(1,host.clientHeight);
-  // The slab fills the host. Keep shape guides at the model's source aspect in a centered subrect.
-  const sx=width/fw,sy=height/fh;scaleFit=Math.min(sx,sy);
+  scaleFit=Math.min(width/fw,height/fh);
   uniforms.uDent.value=knobs.dent/scaleFit;uniforms.uDentRadius.value=knobs.dentRadius/scaleFit;
-  if(preservedAspect){
-   scaleFit=Math.min(sx,sy);group.scale.setScalar(scaleFit);group.position.set(width/2,-height/2,-scaleFit*halfDepth);
-   faceRect={left:(width-fw*scaleFit)/2,top:(height-fh*scaleFit)/2,width:fw*scaleFit,height:fh*scaleFit};
-   const gapY=Math.max(0,(height/scaleFit-fh)/2),gapX=Math.max(0,(width/scaleFit-fw)/2);
-   for(const {plane,side} of edgeFill){
-    const horizontal=side==='top'||side==='bottom';plane.visible=horizontal?gapY>0:gapX>0;
-    plane.scale.set(horizontal?width/scaleFit:gapX,horizontal?gapY:fh,1);
-    plane.position.set(horizontal?0:(side==='right'?1:-1)*(fw+gapX)/2,horizontal?(side==='top'?1:-1)*(fh+gapY)/2:0,plane.position.z);
-   }
-  }else{
-   group.scale.set(sx,sy,scaleFit);group.position.set(width/2,-height/2,-scaleFit*halfDepth);
-   faceRect={left:0,top:0,width,height};
-  }
-  const F=frameOf(effect,knobs),natural=(fw*(F.x1-F.x0))/(fh*(F.y1-F.y0));
-  const pw=Math.min(width,height*natural),ph=Math.min(height,width/natural);
-  viewFrame=preservedAspect?F:{x0:(width-pw)/(2*width),y0:(height-ph)/(2*height),x1:(width+pw)/(2*width),y1:(height+ph)/(2*height)};
+  faceRect={left:(width-fw*scaleFit)/2,top:height-fh*scaleFit,width:fw*scaleFit,height:fh*scaleFit};
+  group.scale.setScalar(scaleFit);group.position.set(width/2,-(faceRect.top+faceRect.height/2),-scaleFit*halfDepth);
+  viewFrame=frameOf(effect,knobs);
+  for(const k in faceRect)host.style.setProperty('--face-'+k,faceRect[k]+'px');
  }
  computeFit();
  const toWorld=(u,v)=>[faceRect.left+u*faceRect.width,-(faceRect.top+v*faceRect.height)];
@@ -227,7 +199,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   }
   if(pointers.size||now<awakeUntil||animating)frame=requestAnimationFrame(tick);
  }
- function faceRectClient(){const hostBox=host.getBoundingClientRect();return {left:hostBox.left,top:hostBox.top,width:hostBox.width,height:hostBox.height};}
+ function faceRectClient(){const hostBox=host.getBoundingClientRect();const sx=hostBox.width/width,sy=hostBox.height/height;return {left:hostBox.left+faceRect.left*sx,top:hostBox.top+faceRect.top*sy,width:faceRect.width*sx,height:faceRect.height*sy};}
  const observer=new ResizeObserver(layout);observer.observe(host);layout();renderer.render(scene,camera);warm.forEach(w=>group.remove(w));
 
  // Cut-away: every triangle of the board's own mesh(es) whose centroid is inside polyUv (face coords, v down;
@@ -244,7 +216,6 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  }
  function cut(polyUv,color='#ffffff',ms=1100){
   heal();
-  if(preservedAspect)polyUv=polyUv.map(([u,v])=>[(u*width-faceRect.left)/faceRect.width,(v*height-faceRect.top)/faceRect.height]);
   const parts=[],pieces=[];
   for(const mesh of meshObjs){
    const g=mesh.geometry,p=g.attributes.position.array,index=g.index||(g.setIndex([...Array(g.attributes.position.count).keys()]),g.index);
@@ -275,7 +246,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   cut,heal,
   patternRect(){const hostBox=host.getBoundingClientRect(),F=viewFrame,sx=hostBox.width/width,sy=hostBox.height/height;if(preservedAspect)return {left:hostBox.left+(faceRect.left+faceRect.width*F.x0)*sx,top:hostBox.top+(faceRect.top+faceRect.height*F.y0)*sy,width:faceRect.width*(F.x1-F.x0)*sx,height:faceRect.height*(F.y1-F.y0)*sy};return {left:hostBox.left+hostBox.width*F.x0,top:hostBox.top+hostBox.height*F.y0,width:hostBox.width*(F.x1-F.x0),height:hostBox.height*(F.y1-F.y0)};},
   press(id,clientX,clientY){
-   const client=faceRectClient(),sx=client.width/width,sy=client.height/height,painted=preservedAspect?{left:client.left+faceRect.left*sx,top:client.top+faceRect.top*sy,width:faceRect.width*sx,height:faceRect.height*sy}:client;
+   const painted=faceRectClient();
    const [u,v]=faceUV(painted,clientX,clientY),cu=Math.min(1,Math.max(0,u)),cv=Math.min(1,Math.max(0,v)),ex=pointers.get(id);
    if(ex){effect.move?.(id,cu,cv,ex.u,ex.v);ex.u=cu;ex.v=cv;}
    else{pointers.set(id,{u:cu,v:cv,t0:performance.now()});effect.press?.(id,cu,cv);}

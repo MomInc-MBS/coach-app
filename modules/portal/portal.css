@@ -8,7 +8,7 @@
    pointer, and it scales with #portalHome in a dive to a home/nav destination (a dialog destination keeps the frame
    still: see #portalChrome). Metal after the pod capsule and control board: CSS only. */
 #portalHome,#portalChrome{--portal-rail:15px}
-#portalBoardHost{position:absolute;z-index:1;inset:var(--portal-rail)}
+#portalBoardHost{position:absolute;z-index:1;inset:var(--portal-rail) var(--portal-rail) calc(88px + env(safe-area-inset-bottom))}
 .portal-frame{--screw:#cbbab0 0 1.4px,#57474f 1.9px 3px,#0000 3.5px;position:absolute;z-index:1;box-sizing:border-box;left:var(--face-left,0px);top:var(--face-top,0px);width:var(--face-width,100%);height:var(--face-height,100%);border-radius:3px;pointer-events:none;box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b}
 .portal-frame:before{content:'';position:absolute;inset:calc(-1*var(--portal-rail));padding:var(--portal-rail);border-radius:calc(var(--portal-rail)/2 + 3px);background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),repeating-linear-gradient(0deg,#0000 0 2px,#00000010 2px 3px),linear-gradient(160deg,#7e6a7c,#4d3d4f 26%,#3b2f42 52%,#2b2132 78%,#564458);box-shadow:inset 0 1px #e6d2da99,inset 1px 0 #d6c0cc44,inset 0 -2px #000a,inset -1px 0 #0007;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 /* The lip: a dark seam, a back-lit bevel line on the rail's inner edge, and the rail's shadow falling onto the board. */
@@ -162,3 +162,30 @@ html[data-public-state] #portalShadows i:nth-child(3){animation:portal-drift-c 2
 html[data-public-state] #portalObjects .portal-object{transition:transform .6s cubic-bezier(.3,0,.7,1),opacity .6s ease,left .6s ease,top .6s ease!important}
 @media (prefers-reduced-motion:reduce){html[data-public-state] #portalHome *,html[data-public-state] #portalHome :after{animation:none!important;transition:none!important}}
 .portal-menu header button{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid #ffffff44;background:#ffffff14;color:#f5eaff}
+
+/* Full device metalwork surrounds the proportionate board. The upper plate occupies the
+   unused height; texture pixels are never pulled into it. */
+#portalBoardHost .portal-frame{--cap:calc(var(--face-top,0px) + var(--portal-rail));--side:calc(var(--face-left,0px) + var(--portal-rail))}
+#portalChrome .portal-frame{--cap:var(--face-top,15px);--side:var(--face-left,15px)}
+.portal-frame:before{top:calc(-1*var(--cap));left:calc(-1*var(--side));right:calc(-1*var(--side));bottom:calc(-88px - env(safe-area-inset-bottom));padding:var(--cap) var(--side) calc(88px + env(safe-area-inset-bottom));background:repeating-linear-gradient(0deg,#0000 0 25px,#0b071966 26px,#d3bed92e 27px,#0000 29px),repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(160deg,#7e6a7c,#4d3d4f 26%,#3b2f42 52%,#2b2132 78%,#564458)}
+.portal-frame b{top:calc(var(--cap)/-2);height:23px;line-height:21px;letter-spacing:.27em}
+#coachDock.coach-dock{height:calc(88px + env(safe-area-inset-bottom));gap:8px;padding:9px 12px calc(12px + env(safe-area-inset-bottom));border-top:0;background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(#493a50,#2b2132);box-shadow:inset 0 2px #ad97ad66,inset 0 6px 9px #0007;backdrop-filter:none}
+#coachDock.coach-dock button,#coachDock.coach-dock button.dock-portal{position:relative;height:53px;min-width:0;border:2px solid #9a8295;border-top-color:#cbb5c5;border-bottom-color:#4b384d;border-radius:4px!important;background:linear-gradient(145deg,#806979,#4a394e 80%);box-shadow:0 0 0 3px #1c1421,0 6px 0 2px #130d18,inset 1px 2px #e0c3d366,inset -2px -3px #25182c99;color:#f6e5d5;transform:none;translate:none}
+#coachDock.coach-dock button:active,#coachDock.coach-dock button[aria-current=page]{transform:translateY(4px);box-shadow:0 0 0 3px #1c1421,0 2px 0 2px #130d18,inset 1px 2px 5px #0008;border-top-color:#9b8194;color:#fff3d3}
+#coachDock.coach-dock button:before{background:#211927;border-color:#100b16;border-radius:1px}
+#coachDock.coach-dock button[aria-current=page]:before{background:#e7b875;box-shadow:0 0 6px #f9c88088}
+#portalMenuButton,#portalExitButton{border-radius:4px;backdrop-filter:none;background:linear-gradient(#8b7586,#514055);border:2px outset #ae94a7;box-shadow:0 4px #211626,inset 0 1px #dbc1cd66}
+#portalMenuButton:active,#portalExitButton:active{box-shadow:0 1px #211626;translate:0 3px}
+.portal-color{display:flex;align-items:center;justify-content:space-between;gap:16px;font:13px system-ui;margin:12px 0}.portal-color input{width:48px;height:44px;padding:3px;border:1px solid #ac91a4;background:#302338}
+dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;clip-path:none!important}
+#portalChrome.portal-garage .portal-aura{display:none}
+#portalChrome.portal-garage .portal-frame{animation:portal-garage-up .8s cubic-bezier(.4,0,.3,1) both}
+#portalChrome.portal-garage[data-destination=meditation]{visibility:hidden}
+@keyframes portal-garage-up{to{transform:translateY(-110vh)}}
+@media(prefers-reduced-motion:reduce){#portalChrome.portal-garage{visibility:hidden}}
+
+/* Static material depths also survive WebGL loss and reduced-motion mode. */
+.portal-glass:not(.gl):is([data-tunnel=ice],[data-tunnel=jelly])>b{background:radial-gradient(ellipse at center,#e5deec 0,transparent 7%),repeating-conic-gradient(from 20deg,color-mix(in srgb,var(--tint) 70%,#05030b) 0 24deg,var(--tint) 27deg 40deg,color-mix(in srgb,var(--tint) 25%,#000) 42deg 60deg)}
+.portal-glass:not(.gl)[data-tunnel=grass]>b{background:radial-gradient(ellipse at center,#9d8257 0,#1a1006 9%,#2b190b 45%,#614122)}
+.portal-glass:not(.gl)[data-tunnel=wood]>b{background:radial-gradient(ellipse at center,#ffb054 0,#bb4116 5%,#261710 14%,#100e0d 68%)}
+.portal-glass:not(.gl)[data-tunnel=cogs]>b{background:radial-gradient(ellipse at center,#bdcbc8 0,#546763 5%,#151b1b 20%,#2b3030 68%)}

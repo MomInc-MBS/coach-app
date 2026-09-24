@@ -1,0 +1,91 @@
+// #111 (W2-2K): the MOM Inc metal frame around the board. The board fills the rail at the physical perimeter at
+// 375x812; overlay controls remain above it. The frame wraps the face exactly, never
+// takes a pointer, and a square traced along its inner edge (starting on the frame) still opens the rect portal
+// with the glass bezel on the stitched outline. Frames land in .frames/ (untracked) per the brief's Verify section.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile,mkdir} from 'node:fs/promises';
+import {resolve,extname,sep} from 'node:path';
+import {chromium} from 'playwright';
+
+const FRAMES_DIR=resolve('.frames');
+
+async function withPortal(run){
+ const source=resolve('.'),built=resolve('dist/client');
+ const server=createServer(async(req,res)=>{
+  const path=new URL(req.url,'http://local').pathname;
+  if(path==='/__portal__'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><style>body{margin:0}</style><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script>');return;}
+  try{const root=path.startsWith('/modules/portal/')||path.startsWith('/pod/worlds/boards/')?source:built,file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.webp':'image/webp'})[extname(file)]||'application/octet-stream');res.end(await readFile(file));}catch{res.writeHead(404);res.end();}
+ });
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
+ try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});await run(browser,'http://127.0.0.1:'+server.address().port+'/__portal__');}
+ finally{await browser?.close();await new Promise(r=>server.close(r));}
+}
+async function openPage(browser,url,dpr=1){
+ const page=await browser.newPage({viewport:{width:375,height:812},deviceScaleFactor:dpr});
+ await page.goto(url);
+ assert(await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();}),'real WebGL Quilt must load');
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ await page.waitForTimeout(300); // the board lays out on its ResizeObserver once shown
+ return page;
+}
+const boxOf=r=>({left:r.left,top:r.top,right:r.left+r.width,bottom:r.top+r.height});
+async function geometry(page){
+ return page.evaluate(()=>{
+  const b=portal.current(),r=el=>{const q=el.getBoundingClientRect();return{left:q.left,top:q.top,width:q.width,height:q.height};};
+  const frame=document.querySelector('#portalBoardHost .portal-frame'),rail=parseFloat(getComputedStyle(frame).getPropertyValue('--portal-rail'));
+  return{face:b.faceRect(),pattern:b.patternRect(),frame:r(frame),rail,plate:r(frame.querySelector('b')),menu:r(document.getElementById('portalMenuButton')),pod:r(document.getElementById('portalExitButton')),bolts:[...frame.querySelectorAll('i')].map(r)};
+ });
+}
+
+test('phone device keeps artwork proportional and renders every downloaded tunnel',async()=>withPortal(async(browser,url)=>{
+ await mkdir(FRAMES_DIR,{recursive:true});
+ const page=await openPage(browser,url);const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='warning'&&m.text().includes('wormhole unavailable'))errors.push(m.text());});
+ const initial=await geometry(page);
+ assert.ok(initial.face.top>120,'top cap occupies spare height');
+ assert.ok(Math.abs(initial.face.width/initial.face.height-1024/1666)<.001,'complete quilt keeps original aspect');
+ await page.screenshot({path:resolve(FRAMES_DIR,'redesign-quilt.png')});
+ for(const id of ['quilt','ice','jelly','grass','wood','cogs']){
+  await page.evaluate(async id=>{await portal.board(id);portal.show();},id);
+  assert.equal(await page.locator('#portalHome').getAttribute('data-board'),id);
+  const shape=await page.evaluate(()=>({face:portal.current().faceRect(),pattern:portal.current().patternRect()}));
+  assert.ok(shape.pattern.top>=shape.face.top&&shape.pattern.top+shape.pattern.height<=shape.face.top+shape.face.height+1,id+' guide inside board');
+  if(id!=='quilt')await page.screenshot({path:resolve(FRAMES_DIR,'redesign-'+id+'.png')});
+  await page.evaluate(()=>portal.playWormhole({direction:'in',minMs:50}));
+  await page.waitForTimeout(100);
+  assert.equal(await page.locator('.portal-wormhole.gl canvas').count(),1,id+' shader compiled and drew');
+  await page.screenshot({path:resolve(FRAMES_DIR,'tunnel-'+id+'.png')});
+  await page.evaluate(()=>portal.playWormhole({direction:'out',minMs:50}));
+ }
+ assert.deepEqual(errors,[]);
+ await page.evaluate(()=>{portal.show();const home=document.createElement('main');home.id='homeScreen';home.innerHTML='<button id="start">BEGIN</button>';document.body.append(home);portal.open('rect');});
+ await page.waitForFunction(()=>document.querySelector('#portalWorkoutHome.portal-fullscreen')?.open,{},{timeout:20000});
+ const rect=await page.locator('#portalWorkoutHome').boundingBox();assert.deepEqual(rect,{x:0,y:0,width:375,height:812});
+ assert.equal(await page.locator('#portalChrome').getAttribute('data-destination'),'workout');
+ await page.waitForTimeout(850);
+ assert.ok(await page.locator('#portalChrome .portal-frame').evaluate(el=>el.getBoundingClientRect().bottom<0),'frame retracts above viewport');
+ await page.screenshot({path:resolve(FRAMES_DIR,'redesign-workout.png')});
+ await page.evaluate(()=>document.getElementById('portalWorkoutHome').close());
+ await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden,{},{timeout:10000});
+ await page.close();
+}));
+
+test('meditation tunnel loses colour throughout its duration and lands fullscreen',async()=>withPortal(async(browser,url)=>{
+ const page=await openPage(browser,url);
+ await page.evaluate(()=>{
+  const entry=document.createElement('button');entry.className='meditation-entry';document.body.append(entry);
+  const room=document.createElement('dialog');room.className='meditation-panel';document.body.append(room);entry.onclick=()=>room.showModal();
+  portal.open('line-lr');
+ });
+ await page.waitForSelector('.portal-glass');
+ const start=await page.locator('.portal-glass').evaluate(el=>({filter:getComputedStyle(el).filter,duration:el.getAnimations().find(a=>a.effect.getKeyframes().some(f=>f.filter))?.effect.getTiming().duration}));
+ assert.ok(start.duration>3000,'fade spans cut, load and arrival, not an instant switch');
+ await page.waitForTimeout(600);
+ const partial=await page.locator('.portal-glass').evaluate(el=>parseFloat(getComputedStyle(el).filter.match(/grayscale\(([^)]+)/)[1]));assert.ok(partial>0&&partial<1);
+ await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-fullscreen')?.open,null,{timeout:10000});
+ const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:0,y:0,width:375,height:812});
+ assert.equal(await page.locator('#portalChrome').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+ await page.close();
+}));

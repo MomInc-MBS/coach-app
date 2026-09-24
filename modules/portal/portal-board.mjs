@@ -29,18 +29,14 @@ const BACKGROUND='#17111e';
 // stitched quilt, same layout: cream cloth in its dark binding, the traceable shapes stitched where the art has them.
 const STITCHES=[['oval','#c42a3c'],['x','#e0388f'],['up','#2c5cc2'],['down','#2f8a4c'],['cross','#4ea6da']];
 
-// The cloth fills its host, while the image's stitched area is kept geometrically true in
-// the largest centered rect that fits.  The binding and unstitched cloth are allowed to
-// stretch around it.  These helpers are exported so the layout contract stays testable
-// without constructing a WebGL context.
+// Preserve the complete source image; unused space belongs to the mechanical cap.
 export function quiltSurfaceLayout(width,height){
- const w=Math.max(1,width),h=Math.max(1,height),pw=Math.min(w,h*PATTERN_RATIO),ph=pw/PATTERN_RATIO;
- return {face:{left:0,top:0,width:w,height:h},pattern:{left:(w-pw)/2,top:(h-ph)/2,width:pw,height:ph}};
+ const w=Math.max(1,width),h=Math.max(1,height),fw=Math.min(w,h*IMAGE_W/IMAGE_H),fh=fw*IMAGE_H/IMAGE_W;
+ const face={left:(w-fw)/2,top:h-fh,width:fw,height:fh};
+ return {face,pattern:{left:face.left+fw*PATTERN.left,top:face.top+fh*PATTERN.top,width:fw*(PATTERN.right-PATTERN.left),height:fh*(PATTERN.bottom-PATTERN.top)}};
 }
-
 export function quiltSourceToSurface(u,v,width,height){
- const {face,pattern}=quiltSurfaceLayout(width,height);
- return [face.width*remapMargin(u,PATTERN.left,PATTERN.right,pattern.left/face.width,(pattern.left+pattern.width)/face.width),face.height*remapMargin(v,PATTERN.top,PATTERN.bottom,pattern.top/face.height,(pattern.top+pattern.height)/face.height)];
+ const {face}=quiltSurfaceLayout(width,height);return [face.left+u*face.width,face.top+v*face.height];
 }
 
 // Client coordinates are post-transform; the cloth solver is in the host's untransformed
@@ -112,8 +108,8 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   for(const k in face)host.style.setProperty('--face-'+k,face[k]+'px'); // the portal's metal frame (#111) wraps the full cloth
   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
    const n=j*cols+i,p=3*n,u=xAxis[i],v=yAxis[j];
-   rest[p]=face.width*remapMargin(u,PATTERN.left,PATTERN.right,pattern.left/face.width,(pattern.left+pattern.width)/face.width);
-   rest[p+1]=-face.height*remapMargin(v,PATTERN.top,PATTERN.bottom,pattern.top/face.height,(pattern.top+pattern.height)/face.height);rest[p+2]=0;
+   rest[p]=face.left+u*face.width;
+   rest[p+1]=-(face.top+v*face.height);rest[p+2]=0;
    uv[2*n]=u;uv[2*n+1]=1-v;
   }
   pos.set(rest);prev.set(rest);
@@ -161,14 +157,14 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
  // Measured fresh from the host box (not the last layout), so it stays correct before
  // ResizeObserver runs and while the portal is CSS-scaled during a dive.
- const quiltRect=()=>{const box=host.getBoundingClientRect();return {left:box.left,top:box.top,width:box.width,height:box.height};};
+ const quiltRect=()=>{const box=host.getBoundingClientRect();const f=quiltSurfaceLayout(box.width,box.height).face;return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};};
  // Cut-away: grid triangles whose centroid (in quilt-image fractions, v down) is inside poly leave the
  // index -> a hole; a static copy of their current positions + uvs falls into the board. The cloth
  // keeps simulating everything (constraints on the now-invisible vertices are harmless).
  function cut(poly,color,ms=1100){
   if(reduced)ms=0;
   heal();
-  const {keep,cut:tri}=splitIndexByPolygon(rest,fullIndex.array,(x,y)=>[x/width,-y/height],poly);
+  const {keep,cut:tri}=splitIndexByPolygon(rest,fullIndex.array,(x,y)=>[(x-surface.face.left)/surface.face.width,(-y-surface.face.top)/surface.face.height],poly);
   const pieces=[];
   if(tri.length){
    const map=new Map(),P=[],U=[],I=[];let cx=0,cy=0,cz=0;
@@ -193,7 +189,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   faceRect:quiltRect,
   cut,heal,
   // Stitched-shape area in client pixels; the portal normalises traces against it.
-  patternRect(){const q=quiltRect(),p=quiltSurfaceLayout(q.width,q.height).pattern;return {left:q.left+p.left,top:q.top+p.top,width:p.width,height:p.height};},
+  patternRect(){const q=quiltRect();return {left:q.left+q.width*PATTERN.left,top:q.top+q.height*PATTERN.top,width:q.width*(PATTERN.right-PATTERN.left),height:q.height*(PATTERN.bottom-PATTERN.top)};},
   quiltRect,
   press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
   release(id){pointers.delete(id);wake();},
