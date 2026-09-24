@@ -120,11 +120,11 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  const group=new THREE.Group();
  const meshObjs=geoms.map((g,i)=>{const mm=new THREE.Mesh(g,meshes[i].material);group.add(mm);return mm;});
  scene.add(group);
- const paintedDoor=effect.id==='cogs';
- // Cogs' pipes are painted shape guides. Keep that slab at its source aspect and extend only
- // the upper/lower edge texture into the host margins; stretching the whole slab moves its guides.
+ const preservedAspect=true;
+ // Several boards have carved or painted shape guides. Keep every slab at its source aspect
+ // and extend edge texture into the host margins; stretching the slab moves those guides.
  const edgeFill=[];
- if(paintedDoor&&meshObjs[0].material.map?.image){
+ if(preservedAspect&&meshObjs[0].material.map?.image){
   const source=meshObjs[0].material.map.image;
   for(const side of ['top','bottom','left','right']){
    const vertical=side==='left'||side==='right',span=Math.min(96,vertical?source.width:source.height);
@@ -170,7 +170,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   // The slab fills the host. Keep shape guides at the model's source aspect in a centered subrect.
   const sx=width/fw,sy=height/fh;scaleFit=Math.min(sx,sy);
   uniforms.uDent.value=knobs.dent/scaleFit;uniforms.uDentRadius.value=knobs.dentRadius/scaleFit;
-  if(paintedDoor){
+  if(preservedAspect){
    scaleFit=Math.min(sx,sy);group.scale.setScalar(scaleFit);group.position.set(width/2,-height/2,-scaleFit*halfDepth);
    faceRect={left:(width-fw*scaleFit)/2,top:(height-fh*scaleFit)/2,width:fw*scaleFit,height:fh*scaleFit};
    const gapY=Math.max(0,(height/scaleFit-fh)/2),gapX=Math.max(0,(width/scaleFit-fw)/2);
@@ -185,7 +185,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   }
   const F=frameOf(effect,knobs),natural=(fw*(F.x1-F.x0))/(fh*(F.y1-F.y0));
   const pw=Math.min(width,height*natural),ph=Math.min(height,width/natural);
-  viewFrame=paintedDoor?F:{x0:(width-pw)/(2*width),y0:(height-ph)/(2*height),x1:(width+pw)/(2*width),y1:(height+ph)/(2*height)};
+  viewFrame=preservedAspect?F:{x0:(width-pw)/(2*width),y0:(height-ph)/(2*height),x1:(width+pw)/(2*width),y1:(height+ph)/(2*height)};
  }
  computeFit();
  const toWorld=(u,v)=>[faceRect.left+u*faceRect.width,-(faceRect.top+v*faceRect.height)];
@@ -244,7 +244,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  }
  function cut(polyUv,color='#ffffff',ms=1100){
   heal();
-  if(paintedDoor)polyUv=polyUv.map(([u,v])=>[(u*width-faceRect.left)/faceRect.width,(v*height-faceRect.top)/faceRect.height]);
+  if(preservedAspect)polyUv=polyUv.map(([u,v])=>[(u*width-faceRect.left)/faceRect.width,(v*height-faceRect.top)/faceRect.height]);
   const parts=[],pieces=[];
   for(const mesh of meshObjs){
    const g=mesh.geometry,p=g.attributes.position.array,index=g.index||(g.setIndex([...Array(g.attributes.position.count).keys()]),g.index);
@@ -265,7 +265,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   if(!cutting)return;
   cutting.fall.end();for(const {g,index} of cutting.parts)g.setIndex(index);cutting=null;effect.heal?.();
   rim.ctx.clearRect(0,0,rim.canvas.width,rim.canvas.height);rim.texture.needsUpdate=true;
-  if(paintedDoor)computeFit();
+  if(preservedAspect)computeFit();
   if(!disposed)renderer.render(scene,camera); // healed frame on the canvas now, even while paused
  }
  return {
@@ -273,9 +273,9 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   background:effect.background||'#17111e',
   faceRect:faceRectClient,
   cut,heal,
-  patternRect(){const hostBox=host.getBoundingClientRect(),F=viewFrame,sx=hostBox.width/width,sy=hostBox.height/height;if(paintedDoor)return {left:hostBox.left+(faceRect.left+faceRect.width*F.x0)*sx,top:hostBox.top+(faceRect.top+faceRect.height*F.y0)*sy,width:faceRect.width*(F.x1-F.x0)*sx,height:faceRect.height*(F.y1-F.y0)*sy};return {left:hostBox.left+hostBox.width*F.x0,top:hostBox.top+hostBox.height*F.y0,width:hostBox.width*(F.x1-F.x0),height:hostBox.height*(F.y1-F.y0)};},
+  patternRect(){const hostBox=host.getBoundingClientRect(),F=viewFrame,sx=hostBox.width/width,sy=hostBox.height/height;if(preservedAspect)return {left:hostBox.left+(faceRect.left+faceRect.width*F.x0)*sx,top:hostBox.top+(faceRect.top+faceRect.height*F.y0)*sy,width:faceRect.width*(F.x1-F.x0)*sx,height:faceRect.height*(F.y1-F.y0)*sy};return {left:hostBox.left+hostBox.width*F.x0,top:hostBox.top+hostBox.height*F.y0,width:hostBox.width*(F.x1-F.x0),height:hostBox.height*(F.y1-F.y0)};},
   press(id,clientX,clientY){
-   const client=faceRectClient(),sx=client.width/width,sy=client.height/height,painted=paintedDoor?{left:client.left+faceRect.left*sx,top:client.top+faceRect.top*sy,width:faceRect.width*sx,height:faceRect.height*sy}:client;
+   const client=faceRectClient(),sx=client.width/width,sy=client.height/height,painted=preservedAspect?{left:client.left+faceRect.left*sx,top:client.top+faceRect.top*sy,width:faceRect.width*sx,height:faceRect.height*sy}:client;
    const [u,v]=faceUV(painted,clientX,clientY),cu=Math.min(1,Math.max(0,u)),cv=Math.min(1,Math.max(0,v)),ex=pointers.get(id);
    if(ex){effect.move?.(id,cu,cv,ex.u,ex.v);ex.u=cu;ex.v=cv;}
    else{pointers.set(id,{u:cu,v:cv,t0:performance.now()});effect.press?.(id,cu,cv);}
