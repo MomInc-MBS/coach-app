@@ -54,7 +54,10 @@ test('camera workouts count reps through the real start paths, including at a ph
    if(begin==='portal'){await page.evaluate(()=>window.myr5Menus.portal());await page.waitForFunction(()=>window.myr5Portal&&!document.querySelector('#portalHome')?.hidden);}
    await choose();
    assert.equal(await page.evaluate(()=>document.getElementById('movement').value),mode,name);
-   await page.evaluate(begin=>begin==='portal'?window.myr5Portal.open('rect'):document.getElementById('start').click(),begin);
+   // Release 5 (2A): the square opens the workout start page (quilt away, pod scrolled to the top) and no longer
+   // presses BEGIN for you; the user's BEGIN tap there is the rest of the real path.
+   if(begin==='portal'){await page.evaluate(()=>window.myr5Portal.open('rect'));await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true&&location.hash==='#workout',null,{timeout:20000});}
+   await page.evaluate(()=>document.getElementById('start').click());
    await page.waitForFunction(()=>document.getElementById('library').open,null,{timeout:30000});
    await page.evaluate(()=>document.getElementById('useHologram').click());
    await page.waitForFunction(()=>window.myr5TestState.phase==='tracking'||window.myr5TestState.phase==='error',null,{timeout:20000});
