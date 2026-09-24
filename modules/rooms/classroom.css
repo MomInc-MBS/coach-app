@@ -1,16 +1,17 @@
 .classroom-panel[data-room=loading],.classroom-panel[data-room=ready]{height:min(100dvh - 28px,900px);overflow:hidden}
-.classroom-panel[data-room]:not([data-room-view=board])[open]{display:flex;flex-direction:column;padding:0}
+.classroom-panel[data-room]:not([data-room-view=board])[open]{display:block;padding:0;position:relative}
 .classroom-panel[data-room]:not([data-room-view=board])>:not(header,.classroom-host){display:none!important}
-.classroom-panel[data-room]:not([data-room-view=board])>header{margin:0;padding:12px 14px 10px;flex:none}
+.classroom-panel[data-room]:not([data-room-view=board])>header{position:absolute;z-index:3;inset:0 0 auto;margin:0;padding:12px 14px 10px;background:transparent;border:0;box-shadow:none;pointer-events:none}
+.classroom-panel[data-room]:not([data-room-view=board])>header>*{pointer-events:auto}
 .classroom-host{position:relative}
-.classroom-panel[data-room]:not([data-room-view=board]) .classroom-host{flex:1;min-height:0}
+.classroom-panel[data-room]:not([data-room-view=board]) .classroom-host{position:absolute;inset:0;min-height:0}
 .classroom-stage{position:absolute;inset:0;overflow:hidden;background:#d9c9b0}
 .classroom-canvas,.classroom-fallback,.classroom-desks,.classroom-ui{position:absolute;inset:0;width:100%;height:100%}
 .classroom-fallback{background:linear-gradient(180deg,#b6a182 0 64%,#a79681 64%);pointer-events:none}
 .classroom-fallback[hidden]{display:none}
 .classroom-desks,.classroom-ui{pointer-events:none}
 .classroom-desks>*,.classroom-ui>*{pointer-events:auto}
-.classroom-panel .classroom-board{position:absolute;left:29%;top:12%;width:42%;height:35%;display:grid;place-items:end center;padding:0 0 8px;background:transparent;border:3px dashed transparent;border-radius:6px;box-shadow:none;cursor:pointer;transform:none}
+#accountPanel.classroom-panel .classroom-board{position:absolute;left:29%;top:12%;width:42%;height:35%;display:grid;place-items:end center;padding:0 0 8px;background:transparent;border:3px dashed transparent;border-radius:6px;box-shadow:none;cursor:pointer;transform:none}
 .classroom-panel .classroom-board span{font:17px/1.2 BoardHand0,cursive;color:#35507a;background:#fffdf5e8;padding:3px 10px;border-radius:12px}
 .classroom-panel .classroom-board:hover,.classroom-panel .classroom-board:focus-visible{border-color:#174b92;outline:2px solid #174b92}
 .classroom-desk{position:absolute;top:63%;transform:translate(-50%,-100%);display:grid;justify-items:center}
@@ -19,8 +20,9 @@
 .classroom-desk .crew-head canvas{width:54px;height:54px}
 .classroom-desk figure{margin:0;display:grid;justify-items:center;gap:3px}
 .classroom-desk figcaption{font:700 13px/1.2 Arial,sans-serif;color:#2e3e56;background:#fffdf5e6;padding:2px 8px;border-radius:9px;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.classroom-panel .classroom-desk button{display:grid;justify-items:center;gap:2px;padding:6px 10px;font:17px/1.1 BoardHand0,cursive}
-.classroom-panel .classroom-desk button b{font:700 26px/1 Arial,sans-serif}
+#accountPanel .classroom-desk button{display:grid;place-items:center;width:54px;height:54px;min-width:0;min-height:0;padding:0;border-radius:50%;font:17px/1 BoardHand0,cursive}
+#accountPanel .classroom-desk button b{font:700 29px/1 Arial,sans-serif}
+#accountPanel .classroom-desk button span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .classroom-note{position:absolute;bottom:10px;left:10px;right:10px;text-align:center;background:#fffdf5dd;padding:5px;border-radius:6px;font:15px Arial,sans-serif}
 .classroom-panel[data-room-view=board]{height:auto;max-height:calc(100dvh - 28px);overflow-y:auto;background:linear-gradient(110deg,#fbf8ef,#f1ede2);border-color:#a7a49c}
 .classroom-panel[data-room-view=board] .classroom-host{display:none}
