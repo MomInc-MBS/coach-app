@@ -106,6 +106,10 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
    position; while the quilt is up, lift it clear of the Menu button (it's exempted from the portal's
    inert sweep in portal.mjs, so it stays tappable there instead). */
 body:has(#portalHome:not([hidden])) .app-update-banner{bottom:calc(76px + env(safe-area-inset-bottom))}
+/* Release 5: Armie's inbox button (armie-inbox-ui.mjs) sits bottom-right above the bar, which on the quilt is the
+   metal frame's corner bolt and the board face. While the quilt is up it moves to the top-left of the band above the
+   frame, level with Pod (exempt from the inert sweep and in the focus cycle, portal.mjs, so it works there). */
+body:has(#portalHome:not([hidden])) .armie-inbox-launcher{top:calc(max(12px,env(safe-area-inset-top)) + 2px);bottom:auto;left:calc(12px + env(safe-area-inset-left,0px));right:auto}
 /* Any dialog opened over the quilt: the board should still glow through instead of going near-black. */
 body:has(#portalHome:not([hidden])) dialog::backdrop{background:#0c081266}
 .portal-transition-flash{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;z-index:10000;pointer-events:none;background:radial-gradient(ellipse at center,#fff 0%,#fff8dc 45%,#ffd86a 100%);animation:portal-transition-flash .52s ease-in-out both}

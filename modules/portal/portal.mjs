@@ -249,14 +249,16 @@ function buildDom(){
  objectsLayer=portalHome.querySelector('#portalObjects');
  statusEl=portalHome.querySelector('#portalStatus');
  // W2-2A: the app's bottom bar (routes.mjs) is up on the quilt; its centre Portal button replaces the floating Menu
- // button, and the focus trap cycles the whole bar plus Pod.
+ // button, and the focus trap cycles the whole bar plus Pod (and Armie's inbox button, which stays live on the quilt).
  const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
  menuBtn=barPortal||portalHome.querySelector('#portalMenuButton');
  if(bar)portalHome.querySelector('#portalMenuButton').remove();
  portalHome.querySelector('#portalExitButton').onclick=()=>setVisible(false);
- const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
+ const armie=()=>[...document.querySelectorAll('.armie-inbox-launcher')].filter(el=>el.getClientRects().length);
+ const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),...armie(),portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
  portalHome.addEventListener('keydown',trap);
  bar?.addEventListener('keydown',e=>{if(boardShown&&!bar.closest('dialog'))trap(e);},{signal:lifecycle.signal});
+ document.addEventListener('keydown',e=>{if(boardShown&&e.target.classList?.contains('armie-inbox-launcher'))trap(e);},{signal:lifecycle.signal});
  boardBtn=document.getElementById('openBoard');
  // The fallback menu sheet lives outside portalHome too: a dialog nested in a hidden ancestor
  // would be hidden along with it while open (e.g. mid-fade during the "all" portal reveal).
@@ -286,7 +288,7 @@ function backgroundBlocked(block){
  // toast (app-updates.mjs) is a non-dialog element sitting over the portal's own controls; it's exempt too, or its
  // "Got it" tap falls through to whatever is underneath (portal.css raises it above the Menu button while up).
  const liveDialog=el=>el.tagName==='DIALOG'&&(el.open||getComputedStyle(el).display==='none');
- const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner')||el.classList.contains('coach-dock');
+ const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner')||el.classList.contains('coach-dock')||el.classList.contains('armie-inbox-launcher');
  if(block){for(const el of document.body.children)if(!exempt(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }

@@ -369,6 +369,14 @@ test('8. traced destinations dive into the frame with the bar lit below it, the 
   assert.ok(quilt.frameBottom<=quilt.barTop,`the quilt's frame clears the bar (${quilt.frameBottom} vs ${quilt.barTop})`);
   let b=await bar(page);
   assert.deepEqual(b.lit,['portal']);assert.equal(b.visible&&b.tappable,true,'the bar is up and tappable on the quilt');
+  // Armie's inbox button: in the band above the frame (clear of its rail, bolts and the board face), clear of Pod
+  // and the bar, and live (not swept inert with the rest of the page).
+  await page.waitForSelector('.armie-inbox-launcher');
+  const armie=await page.evaluate(()=>{const el=document.querySelector('.armie-inbox-launcher'),a=el.getBoundingClientRect(),frame=document.querySelector('#portalBoardHost .portal-frame'),f=frame.getBoundingClientRect(),rail=parseFloat(getComputedStyle(frame).getPropertyValue('--portal-rail')),pod=document.getElementById('portalExitButton').getBoundingClientRect();
+   return {bottom:a.bottom,frameTop:f.top-rail,right:a.right,podLeft:pod.left,barTop:document.getElementById('coachDock').getBoundingClientRect().top,inert:el.inert,hit:document.elementFromPoint(a.left+a.width/2,a.top+a.height/2)===el};});
+  assert.ok(armie.bottom<=armie.frameTop&&armie.bottom<=armie.barTop,`Armie's button sits above the frame (${armie.bottom} vs ${armie.frameTop})`);
+  assert.ok(armie.right<armie.podLeft,`Armie's button clears Pod (${armie.right} vs ${armie.podLeft})`);
+  assert.equal(armie.inert||!armie.hit,false,"Armie's button is tappable on the quilt");
   await page.screenshot({path:resolve(FRAMES,'r5-1-quilt-frame-bar.png')});
 
   // Triangle -> Food: dives in, the pyramid opens inside the frame, the bar below it lit for Food.
