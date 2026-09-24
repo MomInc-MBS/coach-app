@@ -6,6 +6,7 @@
 // Served unbundled (external in scripts/build.mjs): no .ts imports and no build-time defines here.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {pyramidTiles,mealNutrients,todayTiles} from './pyramid-tiles.mjs';
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
@@ -367,7 +368,8 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   timer=setTimeout(()=>download.abort(),20000);let bytes;
   try{const response=await fetch('/food/pyramid-scanner.glb',{signal:download.signal});if(!response.ok)throw new Error('Pyramid model unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
   if(disposed)throw cancelled();
-  const gltf=await new GLTFLoader().parseAsync(bytes,'');const model=gltf.scene;
+  const loader=new GLTFLoader();loader.setMeshoptDecoder(MeshoptDecoder);
+  const gltf=await loader.parseAsync(bytes,'');const model=gltf.scene;
   // GLTF texture decoding cannot be aborted. Discard a late result without
   // mounting anything or reviving the closed renderer/listeners.
   if(disposed){disposeTree(model);throw cancelled();}
