@@ -12,7 +12,12 @@ const CIRCUIT_DONE_LINE='Circuit done. Rest, champion.';
 export function mountCircuitUI({voice,onNext,busy,pending,cached}){
  const card=document.createElement('section');card.className='daily-circuit';card.setAttribute('aria-label','Your daily circuit');
  card.innerHTML='<small>DAILY CIRCUIT</small><meter min="0" max="5" value="0" aria-label="Circuit steps completed today"></meter><p data-circuit-status role="status">Connecting your daily circuit…</p><ol data-circuit-steps></ol><button type="button" data-circuit-next hidden>Start next step →</button>';
- document.querySelector('.difficulty-control').after(card);
+ // W2-2M #117: the daily circuit is the pod's Goals drop-down (pose.html #podGoals), with the route card under it.
+ const goals=document.getElementById('podGoals');goals.querySelector('.pod-goals-menu').prepend(card);
+ // A drop-down: Escape, a tap outside it, or picking one of its actions folds it back up.
+ goals.addEventListener('keydown',event=>{if(event.key==='Escape'&&goals.open){goals.open=false;goals.querySelector('summary').focus();}});
+ document.addEventListener('pointerdown',event=>{if(goals.open&&!goals.contains(event.target))goals.open=false;});
+ goals.addEventListener('click',event=>{if(event.target.closest('.pod-goals-menu button'))goals.open=false;});
  const rest=document.createElement('section');rest.className='daily-circuit rest-circuit';rest.hidden=true;rest.setAttribute('aria-label','Daily circuit progress');
  rest.innerHTML='<meter min="0" max="5" value="0" aria-label="Circuit steps completed today"></meter><p data-circuit-status role="status"></p>';
  document.querySelector('.rest-receipt').after(rest);
@@ -35,6 +40,7 @@ export function mountCircuitUI({voice,onNext,busy,pending,cached}){
   for(const meter of [card.querySelector('meter'),rest.querySelector('meter')])meter.value=today?doneCount(today):0;
   const status=today?`${doneCount(today)} of ${CIRCUIT_STEPS.length} circuit steps today`+(nextStep(today)?` · Next: ${LABEL[nextStep(today).key]}`:' · Circuit complete today'):'Connecting your daily circuit…';
   card.querySelector('[data-circuit-status]').textContent=status;rest.querySelector('[data-circuit-status]').textContent=status;
+  goals.querySelector('[data-goals-status]').textContent=today?`${doneCount(today)}/${CIRCUIT_STEPS.length}`:'';
   card.querySelector('[data-circuit-steps]').replaceChildren(...CIRCUIT_STEPS.map(step=>{const li=document.createElement('li');li.textContent=`${today?.stepDone?.[step.key]?'✓ ':''}${LABEL[step.key]}`;if(today&&!today.stepDone[step.key]&&step===nextStep(today))li.setAttribute('aria-current','step');return li;}));
   const button=card.querySelector('[data-circuit-next]'),next=today?nextStep(today):null;
   button.hidden=!next;

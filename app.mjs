@@ -213,7 +213,7 @@ window.addEventListener('myr5:coach-plan',()=>{
  starterPortalAttempted=true;
  if(starterPortalReady())void showQuiltPortal({shouldShow:starterPortalReady});
 });
-// D-ship-route: full-screen ship view, same coach capsule renderer as "Show my coach" below.
+// D-ship-route: full-screen ship view, using the coach capsule renderer (loadCoachViewer below).
 // W2-2A: options pass through ({entrance:'always',hash:'#select'} is the oval's coach arrival).
 window.myr5Menus={...window.myr5Menus,ship:async(options={})=>{const {openShipView}=await import('./modules/ships/ship-view.mjs');return openShipView({loadCoachViewer,getBridge:shipViewBridge,ownedShipIds:shipOwnedShipIds,mountArrival:mountFirstShipArrival,...options});}};
 // App start: grant whatever the cached step snapshot already earned. Later step changes arrive as
@@ -250,10 +250,8 @@ async function loadUnlockedOptionalMaterials(){
  })();
  try{return await optionalLoading;}finally{optionalLoading=null;}
 }
-const showCoach=document.createElement('button');showCoach.type='button';showCoach.textContent='Show my coach';
-$('coachMount').append(showCoach);
-for(const id of ['coachLoading','restCoachLoading'])$(id).textContent='Open your coach when you are ready.';
-showCoach.onclick=async()=>{showCoach.disabled=true;try{await loadCoachViewer();showCoach.hidden=true;}catch{ $('coachLoading').textContent='Coach could not load. Check your connection and try again.';}finally{showCoach.disabled=false;}};
+// W2-2M #117: no "Show my coach" on the pod any more; the coach's reveal is the oval's ship intro (#select).
+for(const id of ['coachLoading','restCoachLoading'])$(id).textContent='Call your coach with the oval on the portal.';
 $('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();void mountPackLicenses({host:$('packLicenses')});},{once:true});
 $('openIdentity').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
 $('manageMaterials').addEventListener('click',async()=>{

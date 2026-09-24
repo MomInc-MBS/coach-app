@@ -15,10 +15,13 @@ test('published viewer can assemble the default coach using shipped models',asyn
  await page.waitForFunction(()=>document.querySelector('.myr5-companion-card')?.dataset.ready==='true',null,{timeout:60000});
  assert(seen.includes('/creature/models/anatomy.glb'));assert(seen.includes('/creature/models/myr5.glb'));assert.equal(await page.locator('.myr5-companion-stage canvas').count(),1);
  await page.goto('http://127.0.0.1:'+server.address().port+'/pose.html');
- await page.waitForFunction(()=>document.querySelector('#coachMount button')?.textContent==='Show my coach');
- assert.equal(await page.locator('#coachLoading').textContent(),'Open your coach when you are ready.');
- await page.evaluate(()=>document.querySelector('#coachMount button').click());
- await page.waitForFunction(()=>document.querySelector('#coachMount .myr5-companion-card')?.dataset.ready==='true',null,{timeout:60000});
- assert.equal(await page.locator('#coachLoading').isHidden(),true);
+ // W2-2M #117: no "Show my coach" on the pod; the coach arrives with the oval's ship view and is parked in #coachMount after.
+ await page.waitForFunction(()=>typeof window.myr5Menus?.ship==='function');
+ assert.equal(await page.locator('#coachMount button').count(),0);
+ assert.equal(await page.locator('#coachLoading').textContent(),'Call your coach with the oval on the portal.');
+ await page.evaluate(()=>{void window.myr5Menus.ship();});
+ await page.waitForFunction(()=>document.querySelector('dialog.ship-view .myr5-companion-card')?.dataset.ready==='true',null,{timeout:60000});
+ await page.evaluate(()=>document.querySelector('.ship-view-close').click());
+ await page.waitForFunction(()=>document.querySelector('#coachMount .myr5-companion-card')?.dataset.ready==='true',null,{timeout:20000});
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });

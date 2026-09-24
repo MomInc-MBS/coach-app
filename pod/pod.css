@@ -40,3 +40,36 @@ body[data-power=ember]{--power:#ff9d66}body[data-power=arc]{--power:#a4caff}body
 .set-actions .primary-action{gap:8px;padding:10px 11px;white-space:nowrap}
 .coach-line #coachCaption{color:#e8d5b3}
 body:has(#library[open]) .myr5-companion-card{display:none!important}
+/* W2-2M #117: the pod is only the viewing port (your character over the pixel world), the control board and BEGIN,
+   sized so BEGIN sits above the bar without scrolling (the square's #workout start page scrolls to the top).
+   The viewing port takes whatever height is left; ids beat the optional hardware skins' .containment-pod heights. */
+#homeScreen{display:flex;flex-direction:column;min-height:calc(100dvh - 72px - var(--myr5-bar) - 12px)}
+#homeScreen>.training-view{flex:1 1 0;display:flex;flex-direction:column}
+#homeScreen .containment-bay{flex:1;display:flex;min-height:0}
+#homeScreen #view{flex:1;height:auto;min-height:150px;background:radial-gradient(ellipse at 50% 45%,transparent 58%,#120c1ccc),var(--room-world) center 86%/cover no-repeat;image-rendering:pixelated;container-type:size}
+#view .pod-floor{display:none}
+/* The coach is parked here between scenes (its reveal is the oval's ship intro); the pre-set film still shows it. */
+body:not([data-cinematic=pre]) #view .coach-mount,body[data-cinematic=pre] #view :is(.home-character,.coach-line){display:none}
+.pod-nameplate #openIdentity{display:flex;align-items:center;gap:4px;min-height:0;height:100%;padding:0;border:0;border-radius:0;background:none;box-shadow:none;font:10px var(--font);color:var(--gold)}
+.pod-nameplate #miniAvatar{display:none}
+/* The coach's voice line is a radio band across the top of the viewing port. */
+#view .coach-line{position:absolute;z-index:5;top:32px;left:30px;right:30px;min-height:0;margin:0;padding:5px 10px;border:1px solid #b88de755;border-radius:8px;background:#140e1fd9;box-shadow:none}
+@container (max-height:220px){#view .coach-line{top:8px}#view .coach-line p{-webkit-line-clamp:1}#view .home-character{top:44px}#view .camera-preview{bottom:40px;width:60px;height:62px}}
+#controls>p:not([id]){margin:0 2px 8px;font-size:11px;line-height:1.35;color:#bca6c9}
+#controls .set-actions{flex-direction:row;align-items:stretch;gap:8px}#controls #start{flex:1;min-height:66px}#controls #stop{flex:none;min-width:64px}
+/* Goals: the daily circuit and the next-challenge card as a compact drop-down in the deck strip, over the viewing port. */
+.deck-strip{position:relative;z-index:12;height:44px;gap:8px}
+.pod-goals>summary{display:flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border:1px solid #6a537b;border-radius:8px;background:linear-gradient(#3b2b49,#271c32);box-shadow:inset 0 1px #ffffff14,0 2px 0 #0b0712;list-style:none;cursor:pointer;color:var(--gold);font:700 10px/1 ui-monospace,monospace;letter-spacing:.16em}
+.pod-goals>summary::-webkit-details-marker{display:none}
+.pod-goals>summary:after{content:'▾';font-size:11px;letter-spacing:0}.pod-goals[open]>summary:after{content:'▴'}
+.pod-goals>summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.pod-goals [data-goals-status]{color:var(--cream);letter-spacing:.05em}
+.pod-goals-menu{position:absolute;left:0;right:0;top:calc(100% + 2px);max-height:calc(100dvh - 140px - var(--myr5-bar));overflow:auto;overscroll-behavior:contain;padding:12px 14px;border:1px solid #a387b5;border-radius:14px;background:linear-gradient(160deg,#3a2742,#1d1426);box-shadow:0 14px 34px #000c;font:14px/1.45 var(--font);letter-spacing:0;color:var(--cream)}
+.pod-goals-menu .daily-circuit>small{color:var(--gold);letter-spacing:.1em}.pod-goals-menu .daily-circuit meter{width:100%}.pod-goals-menu .daily-circuit p{margin:6px 0}.pod-goals-menu .daily-circuit ol{margin:6px 0;padding-left:22px}.pod-goals-menu .daily-circuit button{width:100%}
+.pod-goals-menu .workout-route{margin:12px 0 0}
+/* The pod's extras ride along to Records (coach-hub.mjs); Meditation there is the #meditate route's opener only. */
+.pod-extras .crew-footer{display:none}.pod-extras .meditation-entry{display:none}
+@media(max-height:720px) and (orientation:portrait){#homeScreen{min-height:calc(100dvh - 60px - var(--myr5-bar) - 12px)}}
+/* The one-time "Updated" notice sits above the bar, which on the pod is exactly where BEGIN is: off the quilt it sits
+   over the viewing port instead, clear of BEGIN below and of the downloads bar (.full-download-bar) at the top. */
+body:not(:has(#portalHome:not([hidden]))):not([data-screen=rest]) .app-update-banner{top:calc(128px + env(safe-area-inset-top));bottom:auto}
