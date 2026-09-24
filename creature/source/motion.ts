@@ -45,16 +45,19 @@ export function createClips(rig:CreatureRig){
 export class MotionController {
  rig:CreatureRig;mixer:T.AnimationMixer;clips:T.AnimationClip[];current:Gesture='idle';action:T.AnimationAction;ambient=true;reduced=false;paused=false;amount=.65;clock=0;nextBlink=3.4;blinkStart=-100;
  actions=new Map<Gesture,T.AnimationAction>();
+ // #149 meditation: asleep = eyes held shut, no gesture or ambient motion, just a slow 4 s breathing bob (none under reduced motion).
+ sleeping=false;
  constructor(rig:CreatureRig){this.rig=rig;this.clips=createClips(rig);this.mixer=new T.AnimationMixer(rig.root);for(const clip of this.clips){const action=this.mixer.clipAction(clip);const id=clip.name as Gesture;action.setLoop(GESTURES[id].loop?T.LoopRepeat:T.LoopOnce,GESTURES[id].loop?Infinity:1);action.clampWhenFinished=!GESTURES[id].loop;this.actions.set(id,action);}this.action=this.actions.get('idle')!;this.action.play();this.mixer.addEventListener('finished',()=>this.play('idle'));}
  play(id:Gesture){if(!Object.hasOwn(GESTURES,id))return;if(this.current===id&&GESTURES[id].loop)return;const next=this.actions.get(id)!;for(const action of this.actions.values())if(action!==this.action&&action!==next)action.stop();if(next===this.action)next.reset().play();else{this.action.fadeOut(.22);next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(.22).play();}this.action=next;this.current=id;}
  update(dt:number){
   if(this.paused)return;dt=Math.min(.05,Math.max(0,dt));this.clock+=dt;this.mixer.update(dt);
   // Scale the finished mixed pose from rest, so editor changes never accumulate.
-  const strength=this.reduced?0:(this.current==='idle'&&!this.ambient?0:this.amount);
+  const strength=this.reduced||this.sleeping?0:(this.current==='idle'&&!this.ambient?0:this.amount);
   for(const [name,node] of Object.entries(this.rig.nodes)){const rest=this.rig.rest[name];if(name.startsWith('EyeBlink'))continue;const position=node.position.clone(),scale=node.scale.clone();node.quaternion.slerpQuaternions(rest.quaternion,node.quaternion.clone(),strength);node.position.copy(rest.position).lerp(position,strength);node.scale.copy(rest.scale).lerp(scale,strength);}
   if(this.clock>=this.nextBlink){this.blinkStart=this.clock;this.nextBlink=this.clock+3.8+Math.random()*2.5;}
   const phase=(this.clock-this.blinkStart)/.23,blink=!this.reduced&&this.ambient&&phase>=0&&phase<=1?Math.sin(phase*Math.PI)**2:0;
-  for(const [name,node] of Object.entries(this.rig.nodes))if(name.startsWith('EyeBlink'))node.scale.y=1-.94*blink;
+  for(const [name,node] of Object.entries(this.rig.nodes))if(name.startsWith('EyeBlink'))node.scale.y=1-.94*(this.sleeping?1:blink);
+  if(this.sleeping&&!this.reduced){const b=Math.sin(this.clock*Math.PI/2),body=this.rig.nodes.BodyMotion,rest=this.rig.rest.BodyMotion;if(body){body.position.y=rest.position.y+.03*b;body.scale.set(rest.scale.x*(1+.006*b),rest.scale.y*(1+.02*b),rest.scale.z*(1+.006*b));}}
  }
  neutral(){this.mixer.stopAllAction();for(const [name,node] of Object.entries(this.rig.nodes)){const r=this.rig.rest[name];node.position.copy(r.position);node.scale.copy(r.scale);node.quaternion.copy(r.quaternion);}}
  dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.rig.root);}

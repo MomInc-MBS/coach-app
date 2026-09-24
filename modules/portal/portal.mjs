@@ -1673,6 +1673,7 @@ export async function mountPortal({visible=false}={}){
    flash.remove();window.dispatchEvent(new CustomEvent('myr5:portal-transition',{detail:{phase:'complete'}}));
   },
   current:()=>board,
+  playWormhole, // #149: Meditation's early-stop smack exits through it (meditation.mjs throughWormhole)
  };
  if(window.__portalTrailProbe===true)window.myr5Portal.trailProbe=trailProbe;
  return window.myr5Portal;
