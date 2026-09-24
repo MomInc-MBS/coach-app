@@ -31,17 +31,20 @@ export const ROUTES={
  // starts the camera as always) and the oval is the coach's arrival: its ship flies in and beams it down, every time.
  // W2-2M: from the top, but BEGIN never under the bar: the page fits at 375x812, a shorter phone scrolls just enough.
  workout:{label:'Workout',page:true,focus:'#view',open(){hideQuilt();const begin=$('start')?.getBoundingClientRect(),room=innerHeight-(dock()?.offsetHeight||0)-8;scrollTo({top:begin?.height?Math.max(0,scrollY+begin.bottom-room):0,behavior:reduced()?'auto':'smooth'});}},
- select:{label:'Coach arrival',dialog:'dialog.ship-view',shared:true,own:true,open:()=>whenOpen('dialog.ship-view',window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
+ // W2-2Q: the router is the one owner of the ship view's #ship/#select history (the view only keeps its own standalone).
+ select:{label:'Coach arrival',dialog:'dialog.ship-view',shared:true,open:()=>whenOpen('dialog.ship-view',window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
  food:{label:'Food',dialog:'#mealsPanel',open:()=>typeof window.myr5Menus?.food==='function'?window.myr5Menus.food():panel('meals')},
  achievements:{label:'Achievements',dialog:'.ach-board',open:()=>window.myr5Menus?.achievements?.()},
  scoreboard:{label:'Scoreboard',dialog:'#accountPanel',open:()=>panel('account')},
- customize:{label:'Character editor',nav:'/creature/index.html'},
+ // #148 (Ian 2026-09-23): the customizer's one door is the oval: its ship arrives and the user taps it (ship-intro.mjs
+ // opens /creature/index.html with the gate the editor checks). So #customize, the X and any link to it land on the arrival.
+ customize:{label:'Character editor',open(){if(hashRoute()==='customize')history.replaceState(null,'',bare()+'#select');void go('select',pending.get('customize'));}},
  meditate:{label:'Meditation',dialog:'.meditation-panel',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
  reminders:{label:'Reminders',dialog:'#remindersPanel',open:()=>panel('reminders')},
  settings:{label:'Settings',dialog:'#settings',open(){$('openSettings')?.click();return $('settings');}},
  // Share isn't built: its route is today's portal Menu sheet (the traced line-up opens the same sheet).
  share:{label:'Menu',dialog:'#portalMenu',async open(){if(!quiltUp()&&!await window.myr5Menus?.portal?.())return null;await window.myr5Portal?.open?.('line-up');return $('portalMenu');}},
- ship:{label:'Ship',dialog:'dialog.ship-view',own:true,open:()=>window.myr5Menus?.ship?.()},
+ ship:{label:'Ship',dialog:'dialog.ship-view',open:()=>window.myr5Menus?.ship?.()},
  'war-room':{label:'War Room',nav:'/war-room/index.html',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:WAR_ROOM_LOCKED},
  pod:{label:'Training pod',page:true,focus:'#homeScreen',open:hideQuilt},
  history:{label:'History',dialog:'#historyPanel',open:()=>panel('history')},
@@ -164,7 +167,8 @@ function sync(event){
   if(bar){bar.dataset.hint='Press back again to leave Coach';clearTimeout(hintTimer);hintTimer=setTimeout(()=>delete bar.dataset.hint,3000);}
   say('Press back again to leave Coach');showQuiltLater();return;
  }
- if(id)go(id,{fromHash:true});
+ // A route already opening is the same request (#customize rewrites itself to #select before its hashchange lands).
+ if(id&&!pending.has(id))go(id,{fromHash:true});
 }
 // The back guard is pushed only after a tap or key (browsers skip history entries added without one).
 function armGuard(){
@@ -194,6 +198,8 @@ export function mountRoutes(){
  addEventListener('hashchange',()=>{const href=location.href,handled=href===seen;seen='';if(!handled)sync({type:'hashchange',state:history.state});});
  addEventListener('pointerup',armGuard,true);addEventListener('keydown',armGuard,true);
  document.addEventListener('click',portalButton,true);
+ // #148: a plain tap on any link to the customizer (the pod's nameplate, the coach card's) plays the arrival instead.
+ document.addEventListener('click',event=>{const link=event.target.closest?.('a[href]');if(!link||event.defaultPrevented||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;const url=new URL(link.href,location.href);if(url.origin===location.origin&&/^\/creature\/(index\.html)?$/.test(url.pathname)){event.preventDefault();go('customize');}});
  new MutationObserver(records=>{
   for(const {target,attributeName} of records){
    if(attributeName==='open'&&target.tagName==='DIALOG'&&target.open){

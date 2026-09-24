@@ -6,7 +6,14 @@ export function normalizeBackground(value){if(typeof value==='number'&&Number.is
 export function dominantFamily(design={}){const styles=design.styles&&typeof design.styles==='object'?design.styles:design,body=Number.isInteger(Number(styles.body))?Number(styles.body):0,score=new Map();for(const [part,weight]of Object.entries(PART_WEIGHTS)){const value=Number(styles[part]);if(Number.isInteger(value)&&value>=0)score.set(value,(score.get(value)||0)+weight)}if(!score.size)return body;let best=body,bestScore=score.get(body)||-1;for(const [family,value]of score)if(value>bestScore||(value===bestScore&&family===body)){best=family;bestScore=value}return best;}
 export function initialScene(design={}){return Object.freeze({ship:normalizeShip(design.coach),background:normalizeBackground(dominantFamily(design)),coach:design});}
 export function resolveSceneSwap(current,next={}){return Object.freeze({ship:next.ship===undefined?normalizeShip(current.ship):normalizeShip(next.ship),background:next.background===undefined?normalizeBackground(current.background):normalizeBackground(next.background),coach:next.coach===undefined?current.coach:next.coach});}
-export function sampleApproach(elapsed,duration=1600){const t=Math.max(0,Math.min(1,elapsed/duration)),eased=1-Math.pow(1-t,3);if(t===1)return Object.freeze({x:0,y:1.82,z:0,scale:1,roll:0,done:true});return Object.freeze({x:3.2*(1-eased),y:3.1-1.28*eased,z:-1.8*(1-eased),scale:.18+.82*eased,roll:-.2*(1-eased),done:t===1});}
+// #145 (Ian 2026-09-23): the ship shows its stern to the viewer, flies in over their head and settles nearer the
+// camera than the coach; the beam waits until it has landed. The duration knobs: the flight, then the beam's charge.
+export const APPROACH_MS=2200,BEAM_CHARGE_MS=500;
+// The starter ship's nose is its model +x (cockpit; the engines are at -x): a quarter turn puts the stern to the camera.
+export const SHIP_FACING=Math.PI/2,SHIP_REST_Z=1.5;
+// From above and behind the camera (z 7) it glides forward and down over the coach into its hover spot: depth and
+// drift ease out, height a little faster, so it drops into view at the top edge and slows into place.
+export function sampleApproach(elapsed,duration=APPROACH_MS){const t=Math.max(0,Math.min(1,elapsed/duration)),far=Math.pow(1-t,3),high=Math.pow(1-t,5);if(t===1)return Object.freeze({x:0,y:SHIP_ANCHOR_Y,z:SHIP_REST_Z,scale:1,roll:0,done:true});return Object.freeze({x:1.4*far,y:SHIP_ANCHOR_Y+2.6*high,z:SHIP_REST_Z+8.5*far,scale:1,roll:-.25*far,done:false});}
 // Hover pose that keeps the whole hull above the coach. The coach card is framed body-to-edges (viewer
 // 'overlay' stage: feet on its bottom edge, head at or below its top), so its top edge bounds the head.
 // band: NDC y range above the card; measured: the ship's NDC y box (top/bottom) and origin at the base
@@ -29,3 +36,7 @@ export function measureShip(THREE,object,camera){
  const origin=object.position.clone().project(camera).y,above=object.position.clone().add(new THREE.Vector3(0,1,0)).project(camera).y;
  return {top,bottom,origin,unit:above-origin};
 }
+// #148 (Ian 2026-09-23): the customizer opens only from the arrival's ship. The editor (creature/source/editor-workbench.ts)
+// boots only with this per-tab gate set; without it (a typed URL, a fresh tab) it sends the user to the arrival first.
+export const SHIP_GATE='myr5-ship-gate';
+export function openCustomizer(url='/creature/index.html'){try{sessionStorage.setItem(SHIP_GATE,'1');}catch{}location.assign(url);}

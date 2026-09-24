@@ -188,7 +188,7 @@ async function primeArrival(page) {
 test('first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive',async()=>withPage(async page=>{
  await primeArrival(page);
  await page.evaluate(()=>{window.opening=openArrival();});
- await page.waitForSelector('.ship-scene-beam.is-charging');
+ await page.waitForSelector('.ship-scene[data-phase="approach"]');
  assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),false);
  assert.equal(await page.locator('.ship-view-coach').evaluate(el=>getComputedStyle(el).opacity),'0');
  await page.evaluate(()=>window.opening);
@@ -217,7 +217,7 @@ test('closing or changing account during real arrival cancels without marking se
  await primeArrival(page);
  for(const action of ['close','account']) {
   await page.evaluate(()=>{window.opening=openArrival();});
-  await page.waitForSelector('.ship-scene-beam.is-charging');
+  await page.waitForSelector('.ship-scene[data-phase="approach"]'); // mid-arrival: the ship is flying in (#145: the beam waits)
   if(action==='close')await page.locator('.ship-view-close').click();
   else await page.evaluate(()=>{window.myr5AuthenticatedAccount={user:{id:'owner-b'}};window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:myr5AuthenticatedAccount}));});
   await page.evaluate(()=>window.opening);await page.waitForFunction(()=>location.hash!=='#ship');
@@ -258,4 +258,129 @@ test('closing while the optional arrival module loads prevents a late scene and 
  assert.equal(await page.evaluate(()=>arrivalEvents.length),0);
  assert.equal(await page.evaluate(()=>arrival.hasSeenShipReveal('supportive')),false);
  assert.equal(await page.locator('#coachMount .myr5-companion-card').count(),1);
+}));
+
+// W2-2Q #145: the yellow beam stays off while the ship flies in; it charges only once the flight is done, then opens.
+test('the beam is hidden until the ship has flown in, charges, then opens',async()=>withPage(async page=>{
+ await primeArrival(page);
+ const marks=await page.evaluate(async()=>{
+  const {APPROACH_MS,BEAM_CHARGE_MS}=await import('/modules/ships/ship-scene-domain.mjs');
+  const marks={APPROACH_MS,BEAM_CHARGE_MS};
+  new MutationObserver(()=>{const root=document.querySelector('.ship-scene'),beam=root?.querySelector('.ship-scene-beam');if(!beam)return;const now=performance.now();
+   if(root.dataset.phase==='approach'&&!marks.approach){marks.approach=now;marks.beamAtTakeOff=beam.className;}
+   if(beam.classList.contains('is-charging')&&!marks.charging)marks.charging=now;
+   if(beam.classList.contains('is-open')&&!marks.open)marks.open=now;
+  }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-phase']});
+  await openArrival();
+  return marks;
+ });
+ assert.equal(marks.beamAtTakeOff,'ship-scene-beam','no is-charging before the approach completes');
+ assert.ok(marks.charging-marks.approach>=marks.APPROACH_MS-20,`the beam charges only after the flight (${marks.charging-marks.approach} ms)`);
+ assert.ok(marks.open-marks.charging>=marks.BEAM_CHARGE_MS-20,`it charges before it opens (${marks.open-marks.charging} ms)`);
+}));
+
+// W2-2Q #148: nothing dead-ends. The still ship (reduced motion, repeat opens, Menu -> Ship) taps through to the
+// customizer like the arrival's ship; with no WebGL a plain button does. Both set the gate the editor checks.
+const stubEditor=page=>page.route('**/creature/index.html',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>editor</title>'}));
+const gate=page=>page.evaluate(()=>sessionStorage.getItem('myr5-ship-gate'));
+test('the still ship opens the customizer on a tap or Enter, with the gate set',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await stubEditor(page);
+ assert(await mountFixtureWithShip(page));
+ const canvas=page.locator('.ship-view-canvas');await canvas.waitFor();
+ assert.deepEqual(await canvas.evaluate(c=>[c.getAttribute('role'),c.tabIndex,c.getAttribute('aria-label')]),['button',0,'Customize this coach']);
+ const box=await canvas.boundingBox();
+ await page.mouse.click(box.x+box.width/2,box.y+box.height*.94); // the floor under the coach: not the ship
+ await page.waitForTimeout(200);assert.equal(new URL(page.url()).pathname,'/','a tap off the hull does nothing');
+ await page.mouse.click(box.x+box.width/2,box.y+box.height*.21); // the hull hovers centred in the band above the coach
+ await page.waitForURL('**/creature/index.html');
+ assert.equal(await gate(page),'1');
+ await page.goBack();await primeFixture(page);assert(await mountFixtureWithShip(page));
+ await page.evaluate(()=>sessionStorage.clear());
+ await page.locator('.ship-view-canvas').focus();await page.keyboard.press('Enter');
+ await page.waitForURL('**/creature/index.html');
+ assert.equal(await gate(page),'1');
+}));
+test('with WebGL blocked the ship view offers a plain "Open the customizer" button',async()=>withPage(async page=>{
+ await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
+ await page.reload();await stubEditor(page);await primeFixture(page);
+ await page.evaluate(async()=>{const {openShipView}=await import('/ship-view.js');window.myr5AuthenticatedAccount=null;await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,entrance:'always'});});
+ const button=page.getByRole('button',{name:'Open the customizer'});
+ assert.equal(await button.isVisible(),true);
+ assert.equal(await page.locator('.ship-view-fallback p').isVisible(),false,'signed out: no upgrade line, just the button');
+ await button.click();
+ await page.waitForURL('**/creature/index.html');
+ assert.equal(await gate(page),'1');
+}));
+
+// Lane 2N: after the ship view closes nothing of it keeps drawing: no ship frame is scheduled and the coach capsule
+// (phone.js's viewer, parked via window.myr5Creature.park until its next stage()) stops too.
+test('after close no ship or capsule animation frame is still running',async()=>withPage(async page=>{
+ await page.evaluate(()=>{
+  const raf=window.requestAnimationFrame.bind(window);window.frameCount=0;window.requestAnimationFrame=cb=>{window.frameCount++;return raf(cb);};
+  // Stand-in capsule with phone.js's contract: stage() wakes its render loop, park() cancels it.
+  let frame=0;const loop=()=>{frame=requestAnimationFrame(loop);};
+  window.myr5Creature={stage(){if(!frame)loop();},park(){cancelAnimationFrame(frame);frame=0;},stats:()=>({stage:'pod',awake:!!frame})};
+ });
+ const quiet=()=>page.evaluate(async()=>{await new Promise(r=>setTimeout(r,100));const before=window.frameCount;await new Promise(r=>setTimeout(r,400));return window.frameCount-before;});
+ await primeArrival(page);
+ await page.evaluate(()=>openArrival()); // the full arrival (approach, beam, flash) with its own loop
+ assert.equal(await page.evaluate(()=>myr5Creature.stats().awake),true,'open wakes the capsule');
+ await page.locator('.ship-view-close').click();await page.waitForFunction(()=>!document.querySelector('.ship-view').open);
+ assert.equal(await quiet(),0,'no frames after the arrival closes');
+ assert.equal(await page.evaluate(()=>myr5Creature.stats().awake),false,'the capsule sleeps');
+ await page.evaluate(()=>openArrival()); // a repeat open: the still ship's loop
+ await page.locator('.ship-view-canvas').waitFor();
+ assert.ok(await page.evaluate(()=>myr5Creature.stats().awake));
+ await page.locator('.ship-view-close').click();await page.waitForFunction(()=>!document.querySelector('.ship-view').open);
+ assert.equal(await quiet(),0,'no frames after the still ship closes');
+}));
+
+// Lane 2O: opening the ship straight through window.myr5Menus.ship(), closing it, then another scene the same way
+// must not walk history off the app. modules/routes.mjs is the one owner of the #hash entries, so exactly one back
+// pops each push. Also #148: #customize and any link to the customizer land on the arrival.
+async function primeRoutes(page){
+ await primeFixture(page);
+ await page.evaluate(async()=>{
+  const {openShipView}=await import('/ship-view.js'),{mountRoutes}=await import('/modules/routes.mjs');
+  const meals=document.createElement('dialog');meals.id='mealsPanel';meals.innerHTML='<h2>Food</h2><button type="button" data-close>Close</button>';document.body.append(meals);
+  meals.querySelector('[data-close]').onclick=()=>meals.close();
+  const link=document.createElement('a');link.href='/creature/index.html';link.textContent='Customize';document.body.append(link);
+  window.myr5AuthenticatedAccount=null;window.shipOpens=[];
+  window.myr5Menus={ship:(options={})=>{shipOpens.push(options);return openShipView({loadCoachViewer:fakeLoadCoachViewer,getBridge:async()=>null,...options});},food:()=>{meals.showModal();return meals;}};
+  mountRoutes().boot();
+ });
+}
+test('ship -> close -> food -> close through myr5Menus stays in the app (one owner pops history)',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto(page.url()+'#pod'); // a fresh window deep-linked to the pod, like lane 2O's check
+ await primeRoutes(page);
+ await page.evaluate(()=>{window.myr5Menus.ship();});
+ await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#ship'&&myr5Routes.current()==='ship');
+ await page.locator('.ship-view-close').click();
+ await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash==='#pod');
+ await page.evaluate(()=>{window.myr5Menus.food();});
+ await page.waitForFunction(()=>document.getElementById('mealsPanel').open&&location.hash==='#food');
+ await page.locator('#mealsPanel [data-close]').click();
+ await page.waitForFunction(()=>!document.getElementById('mealsPanel').open);
+ await page.waitForTimeout(400);
+ assert.equal(await page.evaluate(()=>location.protocol),'http:','closing Food must not walk history off the app (to about:blank)');
+ assert.equal(await page.evaluate(()=>location.hash),'#pod');
+ // Phone back still closes a routed ship view, and pops only its own entry.
+ await page.evaluate(()=>{window.myr5Menus.ship();});
+ await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#ship');
+ await page.goBack();
+ await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash==='#pod');
+ await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>location.hash),'#pod');
+}));
+test('#customize and a link to the customizer both land on the oval arrival, not the editor',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await primeRoutes(page);
+ await page.evaluate(()=>{location.hash='customize';});
+ await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#select'&&myr5Routes.current()==='select');
+ assert.deepEqual(await page.evaluate(()=>shipOpens.at(-1)),{entrance:'always',hash:'#select'});
+ await page.goBack();
+ await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash==='');
+ await page.getByRole('link',{name:'Customize'}).click();
+ await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#select');
+ assert.equal(new URL(page.url()).pathname,'/','the link did not navigate to the editor');
 }));

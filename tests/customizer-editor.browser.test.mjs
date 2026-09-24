@@ -21,6 +21,7 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage();
+  await page.addInitScript(()=>sessionStorage.setItem('myr5-ship-gate','1')); // #148: opened through the arrival's ship
   const base='http://127.0.0.1:'+server.address().port;
   await page.goto(base+'/creature/index.html');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});

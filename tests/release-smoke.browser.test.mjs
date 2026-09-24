@@ -126,13 +126,18 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   await page.locator('.ship-view-close').click(); // #131: seen through the oval cut, its Close in front of the wall
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash!=='#select');
   await portalUp(page);
+  // Lane 2N: the coach capsule the ship view woke stops drawing under the quilt once it closes.
+  assert.equal(await page.evaluate(()=>window.myr5Creature?.stats().awake),false,'the coach capsule sleeps after the ship view closes');
 
-  // x: kind:'nav' -> leaves the pod for the Character Editor. Fire-and-forget: the evaluate call's
-  // own context is torn down mid-navigation, so it must not be awaited directly.
+  // x (#148): the Character Editor's one door is the oval's ship, so the X opens that same arrival, not the editor.
   await page.evaluate(()=>window.myr5Portal.show());
   await portalUp(page);
-  void page.evaluate(()=>window.myr5Portal.open('x')).catch(()=>{});
-  await page.waitForURL('**/creature/index.html*');
+  await page.evaluate(()=>window.myr5Portal.open('x'));
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',{timeout:10000});
+  assert.equal(new URL(page.url()).pathname,'/pose.html');
+  await page.locator('.ship-view-close').click();
+  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash!=='#select');
+  await portalUp(page);
  }finally{await context.close();}
 });
 
@@ -288,9 +293,19 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    const hidden=await page.evaluate(flag=>{document.body.dataset[flag]='true';const d=getComputedStyle(document.getElementById('coachDock')).display;delete document.body.dataset[flag];return d==='none';},flag);
    assert.equal(hidden,true,`the bar is hidden while body[data-${flag}] is set`);
   }
-  // Customize is its own page, with the same bar linking back into /pose.html#<route>.
+  // #148: the customizer's one door is the oval's ship. #customize lands on the arrival; the ship (the still one under
+  // reduced motion) opens the editor, which has the same bar linking back into /pose.html#<route>.
   await page.evaluate(()=>{location.hash='customize';});
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',null,{timeout:30000});
+  assert.equal(new URL(page.url()).pathname,'/pose.html','#customize plays the arrival, not the editor');
+  const ship=page.locator('dialog.ship-view canvas[role="button"]');
+  await ship.waitFor({timeout:30000});await ship.focus();await page.keyboard.press('Enter');
   await page.waitForURL('**/creature/index.html');
+  // A typed editor URL in a fresh tab has no gate: the arrival plays first.
+  const typed=await context.newPage();await typed.goto(base+'/creature/index.html');
+  await typed.waitForURL('**/pose.html#select');
+  await typed.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true,null,{timeout:30000});
+  await typed.close();
   const links=await page.$$eval('.coach-dock a',links=>links.map(a=>a.getAttribute('href')));
   assert.deepEqual(links,['/pose.html#history','/pose.html#food','/pose.html','/pose.html#reminders','/pose.html#scoreboard','/pose.html#install']);
   const box=await page.locator('.coach-dock').boundingBox();
