@@ -11,9 +11,12 @@ const glb=async path=>{
  return {bytes,json:JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)))};
 };
 
-test('all new art belongs to the opt-in Boards group; quilt art stays Starter',async()=>{
- for(const path of ['ice.glb','grass.glb','flower.glb','jelly.glb','wood.glb','cogs/door.glb','cogs/parts-kit.glb','cogs/door-layout.json'])
-  assert.equal(groupOf(`/pod/worlds/boards/${path}`,new Map()),'boards');
+test('each grimoire device bundles its art and tunnel; quilt art stays Starter',async()=>{
+ const paths={ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['cogs/door.glb','cogs/parts-kit.glb','cogs/door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb']};
+ for(const [id,files] of Object.entries(paths)){
+  for(const path of files)assert.equal(groupOf(`/pod/worlds/boards/${path}`,new Map()),`grimoire-${id}`);
+  assert.equal(groupOf(`/modules/portal/portal-tunnel-${id}.mjs`,new Map()),`grimoire-${id}`);
+ }
  assert.equal(groupOf('/pod/worlds/quilt.webp',new Map()),'starter');
 });
 

@@ -19,6 +19,11 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // the GLTF loader) stays core, so each scene opens offline and shows its own placeholder.
 export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$)/;
 export const BOARDS=/^\/pod\/worlds\/boards\//;
+const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood)\.mjs$/;
+const GRIMOIRE_GROUPS=['ice','grass','cogs','jelly','wood'].map(id=>[
+ 'grimoire-'+id,
+ new RegExp(`^/(?:pod/worlds/boards/${id==='cogs'?'cogs/':id==='grass'?'(?:grass|flower)\\.glb$':id+'\\.glb$'}|modules/portal/portal-tunnel-${id}\\.mjs$)`),
+]);
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
@@ -37,7 +42,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
- if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -57,9 +62,9 @@ export async function identifyVoice(root){
 // screens) is "Your coach". Roster bodies never join it: each goes to its workout section from
 // track-placements.ts (#102), or the bodies' Starter section when it has no placement.
 // "starter" (W2-2O) is the portal experience's art, offered first on the first open. Site size rule: the
-// The physics boards have their own opt-in group; quilt and other first-run art stay Starter.
+// Each grimoire device downloads its own board art and tunnel effect together. Quilt stays Starter.
 const GROUPS=[
- ['boards',BOARDS],
+ ...GRIMOIRE_GROUPS,
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],

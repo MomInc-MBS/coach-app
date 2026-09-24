@@ -17,7 +17,11 @@ const say=text=>Object.assign(Error(text),{shown:true});
 const GROUPS=[
  // W2-2O (#136): the portal experience's art, offered first (and picked) on the first open.
  ['starter','Starter: portal, pyramid, ship and worlds','The quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
- ['boards','Portal boards','Ice, Grass, Cogs, Jelly and Wood boards. Choose this to keep their art offline.'],
+ ['grimoire-ice','Ice grimoire portal','Ice board art and its reflective color-matched wormhole.'],
+ ['grimoire-grass','Grass grimoire portal','Grass and flower art with its dirt, roots and bugs wormhole.'],
+ ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],
+ ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
+ ['grimoire-wood','Wood grimoire portal','Wood board art and its ember, bark and charcoal wormhole.'],
  ['coach','Your coach','The regular coach models, the customizer and exercise demos.'],
  ['bodies','Extra coach bodies','More body shapes for the customizer, by workout section. A body you pick also downloads by itself.'],
  ['hand','Helping Hand','Your hand companion and all its looks.'],

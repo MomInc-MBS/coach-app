@@ -38,6 +38,9 @@ test('production build keeps physics board art in an opt-in group',async t=>{
  const {core,optional}=await offlineInventory(client);
  assert(optional.some(asset=>asset.url==='/pod/worlds/quilt.webp'&&asset.group==='starter'),'the quilt art is the Starter download (W2-2O), not core');
  assert(core.some(asset=>asset.url==='/vendor/three/three.module.js'),'offline core includes the starter portal renderer');
- for(const name of ['ice.glb','grass.glb','jelly.glb','wood.glb','door.glb','parts-kit.glb'])assert(optional.some(asset=>asset.url.endsWith('/'+name)&&asset.group==='boards'),`${name} belongs to Boards`);
+ for(const [id,names] of Object.entries({ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['door.glb','parts-kit.glb','door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb']})){
+  for(const name of names)assert(optional.some(asset=>asset.url.endsWith('/'+name)&&asset.group===`grimoire-${id}`),`${name} belongs to ${id} grimoire`);
+  assert(optional.some(asset=>asset.url===`/modules/portal/portal-tunnel-${id}.mjs`&&asset.group===`grimoire-${id}`),`${id} tunnel belongs to its device packet`);
+ }
  assert(!core.some(asset=>asset.url.startsWith('/pod/worlds/boards/')),'physics board art stays out of the core install');
 });
