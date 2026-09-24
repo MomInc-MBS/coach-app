@@ -28,7 +28,7 @@ test('W2-2O: the core list has no heavy scene assets; the Starter group holds ev
  for(const url of ['/modules/portal/portal-board.mjs','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs','/vendor/three/GLTFLoader.js','/achievements-board.mjs','/meditation.mjs'])assert(core.some(a=>a.url===url),`${url}: the scene code stays core, so it opens offline and shows its placeholder`);
  const bytes=core.reduce((sum,a)=>sum+a.bytes,0),starterBytes=starter.reduce((sum,a)=>sum+a.bytes,0);
  assert.ok(bytes<=CORE_OFFLINE_BUDGET,`core ${(bytes/1048576).toFixed(2)} MiB stays under the 8 MiB budget`);
- assert.ok(starterBytes>4*1048576,'the Starter download is the large one');
+ assert.ok(starterBytes>2*1048576,'the Starter download is the large one'); // release 5's meshopt pyramid (3C) is 1.06 MB, not 3.1
  t.diagnostic(`source tree: core ${core.length} files ${bytes} B, Starter ${starter.length} files ${starterBytes} B`);
 });
 test('starter ship GLB uses only core glTF plus WebP textures, so the plain GLTFLoader reads it',async()=>{

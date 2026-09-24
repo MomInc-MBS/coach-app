@@ -59,8 +59,11 @@ test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r)
 const SHAPED=[
  ['up','#mealsPanel','FOOD','food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-tag'],
  ['down','.ach-board','ACHIEVEMENTS','achievements','.ach-close','.ach-head h1','.ach-boss'],
- ['vdiamond','#accountPanel','LEADERBOARD','leaderboard','#accountPanel [data-close]','#accountPanel h2','#signIn'],
- ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2','#signIn'],
+ // W2-2M: Records now opens on the pod's extras (the personal tracker card, taller than the diamond's rectangle), so in the
+ // cut only its title and Done are checked whole; the menu scrolls inside the rectangle (asserted below). Stepped in (the
+ // squat diamond), its first control is whole.
+ ['vdiamond','#accountPanel','LEADERBOARD','leaderboard','#accountPanel [data-close]','#accountPanel h2',null],
+ ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2','#accountPanel .tracker-brand'],
  ['oval','dialog.ship-view','CHOOSE WORKOUT','ship','.ship-view-close',null,'.ship-view-close'],
 ];
 // The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
@@ -196,7 +199,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
  }finally{await still.context.close();}
 });
 
-test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then dives and navigates',{timeout:180000},async()=>{
+test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then dives into the oval ship arrival (#148)',{timeout:180000},async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>{const a=Element.prototype.animate;window.__anims=[];Element.prototype.animate=function(k,t){const x=a.call(this,k,t);window.__anims.push({el:this.id||this.getAttribute?.('class')||'',ms:t?.duration,x});return x;};});
@@ -222,7 +225,8 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   await quiltHome(page);
   // Shown again under the reverse dive's scale, the trace canvas keeps its layout size (it used to shrink to the corner).
   assert.equal(await page.evaluate(()=>{const o=document.getElementById('portalOverlay');return o.width===Math.round(o.clientWidth*Math.min(devicePixelRatio||1,2));}),true,'the trace canvas is full size after a reverse dive');
-  // The X: the diamond between its arms, held in its loading phase for a frame, then the dive and the page change.
+  // The X: the diamond between its arms, held in its loading phase for a frame, then the dive. W2-2Q #148: the editor's one
+  // door is the oval's ship, so the X lands on that arrival (the ship view, #select) instead of navigating.
   await page.evaluate(load=>{window.__anims.length=0;const st=window.setTimeout;window.setTimeout=(fn,ms,...r)=>{if(Math.abs(ms-load)<.5&&!window.__heldX){window.__heldX=()=>st(fn,0,...r);return 0;}return st(fn,ms,...r);};void window.myr5Portal.open('x');},PORTAL.loadMinMs*PORTAL.short);
   await page.waitForFunction(()=>window.__heldX&&document.querySelector('.portal-glass.gl'),null,{timeout:20000});
   const diamond=await page.evaluate(()=>{const g=document.querySelector('.portal-glass').getBoundingClientRect();return {w:g.width,h:g.height};});
@@ -230,7 +234,7 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'124-x-mid-sequence.png')});
   await page.evaluate(()=>window.__heldX());
-  await page.waitForFunction(()=>window.__anims.some(a=>a.el==='portalHome'),null,{timeout:10000,polling:16}).catch(()=>{}); // the dive, before the page goes
-  await page.waitForURL('**/creature/index.html*',{timeout:30000});
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',null,{timeout:30000});
+  assert.equal(new URL(page.url()).pathname,'/pose.html','the X stays in the app');
  }finally{await context.close();}
 });

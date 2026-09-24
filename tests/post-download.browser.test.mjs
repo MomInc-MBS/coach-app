@@ -96,9 +96,12 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   const lead=page.locator('#downloadsMenu .download-row').first();
   assert.equal(await lead.locator('input').getAttribute('data-group'),'starter','Starter leads');
   assert.match(await lead.textContent(),/^Starter: portal, pyramid, ship and worldsRecommended.+ MB(?: left)?$/);
-  // The quilt mounts, hidden, behind the menu and may already have fetched its texture on demand.
-  const starterLeft=rows.starter.size===mb(bytes(groupOf('starter')))?bytes(groupOf('starter')):bytes(groupOf('starter').filter(a=>a.url!=='/pod/worlds/quilt.webp'));
-  assert.equal(rows.starter.size,starterLeft===bytes(groupOf('starter'))?mb(starterLeft):`${mb(starterLeft)} left`);
+  // The quilt mounts, hidden, behind the menu and may already have fetched its texture on demand; so may the pod's
+  // viewing port its room backdrop (W2-2M, great-wall.webp). The row counts only what is left.
+  const early=['/pod/worlds/quilt.webp','/pod/worlds/great-wall.webp'],starterLeft=[[],[early[0]],[early[1]],early]
+   .map(skip=>bytes(groupOf('starter').filter(a=>!skip.includes(a.url))))
+   .find(left=>rows.starter.size===(left===bytes(groupOf('starter'))?mb(left):`${mb(left)} left`));
+  assert.ok(starterLeft!==undefined,`Starter row: ${rows.starter.size}`);
   assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(starterLeft+bytes(groupOf('coach')))}`);
   assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Download selected','focus moves into the menu');
   assert.equal(await page.getByRole('dialog',{name:'Downloads'}).isVisible(),true,'the menu is labelled by its title');
