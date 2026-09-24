@@ -568,8 +568,14 @@ function clipFor(dialog,pts){
   parts.push(`M${o([b.left+k,b.top])}L${o([b.right-k,b.top])}${arc([b.right-k,b.bottom])}L${o([b.left+k,b.bottom])}${arc([b.left+k,b.top])}Z`);
  }
  for(const b of pokes(dialog).map(box)){const p=4;parts.push(`M${o([b.left-p,b.top-p])}L${o([b.right+p,b.top-p])}L${o([b.right+p,b.bottom+p])}L${o([b.left-p,b.bottom+p])}Z`);} // in front of the wall
- if(framed?.dialog===dialog)framed.pokeSig=pokeSig(dialog);
+ if(framed?.dialog===dialog){framed.pokeSig=pokeSig(dialog);holeAura();}
  return `path('M${pts.slice(0,-1).map(o).join('L')}Z${parts.join('')}')`;
+}
+// Release 6: what shows in front of the wall shows in front of the rim too (the pyramid's Scan food / Log by hand tags):
+// the rim's glow is cut out round each poked control, the same 4px margin as the dialog's clip above.
+function holeAura(){
+ if(!aura)return;const p=4,boxes=framed?.dialog?pokes(framed.dialog).map(el=>el.getBoundingClientRect()):[];
+ aura.el.style.clipPath=boxes.length?`path(evenodd,'M-9999 -9999H99999V99999H-9999Z${boxes.map(b=>`M${d2(b.left-p)} ${d2(b.top-p)}H${d2(b.right+p)}V${d2(b.bottom+p)}H${d2(b.left-p)}Z`).join('')}')`:'';
 }
 function clipTo(dialog,pts,{from=null,ms=0,ease='ease'}={}){
  if(framed)framed.clipBusy=performance.now()+ms+60;
@@ -660,7 +666,7 @@ function showAura(look,why='open'){
  blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
  for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
  chrome.append(el);
- aura={el,look,spec:blob,anims:[]};
+ aura={el,look,spec:blob,anims:[]};holeAura();
  if(reduced)return;
  aura.anims.push(wa.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:AURA.spinMs,iterations:Infinity}),
   wb.animate([{transform:'rotate(360deg)'},{transform:'rotate(0deg)'}],{duration:AURA.spinMs*.62,iterations:Infinity}),
