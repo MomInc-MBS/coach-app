@@ -86,7 +86,8 @@ function stop(message='Stopped. Your results stay here until the next start.',{i
   const unfinished=interrupt&&['camera','model','tracking'].includes(state.phase);
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
-  if(unfinished)workoutTransition=Promise.resolve(pod?.interruptCurrent(state.motion)).catch(error=>{status(error.message);throw error;});
+  // #19/#56: a set cut short by STOP also goes home, so the Continue chip is the next thing seen.
+  if(unfinished)workoutTransition=Promise.resolve(pod?.interruptCurrent(state.motion)).then(()=>window.myr5Routes?.home?.()).catch(error=>{status(error.message);throw error;});
   return workoutTransition;
 }
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
@@ -176,7 +177,7 @@ $('widest').addEventListener('click',async()=>{
   finally{$('widest').disabled=state.phase!=='tracking';}
 });
  const workoutReady=openGuestWorkoutAdapter({exerciseKeys:Object.keys(MOVEMENTS)}).then(adapter=>{if(disposed)adapter.close();return adapter;});
- const workouts={paused:(...args)=>workoutReady.then(value=>value.paused(...args)),start:(...args)=>workoutReady.then(value=>value.start(...args)),update:(...args)=>workoutReady.then(value=>value.update(...args)),pause:(...args)=>workoutReady.then(value=>value.pause(...args)),complete:(...args)=>workoutReady.then(value=>value.complete(...args)),interrupt:(...args)=>workoutReady.then(value=>value.interrupt(...args)),close(){disposed=true;void workoutReady.then(value=>value.close(),()=>{});}};
+ const workouts={paused:(...args)=>workoutReady.then(value=>value.paused(...args)),start:(...args)=>workoutReady.then(value=>value.start(...args)),update:(...args)=>workoutReady.then(value=>value.update(...args)),pause:(...args)=>workoutReady.then(value=>value.pause(...args)),complete:(...args)=>workoutReady.then(value=>value.complete(...args)),interrupt:(...args)=>workoutReady.then(value=>value.interrupt(...args)),unfinished:(...args)=>workoutReady.then(value=>value.unfinished(...args)),close(){disposed=true;void workoutReady.then(value=>value.close(),()=>{});}};
  window.addEventListener('pagehide',()=>{if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady().finally(()=>workouts.close());else{const stopped=stop();void Promise.allSettled([stopped,cameraStartTransition]).then(()=>workouts.close());}});document.addEventListener('visibilitychange',()=>{if(!document.hidden||state.phase==='idle')return;if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady();else void stop('Paused while the page was hidden. Tap Start for a new session.');});
  pod=initPod({voice,movements:MOVEMENTS,workouts,onStop:()=>{if(state.phase==='manual'){generation++;release();controls(false);state.phase='idle';manual=null;}else stop('Set ended. Your camera is off.',{interrupt:false});},onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
 // P13D: optional pack UI may bind this actual owner after user intent; packs are not imported at startup.
@@ -192,6 +193,35 @@ soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+// #19: one Continue chip on the quilt for today's newest paused/interrupted workout. Reactive to any
+// quilt/route change (same body-wide attribute-watch trick routes.mjs already uses for #portalHome and
+// dialog[open]), so it stays correct after stop()/leave()/a set starting without a call at every site.
+function refreshContinueChip(){
+ const chip=document.querySelector('#coachDock .dock-continue');if(!chip)return;
+ // Guard every write against its own current value: the observer below watches `hidden`, and an
+ // unconditional set (even to the same value) re-fires it, which would otherwise chain forever.
+ const hide=()=>{if(!chip.hidden)chip.hidden=true;};
+ const onQuilt=()=>document.getElementById('portalHome')?.hidden===false&&!window.myr5Routes?.current();
+ if(!onQuilt()){hide();return;}
+ void workouts.unfinished().then(row=>{
+  if(!row||!onQuilt()){hide();return;}
+  chip.textContent='Continue · '+(row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode);
+  chip.dataset.mode=row.mode;chip.dataset.control=row.metadata?.control||'camera';
+  if(chip.hidden)chip.hidden=false;
+ }).catch(hide);
+}
+new MutationObserver(refreshContinueChip).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','aria-current']});
+document.addEventListener('click',event=>{
+ const chip=event.target.closest?.('#coachDock .dock-continue');if(!chip)return;
+ const mode=chip.dataset.mode;if(!mode)return;
+ window.myr5Routes?.go('workout');
+ // Manual resumes through beginSet's pausedLocal check, which only fires when the camera picker is set to
+ // 'manual'; a paused/interrupted camera row just restarts the movement through the normal BEGIN flow.
+ if(chip.dataset.control==='manual')$('camera').value='manual';
+ $('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
+ $('start').click();
+});
+refreshContinueChip();
 window.addEventListener('myr5:ship-scene-ready',event=>{acceptShipRevealComplete(event);});
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};
@@ -285,7 +315,7 @@ async function activateManual(){
  if(state.phase!=='manual'||!manual||['hold','pace'].includes(state.motion.kind))return;
  manual.value++;try{const motion=manualSnapshot();await pod.saveManual(motion);renderMotion(motion);await pod.consume(motion,Date.now());}catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
 }
-async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await pod.pauseManual(state.motion);generation++;release();controls(false);state.phase='idle';manual=null;status('Paused. Tap Begin to resume this workout.');$('detail').textContent='Manual workout paused on this device';}catch(error){status(error.message);}}
+async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await pod.pauseManual(state.motion);generation++;release();controls(false);state.phase='idle';manual=null;status('Paused. Tap Begin to resume this workout.');$('detail').textContent='Manual workout paused on this device';window.myr5Routes?.home?.();}catch(error){status(error.message);}}
 function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}
 $('primary').addEventListener('pointerdown',event=>{if(state.phase==='manual'){event.preventDefault();void activateManual();}});
 $('primary').addEventListener('keydown',event=>{if(state.phase==='manual'&&(event.key==='Enter'||event.key===' ')){event.preventDefault();void activateManual();}});

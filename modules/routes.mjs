@@ -171,14 +171,19 @@ function armGuard(){
  if(guardArmed||active)return;
  guardHref=location.href;history.pushState({myr5Home:true},'',guardHref);guardArmed=true;
 }
+// Closes whatever route is open and brings up the quilt. Used by the bar's centre Portal off the quilt, and by
+// anything else that wants to send the user home (#56's rest exit, a stopped/paused set, the Settings PORTAL link).
+export function home(){
+ if(active){const entry=active;if(entry.dialog?.open)entry.reason='portal';finish(entry,'portal');}
+ showQuiltLater(true);
+}
 // The bar's centre Portal: on the quilt the portal's own handler opens the Menu sheet; anywhere else it goes
 // home to the quilt (closing the open route).
 function portalButton(event){
  if(!event.target.closest?.('#coachDock [data-route="portal"]'))return;
  if(quiltUp()&&!active)return;
  event.stopPropagation();
- if(active){const entry=active;if(entry.dialog?.open)entry.reason='portal';finish(entry,'portal');}
- showQuiltLater(true);
+ home();
 }
 
 export function mountRoutes(){
@@ -201,7 +206,7 @@ export function mountRoutes(){
   }
  }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open','hidden']});
  return window.myr5Routes={
-  go,ROUTES,hashRoute,
+  go,home,ROUTES,hashRoute,
   current:()=>active?.id||'',
   // launch.mjs calls this once the panels exist: a ?panel= or #route deep link opens its route.
   boot(panelName){const id=PANEL_ROUTES[panelName]||hashRoute();if(id&&id!=='pod')go(id,{deepLink:true});else paint();},

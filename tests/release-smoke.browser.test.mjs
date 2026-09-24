@@ -445,3 +445,49 @@ test('8. traced destinations dive into the frame with the bar lit below it, the 
   await page.screenshot({path:resolve(FRAMES,'r5-5-workout-start-from-square.png')});
  }finally{await context.close();}
 });
+
+// W2-2C (#56, #79, #19): the rest screen's exit goes home to the quilt instead of the pod, a Settings link
+// is a real route (lights the bar, sets the hash), and the Continue chip has its own spot above the bar.
+test('9. the rest exit goes home to the quilt, a Settings link is a real route, and the Continue chip sits above the bar',{timeout:120000},async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  await mkdir(FRAMES,{recursive:true});
+  await page.evaluate(()=>window.myr5Menus.portal());
+  await portalUp(page);
+
+  // #56: reach rest from the pod (quilt hidden) so the exit's own trip back to the quilt is what's under test.
+  await page.evaluate(()=>{location.hash='pod';});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
+  await page.evaluate(()=>document.getElementById('openSettings').click());
+  await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
+  await page.locator('#visitRest').click(); // a practice rest -- same leave()/#leaveRest path as a real set
+  await page.waitForFunction(()=>document.body.dataset.screen==='rest'&&document.getElementById('restScreen')?.hidden===false);
+  await page.locator('#leaveRest').click();
+  await portalUp(page);
+  assert.equal(await page.evaluate(()=>location.hash),'','the rest exit clears the hash instead of landing on #pod');
+  await page.screenshot({path:resolve(FRAMES,'r5-6-rest-exit-quilt.png')});
+  await page.evaluate(()=>{location.hash='pod';});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='pod'); // #pod is still a real route on request
+  await page.goBack();
+  await portalUp(page);
+
+  // #19: the chip's own spot and look above the bar (unfinished()'s data rule -- the newest paused/interrupted
+  // row from today -- has its own node test beside the local-coach tests).
+  await page.evaluate(()=>{const chip=document.querySelector('#coachDock .dock-continue');chip.textContent='Continue · Squats';chip.dataset.mode='squat';chip.hidden=false;});
+  await page.screenshot({path:resolve(FRAMES,'r5-7-continue-chip.png')});
+  await page.evaluate(()=>{document.querySelector('#coachDock .dock-continue').hidden=true;});
+
+  // #79: every Settings link but HOW TO PLAY is a route now; ACHIEVEMENTS sets #achievements and the bar stays
+  // up under it (test 6 already covers that no dock item lights for achievements -- it isn't one of the six).
+  await page.evaluate(()=>document.getElementById('openSettings').click());
+  await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
+  await page.screenshot({path:resolve(FRAMES,'r5-8-settings-links.png')});
+  await page.locator('.terminal-links button',{hasText:'ACHIEVEMENTS'}).click();
+  await page.waitForFunction(()=>location.hash==='#achievements'&&document.getElementById('settings')?.open!==true&&document.querySelector('.ach-board')?.open===true);
+  assert.equal(await page.evaluate(()=>window.myr5Routes.current()),'achievements','the Settings link goes through the router, not a direct call');
+  assert.equal((await bar(page)).visible,true,'the bar stays up under the achievements route');
+  await page.screenshot({path:resolve(FRAMES,'r5-9-settings-achievements-route.png')});
+  await page.goBack();
+  await page.waitForFunction(()=>!document.querySelector('.ach-board')?.open);
+ }finally{await context.close();}
+});
