@@ -242,10 +242,10 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   const dive=await page.evaluate(()=>window.__anims.find(a=>a.el==='portalHome')?.ms);
   assert.ok(Math.abs(dive-PORTAL.revealMs*PORTAL.short)<1,`a line dives on the short reveal (${dive} ms)`);
   await page.evaluate(()=>window.run);
-  // Landed (not mid-arrival): it fills the frame's window, moved at most the gentle 2 px.
+  // Landed (not mid-arrival): meditation occupies the phone in black and white.
   await page.waitForFunction(()=>{const d=document.querySelector('.meditation-panel'),c=getComputedStyle(d);return !d.classList.contains('portal-arriving')&&c.transform==='none'&&c.opacity==='1';},null,{timeout:30000});
-  const med=await page.evaluate(()=>{const r=document.querySelector('.meditation-panel').getBoundingClientRect(),c=document.getElementById('portalChrome').style;return {w:r.width,h:r.height,fw:parseFloat(c.getPropertyValue('--face-width')),fh:parseFloat(c.getPropertyValue('--face-height'))};});
-  assert.ok(Math.abs(med.w-med.fw)<1&&Math.abs(med.h-med.fh)<1,`Meditation fills its frame (${JSON.stringify(med)})`);
+  const med=await page.evaluate(()=>{const d=document.querySelector('.meditation-panel'),r=d.getBoundingClientRect();return {w:r.width,h:r.height,vw:innerWidth,vh:innerHeight,bg:getComputedStyle(d).backgroundColor};});
+  assert.ok(Math.abs(med.w-med.vw)<1&&Math.abs(med.h-med.vh)<1&&med.bg==='rgb(0, 0, 0)',`Meditation fills the black viewport (${JSON.stringify(med)})`);
   await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'127-meditation.png')});
   await page.locator('.meditation-panel [data-meditation-close]').click();
