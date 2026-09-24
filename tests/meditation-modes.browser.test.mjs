@@ -45,6 +45,7 @@ const count=(page,path)=>page.evaluate(p=>window.__calls.filter(c=>c===p).length
 const phase=page=>page.locator('[data-breath-run]').getAttribute('data-phase');
 const caption=page=>page.locator('.meditation-speech').textContent();
 async function shot(page,name){await page.screenshot({path:`${SHOTS}/${name}.png`});}
+async function reopenAfterSmack(page){assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'the early stop closes the room');await page.locator('.meditation-entry').click();}
 async function stopVisible(page){const box=await page.locator('[data-breath-exit]').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=844,'Stop now must be on screen without scrolling');}
 
 async function openRoom(browser,{art=true,reducedMotion='no-preference'}={}){
@@ -91,6 +92,7 @@ test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);assert.equal(await page.locator('[data-breath-run]').isHidden(),true);
  assert.equal(await caption(page),'Breathe in. Breathe out.','exit restores the idle caption');
  await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0,'an exited session never completes');
+ await reopenAfterSmack(page); // #149: stopping early wakes the coach, which smacks you out of the room
  await shot(page,'04-wim-hof-exited');
  await start(page,'wim-hof');await page.clock.runFor(181000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
@@ -114,6 +116,7 @@ test('tai chi stance: existing core/balance stance hold, stance link, exit mid-h
  await page.locator('[data-breath-exit]').click();
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);
  await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0);
+ await reopenAfterSmack(page);
  await start(page,'tai-chi');await page.clock.runFor(181000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
  assert.equal(await count(page,'/api/breathing/complete'),1);

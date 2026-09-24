@@ -17,7 +17,7 @@ function captionFor(p,reduced){
  return p.key==='hold'?'Breathe out and hold.':IDLE_CAPTION;
 }
 
-export function mountBreathing({dialog,scene,pause,api,onComplete,getAccount,transitions=authTransitions()}){
+export function mountBreathing({dialog,scene,pause,api,onComplete,onEarlyExit,getAccount,transitions=authTransitions()}){
  const actions=createAccountSessionActions({api,transitions});
  const controls=document.createElement('div');controls.className='breathing-session';
  controls.innerHTML='<div class="breath-modes" data-breath-modes>'+MODE_IDS.map(id=>{const m=BREATHING_MODES[id];return `<button type="button" class="breath-mode-card" data-mode="${id}"><strong>${m.title}</strong><small>${m.subtitle}</small>`+(m.seatedOnly?`<small class="breath-seated-notice">${SEATED_ONLY_NOTICE}</small>`:'')+'</button>';}).join('')+'</div>'
@@ -66,8 +66,9 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,getAccount,tra
   }catch(error){if(current===run){reset();statusEl.textContent=error.message;}}
  }
  for(const id of MODE_IDS)$(`[data-mode="${id}"]`).onclick=()=>startSession(id);
- // Immediate exit: abandons the session (nothing is saved) and never waits on the network.
- exit.onclick=()=>reset();
+ // Immediate exit: abandons the session (nothing is saved) and never waits on the network. Stopping before the time is up
+ // (not "Done" after it) also tells the room, where the sleeping coach wakes (#149).
+ exit.onclick=()=>{if(script&&!clock.complete)onEarlyExit?.();reset();};
  retry.onclick=()=>finish();
  // D25: existing core/balance hold detection stays reachable -- leave breathing for the movement
  // library's own camera hold for this stance instead of re-implementing pose detection here.
