@@ -1,0 +1,51 @@
+/* W2-2P (#137): TV site's CRT tube glass, ported to the Settings terminal screen only — never the
+   bezel (border/box-shadow/corner bolts) or the SATCOM top / BUILD bottom strips that
+   settings-frame.css (#107, lane 2L) owns. Geometry (position/size) is written inline by
+   settings-crt.mjs from the live screen rect; this file only styles what's drawn inside it.
+   Curve = a bigger tube corner radius + a stronger four-edge vignette + a soft convex highlight
+   band near the top + a thin inner shadow so the glass reads as recessed into the bezel, ported
+   from site-hint tv/tv.css .glass + .phosphor + .glare (border-radius, inset shadow,
+   scanline+vignette gradient, glare gradient). Conductor pass (2026-09-23) on 0a450a2: the first
+   cut was too faint and left a seam where the overlay stopped short of the real screen edge —
+   settings-crt.mjs now insets only by the border width so this sits flush; the corner bolts read
+   fine under the vignette's own corner darkening. Both layers are pointer-events:none overlays;
+   see settings-crt.mjs for why. */
+.crt-screen{position:fixed;pointer-events:none;z-index:6;overflow:hidden;border-radius:26px/20px;
+ box-shadow:inset 0 0 0 1px #00000080,inset 0 0 10px 2px #00000070}
+.crt-screen>div{position:absolute;inset:0}
+.crt-vignette{
+ background:
+  /* soft convex highlight band near the top — the tube's bulge catching light */
+  linear-gradient(180deg,#ffffff2e 0%,#ffffff12 12%,transparent 30%),
+  radial-gradient(ellipse 60% 40% at 24% 10%,#ffffff26,transparent 55%),
+  /* four-edge falloff: corners and edges read darker than the centre */
+  radial-gradient(ellipse 75% 70% at 50% 50%,transparent 42%,#000000b3 100%);
+}
+.crt-scanlines{
+ /* ~3px period, ~1.5px dark line: visible at 1x per the conductor's crop check */
+ background-image:repeating-linear-gradient(#000 0 1.5px,transparent 1.5px 3px);
+ opacity:.22;animation:crt-roll 9s linear infinite;
+}
+@keyframes crt-roll{to{background-position-y:12px}}
+@media(prefers-reduced-motion:reduce){.crt-scanlines{animation:none}}
+/* optional: one soft band rolling slowly down the tube, on top of the fine scanlines */
+.crt-scan-band{
+ background-image:linear-gradient(180deg,transparent,#9dffb01a 45%,transparent 90%);
+ background-size:100% 45%;background-repeat:no-repeat;
+ animation:crt-band-roll 7s linear infinite;
+}
+@keyframes crt-band-roll{0%{background-position-y:-45%}100%{background-position-y:145%}}
+@media(prefers-reduced-motion:reduce){.crt-scan-band{animation:none;opacity:0}}
+
+.crt-touch-layer{position:fixed;pointer-events:none;z-index:7;overflow:hidden;border-radius:26px/20px}
+/* the touch spot: ported from site-hint tv/tv.css .press (a growing radial spot at the touch
+   point, springy release) — recoloured for green phosphor instead of the site's purple/gold glass:
+   a darker soft centre (low opacity, not black) inside a brighter green bulge ring, alpha-blended
+   (no mix-blend-mode:screen — that can only lighten, so it read as a black hole instead of a lens). */
+.settings-touch-mark{
+ position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;
+ background:radial-gradient(circle,#03150d66 0 16%,#9dffb01f 26%,#9dffb080 38%,#9dffb01f 52%,transparent 68%);
+ animation:settings-touch-pulse .5s ease-out forwards;
+}
+@keyframes settings-touch-pulse{0%{transform:scale(.25);opacity:0}30%{opacity:.9}100%{transform:scale(1);opacity:0}}
+@media(prefers-reduced-motion:reduce){.settings-touch-mark{animation:none;opacity:0}}
