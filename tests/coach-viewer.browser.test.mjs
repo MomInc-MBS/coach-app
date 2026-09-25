@@ -7,7 +7,7 @@ import {chromium} from 'playwright';
 test('published viewer can assemble the default coach using shipped models',async()=>{
  const seen=[];const root=resolve('dist/client');
  const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://local').pathname;seen.push(path);
- if(path==='/fixture'){res.setHeader('Content-Type','text/html');res.end('<div id="view" style="width:400px;height:500px"></div><script type="module" src="/creature/assets/phone.js"></script>');return;}
+ if(path==='/fixture'){res.setHeader('Content-Type','text/html');res.end('<div id="view" style="width:400px;height:500px"></div><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script><script type="module" src="/creature/assets/phone.js"></script>');return;}
  if(path.startsWith('/api/')){res.writeHead(path==='/api/auth/config'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/auth/config'?{enabled:false}:{error:'Sign in'}));return;}
  try{const body=await readFile(resolve(root,'.'+path));res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.mjs':'text/javascript'})[extname(path)]||'application/octet-stream');res.end(body);}catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;

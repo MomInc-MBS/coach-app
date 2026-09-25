@@ -136,7 +136,7 @@ test('Stop now: the coach wakes, lunges and smacks, the wormhole hook runs outwa
 });
 
 test('real viewer: preview() shows a temporary body without writing myr5-recipe-v1, and falls back when the body cannot load',{skip:!existsSync('dist/client/creature/assets/phone.js')&&'needs npm run build (serves dist/client)'},async()=>{
- const fixture='<div id="view" style="width:400px;height:500px"></div><script type="module" src="/creature/assets/phone.js"></script>';
+ const fixture='<div id="view" style="width:400px;height:500px"></div><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script><script type="module" src="/creature/assets/phone.js"></script>';
  const run=async(block,check)=>{
   const {server,base}=await serve(resolve('dist/client'),{page:fixture,block});const context=await browser.newContext();
   try{const page=await context.newPage();await page.goto(base+'/__room__');
