@@ -80,8 +80,8 @@ test('SATCOM frame on Install: present, settles to DOWNLOAD LINK, keeps its own 
   const buildBox=await page.locator('#installPanel .satcom-bottom [data-build]').boundingBox();
   assert.ok(buildBox.y+buildBox.height<=812,'BUILD strip stays within the 812px viewport');
   // Install's own controls (not ours to change) stay visible and clickable through the frame.
-  for(const selector of ['#installLink','#copyInstallLink','#downloadVoice'])assert.equal(await page.locator(selector).isVisible(),true,selector+' stays visible');
-  assert.equal(await hitTests(page,'#copyInstallLink'),true,'Copy link stays hit-testable');
+  for(const selector of ['#downloadVoice'])assert.equal(await page.locator(selector).isVisible(),true,selector+' stays visible');
+  for(const selector of ['#installLink','#copyInstallLink','.install-qr'])assert.equal(await page.locator(selector).count(),0,selector+' stays out of the app');
   await page.screenshot({path:resolve(FRAMES,'install-panel-375x812.png')});
   await normal.close();
 
