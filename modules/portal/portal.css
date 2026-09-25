@@ -201,18 +201,22 @@ dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:10
 #mealsPanel.portal-fullscreen .food-sheet{padding-bottom:max(12px,env(safe-area-inset-bottom))}
 body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{display:none!important}
 
-/* Conductor 24 Sept: six physical dock keys wrap around the central Portal toggle. */
-#coachDock.coach-dock{box-sizing:border-box;height:88px;display:grid;grid-template-columns:44px 44px minmax(82px,1fr) 44px 44px;grid-template-rows:26px 26px;align-content:center;justify-content:center;gap:5px 8px;padding:7px 12px calc(7px + env(safe-area-inset-bottom));}
-#coachDock .dock-settings{grid-column:1;grid-row:1/3;border-radius:50%!important;font-size:22px;height:54px!important}
-#coachDock .dock-food{grid-column:5;grid-row:1;font-size:20px;clip-path:polygon(50% 0,100% 100%,0 100%)}
-#coachDock .dock-portal{grid-column:3;grid-row:1/3;height:58px!important;align-self:center;font-size:13px;letter-spacing:.12em}
-#coachDock .dock-scoreboard{grid-column:4;grid-row:1/3;font-size:19px;height:54px!important;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-#coachDock .dock-achievements{grid-column:5;grid-row:2;font-size:19px;clip-path:polygon(0 0,100% 0,50% 100%)}
-#coachDock .dock-pod{grid-column:2;grid-row:1/3;border-radius:50%!important;font-size:22px;height:54px!important}
-#coachDock .dock-control{width:44px;height:26px;min-height:26px;padding:0;display:grid;place-items:center;font-weight:900;line-height:1}
-#coachDock .dock-control:before{display:none}
+/* Dock keys: 44px hit boxes with smaller tactile silhouettes on the span; the Portal key sits at true centre. */
+#coachDock.coach-dock{box-sizing:border-box;height:calc(88px + env(safe-area-inset-bottom));max-width:100vw;display:grid;grid-template-columns:repeat(2,44px) 1fr repeat(3,44px);grid-template-rows:44px;align-content:center;align-items:center;gap:0 4px;padding:0 max(8px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px,env(safe-area-inset-left));overflow:visible}
+#coachDock.coach-dock.coach-dock button.dock-control{grid-row:1;width:44px;height:44px;min-height:44px;padding:0;display:grid;place-items:center;background:none;border:0;box-shadow:none;border-radius:0!important;clip-path:none;filter:drop-shadow(0 3px 0 #130d18) drop-shadow(0 0 1px #000)}
+#coachDock.coach-dock.coach-dock button.dock-control:before{display:none}
+#coachDock .dock-control>span{width:36px;height:36px;display:grid;place-items:center;color:#f6e5d5;background:linear-gradient(145deg,#a58a9c,#5a4560 55%,#3b2c42);box-shadow:inset 2px 2px #ffffff40,inset -2px -3px #0006;transition:transform .08s}
+#coachDock .dock-control>span svg{width:22px;height:22px}
+#coachDock .dock-control:is(:active,[aria-current=page]){filter:drop-shadow(0 1px 0 #130d18)}
+#coachDock .dock-control:is(:active,[aria-current=page])>span{transform:translateY(2px);color:#ffd48a}
+#coachDock .dock-settings{grid-column:1}#coachDock .dock-settings>span{border-radius:50%}
+#coachDock .dock-scoreboard{grid-column:2}#coachDock .dock-scoreboard>span{border-radius:14px 14px 6px 6px}
+#coachDock .dock-food{grid-column:4}#coachDock .dock-food>span{width:40px;height:30px;border-radius:5px 5px 9px 9px}
+#coachDock .dock-achievements{grid-column:5}#coachDock .dock-achievements>span{clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);background:linear-gradient(145deg,#f2c46f,#b98033)}
+#coachDock .dock-pod{grid-column:6}#coachDock .dock-pod>span{width:30px;border-radius:15px}
+#coachDock.coach-dock button.dock-portal{position:absolute;left:50%;top:50%;translate:-50% -50%;width:62px;height:62px;min-width:62px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;line-height:1;letter-spacing:.04em}
+#coachDock .dock-portal svg{width:22px;height:22px;flex:none}#coachDock .dock-portal span{max-width:100%}
 #coachDock .dock-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-@media(max-width:360px){#coachDock.coach-dock{grid-template-columns:40px 40px minmax(72px,1fr) 40px 40px;column-gap:6px;padding-inline:8px}#coachDock .dock-control{width:40px}}
 /* Menu content uses its natural line wrapping and an inner scroller instead of zoomed tabs that can clip on phones. */
 #portalMenu.portal-framed.portal-inset{box-sizing:border-box;min-width:0;min-height:0;overflow:auto!important;padding:10px!important;overscroll-behavior:contain}
 #portalMenu.portal-framed.portal-inset>:not(#coachDock):not(.portal-peer-ui){zoom:1!important;translate:none!important}
@@ -226,4 +230,3 @@ body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{disp
 dialog.portal-pinched-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important}
 
 #coachDock.coach-dock button>span{pointer-events:none}
-
