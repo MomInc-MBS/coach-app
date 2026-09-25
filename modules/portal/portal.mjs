@@ -179,7 +179,7 @@ let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boa
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
-let pointers=new Map(),pinchPointers=new Map(),pinchState=null,pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
+let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
 // #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
@@ -1698,30 +1698,6 @@ function wirePointerEvents(){
  overlay.addEventListener('pointercancel',e=>endPointer(e,true));
 }
 
-function pinchTarget(){return framed?.dialog?.open?framed.dialog:menuSheet?.open?menuSheet:null;}
-function pinchDistance(){const p=[...pinchPointers.values()];return p.length===2?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0;}
-function onPinchPointer(e){
- const target=pinchTarget();if(!target||!['touch','pen'].includes(e.pointerType))return;
- if(e.type==='pointerdown'){
-  pinchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pinchPointers.size===2)pinchState={dialog:target,distance:pinchDistance(),handled:false};
-  return;
- }
- if(e.type==='pointermove'&&pinchPointers.has(e.pointerId)){
-  pinchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pinchPointers.size!==2||!pinchState||pinchState.dialog!==target)return;
-  const framedTarget=framed?.dialog===target,ratio=pinchDistance()/Math.max(1,pinchState.distance),full=framedTarget?(!!framed.expanded||target.classList.contains('portal-fullscreen')):target.classList.contains('portal-pinched-fullscreen');
-  if((!full&&ratio>1.42)||(full&&ratio<.70)){
-   if(e.cancelable)e.preventDefault();e.stopPropagation();
-   if(!pinchState.handled){pinchState.handled=true;if(framedTarget){full?contractScene(target):expandScene(target);}else target.classList.toggle('portal-pinched-fullscreen',!full);}
-  }
-  return;
- }
- if(e.type==='pointerup'||e.type==='pointercancel'){
-  pinchPointers.delete(e.pointerId);if(pinchPointers.size<2)pinchState=null;
- }
-}
-
 function initialVisible(){
  return !(new URLSearchParams(location.search).has('panel')||location.hash==='#pod'||document.body.dataset.screen==='rest');
 }
@@ -1730,10 +1706,6 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
- document.addEventListener('pointerdown',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
- document.addEventListener('pointermove',onPinchPointer,{capture:true,passive:false,signal:lifecycle.signal});
- document.addEventListener('pointerup',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
- document.addEventListener('pointercancel',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
  addEventListener('myr5:food-photo-ready',()=>expandScene(document.getElementById('mealsPanel')),{signal:lifecycle.signal});
  document.addEventListener('myr5:classroom-board',e=>{if(e.target?.id==='accountPanel')expandScene(e.target);},{signal:lifecycle.signal});
  document.addEventListener('room-ready',e=>{const f=framed;if(e.target?.id==='accountPanel'&&f?.dialog===e.target&&!f.expanded&&f.look.shaped){layoutInCut(e.target,true);clipTo(e.target,f.outlines.shape);}},{signal:lifecycle.signal});

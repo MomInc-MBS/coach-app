@@ -10,7 +10,7 @@ export async function createHologram(host,name,{still=false}={}){
   function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);disposeObject(scene);renderer?.dispose();renderer?.forceContextLoss();renderer?.domElement.remove();}
   try{
     renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);host.append(renderer.domElement);
-    const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=12;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;
+    const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableZoom=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=12;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;
     if(['squat','pushup'].includes(name)){
     const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),20000);let bytes;
     try{const response=await fetch('/models/'+name+'.glb',{signal:abort.signal});if(!response.ok)throw new Error('Model file unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
@@ -33,6 +33,6 @@ export async function createHologram(host,name,{still=false}={}){
     function resize(){const r=host.getBoundingClientRect();renderer.setSize(Math.max(r.width,1),Math.max(r.height,1),false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();}
     observer=new ResizeObserver(resize);observer.observe(host);reset();resize();let last=performance.now();
     function draw(now){if(disposed)return;const dt=Math.min((now-last)/1000,.06);last=now;if(playing){mixer?.update(dt);demoTime+=dt;animateDemo?.(demoTime);}controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}if(!still)frame=requestAnimationFrame(draw);
-    return {dispose,reset,capturePose:async time=>{mixer?.setTime(time);animateDemo?.(time);controls.update();renderer.render(scene,camera);return new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));},toggle:()=>playing=!playing,zoom:factor=>{camera.position.sub(controls.target).multiplyScalar(factor).clampLength(controls.minDistance,controls.maxDistance).add(controls.target);controls.update();},rotate:(x,y)=>{pivot.rotation.y+=x;pivot.rotation.x=THREE.MathUtils.clamp(pivot.rotation.x+y,-1.2,1.2);}};
+    return {dispose,reset,capturePose:async time=>{mixer?.setTime(time);animateDemo?.(time);controls.update();renderer.render(scene,camera);return new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));},toggle:()=>playing=!playing,rotate:(x,y)=>{pivot.rotation.y+=x;pivot.rotation.x=THREE.MathUtils.clamp(pivot.rotation.x+y,-1.2,1.2);}};
   }catch(error){dispose();throw error;}
 }

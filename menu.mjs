@@ -65,8 +65,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  $('closeLibrary').addEventListener('click',()=>{cancelIntro();dialog.close();speak('Library closed.',{interrupt:true});});
  $('backLibrary').addEventListener('click',()=>{home();speak('Movement library.',{interrupt:true});});
  $('useHologram').addEventListener('click',()=>begin());
- $('holoReset').addEventListener('click',()=>{viewer?.reset();if(!introducing)speak('View reset.');});$('zoomIn').addEventListener('click',()=>{viewer?.zoom(.85);if(!introducing)speak('Closer.');});$('zoomOut').addEventListener('click',()=>{viewer?.zoom(1.18);if(!introducing)speak('Further away.');});
- $('holoPlay').addEventListener('click',()=>{if(viewer){if(introducing)cancelIntro();const playing=viewer.toggle();$('holoPlay').textContent=playing?'Pause animation':'Play animation';$('useHologram').textContent='Begin';speak(playing?'Example playing.':'Example paused.');}});
+ $('holoReset').addEventListener('click',()=>{viewer?.reset();if(!introducing)speak('View reset.');}); $('holoPlay').addEventListener('click',()=>{if(viewer){if(introducing)cancelIntro();const playing=viewer.toggle();$('holoPlay').textContent=playing?'Pause animation':'Play animation';$('useHologram').textContent='Begin';speak(playing?'Example playing.':'Example paused.');}});
  dialog.addEventListener('cancel',cancelIntro);
  dialog.addEventListener('close',()=>{stopHands();releaseViewer();$('openLibrary').focus();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&dialog.open){cancelIntro();stopHands('Gestures paused');releaseViewer();home();}});

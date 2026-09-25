@@ -227,6 +227,5 @@ body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{disp
 
 #mealsPanel.portal-shaped .pyramid-tag{display:none!important}
 
-dialog.portal-pinched-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important}
 
 #coachDock.coach-dock button>span{pointer-events:none}
