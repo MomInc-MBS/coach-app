@@ -4,7 +4,7 @@ const changed=()=>Object.assign(Error('Account changed. Refresh the War Room bef
 export function createWarRoomApi({request,transitions}){
  let scope=null,readGeneration=0;
  const clear=()=>{scope=null;readGeneration++;};
- transitions.subscribe(clear);
+ const unsubscribe=transitions.subscribe(clear);
  async function api(path,options={}){
   const ticket=transitions.capture(),method=(options.method||'GET').toUpperCase();
   const roomRead=path==='/api/war-room'&&method==='GET',write=path.startsWith('/api/war-room/')&&!['GET','HEAD'].includes(method);
@@ -19,5 +19,5 @@ export function createWarRoomApi({request,transitions}){
   if(roomRead){if(typeof value.targetAccountId!=='string'||!value.targetAccountId||!Number.isSafeInteger(value.dataEpoch)||value.dataEpoch<1)throw changed();scope=Object.freeze({owner:value.targetAccountId,epoch:value.dataEpoch});}
   return value;
  }
- return {api,clear};
+ return {api,clear,dispose:()=>{clear();unsubscribe?.();}};
 }
