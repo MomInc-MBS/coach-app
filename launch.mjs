@@ -13,7 +13,7 @@ import {mountRewardPacks} from './reward-pack-ui.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
-import {applyCoachAccount,applyLocalCoach,clearCoachAccount,setOptionalGateReason} from './coach-profile.mjs';
+import {applyCoachAccount,applyLocalCoach,clearCoachAccount} from './coach-profile.mjs';
 import {openLocalCoach} from './local-coach-runtime.mjs';
 import {mountLaunch} from './launch-shell.mjs?v=quick-install-v1';
 import {mountRemindersComputer} from './modules/rooms/reminders-computer.mjs';
@@ -26,7 +26,6 @@ import {notificationBinding} from './device-notifications.mjs';
 import {mountMealScanner} from './meal-scanner.mjs';
 import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
-import {canEnterPublicRoute,coachArmyComplete} from './public-access.mjs';
 import {hasPackGrant} from './packs/pack-entitlements.mjs';
 import {createPackGrantCache} from './packs/pack-grant-cache.mjs';
 const accountTransitions=authTransitions();
@@ -43,9 +42,8 @@ const reminderControls=mountReminderControls();
 window.addEventListener('myr5:reminder-defaults',e=>reminderControls.load(e.detail.tone,e.detail.days));
 let editingReminder=null;
 const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];
-let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false,armyComplete=false,packGrantCache=null;
+let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false,packGrantCache=null;
 let localHistoryRepository=null,guestHistoryChoice=null,accountTransitionBusy=false;
-window.addEventListener('myr5:account-progress',()=>{armyComplete=coachArmyComplete(account);});
 let expansionMounted=false;
 async function mountVerifiedExpansion(value){
  if(expansionMounted||!hasPackGrant(value,'mom-paper-tear')||!window.myr5WorkoutOwner)return;
@@ -58,31 +56,6 @@ async function mountVerifiedExpansion(value){
 }
 window.addEventListener('myr5:account-ready',event=>{void mountVerifiedExpansion(event.detail);});
 window.addEventListener('myr5:workout-owner-ready',()=>{const owner=account||packGrantCache?.active();if(owner)void mountVerifiedExpansion(owner);});
-document.addEventListener('click',event=>{
- const target=event.target.closest?.('a,button');if(!target)return;
- const raw=target.dataset.accessRoute||target.getAttribute('href');if(!raw||raw.startsWith('#')||raw.startsWith('http'))return;
- let url;try{url=new URL(raw,location.origin);}catch{return;}
- if(url.origin===location.origin&&!canEnterPublicRoute(url.pathname,armyComplete)){event.preventDefault();event.stopImmediatePropagation();const status=document.getElementById('identityStatus')||document.getElementById('status');if(status)status.textContent='Complete Coach setup to unlock this room.';}
-},true);
-// A direct visit to an optional route (typed URL, bookmark) never reaches the click guard above —
-// public-entry.mjs already bounced it here with ?optional=<route> before this page's account state
-// was known. Say why: in #status (visible once the pod shows — app.mjs's starterPortalReady() now
-// keeps the starter portal from covering it while this param is present), and in the setup gate's own
-// reason line if the gate is what ends up blocking instead. Strip the param only once account state
-// has settled (plan found, or definitively no plan) — stripping it immediately would make app.mjs's
-// own read of this same param miss it and auto-open the portal over #status anyway.
-{
- const optionalEntry=new URLSearchParams(location.search).get('optional');
- if(optionalEntry){
-  const message=optionalEntry==='/war-room'?'Finish Coach setup to unlock the War Room.':'Complete Coach setup to unlock this room.';
-  const status=document.getElementById('status');if(status)status.textContent=message;
-  setOptionalGateReason(message);
-  const clean=new URL(location.href);clean.searchParams.delete('optional');
-  const strip=()=>history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
-  window.addEventListener('myr5:coach-plan',strip,{once:true});
-  window.addEventListener('myr5:account-cleared',strip,{once:true});
- }
-}
 const scoreboard=mountScoreboard({api,getAccount:()=>account});
 const deviceBinding=notificationBinding(api);
 const liveReminders=mountLiveReminders({refresh,read:reminders,getAccount:()=>account,deviceReady:()=>deviceBinding.ready(account?.user.id)});

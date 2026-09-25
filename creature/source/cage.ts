@@ -101,7 +101,7 @@ function weaponBay(body:HTMLElement){
  const earned=ul(owned,'bay-owned',i=>`${i.name} · earned`);owned.forEach((item,n)=>sparkle(earned!.children[n] as HTMLElement,'weapon',item.id));
  for(const list of [earned,lockedList(items.filter(i=>!i.granted))])if(list)reward.append(list);
  reward.append(help('These rewards are not Gala weapons and are never sent to the War Room.'));
- const gala=el('section','','gala-loadout');gala.dataset.galaLoadout='';gala.append(el('h3','Gala War Room loadout'),help('A separate, account-owned loadout for Coach Army members. It saves only when you press Save loadout, and needs a connection.'));
+ const gala=el('section','','gala-loadout');gala.dataset.galaLoadout='';gala.append(el('h3','Gala War Room loadout'),help('A separate, account-owned loadout for your account, alongside your earned rewards. It saves only when you press Save loadout, and needs a connection.'));
  const host=el('div');gala.append(host);body.append(reward,gala);
  let wall:ReturnType<typeof mountWeaponWall>|null=null;
  try{wall=mountWeaponWall({host});}catch{host.append(help('The Gala loadout is unavailable right now.'));}

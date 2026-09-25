@@ -124,11 +124,6 @@ function finish(entry,reason){
 
 export function go(id,{deepLink=false,fromHash=false}={}){
  const route=ROUTES[id];if(!route)return undefined;
- if(route.locked?.()){
-  say(route.lockedMessage);const status=$('status');if(status)status.textContent=route.lockedMessage;
-  if(hashRoute()===id)history.replaceState(null,'',bare());
-  return undefined;
- }
  if(route.nav){
   if(active)active.reason='nav';
   if(hashRoute())history.replaceState(history.state?.myr5Home?history.state:null,'',bare());

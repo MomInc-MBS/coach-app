@@ -215,9 +215,7 @@ function starterPortalReady(){
  // gets the same quilt-first landing as an installed one. New/signed-out visitors never reach this
  // point with a coachPlan, so they still see setup first.
  // A #route deep link (#pod, #ship, #food…) came for that scene; the quilt waits.
- // #15: a bounced ?optional= route (launch.mjs) must stay on the visible pod long enough to read
- // why, not get covered by the starter portal the instant a coachPlan resolves.
- return !route.has('panel')&&!route.has('optional')&&!hashRoute()&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
+ return !route.has('panel')&&!hashRoute()&&!document.hidden&&!!window.coachPlan&&state.phase==='idle'&&document.body.dataset.cameraWorkout!=='true'&&document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest'&&!document.querySelector('dialog[open]');
 }
 window.addEventListener('myr5:coach-plan',()=>{
  if(starterPortalAttempted)return;
@@ -244,8 +242,8 @@ async function loadCoachViewer(){
  }
  await coachLoading;
 }
-async function loadUnlockedOptionalMaterials(){
- if(window.myr5VerifiedOptionalAccess!==true)return false;
+// Optional look/feel assets load on first user intent for everyone, guests included (no Coach Army gate).
+async function loadOptionalMaterials(){
  if(optionalLoaded)return true;
  if(optionalLoading)return optionalLoading;
  optionalLoading=(async()=>{
@@ -263,12 +261,13 @@ async function loadUnlockedOptionalMaterials(){
 }
 // W2-2M #117: no "Show my coach" on the pod any more; the coach's reveal is the oval's ship intro (#select).
 for(const id of ['coachLoading','restCoachLoading'])$(id).textContent='Call your coach with the oval on the portal.';
-$('openSettings').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();void mountPackLicenses({host:$('packLicenses')});},{once:true});
-$('openIdentity').addEventListener('click',()=>{void loadUnlockedOptionalMaterials();},{once:true});
+$('openSettings').addEventListener('click',()=>{void loadOptionalMaterials();void mountPackLicenses({host:$('packLicenses')});},{once:true});
+$('openIdentity').addEventListener('click',()=>{void loadOptionalMaterials();},{once:true});
 $('manageMaterials').addEventListener('click',async()=>{
  const status=$('materialsStatus');
- if(!await loadUnlockedOptionalMaterials()){status.textContent='Complete Coach setup to unlock materials.';return;}
- try { const {mountMaterialControls}=await import('./modules/materials/material-controller.mjs'); $('materialControls').hidden=false; materialController??=mountMaterialControls({account:window.myr5AuthenticatedAccount,workoutOwner:pod.workoutOwner}); status.textContent=materialController?'Material controls ready.':'Material controls unavailable.'; }
+ // Material packs are account-owned grants: guests are asked to sign in, not to join anything.
+ if(!window.myr5AuthenticatedAccount?.user?.id){status.textContent='Sign in to download materials you own.';return;}
+ try { await loadOptionalMaterials(); const {mountMaterialControls}=await import('./modules/materials/material-controller.mjs'); $('materialControls').hidden=false; materialController??=mountMaterialControls({account:window.myr5AuthenticatedAccount,workoutOwner:pod.workoutOwner}); status.textContent=materialController?'Material controls ready.':'Material controls unavailable.'; }
  catch(error){status.textContent=error.message;}
 });
 window.myr5Cinematics=cinematics;

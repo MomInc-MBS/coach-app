@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {canEnterPublicRoute,coachArmyComplete,filterInitialPrecache,isOptionalPublicRoute} from '../public-access.mjs';
-test('only the explicit authoritative Coach Army entitlement unlocks editors',()=>{
+import * as access from '../public-access.mjs';
+const {coachArmyComplete,filterInitialPrecache}=access;
+test('coachArmyComplete reads only the explicit authoritative entitlement (War Room lane)',()=>{
  assert.equal(coachArmyComplete({onboarding:{revision:1}}),false);
  assert.equal(coachArmyComplete({onboarding:{data:{entryRoute:'office'}}}),false);
  assert.equal(coachArmyComplete({onboarding:{data:{entryRoute:'games',armieCompleted:true}}}),false);
@@ -11,7 +12,16 @@ test('only the explicit authoritative Coach Army entitlement unlocks editors',()
  assert.equal(coachArmyComplete({entitlements:{coachArmy:{status:'completed',completedAt:'1700000000000'}}}),false);
  assert.equal(coachArmyComplete(null),false);
 });
-test('public entry and functional routes stay available while optional routes are gated',()=>{for(const path of ['/pose.html','/pose.html?panel=reminders','/api/reminders','/signin.html','/creature/index.html','/war-room/','/war-room/index.html'])assert.equal(canEnterPublicRoute(path.split('?')[0],false),true,path);for(const path of ['/handborne/index.html','/editor/character']){assert.equal(isOptionalPublicRoute(path),true,path);assert.equal(canEnterPublicRoute(path,false),false,path);assert.equal(canEnterPublicRoute(path,true),true,path);}});
+test('installed app has no second Coach Army gate on optional routes or materials',()=>{
+ assert.equal(access.canEnterPublicRoute,undefined);assert.equal(access.isOptionalPublicRoute,undefined);
+ const read=file=>fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ assert.doesNotMatch(read('public-entry.mjs'),/coachArmy|\/api\/account|optional=/);
+ for(const file of ['launch.mjs','coach-profile.mjs','app.mjs','pod/pod.mjs','modules/routes.mjs'])assert.doesNotMatch(read(file),/coachArmy|myr5VerifiedOptionalAccess|canEnterPublicRoute|Coach setup to unlock|Coach Army required|route\.locked/,file);
+ assert.match(read('coach-profile.mjs'),/publicState=localPlan\?'unlocked':'locked'/,'sign-out with a device-local plan must not re-lock the public shell');
+ assert.match(read('coach-profile.mjs'),/coachPlan=localPlan;document\.documentElement\.dataset\.publicState='unlocked'/,'applyLocalCoach unlocks');
+ assert.doesNotMatch(read('pose.html'),/after Coach unlock/);assert.doesNotMatch(read('creature/source/cage.ts'),/Coach Army members/);
+ assert.match(read('app.mjs'),/Sign in to download materials you own\./,'owned material packs still ask guests to sign in');
+});
 test('the main Coach page never applies the optional-access visual lock',()=>{
  const html=fs.readFileSync(new URL('../pose.html',import.meta.url),'utf8');
  assert.doesNotMatch(html,/locked-public\.css/);

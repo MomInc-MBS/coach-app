@@ -21,7 +21,7 @@ const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 export const idleStatus=text=>{const value=String(text||'').trim();return !value||value==='Ready';};
 export function initPod({voice,movements,onStop,onNext,workouts}){
  let hand={enter(){},leave(){},hit(){},dispose(){},edit(){}};let handOptionalLoaded=false;const arena=initRestArena();
- window.addEventListener('myr5:optional-materials-ready',async()=>{if(window.myr5VerifiedOptionalAccess!==true||handOptionalLoaded)return;handOptionalLoaded=true;const {initHandCompanion}=await import('../hand-companion.mjs');hand=initHandCompanion();},{once:true});
+ window.addEventListener('myr5:optional-materials-ready',async()=>{if(handOptionalLoaded)return;handOptionalLoaded=true;const {initHandCompanion}=await import('../hand-companion.mjs');hand=initHandCompanion();},{once:true});
  // safeRead(PROGRESS) restores the last-synced circuit snapshot (and completedSets) so the
  // circuit meter can render immediately on reopen, before the next account-progress event lands.
  const flow=new SetFlow(safeRead(PROGRESS),{cooldown:safeRead(COOLDOWN)}),encourage=new SetEncouragement();

@@ -19,7 +19,7 @@ test('account refresh preserves mounted packs, clearing fences listeners, and fu
   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.address().port);
   await page.evaluate(async()=>{
    const MB=1048576;window.saved=0;window.blocked=false;
-   window.myr5AuthenticatedAccount={user:{id:'owner-a'}};window.coachEntitlements={coachArmy:{status:'completed',completedAt:1}};window.myr5VerifiedOptionalAccess=true;
+   window.myr5AuthenticatedAccount={user:{id:'owner-a'}};window.coachEntitlements={coachArmy:{status:'completed',completedAt:1}};
    Object.defineProperty(navigator,'serviceWorker',{value:{controller:{postMessage(_message,ports){ports[0].postMessage({cache:'test',total:300*MB,remaining:(75-window.saved)*MB,missing:[{url:'/first.bin',bytes:8*MB},{url:'/second.bin',bytes:67*MB}]});}}}});
    Object.defineProperty(navigator,'storage',{value:{estimate:async()=>({}),persist:async()=>true}});
    Object.defineProperty(window,'caches',{value:{open:async()=>({put:async()=>{window.saved+=8;}})}});
@@ -44,9 +44,9 @@ test('account refresh preserves mounted packs, clearing fences listeners, and fu
   assert.equal(await page.locator('.full-download-bar [data-bytes]').textContent(),before,'verified saved bytes remain counted after Pause');
   assert.deepEqual(await page.evaluate(async()=>{
    const {clearCoachAccount}=await import('/profile.js');let observed;
-   window.addEventListener('myr5:account-cleared',()=>{observed={account:window.myr5AuthenticatedAccount,entitlements:window.coachEntitlements,optional:window.myr5VerifiedOptionalAccess,state:document.documentElement.dataset.publicState};},{once:true});
+   window.addEventListener('myr5:account-cleared',()=>{observed={account:window.myr5AuthenticatedAccount,entitlements:window.coachEntitlements,state:document.documentElement.dataset.publicState};},{once:true});
    clearCoachAccount();return observed;
-  }),{account:null,entitlements:null,optional:false,state:'locked'},'clear listeners must observe revoked account state synchronously');
+  }),{account:null,entitlements:null,state:'locked'},'clear listeners must observe revoked account state synchronously');
   assert.equal(await page.locator('.post-download-sections').count(),0);
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 });
