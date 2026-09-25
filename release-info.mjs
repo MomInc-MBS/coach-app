@@ -1,8 +1,8 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-09-25-release-6-'+BUILD_ID,title:'Release 6: Grimoire and rooms',date:'2026-09-25',url:'https://myr5.mominc.online/repair-coach',notes:[
- 'The tactile dock opens the workout pod, food, classroom, achievements, Reminders, settings and the public War Room. In-app pinch and zoom controls are removed.',
- 'Each grimoire board has a moving tunnel pattern. The Reminders computer is larger and turns by drag or arrow keys; room titles sit inside their portal cuts.',
- 'The War Room lets you choose portal metal, frame and light-strip colours and the active board. The 3D customizer cage is an optional download.',
- 'Owned ships can be previewed and swapped in the coach customizer. The phone ship reveal keeps its hull in frame.',
- 'New unlocks show a sparkle beside each item until it is viewed. Existing unlocks stay quiet.'
+export const RELEASE=Object.freeze({id:'2026-09-25-release-6-'+BUILD_ID,title:'Release 6: War Room and grimoire',date:'2026-09-25',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'The War Room now edits your 64-bit Gala character in the 3D cage. The oval portal still opens Coach customization.',
+ 'The weapon rack, pet cages, mirror and clothes station open their character controls. Face edits zoom in, and the character walks away after ten idle seconds.',
+ 'Every grimoire texture keeps a colourful wormhole moving through it at 25% strength. A missing Jelly board falls back cleanly without repeated Downloads prompts.',
+ 'Installed app features no longer ask for Coach Armie again. Signed-in account saves still belong to their owner.',
+ 'Sound is beside the Reminders phone key. The app no longer offers a QR code or share link to install the full version.'
 ]});
