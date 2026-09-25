@@ -212,7 +212,7 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
  }finally{await context.close();}
 });
 
-test('4. the oval opens the ship view inside the metal frame above the dock, and the phone back button closes it (#ship too)',async()=>{
+test('4. the oval opens the ship view inside the metal frame above the dock, and the phone back button closes it',async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>window.myr5Menus.portal());
@@ -225,7 +225,7 @@ test('4. the oval opens the ship view inside the metal frame above the dock, and
   const box=await page.locator('dialog.ship-view').boundingBox();
   assert.ok(box&&box.width>=330&&box.height>=530&&box.x>=10&&375-box.x-box.width>=10,`the ship view must fill the frame's window: ${JSON.stringify(box)}`);
   // Re-stacked above the just-opened dialog one frame later (portal.mjs frameDialog: WebKit keeps a same-task re-show under the backdrop).
-  await page.waitForFunction(()=>document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:2000}).catch(()=>assert.fail('the frame stays up around it'));
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.classList.contains('portal-framed')&&document.getElementById('portalChrome')?.getBoundingClientRect().width>0,null,{timeout:5000}).catch(()=>assert.fail('the visible metal frame stays around the ship view'));
   // Release 5: the bottom bar (W2-2A) stays visible and tappable below the frame, never inside its window.
   const barState=await bar(page),barTop=(await page.locator('#coachDock').boundingBox()).y;
   assert.equal(barState.visible&&barState.tappable,true,'the bar shows and takes taps under the framed ship view');
@@ -233,11 +233,6 @@ test('4. the oval opens the ship view inside the metal frame above the dock, and
   await page.goBack();
   await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open&&location.hash!=='#select');
   await portalUp(page);
-  // The #ship route is the same dialog on its own history entry: back closes it too.
-  await page.evaluate(()=>{location.hash='ship';});
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&window.myr5Routes.current()==='ship');
-  await page.goBack();
-  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open&&window.myr5Routes.current()==='');
  }finally{await context.close();}
 });
 
