@@ -3,6 +3,7 @@ import {TRAINING_TRACKS} from './weapon-training.mjs';
 import {coachReminder} from './reminder-plan.mjs';
 import {RELEASE} from './release-info.mjs';
 import {mountSettingsCrt} from './settings-crt.mjs';
+import {dailyGuideDue,markDailyGuide,guideOwner} from './daily-guide.mjs';
 
 // #107/#120: military-satcom frame, usable on any dialog. Adds a top SATCOM status strip (an
 // ACQUIRING… -> {title} animation replayed every time the dialog opens), a bottom clock/BUILD
@@ -50,6 +51,13 @@ const guide=[
  ['reminders','Reminders','MOM WILL FOLLOW UP.',[['Choose the pressure','Set one, two or three messages per day. Missed scheduled training days make the next message firmer. Gentle tone, pause, frequency and quiet hours remain under your control.'],['Connect this device','Allow notifications on each device. On iPhone, add Coach to your home screen first. The live sender works while Coach is closed; local previews do not send notifications.'],['App updates','Updates download while connected and install when the app is idle. Older installs may need Update now once. A What’s new notice appears after releases.']]]
 ];
 
+export const SETTINGS_LINKS=[['ACCOUNT','scoreboard'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']];
+// Settings always opens collapsed: every section folded and scrolled to the top.
+export function collapseOnOpen(dialog){
+ const showModal=dialog.showModal.bind(dialog);
+ dialog.showModal=(...args)=>{for(const details of dialog.querySelectorAll('details'))details.open=false;dialog.scrollTop=0;return showModal(...args);};
+}
+
 export function mountCoachHub({api}){
  const hub=document.createElement('section');hub.className='coach-mission';hub.setAttribute('aria-label','Coach reminders and daily power');
  hub.innerHTML='<div class="mission-tag">MOM INC // DAILY ORDERS</div><div class="mission-head"><div><h3>CHECK IN.<br>POWER UP.</h3><p data-hub-line>MOM has your next move.</p></div><div class="mission-streak"><strong data-streak>—</strong><span>DAY STREAK</span></div></div><button class="mission-arm" type="button">ARM YOUR REMINDERS <span>→</span></button><div class="mission-readouts"><span data-message-count>1–3 messages / day</span><span data-damage>Sign in to power up</span></div><button class="mission-guide" type="button">HOW TO PLAY</button>';
@@ -67,12 +75,32 @@ export function mountCoachHub({api}){
  guide.forEach(([id,label],index)=>{const button=document.createElement('button');button.type='button';button.id='guide-tab-'+id;button.setAttribute('role','tab');button.setAttribute('aria-controls','guide-panel');button.textContent=label;button.onclick=()=>choose(index);tabs.append(button);});
  tabs.onkeydown=event=>{const move={ArrowRight:current+1,ArrowLeft:current-1,Home:0,End:guide.length-1};if(Object.hasOwn(move,event.key)){event.preventDefault();choose(move[event.key],true);}};
  function openGuide(){opener=document.activeElement;choose(0);dialog.showModal();tabs.children[0].focus();}
- hub.querySelector('.mission-guide').onclick=openGuide;dialog.querySelector('[data-close-guide]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>opener?.focus());
+ hub.querySelector('.mission-guide').onclick=openGuide;
+ // How to Play opens by itself once per local day, at the first app opening that day for this account (or the
+ // guest). Waits for the starter quilt to come up and for no other popup to be up, so it never stacks on the setup
+ // gate, a reward reveal or the quilt's own first frame.
+ const guideTried=new Set();
+ function dailyGuide(){
+  const owner=guideOwner();if(guideTried.has(owner)||!dailyGuideDue({owner}))return;guideTried.add(owner);
+  const started=Date.now(),attempt=()=>{
+   if(guideOwner()!==owner)return;
+   const busy=document.querySelector('dialog[open]')||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||document.body.dataset.cinematic;
+   // The starter quilt checks for open dialogs before it appears: give it the first word (up to 5 s).
+   const settled=document.getElementById('portalHome')?.hidden===false||Date.now()-started>=5000;
+   if(busy||!settled){setTimeout(attempt,busy?1000:250);return;}
+   if(!dailyGuideDue({owner}))return;markDailyGuide({owner});openGuide();
+  };
+  setTimeout(attempt,0);
+ }
+ window.addEventListener('myr5:coach-plan',dailyGuide);
+ dialog.querySelector('[data-close-guide]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>opener?.focus());
  const settings=document.getElementById('settings');settings.classList.add('terminal-menu');document.getElementById('settingsTitle').textContent='MOM://POD CONTROL';
  const nav=document.createElement('nav');nav.className='terminal-links';nav.setAttribute('aria-label','Behind the scenes');
- // #79: every link but HOW TO PLAY is a real route now (W2-2A's router); PORTAL closes back to the quilt.
- for(const [label,target] of [['PORTAL','portal'],['ACHIEVEMENTS','achievements'],['REMINDERS','reminders'],['ACCOUNT','scoreboard'],['DEVICE + UPDATES','install'],['HOW TO PLAY','guide']]){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():target==='portal'?window.myr5Routes?.home?.():window.myr5Routes?.go(target);};nav.append(b);}settings.append(nav);
+ // #79: every link but HOW TO PLAY is a real route (W2-2A's router). Portal, Achievements and Reminders have
+ // their own doors (the quilt and the bottom bar), so Settings no longer repeats them.
+ for(const [label,target] of SETTINGS_LINKS){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():window.myr5Routes?.go(target);};nav.append(b);}settings.append(nav);
  mountSatcomFrame(settings);
+ collapseOnOpen(settings);
  mountSettingsCrt(settings); // #137: TV touch effect + CRT curve + scan lines, screen area only
  for(const id of ['installPanel','remindersPanel'])document.getElementById(id).classList.add('terminal-menu');
  let progress=null;

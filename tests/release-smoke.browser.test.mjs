@@ -34,6 +34,8 @@ function serve(){
 async function installedContext(browser,overrides={}){
  const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion:'reduce',...overrides});
  await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));
+ // The once-a-day How to Play popup is covered by its own checks; these frames start from a day it was already seen.
+ await context.addInitScript((()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};}));
  return context;
 }
 async function seed(context,base){
@@ -399,14 +401,10 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   assert.ok(quilt.frameBottom<=quilt.barTop,`the quilt's frame clears the bar (${quilt.frameBottom} vs ${quilt.barTop})`);
   let b=await bar(page);
   assert.deepEqual(b.lit,['portal']);assert.equal(b.visible&&b.tappable,true,'the bar is up and tappable on the quilt');
-  // Armie's inbox button: in the band above the frame (clear of its rail, bolts and the board face), clear of Pod
-  // and the bar, and live (not swept inert with the rest of the page).
-  await page.waitForSelector('.armie-inbox-launcher');
-  const armie=await page.evaluate(()=>{const el=document.querySelector('.armie-inbox-launcher'),a=el.getBoundingClientRect(),frame=document.querySelector('#portalBoardHost .portal-frame'),f=frame.getBoundingClientRect(),rail=parseFloat(getComputedStyle(frame).getPropertyValue('--portal-rail')),pod=document.getElementById('portalExitButton').getBoundingClientRect();
-   return {bottom:a.bottom,frameTop:f.top-rail,right:a.right,podLeft:pod.left,barTop:document.getElementById('coachDock').getBoundingClientRect().top,inert:el.inert,hit:document.elementFromPoint(a.left+a.width/2,a.top+a.height/2)===el};});
-  assert.ok(armie.bottom<=armie.frameTop&&armie.bottom<=armie.barTop,`Armie's button sits above the frame (${armie.bottom} vs ${armie.frameTop})`);
-  assert.ok(armie.right<armie.podLeft,`Armie's button clears Pod (${armie.right} vs ${armie.podLeft})`);
-  assert.equal(armie.inert||!armie.hit,false,"Armie's button is tappable on the quilt");
+  // Armie's inbox button: hidden and inert while this player owns no letter -- no greyed, half-loaded button.
+  await page.waitForFunction(()=>!!document.querySelector('.armie-inbox-launcher'));
+  const armie=await page.evaluate(()=>{const el=document.querySelector('.armie-inbox-launcher');return {hidden:el.hidden,inert:el.inert,boxes:el.getClientRects().length};});
+  assert.deepEqual(armie,{hidden:true,inert:true,boxes:0},"Armie's button stays hidden until a letter arrives");
   await page.screenshot({path:resolve(FRAMES,'r5-1-quilt-frame-bar.png')});
 
   // Triangle -> Food (#131): the pyramid opens in the triangle's cut, the quilt staying on as the wall round it, the
@@ -493,6 +491,7 @@ test('9. the rest exit goes home to the quilt, a Settings link is a real route, 
   await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
   await page.evaluate(()=>document.getElementById('openSettings').click());
   await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
+  await page.locator('#settings .settings-group summary',{hasText:'Pod'}).click(); // Settings opens folded
   await page.locator('#visitRest').click(); // a practice rest -- same leave()/#leaveRest path as a real set
   await page.waitForFunction(()=>document.body.dataset.screen==='rest'&&document.getElementById('restScreen')?.hidden===false);
   await page.locator('#leaveRest').click();
@@ -522,30 +521,36 @@ test('9. the rest exit goes home to the quilt, a Settings link is a real route, 
   await page.evaluate(()=>document.querySelector('.app-update-banner [data-later]')?.click());
   await page.evaluate(()=>window.myr5Menus.portal());
   await portalUp(page);
-  const chip=page.locator('#coachDock .dock-continue');
-  await chip.waitFor({state:'visible',timeout:10000});
-  assert.match(await chip.textContent(),/Continue.*Squats/,'the chip names the interrupted movement');
-  // .portal-frame's own box is the metal frame's face (its rail is a box-shadow that extends --portal-rail
-  // further out still, per portal.css); the chip must clear the face, well short of the rail.
-  const [chipBox,dockBox,frame]=await Promise.all([chip.boundingBox(),page.locator('#coachDock').boundingBox(),
-   page.evaluate(()=>{const host=document.querySelector('#portalBoardHost .portal-frame');return host?host.getBoundingClientRect().bottom:null;})]);
-  assert.ok(chipBox&&dockBox,'the chip and the bar both have a box');
-  assert.ok(chipBox.y+chipBox.height<=dockBox.y+.5,`the chip sits above the bar, not over it (${chipBox.y+chipBox.height} vs ${dockBox.y})`);
-  assert.ok(chipBox.x>=0&&chipBox.x+chipBox.width<=375,'the chip stays inside the 375-wide viewport');
-  if(frame)assert.ok(chipBox.y+chipBox.height<=frame-.5,`the chip sits clear of the quilt's frame face (${chipBox.y+chipBox.height} vs frame face bottom ${frame})`);
+  // #19: the Continue offer belongs to the pod, never the quilt.
+  await page.waitForTimeout(500);
+  assert.equal(await page.locator('.continue-workout').isVisible(),false,'no Continue popup on the quilt');
+  assert.equal(await page.locator('#coachDock .dock-continue').isVisible(),false,'no Continue chip on the quilt');
+  await page.evaluate(()=>{location.hash='pod';});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
+  const popup=page.locator('.continue-workout');
+  await popup.waitFor({state:'visible',timeout:10000});
+  assert.match(await popup.locator('h2').textContent(),/Continue.*Squats/,'the popup names the interrupted movement');
+  const [popupBox,dockBox]=await Promise.all([popup.boundingBox(),page.locator('#coachDock').boundingBox()]);
+  assert.ok(popupBox&&dockBox,'the popup and the bar both have a box');
+  assert.ok(popupBox.y+popupBox.height<=dockBox.y+.5,`the popup sits above the bar (${popupBox.y+popupBox.height} vs ${dockBox.y})`);
+  assert.ok(popupBox.x>=0&&popupBox.x+popupBox.width<=375,'the popup stays inside the 375-wide viewport');
   await page.screenshot({path:resolve(FRAMES,'r5-7-continue-chip.png')});
+  await popup.locator('[data-dismiss]').click();
+  await popup.waitFor({state:'hidden'});
+  await page.goBack();
+  await portalUp(page);
 
-  // #79: every Settings link but HOW TO PLAY is a route now; ACHIEVEMENTS sets #achievements and the bar stays
-  // up under it (test 6 already covers that no dock item lights for achievements -- it isn't one of the six).
+  // #79: every Settings link but HOW TO PLAY is a route now; ACCOUNT sets #scoreboard and the bar stays up under it.
   await page.evaluate(()=>document.getElementById('openSettings').click());
   await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
   await page.screenshot({path:resolve(FRAMES,'r5-8-settings-links.png')});
-  await page.locator('.terminal-links button',{hasText:'ACHIEVEMENTS'}).click();
-  await page.waitForFunction(()=>location.hash==='#achievements'&&document.getElementById('settings')?.open!==true&&document.querySelector('.ach-board')?.open===true);
-  assert.equal(await page.evaluate(()=>window.myr5Routes.current()),'achievements','the Settings link goes through the router, not a direct call');
-  assert.equal((await bar(page)).visible,true,'the bar stays up under the achievements route');
-  await page.screenshot({path:resolve(FRAMES,'r5-9-settings-achievements-route.png')});
+  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('.terminal-links button')].map(b=>b.textContent)),['> ACCOUNT','> DEVICE + UPDATES','> HOW TO PLAY'],'no Portal, Achievements or Reminders links in Settings');
+  await page.locator('.terminal-links button',{hasText:'ACCOUNT'}).click();
+  await page.waitForFunction(()=>location.hash==='#scoreboard'&&document.getElementById('settings')?.open!==true&&document.getElementById('accountPanel')?.open===true);
+  assert.equal(await page.evaluate(()=>window.myr5Routes.current()),'scoreboard','the Settings link goes through the router, not a direct call');
+  assert.equal((await bar(page)).visible,true,'the bar stays up under the scoreboard route');
+  await page.screenshot({path:resolve(FRAMES,'r5-9-settings-account-route.png')});
   await page.goBack();
-  await page.waitForFunction(()=>!document.querySelector('.ach-board')?.open);
+  await page.waitForFunction(()=>!document.getElementById('accountPanel')?.open);
  }finally{await context.close();}
 });

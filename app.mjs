@@ -6,6 +6,7 @@ import {initPod} from './pod/pod.mjs';
 import {openAchievements} from './achievements-board.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
 import {mountHomeCharacter} from './pod/home-character.mjs';
+import {mountContinueWorkout} from './pod/continue-workout.mjs';
 import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
 import {openCamera,listCameras,findUltrawide,deviceChoice,cameraFacing,widestZoom,cameraReport} from './camera.mjs';
@@ -34,7 +35,7 @@ window.myr5TestState=state;
 const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{void stop();voice.say('Stopped.',{interrupt:true});}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -86,7 +87,7 @@ function stop(message='Stopped. Your results stay here until the next start.',{i
   const unfinished=interrupt&&['camera','model','tracking'].includes(state.phase);
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
-  // #19/#56: a set cut short by STOP also goes home, so the Continue chip is the next thing seen.
+  // #19/#56: a set cut short by STOP also goes home; the pod offers it back with its Continue popup.
   if(unfinished)workoutTransition=Promise.resolve(pod?.interruptCurrent(state.motion)).then(()=>window.myr5Routes?.home?.()).catch(error=>{status(error.message);throw error;});
   return workoutTransition;
 }
@@ -193,35 +194,15 @@ soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
-// #19: one Continue chip on the quilt for today's newest paused/interrupted workout. Reactive to any
-// quilt/route change (same body-wide attribute-watch trick routes.mjs already uses for #portalHome and
-// dialog[open]), so it stays correct after stop()/leave()/a set starting without a call at every site.
-function refreshContinueChip(){
- const chip=document.querySelector('#coachDock .dock-continue');if(!chip)return;
- // Guard every write against its own current value: the observer below watches `hidden`, and an
- // unconditional set (even to the same value) re-fires it, which would otherwise chain forever.
- const hide=()=>{if(!chip.hidden)chip.hidden=true;};
- const onQuilt=()=>document.getElementById('portalHome')?.hidden===false&&!window.myr5Routes?.current();
- if(!onQuilt()){hide();return;}
- void workouts.unfinished().then(row=>{
-  if(!row||!onQuilt()){hide();return;}
-  chip.textContent='Continue · '+(row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode);
-  chip.dataset.mode=row.mode;chip.dataset.control=row.metadata?.control||'camera';
-  if(chip.hidden)chip.hidden=false;
- }).catch(hide);
-}
-new MutationObserver(refreshContinueChip).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','aria-current']});
-document.addEventListener('click',event=>{
- const chip=event.target.closest?.('#coachDock .dock-continue');if(!chip)return;
- const mode=chip.dataset.mode;if(!mode)return;
- window.myr5Routes?.go('workout');
- // Manual resumes through beginSet's pausedLocal check, which only fires when the camera picker is set to
- // 'manual'; a paused/interrupted camera row just restarts the movement through the normal BEGIN flow.
- if(chip.dataset.control==='manual')$('camera').value='manual';
- $('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
+// #19: today's newest paused/interrupted workout is offered by a Continue popup on the pod page (never the quilt).
+// Manual resumes through beginSet's pausedLocal check, which only fires when the camera picker is set to
+// 'manual'; a paused/interrupted camera row just restarts the movement through the normal BEGIN flow.
+mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,onContinue:row=>{
+ if(!MOVEMENTS[row.mode])return;
+ if((row.metadata?.control||'camera')==='manual')$('camera').value='manual';
+ $('movement').value=row.mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
  $('start').click();
-});
-refreshContinueChip();
+}});
 window.addEventListener('myr5:ship-scene-ready',event=>{acceptShipRevealComplete(event);});
 // D30: the owner's achievements board. One hook: the Settings menu calls it now, the owner's portal (inverted triangle) later.
 window.myr5Menus={...window.myr5Menus,achievements:openAchievements};

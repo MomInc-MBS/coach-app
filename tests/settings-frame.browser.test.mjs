@@ -24,7 +24,7 @@ test('SATCOM frame: acquiring -> locked status strip, and a static locked frame 
  const base='http://127.0.0.1:'+server.address().port;let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
-  async function installedContext(extra={}){const context=await browser.newContext({serviceWorkers:'block',viewport:{width:375,height:812},...extra});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));return context;}
+  async function installedContext(extra={}){const context=await browser.newContext({serviceWorkers:'block',viewport:{width:375,height:812},...extra});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));await context.addInitScript((()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};}));return context;}
   async function seed(context){const page=await context.newPage();await page.goto(base+'/onboarding.html');await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await page.close();}
   async function openSettingsAt(context){
    await seed(context);const page=await context.newPage();await page.goto(base+'/pose.html');
@@ -44,7 +44,11 @@ test('SATCOM frame: acquiring -> locked status strip, and a static locked frame 
   assert.equal(initial.open,true,'settings opens');
   assert.equal(initial.link,'ACQUIRING…','opens in the acquiring state');
   // The frame must not cover the nav items it isn't allowed to change.
-  for(const label of ['PORTAL','ACHIEVEMENTS','REMINDERS','ACCOUNT','DEVICE + UPDATES','HOW TO PLAY'])await assertVisible(page,`#settings button:has-text("> ${label}")`);
+  for(const label of ['ACCOUNT','DEVICE + UPDATES','HOW TO PLAY'])await assertVisible(page,`#settings button:has-text("> ${label}")`);
+  // Portal, Achievements and Reminders have their own doors; Settings opens with every section folded.
+  const extra=await page.evaluate(()=>({links:[...document.querySelectorAll('#settings .terminal-links button')].map(b=>b.textContent),open:document.querySelectorAll('#settings details[open]').length}));
+  assert.deepEqual(extra.links,['> ACCOUNT','> DEVICE + UPDATES','> HOW TO PLAY']);
+  assert.equal(extra.open,0,'settings opens collapsed');
   await page.screenshot({path:resolve(FRAMES,'settings-acquiring.png')});
   await page.waitForFunction(()=>document.querySelector('#settings .satcom-top')?.classList.contains('locked'),{timeout:5000});
   assert.equal(await page.locator('#settings .satcom-top [data-link]').textContent(),'UPLINK ESTABLISHED','settles to locked shortly after opening');

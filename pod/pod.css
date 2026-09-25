@@ -50,8 +50,17 @@ body:has(#library[open]) .myr5-companion-card{display:none!important}
 #view .pod-floor{display:none}
 /* The coach is parked here between scenes (its reveal is the oval's ship intro); the pre-set film still shows it. */
 body:not([data-cinematic=pre]) #view .coach-mount,body[data-cinematic=pre] #view :is(.home-character,.coach-line){display:none}
-.pod-nameplate #openIdentity{display:flex;align-items:center;gap:4px;min-height:0;height:100%;padding:0;border:0;border-radius:0;background:none;box-shadow:none;font:10px var(--font);color:var(--gold)}
-.pod-nameplate #miniAvatar{display:none}
+/* Pod header actions: the player's name (opens the avatar) and Customize coach, as plain text links. */
+.pod-header-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 2px 2px}
+.pod-header-actions #openIdentity,.pod-header-actions a{min-height:44px;display:flex;align-items:center;padding:0 4px;border:0;border-radius:6px;background:none;box-shadow:none;color:var(--gold);font:600 13px var(--font);text-decoration:underline;text-underline-offset:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.pod-header-actions #miniAvatar{display:none}
+/* Continue popup for today's unfinished set: on the pod, above the bottom bar. */
+.continue-workout{position:fixed;z-index:30;left:16px;right:16px;bottom:calc(var(--myr5-bar,0px) + 16px + env(safe-area-inset-bottom,0px));max-width:420px;margin:0 auto;padding:14px 16px;border:2px solid var(--gold);border-radius:14px;background:#21172ff2;box-shadow:0 10px 30px #000a}
+.continue-workout .continue-eyebrow{margin:0;color:var(--gold);font:800 11px ui-monospace,monospace;letter-spacing:.16em}.continue-workout h2{margin:4px 0 10px;font:800 19px/1.2 var(--font)}
+.continue-workout .continue-actions{display:flex;gap:10px}.continue-workout .continue-actions button{flex:1}
+/* Settings open folded: each group is a one-line summary until tapped. */
+#settings .settings-group>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700}
+#settings .settings-group>summary::before{content:'▸';margin-right:8px}#settings .settings-group[open]>summary::before{content:'▾'}
 /* The coach's voice line is a radio band across the top of the viewing port. */
 #view .coach-line{position:absolute;z-index:5;top:32px;left:30px;right:30px;min-height:0;margin:0;padding:5px 10px;border:1px solid #b88de755;border-radius:8px;background:#140e1fd9;box-shadow:none}
 @container (max-height:220px){#view .coach-line{top:8px}#view .coach-line p{-webkit-line-clamp:1}#view .home-character{top:44px}#view .camera-preview{bottom:40px;width:60px;height:62px}}

@@ -17,6 +17,7 @@ function warmVoice(goal){try{voiceManifest??=fetch(VOICE_MANIFEST).then(r=>r.jso
 const $=id=>document.getElementById(id),PROGRESS='myr5-workout-progress-v1',COOLDOWN='myr5-special-cooldown-v1';
 const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
+export const idleStatus=text=>{const value=String(text||'').trim();return !value||value==='Ready';};
 export function initPod({voice,movements,onStop,onNext,workouts}){
  let hand={enter(){},leave(){},hit(){},dispose(){},edit(){}};let handOptionalLoaded=false;const arena=initRestArena();
  window.addEventListener('myr5:optional-materials-ready',async()=>{if(window.myr5VerifiedOptionalAccess!==true||handOptionalLoaded)return;handOptionalLoaded=true;const {initHandCompanion}=await import('../hand-companion.mjs');hand=initHandCompanion();},{once:true});
@@ -39,7 +40,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   if(!avatar)return;
   try{look=loadGala(localStorage,avatar);}catch{look={look:structuredClone(avatar.defaultLook),linked:false};}
   for(const id of ['miniAvatar','identityAvatar'])avatar.draw($(id),look.look,{base:id!=='restAvatar'});
-  const name=window.MBS_DJ?.display()||(look.linked?(look.look.name||'Gala guest'):'Guest preview');arena.load();$('guestLabel').textContent=look.linked?name:'Your avatar';$('restGuest').textContent=name;$('identityName').textContent=name;
+  const name=window.MBS_DJ?.display()||(look.linked?(look.look.name||'Gala guest'):'Guest preview');arena.load();$('guestLabel').textContent=window.MBS_DJ?.display()||(look.linked?name:'Anonymous guest');$('restGuest').textContent=name;$('identityName').textContent=name;
   $('restAvatar').setAttribute('aria-label',name+' on the floating platform');$('identityStatus').textContent=look.linked?'Appearance saved':'Guest appearance';
  }
  function moveCoach(){
@@ -129,6 +130,9 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  window.addEventListener('pagehide',()=>{hand.dispose();arena.dispose();clearInterval(restTimer);clearTimeout(hitTimer);observer.disconnect();});
  document.querySelector('.mom-brand').addEventListener('click',event=>{event.preventDefault();if(flow.phase==='rest')leave();});
  paintGuest();updateProgress();document.body.dataset.screen='pod';
+ // The idle pod shows no "Ready" line: #status only appears while it has something to say (a set's hints, an error).
+ const statusLine=$('status'),syncStatus=()=>{const quiet=idleStatus(statusLine.textContent);if(statusLine.hidden!==quiet)statusLine.hidden=quiet;};
+ new MutationObserver(syncStatus).observe(statusLine,{childList:true,characterData:true,subtree:true});syncStatus();
  const requestedPanel=new URLSearchParams(location.search).get('panel');if(['avatar','hand'].includes(requestedPanel)){$('identity').showModal();if(requestedPanel==='hand')hand.edit();}
  window.addEventListener('myr5:account-progress',({detail:p})=>{flow.combat=p.combat;flow.progress.completedSets=p.completedSets;flow.progress.circuit=p.circuit||null;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
  window.addEventListener('myr5:round-rejected',({detail})=>{if(awaitingRound?.id!==detail.id)return;awaitingRound=null;pendingChallenge=null;$('setReceipt').textContent=detail.message;$('earnedXp').textContent='NO XP';route.render();circuit.render();});

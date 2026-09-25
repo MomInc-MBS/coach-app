@@ -8,8 +8,7 @@ import {armieInbox,canOfferArmiePush,maybeRequestArmiePushPermission} from './ar
 
 const STYLE = `
 .armie-inbox-launcher{position:fixed;right:12px;bottom:12px;z-index:40;min-width:40px;height:40px;padding:0 10px;border-radius:20px;border:none;background:#1b1030;color:#fff;font:600 13px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
-.armie-inbox-launcher[data-unread="0"]{opacity:.55;}
-body[data-camera-workout] .armie-inbox-launcher{display:none;}
+.armie-inbox-launcher[hidden],body[data-camera-workout] .armie-inbox-launcher{display:none!important;}
 .armie-inbox-dialog{max-width:360px;width:92vw;border:none;border-radius:12px;padding:0;color:#1b1030;}
 .armie-inbox-dialog::backdrop{background:rgba(0,0,0,.4);}
 .armie-inbox-dialog header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e3ddf2;font:600 14px system-ui,sans-serif;}
@@ -28,6 +27,12 @@ let mountPromise = null;
 // that once here rather than nagging every time the inbox opens.
 const isIosBrowserTab = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone;
 
+export function setArmieLauncherOwned(launcher, owned) {
+ launcher.hidden = !owned;
+ launcher.inert = !owned;
+ if (owned) launcher.removeAttribute('tabindex'); else launcher.tabIndex = -1;
+}
+
 export function mountArmieInboxUI({root = document.body} = {}) {
  return mountPromise ??= (async () => {
   const style = document.createElement('style');
@@ -38,6 +43,9 @@ export function mountArmieInboxUI({root = document.body} = {}) {
   launcher.type = 'button';
   launcher.className = 'armie-inbox-launcher';
   launcher.setAttribute('aria-label', 'Letters from Armie');
+  // Hidden and inert until the inbox has loaded and the player owns at least one letter:
+  // never a greyed-out, half-loaded button.
+  setArmieLauncherOwned(launcher, false);
   const dialog = document.createElement('dialog');
   dialog.className = 'armie-inbox-dialog';
   root.append(launcher, dialog);
@@ -45,9 +53,11 @@ export function mountArmieInboxUI({root = document.body} = {}) {
   const store = await armieInbox();
 
   async function refreshBadge() {
-   const unread = await store.unreadCount();
+   const [owned, unread] = await Promise.all([store.hasAnyLetterEver(), store.unreadCount()]);
    launcher.dataset.unread = String(unread);
    launcher.textContent = unread ? `✉ ${unread}` : '✉';
+   setArmieLauncherOwned(launcher, owned);
+   if (!owned && dialog.open) dialog.close();
   }
 
   async function render() {
@@ -67,7 +77,7 @@ export function mountArmieInboxUI({root = document.body} = {}) {
    }
   }
 
-  launcher.addEventListener('click', async () => { await render(); dialog.showModal(); await refreshBadge(); });
+  launcher.addEventListener('click', async () => { if (launcher.hidden || launcher.inert) return; await render(); dialog.showModal(); await refreshBadge(); });
   window.addEventListener('myr5:armie-inbox-updated', () => void refreshBadge());
   await refreshBadge();
   return {launcher, dialog};

@@ -56,7 +56,7 @@ export function mountPostDownload({host}){
  const list=menu.querySelector('[data-groups]'),packsHost=menu.querySelector('[data-packs]'),menuStatus=menu.querySelector('.downloads-status');
  // Settings reaches the same menu (the pod Settings dialog, when this page has one).
  const podSettings=document.getElementById('settings'),entry=document.createElement('div');
- if(podSettings){entry.className='settings-fields downloads-entry';entry.innerHTML='<button type="button" data-open>Downloads</button>';const before=podSettings.querySelector('.settings-actions');before?before.before(entry):podSettings.append(entry);}
+ if(podSettings){entry.className='settings-fields downloads-entry';entry.innerHTML='<button type="button" data-open>Downloads</button>';const before=podSettings.querySelector('.settings-group,.settings-actions');before?before.before(entry):podSettings.append(entry);}
  // Account-bound, signed optional packets live beside (not inside) the anonymous package groups.
  // Do not even add their controls to the anonymous page: mount them only after the same-origin
  // account bridge publishes a stable owner, and remove them again as soon as that owner clears.
