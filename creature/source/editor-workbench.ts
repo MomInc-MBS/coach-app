@@ -13,6 +13,7 @@ import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection}
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
+import {mountCage,cagePacketReady,cageStyle} from './cage';
 export {CreatureViewer,GESTURES,importCreature};
 // #148: the ship's admission is single-use. A reload can resume this exact editor history entry, but
 // navigating here again (including Back/Forward) needs another completed ship reveal and tap.
@@ -149,7 +150,7 @@ function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
-function focusPart(region:Region){selected=region;sync();viewer?.focusRegion(region);}
+function focusPart(region:Region,frame=true){selected=region;sync();if(frame)viewer?.focusRegion(region);}
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 // Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
@@ -218,7 +219,23 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
 }
 skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;pickTexture(id);});
 window.addEventListener('myr5:account-ready',event=>void refreshSkinEditor((event as CustomEvent).detail));window.addEventListener('myr5:account-cleared',()=>void refreshSkinEditor(null));window.addEventListener('myr5:battle-pass',()=>void refreshSkinEditor());window.addEventListener('storage',event=>{if(event.key?.startsWith('myr5-battle-pass-ledger-v1/account/')||event.key==='myr5-battle-pass-ledger-v1')void refreshSkinEditor();});
-function openMenu(tab:HTMLButtonElement){if(tab.hidden)return;activeRange=null;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye');else if(tab.dataset.menu==='body')focusPart('body');else if(tab.dataset.menu==='materials')focusPart(selected);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
+// frame=false (the cage): its own camera already moved to the bay, so the tab opens without refocusing on a part.
+function openMenu(tab:HTMLButtonElement,frame=true){if(tab.hidden)return;activeRange=null;bayPanel.hidden=true;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye',frame);else if(tab.dataset.menu==='body')focusPart('body',frame);else if(tab.dataset.menu==='materials')focusPart(selected,frame);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
+// W4-4E: the cage's narrow way into this tab state, instead of synthetic clicks. It may open only Species or
+// Colour, and never a hidden tab. Pets, weapons and clothing have no tab: their bay shows in the console instead,
+// with every tab unselected (the last one stays keyboard-reachable) until a tab is picked again.
+const bayPanel=document.createElement('section');bayPanel.id='panel-bay';bayPanel.setAttribute('aria-labelledby','bayTitle');bayPanel.tabIndex=-1;bayPanel.hidden=true;document.querySelector('.console-scroll')?.append(bayPanel);
+function cageOpen(menu:'body'|'materials'){const tab=tabs.find(b=>b.dataset.menu===menu);if(!tab||tab.hidden||!['body','materials'].includes(menu))return false;openMenu(tab,false);return true;}
+function cageBay(title:string,kicker:string,body:Node){
+ activeRange=null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
+ const heading=document.createElement('div'),label=document.createElement('div'),small=document.createElement('small'),h2=document.createElement('h2');heading.className='panel-heading';small.textContent=kicker;h2.id='bayTitle';h2.textContent=title;label.append(small,h2);heading.append(label);
+ bayPanel.replaceChildren(heading,body);bayPanel.hidden=false;(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;
+}
+// Before the packet is on this phone: the flat customizer, plus a clear way to get the cage (Files is the
+// customizer's Downloads tab, D47). Built now, not later, so the War Room's embed rewrites its link too.
+const cageOffer=document.createElement('p');cageOffer.className='help';cageOffer.hidden=true;cageOffer.innerHTML='<strong>3D cage</strong> · not on this phone yet. Open <a href="/pose.html#install" data-cage-download>Install → Downloads</a> and pick “3D customizer cage” (about 1 MB). Until then the customizer works as it does now.';
+$('panel-files').append(cageOffer);
+const cageButton=document.createElement('button');cageButton.type='button';cageButton.className='cage-offer';cageButton.textContent='Get the 3D cage';cageButton.hidden=true;cageButton.onclick=()=>{openMenu(filesTab);cageOffer.scrollIntoView({block:'nearest'});};
 tabs.forEach(b=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{const enabled=tabs.filter(tab=>!tab.hidden),index=enabled.indexOf(b);let next=index;if(event.key==='ArrowRight')next=(index+1)%enabled.length;else if(event.key==='ArrowLeft')next=(index+enabled.length-1)%enabled.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=enabled.length-1;else return;event.preventDefault();openMenu(enabled[next]);enabled[next].focus();};});
 // Rank 5: the grid's "apply to all parts" copied a legacy style index; with the grid gone, this
 // copies the selected part's actual texture+colour+sparkle+metallic choice to every part instead.
@@ -227,7 +244,7 @@ $('undo').onclick=()=>{if(endPreview()||!undo.length)return;activeRange=null;red
 $('redo').onclick=()=>{if(!redo.length)return;activeRange=null;clearPreview();undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
 $('original').onclick=()=>{clearPreview();commit(fresh());};
 // Done (or the brand link) leaves on the owned look; the preview was never saved.
-for(const a of document.querySelectorAll('.editor-header a,.coach-dock a'))a.addEventListener('click',()=>{endPreview();try{sessionStorage.removeItem(SHIP_GATE);}catch{}});
+for(const a of document.querySelectorAll('.editor-header a,.coach-dock a,[data-cage-download]'))a.addEventListener('click',()=>{endPreview();try{sessionStorage.removeItem(SHIP_GATE);}catch{}});
 $('importFile').addEventListener('change',async event=>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;try{if(file.size>MAX_IMPORT_BYTES)throw Error('Choose a MYR5 recipe smaller than 64 KB.');clearPreview();commit(importCreature(await file.text()));}catch(error){tell((error as Error).message);}finally{input.value='';}});
 $('exportRecipe').onclick=()=>download(new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}),'myr5-recipe.json');
 $('exportGLB').onclick=async()=>{if(!ready||!viewer||previewing())return;try{tell('Preparing your animated model…');download(await viewer.exportGLB(),'myr5-animated.glb');tell('Animated model downloaded');}catch(error){tell((error as Error).message);}};
@@ -252,5 +269,13 @@ navigator.serviceWorker?.addEventListener('message',({data})=>{
  else if(pendingBodyUrls.size)tell('Downloading this body…');
  else tell(originalStatus);
 });
-try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
+let cage:ReturnType<typeof mountCage>|null=null;
+try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},get cage(){return cage;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
 catch(error){tell('3D could not start. '+(error as Error).message);}
+// W4-4E: the cage joins only when its optional packet is downloaded and the 3D viewer started.
+void cagePacketReady().then(have=>{
+ if(!viewer||viewer.disposed)return;
+ if(!have){cageStyle();cageOffer.hidden=false;cageButton.hidden=false;$('creatureStage').append(cageButton);return;}
+ cage=mountCage(viewer,{openTab:cageOpen,showBay:cageBay,tell});
+});
+window.addEventListener('pagehide',()=>cage?.dispose());

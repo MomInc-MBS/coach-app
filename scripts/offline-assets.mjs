@@ -22,6 +22,8 @@ export const BOARDS=/^\/pod\/worlds\/boards\//;
 const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood)\.mjs$/;
 export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|modules\/rooms\/classroom\.(?:mjs|css))$/;
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.webp|modules\/rooms\/reminders-computer\.css)$/;
+// W4-4E (D47): the customizer cage and the Draco decoder only it needs. Never core; the customizer stays 2D without it.
+export const CAGE_ROOM=/^\/pod\/rooms\/cage\//;
 const GRIMOIRE_GROUPS=['ice','grass','cogs','jelly','wood'].map(id=>[
  'grimoire-'+id,
  new RegExp(`^/(?:pod/worlds/boards/${id==='cogs'?'cogs/':id==='grass'?'(?:grass|flower)\\.glb$':id+'\\.glb$'}|modules/portal/portal-tunnel-${id}\\.mjs$)`),
@@ -31,7 +33,7 @@ const GRIMOIRE_GROUPS=['ice','grass','cogs','jelly','wood'].map(id=>[
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
 const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
-const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)$/i;
+const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 
 async function identify(root,path){
@@ -44,7 +46,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
- if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url)||CAGE_ROOM.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -69,6 +71,7 @@ const GROUPS=[
  ...GRIMOIRE_GROUPS,
  ['room-scoreboard',SCOREBOARD_ROOM],
  ['room-reminders',REMINDERS_ROOM],
+ ['room-cage',CAGE_ROOM],
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
