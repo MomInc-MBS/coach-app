@@ -192,7 +192,7 @@ dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:10
 
 /* Static material depths also survive WebGL loss and reduced-motion mode. */
 .portal-glass:not(.gl):is([data-tunnel=ice],[data-tunnel=jelly])>b{background:radial-gradient(ellipse at center,#e5deec 0,transparent 7%),repeating-conic-gradient(from 20deg,color-mix(in srgb,var(--tint) 70%,#05030b) 0 24deg,var(--tint) 27deg 40deg,color-mix(in srgb,var(--tint) 25%,#000) 42deg 60deg)}
-.portal-glass:not(.gl)[data-tunnel=grass]>b{background:radial-gradient(ellipse at center,#9d8257 0,#1a1006 9%,#2b190b 45%,#614122)}
+.portal-glass:not(.gl)[data-tunnel=grass]>b{background:radial-gradient(ellipse at center,#d8ff9a 0,#1f6a1a 9%,#0b2f10 45%,#2f7a25)}
 .portal-glass:not(.gl)[data-tunnel=wood]>b{background:radial-gradient(ellipse at center,#ffb054 0,#bb4116 5%,#261710 14%,#100e0d 68%)}
 .portal-glass:not(.gl)[data-tunnel=cogs]>b{background:radial-gradient(ellipse at center,#bdcbc8 0,#546763 5%,#151b1b 20%,#2b3030 68%)}
 

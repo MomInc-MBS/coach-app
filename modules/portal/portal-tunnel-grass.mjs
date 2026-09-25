@@ -1,8 +1,15 @@
-// Optional grimoire tunnel material; downloaded with its board.
-export const material=`vec3 material(float a,float v,float z,float r,float aa,vec3 base){
-float soil=fract(sin(floor(a*160.)*14.31+floor(v*48.)*7.13)*437.1);float root=1.-smoothstep(.025,.09,abs(sin(a*11.+sin(v*.8)*1.7)));
- vec3 dirt=mix(vec3(.075,.032,.012),vec3(.28,.14,.045),soil)+vec3(.23,.12,.035)*root;
- vec2 bug=vec2(fract(a*3.183+sin(v*.4)*.12)-.5,fract(v*.24)-.5);float body=1.-smoothstep(.04,.085,length(bug*vec2(1.,1.8)));float legs=(1.-smoothstep(.015,.04,abs(bug.y+sin(bug.x*65.)*.027)))*(1.-smoothstep(.06,.12,abs(bug.x)));
- return mix(dirt,vec3(.014,.009,.004),max(body,legs)*aa);
+// Optional grimoire tunnel material; downloaded with its board. Blades and flower glints are cells in (a,v), so they stream past with travel.
+export const material=`float gH(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+vec3 material(float a,float v,float z,float r,float aa,vec3 base){
+ float ca=a*9.549296586,cv=v*1.25;vec2 id=vec2(mod(floor(ca),60.),floor(cv)),q=vec2(fract(ca)-.5,fract(cv));
+ float h=gH(id),n=gH(vec2(floor(a*38.2),floor(v*3.)));
+ vec3 c=mix(vec3(.015,.11,.035),vec3(.07,.34,.07),n)+vec3(0.,.06,0.)*(.5+.5*sin(a*14.+v*.9));
+ float lean=(h-.5)*.6,w=.2*(1.-q.y)+.015,blade=(1.-smoothstep(w*.6,w,abs(q.x-lean*q.y)))*step(.3,h)*aa;
+ c=mix(c,mix(vec3(.05,.42,.06),vec3(.55,.95,.25),q.y),blade);
+ float f=gH(id+7.3),d=length((q-vec2(0.,.5))*vec2(1.,.8));
+ float bloom=(1.-smoothstep(.07,.2,d))*step(.9,f)*aa,tw=.6+.4*sin(v*5.+f*40.);
+ vec3 pet=f>.95?vec3(1.,.9,.25):vec3(1.,.55,.8);
+ c=mix(c,pet*tw+vec3(.25),bloom)+pet*bloom*.35*tw;
+ return c;
 }`;
-export const core='#78512d';
+export const core='#7dff5a';
