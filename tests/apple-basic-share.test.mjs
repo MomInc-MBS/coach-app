@@ -12,11 +12,13 @@ function fakeDom(){
  return {children:[],append(...c){this.children.push(...c);}};
 }
 
-test('shipped config is unset, so the action stays hidden',()=>{
- assert.ok(!APPLE_BASIC_SHARE_URL);
+test('shipped config mounts a share action for the separate public Apple basic app',()=>{
+ assert.equal(APPLE_BASIC_SHARE_URL,'https://mom-inc-fitness-basic.ianmyersrocks97.chatgpt.site');
+ assert.ok(!APPLE_BASIC_SHARE_URL.includes('myr5.mominc.online'));
  const settings=fakeDom();
- assert.equal(mountAppleBasicShare(settings),null);
- assert.equal(settings.children.length,0);
+ const wrap=mountAppleBasicShare(settings,{nav:{}});
+ assert.equal(settings.children.length,1);
+ assert.equal(wrap.children[0].textContent,'Share Apple basic');
 });
 
 test('uses navigator.share when available',async()=>{
