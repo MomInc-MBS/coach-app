@@ -3,6 +3,7 @@ import {TRAINING_TRACKS} from './weapon-training.mjs';
 import {coachReminder} from './reminder-plan.mjs';
 import {RELEASE} from './release-info.mjs';
 import {mountSettingsCrt} from './settings-crt.mjs';
+import {mountAppleBasicShare} from './apple-basic-share.mjs';
 import {dailyGuideDue,markDailyGuide,guideOwner} from './daily-guide.mjs';
 
 // #107/#120: military-satcom frame, usable on any dialog. Adds a top SATCOM status strip (an
@@ -99,6 +100,7 @@ export function mountCoachHub({api}){
  // #79: every link but HOW TO PLAY is a real route (W2-2A's router). Portal, Achievements and Reminders have
  // their own doors (the quilt and the bottom bar), so Settings no longer repeats them.
  for(const [label,target] of SETTINGS_LINKS){const b=document.createElement('button');b.type='button';b.textContent='> '+label;b.onclick=()=>{settings.close();target==='guide'?openGuide():window.myr5Routes?.go(target);};nav.append(b);}settings.append(nav);
+ mountAppleBasicShare(settings); // hidden until APPLE_BASIC_SHARE_URL is set
  mountSatcomFrame(settings);
  collapseOnOpen(settings);
  mountSettingsCrt(settings); // #137: TV touch effect + CRT curve + scan lines, screen area only
