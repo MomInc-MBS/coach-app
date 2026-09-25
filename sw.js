@@ -86,6 +86,7 @@ async function reportDownload(){
 
 function assetPath(path){
  if(path==='/'||path==='/index.html'||path==='/index')return '/pose.html';
+ if(path==='/icons/coach-512.png')return '/icons/myr5-alien-512.png';
  if(ASSET_BY_URL.has(path)||OPTIONAL_BY_URL.has(path))return path;
  const html=path.endsWith('/')?path+'index.html':path+'.html';
  if(ASSET_BY_URL.has(html)||OPTIONAL_BY_URL.has(html))return html;

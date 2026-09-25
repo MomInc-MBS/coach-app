@@ -4,6 +4,7 @@ import {compactModels} from './compact-models.mjs';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
 import {deploymentSize,SITES_ARCHIVE_LIMIT} from './deployment-size.mjs';
+import {omitDuplicateCoachIcon} from './icon-stage.mjs';
 import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {gzipSync} from 'node:zlib';
@@ -35,6 +36,8 @@ for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 console.log('Packed nutrition bytes removed:',await packNutrition());
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor','reward-assets'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+// Legacy Coach 512 URL is aliased by the Worker and service worker.
+await omitDuplicateCoachIcon('dist/client');
 if(materialRelease.configured){
  await copySignedMaterialManifests({sourceDir:materialManifestSource,siteRoot:'dist/client',baseUrl:process.env.MYR5_MATERIALS_BASE_URL,publicJwk:materialRelease.publicJwk});
  const configPath='dist/client/modules/materials/material-config.mjs';let config=await readFile(configPath,'utf8');
