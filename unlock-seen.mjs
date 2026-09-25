@@ -23,21 +23,32 @@ export function markSeen(kind,id,options){
  }
 }
 
-/** Sparkles `el` if the item is unseen. It clears when the element is actually on screen (at least 60% visible while
- * the page is visible; hidden panels and scrolled-away rows never intersect), or when it is clicked or focused. */
+// Keep each badge visible long enough to notice. Time outside the viewport or in a hidden tab never counts.
+const DWELL_MS=1500;
+function afterVisibleDwell(el,seen,active=()=>!!el.dataset.sparkle){
+ if(typeof IntersectionObserver!=='function')return;
+ const doc=el.ownerDocument;let inView=false,timer=null;
+ const cancel=()=>{if(timer!==null){clearTimeout(timer);timer=null;}};
+ const schedule=()=>{if(timer!==null||!inView||doc.visibilityState!=='visible'||!active())return;
+  timer=setTimeout(()=>{timer=null;if(inView&&el.isConnected&&doc.visibilityState==='visible'&&active()){io.disconnect();doc.removeEventListener('visibilitychange',onVisibility);seen();}},DWELL_MS);
+ };
+ const onVisibility=()=>{if(doc.visibilityState!=='visible')cancel();else schedule();};
+ const io=new IntersectionObserver(entries=>{
+  if(!el.isConnected){cancel();io.disconnect();doc.removeEventListener('visibilitychange',onVisibility);return;}
+  inView=entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.6);
+  if(inView)schedule();else cancel();
+ },{threshold:[.6]});
+ doc.addEventListener('visibilitychange',onVisibility);io.observe(el);
+}
+
+/** Sparkles `el` if unseen. It clears after 1.5s on screen, or immediately on click/focus. */
 export function sparkle(el,kind,id,options){
  if(!isUnseen(kind,id,options))return false;
  ensureStyle(el.ownerDocument);
  el.dataset.sparkle=`${kind}:${id}`;
  const seen=()=>markSeen(kind,id,options);
  el.addEventListener('click',seen,{once:true});el.addEventListener('focus',seen,{once:true});
- if(typeof IntersectionObserver==='function'){
-  const io=new IntersectionObserver(entries=>{
-   if(!el.isConnected||!el.dataset.sparkle){io.disconnect();return;}
-   if(el.ownerDocument.visibilityState==='visible'&&entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.6)){io.disconnect();seen();}
-  },{threshold:[.6]});
-  io.observe(el);
- }
+ afterVisibleDwell(el,seen);
  return true;
 }
 
@@ -55,7 +66,5 @@ const markSelected=(select,options)=>{
 /** Picking an option views it; so does the select showing it on screen (a lone ship or skin can't be "picked"). */
 export function watchSelect(select,options){
  select.addEventListener('change',()=>markSelected(select,options));
- if(typeof IntersectionObserver==='function')new IntersectionObserver(entries=>{
-  if(select.ownerDocument.visibilityState==='visible'&&entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.6))markSelected(select,options);
- },{threshold:[.6]}).observe(select);
+ afterVisibleDwell(select,()=>markSelected(select,options),()=>!!select.selectedOptions[0]?.dataset.sparkle);
 }
