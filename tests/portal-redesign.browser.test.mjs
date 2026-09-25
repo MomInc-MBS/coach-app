@@ -106,3 +106,40 @@ test('a failed jelly or cogs packet can retry without poisoning the other boards
  }
  await page.close();
 }));
+
+test('saved missing jelly falls back to quilt without Downloads; rapid picks end on working grass; only an explicit pick offers Downloads once',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{localStorage.setItem('myr5.portalBoard','jelly');window.packOffers=[];window.myr5Packs={open:id=>window.packOffers.push(id)};});
+ let jellyMissing=true;await page.route('**/jelly.glb',route=>jellyMissing?route.abort('failed'):route.continue());
+ await page.goto(url);
+ await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ const board=()=>page.locator('#portalHome').getAttribute('data-board'),offers=()=>page.evaluate(()=>window.packOffers.length);
+ assert.equal(await board(),'quilt','cold start with a missing saved jelly falls back to quilt');
+ assert.equal(await offers(),0,'cold start never opens Downloads');
+ // second open/sync: storage + pageshow re-sync, then dispose and a fresh cold mount
+ await page.evaluate(()=>{dispatchEvent(new Event('storage'));dispatchEvent(new Event('pageshow'));});
+ await page.waitForTimeout(500);
+ await page.evaluate(async()=>{window.myr5Portal.dispose();const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});
+ await page.waitForTimeout(500);
+ assert.equal(await board(),'quilt','second portal open still shows quilt');
+ assert.equal(await offers(),0,'second open/sync never opens Downloads');
+ // rapid choices end on a working grass board
+ jellyMissing=false;
+ await page.evaluate(async()=>{await Promise.all([portal.board('jelly'),portal.board('cogs'),portal.board('grass')]);});
+ assert.equal(await board(),'grass','last rapid pick wins');
+ assert.equal(await page.locator('#portalBoardHost canvas').count(),1,'one live renderer');
+ await page.evaluate(()=>portal.playWormhole({direction:'in',minMs:50}));await page.waitForTimeout(100);
+ assert.equal(await page.locator('.portal-wormhole.gl canvas').count(),1,'grass tunnel draws');
+ await page.evaluate(()=>portal.playWormhole({direction:'out',minMs:50}));
+ assert.equal(await offers(),0,'rapid picks with an available jelly never offer Downloads');
+ // an actually missing board picked by hand offers Downloads exactly once
+ jellyMissing=true;
+ await page.evaluate(()=>document.querySelector('#portalMenu [data-board="jelly"]').click());
+ await page.waitForFunction(()=>window.packOffers.length>0&&document.getElementById('portalHome').dataset.board==='quilt');
+ await page.waitForTimeout(500);
+ assert.deepEqual(await page.evaluate(()=>window.packOffers),['grimoire-jelly'],'one explicit offer');
+ assert.deepEqual(errors,[]);
+ await page.close();
+}));
