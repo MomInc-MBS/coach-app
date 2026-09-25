@@ -262,7 +262,7 @@ function cageOpen(menu:'body'|'materials'){const tab=tabs.find(b=>b.dataset.menu
 let bayClose:(()=>void)|null=null;
 function closeBay(){const close=bayClose;bayClose=null;close?.();}
 function cageBay(title:string,kicker:string,body:Node,onClose?:()=>void){
- activeRange=null;closeBay();bayClose=onClose??null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
+ activeRange=null;closeBay();closeShipPreview();bayClose=onClose??null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
  const heading=document.createElement('div'),label=document.createElement('div'),small=document.createElement('small'),h2=document.createElement('h2');heading.className='panel-heading';small.textContent=kicker;h2.id='bayTitle';h2.textContent=title;label.append(small,h2);heading.append(label);
  bayPanel.replaceChildren(heading,body);bayPanel.hidden=false;(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;
 }
