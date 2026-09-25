@@ -197,9 +197,15 @@ function updateBoardChips(){const tint=menuSheet?.querySelector('input[type=colo
 // Swaps the mounted board: pauses/disposes the old one, creates the new one, falls back to the
 // quilt (then the no-board menu sheet) on failure. Pointer listeners read the `board` variable at
 // call time, so nothing needs re-wiring here.
-async function loadBoard(id){
+// Loads run one at a time: effects (jelly's module state) are singletons, so a superseded load disposing late
+// must never overlap the next board's init. A load superseded while queued does nothing.
+let loadQueue=Promise.resolve();
+function loadBoard(id,{explicit=false}={}){
  if(!BOARDS[id])id='quilt';
- const wanted=wantedBoard=id,load=++boardLoad;
+ const wanted=wantedBoard=id,load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,wanted,load,explicit):null);
+ loadQueue=run.catch(()=>{});return run;
+}
+async function loadBoardNow(id,wanted,load,explicit){
  status(`Loading ${BOARDS[id].label} board…`);
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
@@ -215,7 +221,8 @@ async function loadBoard(id){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
   failureMessage=`${BOARDS[id].label} board art is unavailable. Download the ${BOARDS[id].label} grimoire in Downloads to keep its board and tunnel offline.`;
   if(id!=='quilt'){
-   window.myr5Packs?.open?.('grimoire-'+id);tunnelMaterial='';tunnelCore=null;
+   if(explicit&&load===boardLoad)window.myr5Packs?.open?.('grimoire-'+id); // Downloads opens only for a board just picked, never for a saved pick at start/sync
+   tunnelMaterial='';tunnelCore=null;
    try{board=await BOARDS.quilt.create(boardHost);id='quilt';}
    catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
   }else boardFailed=true;
@@ -307,7 +314,7 @@ function buildDom(){
   setVisible(false);menu.open?.();
  });
  menuSheet.querySelector('input[type=color]').oninput=e=>store.set(tintKey(boardId),e.target.value);
- menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected);if(!lifecycle.signal.aborted)setVisible(true);});
+ menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected,{explicit:true});if(!lifecycle.signal.aborted)setVisible(true);});
  workoutHome=document.createElement('dialog');workoutHome.id='portalWorkoutHome';workoutHome.className='portal-workout-home';document.body.append(workoutHome);
  workoutHome.addEventListener('close',restoreWorkoutHome);
 }
@@ -1308,7 +1315,7 @@ vec3 tunnel(vec2 p,float fz){
  vec3 c=mix(seq(i),seq(i+1.),smoothstep(.65,1.,f));
  c*=mix(.85,.55+.45*(.5+.5*sin(a*7.+v*6.2832)),aa); // twisted streaks
  c+=max(pow(f,12.),1.-smoothstep(0.,1.5*fz,f))*aa*(c*.8+.35); // bright leading edge of each ring, antialiased across the wrap
- c=material(a,v,z,r,aa,c);
+ c=mix(c,material(a,v,z,r,aa,c),.75); // the colourful wormhole keeps 25% over every board's texture (identity material: unchanged)
  c=mix(c,uCore,smoothstep(7.,40.,z));            // depth fog: the far end glows
  c+=uCore*exp(-r*16.)*1.1;                        // bright core at the vanishing point
  return c*mix(1.,.78,smoothstep(1.,1.8,r));      // walls dim a little toward the opening (more turns neon yellow olive)
