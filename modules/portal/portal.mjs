@@ -65,7 +65,6 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
   cut:()=>Promise.resolve(),heal(){},press(){},release(){},pause(){},resume(){},dispose(){},
  })};
 const BOARD_KEY='myr5.portalBoard';
-let tunnelMaterial='',tunnelCore=null;
 const tintKey=id=>'myr5.grimoireColor.'+id;
 const boardTint=()=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(boardId))||'')?store.get(tintKey(boardId)):'#b026ff';
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
@@ -216,13 +215,12 @@ async function loadBoardNow(id,wanted,load,explicit){
  const hiddenForLoad=portalHome.hidden,priorVisibility=portalHome.style.visibility;
  if(hiddenForLoad){portalHome.hidden=false;portalHome.style.visibility='hidden';}
  try{
- try{const theme=id==='quilt'||id==='__stub__'?null:await import(`./portal-tunnel-${id}.mjs`),material=theme?.material||'';const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;tunnelMaterial=material;tunnelCore=theme?.core||null;}
+ try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
  catch(error){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
   failureMessage=`${BOARDS[id].label} board art is unavailable. Download the ${BOARDS[id].label} grimoire in Downloads to keep its board and tunnel offline.`;
   if(id!=='quilt'){
    if(explicit&&load===boardLoad)window.myr5Packs?.open?.('grimoire-'+id); // Downloads opens only for a board just picked, never for a saved pick at start/sync
-   tunnelMaterial='';tunnelCore=null;
    try{board=await BOARDS.quilt.create(boardHost);id='quilt';}
    catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
   }else boardFailed=true;
@@ -1303,11 +1301,10 @@ export function lensMap(poly,w,h,px=GLASS.mapPx,bevel=GLASS.bevel){
  return {data,mw,mh};
 }
 const TUNNEL_VS='#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0,1);}';
-const tunnelFragment=material=>`#version 300 es
+const tunnelFragment=()=>`#version 300 es
 precision highp float;
 uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
-${material||'vec3 material(float a,float v,float z,float r,float aa,vec3 base){return base;}'}
 vec3 tunnel(vec2 p,float fz){
  float aa=1.-smoothstep(.25,.9,fz); // fade ring detail that gets finer than a pixel
  vec2 d=(p-uC)/uR;float r=max(length(d),1e-3),z=3.4/r,a=atan(d.y,d.x)+uSpin+.12*z;
@@ -1315,7 +1312,6 @@ vec3 tunnel(vec2 p,float fz){
  vec3 c=mix(seq(i),seq(i+1.),smoothstep(.65,1.,f));
  c*=mix(.85,.55+.45*(.5+.5*sin(a*7.+v*6.2832)),aa); // twisted streaks
  c+=max(pow(f,12.),1.-smoothstep(0.,1.5*fz,f))*aa*(c*.8+.35); // bright leading edge of each ring, antialiased across the wrap
- c=mix(c,material(a,v,z,r,aa,c),.75); // the colourful wormhole keeps 25% over every board's texture (identity material: unchanged)
  c=mix(c,uCore,smoothstep(7.,40.,z));            // depth fog: the far end glows
  c+=uCore*exp(-r*16.)*1.1;                        // bright core at the vanishing point
  return c*mix(1.,.78,smoothstep(1.,1.8,r));      // walls dim a little toward the opening (more turns neon yellow olive)
@@ -1344,12 +1340,12 @@ void main(){
 // One WebGL2 context for the portal's life, created on the first glass and reused; null when unavailable (CSS glass then).
 let tunnel=null;
 function tunnelGL(){
- if(tunnel?.material===tunnelMaterial)return tunnel;
+ if(tunnel)return tunnel;
  if(tunnel){tunnel.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel.canvas.remove();tunnel=null;}
  const canvas=document.createElement('canvas'),gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
  if(!gl)return null;
  const prog=gl.createProgram();
- for(const [type,src] of [[gl.VERTEX_SHADER,TUNNEL_VS],[gl.FRAGMENT_SHADER,tunnelFragment(tunnelMaterial)]]){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);gl.attachShader(prog,s);}
+ for(const [type,src] of [[gl.VERTEX_SHADER,TUNNEL_VS],[gl.FRAGMENT_SHADER,tunnelFragment()]]){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);gl.attachShader(prog,s);}
  gl.linkProgram(prog);
  if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.warn('Portal wormhole unavailable.',gl.getProgramInfoLog(prog));gl.getExtension('WEBGL_lose_context')?.loseContext();return null;}
  gl.useProgram(prog);
@@ -1360,7 +1356,7 @@ function tunnelGL(){
  canvas.addEventListener('webglcontextlost',()=>{if(tunnel?.canvas===canvas)tunnel=null;canvas.parentNode?.classList.remove('gl');canvas.remove();});
  // One 1px draw read back now: drivers compile lazily, at the first real draw, which would stall the first cut instead.
  canvas.width=canvas.height=1;gl.viewport(0,0,1,1);gl.drawArrays(gl.TRIANGLES,0,3);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
- return tunnel={canvas,gl,u,material:tunnelMaterial};
+ return tunnel={canvas,gl,u};
 }
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
@@ -1376,7 +1372,7 @@ function startTunnel(ph,poly,color,all){
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,tex.mw,tex.mh,0,gl.RGBA,gl.UNSIGNED_BYTE,tex.data);
  const flat=new Float32Array(30);seq.forEach((c,i)=>flat.set(rgb(c),3*i));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
  gl.uniform3fv(u.uTint,rgb(boardTint()));
- gl.uniform3fv(u.uCore,tunnelMaterial?rgb(tunnelCore||boardTint()).map(v=>v*.55+.22):all?[1,1,1]:rgb(color).map(v=>v*.5+.5));
+ gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(color).map(v=>v*.5+.5));
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  // ponytail: hardwareConcurrency is a coarse low-end hint (and capped on some browsers); the measured-frame check below is the real guard.
  let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,raf=0,tilt=null,tilt0=null;
@@ -1396,7 +1392,7 @@ function startTunnel(ph,poly,color,all){
   // Graceful degrade: if frames 10-40 run slow (median under ~45 fps), drop resolution and the fringe.
   if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);size();ph.glass.dataset.lite='1';}
   const T=ph.T,d=ph.diveT0?Math.min(1,(now-ph.diveT0)/T.reveal):ph.backT0?Math.max(0,1-(now-ph.backT0)/T.reveal):0; // the dive adds up to tunnelDive rings/s (the dive back sheds it)
-  travel=(travel+dt*1.25*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(T.cut+T.load))+PORTAL.tunnelDive*d*d))%(tunnelMaterial?10000:seq.length);
+  travel=(travel+dt*1.25*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(T.cut+T.load))+PORTAL.tunnelDive*d*d))%seq.length;
   const finger=[...pointers.values()].at(-1)?.pts.at(-1);let tx=(tilt?.[0]||0)+(finger?(finger.x-left-cx)*.12:0),ty=(tilt?.[1]||0)+(finger?(finger.y-top-cy)*.12:0);
   const k=Math.min(1,.2*R/(Math.hypot(tx,ty)||1));par[0]+=(tx*k-par[0])*Math.min(1,dt*5);par[1]+=(ty*k-par[1])*Math.min(1,dt*5);
   const lx=finger?finger.x-left:rest[0]-(tilt?.[0]||0)*8,ly=finger?finger.y-top:rest[1]-(tilt?.[1]||0)*8;light[0]+=(lx-light[0])*Math.min(1,dt*9);light[1]+=(ly-light[1])*Math.min(1,dt*9);
