@@ -21,13 +21,16 @@
  border:solid transparent;border-width:var(--bt) var(--br) var(--bb) var(--bl);
  border-image:url('/pod/rooms/console.webp') 418 70 376 74 fill / 1 / 0 stretch;
  transform-origin:50% 45%;animation:reminders-computer-sway 9s ease-in-out infinite alternate;
+ transform:perspective(1100px) rotateY(calc(var(--sway) + var(--computer-spin,0deg))) rotateZ(calc(var(--sway)/9));
 }
+/* Drag sideways (or Left/Right on the focused dialog) turns the art; vertical pans still scroll the form. */
+#remindersPanel[data-reminder-room=ready]{touch-action:pan-y;cursor:grab}
+#remindersPanel[data-reminder-room=ready] :is(button,input,select,textarea,a,label,summary){cursor:auto}
+#remindersPanel[data-reminder-room=ready]:focus-visible{outline:2px solid #b99cff;outline-offset:-2px}
 /* While the portal scales the dialog in, a transformed dialog is the fixed art's containing block. */
 #remindersPanel.portal-arriving[data-reminder-room=ready]::before{left:calc(-1*var(--bl));top:calc(-1*var(--bt))}
-@keyframes reminders-computer-sway{
- from{transform:perspective(1100px) rotateY(-7deg) rotateZ(-.8deg) translateY(-3px)}
- to{transform:perspective(1100px) rotateY(7deg) rotateZ(.8deg) translateY(3px)}
-}
+@property --sway{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes reminders-computer-sway{from{--sway:-7deg}to{--sway:7deg}}
 @media(prefers-reduced-motion:reduce){#remindersPanel[data-reminder-room=ready]::before{animation:none}}
 #remindersPanel[data-reminder-room=ready] .reminders-computer-offer{display:none}
 #remindersPanel[data-reminder-room=ready] header{background:#281a43e8;border:1px solid #8e6cc4;border-radius:8px;padding:8px 10px;margin:0 0 8px}
