@@ -223,7 +223,7 @@ let S=null; // per-instance state; one portal board is ever active at once
 
 // One GLTFLoader promise per file, so every slot using a kit shares a single load.
 const models=new Map();
-const loadModel=url=>models.get(url)??models.set(url,new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url)).get(url);
+const loadModel=url=>{let pending=models.get(url);if(!pending){pending=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url).catch(error=>{models.delete(url);throw error;});models.set(url,pending);}return pending;};
 function kitMesh(gltf,name){
  gltf.scene.updateMatrixWorld(true);
  let src=null;(name?gltf.scene.getObjectByName(name):gltf.scene)?.traverse(o=>{if(o.isMesh&&!src)src=o;});

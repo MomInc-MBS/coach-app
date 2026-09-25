@@ -66,6 +66,7 @@ test('phone device keeps artwork proportional and renders every downloaded tunne
  assert.equal(await page.locator('#portalChrome').getAttribute('data-destination'),'workout');
  await page.waitForTimeout(850);
  assert.ok(await page.locator('#portalChrome .portal-frame').evaluate(el=>el.getBoundingClientRect().bottom<0),'frame retracts above viewport');
+ assert.equal(await page.locator('#start').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;}),true,'the retracted frame must not cover the workout start page');
  await page.screenshot({path:resolve(FRAMES_DIR,'redesign-workout.png')});
  await page.evaluate(()=>document.getElementById('portalWorkoutHome').close());
  await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden,{},{timeout:10000});
@@ -87,5 +88,21 @@ test('meditation tunnel loses colour throughout its duration and lands fullscree
  await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-fullscreen')?.open,null,{timeout:10000});
  const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:0,y:0,width:375,height:812});
  assert.equal(await page.locator('#portalChrome').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+ await page.close();
+}));
+
+test('a failed jelly or cogs packet can retry without poisoning the other boards',async()=>withPortal(async(browser,url)=>{
+ const page=await openPage(browser,url);
+ for(const [id,asset] of [['jelly','jelly.glb'],['cogs','parts-kit.glb']]){
+  let failed=false;
+  await page.route('**/'+asset,route=>{if(!failed){failed=true;return route.abort('failed');}return route.continue();});
+  await page.evaluate(id=>portal.board(id),id);
+  assert.equal(failed,true,`${id} requested its optional asset`);
+  assert.equal(await page.locator('#portalHome').getAttribute('data-board'),'quilt',`${id} falls back to a usable quilt`);
+  await page.evaluate(id=>portal.board(id),id);
+  assert.equal(await page.locator('#portalHome').getAttribute('data-board'),id,`${id} retries after the transient failure`);
+  assert.equal(await page.locator('#portalBoardHost canvas').count(),1,`${id} leaves one live renderer`);
+  await page.unroute('**/'+asset);
+ }
  await page.close();
 }));

@@ -185,7 +185,7 @@ html[data-public-state] #portalObjects .portal-object{transition:transform .6s c
 .portal-color{display:flex;align-items:center;justify-content:space-between;gap:16px;font:13px system-ui;margin:12px 0}.portal-color input{width:48px;height:44px;padding:3px;border:1px solid #ac91a4;background:#302338}
 dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;clip-path:none!important}
 #portalChrome.portal-garage .portal-aura{display:none}
-#portalChrome.portal-garage .portal-frame{animation:portal-garage-up .8s cubic-bezier(.4,0,.3,1) both}
+#portalChrome.portal-garage .portal-frame{box-shadow:none;animation:portal-garage-up .8s cubic-bezier(.4,0,.3,1) both}
 #portalChrome.portal-garage[data-destination=meditation]{visibility:hidden}
 @keyframes portal-garage-up{to{transform:translateY(-110vh)}}
 @media(prefers-reduced-motion:reduce){#portalChrome.portal-garage{visibility:hidden}}

@@ -107,6 +107,11 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
     }),true,'the 3D classroom, two desks and tappable whiteboard sit in the diamond');
     assert.equal(await page.evaluate(()=>{const board=document.querySelector('#accountPanel [data-room-board]'),r=board.getBoundingClientRect();return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('[data-room-board]');}),true,'the whiteboard center is tappable through the cut');
    }
+   if(id==='oval'){
+    await page.waitForFunction(()=>document.querySelector('.ship-view-stage .ship-scene[data-phase=ready]')&&!document.querySelector('.ship-scene-flash:popover-open'),null,{timeout:30000});
+    const scene=await page.locator('.ship-view-stage .ship-scene-canvas').boundingBox();
+    assert.ok(scene?.width>200&&scene.height>400,'the coach ship scene has a real viewport behind the oval cut');
+   }
    assert.equal(await barTappable(page),true,`${id}: the bar stays tappable`);
    await page.screenshot({path:resolve(FRAMES,`134-${frame}.png`)});
    await page.screenshot({path:resolve(FRAMES,`131-inscribed-${id}.png`)});
