@@ -133,13 +133,13 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   // Lane 2N: the coach capsule the ship view woke stops drawing under the quilt once it closes.
   assert.equal(await page.evaluate(()=>window.myr5Creature?.stats().awake),false,'the coach capsule sleeps after the ship view closes');
 
-  // The War Room remains Coach Army gated until access is explicitly changed; X names the lock and leaves the quilt usable.
+  // The War Room is public: X takes an installed-app guest straight in, with no second Coach Army entitlement.
   await page.evaluate(()=>window.myr5Portal.show());
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('x'));
-  await page.waitForFunction(()=>document.getElementById('portalStatus')?.textContent==='Finish Coach setup to unlock the War Room.');
-  assert.equal(new URL(page.url()).pathname,'/pose.html');
-  await portalUp(page);
+  await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
+  await page.locator('h1#title').waitFor();
+  assert.equal(await page.evaluate(()=>document.body.textContent.includes('Finish Coach setup')),false,'no Coach setup lock on the War Room');
  }finally{await context.close();}
 });
 
@@ -287,11 +287,13 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   await page.evaluate(()=>{location.hash='pod';});
   await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
   await page.goBack();await page.waitForFunction(()=>window.myr5Routes.current()==='');
-  // The War Room keeps its lock (no verified pack here): the route says why and stays put.
+  // The War Room route is public: a guest hash route enters it directly, with no lock message or bounce.
   await page.evaluate(()=>{location.hash='war-room';});
-  await page.waitForFunction(()=>document.getElementById('status')?.textContent==='Finish Coach setup to unlock the War Room.');
-  await page.waitForFunction(()=>location.hash==='');
-  assert.equal(new URL(page.url()).pathname,'/pose.html');
+  await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
+  await page.locator('h1#title').waitFor();
+  await page.goBack();
+  await page.waitForURL(url=>url.pathname==='/pose.html',{timeout:15000});
+  await page.waitForFunction(()=>window.myr5Routes.current()==='');
   await portalSettled(page);
   await page.waitForTimeout(300); // let any earlier back traversal finish before testing a new hash navigation
   // D24: nothing over the camera view (and no bar during a set).
@@ -299,10 +301,10 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    const hidden=await page.evaluate(flag=>{document.body.dataset[flag]='true';const d=getComputedStyle(document.getElementById('coachDock')).display;delete document.body.dataset[flag];return d==='none';},flag);
    assert.equal(hidden,true,`the bar is hidden while body[data-${flag}] is set`);
   }
-  // A guest deep-link to the 3D War Room stays behind its existing Coach Army gate.
+  // A guest deep-link to the 3D customizer enters the public War Room too, not a Coach Army bounce.
   await page.evaluate(()=>{location.hash='customize';});
-  await page.waitForURL(url=>url.pathname==='/pose.html'&&url.searchParams.get('optional')==='/war-room',{timeout:15000});
-  assert.equal(new URL(page.url()).pathname,'/pose.html');
+  await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
+  await page.locator('h1#title').waitFor();
  }finally{await context.close();}
 });
 
