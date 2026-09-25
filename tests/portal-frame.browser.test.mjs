@@ -43,7 +43,7 @@ test('#111 the metal cap fills above the proportionate board and never takes a p
  await mkdir(FRAMES_DIR,{recursive:true});
  const page=await openPage(browser,url);
  const g=await geometry(page),face=boxOf(g.face),frame=boxOf(g.frame),outer={left:frame.left-g.rail,top:frame.top-g.rail,right:frame.right+g.rail,bottom:frame.bottom+g.rail};
- assert(Math.abs(face.left-g.rail)<.6&&face.top>120&&Math.abs(face.right-(375-g.rail))<.6&&Math.abs(face.bottom-(812-88))<.6,`board retains its proportions above the hardware dock: ${JSON.stringify(face)}`);
+ assert(Math.abs(face.left-g.rail)<.6&&face.top>120&&Math.abs(face.right-(375-g.rail))<.6&&Math.abs(face.bottom-(812-88-g.rail))<.6,`the frame face clears the hardware dock by its rail: ${JSON.stringify(face)}`);
  for(const k of ['left','top','right','bottom'])assert(Math.abs(frame[k]-face[k])<.6,`the frame wraps the face exactly (${k}: ${frame[k]} vs ${face[k]})`);
  assert(g.rail>=12,'the rail takes the margin');
  assert(Math.abs(outer.left)<.6&&Math.abs(outer.right-375)<.6,'side rails reach the physical perimeter');

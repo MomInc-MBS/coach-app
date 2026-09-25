@@ -111,7 +111,7 @@ export const MENUS={
  down:{label:'Achievements',route:'achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
  hdiamond:{...LEADERBOARD,hidden:true},
- x:{label:'Character Editor',route:'select',color:'#ff10f0',icon:ICONS.brush,kind:'dialog',open:via('select',()=>window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))}, // #148: the editor's one door is the oval's ship
+ x:{label:'War Room',route:'war-room',color:'#ff10f0',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5Routes?.ROUTES?.['war-room']?.locked?.()??window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
  'line-lr':{label:'Meditation',route:'meditate',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
  'line-rl':{label:'Reminders',route:'reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
  'line-down':{label:'Settings',route:'settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},
@@ -182,7 +182,7 @@ let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boa
 let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
-let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
+let pointers=new Map(),pinchPointers=new Map(),pinchState=null,pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
 // #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
@@ -289,9 +289,8 @@ function buildDom(){
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
  // The board picker row only earns its place once a second board ships; one option is nothing to pick from.
  const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div>`;
- menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Menu</h2><button type="button" data-close>Close</button></header><div class="portal-menu-grid">${menuButtonsHtml()}</div>${boardRow}<label class="portal-color">Grimoire colour <input type="color" aria-label="Grimoire colour" value="${boardTint()}"></label><p id="portalMenuStatus" role="status"></p>`;
+ menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Menu</h2></header><div class="portal-menu-grid">${menuButtonsHtml()}</div>${boardRow}<label class="portal-color">Grimoire colour <input type="color" aria-label="Grimoire colour" value="${boardTint()}"></label><p id="portalMenuStatus" role="status"></p>`;
  document.body.append(menuSheet);
- menuSheet.querySelector('[data-close]').onclick=()=>menuSheet.close();
  menuSheet.querySelectorAll('[data-menu]').forEach(btn=>btn.onclick=()=>{
   const menu=MENUS[btn.dataset.menu];
   if(menu.locked?.()){menuSheet.querySelector('#portalMenuStatus').textContent=menu.lockedMessage;return;}
@@ -379,8 +378,8 @@ const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el
 const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
 const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
 // A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the upper rail.
-const windowLook=(id,menu,face)=>({id,color:menu?.color||'#b026ff',label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
-const shapeLook=(id,menu,pts,face,pattern)=>({id,color:menu.color,label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
+const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
+const shapeLook=(id,menu,pts,face,pattern)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
 function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
@@ -414,6 +413,13 @@ function expandScene(dialog){
  setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
  dialog.querySelector(':scope>.portal-peer-ui')?.remove();hideAura();chrome.hidePopover();
  stowBoard();return true;
+}
+function contractScene(dialog){
+ if(!dialog?.open||framed?.dialog!==dialog||(!framed.expanded&&!dialog.classList.contains('portal-fullscreen')))return false;
+ framed.expanded=false;framed.leaned=false;dialog.classList.remove('portal-fullscreen','portal-leaned');setFace(dialog,framed.face);
+ if(framed.look.shaped){dialog.classList.add('portal-shaped');layoutInCut(dialog,true);clipTo(dialog,framed.outlines.shape,{ms:prefersReducedMotion()?0:280});}
+ else{dialog.classList.remove('portal-shaped');layoutInCut(dialog,true);dialog.style.removeProperty('clip-path');}
+ chrome.showPopover?.();showAura(framed.look,'open');portalHome.hidden=false;if(boardBtn)boardBtn.hidden=true;board?.resume();boardShown=true;syncEnergy();backgroundBlocked(true);return true;
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
 // its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
@@ -547,16 +553,11 @@ function peerUi(dialog){
 // Close and first controls (cfg.poke) showing through the wall as if in front of it, and cfg.fit sizes a scene layer to
 // the cut (the constellation). Without an own Close the portal adds a ✕ on the quilt.
 function shapeDialog(dialog){
- const {look,face}=framed,ui=peerUi(dialog),cfg=peerCfg(dialog);
+ const {look}=framed,ui=peerUi(dialog),cfg=peerCfg(dialog);
  framed.flat=!cfg.scene;framed.cfg=cfg;
- const own=ownClose(dialog);
- ui.insertAdjacentHTML('beforeend',`${own?'':`<button type="button" data-peer-close aria-label="Close ${look.label}">✕</button>`}<button type="button" data-peer-lean aria-pressed="false" aria-label="Step in to ${look.label}">⤢</button>`);
- const close=ui.querySelector('[data-peer-close]'),step=ui.querySelector('[data-peer-lean]'),at=(el,x,y)=>{el.style.left=x+'px';el.style.top=y+'px';};
- if(close){at(close,face.left+face.width-52,face.top+8);close.onclick=()=>closeDestination(dialog);}
- at(step,face.left+face.width-52,face.top+face.height-52);step.onclick=()=>lean(!framed?.leaned);
  dialog.classList.add('portal-shaped');
  const r=framed.flat&&(framed.inset??=insetRect(framed.outlines.shape)),small=r&&(r.width-2*INSET.margin<INSET.minW||r.height-2*INSET.margin<INSET.minH);
- if(small){framed.leaned=true;dialog.classList.add('portal-leaned');leanButton(step,true,look.label);showAura({...look,pts:rectPts(face),shaped:false,name:namePath(null,null,face)},'lean');}
+ if(small){framed.leaned=true;dialog.classList.add('portal-leaned');showAura({...look,pts:rectPts(face),shaped:false,name:namePath(null,null,face)},'lean');}
  else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
@@ -1699,6 +1700,30 @@ function wirePointerEvents(){
  overlay.addEventListener('pointercancel',e=>endPointer(e,true));
 }
 
+function pinchTarget(){return framed?.dialog?.open?framed.dialog:menuSheet?.open?menuSheet:null;}
+function pinchDistance(){const p=[...pinchPointers.values()];return p.length===2?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0;}
+function onPinchPointer(e){
+ const target=pinchTarget();if(!target||!['touch','pen'].includes(e.pointerType))return;
+ if(e.type==='pointerdown'){
+  pinchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinchPointers.size===2)pinchState={dialog:target,distance:pinchDistance(),handled:false};
+  return;
+ }
+ if(e.type==='pointermove'&&pinchPointers.has(e.pointerId)){
+  pinchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinchPointers.size!==2||!pinchState||pinchState.dialog!==target)return;
+  const framedTarget=framed?.dialog===target,ratio=pinchDistance()/Math.max(1,pinchState.distance),full=framedTarget?(!!framed.expanded||target.classList.contains('portal-fullscreen')):target.classList.contains('portal-pinched-fullscreen');
+  if((!full&&ratio>1.42)||(full&&ratio<.70)){
+   if(e.cancelable)e.preventDefault();e.stopPropagation();
+   if(!pinchState.handled){pinchState.handled=true;if(framedTarget){full?contractScene(target):expandScene(target);}else target.classList.toggle('portal-pinched-fullscreen',!full);}
+  }
+  return;
+ }
+ if(e.type==='pointerup'||e.type==='pointercancel'){
+  pinchPointers.delete(e.pointerId);if(pinchPointers.size<2)pinchState=null;
+ }
+}
+
 function initialVisible(){
  return !(new URLSearchParams(location.search).has('panel')||location.hash==='#pod'||document.body.dataset.screen==='rest');
 }
@@ -1707,11 +1732,15 @@ export async function mountPortal({visible=false}={}){
  if(window.myr5Portal&&!window.myr5Portal.disposed)return window.myr5Portal;
  const lifetime=new AbortController();lifecycle=lifetime;
  buildDom();
+ document.addEventListener('pointerdown',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
+ document.addEventListener('pointermove',onPinchPointer,{capture:true,passive:false,signal:lifecycle.signal});
+ document.addEventListener('pointerup',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
+ document.addEventListener('pointercancel',onPinchPointer,{capture:true,passive:true,signal:lifecycle.signal});
  addEventListener('myr5:food-photo-ready',()=>expandScene(document.getElementById('mealsPanel')),{signal:lifecycle.signal});
  document.addEventListener('myr5:classroom-board',e=>{if(e.target?.id==='accountPanel')expandScene(e.target);},{signal:lifecycle.signal});
  document.addEventListener('room-ready',e=>{const f=framed;if(e.target?.id==='accountPanel'&&f?.dialog===e.target&&!f.expanded&&f.look.shaped){layoutInCut(e.target,true);clipTo(e.target,f.outlines.shape);}},{signal:lifecycle.signal});
  document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){setVisible(false);restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
- menuBtn.addEventListener('click',()=>{if(busy)return;openMenu();},{signal:lifecycle.signal});
+ menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  if(!boardFailed){wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL();});} // compile the wormhole while idle, not at the first cut

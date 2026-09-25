@@ -24,7 +24,7 @@ async function withPortal(run){
  finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
 
-test('Menu-sheet dialog opens fade back to the quilt on close, exit button reads Pod, and the Boards packet is selectable',async()=>withPortal(async(browser,url)=>{
+test('physical dock toggles the grimoire, Escape closes the menu sheet, and destinations return to the quilt',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  // The board's own WebGL rendering is irrelevant here; fail it so the test doesn't need swiftshader.
  await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
@@ -38,9 +38,33 @@ test('Menu-sheet dialog opens fade back to the quilt on close, exit button reads
  assert.equal(await page.locator('.portal-board-chips').count(),1);
  assert.equal(await page.locator('.portal-board-chips [data-board]').count(),6);
 
- // #8: a dialog destination (Meditation, kind:'dialog') opened from the Menu sheet — not a traced shape —
- // must still fade back to the quilt when its dialog closes, same as a gesture open.
+ // The large center key toggles between the grimoire and the workout pod.
  await page.locator('#portalMenuButton').click();
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true);
+ await page.evaluate(()=>window.portal.show());
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ // Line-up still opens the menu. Escape remains its keyboard close path after the explicit close control is removed.
+ await page.evaluate(()=>window.portal.open('line-up'));
+ await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
+ assert.equal(await page.locator('#portalMenu [data-close]').count(),0);
+ // Pinch apart opens the sheet to full screen; pinching together restores its portal frame.
+ await page.evaluate(()=>{
+  const d=document.getElementById('portalMenu');
+  const fire=(type,id,x)=>d.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',clientX:x,clientY:400}));
+  fire('pointerdown',31,120);fire('pointerdown',32,220);fire('pointermove',31,40);fire('pointermove',32,300);
+ });
+ await page.waitForFunction(()=>{const d=document.getElementById('portalMenu');return d?.classList.contains('portal-fullscreen')||d?.classList.contains('portal-pinched-fullscreen');},null,{timeout:5000});
+ await page.evaluate(()=>{
+  const d=document.getElementById('portalMenu');
+  const fire=(type,id,x)=>d.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',clientX:x,clientY:400}));
+  fire('pointerup',31,40);fire('pointerup',32,300);fire('pointerdown',33,40);fire('pointerdown',34,300);fire('pointermove',33,130);fire('pointermove',34,210);
+ });
+ await page.waitForFunction(()=>{const d=document.getElementById('portalMenu');return !d?.classList.contains('portal-fullscreen')&&!d?.classList.contains('portal-pinched-fullscreen');},null,{timeout:5000});
+ await page.keyboard.press('Escape');
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
+ // A dialog destination opened from the sheet must still return through the portal on close.
+ await page.evaluate(()=>window.portal.open('line-up'));
+ await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
  await page.locator('#portalMenu [data-menu="line-lr"]').click();
  await page.waitForFunction(()=>document.querySelector('.meditation-panel')?.open===true);
  await page.locator('#meditationClose').click();

@@ -38,7 +38,7 @@ export const ROUTES={
  scoreboard:{label:'Scoreboard',dialog:'#accountPanel',open:()=>panel('account')},
  // #148 (Ian 2026-09-23): the customizer's one door is the oval: its ship arrives and the user taps it (ship-intro.mjs
  // opens /creature/index.html with the gate the editor checks). So #customize, the X and any link to it land on the arrival.
- customize:{label:'Character editor',open(){if(hashRoute()==='customize')history.replaceState(null,'',bare()+'#select');void go('select',pending.get('customize'));}},
+ customize:{label:'War Room customizer',nav:'/war-room/index.html'},
  meditate:{label:'Meditation',dialog:'.meditation-panel',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
  reminders:{label:'Reminders',dialog:'#remindersPanel',open:()=>panel('reminders')},
  settings:{label:'Settings',dialog:'#settings',open(){$('openSettings')?.click();return $('settings');}},
@@ -184,6 +184,11 @@ export function home(){
 }
 // The bar's centre Portal: on the quilt the portal's own handler opens the Menu sheet; anywhere else it goes
 // home to the quilt (closing the open route).
+function dockRoute(event){
+ const button=event.target.closest?.('#coachDock [data-route]:not([data-panel])');
+ if(!button||button.dataset.route==='portal')return;
+ go(button.dataset.route);
+}
 function portalButton(event){
  if(!event.target.closest?.('#coachDock [data-route="portal"]'))return;
  if(quiltUp()&&!active)return;
@@ -198,7 +203,8 @@ export function mountRoutes(){
  addEventListener('hashchange',()=>{const href=location.href,handled=href===seen;seen='';if(!handled)sync({type:'hashchange',state:history.state});});
  addEventListener('pointerup',armGuard,true);addEventListener('keydown',armGuard,true);
  document.addEventListener('click',portalButton,true);
- // #148: a plain tap on any link to the customizer (the pod's nameplate, the coach card's) plays the arrival instead.
+ document.addEventListener('click',dockRoute);
+ // A plain tap on a legacy customizer link enters the War Room scene.
  document.addEventListener('click',event=>{const link=event.target.closest?.('a[href]');if(!link||event.defaultPrevented||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;const url=new URL(link.href,location.href);if(url.origin===location.origin&&/^\/creature\/(index\.html)?$/.test(url.pathname)){event.preventDefault();go('customize');}});
  new MutationObserver(records=>{
   for(const {target,attributeName} of records){

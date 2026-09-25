@@ -70,3 +70,6 @@
 .meditation-panel .breath-mode-card:focus-visible{outline:3px solid #fff;outline-offset:5px}
 .meditation-panel.meditation-colour .breath-mode-card{border-color:#fff!important}
 @media(max-height:650px){.meditation-panel .breath-mode-card{top:28%;min-height:110px}.meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{bottom:28%}}
+
+/* Keep the active track time readable near the top third of the still room. */
+.meditation-panel .breath-run:not([hidden]) [data-status]{position:fixed;top:33dvh;left:12px;right:12px;z-index:7;margin:0;text-align:center;pointer-events:none}

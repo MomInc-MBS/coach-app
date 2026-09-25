@@ -14,7 +14,7 @@ test('gesture id -> destination label matches the map',()=>{
   down:'Achievements',
   vdiamond:'Leaderboard',
   hdiamond:'Leaderboard', // one Diamond, two orientations
-  x:'Character Editor',
+  x:'War Room',
   'line-lr':'Meditation',
   'line-rl':'Reminders',
   'line-down':'Settings',
@@ -37,11 +37,14 @@ test('Menu (line-up) opens the Menu sheet, not a dialog, and is hidden from the 
  assert.equal(MENUS['line-up'].hidden,true);
 });
 
-test('War Room/Arcade keeps its Menu-sheet row and lock, with no gesture of its own',()=>{
+test('the X and the Menu-sheet War Room row enter the same locked War Room route',()=>{
+ assert.equal(MENUS.x.route,'war-room');
+ assert.equal(MENUS.x.kind,'nav');
+ assert.equal(MENUS.x.lockedMessage,MENUS.warroom.lockedMessage);
  assert.equal(MENUS.warroom.label,'Arcade / War Room');
  assert.equal(typeof MENUS.warroom.locked,'function');
  assert.equal(MENUS.warroom.lockedMessage,'Finish Coach setup to unlock the War Room.');
- assert(!SHAPE_IDS.includes('warroom'),'War Room has no recognizable shape');
+ assert(!SHAPE_IDS.includes('warroom'),'War Room menu row has no recognizable shape');
 });
 
 test('every recognizable shape other than cross has a MENUS destination, and the Menu sheet rows follow the table order',()=>{
