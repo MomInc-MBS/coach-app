@@ -1,6 +1,7 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-09-24-reward-packs-'+BUILD_ID,title:'Reward packs and pixel canisters',date:'2026-09-24',url:'https://myr5.mominc.online/repair-coach',notes:[
- 'Earn Uncommon, Rare and Legendary packs as you level up, plus an Uncommon pack each day you sign in.',
- 'Each pack reveals a random colour, 64-bit boss look or grimoire texture. Weapons and boss progression keep their level gates.',
- 'Open packs in a pixel canister with green, blue and orange tier styles.'
+export const RELEASE=Object.freeze({id:'2026-09-25-release-6-'+BUILD_ID,title:'Release 6: Grimoire and rooms',date:'2026-09-25',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'The grimoire portals open the workout pod, Coach ship, food pyramid, classroom and War Room. Use the mechanical dock to move between them.',
+ 'Pinch apart to expand a portal and pinch together to return. Boards now load independently, with their own textured wormholes.',
+ 'The Reminders computer and 3D War Room are ready in their downloaded rooms.',
+ 'Reward packs reveal the unlocked colour, 64-bit look or texture on a pixel tile.'
 ]});

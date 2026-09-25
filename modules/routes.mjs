@@ -12,7 +12,7 @@ const dock=()=>dockEl||=$('coachDock');
 const quiltUp=()=>$('portalHome')?.hidden===false;
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const hideQuilt=()=>{if(quiltUp())window.myr5Portal?.hide?.();};
-const panel=name=>{document.querySelector(`.coach-dock [data-panel="${name}"]`)?.click();return $(name+'Panel');};
+const panel=name=>{const dialog=$(name+'Panel'),button=document.querySelector(`.coach-dock [data-panel="${name}"]`);if(button)button.click();else if(dialog&&!dialog.open)dialog.showModal();return dialog;};
 const bare=()=>location.pathname+location.search;
 // The ship view resolves only once its entrance is over; the portal's dive needs the dialog as soon as it opens.
 const whenOpen=(selector,opening)=>new Promise(resolve=>{
@@ -60,6 +60,8 @@ const pending=new Map();
 function paint(){
  const current=active?active.id:quiltUp()?'portal':'';
  for(const button of dock()?.querySelectorAll('[data-route]')||[]){if(button.dataset.route===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+ const centre=dock()?.querySelector('.dock-portal');
+ if(centre){const onQuilt=quiltUp()&&!active;centre.querySelector('span').textContent=onQuilt?'POD':'PORTAL';centre.setAttribute('aria-label',onQuilt?'Open workout pod':'Return to portal grimoire');centre.title=centre.getAttribute('aria-label');}
 }
 function say(text){
  const live=dock()?.querySelector('.dock-live');if(!live)return;

@@ -277,9 +277,11 @@ function buildDom(){
  const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
  menuBtn=barPortal||portalHome.querySelector('#portalMenuButton');
  if(bar)portalHome.querySelector('#portalMenuButton').remove();
- portalHome.querySelector('#portalExitButton').onclick=()=>setVisible(false);
+ const exitBtn=portalHome.querySelector('#portalExitButton');
+ if(bar)exitBtn.remove(); // the centre mechanical key returns to the pod when the dock is present
+ else exitBtn.onclick=()=>setVisible(false);
  const armie=()=>[...document.querySelectorAll('.armie-inbox-launcher')].filter(el=>el.getClientRects().length);
- const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),...armie(),portalHome.querySelector('#portalExitButton')],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
+ const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),...armie(),...(exitBtn.isConnected?[exitBtn]:[])],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
  portalHome.addEventListener('keydown',trap);
  bar?.addEventListener('keydown',e=>{if(boardShown&&!bar.closest('dialog'))trap(e);},{signal:lifecycle.signal});
  document.addEventListener('keydown',e=>{if(boardShown&&e.target.classList?.contains('armie-inbox-launcher'))trap(e);},{signal:lifecycle.signal});

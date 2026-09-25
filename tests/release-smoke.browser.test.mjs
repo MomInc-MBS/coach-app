@@ -96,15 +96,15 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    ['line-lr','.meditation-panel','.meditation-panel [data-meditation-close]'],
    ['line-rl','#remindersPanel','#remindersPanel [data-close]'],
    ['line-down','#settings','#closeSettings'],
-   ['line-up','#portalMenu','#portalMenu [data-close]'],
-   ['cross','#portalMenu','#portalMenu [data-close]'],
+   ['line-up','#portalMenu',null],
+   ['cross','#portalMenu',null],
   ];
   for(const [id,dialogSel,closeSel] of DIALOG_CASES){
    await page.evaluate(()=>window.myr5Portal.show());
    await portalUp(page);
    await page.evaluate(id=>window.myr5Portal.open(id),id);
    await page.waitForFunction(sel=>document.querySelector(sel)?.open===true,dialogSel,{timeout:10000});
-   await page.locator(closeSel).first().click();
+   if(closeSel)await page.locator(closeSel).first().click();else await page.keyboard.press('Escape');
    await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
    await portalUp(page);
    await portalSettled(page);
@@ -133,14 +133,12 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   // Lane 2N: the coach capsule the ship view woke stops drawing under the quilt once it closes.
   assert.equal(await page.evaluate(()=>window.myr5Creature?.stats().awake),false,'the coach capsule sleeps after the ship view closes');
 
-  // x (#148): the Character Editor's one door is the oval's ship, so the X opens that same arrival, not the editor.
+  // The War Room remains Coach Army gated until access is explicitly changed; X names the lock and leaves the quilt usable.
   await page.evaluate(()=>window.myr5Portal.show());
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('x'));
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',{timeout:10000});
+  await page.waitForFunction(()=>document.getElementById('portalStatus')?.textContent==='Finish Coach setup to unlock the War Room.');
   assert.equal(new URL(page.url()).pathname,'/pose.html');
-  await page.locator('.ship-view-close').click();
-  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash!=='#select');
   await portalUp(page);
  }finally{await context.close();}
 });
@@ -206,7 +204,7 @@ test('4. Menu sheet -> Ship opens the ship view inside the metal frame, and the 
  try{
   await page.evaluate(()=>window.myr5Menus.portal());
   await portalUp(page);
-  await page.locator(PORTAL_BUTTON).click();
+  await page.evaluate(()=>window.myr5Portal.open('line-up'));
   await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
   await page.locator('#portalMenu [data-menu="ship"]').click();
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true);
@@ -259,8 +257,8 @@ const bar=page=>page.evaluate(()=>{
 });
 const DIALOG_ROUTES=[
  ['food','#mealsPanel','food'],['reminders','#remindersPanel','reminders'],['scoreboard','#accountPanel','scoreboard'],
- ['history','#historyPanel','history'],['install','#installPanel','install'],['settings','#settings',null],
- ['achievements','.ach-board',null],['meditate','.meditation-panel',null],['share','#portalMenu',null],
+ ['history','#historyPanel',null],['install','#installPanel',null],['settings','#settings','settings'],
+ ['achievements','.ach-board','achievements'],['meditate','.meditation-panel',null],['share','#portalMenu',null],
  ['ship','dialog.ship-view',null],['select','dialog.ship-view',null],
 ];
 test('6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it',{timeout:180000},async()=>{
@@ -301,32 +299,10 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    const hidden=await page.evaluate(flag=>{document.body.dataset[flag]='true';const d=getComputedStyle(document.getElementById('coachDock')).display;delete document.body.dataset[flag];return d==='none';},flag);
    assert.equal(hidden,true,`the bar is hidden while body[data-${flag}] is set`);
   }
-  // #148: the customizer's one door is the oval's ship. #customize lands on the arrival; the ship (the still one under
-  // reduced motion) opens the editor, which has the same bar linking back into /pose.html#<route>.
+  // A guest deep-link to the 3D War Room stays behind its existing Coach Army gate.
   await page.evaluate(()=>{location.hash='customize';});
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',null,{timeout:30000});
-  assert.equal(new URL(page.url()).pathname,'/pose.html','#customize plays the arrival, not the editor');
-  const ship=page.locator('dialog.ship-view canvas[role="button"]');
-  await ship.waitFor({timeout:30000});await ship.focus();await page.keyboard.press('Enter');
-  await page.waitForURL('**/creature/index.html');
-  await page.reload();await page.waitForURL('**/creature/index.html');
-  // A typed editor URL in a fresh tab has no gate: the arrival plays first.
-  const typed=await context.newPage();await typed.goto(base+'/creature/index.html');
-  await typed.waitForURL('**/pose.html#select');
-  await typed.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true,null,{timeout:30000});
-  await typed.close();
-  const links=await page.$$eval('.coach-dock a',links=>links.map(a=>a.getAttribute('href')));
-  assert.deepEqual(links,['/pose.html#history','/pose.html#food','/pose.html','/pose.html#reminders','/pose.html#scoreboard','/pose.html#install']);
-  const box=await page.locator('.coach-dock').boundingBox();
-  assert.ok(box&&Math.round(box.y+box.height)===812,'the customizer bar sits at the bottom');
-  await page.locator('.coach-dock a[href="/pose.html#food"]').click();
-  await page.waitForURL('**/pose.html#food');
-  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,null,{timeout:15000});
-  // The admission was consumed on entry. A stale former gate cannot admit a direct editor URL in this same tab.
-  await page.evaluate(()=>sessionStorage.setItem('myr5-ship-gate','1'));
-  await page.goto(base+'/creature/index.html');
-  await page.waitForURL('**/pose.html#select');
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true,null,{timeout:30000});
+  await page.waitForURL(url=>url.pathname==='/pose.html'&&url.searchParams.get('optional')==='/war-room',{timeout:15000});
+  assert.equal(new URL(page.url()).pathname,'/pose.html');
  }finally{await context.close();}
 });
 
@@ -358,9 +334,11 @@ test('7. a traced route sets its hash; back returns to the quilt, the bar Portal
   await page.locator(PORTAL_BUTTON).click();
   await page.waitForFunction(()=>!document.getElementById('accountPanel').open&&location.hash==='');
   await portalUp(page);
-  // On the quilt it opens the Menu sheet (#share).
+  // On the quilt the large center key returns to the workout pod; a second press returns to the grimoire.
   await page.locator(PORTAL_BUTTON).click();
-  await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true&&location.hash==='#share');
+  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===true);
+  await page.locator(PORTAL_BUTTON).click();
+  await portalUp(page);
  }finally{await context.close();}
 });
 
