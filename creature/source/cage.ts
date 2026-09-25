@@ -158,7 +158,8 @@ export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
     hits.push(mesh);(outlines.get(section)??outlines.set(section,[]).get(section)!).push(line);root.add(mesh);
    }
    root.updateMatrixWorld(true);viewer.scene.add(root);viewer.floorObjects.forEach(o=>o.visible=false);
-   bays.hidden=false;set('ready');select('overview');
+   // The phone layout gives the stage more room once the cage is up; size the camera to it before framing.
+   bays.hidden=false;set('ready');viewer.resize();select('overview');
    return true;
   }catch(error){
    if(disposed)return false;
