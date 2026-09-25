@@ -9,7 +9,7 @@ const loadStyle=()=>styleReady??=new Promise(resolve=>{
 
 export function mountRemindersComputer(panel=document.getElementById('remindersPanel')){
  if(!panel)return null;
- const offer=document.createElement('div');offer.className='reminders-computer-offer';offer.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px';
+ const offer=document.createElement('div');offer.className='reminders-computer-offer';offer.style.cssText='margin:0 0 12px';
  const button=document.createElement('button');button.type='button';button.textContent='Download Reminders computer';
  const note=document.createElement('span');note.setAttribute('role','status');
  offer.append(button,note);panel.querySelector('header')?.after(offer);
