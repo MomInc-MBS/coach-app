@@ -1,6 +1,6 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-09-24-through-the-portal-'+BUILD_ID,title:'Menus through the portal',date:'2026-09-24',url:'https://myr5.mominc.online/repair-coach',notes:[
- 'Every menu opens through its portal shape with a glowing rim. Tilt your phone to look around.',
- 'The coach customizer opens from the ship, with Species and Adaptations tabs and locked coaches you can preview.',
- 'A black-and-white meditation room, a slimmer main screen with Goals, and a smaller first download.'
+export const RELEASE=Object.freeze({id:'2026-09-24-through-the-portal-'+BUILD_ID,title:'Portal rooms and grimoire devices',date:'2026-09-24',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'Portal traces follow your finger. The larger plated frame has tactile buttons and retracts for full-screen workouts.',
+ 'The Food pyramid stays whole in its cut, then fills the phone after a photo. Two friends sit at desks in the 3D classroom; tap its whiteboard to step in.',
+ 'Meditation opens in black and white. Each downloadable grimoire device has its own faster, softly blurred wormhole.'
 ]});
