@@ -1,15 +1,34 @@
 .reminders-computer-offer button{min-height:44px}
 .reminders-computer-offer span{font-size:12px}
+/* The dialog keeps the art's borders (transparent) so the form sits in the screen; the art itself is a fixed ::before
+   that sways a little in 3D like the Food pyramid, so the form, the dock and the portal's own transforms stay still. */
 #remindersPanel[data-reminder-room=ready]{
- --computer-width:min(460px,calc(100vw - 38px));
+ --computer-width:min(560px,calc(100vw - 12px));--computer-height:min(94dvh,calc(var(--computer-width)*2.1));
+ --bt:calc(var(--computer-width)*418/750);--br:calc(var(--computer-width)*70/750);--bb:calc(var(--computer-width)*376/750);--bl:calc(var(--computer-width)*74/750);
+ --computer-left:calc(50vw - var(--computer-width)/2);--computer-top:calc(50dvh - var(--computer-height)/2);
  box-sizing:border-box;width:var(--computer-width);max-width:none;
- height:min(90dvh,calc(var(--computer-width)*2.1));max-height:none;
+ height:var(--computer-height);max-height:none;
  padding:6px 10px!important;overflow-y:auto;overscroll-behavior:contain;
  border-style:solid!important;border-color:transparent!important;border-radius:0!important;
- border-width:calc(var(--computer-width)*418/750) calc(var(--computer-width)*70/750) calc(var(--computer-width)*376/750) calc(var(--computer-width)*74/750)!important;
- border-image:url('/pod/rooms/console.webp') 418 70 376 74 fill / 1 / 0 stretch!important;
+ border-width:var(--bt) var(--br) var(--bb) var(--bl)!important;
  background:transparent!important;box-shadow:none!important;color:#efe7ff;
 }
+/* Framed in the portal the dialog is the face box (portal.css dialog.portal-framed). */
+#remindersPanel.portal-framed[data-reminder-room=ready]{--computer-width:var(--face-width);--computer-height:var(--face-height);--computer-left:var(--face-left);--computer-top:var(--face-top)}
+#remindersPanel[data-reminder-room=ready]::before{
+ content:'';position:fixed;z-index:-1;pointer-events:none;box-sizing:border-box;
+ left:var(--computer-left);top:var(--computer-top);width:var(--computer-width);height:var(--computer-height);
+ border:solid transparent;border-width:var(--bt) var(--br) var(--bb) var(--bl);
+ border-image:url('/pod/rooms/console.webp') 418 70 376 74 fill / 1 / 0 stretch;
+ transform-origin:50% 45%;animation:reminders-computer-sway 9s ease-in-out infinite alternate;
+}
+/* While the portal scales the dialog in, a transformed dialog is the fixed art's containing block. */
+#remindersPanel.portal-arriving[data-reminder-room=ready]::before{left:calc(-1*var(--bl));top:calc(-1*var(--bt))}
+@keyframes reminders-computer-sway{
+ from{transform:perspective(1100px) rotateY(-7deg) rotateZ(-.8deg) translateY(-3px)}
+ to{transform:perspective(1100px) rotateY(7deg) rotateZ(.8deg) translateY(3px)}
+}
+@media(prefers-reduced-motion:reduce){#remindersPanel[data-reminder-room=ready]::before{animation:none}}
 #remindersPanel[data-reminder-room=ready] .reminders-computer-offer{display:none}
 #remindersPanel[data-reminder-room=ready] header{background:#281a43e8;border:1px solid #8e6cc4;border-radius:8px;padding:8px 10px;margin:0 0 8px}
 #remindersPanel[data-reminder-room=ready]::backdrop{background:radial-gradient(ellipse at 50% 40%,#3a1d63e6,#07040de6 70%)}

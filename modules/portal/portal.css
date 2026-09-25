@@ -201,6 +201,7 @@ dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:10
 #mealsPanel.portal-fullscreen .food-sheet{padding-bottom:max(12px,env(safe-area-inset-bottom))}
 body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{display:none!important}
 
+
 /* Dock keys: 44px hit boxes with smaller tactile silhouettes on the span; the Portal key sits at true centre. */
 #coachDock.coach-dock{box-sizing:border-box;height:calc(88px + env(safe-area-inset-bottom));max-width:100vw;display:grid;grid-template-columns:repeat(2,44px) 1fr repeat(3,44px);grid-template-rows:44px;align-content:center;align-items:center;gap:0 4px;padding:0 max(8px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px,env(safe-area-inset-left));overflow:visible}
 #coachDock.coach-dock.coach-dock button.dock-control{grid-row:1;width:44px;height:44px;min-height:44px;padding:0;display:grid;place-items:center;background:none;border:0;box-shadow:none;border-radius:0!important;clip-path:none;filter:drop-shadow(0 3px 0 #130d18) drop-shadow(0 0 1px #000)}
@@ -216,6 +217,23 @@ body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{disp
 #coachDock .dock-pod{grid-column:6}#coachDock .dock-pod>span{width:30px;border-radius:15px}
 #coachDock.coach-dock button.dock-portal{position:absolute;left:50%;top:50%;translate:-50% -50%;width:62px;height:62px;min-width:62px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;line-height:1;letter-spacing:.04em}
 #coachDock .dock-portal svg{width:22px;height:22px;flex:none}#coachDock .dock-portal span{max-width:100%}
+
+/* A scene's title, Close and cards show in front of the wall (portal.mjs pokes), so they sit inside the cut, not over
+   the metal. Achievements' inverted triangle: its top edge is 29% down and it narrows to the point. */
+.ach-board.portal-shaped:not(.portal-leaned) .ach-head{top:calc(29% + 16px);left:16%;right:calc(16% + 50px)}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-head h1{font-size:18px}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-head p{font-size:12px}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-close{top:calc(29% + 10px);right:14%}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-detail{top:calc(29% + 10px);bottom:auto;left:20%;right:20%;max-height:24%;padding:10px 8px;border-radius:8px;background:#05030cf0}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-detail h2{font-size:22px}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-detail li{grid-template-columns:12px 54px 1fr;gap:6px;font-size:14px}
+.ach-board.portal-shaped:not(.portal-leaned).no-art:not(.zoomed) .ach-starter{top:calc(29% + 90px);bottom:auto;left:22%;right:22%}
+.ach-board.portal-shaped:not(.portal-leaned) .ach-starter button{white-space:normal}
+/* The Leaderboard's tall diamond: Done then the Crew scoreboard title, stacked on the axis where the cut is wide enough. */
+#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header{top:18%;min-height:0;padding:0;display:flex;flex-direction:column-reverse;align-items:center;gap:6px;text-align:center}
+#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header h2{font-size:20px;max-width:min(60vw,220px);margin:0 auto;padding:0;white-space:normal}
+#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header>[data-close]{position:static}
+
 #coachDock .dock-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 /* Menu content uses its natural line wrapping and an inner scroller instead of zoomed tabs that can clip on phones. */
 #portalMenu.portal-framed.portal-inset{box-sizing:border-box;min-width:0;min-height:0;overflow:auto!important;padding:10px!important;overscroll-behavior:contain}
