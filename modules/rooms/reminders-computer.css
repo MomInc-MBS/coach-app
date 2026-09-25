@@ -1,0 +1,16 @@
+.reminders-computer-offer button{min-height:44px}
+.reminders-computer-offer span{font-size:12px}
+#remindersPanel[data-reminder-room=ready]{
+ --computer-width:min(460px,calc(100vw - 38px));
+ box-sizing:border-box;width:var(--computer-width);max-width:none;
+ height:min(90dvh,calc(var(--computer-width)*2.1));max-height:none;
+ padding:6px 10px!important;overflow-y:auto;overscroll-behavior:contain;
+ border-style:solid!important;border-color:transparent!important;border-radius:0!important;
+ border-width:calc(var(--computer-width)*418/750) calc(var(--computer-width)*70/750) calc(var(--computer-width)*376/750) calc(var(--computer-width)*74/750)!important;
+ border-image:url('/pod/rooms/console.webp') 418 70 376 74 fill / 1 / 0 stretch!important;
+ background:transparent!important;box-shadow:none!important;color:#efe7ff;
+}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-offer{display:none}
+#remindersPanel[data-reminder-room=ready] header{background:#281a43e8;border:1px solid #8e6cc4;border-radius:8px;padding:8px 10px;margin:0 0 8px}
+#remindersPanel[data-reminder-room=ready]::backdrop{background:radial-gradient(ellipse at 50% 40%,#3a1d63e6,#07040de6 70%)}
+@media(max-width:390px){#remindersPanel[data-reminder-room=ready]{font-size:13px}}
