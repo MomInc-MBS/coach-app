@@ -9,6 +9,7 @@ import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import {battlePassState} from '../../battle-pass.mjs';
 import {availablePetChoices,selectedPetChoice,selectPetChoice,PET_CHOICE_SCOPE_LABEL} from '../../pet-choice.mjs';
 import {mountWeaponWall} from './weapon-wall.mjs';
+import {sparkle} from '../../unlock-seen.mjs';
 import type {CreatureViewer} from './viewer';
 
 export const CAGE_BASE='/pod/rooms/cage/';
@@ -83,6 +84,7 @@ function petBay(body:HTMLElement,focusId?:string|null){
   const b=el('button',choice.name+(choice.id===chosen?` · ${PET_CHOICE_SCOPE_LABEL}`:''));b.type='button';b.dataset.petChoice=choice.id??'';
   b.setAttribute('aria-pressed',String(choice.id===chosen));
   b.onclick=()=>{const saved=selectPetChoice(choice.id);petBay(body,choice.id);if(!saved){const e=el('p','This choice could not be saved. Storage is unavailable on this device.','bay-error');e.setAttribute('role','alert');body.prepend(e);}};
+  if(choice.id)sparkle(b,'pet',choice.id);
   group.append(b);
  }
  const held=rewards('pet'),parts:(Node|null)[]=[status,group,lockedList(held.filter(p=>!ids.has(p.id))),
@@ -96,7 +98,8 @@ function petBay(body:HTMLElement,focusId?:string|null){
 function weaponBay(body:HTMLElement){
  const items=rewards('weapon'),owned=items.filter(i=>i.granted),reward=el('section');
  reward.append(el('h3','Battle-pass weapons'),el('p',owned.length?`You have earned ${owned.length} of ${items.length} on this device.`:'No weapons yet. Workout path bosses give them at levels 1 and 3.'));
- for(const list of [ul(owned,'bay-owned',i=>`${i.name} · earned`),lockedList(items.filter(i=>!i.granted))])if(list)reward.append(list);
+ const earned=ul(owned,'bay-owned',i=>`${i.name} · earned`);owned.forEach((item,n)=>sparkle(earned!.children[n] as HTMLElement,'weapon',item.id));
+ for(const list of [earned,lockedList(items.filter(i=>!i.granted))])if(list)reward.append(list);
  reward.append(help('These rewards are not Gala weapons and are never sent to the War Room.'));
  const gala=el('section','','gala-loadout');gala.dataset.galaLoadout='';gala.append(el('h3','Gala War Room loadout'),help('A separate, account-owned loadout for Coach Army members. It saves only when you press Save loadout, and needs a connection.'));
  const host=el('div');gala.append(host);body.append(reward,gala);

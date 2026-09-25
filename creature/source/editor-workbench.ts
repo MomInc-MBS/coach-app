@@ -5,7 +5,10 @@ import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTIO
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
 import type {Design,Region,MaterialChoice} from './creator/design';
 import {TEXTURES,COLORS,PALETTES,lockSource,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
-import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,type TrackId} from './creator/track-placements';
+import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
+import {isGranted} from './creator/unlock-store';
+import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
+import {noteUnlocked} from '../../unlock-pending.mjs';
 import {saveRecipe,BODY_KEYS} from './save-look';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
@@ -47,6 +50,9 @@ let saved=recipe; // the last recipe written to storage: the owned look saveReci
 const grandfathered=new Set<string>(BODY_KEYS.map(key=>recipe[key]));
 // #138: the new-user allowance (first bodies of the user's picked paths) lives inside the same lock.
 const progress=loadProgress(),tracks=selectedTracks(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress,tracks);
+// Body unlocks are derived from section completion, so record them here: first use snapshots, later ones sparkle.
+const noteBodyUnlocks=()=>{const state=loadProgress();noteUnlocked('body',TRACK_PLACEMENTS.filter(p=>p.tracks.some(t=>sectionComplete(t,state))).map(p=>p.stableId));};
+noteBodyUnlocks();window.addEventListener('myr5:battle-pass',noteBodyUnlocks);
 const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBase,location.href).href:new URL('../',import.meta.url).href;
 let viewer:CreatureViewer|undefined;
@@ -146,7 +152,7 @@ function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for
 // #138: a section lists its bodies in placement order, so the one a new user may use comes first.
 {const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(track:TrackId)=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(track)).flatMap(p=>PICKER_BODIES.filter(b=>b.id===p.stableId));
  for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],inSection(t)])] as [string,typeof PICKER_BODIES][]){
-  const g=document.createElement('optgroup');g.label=label;for(const b of bodies){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;g.append(o);}$('body').append(g);}}
+  const g=document.createElement('optgroup');g.label=label;for(const b of bodies){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;if(!section&&TRACK_PLACEMENTS.find(p=>p.stableId===b.id)?.tracks.some(t=>sectionComplete(t,progress)))sparkleOption(o,'body',b.id);g.append(o);}$('body').append(g);}}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 $('coachSituation').addEventListener('change',coachPreview);
@@ -156,13 +162,14 @@ for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',p
 // Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
 const lockedLabel=(name:string,id:string)=>{const source=lockSource(id);return source?`${name} (locked — ${source})`:name;};
-for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(lockSource(t.id)?'🔒 ':'')+lockedLabel(t.displayName,t.id);$('textureId').append(o);}
+for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(lockSource(t.id)?'🔒 ':'')+lockedLabel(t.displayName,t.id);if(isGranted('texture',t.id))sparkleOption(o,'texture',t.id);$('textureId').append(o);}
+watchSelect($('body') as HTMLSelectElement);watchSelect($('textureId') as HTMLSelectElement);
 $('textureId').addEventListener('change',()=>pickTexture(($('textureId') as HTMLSelectElement).value));
 const colorSwatches=[
- ...COLORS.map(c=>({id:c.id,name:c.displayName,background:c.primary})),
- ...PALETTES.map(p=>({id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
+ ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
+ ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>onPick(s.id);grid.append(b);}}
+function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>onPick(s.id);if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);grid.append(b);}}
 swatchGrid($('colorSwatches'),id=>pick({colorId:id}));
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};delete materials[selected];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
 for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
@@ -199,15 +206,15 @@ function persistSkinSettings(){if(skinOwner)localStorage.setItem(SKIN_SETTINGS_P
 function skinSettings(){if(!skinOwner)return{};try{const value=JSON.parse(localStorage.getItem(SKIN_SETTINGS_PREFIX+skinOwner)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 const editorOwner=()=>{const account=window.myr5AuthenticatedAccount;return typeof account==='string'?account:account?.user?.id;};
 function shipSettings(){try{const owner=editorOwner();if(!owner)return{};const value=JSON.parse(localStorage.getItem(`${SHIP_SETTINGS_KEY}/${owner}`)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}}
-function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=id[0].toUpperCase()+id.slice(1);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;for(const b of document.querySelectorAll<HTMLButtonElement>('#shipSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===current.colorId));}
+function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=id[0].toUpperCase()+id.slice(1);sparkleOption(option,'ship','ship-'+id);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;for(const b of document.querySelectorAll<HTMLButtonElement>('#shipSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===current.colorId));}
 // #147: the ship takes one of the coach's unlocked colours/palettes; `tint` stays its primary hex, so the ship scene reads it unchanged.
 function persistShipEditor(colorId?:string){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,current=shipSettings();colorId??=current.colorId;const tint=colorId?colorTriad(colorId)?.primary:/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';if(!ownerId||shipTab.hidden||!owned.includes(ship)||!tint||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint,colorId};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
 swatchGrid($('shipSwatches'),id=>{const source=lockSource(id);if(source){tell('Locked for your ship too · unlocks at '+source);return;}persistShipEditor(id);syncShipEditor();});
-syncShipEditor();$('shipChoice').addEventListener('change',()=>persistShipEditor());
+syncShipEditor();watchSelect($('shipChoice') as HTMLSelectElement);watchSelect($('skinChoice') as HTMLSelectElement);$('shipChoice').addEventListener('change',()=>persistShipEditor());
 window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});
 let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,skinEpoch=0,skinChoices:{id:string;displayName:string}[]=[];
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}
-function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;return option}));select.value='';syncSkinChoice();}
+function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;sparkleOption(option,'creature-skin',skin.id);return option}));select.value='';syncSkinChoice();}
 async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
  const run=++skinEpoch,owner=typeof account==='string'?account:account?.user?.id||null;if(owner!==skinOwner){undo=[];redo=[];activeRange=null;}skinOwner=owner;skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);renderSkinChoices();
  if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};

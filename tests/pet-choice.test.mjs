@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {availablePetChoices,selectedPetChoice,selectPetChoice,PET_CHOICE_KEY,PET_CHOICE_SCOPE_LABEL} from '../pet-choice.mjs';
 import {grantUnlock,LEDGER_KEY} from '../unlock-ledger.mjs';
+import {PENDING_KEY} from '../unlock-pending.mjs';
 
 function device(){
  const data=new Map();
@@ -52,9 +53,12 @@ test('selection writes only its device key and leaves the coach recipe intact',(
  const recipe='{"name":"Existing coach","parts":{"pet":39}}';
  storage.setItem('myr5-recipe-v1',recipe);
  grantUnlock('pet','push-pet');
- const beforeLedger=storage.getItem(LEDGER_KEY);
+ // The grant itself legitimately writes the ledger and its pending marker; selection must add only its own key.
+ assert.deepEqual([...storage.data.keys()].sort(),[LEDGER_KEY,PENDING_KEY,'myr5-recipe-v1'].sort());
+ const beforeLedger=storage.getItem(LEDGER_KEY),beforePending=storage.getItem(PENDING_KEY);
  assert.equal(selectPetChoice('push-pet'),true);
  assert.equal(storage.getItem('myr5-recipe-v1'),recipe);
  assert.equal(storage.getItem(LEDGER_KEY),beforeLedger);
- assert.deepEqual([...storage.data.keys()].sort(),[LEDGER_KEY,PET_CHOICE_KEY,'myr5-recipe-v1'].sort());
+ assert.equal(storage.getItem(PENDING_KEY),beforePending);
+ assert.deepEqual([...storage.data.keys()].sort(),[LEDGER_KEY,PENDING_KEY,PET_CHOICE_KEY,'myr5-recipe-v1'].sort());
 }));

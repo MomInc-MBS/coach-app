@@ -39,6 +39,7 @@
 .ach-detail li[data-step=done]::before{color:#fff;text-shadow:0 0 8px var(--glow),0 0 14px var(--glow)}
 .ach-detail li[data-step=next]::before{color:var(--glow);animation:ach-twinkle 1.2s ease-in-out infinite alternate}
 .ach-detail li[data-step=todo]{color:#8f89a8}
+.ach-detail li i{font-style:normal}
 .ach-detail li b{font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:#e9e3ff}
 .ach-back{margin-top:18px;min-height:44px;padding:0 6px;border:0;border-bottom:1px solid #fff9;background:none;color:#fff;font:400 17px/1 'Barlow Condensed',var(--font,system-ui);letter-spacing:.2em;text-transform:uppercase}
 .ach-close{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff55;background:#05030ccc;color:#fff;font-size:18px}

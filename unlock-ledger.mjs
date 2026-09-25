@@ -1,6 +1,8 @@
 // Global battle-pass ledger (rank 6b) for the items unlock-store.ts doesn't hold: weapons, pets,
 // boss looks, specials, auras, Food bonuses (D32). Textures/colours/palettes stay in unlock-store.ts. Same API
 // shape as unlock-store.ts, one localStorage key, not per-coach (unlocks are global).
+import {markPending,ACCOUNT_SCOPED_LEDGER_KINDS} from './unlock-pending.mjs';
+export {ACCOUNT_SCOPED_LEDGER_KINDS};
 export const LEDGER_KEY='myr5-battle-pass-ledger-v1';
 export const LEDGER_KINDS=Object.freeze(['weapon','pet','boss-texture','boss-skin','boss-unlock','special','aura','bonus','creature-skin','ship','reward-pack']);
 
@@ -11,7 +13,6 @@ function read(){
  }catch{return Object.fromEntries(LEDGER_KINDS.map(k=>[k,[]]));}
 }
 
-export const ACCOUNT_SCOPED_LEDGER_KINDS=Object.freeze(['creature-skin','ship','reward-pack']);
 const accountKinds=new Set(ACCOUNT_SCOPED_LEDGER_KINDS);
 const ownerKey=({account=globalThis.myr5AuthenticatedAccount}={})=>{
  const id=typeof account==='string'?account:account?.user?.id;
@@ -26,11 +27,13 @@ export function grantUnlock(kind,id,options){
   const key=ownerKey(options);if(!key)return false;
   const data=accountRead(options),ids=Array.isArray(data[kind])?data[kind]:[];
   if(ids.includes(id))return false;data[kind]=[...ids,id];
-  try{localStorage.setItem(key,JSON.stringify(data));return true;}catch{return false;}
+  try{localStorage.setItem(key,JSON.stringify(data));}catch{return false;}
+  markPending(kind,id,options);return true;
  }
  const store=read();
  if(!store[kind]||store[kind].includes(id))return false;
  store[kind].push(id);
  try{localStorage.setItem(LEDGER_KEY,JSON.stringify(store));}catch{return false;}
+ markPending(kind,id);
  return true;
 }

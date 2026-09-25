@@ -2,7 +2,8 @@
 // glow and twinkle; tapping one zooms in and lists its levels and rewards; bosses that are too
 // advanced, and rows outside the user's paths, are locked and not clickable. AGPL-3.0-or-later.
 // The two swap points (selected paths, beaten levels) read the battle-pass API (rank 6b, D30).
-import {selectedTracks,loadProgress} from './battle-pass.mjs';
+import {selectedTracks,loadProgress,battlePassState} from './battle-pass.mjs';
+import {sparkle} from './unlock-seen.mjs';
 import {bossRewards} from './battle-pass-rewards.mjs';
 export {selectedTracks,loadProgress};
 const IMAGE='/pod/worlds/achievements.jpg';
@@ -163,7 +164,12 @@ function zoom(b,btn){
  detail.innerHTML=`<h2>${b.name}</h2><hr><p class="ach-status">${path} · ${b.state==='done'?'every level beaten':`${b.levels} of ${MAX_LEVEL} levels beaten · beat level ${b.levels+1} next`}</p><ol>${LEVELS.map((rewards,i)=>`<li data-step="${i<b.levels?'done':i===b.levels?'next':'todo'}"><b>Level ${i+1}</b><span>${rewards.join(' · ')}</span></li>`).join('')}</ol><button type="button" class="ach-back">Back</button>`;
  detail.hidden=false;detail.querySelector('.ach-back').onclick=unzoom;
  const rewards=levelRewardsForBoss(b.id);
- detail.querySelectorAll('ol li span').forEach((span,i)=>{const items=rewards[i]||[];span.textContent=items.length?items.map(item=>`${item.name}${item.line?` — ${item.line}`:''}`).join(' · '):'No reward';});
+ // Each earned reward gets its own sparkle (state rows mirror the catalog rows, plus `granted`); it clears once that line is on screen.
+ const shown=battlePassState().bosses.find(x=>x.id===b.id)?.rewards||[];
+ detail.querySelectorAll('ol li span').forEach((span,i)=>{
+  const items=rewards[i]||[];if(!items.length){span.textContent='No reward';return;}
+  span.replaceChildren(...items.flatMap((item,j)=>{const part=document.createElement('i'),held=shown[i]?.items[j];part.textContent=`${item.name}${item.line?` — ${item.line}`:''}`;if(held?.granted)sparkle(part,held.kind,held.id);return j?[' · ',part]:[part];}));
+ });
 }
 function unzoom(){
  for(const el of [artEl,bossesEl,layers?.far,layers?.mid,layers?.near])if(el)el.style.transform='';

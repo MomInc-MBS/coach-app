@@ -1,6 +1,7 @@
 // One global unlock ledger, shared across every coach (not per-coach). A later battle-pass
 // worker calls grantUnlock() when the player earns an item; the registry decides whether an
 // id needs a grant at all ('default' items are always unlocked and never touch this store).
+import { markPending } from '../../../unlock-pending.mjs';
 export type UnlockKind = 'texture' | 'color' | 'palette';
 const KEY = 'myr5-unlocks-v1';
 type Store = Record<UnlockKind, string[]>;
@@ -12,8 +13,8 @@ function read(): Store {
   return { texture: Array.isArray(d.texture) ? d.texture : [], color: Array.isArray(d.color) ? d.color : [], palette: Array.isArray(d.palette) ? d.palette : [] };
  } catch { return empty(); }
 }
-function write(store: Store) { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* storage unavailable: grant just won't persist across reloads */ } }
+function write(store: Store) { try { localStorage.setItem(KEY, JSON.stringify(store)); return true; } catch { /* storage unavailable: grant just won't persist across reloads */ return false; } }
 
 export const isGranted = (kind: UnlockKind, id: string) => read()[kind].includes(id);
-export function grantUnlock(kind: UnlockKind, id: string) { const s = read(); if (!s[kind].includes(id)) { s[kind].push(id); write(s); } }
+export function grantUnlock(kind: UnlockKind, id: string) { const s = read(); if (!s[kind].includes(id)) { s[kind].push(id); if (write(s)) markPending(kind, id); } }
 export const grantedIds = (kind: UnlockKind) => read()[kind];
