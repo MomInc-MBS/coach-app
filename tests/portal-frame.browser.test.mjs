@@ -35,7 +35,7 @@ async function geometry(page){
  return page.evaluate(()=>{
   const b=portal.current(),r=el=>{const q=el.getBoundingClientRect();return{left:q.left,top:q.top,width:q.width,height:q.height};};
   const frame=document.querySelector('#portalBoardHost .portal-frame'),rail=parseFloat(getComputedStyle(frame).getPropertyValue('--portal-rail'));
-  return{face:b.faceRect(),pattern:b.patternRect(),frame:r(frame),rail,plate:r(frame.querySelector('b')),menu:r(document.getElementById('portalMenuButton')),pod:r(document.getElementById('portalExitButton')),bolts:[...frame.querySelectorAll('i')].map(r)};
+  return{face:b.faceRect(),pattern:b.patternRect(),frame:r(frame),rail,plate:r(frame.querySelector('b')),bolts:[...frame.querySelectorAll('i')].map(r)};
  });
 }
 
