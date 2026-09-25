@@ -46,3 +46,11 @@ test('the Downloads menu offers the cage, and the customizer only loads it from 
  assert.match(workbench,/if\(!have\)\{cageStyle\(\);cageOffer\.hidden=false/);
  assert.match(workbench,/function cageOpen\(menu:'body'\|'materials'\)\{const tab=tabs\.find\(b=>b\.dataset\.menu===menu\);if\(!tab\|\|tab\.hidden/);
 });
+
+test('the cage bays call the two adapters, and never call pet or weapon rewards account-owned',async()=>{
+ const cage=await readFile(new URL('../creature/source/cage.ts',import.meta.url),'utf8');
+ assert.match(cage,/availablePetChoices[\s\S]*selectPetChoice/);
+ assert.match(cage,/mountWeaponWall\(\{host\}\)/);
+ assert.doesNotMatch(cage,/account rewards|You own /);
+ assert.doesNotMatch(cage,/battle-?pass[^;]*\.save\(/i);
+});

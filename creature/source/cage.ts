@@ -7,6 +7,8 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import {battlePassState} from '../../battle-pass.mjs';
+import {availablePetChoices,selectedPetChoice,selectPetChoice,PET_CHOICE_SCOPE_LABEL} from '../../pet-choice.mjs';
+import {mountWeaponWall} from './weapon-wall.mjs';
 import type {CreatureViewer} from './viewer';
 
 export const CAGE_BASE='/pod/rooms/cage/';
@@ -53,34 +55,61 @@ export async function cagePacketReady(){
  }catch{return false;}
 }
 
-const CSS='.cage-bays{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px}.cage-bays button{flex:1 1 auto;min-height:36px;min-width:44px;padding:4px 2px;font-size:.75rem;border-radius:7px;background:linear-gradient(#3b4f58,#22303a);border-color:#6fd6e3;color:#dff9ff;box-shadow:inset 0 1px #bff4ff33,0 2px 0 #0b1216}.cage-bays button[aria-pressed=true]{background:linear-gradient(#9ff2ff,#46b6c6);color:#07252b;border-color:#dffcff}.cage-offer{position:absolute;right:8px;bottom:8px;z-index:2;min-height:32px;padding:4px 10px;font-size:.75rem}#panel-bay ul{margin:8px 0;padding-left:20px}#panel-bay li+li{margin-top:4px}#panel-bay .bay-locked{color:var(--muted)}@media(max-width:700px){.editor-shell[data-cage=ready] .editor-workspace{grid-template-rows:minmax(220px,48%) minmax(0,1fr)}}';
+const CSS='.cage-bays{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px}.cage-bays button{flex:1 1 auto;min-height:36px;min-width:44px;padding:4px 2px;font-size:.75rem;border-radius:7px;background:linear-gradient(#3b4f58,#22303a);border-color:#6fd6e3;color:#dff9ff;box-shadow:inset 0 1px #bff4ff33,0 2px 0 #0b1216}.cage-bays button[aria-pressed=true]{background:linear-gradient(#9ff2ff,#46b6c6);color:#07252b;border-color:#dffcff}.cage-offer{position:absolute;right:8px;bottom:8px;z-index:2;min-height:32px;padding:4px 10px;font-size:.75rem}#panel-bay ul{margin:8px 0;padding-left:20px}#panel-bay li+li{margin-top:4px}#panel-bay h3{margin:12px 0 4px;font-size:.95rem}.pet-choices{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.pet-choices button{min-height:44px;min-width:44px}.pet-choices button[aria-pressed=true]{outline:2px solid #6fd6e3}#panel-bay .bay-error{color:#ffb4a8}.gala-loadout{margin-top:14px;padding-top:8px;border-top:1px solid #6fd6e3}.gala-loadout .cage-weapon-wall{display:grid;gap:8px}.gala-loadout .cage-weapon-wall h2{display:none}.gala-loadout .cage-weapon-wall :is(select,input,button){min-height:44px}#panel-bay .bay-locked{color:var(--muted)}@media(max-width:700px){.editor-shell[data-cage=ready] .editor-workspace{grid-template-rows:minmax(220px,48%) minmax(0,1fr)}}';
 
 let styled:HTMLStyleElement|null=null;
 export function cageStyle(){if(!styled?.isConnected){styled=document.createElement('style');styled.textContent=CSS;document.head.append(styled);}}
-export type CageHooks={openTab:(menu:'body'|'materials')=>boolean;showBay:(title:string,kicker:string,body:Node)=>void;tell:(text:string)=>void};
-type Owned={name:string;boss:string;level:number;granted:boolean};
+// onClose runs when the bay stops being shown (another bay, a console tab, or the cage going away).
+export type CageHooks={openTab:(menu:'body'|'materials')=>boolean;showBay:(title:string,kicker:string,body:Node,onClose?:()=>void)=>void;closeBay?:()=>void;tell:(text:string)=>void};
+type Owned={id:string;name:string;boss:string;level:number;granted:boolean};
 function rewards(kind:'pet'|'weapon'):Owned[]{
  const seen=new Map<string,Owned>();
  for(const boss of battlePassState().bosses)for(const reward of boss.rewards)for(const item of reward.items)if(item.kind===kind){
-  const prior=seen.get(item.id);if(!prior||item.granted&&!prior.granted)seen.set(item.id,{name:item.name,boss:boss.name,level:reward.level,granted:!!item.granted});
+  const prior=seen.get(item.id);if(!prior||item.granted&&!prior.granted)seen.set(item.id,{id:item.id,name:item.name,boss:boss.name,level:reward.level,granted:!!item.granted});
  }
  return [...seen.values()];
 }
-function list(items:Owned[],empty:string){
- const wrap=document.createElement('div'),owned=items.filter(i=>i.granted),locked=items.filter(i=>!i.granted),p=document.createElement('p');
- p.textContent=owned.length?`You own ${owned.length} of ${items.length}.`:empty;wrap.append(p);
- const ul=(rows:Owned[],cls:string,text:(i:Owned)=>string)=>{if(!rows.length)return;const ul=document.createElement('ul');ul.className=cls;for(const row of rows){const li=document.createElement('li');li.textContent=text(row);ul.append(li);}wrap.append(ul);};
- ul(owned,'bay-owned',i=>`${i.name} · owned`);
- ul(locked,'bay-locked',i=>`🔒 ${i.name} · ${i.boss} level ${i.level}`);
- return wrap;
+const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cls='')=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
+const ul=(rows:Owned[],cls:string,text:(i:Owned)=>string)=>{if(!rows.length)return null;const list=el('ul','',cls);for(const row of rows)list.append(el('li',text(row)));return list;};
+const lockedList=(rows:Owned[])=>ul(rows,'bay-locked',i=>`🔒 ${i.name} · ${i.boss} level ${i.level}`);
+const help=(text:string)=>el('p',text,'help');
+// Pet cages: a device-local preference over the pets this device has been granted (pet-choice.mjs). Every
+// render re-reads it, so a pet that is no longer granted drops back to None. Nothing is granted or saved to the coach.
+function petBay(body:HTMLElement,focusId?:string|null){
+ const choices=availablePetChoices(),chosen=selectedPetChoice().petId,ids=new Set(choices.map(c=>c.id));
+ const status=el('p',`${choices.find(c=>c.id===chosen)?.name??'None'}: ${PET_CHOICE_SCOPE_LABEL}`);status.setAttribute('role','status');status.dataset.petStatus='';
+ const group=el('div','','pet-choices');group.setAttribute('role','group');group.setAttribute('aria-label','Pet choice');
+ for(const choice of choices){
+  const b=el('button',choice.name+(choice.id===chosen?` · ${PET_CHOICE_SCOPE_LABEL}`:''));b.type='button';b.dataset.petChoice=choice.id??'';
+  b.setAttribute('aria-pressed',String(choice.id===chosen));
+  b.onclick=()=>{const saved=selectPetChoice(choice.id);petBay(body,choice.id);if(!saved){const e=el('p','This choice could not be saved. Storage is unavailable on this device.','bay-error');e.setAttribute('role','alert');body.prepend(e);}};
+  group.append(b);
+ }
+ const held=rewards('pet'),parts:(Node|null)[]=[status,group,lockedList(held.filter(p=>!ids.has(p.id))),
+  help('Only pets you have earned appear as choices. Your choice is kept on this device only; it grants nothing and does not change your coach. No pet appears with your coach yet.')];
+ if(!held.length)parts.splice(2,0,help('No pets yet. Each workout path’s first boss gives one at level 4.'));
+ body.replaceChildren(...parts.filter(Boolean) as Node[]);
+ if(focusId!==undefined)(body.querySelector(`[data-pet-choice="${focusId??''}"]`) as HTMLElement|null)?.focus();
 }
-const help=(text:string)=>{const p=document.createElement('p');p.className='help';p.textContent=text;return p;};
-// Pets and weapons are account rewards, shown as they are. Nothing here writes the coach recipe, and the War
-// Room loadout (PUT /api/war-room/loadout, Coach Army only) is never read or saved from the cage.
-export function sectionBay(section:'pets'|'weapons'|'clothing'):[string,string,Node]{
- const body=document.createElement('div');
- if(section==='pets'){body.append(list(rewards('pet'),'No pets yet. Each workout path’s first boss gives one at level 4.'),help('Pets you own live in these cages. Choosing a pet to follow your coach isn’t available yet.'));return ['Pet cages','PETS',body];}
- if(section==='weapons'){body.append(list(rewards('weapon'),'No weapons yet. Workout path bosses give them at levels 1 and 3.'),help('Your War Room loadout is chosen and saved in the War Room. The cage shows your rewards and never changes it.'));return ['Weapon wall','WEAPONS',body];}
+// Battle-pass weapons are device rewards, shown as earned or locked. The Gala War Room loadout is a different,
+// account-owned thing: its form is the adapter's, saves only on its own button, and is disposed with the bay.
+function weaponBay(body:HTMLElement){
+ const items=rewards('weapon'),owned=items.filter(i=>i.granted),reward=el('section');
+ reward.append(el('h3','Battle-pass weapons'),el('p',owned.length?`You have earned ${owned.length} of ${items.length} on this device.`:'No weapons yet. Workout path bosses give them at levels 1 and 3.'));
+ for(const list of [ul(owned,'bay-owned',i=>`${i.name} · earned`),lockedList(items.filter(i=>!i.granted))])if(list)reward.append(list);
+ reward.append(help('These rewards are not Gala weapons and are never sent to the War Room.'));
+ const gala=el('section','','gala-loadout');gala.dataset.galaLoadout='';gala.append(el('h3','Gala War Room loadout'),help('A separate, account-owned loadout for Coach Army members. It saves only when you press Save loadout, and needs a connection.'));
+ const host=el('div');gala.append(host);body.append(reward,gala);
+ let wall:ReturnType<typeof mountWeaponWall>|null=null;
+ try{wall=mountWeaponWall({host});}catch{host.append(help('The Gala loadout is unavailable right now.'));}
+ return ()=>{wall?.dispose();wall=null;};
+}
+// Pets and weapons here are device rewards; the pet choice is a device preference. Nothing writes the coach recipe,
+// and the only War Room call is the weapon form's own read and Save.
+export function sectionBay(section:'pets'|'weapons'|'clothing'):[string,string,Node,(()=>void)?]{
+ const body=el('div');
+ if(section==='pets'){petBay(body);return ['Pet cages','PETS',body];}
+ if(section==='weapons')return ['Weapon wall','WEAPONS',body,weaponBay(body)];
  body.append(help('Nothing to wear yet. This empty bay is kept for coach clothing when it arrives.'));return ['Clothing bay','CLOTHING',body];
 }
 
@@ -122,7 +151,7 @@ export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
   move(section);
   if(section==='pedestal')hooks.openTab('body');
   else if(section==='mirror')hooks.openTab('materials');
-  else if(section!=='overview')hooks.showBay(...sectionBay(section));
+  else if(section!=='overview'){const [title,kicker,body,onClose]=sectionBay(section);hooks.showBay(title,kicker,body,onClose);}
  }
  // Tap (not drag) a bay in the scene: the same action as its button.
  const raycaster=new T.Raycaster(),canvas=viewer.renderer.domElement;let down:{x:number;y:number;t:number}|null=null;
@@ -137,7 +166,7 @@ export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
  function teardown(){
   cancelAnimationFrame(tween);tween=0;
   if(root){viewer.scene.remove(root);root.traverse(node=>{const mesh=node as T.Mesh;mesh.geometry?.dispose();for(const m of ([] as T.Material[]).concat(mesh.material||[])){for(const value of Object.values(m))if((value as T.Texture)?.isTexture)(value as T.Texture).dispose();m.dispose();}});root=null;}
-  hits.length=0;outlines.clear();viewer.floorObjects.forEach(o=>o.visible=true);bays.hidden=true;
+  hooks.closeBay?.();hits.length=0;outlines.clear();viewer.floorObjects.forEach(o=>o.visible=true);bays.hidden=true;
  }
  function dispose(){if(disposed)return;disposed=true;teardown();canvas.removeEventListener('pointerdown',onDown);canvas.removeEventListener('pointerup',onUp);bays.remove();}
  set('loading');

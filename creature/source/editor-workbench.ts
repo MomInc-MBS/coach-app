@@ -220,14 +220,16 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
 skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;pickTexture(id);});
 window.addEventListener('myr5:account-ready',event=>void refreshSkinEditor((event as CustomEvent).detail));window.addEventListener('myr5:account-cleared',()=>void refreshSkinEditor(null));window.addEventListener('myr5:battle-pass',()=>void refreshSkinEditor());window.addEventListener('storage',event=>{if(event.key?.startsWith('myr5-battle-pass-ledger-v1/account/')||event.key==='myr5-battle-pass-ledger-v1')void refreshSkinEditor();});
 // frame=false (the cage): its own camera already moved to the bay, so the tab opens without refocusing on a part.
-function openMenu(tab:HTMLButtonElement,frame=true){if(tab.hidden)return;activeRange=null;bayPanel.hidden=true;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye',frame);else if(tab.dataset.menu==='body')focusPart('body',frame);else if(tab.dataset.menu==='materials')focusPart(selected,frame);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
+function openMenu(tab:HTMLButtonElement,frame=true){if(tab.hidden)return;activeRange=null;closeBay();bayPanel.hidden=true;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye',frame);else if(tab.dataset.menu==='body')focusPart('body',frame);else if(tab.dataset.menu==='materials')focusPart(selected,frame);else if(tab.dataset.menu==='skin')syncSkinChoice();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
 // W4-4E: the cage's narrow way into this tab state, instead of synthetic clicks. It may open only Species or
 // Colour, and never a hidden tab. Pets, weapons and clothing have no tab: their bay shows in the console instead,
 // with every tab unselected (the last one stays keyboard-reachable) until a tab is picked again.
 const bayPanel=document.createElement('section');bayPanel.id='panel-bay';bayPanel.setAttribute('aria-labelledby','bayTitle');bayPanel.tabIndex=-1;bayPanel.hidden=true;document.querySelector('.console-scroll')?.append(bayPanel);
 function cageOpen(menu:'body'|'materials'){const tab=tabs.find(b=>b.dataset.menu===menu);if(!tab||tab.hidden||!['body','materials'].includes(menu))return false;openMenu(tab,false);return true;}
-function cageBay(title:string,kicker:string,body:Node){
- activeRange=null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
+let bayClose:(()=>void)|null=null;
+function closeBay(){const close=bayClose;bayClose=null;close?.();}
+function cageBay(title:string,kicker:string,body:Node,onClose?:()=>void){
+ activeRange=null;closeBay();bayClose=onClose??null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
  const heading=document.createElement('div'),label=document.createElement('div'),small=document.createElement('small'),h2=document.createElement('h2');heading.className='panel-heading';small.textContent=kicker;h2.id='bayTitle';h2.textContent=title;label.append(small,h2);heading.append(label);
  bayPanel.replaceChildren(heading,body);bayPanel.hidden=false;(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;
 }
@@ -276,6 +278,6 @@ catch(error){tell('3D could not start. '+(error as Error).message);}
 void cagePacketReady().then(have=>{
  if(!viewer||viewer.disposed)return;
  if(!have){cageStyle();cageOffer.hidden=false;cageButton.hidden=false;$('creatureStage').append(cageButton);return;}
- cage=mountCage(viewer,{openTab:cageOpen,showBay:cageBay,tell});
+ cage=mountCage(viewer,{openTab:cageOpen,showBay:cageBay,closeBay,tell});
 });
 window.addEventListener('pagehide',()=>cage?.dispose());
