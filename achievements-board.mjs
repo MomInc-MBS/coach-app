@@ -23,7 +23,7 @@ export const TIERS=[
  {id:'lume',name:'Lume',track:null,color:'#ffc94a',boxes:[[39.35,75.95,15.34,8.8]]},
 ];
 // Reward ladder per boss — plan/DECISIONS.md D22 (+ D16 textures, D17 specials). Text only, no tuning numbers.
-export const LEVELS=[['Weapon 1','Texture 1'],['Colour palette','Boss texture'],['Weapon 2','Special','Texture 2'],['Pet'],['Aura','Boss skin','Texture 3']];
+export const LEVELS=[['Weapon 1','Legendary pack'],['Uncommon pack','Boss texture'],['Weapon 2','Special','Legendary pack'],['Pet','Rare pack'],['Aura','Boss beaten','Legendary pack']];
 export const MAX_LEVEL=LEVELS.length;
 export const BOSSES=TIERS.flatMap((tier,t)=>tier.boxes.map((box,i)=>({id:`${tier.id}-${i+1}`,name:tier.boxes.length>1?`${tier.name} ${i+1}`:tier.name,tier:t,track:tier.track,color:tier.color,box})));
 export const levelRewardsForBoss=bossId=>bossRewards(bossId);

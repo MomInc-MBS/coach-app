@@ -85,7 +85,7 @@ export function battlePassState(opts={}){
   level:i+1,beaten:progress[boss.id]>i,
   items:items.map(item=>{
    const owner=item.kind==='pet'&&PET_SUBSTITUTE_PALETTE[item.family]&&petOwner(item.family);
-   const shown=owner&&owner!==boss.row?paletteItem(PET_SUBSTITUTE_PALETTE[item.family]):item;
+   const shown=owner&&owner!==boss.row?(()=>{const palette=paletteItem(PET_SUBSTITUTE_PALETTE[item.family]);return {kind:'reward-pack',id:`reward-pack:uncommon:${boss.id}:L4:${palette.id}`,tier:'uncommon',name:'Uncommon Pack',line:'Open for one random cosmetic.'};})():item;
    return {...shown,granted:isGranted(shown,opts)};
   }),
  }))}));

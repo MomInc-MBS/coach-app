@@ -119,6 +119,18 @@ const PET_LINES={
 };
 
 const item=(kind,[id,name,line])=>({kind,id,name,line});
+const rewardPack=(tier,id)=>({kind:'reward-pack',id:`reward-pack:${tier}:${id}`,tier,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,line:'Open for one random cosmetic.'});
+export const textureRewardPool=()=>TEXTURES.map(t=>item('texture',TEXTURE_SWAP[t[0]]??t));
+function packCosmetics(levels,bossId){
+ for(let level=0;level<levels.length;level++)levels[level]=levels[level].flatMap(reward=>{
+  if(reward.kind==='palette')return [rewardPack('uncommon',`${bossId}:L${level+1}:${reward.id}`)];
+  if(reward.kind==='texture')return [rewardPack('legendary',`${bossId}:L${level+1}:${reward.id}`)];
+  if(reward.kind==='boss-skin')return [{kind:'boss-unlock',id:bossId,name:reward.name.replace(/ Skin$/,' Beaten'),line:'Boss cleared at level 5.'}];
+  return [reward];
+ });
+ levels[3].push(rewardPack('rare',`${bossId}:L4:64-bit`));
+ return levels;
+}
 const find=(list,id)=>list.find(row=>row[0]===id);
 export function paletteItem(id){const p=PALETTES.find(p=>p.id===id);return {kind:'palette',id,name:p.name,line:p.tagline};}
 // palettes.json `reward` ('<bossId>:L<n>' | 'food:L<n>') -> palette id.
@@ -136,7 +148,7 @@ export function bossRewards(bossId){
  const levels=slotPalettes(boss.id,LEVELS_PER_BOSS); // D32 fill (empty for first bosses)
  levels[1].push({kind:'boss-texture',id:`${boss.id}-texture`,name:`${boss.name} Texture`,line:lines[0]});
  levels[4].push({kind:'boss-skin',id:`${boss.id}-skin`,name:`${boss.name} Skin`,line:lines[1]});
- if(!meta||boss.index!==1)return levels;
+ if(!meta||boss.index!==1)return packCosmetics(levels,boss.id);
  const c=meta.catalog,tex=TEXTURES.filter(t=>t[0].startsWith(c+'-')).map(t=>TEXTURE_SWAP[t[0]]??t); // catalog order = texture-1/2/3
  levels[0].unshift(item('weapon',find(WEAPONS,`${c}-w1`)),item('texture',tex[0]));
  levels[1].unshift(paletteItem(meta.palette));
@@ -146,7 +158,7 @@ export function bossRewards(bossId){
  levels[4].push(item('texture',tex[2]));
  for(const skin of CREATURE_SKIN_REWARDS.filter(row=>row.track===c))levels[skin.level-1].push(skin);
  for(const ship of SHIP_DEFINITIONS.filter(row=>row.track===c))levels[ship.level-1].push({kind:'ship',id:ship.id,name:ship.name,line:`Reveals the ${ship.ship} ship.`,ship:ship.ship,pack:'coach-ships-biomes'});
- return levels;
+ return packCosmetics(levels,boss.id);
 }
 
 // --- Food (D32): no board row, no weapons (item-catalog's food-w1/w2 are never granted), no pet
@@ -157,4 +169,4 @@ export const FOOD_BONUS=Object.freeze({id:'food-bonus',name:'Second Helping',lin
 export const FOOD_LEVELS=PALETTES.filter(p=>p.reward?.startsWith('food:')).length;
 /** Food ladder: FOOD_LEVELS levels, each `[palette, bonus]`. Bonus ids are per level
  * (`food-bonus-<n>`) so each grant happens once. */
-export const foodRewards=()=>slotPalettes('food',FOOD_LEVELS).map((items,i)=>[...items,{kind:'bonus',id:`${FOOD_BONUS.id}-${i+1}`,name:FOOD_BONUS.name,line:FOOD_BONUS.line,effect:FOOD_BONUS.effect}]);
+export const foodRewards=()=>slotPalettes('food',FOOD_LEVELS).map((items,i)=>[...items.map(reward=>rewardPack('uncommon',`food:L${i+1}:${reward.id}`)),{kind:'bonus',id:`${FOOD_BONUS.id}-${i+1}`,name:FOOD_BONUS.name,line:FOOD_BONUS.line,effect:FOOD_BONUS.effect}]);

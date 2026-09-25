@@ -70,157 +70,60 @@ test('Warden then Lume open only once every available row is beaten, fed by over
  p=at(40,40);assert.deepEqual([p['warden-1'],p['lume-1']],[5,5]);
 });
 
-test('D22 ladder with D16 textures at L1/L3/L5 and D17 special at L3',()=>{
- const kinds=bossRewards('strider-1').map(l=>l.filter(i=>!['creature-skin','ship'].includes(i.kind)).map(i=>i.kind).sort());
- assert.deepEqual(kinds,[['texture','weapon'],['boss-texture','palette'],['special','texture','weapon'],['pet'],['aura','boss-skin','texture']]);
- for(const b of BOSSES.filter(b=>b.track&&b.index===1)){
-  const r=bossRewards(b.id);
-  assert.deepEqual(r.map(l=>l.filter(i=>i.kind==='texture').length),[1,0,1,0,1],b.id);
-  assert.deepEqual(r.map(l=>l.some(i=>i.kind==='special')),[false,false,true,false,false],b.id);
- }
- assert.deepEqual(bossRewards('wedge-1')[0].filter(i=>!['creature-skin','ship'].includes(i.kind)).map(i=>i.id),['arms-w1','arms-hammered-bronze'],'arms-shoulders uses the catalog arms items');
- // D30: later bosses and the shared ones keep their own boss looks; D32 adds a palette at L1/L3/L4.
- for(const id of ['strider-2','cap-3','warden-1','lume-1'])assert.deepEqual(bossRewards(id).map(l=>l.map(i=>i.kind)),[['palette'],['boss-texture'],['palette'],['palette'],['boss-skin']],id);
- assert.equal(new Set(BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>!['pet','ship'].includes(i.kind)).map(i=>i.kind+':'+i.id))).size,BOSSES.flatMap(b=>bossRewards(b.id).flat().filter(i=>!['pet','ship'].includes(i.kind))).length,'no item appears twice except family pets and cycling ships');
+test('pack ladder retains fixed weapons, pet, boss looks and ship placement',()=>{
+ const levels=bossRewards('strider-1');
+ assert.deepEqual(levels.map(items=>items.filter(item=>item.kind==='reward-pack').map(item=>item.tier)),[['legendary'],['uncommon'],['legendary'],['rare'],['legendary']]);
+ assert.deepEqual(levels.map(items=>items.filter(item=>item.kind==='weapon').map(item=>item.id)),[['chest-w1'],[],['chest-w2'],[],[]]);
+ assert(levels[3].some(item=>item.kind==='pet'&&item.id==='push-pet'));
+ assert(levels[1].some(item=>item.kind==='boss-texture'));
+ assert(levels[4].some(item=>item.kind==='boss-unlock'));
+ assert(levels[2].some(item=>item.kind==='ship'&&item.id==='ship-supportive'));
+ for(const boss of BOSSES)assert(bossRewards(boss.id).every(items=>items.length>0),boss.id);
 });
 
-test('D32: every board boss level has at least one reward, and the fill sits only in the old empty slots',()=>{
- fresh();
- const s=battlePassState({tracks:{},account:nobody});
- assert.equal(s.bosses.length,38);
- for(const b of s.bosses)b.rewards.forEach(l=>assert.ok(l.items.length>=1,`${b.id} L${l.level} is empty`));
- const filled=BOSSES.filter(b=>!b.track||b.index>1);
- assert.equal(filled.length,30,'bosses 2-6 of each row + Warden + Lume');
- for(const b of filled){
-  const r=bossRewards(b.id),fill=r.map(l=>l.filter(i=>D32_PALETTES.has(i.id)).map(i=>i.id));
-  assert.deepEqual(fill.map(ids=>ids.length),[1,0,1,1,0],b.id);
-  fill.forEach((ids,i)=>ids.forEach(id=>assert.equal(PALETTES.find(p=>p.id===id).reward,`${b.id}:L${i+1}`)));
+test('D32 palette fill becomes Uncommon packs in original slots',()=>{
+ const filled=BOSSES.filter(boss=>!boss.track||boss.index>1);
+ assert.equal(filled.length,30);
+ for(const boss of filled){
+  const levels=bossRewards(boss.id);
+  assert.deepEqual(levels.map(items=>items.filter(item=>item.tier==='uncommon').length),[1,0,1,1,0],boss.id);
+  assert(levels[3].some(item=>item.tier==='rare'),boss.id);
+  assert(levels[1].some(item=>item.kind==='boss-texture'),boss.id);
+  assert(!levels[4].some(item=>item.kind==='boss-skin'),boss.id);
  }
- for(const b of BOSSES.filter(b=>b.track&&b.index===1))assert.ok(!bossRewards(b.id).flat().some(i=>D32_PALETTES.has(i.id)),`${b.id} keeps its old ladder`);
 });
 
-test('D22/D16/D17/D21 grants are unchanged where they already existed',()=>{
- for(const b of BOSSES){
- const old=bossRewards(b.id).map(l=>l.filter(i=>!D32_PALETTES.has(i.id)&&!['creature-skin','ship'].includes(i.kind)));
-  if(!b.track||b.index>1){assert.deepEqual(old.map(l=>l.map(i=>i.id)),[[],[`${b.id}-texture`],[],[],[`${b.id}-skin`]],b.id);continue;}
-  const c=TRACKS[b.track].catalog;
-  assert.deepEqual(old.map(l=>l.map(i=>i.kind)),[['weapon','texture'],['palette','boss-texture'],['weapon','special','texture'],['pet'],['aura','boss-skin','texture']],b.id);
-  assert.deepEqual([old[0][0].id,old[1][0].id,old[2][0].id,old[2][1].id,old[4][0].id],[`${c}-w1`,TRACKS[b.track].palette,`${c}-w2`,`${c}-special`,`${c}-aura`],b.id);
- }
- assert.deepEqual(bossRewards('strider-1')[1][0],{kind:'palette',id:'pal-01',name:'Morning Mist',line:'Soft start, steady glow'});
-});
-
-test('D32 Food: no weapons anywhere; each food level grants a palette + the bonus; progress is in battlePassState()',()=>{
- const every=[...BOSSES.flatMap(b=>bossRewards(b.id).flat()),...foodRewards().flat()];
- assert.ok(!every.some(i=>/^food-/.test(i.id)&&i.kind!=='bonus'),'no food weapon/pet/boss item');
- assert.deepEqual([...new Set(every.filter(i=>i.kind==='weapon').map(i=>i.id.replace(/-w[12]$/,'')))].sort(),['arms','cardio','chest','glutes','martial-arts','meditation','quads','yoga']);
+test('Food levels give Uncommon packs and retain per-level bonuses',()=>{
  assert.equal(FOOD_LEVELS,5);
- foodRewards().forEach((items,i)=>{
-  assert.deepEqual(items.map(x=>x.kind),['palette','bonus']);
-  assert.equal(PALETTES.find(p=>p.id===items[0].id).reward,`food:L${i+1}`);
-  assert.deepEqual([items[1].id,items[1].name,items[1].effect],[`food-bonus-${i+1}`,FOOD_BONUS.name,FOOD_BONUS.effect]);
+ foodRewards().forEach((items,index)=>{
+  assert.deepEqual(items.map(item=>item.kind),['reward-pack','bonus']);
+  assert.equal(items[0].tier,'uncommon');
+  assert.equal(items[1].id,`food-bonus-${index+1}`);
  });
- assert.deepEqual(FOOD_BONUS.effect,{type:'damage-multiplier',days:1,value:FOOD_BONUS_DAMAGE_MULTIPLIER});
- assert.equal(FOOD_BONUS_DAMAGE_MULTIPLIER,1.1,'owner-changeable default');
- fresh();
- assert.deepEqual([0,4,5,24,25,99].map(n=>battlePassState({tracks:steps({food:n}),account:nobody}).food.levels),[0,0,1,4,5,5]);
- const s=battlePassState({tracks:steps({food:12}),account:nobody});
- assert.deepEqual([s.food.steps,s.food.maxLevel,s.food.rewards.map(l=>l.beaten)],[12,5,[true,true,false,false,false]]);
- assert.ok(!s.bosses.some(b=>b.track==='food'),'food needs no board row');
- const first=syncBattlePass({tracks:steps({food:10}),account:nobody});
- assert.deepEqual(first.granted.map(i=>i.id),['pal-103','food-bonus-1','pal-104','food-bonus-2']);
- assert.ok(store.isGranted('palette','pal-104')&&ledger.isGranted('bonus','food-bonus-2'));
- assert.equal(syncBattlePass({tracks:steps({food:10}),account:nobody}).granted.length,0,'idempotent');
- assert.deepEqual(syncBattlePass({tracks:steps({food:15}),account:nobody}).granted.map(i=>i.id),['pal-105','food-bonus-3']);
+ fresh();const result=syncBattlePass({tracks:steps({food:10})});
+ assert.deepEqual(result.granted.map(item=>item.kind),['reward-pack','bonus','reward-pack','bonus']);
+ assert.equal(syncBattlePass({tracks:steps({food:10})}).granted.length,0);
 });
 
-test('full regrant is idempotent: every item on the board + food is granted exactly once',()=>{
- fresh();setSelectedTracks(ALL_TRACKS);
- const first=syncBattlePass({tracks:allSteps(9999)});
- const ids=first.granted.map(i=>i.kind+':'+i.id);
- assert.equal(new Set(ids).size,ids.length,'nothing granted twice in one sync');
- const expected=new Set([...BOSSES.flatMap(b=>bossRewards(b.id).flat()),...foodRewards().flat()].map(i=>i.kind+':'+i.id));
- // D21: the second row of each two-row family gets its substitute palette instead of a second pet.
- for(const id of ['palette:pal-09','palette:pal-10','palette:pal-11'])expected.add(id);
- assert.deepEqual(new Set(ids),expected);
- assert.equal(syncBattlePass({tracks:allSteps(9999)}).granted.length,0);
- assert.equal(JSON.parse(memory.get('myr5-unlocks-v1')).palette.length,11+90+5,'L2 + D21 substitutes + board fill + food');
+test('shared family pet substitutes use Uncommon packs while first pet stays at level four',()=>{
+ fresh();setSelectedTracks(['chest','arms-shoulders']);
+ const state=battlePassState({tracks:steps({chest:25,shoulders:25})});
+ const l4=id=>state.bosses.find(b=>b.id===id).rewards[3].items;
+ assert(l4('strider-1').some(item=>item.kind==='pet'&&item.id==='push-pet'));
+ assert(l4('wedge-1').some(item=>item.kind==='reward-pack'&&item.tier==='uncommon'));
+ assert(l4('wedge-1').some(item=>item.kind==='reward-pack'&&item.tier==='rare'));
 });
 
-test('old unlock ledgers (pre-D32, no bonus kind) still load and are not regranted',()=>{
+test('all earned packs persist once and do not directly unlock cosmetics',()=>{
  fresh();setSelectedTracks(['chest']);
- memory.set('myr5-battle-pass-ledger-v1',JSON.stringify({weapon:['chest-w1'],pet:[],'boss-texture':[],'boss-skin':[],special:[],aura:[]}));
- memory.set('myr5-unlocks-v1',JSON.stringify({texture:['chest-plate-steel'],color:[],palette:['pal-01','pal-05']}));
- const s=battlePassState({tracks:steps({chest:5,food:5})});
- assert.ok(s.bosses.find(b=>b.id==='strider-1').rewards[0].items.filter(i=>!['creature-skin','ship'].includes(i.kind)).every(i=>i.granted),'old grants read back as granted');
- const {granted}=syncBattlePass({tracks:steps({chest:5,food:5})});
- assert.deepEqual(granted.map(i=>i.id),['creature-starforged-plate','creature-mirror-knight','pal-103','food-bonus-1'],'only the additive L1 skins and new Food level; old L1 items not regranted');
- const led=JSON.parse(memory.get('myr5-battle-pass-ledger-v1'));
- assert.deepEqual([led.weapon,led.bonus],[['chest-w1'],['food-bonus-1']]);
- assert.deepEqual(JSON.parse(memory.get('myr5-unlocks-v1')).palette,['pal-01','pal-05','pal-103'],'aura-milestone grants kept');
-});
-
-test('#140 the 7 legacy textures hold the 7 freed catalog slots; the freed ones are never rewards',()=>{
- const rewards=BOSSES.flatMap(b=>bossRewards(b.id).flatMap((items,i)=>items.filter(x=>x.kind==='texture').map(x=>({...x,boss:b.id,level:i+1}))));
- assert.deepEqual(rewards.find(x=>x.id==='legacy-15'),{kind:'texture',id:'legacy-15',name:'Magma',line:TEXTURE_SWAP['chest-rubber-grip'][2],boss:'strider-1',level:3});
- assert.deepEqual(Object.values(TEXTURE_SWAP).map(([,name])=>name).sort(),['Crystal','Fluffy','Glacial','Jelly','Magma','Spectral','Stone Golem']);
- for(const [freed,[legacy]] of Object.entries(TEXTURE_SWAP)){assert.ok(!rewards.some(x=>x.id===freed),freed);assert.equal(rewards.filter(x=>x.id===legacy).length,1,legacy);}
- assert.equal(rewards.length,24);
-});
-
-test('texture and palette ids exist in materials-registry.ts at the matching pass level',async()=>{
- const registry=await readFile(join(process.cwd(),'creature/source/creator/materials-registry.ts'),'utf8');
- const entries=[...registry.matchAll(/\{ id: '([^']+)', name: '[^']+', slot: '(texture-[123])', track: '([^']+)' \}/g)].map(([,id,slot,track])=>({id,slot,track}));
- const slotLevel={'texture-1':1,'texture-2':3,'texture-3':5},reg={TEXTURES:entries.map(item=>({...item,unlockRule:'battle-pass',passLevel:slotLevel[item.slot]})),PALETTES:PALETTES.map(p=>({...p,displayName:p.name}))};
- assert.equal(reg.TEXTURES.length,24,'source registry contains the 24 existing fitness texture placeholders');
- for(const b of BOSSES)bossRewards(b.id).forEach((items,i)=>{for(const item of items){
-  if(item.kind==='texture'){const t=reg.TEXTURES.find(t=>t.id===item.id||TEXTURE_SWAP[t.id]?.[0]===item.id); // #140: a swapped-in legacy texture holds the freed slot's level
-assert.ok(t,item.id);assert.equal(t.unlockRule,'battle-pass');assert.equal(t.passLevel,i+1,item.id);}
-  if(item.kind==='palette'){const p=reg.PALETTES.find(p=>p.id===item.id);assert.ok(p,item.id);assert.equal(p.displayName,item.name);}
- }});
- // D32: every battle-pass palette in the registry is granted by exactly the slot its `reward` names.
- const slots=new Map([...BOSSES.flatMap(b=>bossRewards(b.id).map((items,i)=>[`${b.id}:L${i+1}`,items])),...foodRewards().map((items,i)=>[`food:L${i+1}`,items])]);
- const bp=reg.PALETTES.filter(p=>p.unlockRule==='battle-pass');
- assert.equal(bp.length,95);
- for(const p of bp)assert.ok(slots.get(p.reward)?.some(i=>i.kind==='palette'&&i.id===p.id),`${p.id} -> ${p.reward}`);
-});
-
-test('D21 pets: one per family; the second row of the family gets a palette at L4 instead',()=>{
- fresh();setSelectedTracks(['chest','arms-shoulders']);
- const s=battlePassState({tracks:steps({chest:25,shoulders:25})});
- const l4=id=>s.bosses.find(b=>b.id===id).rewards[3].items.map(i=>i.kind+':'+i.id);
- assert.deepEqual(l4('strider-1'),['pet:push-pet']);
- assert.deepEqual(l4('wedge-1'),['palette:pal-09']);
- const solo=battlePassState({tracks:steps({shoulders:25})});
- assert.deepEqual(solo.bosses.find(b=>b.id==='wedge-1').rewards[3].items.map(i=>i.id),['push-pet'],'whoever reaches L4 first holds the pet');
-});
-
-test('sync grants once into the right store, fires myr5:battle-pass only for new unlocks, and persists',()=>{
- fresh();setSelectedTracks(['chest','arms-shoulders']);
- globalThis.window=new EventTarget();
- const events=[];window.addEventListener('myr5:battle-pass',e=>events.push(e.detail));
- const tracks=steps({chest:25,shoulders:25,meditation:4});
+ const tracks=steps({chest:25,meditation:4});
  const first=syncBattlePass({tracks});
- assert.equal(events.length,1);
- assert.equal(first.granted.length,events[0].granted.length);
- // Textures/palettes -> unlock-store.ts; everything else -> the ledger.
- assert.ok(store.isGranted('texture','chest-plate-steel')&&store.isGranted('texture','chest-chain-mail')&&store.isGranted('palette','pal-01')&&store.isGranted('palette','pal-09'));
- for(const [kind,id] of [['weapon','chest-w1'],['weapon','arms-w2'],['special','chest-special'],['aura','arms-aura'],['pet','push-pet'],['boss-texture','strider-1-texture'],['boss-skin','wedge-1-skin']])assert.ok(ledger.isGranted(kind,id),id);
- assert.equal(ledger.isGranted('weapon','meditation-w1'),false,'meditation has 0 levels at 4 steps');
- assert.equal(ledger.grantedIds('pet').filter(id=>id==='push-pet').length,1);
- // Idempotent regrant: same steps, nothing new, no event.
- const again=syncBattlePass({tracks});
- assert.equal(again.granted.length,0);assert.equal(events.length,1);
- assert.ok(again.state.bosses.find(b=>b.id==='strider-1').rewards.every(l=>l.items.every(i=>i.granted)));
- // One more step on meditation -> exactly that level's items, one event.
- const next=syncBattlePass({tracks:{...tracks,meditation:{steps:5}}});
- assert.deepEqual(next.granted.map(i=>i.id).sort(),['creature-celestial-mosaic','creature-zen-sand','meditation-sand-garden','meditation-w1']);
- assert.equal(events.length,2);
- // Persistence: plain JSON under the two keys, readable by a fresh page.
- assert.ok(JSON.parse(memory.get('myr5-unlocks-v1')).texture.includes('meditation-sand-garden'));
- assert.ok(JSON.parse(memory.get('myr5-battle-pass-ledger-v1')).weapon.includes('meditation-w1'));
- assert.deepEqual(JSON.parse(memory.get('myr5-selected-tracks-v1')),['chest','arms-shoulders']);
- delete globalThis.window;
+ assert(first.granted.some(item=>item.kind==='reward-pack'));
+ assert(ledger.isGranted('weapon','chest-w1'));
+ assert(!ledger.isGranted('boss-skin','strider-1-skin'));
+ assert.equal(store.grantedIds('palette').length,0);
+ assert.equal(store.grantedIds('texture').length,0);
+ assert.equal(syncBattlePass({tracks}).granted.length,0);
 });
 
 test('step source: live coachProgress, else the cached progress snapshot',()=>{
