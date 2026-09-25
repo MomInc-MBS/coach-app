@@ -26,7 +26,7 @@ async function withPage(run){
   if(path==='/ship-view.js'){res.setHeader('Content-Type','text/javascript');res.end(bundle.outputFiles[0].text);return;}
   try{
    const file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();
-   res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'})[extname(file)]||'application/octet-stream');
+   res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'})[extname(file)]||'application/octet-stream');
    res.end(await readFile(file));
   }catch{res.writeHead(404);res.end();}
  });
@@ -340,7 +340,7 @@ test('after close no ship or capsule animation frame is still running',async()=>
 
 // Lane 2O: opening the ship straight through window.myr5Menus.ship(), closing it, then another scene the same way
 // must not walk history off the app. modules/routes.mjs is the one owner of the #hash entries, so exactly one back
-// pops each push. Also #148: #customize and any link to the customizer land on the arrival.
+// pops each push. The legacy #customize hash and links now enter the public War Room.
 async function primeRoutes(page){
  await primeFixture(page);
  await page.evaluate(async()=>{
@@ -375,15 +375,13 @@ test('ship -> close -> food -> close through myr5Menus stays in the app (one own
  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash==='#pod');
  await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>location.hash),'#pod');
 }));
-test('#customize and a link to the customizer both land on the oval arrival, not the editor',async()=>withPage(async page=>{
- await page.emulateMedia({reducedMotion:'reduce'});
+test('#customize enters the public War Room',async()=>withPage(async page=>{
  await primeRoutes(page);
- await page.evaluate(()=>{location.hash='customize';});
- await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#select'&&myr5Routes.current()==='select');
- assert.deepEqual(await page.evaluate(()=>shipOpens.at(-1)),{entrance:'always',hash:'#select'});
- await page.goBack();
- await page.waitForFunction(()=>!document.querySelector('dialog.ship-view').open&&location.hash==='');
+ await page.evaluate(()=>{location.hash='customize';}).catch(()=>{});
+ await page.waitForURL(url=>url.pathname==='/war-room/index.html');
+}));
+test('legacy customizer links enter the public War Room',async()=>withPage(async page=>{
+ await primeRoutes(page);
  await page.getByRole('link',{name:'Customize'}).click();
- await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open&&location.hash==='#select');
- assert.equal(new URL(page.url()).pathname,'/','the link did not navigate to the editor');
+ await page.waitForURL(url=>url.pathname==='/war-room/index.html');
 }));
