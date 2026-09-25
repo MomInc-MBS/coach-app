@@ -9,6 +9,7 @@ import {grass} from './portal-board-grass.mjs';
 import {cogs} from './portal-board-cogs.mjs';
 import {jelly} from './portal-board-jelly.mjs';
 import {wood} from './portal-board-wood.mjs';
+import {readLook,applyLookVars,stripSeq,LOOK_DEFAULTS} from './portal-look.mjs';
 import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
 import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
@@ -176,7 +177,7 @@ function growHole(el,pts,box,current=()=>true,ms=PORTAL.revealMs){
 }
 
 let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome,workoutHome,workoutSource,workoutNode;
-let sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
+let wantedBoard=null,sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 let board=null,boardFailed=false,boardShown=false,boardId='quilt';
 let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
@@ -198,7 +199,7 @@ function updateBoardChips(){const tint=menuSheet?.querySelector('input[type=colo
 // call time, so nothing needs re-wiring here.
 async function loadBoard(id){
  if(!BOARDS[id])id='quilt';
- const load=++boardLoad;
+ const wanted=wantedBoard=id,load=++boardLoad;
  status(`Loading ${BOARDS[id].label} board…`);
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
@@ -223,7 +224,8 @@ async function loadBoard(id){
  if(!boardShown)board?.pause();
  portalHome.classList.toggle('no-board',boardFailed);
  portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
- status(failureMessage);portalHome.dataset.board=id;boardId=id;store.set(BOARD_KEY,id);updateBoardChips();
+ status(failureMessage);portalHome.dataset.board=id;boardId=id;if(id===wanted)store.set(BOARD_KEY,id);// an uncached pick falls back to quilt but stays the saved choice
+updateBoardChips();
  return board;
  }finally{if(hiddenForLoad){portalHome.style.visibility=priorVisibility;if(!boardShown)portalHome.hidden=true;}}
 }
@@ -246,6 +248,11 @@ function energize(seq,rate=1,hot=false){
  energyAnims.forEach(a=>a.updatePlaybackRate(rate));
 }
 function syncEnergy(){const on=boardShown||!!framed;energyAnims.forEach(a=>on?a.play():a.pause());}
+// War Room look (device-local, guests too): metal colours ride CSS variables, the strip colour feeds energize(). Reapplied on
+// load, return to the portal and cross-tab/bfcache changes; a board pick made elsewhere loads once (an uncached one falls back).
+const restSeq=()=>{const c=readLook().strip;return c===LOOK_DEFAULTS.strip?NEONS:stripSeq(c);};
+function applyLook(){applyLookVars();if(!phase)energize(restSeq());}
+function syncLook(){applyLook();const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored]&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
  portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
@@ -259,7 +266,7 @@ function buildDom(){
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
  if(!chrome.showPopover)chrome.remove(); // no Popover API (iOS Safari 16-): no UA hidden state, so it would sit over every screen; frameOn() skips framing
- energize(NEONS);
+ applyLookVars();energize(restSeq());
  for(const el of document.querySelectorAll('.portal-energy')){
   el.style.setProperty('--energy-px',ENERGY.px+'px');
   if(!prefersReducedMotion())[...el.children].forEach((channel,i)=>{const [axis,dir]=ENERGY_MOVES[i],from=`translate${axis}(${-ENERGY.px*(dir>0)}px)`,to=`translate${axis}(${-ENERGY.px*(dir<0)}px)`;energyAnims.push(channel.firstElementChild.animate([{transform:from},{transform:to}],{duration:ENERGY.loopMs,iterations:Infinity}));});
@@ -347,7 +354,7 @@ function setVisible(v){
  if(boardBtn)boardBtn.hidden=v;
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
- boardShown=v;frameOff();syncEnergy();
+ boardShown=v;frameOff();if(v)applyLook();syncEnergy();
  scheduleIdle();
 }
 function fadeOutBoard(){
@@ -1431,7 +1438,7 @@ function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null,monochrome=f
  startTunnel(phase,poly,color,all);
  energize(ringColours(color,all),ENERGY.surge,true);
 }
-function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;energize(NEONS);}
+function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;energize(restSeq());}
 // The wormhole on its own, for transitions elsewhere (a workout's rest <-> attack, leaving Meditation): 'in' opens it
 // from the centre of the screen until it covers everything (then it stays up, still flowing, while the caller swaps
 // what is under it); 'out' shrinks it back into its core and removes it. Resolves when that half is done. One wormhole
@@ -1455,7 +1462,7 @@ export async function playWormhole({direction='in',minMs=900,color='#b026ff'}={}
 }
 // A destination seen through the hole: stop the wormhole and leave its still depth (what a flat menu's rectangle sits in),
 // the bezel staying over the cloth's ragged edge.
-function quietPhase(){if(!phase)return;phase.stop?.();phase.stop=null;phase.pulse=false;phase.glass.classList.remove('gl');phase.glass.classList.add('still');phase.glass.querySelector('canvas')?.remove();energize(NEONS);}
+function quietPhase(){if(!phase)return;phase.stop?.();phase.stop=null;phase.pulse=false;phase.glass.classList.remove('gl');phase.glass.classList.add('still');phase.glass.querySelector('canvas')?.remove();energize(restSeq());}
 function ripple(x,y){
  if(!phase||prefersReducedMotion())return;
  const r=document.createElement('i');r.className='portal-ripple';r.style.left=(x-phase.box.left)+'px';r.style.top=(y-phase.box.top)+'px';
@@ -1710,6 +1717,7 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('myr5:classroom-board',e=>{if(e.target?.id==='accountPanel')expandScene(e.target);},{signal:lifecycle.signal});
  document.addEventListener('room-ready',e=>{const f=framed;if(e.target?.id==='accountPanel'&&f?.dialog===e.target&&!f.expanded&&f.look.shaped){layoutInCut(e.target,true);clipTo(e.target,f.outlines.shape);}},{signal:lifecycle.signal});
  document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){setVisible(false);restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
+ for(const type of ['storage','pageshow'])addEventListener(type,syncLook,{signal:lifecycle.signal});
  menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
