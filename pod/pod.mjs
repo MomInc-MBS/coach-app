@@ -10,6 +10,7 @@ import {ROUTE_LINES,exerciseFamily} from '../workout-route.mjs';
 import {VOICE_MANIFEST} from '../robot-audio.mjs';
 import {WorkoutSessionOwner} from './workout-session-owner.mjs';
 import {combatLevel} from '../battle-pass.mjs';
+import {throughWormhole,LINES} from './set-transition.mjs';
 import {SPECIAL_LEVEL} from '../combat-config.mjs';
 let voiceManifest=null;
 // Fetch the clips this set will say while the camera opens; sw.js stores /voice/* in the voice cache, so RobotAudio's later fetch is a hit.
@@ -77,7 +78,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  function speakChallenge(){if(pendingChallenge&&flow.phase==='rest'&&!document.hidden&&!document.body.dataset.cinematic){const text=pendingChallenge;pendingChallenge=null;voice.say(text,{key:'challenge',interrupt:true});}}
  window.addEventListener('myr5:cinematic-end',speakChallenge);
  function tick(){if(flow.phase!=='rest')return;speakChallenge();const now=Date.now();if(flow.shouldEndRest(now)){leave();return;}specialControls();const remaining=flow.remaining(now),next=route.suggestion();setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0||!next;$('nextSet').textContent=remaining?'Recovering…':awaitingRound?'Waiting to sync…':next?'Preview next round →':'Finished for today';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest complete. Keep tapping to stay.',{interrupt:true});}}
- function enterRest(result=null,{silent=false}={}){
+ function enterRest(result=null){
   flow.kitLevel=combatLevel(result?.mode||currentMode||'squat'); // real battle-pass level for this boss's track (D8/D22)
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
   document.body.dataset.screen='rest';$('homeScreen').hidden=true;$('restScreen').hidden=false;
@@ -87,14 +88,21 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent=Math.round(flow.damage)+' DAMAGE';paintHealth();
   syncCombat();
   $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
-  clearInterval(restTimer);restTimer=setInterval(tick,250);tick();$('restHeading').focus();
+  clearInterval(restTimer);restTimer=setInterval(tick,250);tick();
   history.replaceState(null,'','#rest');window.myr5Creature?.play(result?'celebrate':'rest');
-  if(!silent)voice.say(result?'Set complete. Take a breath.':'Tap to strike.',{interrupt:true});
  }
- async function consume(m,now){const before={...flow.progress},id=flow.active?.localId,manual=flow.active?.control==='manual',result=flow.consume(m,now);if(!result)return false;const saved=await workoutOwner.complete({id,value:result.value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0,earned:result.earned,progress:{...flow.progress,value:result.value}});if(!saved.saved){flow.progress=before;flow.phase='set';throw Error(saved.reason);}window.dispatchEvent(new Event('myr5:local-history-refresh'));onStop();enterRest(result,{silent:manual});if(!storageAvailable)$('setReceipt').textContent+=' · Progress could not be saved on this device.';return true;}
+ // #150: into rest through the wormhole. The rest timer started with the set, so the time until rest shows (the save, the trip in) is added back;
+ // the heading's focus and the voice line wait until the tunnel has opened.
+ async function toRest(result=null,{silent=false,started=Date.now()}={}){
+  await throughWormhole(result?LINES.rest:LINES.practice,()=>{if(flow.phase!=='rest')return;flow.restUntil+=Date.now()-started;enterRest(result);});
+  if(flow.phase!=='rest')return;
+  $('restHeading').focus();if(!silent)voice.say(result?'Set complete. Take a breath.':'Tap to strike.',{interrupt:true});
+ }
+ async function consume(m,now){const before={...flow.progress},id=flow.active?.localId,manual=flow.active?.control==='manual',result=flow.consume(m,now);if(!result)return false;const saved=await workoutOwner.complete({id,value:result.value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0,earned:result.earned,progress:{...flow.progress,value:result.value}});if(!saved.saved){flow.progress=before;flow.phase='set';throw Error(saved.reason);}window.dispatchEvent(new Event('myr5:local-history-refresh'));onStop();await toRest(result,{silent:manual,started:now});if(!storageAvailable)$('setReceipt').textContent+=' · Progress could not be saved on this device.';return true;}
  async function saveManual(m){const id=flow.active?.localId;if(!id)return null;const value=valueOf(m),progress={...flow.progress,value,activeSeconds:m.active||0,elapsedSeconds:m.elapsed||0};await workouts.update(id,progress);flow.active.savedProgress=progress;return progress;}
  async function pauseManual(m){const id=flow.active?.localId;if(!id)return null;const progress=await saveManual(m),workout=await workouts.pause(id,progress);pausedLocal=workout;flow.leave();return workout;}
  async function interruptCurrent(m){const id=flow.active?.localId;if(id)await workouts.interrupt(id,{...flow.progress,value:m?valueOf(m):0,activeSeconds:m?.active||0,elapsedSeconds:m?.elapsed||0});if(flow.phase==='set')flow.leave();pausedLocal=null;workoutOwner.stop();route.render();circuit.render();}
+ // #150: the trips out of rest stop its timer first, so the idle end can't leave() under the tunnel.
  // #56: the ↗ exit goes home to the quilt (clears the hash, closes the route); "Next set →" stays in the pod.
  function leave({home=false}={}){pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();if(home){history.replaceState(null,'',location.pathname+location.search);window.myr5Routes?.home?.();}else history.replaceState(null,'','#pod');$('start').disabled=!route.canStart(currentMode);route.render();circuit.render();$('start').focus();}
  document.querySelector('.encounter').addEventListener('pointerdown',()=>flow.touchRest(Date.now()),{passive:true});
@@ -108,7 +116,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('restFeedback').textContent=hit.blocked?`${POWERS[$('coachPower').value].line} ${hit.hits} ${hit.hits===1?'hit':'hits'}, zero damage.`:`${hit.assisted?'Helping Hand lands a team strike! ':''}${hit.hits} hits. ${hit.totalDamage} damage.`;
   if(now-lastSpoken>10000){lastSpoken=now;window.myr5Creature?.play(hit.blocked?'agree':'encourage');voice.say(hit.blocked?'Nice teamwork. My shield is still intact. Keep training.':'You and that hand make quite a team. That one connected.',{key:'rest'});}
  });
- $('leaveRest').addEventListener('click',()=>leave({home:true}));$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
+ $('leaveRest').addEventListener('click',()=>{clearInterval(restTimer);void throughWormhole(LINES.home,()=>leave({home:true}));});$('moreRest').addEventListener('click',()=>{flow.extend(30,Date.now());restCalled=false;tick();voice.say('Thirty more seconds. Take your time.',{interrupt:true});});
  $('weaponSpecial').addEventListener('click',async()=>{
   const activate=()=>{syncCombat();flow.abilities.merge(safeRead(COOLDOWN));const result=flow.special(arena.weapon,{now:Date.now(),progress:arena.progress,catalog:window.GalaWeapons});if(result.ok)store(COOLDOWN,JSON.stringify(flow.abilities.snapshot()));return result;};
   const hit=navigator.locks?.request?await navigator.locks.request('myr5-weapon-special',activate):activate();if(!hit.ok){specialControls();return;}
@@ -117,8 +125,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('damageFloat').textContent=hit.blocked?'BLOCKED':'−'+hit.damage;$('restFeedback').textContent=hit.ability.name+(hit.blocked?' · Shielded':'');
   const scene=document.querySelector('.encounter');scene.classList.remove('hit');void scene.offsetWidth;scene.classList.add('hit');clearTimeout(hitTimer);hitTimer=setTimeout(()=>scene.classList.remove('hit'),650);specialControls();
  });
- $('nextSet').addEventListener('click',()=>{const next=route.suggestion();if(flow.remaining(Date.now())>0||!next)return;leave();onNext(next);});
- $('visitRest').addEventListener('click',()=>{onStop();flow.previewRest(Date.now(),Number($('restDuration').value));enterRest();});
+ $('nextSet').addEventListener('click',async()=>{const next=route.suggestion();if(flow.remaining(Date.now())>0||!next)return;clearInterval(restTimer);await throughWormhole(LINES.next,leave);onNext(next);});
+ $('visitRest').addEventListener('click',()=>{onStop();flow.previewRest(Date.now(),Number($('restDuration').value));void toRest();});
  $('openSettings').addEventListener('click',()=>{$('settings').showModal();voice.say('Pod controls.',{interrupt:true});});$('closeSettings').addEventListener('click',()=>$('settings').close());
  $('coachPower').addEventListener('change',()=>{power();voice.say(POWERS[$('coachPower').value].name+' selected.',{interrupt:true});});
  $('restDuration').addEventListener('change',()=>voice.say($('restDuration').value+' seconds between sets.',{interrupt:true}));
