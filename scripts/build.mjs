@@ -26,6 +26,8 @@ await ensureThreeVendor();
 await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js',plugins:[vendoredThree],define:materialRelease.defines});
 // The app viewer must use the same recipe catalog and materials as the editor.
 await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js',plugins:[vendoredThree],define:materialRelease.defines});
+// The War Room's Gala character bay reuses the cage room and its Draco loader, so it is bundled like the editor.
+await bundleEditor({entryPoints:['./creature/source/war-room-gala.ts'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'war-room/gala-bay.js',plugins:[vendoredThree]});
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();

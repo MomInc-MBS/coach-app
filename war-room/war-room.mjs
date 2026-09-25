@@ -1,5 +1,5 @@
 import {authFetch} from '../auth-client.mjs';
-import {SHIP_GATE,SHIP_GATE_TOKEN} from '../modules/ships/ship-scene-domain.mjs';
+import {equipmentProgress} from '../pod/rest-arena.mjs';
 import {authTransitions} from '../auth-transition.mjs';
 import {createWarRoomApi} from './account-api.mjs';
 import {readLook,saveLook,readBoard,saveBoard,LOOK_DEFAULTS,BOARD_CHOICES} from '../modules/portal/portal-look.mjs';
@@ -10,7 +10,9 @@ const transitions=authTransitions(),{api}=createWarRoomApi({request:authFetch,tr
 const time=ms=>{if(!Number.isFinite(Number(ms)))return '—';const s=Math.max(0,Math.round(Number(ms)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
 const GUEST='Sign in to use your saved run and loadouts.';
 let arsenal=null;
-transitions.subscribe(()=>{arsenal=null;$('saveLoadout').disabled=true;$('arsenalStatus').textContent='Account changed. Refresh the War Room.';});
+// Gala weapon upgrades unlock from the signed-in account's training, as in the pod; guests keep base tiers.
+const galaProgress=progress=>{window.GalaProgress=progress?{read:()=>equipmentProgress(progress)}:undefined;window.dispatchEvent(new Event('mominc-avatar-change'));};
+transitions.subscribe(()=>{galaProgress(null);arsenal=null;$('saveLoadout').disabled=true;$('arsenalStatus').textContent='Account changed. Refresh the War Room.';});
 function renderArsenal(state){arsenal=state;$('saveLoadout').disabled=false;$('weaponType').value=state.loadout.type;$('weaponTier').value=String(state.loadout.tier);$('arsenalStatus').textContent=state.updatedAt?'Saved to this account.':'No saved loadout yet.';}
 function renderRun(run){$('runStatus').textContent=run?'Run '+(run.completedAt?'complete':'in progress')+'.':'No saved Gala run found.';$('identity').textContent=run?.djName||'No DJ identity attached.';$('checks').replaceChildren(...CHECKS.map(([key,label])=>{const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=run?.completed?.includes(key)?'✓ complete':'— pending';row.append(dt,dd);return row;}));}
 function renderBoard(board){const rows=board.items||[];$('leaderRows').replaceChildren(...rows.map(item=>{const tr=document.createElement('tr');for(const value of [String(item.rank).padStart(2,'0'),item.djName||'Unnamed DJ',time(item.durationMs)]){const td=document.createElement('td');td.textContent=value;tr.append(td);}return tr;}));$('boardStatus').textContent=rows.length?'Live escapee records.':'No ranked runs yet.';}
@@ -33,7 +35,7 @@ async function load(){
  try{
   const account=await authFetch('/api/account').then(response=>response.ok?response.json():null,()=>null);transitions.assertCurrent(ticket);
   if(!account){$('access').textContent='Public War Room';$('runStatus').textContent=GUEST;$('checks').replaceChildren();$('arsenalStatus').textContent=GUEST;return;}
-  $('access').textContent='Signed-in War Room';
+  $('access').textContent='Signed-in War Room';galaProgress(account.progress);
   const [runReply,room]=await Promise.all([api('/api/gala/install-draft'),api('/api/war-room')]);transitions.assertCurrent(ticket);renderRun(runReply.data);renderArsenal(room.state);
  }catch(error){if(!transitions.isCurrent(ticket))return;$('runStatus').textContent=error.message;$('arsenalStatus').textContent='Arsenal unavailable: '+error.message;$('access').textContent='Signed in · service unavailable';}
  finally{await board;if(transitions.isCurrent(ticket))$('refresh').disabled=false;}
@@ -41,29 +43,15 @@ async function load(){
 $('refresh').addEventListener('click',load);load();
 $('saveLoadout').addEventListener('click',async()=>{if(!arsenal)return;const ticket=transitions.capture(),button=$('saveLoadout');button.disabled=true;try{const reply=await api('/api/war-room/loadout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:arsenal.revision,loadout:{type:$('weaponType').value,tier:Number($('weaponTier').value)}})});transitions.assertCurrent(ticket);renderArsenal(reply.state);}catch(error){if(transitions.isCurrent(ticket))$('arsenalStatus').textContent=error.message;}finally{if(transitions.isCurrent(ticket))button.disabled=false;}});
 
-// The customizer admits itself once per ship-gate token; this room is open to everyone,
-// so it hands the editor a fresh token each time it (re)opens the embedded bay.
+// The character bay dresses the player's own 64-bit Gala character in the cage room. It never opens the
+// coach customizer, so it needs no ship admission; guests use it too, saving to this device.
 function mountCharacterBay(){
- const host=$('warRoomEditorHost'),status=$('characterBayStatus');
+ const host=$('warRoomGalaHost'),status=$('characterBayStatus');
  if(!host||!status)return;
- const frame=document.createElement('iframe');frame.title='3D character customizer';frame.className='character-bay-editor';
- const retry=document.createElement('button');retry.type='button';retry.textContent='Reopen character bay';retry.hidden=true;
- const fail=text=>{status.textContent=text;retry.hidden=false;frame.remove();};
- function open(){
-  retry.hidden=true;status.textContent='Opening your character bay…';
-  try{sessionStorage.setItem(SHIP_GATE,SHIP_GATE_TOKEN);}catch{fail('Character bay needs session storage on this device.');return;}
-  frame.src='/creature/index.html';if(!frame.isConnected)host.prepend(frame);
- }
- frame.addEventListener('load',()=>{
-  let doc;try{doc=frame.contentWindow.location.pathname==='/creature/index.html'&&frame.contentDocument;}catch{}
-  if(!doc){fail('Character bay could not open.');return;}
-  const style=doc.createElement('style');style.textContent='.coach-dock{display:none!important}';doc.head.append(style);
-  for(const link of doc.querySelectorAll('a[href^="/"]')){if(link.getAttribute('href')==='/pose.html')link.href='/pose.html#portal';link.target='_top';}
-  status.textContent='Design your 64-bit character. Changes save to this phone.';
- });
- retry.onclick=open;host.append(retry);
- // A restored page must not revive the editor's spent admission; reopen it with a new token.
- addEventListener('pagehide',()=>frame.remove());
+ const tell=text=>{status.textContent=text;};
+ let bay=null,module=null;
+ const open=()=>{module??=import('/war-room/gala-bay.js');module.then(({mountGalaBay})=>{bay?.dispose();bay=mountGalaBay(host,{tell});window.warRoomGala=bay;tell('Tap the weapon rack, animal cages, mirror or centre station. Tap your character for a closer look.');}).catch(()=>tell('Character bay could not open on this device.'));};
+ addEventListener('pagehide',()=>{bay?.dispose();bay=null;});
  addEventListener('pageshow',event=>{if(event.persisted)open();});
  open();
 }

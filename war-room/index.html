@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#081f2b"><title>MYR5 · War Room</title>
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script>
+  <script src="/workout-tracks.js"></script><script src="/pod/gala-weapons.js"></script><script src="/pod/gala-avatar.js"></script><script src="/pod/gala-performer.js"></script>
   <script type="module" src="/war-room/war-room.mjs"></script>
 </head>
 <body>
   <main class="war-room" aria-labelledby="title">
     <header class="room-header"><a href="/pose.html#portal">← Portal grimoire</a><span class="room-mark">MOM // INC.</span><span id="access" role="status">Checking account…</span></header>
     <section class="hero"><p class="eyebrow">GALA OPERATIONS</p><h1 id="title">WAR ROOM</h1><p>One shared control surface for your saved run, identity, and ranked time.</p></section>
-    <section class="panel character-bay" aria-labelledby="characterBayTitle"><div class="character-bay-head"><div><p class="eyebrow">64-BIT OPERATIONS</p><h2 id="characterBayTitle">3D character bay</h2></div><p id="characterBayStatus" role="status">Opening your character bay…</p></div><div id="warRoomEditorHost" class="character-bay-stage"></div></section>
+    <section class="panel character-bay" aria-labelledby="characterBayTitle"><div class="character-bay-head"><div><p class="eyebrow">64-BIT OPERATIONS</p><h2 id="characterBayTitle">Gala character bay</h2></div><p id="characterBayStatus" role="status">Opening your character bay…</p></div><div id="warRoomGalaHost" class="character-bay-stage"></div></section>
     <section class="panel look" aria-labelledby="lookTitle"><p class="eyebrow">THIS DEVICE</p><h2 id="lookTitle">Portal appearance</h2><div id="lookPreview" class="look-preview" aria-hidden="true"><i></i></div>
       <div class="look-colors"><label>Portal metal <input id="lookPortal" type="color"></label><label>Destination frame <input id="lookFrame" type="color"></label><label>Light strip <input id="lookStrip" type="color"></label></div>
       <div id="lookBoards" class="look-boards" role="group" aria-label="Board"></div>

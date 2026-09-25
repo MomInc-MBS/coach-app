@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 
 const root=resolve(import.meta.dirname,'..');let server,base,unlocked=false;
-const mime={'.html':'text/html','.mjs':'text/javascript','.css':'text/css'};
+const mime={'.html':'text/html','.mjs':'text/javascript','.js':'text/javascript','.css':'text/css'};
 test.use({channel:'msedge'});test.describe.configure({mode:'serial'});
 test.beforeAll(async()=>{server=http.createServer(async(req,res)=>{const path=new URL(req.url,'http://local').pathname;
  if(path==='/api/auth/config'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({enabled:false}));return;}
@@ -27,6 +27,8 @@ test.beforeAll(async()=>{server=http.createServer(async(req,res)=>{const path=ne
   expect(requests).toContain('/api/gala/leaderboard');
   expect(requests).not.toContain('/api/war-room');
   expect(requests).not.toContain('/api/gala/install-draft');
-  await expect(page.locator('iframe.character-bay-editor')).toHaveAttribute('src','/creature/index.html');
+  await expect.poll(()=>requests).toContain('/war-room/gala-bay.js');
+  expect(requests).not.toContain('/creature/index.html');
+  await expect(page.locator('iframe')).toHaveCount(0);
   expect(new URL(page.url()).pathname).toBe('/war-room/');
- }); test('signed-in deep link, with no Coach Army entitlement, loads scaffold and existing read seams',async({page})=>{unlocked=true;const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));await page.goto(base+'/war-room/');await expect(page.locator('h1')).toHaveText('WAR ROOM');await expect(page.locator('#leaderRows tr')).toHaveCount(1);expect(requests).toContain('/war-room/war-room.mjs');expect(requests).toContain('/api/gala/install-draft');expect(requests).toContain('/api/gala/leaderboard');await expect(page.locator('iframe.character-bay-editor')).toHaveAttribute('src','/creature/index.html');});
+ }); test('signed-in deep link, with no Coach Army entitlement, loads scaffold and existing read seams',async({page})=>{unlocked=true;const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));await page.goto(base+'/war-room/');await expect(page.locator('h1')).toHaveText('WAR ROOM');await expect(page.locator('#leaderRows tr')).toHaveCount(1);expect(requests).toContain('/war-room/war-room.mjs');expect(requests).toContain('/api/gala/install-draft');expect(requests).toContain('/api/gala/leaderboard');await expect.poll(()=>requests).toContain('/war-room/gala-bay.js');expect(requests).not.toContain('/creature/index.html');});

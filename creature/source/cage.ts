@@ -61,7 +61,11 @@ const CSS='.cage-bays{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;
 let styled:HTMLStyleElement|null=null;
 export function cageStyle(){if(!styled?.isConnected){styled=document.createElement('style');styled.textContent=CSS;document.head.append(styled);}}
 // onClose runs when the bay stops being shown (another bay, a console tab, or the cage going away).
-export type CageHooks={openTab:(menu:'body'|'materials')=>boolean;showBay:(title:string,kicker:string,body:Node,onClose?:()=>void)=>void;closeBay?:()=>void;tell:(text:string)=>void};
+// The War Room's Gala bay passes bay and labels: its own menus replace the coach's tabs and bays for every section.
+export type CageHooks={openTab:(menu:'body'|'materials')=>boolean;showBay:(title:string,kicker:string,body:Node,onClose?:()=>void)=>void;closeBay?:()=>void;tell:(text:string)=>void;
+ bay?:(section:Exclude<CageSection,'overview'>)=>void;labels?:Partial<Record<CageSection,{label:string;name:string}>>;volumes?:Partial<Record<Exclude<CageSection,'overview'>,Volume[]>>};
+// What the cage needs from a stage: the coach's CreatureViewer, or the War Room's Gala stage.
+export type CageViewer=Pick<CreatureViewer,'mount'|'renderer'|'camera'|'orbit'|'scene'|'bodyBounds'|'floorObjects'|'settings'|'resize'|'focused'>;
 type Owned={id:string;name:string;boss:string;level:number;granted:boolean};
 function rewards(kind:'pet'|'weapon'):Owned[]{
  const seen=new Map<string,Owned>();
@@ -116,11 +120,11 @@ export function sectionBay(section:'pets'|'weapons'|'clothing'):[string,string,N
  body.append(help('Nothing to wear yet. This empty bay is kept for coach clothing when it arrives.'));return ['Clothing bay','CLOTHING',body];
 }
 
-export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
+export function mountCage(viewer:CageViewer,hooks:CageHooks){
  const stage=viewer.mount,shell=stage.closest('.editor-shell') as HTMLElement|null;cageStyle();
  const bays=document.createElement('div');bays.className='cage-bays';bays.setAttribute('role','group');bays.setAttribute('aria-label','Cage sections');bays.hidden=true;stage.append(bays);
  const buttons=new Map<CageSection,HTMLButtonElement>();
- for(const s of SECTIONS){const b=document.createElement('button');b.type='button';b.textContent=s.label;b.setAttribute('aria-label',s.name);b.dataset.cageSection=s.id;b.setAttribute('aria-pressed','false');b.onclick=()=>select(s.id);bays.append(b);buttons.set(s.id,b);}
+ for(const s of SECTIONS){const b=document.createElement('button'),own=hooks.labels?.[s.id];b.type='button';b.textContent=own?.label??s.label;b.setAttribute('aria-label',own?.name??s.name);b.dataset.cageSection=s.id;b.setAttribute('aria-pressed','false');b.onclick=()=>select(s.id);bays.append(b);buttons.set(s.id,b);}
  let root:T.Group|null=null,disposed=false,current:CageSection|null=null,tween=0;const hits:T.Mesh[]=[],outlines=new Map<CageSection,T.LineSegments[]>();
  const set=(state:string)=>{if(shell)shell.dataset.cage=state;};
  const world=(x:number,y:number,z:number)=>new T.Vector3((x-PEDESTAL[0])*SCALE,(y-PEDESTAL[1])*SCALE,(z-PEDESTAL[2])*SCALE);
@@ -152,7 +156,8 @@ export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
   for(const [id,b] of buttons)b.setAttribute('aria-pressed',String(id===section));
   for(const [id,lines] of outlines)for(const line of lines)line.visible=id===section;
   move(section);
-  if(section==='pedestal')hooks.openTab('body');
+  if(hooks.bay){if(section==='overview')hooks.closeBay?.();else hooks.bay(section);}
+  else if(section==='pedestal')hooks.openTab('body');
   else if(section==='mirror')hooks.openTab('materials');
   else if(section!=='overview'){const [title,kicker,body,onClose]=sectionBay(section);hooks.showBay(title,kicker,body,onClose);}
  }
@@ -183,7 +188,7 @@ export function mountCage(viewer:CreatureViewer,hooks:CageHooks){
    root=new T.Group();root.name='customizer-cage';
    gltf.scene.scale.setScalar(SCALE);gltf.scene.position.copy(world(0,0,0));root.add(gltf.scene);
    const hidden=new T.MeshBasicMaterial({visible:false}),edge=new T.LineBasicMaterial({color:0x7eeaff,transparent:true,opacity:.85});
-   for(const [section,volumes] of Object.entries(VOLUMES) as [CageSection,Volume[]][])for(const [x,y,z,sx,sy,sz,yaw] of volumes){
+   for(const [section,volumes] of Object.entries({...VOLUMES,...hooks.volumes}) as [CageSection,Volume[]][])for(const [x,y,z,sx,sy,sz,yaw] of volumes){
     const geometry=new T.BoxGeometry(sx*SCALE,sy*SCALE,sz*SCALE),mesh=new T.Mesh(geometry,hidden);
     mesh.position.copy(world(x,y,z));mesh.rotation.y=yaw;mesh.userData.section=section;mesh.name='cage-'+section;
     const line=new T.LineSegments(new T.EdgesGeometry(geometry),edge);line.visible=false;mesh.add(line);
