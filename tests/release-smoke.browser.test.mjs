@@ -57,9 +57,11 @@ const portalUp=page=>page.waitForFunction(()=>document.getElementById('portalHom
 const portalSettled=page=>page.waitForFunction(()=>window.myr5Routes?.current?.()===''&&location.hash===''&&!document.querySelector('.portal-glass')&&!document.getElementById('portalChrome')?.matches(':popover-open'));
 // W2-2A: the bottom bar's centre Portal button replaced the quilt's floating Menu button.
 const PORTAL_BUTTON='#coachDock [data-route="portal"]';
+// The tactile dock: six physical keys (no Menu key), each named for assistive tech; the centre one is the raised Portal.
+const DOCK_KEYS=[['settings','Settings'],['food','Food'],['portal','Open workout pod'],['scoreboard','Classroom leaderboard'],['achievements','Achievements'],['reminders','Reminders computer']];
 // W2-2M: BEGIN on the workout start page is above the bar and is what a tap there hits, without scrolling.
 const beginClear=page=>page.evaluate(()=>{const b=document.getElementById('start').getBoundingClientRect(),bar=document.getElementById('coachDock').getBoundingClientRect();return {above:b.height>0&&b.top>=0&&b.bottom<=bar.top,hit:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#start')!==null};});
-const centerHit=(page,selector)=>page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;},selector);
+const centerHit=(page,selector)=>page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!hit&&el.contains(hit);},selector); // a key's own icon/label span is part of the key
 
 let server,base,browser;
 test.before(async()=>{
@@ -77,6 +79,9 @@ test('1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt'
   assert.equal(opened,true,'window.myr5Menus.portal() must resolve truthy once mounted and shown');
   await portalUp(page);
   assert.equal(await page.locator('#portalHome').getAttribute('aria-label'),'Quilt portal');
+  assert.equal(await page.locator('#coachDock').getAttribute('aria-label'),'Coach tools');
+  assertDockKeys(await dockKeys(page),'quilt');
+  assert.equal(await page.locator('#coachDock [aria-label="Menu"]').count(),0,'there is no Menu button in the dock');
  }finally{await context.close();}
 });
 
@@ -96,8 +101,6 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    ['line-lr','.meditation-panel','.meditation-panel [data-meditation-close]'],
    ['line-rl','#remindersPanel','#remindersPanel [data-close]'],
    ['line-down','#settings','#closeSettings'],
-   ['line-up','#portalMenu',null],
-   ['cross','#portalMenu',null],
   ];
   for(const [id,dialogSel,closeSel] of DIALOG_CASES){
    await page.evaluate(()=>window.myr5Portal.show());
@@ -108,6 +111,15 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
    await portalUp(page);
    await portalSettled(page);
+  }
+
+  // The Menu sheet is gone: its two gestures (line-up, cross) open nothing and the quilt stays up, untouched.
+  for(const id of ['line-up','cross']){
+   await page.evaluate(()=>window.myr5Portal.show());
+   await portalUp(page);
+   await page.evaluate(id=>window.myr5Portal.open(id),id);
+   await page.waitForTimeout(300);
+   assert.deepEqual(await page.evaluate(()=>({menu:document.getElementById('portalMenu')?.open===true,dialogs:document.querySelectorAll('dialog[open]').length,quilt:document.getElementById('portalHome').hidden===false,glass:!!document.querySelector('.portal-glass')})),{menu:false,dialogs:0,quilt:true,glass:false},`${id} opens no Menu sheet and leaves the quilt alone`);
   }
 
   // rect (Ian 2026-09-23): the workout start page -- hides the quilt and shows the pod from the top (viewing port,
@@ -143,7 +155,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
  }finally{await context.close();}
 });
 
-test('3. freeze check: a dialog opened over the quilt stays tappable, and the Menu button works again after it closes',async()=>{
+test('3. freeze check: a dialog opened over the quilt stays tappable, and the dock Portal key works again after it closes',async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   // Stand-in for any boot-time <dialog> (the old #fullDownloadOffer, the setup gate, reward reveals):
@@ -169,7 +181,8 @@ test('3. freeze check: a dialog opened over the quilt stays tappable, and the Me
   assert.equal(await centerHit(page,'#fullDownloadOffer button'),true,"the offer's primary button must be tappable, not swallowed by the inert quilt background");
 
   await page.evaluate(()=>{document.getElementById('fullDownloadOffer').close();document.getElementById('fullDownloadOffer').remove();});
-  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the Menu (Portal) button must be hit-testable again once the dialog closes');
+  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the dock Portal key must be hit-testable again once the dialog closes');
+  assertDockKeys(await dockKeys(page),'after the dialog closes');
  }finally{await context.close();}
 });
 
@@ -185,7 +198,7 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
   assert.equal(await centerHit(page,'#downloadsMenu [data-later]'),true,'the menu stays tappable');
   await page.locator('#downloadsMenu [data-later]').click();
   await portalUp(page);
-  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the Menu (Portal) button works again');
+  assert.equal(await centerHit(page,PORTAL_BUTTON),true,'the dock Portal key works again');
   // From Settings, which the quilt opens with its line-down shape.
   await page.evaluate(()=>window.myr5Portal.open('line-down'));
   await page.waitForFunction(()=>document.getElementById('settings')?.open===true);
@@ -199,15 +212,13 @@ test('3b. the Downloads menu is its own screen: the quilt steps aside while it i
  }finally{await context.close();}
 });
 
-test('4. Menu sheet -> Ship opens the ship view inside the metal frame, and the phone back button closes it',async()=>{
+test('4. the oval opens the ship view inside the metal frame above the dock, and the phone back button closes it (#ship too)',async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>window.myr5Menus.portal());
   await portalUp(page);
-  await page.evaluate(()=>window.myr5Portal.open('line-up'));
-  await page.waitForFunction(()=>document.getElementById('portalMenu')?.open===true);
-  await page.locator('#portalMenu [data-menu="ship"]').click();
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true);
+  await page.evaluate(()=>window.myr5Portal.open('oval')); // the Menu sheet's Ship row is gone; the oval is the gesture way in
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',null,{timeout:10000});
   // ship-view.css loads via a dynamically-appended <link>; wait for it before measuring the box.
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed');
   // W2-2K (Ian 23 Sept): the metal frame stays on screen and the ship view fills its window, not the whole screen.
@@ -219,9 +230,14 @@ test('4. Menu sheet -> Ship opens the ship view inside the metal frame, and the 
   const barState=await bar(page),barTop=(await page.locator('#coachDock').boundingBox()).y;
   assert.equal(barState.visible&&barState.tappable,true,'the bar shows and takes taps under the framed ship view');
   assert.ok(box.y+box.height<=barTop,`the frame's window ends above the bar (${box.y+box.height} vs ${barTop})`);
-  assert.equal(await page.evaluate(()=>location.hash),'#ship');
   await page.goBack();
-  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open);
+  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open&&location.hash!=='#select');
+  await portalUp(page);
+  // The #ship route is the same dialog on its own history entry: back closes it too.
+  await page.evaluate(()=>{location.hash='ship';});
+  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&window.myr5Routes.current()==='ship');
+  await page.goBack();
+  await page.waitForFunction(()=>!document.querySelector('dialog.ship-view')?.open&&window.myr5Routes.current()==='');
  }finally{await context.close();}
 });
 
@@ -252,13 +268,23 @@ const bar=page=>page.evaluate(()=>{
  const dock=document.getElementById('coachDock'),r=dock?.getBoundingClientRect(),style=dock&&getComputedStyle(dock);
  const food=dock?.querySelector('[data-route="food"]'),fr=food?.getBoundingClientRect();
  return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>40&&Math.round(r.bottom)===innerHeight,
-  tappable:!!fr&&document.elementFromPoint(fr.left+fr.width/2,fr.top+fr.height/2)===food,
+  tappable:!!fr&&food.contains(document.elementFromPoint(fr.left+fr.width/2,fr.top+fr.height/2)),
   lit:[...dock.querySelectorAll('[aria-current="page"]')].map(b=>b.dataset.route),live:dock.querySelector('.dock-live')?.textContent||''};
 });
+// Every dock key: named, in order, a real 44px+ target (the Portal 56px+) whose centre lands on itself (or its own icon).
+const dockKeys=page=>page.evaluate(()=>[...document.querySelectorAll('#coachDock [data-route]')].map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {route:b.dataset.route,name:b.getAttribute('aria-label'),w:Math.round(r.width),h:Math.round(r.height),hit:!!hit&&b.contains(hit)};}));
+function assertDockKeys(keys,where){
+ assert.deepEqual(keys.map(k=>[k.route,k.name]),DOCK_KEYS,`${where}: the dock has exactly these named keys, no Menu key`);
+ for(const k of keys){
+  assert.equal(k.hit,true,`${where}: ${k.route} takes a tap at its centre`);
+  const min=k.route==='portal'?56:44;
+  assert.ok(k.w>=min&&k.h>=min,`${where}: ${k.route} is a physical target of at least ${min}px (${k.w}x${k.h})`);
+ }
+}
 const DIALOG_ROUTES=[
  ['food','#mealsPanel','food'],['reminders','#remindersPanel','reminders'],['scoreboard','#accountPanel','scoreboard'],
  ['history','#historyPanel',null],['install','#installPanel',null],['settings','#settings','settings'],
- ['achievements','.ach-board','achievements'],['meditate','.meditation-panel',null],['share','#portalMenu',null],
+ ['achievements','.ach-board','achievements'],['meditate','.meditation-panel',null],
  ['ship','dialog.ship-view',null],['select','dialog.ship-view',null],
 ];
 test('6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it',{timeout:180000},async()=>{
@@ -278,6 +304,11 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
    await page.waitForFunction(route=>location.hash!=='#'+route&&window.myr5Routes.current()==='',route);
   }
+  // #share was removed with the Menu: the hash is not a route, opens nothing and adopts no dialog.
+  await page.evaluate(()=>{location.hash='share';});
+  await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(()=>({route:window.myr5Routes.current(),open:document.querySelectorAll('dialog[open]').length,menu:document.getElementById('portalMenu')?.open===true})),{route:'',open:0,menu:false},'#share opens nothing');
+  await page.goBack();await page.waitForFunction(()=>location.hash==='');
   // No-dialog scenes: the workout start page (BEGIN not pressed) and the pod.
   await page.evaluate(()=>{scrollTo(0,400);location.hash='workout';});
   await page.waitForFunction(()=>window.myr5Routes.current()==='workout'&&scrollY===0);
