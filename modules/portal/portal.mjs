@@ -1120,17 +1120,16 @@ function drawLabel(text,[x,y],color,alpha,rect){
  ctx.fillText(text,lx+padX,ly+1);
  ctx.restore();
 }
-function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width,rect,labelAlpha=alpha){
+function drawIdleShape({polys,color,label,labelPt,arrow},alpha,width,rect,drawRouteLabel=true){
  polys.forEach(p=>strokeGlow(p,color,alpha,width));
  if(arrow)drawArrow(arrow.from,arrow.to,color,alpha);
- drawLabel(label,labelPt,color,labelAlpha,rect);
+ if(drawRouteLabel)drawLabel(label,labelPt,color,alpha,rect);
 }
 function drawIdle(now){
  const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
- const labelAlpha=boardId==='grass'||boardId==='cogs'?.9:undefined;
- if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face,labelAlpha));return;}
+ if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face,false));return;}
  const f=idleFrame(now);
- if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,f.width,face,labelAlpha===undefined?f.alpha:Math.max(labelAlpha,f.alpha));
+ if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,f.width,face);
 }
 
 // #22 first-run hint: a glowing fingertip traces the stitched square once, labelled, the first time the
