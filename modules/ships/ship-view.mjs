@@ -79,13 +79,16 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  };
 }
 
-let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null, customizeBtn = null;
-let viewOwner = null;
+let dialog = null, stage = null, bgEl = null, coachMount = null, note = null, fallback = null, downloadBtn = null, customizeBtn = null, retryBtn = null, errorLine = null;
+let viewOwner = null, lastOpen = {};
 let realShip = null, pushedHash = false, openEpoch = 0, coachStage = null, openHash = HASH;
+const LOADING = 'Loading your ship…';
 
-function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; customizeBtn.hidden = true; }
+function clearShipVisual() { realShip?.dispose(); realShip = null; bgEl.style.backgroundImage = ''; fallback.hidden = true; customizeBtn.hidden = true; retryBtn.hidden = true; errorLine.hidden = true; }
 // #148: no ship to tap (no WebGL, or the model failed): the customizer is still one plain button away.
 function offerCustomizer() { fallback.hidden = false; customizeBtn.hidden = false; }
+// A ship that failed to load says so and can be tried again (the same open, re-run in place).
+function offerRetry(text) { errorLine.textContent = text; errorLine.hidden = false; retryBtn.hidden = false; fallback.hidden = false; }
 // Inside the app modules/routes.mjs owns this view's #hash (it pushes and pops it: one owner of history). Standalone
 // (no router) the view keeps its own.
 const routed = () => !!window.myr5Routes;
@@ -114,13 +117,14 @@ async function showStarter({ signedIn, owned, isCurrent, always = false }) {
    const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
    // Offered (W2-2O): the arrival scene steps aside (its beam and status), leaving the plain backdrop, the coach and the offer.
    // No ship to tap either way (#148): the plain customizer button shows too.
-   if (await scene.ready) { if (isCurrent()) starterEntranceDone = true; }
-   else { if (await offerStarter(isCurrent) && realShip === scene) { scene.dispose(); realShip = null; } if (isCurrent()) offerCustomizer(); }
-   return;
+   if (await scene.ready) { if (isCurrent()) starterEntranceDone = true; return true; }
+   if (await offerStarter(isCurrent) && realShip === scene) { scene.dispose(); realShip = null; } if (isCurrent()) offerCustomizer();
+   return false;
   }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP });
   if (!isCurrent()) mounted.dispose(); else realShip = mounted;
- } catch { await offerStarter(isCurrent); if (isCurrent()) offerCustomizer(); /* no WebGL or model: the wonder and the coach still show */ }
+  return true;
+ } catch { await offerStarter(isCurrent); if (isCurrent()) offerCustomizer(); /* no WebGL or model: the wonder and the coach still show */ return false; }
 }
 
 async function waitForCard(timeoutMs = 8000) {
@@ -146,11 +150,13 @@ function build() {
  dialog = document.createElement('dialog'); dialog.className = 'ship-view'; dialog.setAttribute('aria-label', 'Your ship');
  dialog.innerHTML = '<div class="ship-view-stage"><div class="ship-view-bg" aria-hidden="true"></div><div class="ship-view-coach"></div></div>'
   + '<p class="ship-view-note" role="status"></p>'
-  + '<div class="ship-view-fallback" hidden><p></p><button type="button" class="ship-view-download">Download Ships &amp; worlds</button><button type="button" class="ship-view-customize" hidden>Open the customizer</button></div>'
+  + '<div class="ship-view-fallback" hidden><strong class="ship-view-error" role="alert" hidden></strong><p></p><button type="button" class="ship-view-retry" hidden>Try again</button><button type="button" class="ship-view-download">Download Ships &amp; worlds</button><button type="button" class="ship-view-customize" hidden>Open the customizer</button></div>'
   + '<button type="button" class="ship-view-close" aria-label="Close">✕</button>';
  document.body.append(dialog);
  stage = dialog.querySelector('.ship-view-stage'); bgEl = dialog.querySelector('.ship-view-bg'); coachMount = dialog.querySelector('.ship-view-coach');
  note = dialog.querySelector('.ship-view-note'); fallback = dialog.querySelector('.ship-view-fallback'); downloadBtn = dialog.querySelector('.ship-view-download'); customizeBtn = dialog.querySelector('.ship-view-customize');
+ retryBtn = dialog.querySelector('.ship-view-retry'); errorLine = dialog.querySelector('.ship-view-error');
+ retryBtn.onclick = () => { if (dialog.open) void openShipView(lastOpen); };
  customizeBtn.onclick = () => openCustomizer();
  dialog.querySelector('.ship-view-close').onclick = () => dialog.close();
  downloadBtn.onclick = () => { if (typeof window.myr5Packs?.open === 'function') window.myr5Packs.open(downloadBtn.dataset.pack || 'coach-ships-biomes'); else document.querySelector('.coach-dock [data-panel="install"]')?.click(); };
@@ -173,6 +179,7 @@ function build() {
  * owns in history (the oval's is '#select'; Menu -> Ship keeps '#ship' and the once-per-session entrance). */
 export async function openShipView({ loadCoachViewer, getBridge = async () => null, ownedShipIds = () => [], mountArrival = () => null, entrance = 'first', hash = HASH } = {}) {
  if (!dialog) build();
+ lastOpen = arguments[0] || {};
  const epoch = ++openEpoch;
  const owner = viewOwner = globalThis.myr5AuthenticatedAccount?.user?.id;
  const isCurrent = () => epoch === openEpoch && dialog.open && globalThis.myr5AuthenticatedAccount?.user?.id === owner;
@@ -185,37 +192,50 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
  const card = await waitForCard();
  if (!isCurrent()) return dialog;
  // Frame the whole body in the card (feet on its bottom edge) so the ship can hover clear above its top edge.
- if (card) { coachMount.append(card); note.textContent = ''; coachStage ??= window.myr5Creature?.stats?.().stage || null; window.myr5Creature?.stage?.('overlay'); }
+ if (card) { coachMount.append(card); note.textContent = LOADING; coachStage ??= window.myr5Creature?.stats?.().stage || null; window.myr5Creature?.stage?.('overlay'); }
  else note.textContent = 'Coach could not load. Check your connection and try again.';
+ try { await showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner, isCurrent }); }
+ finally { if (epoch === openEpoch && note.textContent === LOADING) note.textContent = ''; }
+ return dialog;
+}
+
+async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner, isCurrent }) {
  const signedIn = !!globalThis.myr5AuthenticatedAccount?.user?.id;
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
- if (!isCurrent()) { bridge?.dispose?.(); return dialog; }
+ if (!isCurrent()) { bridge?.dispose?.(); return; }
  const always = entrance === 'always';
- if (!bridge) { await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }); return dialog; }
+ if (!bridge) { if (!await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }) && isCurrent()) offerRetry('The ship could not load.'); return; }
  try {
   const owned = bridge.ownedShipIds();
   const arrival = await mountArrival({host:stage,assetBridge:bridge,isCurrent});
-  if (!isCurrent()) { if (arrival) arrival.dispose(); else bridge.dispose?.(); return dialog; }
+  if (!isCurrent()) { if (arrival) arrival.dispose(); else bridge.dispose?.(); return; }
   if (arrival) {
    realShip = arrival;
    const completed = await arrival.ready;
-   if (!isCurrent()) { arrival.dispose(); return dialog; }
+   if (!isCurrent()) { arrival.dispose(); return; }
    if (!completed) throw new Error('Ship arrival did not complete');
-   fallback.hidden = true; return dialog;
+   fallback.hidden = true; return;
   }
   const scene = initialScene(readJSON(RECIPE_KEY)), custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
   const shipId = owned.includes(custom.ship) ? custom.ship : owned.includes(scene.ship) ? scene.ship : owned[0];
   if (always && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
-   if (!isCurrent()) { bridge.dispose?.(); return dialog; }
+   if (!isCurrent()) { bridge.dispose?.(); return; }
    const intro = mountShipScene({ host: stage, assetBridge: bridge, ship: shipId });
    realShip = { dispose() { intro.dispose(); bridge.dispose?.(); } };
-   const arrived = await intro.ready; if (isCurrent()) { if (arrived) fallback.hidden = true; else offerCustomizer(); } return dialog;
+   const arrived = await intro.ready; if (!isCurrent()) return;
+   if (!arrived) throw new Error('Ship arrival did not complete'); // the owned ship failed: fall back to the starter below
+   fallback.hidden = true; return;
   }
   const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
-  if (!isCurrent()) { mounted.dispose(); return dialog; }
+  if (!isCurrent()) { mounted.dispose(); return; }
   realShip = mounted; fallback.hidden = true;
- } catch { if (!isCurrent()) { bridge.dispose?.(); return dialog; } clearShipVisual(); bridge.dispose?.(); await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }); }
- return dialog;
+ } catch (error) {
+  if (!isCurrent()) { bridge.dispose?.(); return; }
+  if (error?.name !== 'AbortError') console.warn('Owned ship unavailable', error);
+  clearShipVisual(); bridge.dispose?.();
+  const starter = await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always });
+  if (isCurrent()) offerRetry(starter ? 'Your ship did not load, so the starter ship came instead.' : 'Your ship did not load.');
+ }
 }

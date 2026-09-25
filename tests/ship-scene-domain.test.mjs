@@ -40,3 +40,12 @@ test('the hover pose fits the whole hull into the band above the coach card, for
  }
  assert.deepEqual(shipPoseAbove(coachBand({top:0,height:812},{top:40}),measured),{y:SHIP_ANCHOR_Y,scale:1,belly:.3},'a card filling the stage keeps the base pose');
 });
+test('on a 375x812 phone the hover pose also keeps the wings inside the stage width',()=>{
+ // Measured on a landscape stage, where the wings used half the width; the same hull on a portrait phone is wider in NDC.
+ const measured={top:.7,bottom:.5,left:-.5,right:.5,aspect:1.6,origin:.6,unit:.47},stage={top:0,width:375,height:812};
+ const pose=shipPoseAbove(coachBand(stage,{top:.36*812}),measured),half=.5*1.6/(375/812)*pose.scale;
+ assert.ok(half<=.9+1e-9,`wings inside the stage (NDC half-width ${half})`);
+ assert.ok(pose.scale<1);
+ const wide=shipPoseAbove(coachBand({top:0,width:1600,height:1000},{top:360}),measured);
+ assert.equal(wide.scale,1,'a wide stage keeps full size when the band allows it');
+});

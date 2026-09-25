@@ -6,29 +6,10 @@
 // would 404. tests/ship-view-import-graph.test.mjs enforces that ship-view.mjs never re-acquires
 // this chain.
 import {ownedShipIds,hasSeenShipReveal,acceptShipRevealComplete} from './ship-access.mjs';
-import {createVerifiedShipAssetBridge} from './verified-ship-assets.mjs';
-import {productionMaterialTrust} from '../materials/material-config.mjs';
-import {resolvePostDownloadSection} from '../materials/post-download-sections.mjs';
-import {ChunkDownloader, indexedDbChunkStore, DEFAULT_LOCAL_RESOURCE_POLICY} from '../materials/chunk-delivery.mjs';
 
 export {ownedShipIds};
-
-/** Read-only: resolves to a ready ship/background asset bridge only if this account's owned ship
- * section is already downloaded and verified on this device. Never fetches chunk bytes — a
- * missing/partial pack always resolves to null, so opening the ship view can never start the 60MB
- * download on its own. */
-export async function localVerifiedBridge() {
- const account = globalThis.myr5AuthenticatedAccount, owner = account?.user?.id;
- if (!owner || !ownedShipIds().length) return null;
- const assertOwner = () => { if (globalThis.myr5AuthenticatedAccount?.user?.id !== owner) throw new DOMException('Ship owner changed', 'AbortError'); };
- const trust = productionMaterialTrust(); if (!trust) return null;
- const resolved = await resolvePostDownloadSection('coach-ships-biomes', { trust });
- assertOwner();
- const downloader = new ChunkDownloader({ store: indexedDbChunkStore(), policy: DEFAULT_LOCAL_RESOURCE_POLICY, expectedVersion: resolved.manifest.version, manifestPublicKey: resolved.trust, ownership: async () => { assertOwner(); return owner; } });
- await downloader.verifyStored(resolved.manifest); // local store reads + hash checks only, no network
- assertOwner();
- return createVerifiedShipAssetBridge({ downloader, manifest: resolved.manifest, isOwned: id => id === 'coach-ships-biomes' && globalThis.myr5AuthenticatedAccount?.user?.id === owner, canUseShip: () => { assertOwner(); return ownedShipIds(); } });
-}
+// Shared with the customizer's Ship tab preview (creature/source/editor-workbench.ts).
+export {localVerifiedBridge} from './verified-ship-assets.mjs';
 
 /** Called only with the view's verified local bridge. The real post-flash scene
  * event is the sole source of reveal completion; cancellation never marks seen. */
