@@ -66,7 +66,7 @@ test('SATCOM frame on Install: present, settles to DOWNLOAD LINK, keeps its own 
   // separate steps, making "opens in the acquiring state" flaky even though nothing is wrong
   // (same trick as tests/settings-frame.browser.test.mjs).
   const initial=await page.evaluate(()=>{
-   document.querySelector('[data-panel="install"]').click();
+   window.myr5Routes.go('install');
    const panel=document.getElementById('installPanel');
    return {open:panel.open,frame:panel.classList.contains('satcom-frame'),bolts:panel.querySelectorAll('.satcom-bolt').length,link:panel.querySelector('.satcom-top [data-link]')?.textContent};
   });
@@ -87,7 +87,7 @@ test('SATCOM frame on Install: present, settles to DOWNLOAD LINK, keeps its own 
 
   const reduced=await installed(browser,server.base,{reducedMotion:'reduce'});
   const rpage=await home(reduced,server.base);
-  await rpage.evaluate(()=>document.querySelector('[data-panel="install"]').click());
+  await rpage.evaluate(()=>window.myr5Routes.go('install'));
   await rpage.waitForFunction(()=>document.getElementById('installPanel')?.open===true);
   assert.equal(await rpage.locator('#installPanel .satcom-top [data-link]').textContent(),'DOWNLOAD LINK','reduced motion skips straight to the locked label');
   assert.equal(await rpage.evaluate(()=>document.querySelector('#installPanel .satcom-top').classList.contains('locked')),true);
@@ -95,13 +95,15 @@ test('SATCOM frame on Install: present, settles to DOWNLOAD LINK, keeps its own 
  }finally{await browser?.close();await server.close();}
 });
 
-test('SATCOM frame on the Downloads menu: present at first open, Download selected / Not now stay visible and hit-testable',async()=>{
+test('SATCOM frame on the Downloads menu: present when opened, Download selected / Not now stay visible and hit-testable',async()=>{
  await mkdir(FRAMES,{recursive:true});
  const server=await serve();let browser;
  try{
   browser=await launch();
   const context=await installed(browser,server.base);
   const page=await home(context,server.base);
+  // Downloads no longer auto-opens; open it the way the app does (Settings / Install / ship scene call this).
+  await page.evaluate(()=>window.myr5Packs.open());
   await page.waitForFunction(()=>document.getElementById('downloadsMenu')?.open&&document.querySelector('#downloadsMenu [data-group]'),null,{timeout:15000});
   assert.equal(await page.locator('#downloadsMenu').evaluate(el=>el.classList.contains('satcom-frame')),true,'the Downloads menu gets the frame');
   await page.waitForFunction(()=>document.querySelector('#downloadsMenu .satcom-top')?.classList.contains('locked'),{timeout:5000});
@@ -117,9 +119,9 @@ test('SATCOM frame on the Downloads menu: present at first open, Download select
    assert.equal(await page.locator(selector).isVisible(),true,selector+' stays visible');
    assert.equal(await hitTests(page,selector),true,selector+' stays hit-testable');
   }
-  await page.screenshot({path:resolve(FRAMES,'downloads-menu-first-open-375x812.png')});
-  // The frame doesn't break the menu's own behaviour: Not now still closes it.
+  await page.screenshot({path:resolve(FRAMES,'downloads-menu-375x812.png')});
+  // The frame doesn't break the menu's own behaviour: its dismiss button (data-later; "Close" when opened on demand) still closes it.
   await page.locator('#downloadsMenu [data-later]').click();
-  assert.equal(await page.evaluate(()=>document.getElementById('downloadsMenu')?.open),false,'Not now still closes the menu');
+  assert.equal(await page.evaluate(()=>document.getElementById('downloadsMenu')?.open),false,'the dismiss button still closes the menu');
  }finally{await browser?.close();await server.close();}
 });
