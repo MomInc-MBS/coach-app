@@ -67,20 +67,66 @@ function plainQuilt(){
  return canvas;
 }
 
-export async function createQuiltBoard(host,{knobs=QUILT}={}){
+// Measured fresh from the host box, so it stays correct before ResizeObserver runs and while the portal is CSS-scaled during a dive.
+function quiltRectOf(host){const box=host.getBoundingClientRect(),f=quiltSurfaceLayout(box.width,box.height).face;return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};}
+function patternRectOf(host){const q=quiltRectOf(host);return {left:q.left+q.width*PATTERN.left,top:q.top+q.height*PATTERN.top,width:q.width*(PATTERN.right-PATTERN.left),height:q.height*(PATTERN.bottom-PATTERN.top)};}
+
+// Non-WebGL twin of the quilt (Android can refuse a context, or lose it): the same art, face layout, cut hole and
+// public interface on a plain 2D canvas, so shape navigation never falls back to a blank sheet.
+// ponytail: no cloth ripple and no falling piece; the cut just opens a hole. Add if a 2D board is ever the common path.
+export async function createQuiltBoard2D(host){
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const canvas=document.createElement('canvas'),g=canvas.getContext('2d');
+ if(!g)throw new Error('2D canvas unavailable');
+ canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
+ let image;
+ try{image=await new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=fail;img.src=IMAGE;});}
+ catch{image=plainQuilt();}
+ let width=1,height=1,holes=[],disposed=false;
+ function draw(){
+  if(disposed)return;
+  const scale=Math.min(devicePixelRatio||1,2),{face}=quiltSurfaceLayout(width,height);
+  canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale); // resizing also clears
+  g.setTransform(scale,0,0,scale,0,0);g.save();
+  if(holes.length){g.beginPath();g.rect(0,0,width,height);for(const poly of holes){poly.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](face.left+u*face.width,face.top+v*face.height));g.closePath();}g.clip('evenodd');}
+  g.drawImage(image,face.left,face.top,face.width,face.height);g.restore();
+ }
+ function layout(box={width:host.clientWidth,height:host.clientHeight}){
+  width=Math.max(1,box.width);height=Math.max(1,box.height);
+  for(const [k,v] of Object.entries(quiltSurfaceLayout(width,height).face))host.style.setProperty('--face-'+k,v+'px');
+  draw();
+ }
+ const observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();
+ return {
+  canvas,background:BACKGROUND,faceRect:()=>quiltRectOf(host),quiltRect:()=>quiltRectOf(host),patternRect:()=>patternRectOf(host),
+  cut(poly,color,ms=1100){holes=[poly];draw();return new Promise(done=>setTimeout(done,reduced?0:ms));},
+  heal(){if(holes.length){holes=[];draw();}},
+  press(){},release(){},frameMs:()=>0,pause(){},resume(){},
+  dispose(){disposed=true;observer.disconnect();canvas.remove();},
+ };
+}
+
+// WebGL quilt first; when the driver refuses a renderer (or fails while building it) the 2D board stands in.
+export async function createQuiltBoard(host,opts){
+ try{return await createQuiltBoardGL(host,opts);}
+ catch(error){console.warn('Quilt WebGL unavailable, using the 2D board.',error);return createQuiltBoard2D(host);}
+}
+
+async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  // Transparent canvas; BACKGROUND goes on #portalHome (board.background) so the neon glass shows only through a cut.
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
- let texture;
+ let observer,texture,geometry,material,pieceMat;
+ try{ // a failure after the renderer exists must not leave its canvas and context behind
  try{texture=await new THREE.TextureLoader().loadAsync(IMAGE);}
  catch{texture=new THREE.CanvasTexture(plainQuilt());}
  texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));
  const sun=new THREE.DirectionalLight(0xfff0dc,2.4);sun.position.set(-.7,.55,.45);scene.add(sun);
- const material=new THREE.MeshStandardMaterial({map:texture,roughness:.95,metalness:0,side:THREE.DoubleSide});
+ material=new THREE.MeshStandardMaterial({map:texture,roughness:.95,metalness:0,side:THREE.DoubleSide});
  const segX=knobs.segX,segY=Math.round(segX*IMAGE_H/IMAGE_W);
  // Source-pattern anchor vertices stay in the topology.  layout() moves them to the
  // current pattern boundary, so resizing or rotation never interpolates across a stitch edge.
@@ -93,10 +139,10 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  for(let t=0;t<index.length;t+=3)for(let k=0;k<3;k++){const a=index[t+k],b=index[t+(k+1)%3],o=index[t+(k+2)%3],key=Math.min(a,b)*count+Math.max(a,b);(edges.get(key)||edges.set(key,{a,b,far:[]}).get(key)).far.push(o);}
  const stretch=[],bend=[];for(const e of edges.values()){stretch.push(e.a,e.b);if(e.far.length===2)bend.push(e.far[0],e.far[1]);}
  const stretchIds=new Int32Array(stretch),bendIds=new Int32Array(bend),stretchLen=new Float32Array(stretch.length/2),bendLen=new Float32Array(bend.length/2);
- const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));geometry.setIndex(index);
+ geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));geometry.setIndex(index);
  const mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;scene.add(mesh);
  // Transparent twin for cut pieces, drawn once at load (opacity 0 over the quilt: invisible) so the first cut doesn't hitch on a compile.
- const pieceMat=pieceMaterial(material),warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
+ pieceMat=pieceMaterial(material);const warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
  const fullIndex=geometry.index;let cutting=null;
 
  let width=1,height=1,surface=quiltSurfaceLayout(1,1),frame=0,disposed=false,paused=false,awakeUntil=0,last=0,frameMs=0;
@@ -154,10 +200,8 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
  const local=(x,y)=>clientToBoardLocal(x,y,host.getBoundingClientRect(),width,height);
  // Hidden (display:none) reads as 0x0: keep the last layout rather than shrink the renderer and reset the cloth, only to
  // rebuild both at full size the moment the quilt shows again.
- const observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
- // Measured fresh from the host box (not the last layout), so it stays correct before
- // ResizeObserver runs and while the portal is CSS-scaled during a dive.
- const quiltRect=()=>{const box=host.getBoundingClientRect();const f=quiltSurfaceLayout(box.width,box.height).face;return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};};
+ observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
+ const quiltRect=()=>quiltRectOf(host);
  // Cut-away: grid triangles whose centroid (in quilt-image fractions, v down) is inside poly leave the
  // index -> a hole; a static copy of their current positions + uvs falls into the board. The cloth
  // keeps simulating everything (constraints on the now-invisible vertices are harmless).
@@ -189,7 +233,7 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   faceRect:quiltRect,
   cut,heal,
   // Stitched-shape area in client pixels; the portal normalises traces against it.
-  patternRect(){const q=quiltRect();return {left:q.left+q.width*PATTERN.left,top:q.top+q.height*PATTERN.top,width:q.width*(PATTERN.right-PATTERN.left),height:q.height*(PATTERN.bottom-PATTERN.top)};},
+  patternRect:()=>patternRectOf(host),
   quiltRect,
   press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
   release(id){pointers.delete(id);wake();},
@@ -198,4 +242,5 @@ export async function createQuiltBoard(host,{knobs=QUILT}={}){
   resume(){paused=false;wake();},
   dispose(){cutting?.fall.end();pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
+ }catch(error){observer?.disconnect();pieceMat?.dispose();geometry?.dispose();material?.dispose();texture?.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
 }

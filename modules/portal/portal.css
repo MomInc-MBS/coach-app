@@ -115,6 +115,8 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
 .portal-glass.all>b{background:radial-gradient(circle at 50% 46%,#fff 0,transparent 30%),conic-gradient(from 210deg at 50% 46%,#ff5f1f,#ffff33,#39ff14,#1f51ff,#b026ff,#ff10f0,#ff5f1f)}
 .portal-glass>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .portal-glass.gl>b,.portal-glass.gl:after{display:none}
+.portal-glass:not(.gl)>b{animation:portal-rainbow-turn 4s linear infinite;transform-origin:50% 46%}
+@keyframes portal-rainbow-turn{to{transform:rotate(360deg)}}
 .portal-glass:after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;right:-60%;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 42%,#ffffff55 49%,#ffffff1a 53%,transparent 60%);animation:portal-sheen 6s ease-in-out infinite alternate}
 /* Glass bezel over the board along the exact cut outline, wide enough (JS sets it) to cover the cloth's stair-stepped
    hole edge: soft shadow, smoky glass lit top-left, a neon filament with its glow, a specular line. Static, no filters. */
@@ -134,8 +136,8 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
 @keyframes portal-sheen{from{transform:translateX(-28%)}to{transform:translateX(28%)}}
 @keyframes portal-glass-in{from{opacity:0}}
 @keyframes portal-ripple{from{transform:scale(.12);opacity:.95}to{transform:scale(2.2);opacity:0}}
-@media (prefers-reduced-motion:reduce){.portal-glass:after{animation:none}}
-#portalStatus{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:10;margin:0;text-align:center;color:#f5d9ff;font:13px/1.4 var(--font,system-ui);text-shadow:0 1px 3px #000}
+@media (prefers-reduced-motion:reduce){.portal-glass:after,.portal-glass>b{animation:none}}
+#portalStatus{position:fixed;left:16px;right:16px;bottom:calc(108px + env(safe-area-inset-bottom));z-index:10;margin:0;text-align:center;color:#f5d9ff;font:13px/1.4 var(--font,system-ui);text-shadow:0 1px 3px #000}
 #portalStatus:empty{display:none}
 #portalMenuButton{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10;min-height:48px;min-width:120px;padding:0 22px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 15px/1 var(--font,system-ui);backdrop-filter:blur(10px);box-shadow:0 6px 20px #0007}
 #portalExitButton{position:fixed;right:12px;top:max(12px,env(safe-area-inset-top));z-index:10;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 14px/1 var(--font,system-ui)}

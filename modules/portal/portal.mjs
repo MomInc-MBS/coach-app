@@ -208,7 +208,7 @@ async function loadBoardNow(id,load){
  status(`Loading ${BOARDS[id].label} board…`);
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
- board?.pause();board?.dispose();board=null;boardFailed=false;
+ const old=board;board=null;boardFailed=false;old?.pause();old?.dispose(); // board is null first, so the old canvas's own context-loss event is ignored
  let failureMessage='';
  // Effects place GLB details during init, so they must measure a real host even when startup
  // keeps the portal closed. visibility:hidden lays it out without a content flash or input.
@@ -218,7 +218,7 @@ async function loadBoardNow(id,load){
  try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
  catch(error){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
-  failureMessage=`${BOARDS[id].label} board art is unavailable. Quilt is ready; try the board again later or check Downloads.`;
+  failureMessage=id==='quilt'?'Quilt board art is unavailable. Return to the pod and reconnect or update Coach.':BOARDS[id].label+' board art is unavailable. Quilt is ready; try the board again later or check Downloads.';
   if(id!=='quilt'){
    id='quilt';
    try{board=await BOARDS.quilt.create(boardHost);}
@@ -227,6 +227,8 @@ async function loadBoardNow(id,load){
  }
  if(load!==boardLoad)return null;
  if(!boardShown)board?.pause();
+ // Android can drop a live WebGL context (memory pressure): the canvas would go blank, so rebuild on the quilt (2D when WebGL is gone).
+ const live=board;live?.canvas?.addEventListener('webglcontextlost',e=>{e.preventDefault();if(board===live)loadBoard('quilt');});
  portalHome.classList.toggle('no-board',boardFailed);
  portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
  status(failureMessage);portalHome.dataset.board=id;boardId=id;store.set(BOARD_KEY,id);// a failed pick recovers to quilt on this device instead of retrying every cold start

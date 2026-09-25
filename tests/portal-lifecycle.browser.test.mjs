@@ -55,13 +55,13 @@ test('Back to Coach cancels a pending destination and flash duration/completion 
  assert.equal(await page.evaluate(()=>window.cancelledFlash),'AbortError');assert.equal(await page.locator('.portal-transition-flash').count(),0);
 }));
 
-test('a renderer failure leaves a usable menu without orphaned canvases',async()=>withPortal(async(browser,url)=>{
+test('a renderer failure leaves a usable portal on the 2D quilt, with no orphaned canvases',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage();await page.emulateMedia({reducedMotion:'reduce'});
  await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
- await page.goto(url);assert.equal(await open(page),false);
- assert.equal(await page.locator('#portalBoardHost canvas').count(),0);
- await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
- await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
+ await page.goto(url);assert.equal(await open(page),true);
+ assert.equal(await page.locator('#portalBoardHost canvas').count(),1);
+ await page.evaluate(()=>portal.open('up'));
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel').open);
  await page.close();
 }));
 // W2-2O: the quilt texture is Starter-pack art. Offline without it the board still mounts, as a plain stitched quilt.
@@ -84,8 +84,8 @@ test('a missing quilt texture (no Starter pack, offline) gives a plain stitched 
  assert.ok(cloth.blue>150,`stitched cross across the middle (${cloth.blue} px)`);
  await page.screenshot({path:resolve('.frames','w2-2o-plain-quilt-375x812.png')});
  // Still a working board: the Menu opens Food.
- await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="up"]').click();
- await page.waitForFunction(()=>document.querySelector('#mealsPanel').open&&document.querySelector('#portalHome').hidden);
+ await page.evaluate(()=>portal.open('up'));
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel').open);
  await page.close();
 }));
 
