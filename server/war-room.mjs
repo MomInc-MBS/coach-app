@@ -1,6 +1,5 @@
 import {epochFencedBatch} from './remote-epochs.mjs';
 import {fail} from './domain.mjs';
-import {readEntitlements} from './entitlements.mjs';
 
 // These are the existing Gala family ids.  A selection is presentation data,
 // not an entitlement: this service never creates XP, tiers, or rewards.
@@ -24,11 +23,6 @@ const storedRecipes=value=>{
  for(const item of items){try{const safe=recipe(item);if(!seen.has(safe.id)){seen.add(safe.id);valid.push(safe);}}catch{}if(valid.length===20)break;}
  return valid;
 };
-async function clearance(database,user){
- const entitlements=await readEntitlements(database,user);
- if(!entitlements.coachArmy)fail('Complete verified Coach Army access before opening the War Room.',403);
- return entitlements;
-}
 async function current(database,user){
  return (await database.prepare('SELECT loadout,recipes,revision,updated_at FROM war_room_arsenals WHERE user_id=?').bind(user).first())||{loadout:json({type:'rapier',tier:0}),recipes:'[]',revision:0,updated_at:null};
 }
@@ -39,9 +33,8 @@ async function save(database,user,previous,next,now,dataEpoch){
  return {...next,revision:Number(result.revision),updatedAt:Number(result.updated_at)};
 }
 export async function warRoomApi(database,user,path,method,input,now=Date.now(),{dataEpoch=1}={}){
- const entitlements=await clearance(database,user);
  const row=await current(database,user),state=safe(row);
- if(path==='/api/war-room'&&method==='GET')return {entitlements,state};
+ if(path==='/api/war-room'&&method==='GET')return {state};
  if(path==='/api/war-room/loadout'&&method==='PUT'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
   return {state:await save(database,user,state,{...state,loadout:weapon(input.loadout)},now,dataEpoch)};

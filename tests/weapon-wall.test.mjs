@@ -14,13 +14,13 @@ function transitions(){
 const room=(owner='A',revision=1,type='rapier',tier=0)=>Response.json({
  targetAccountId:owner,dataEpoch:2,state:{revision,loadout:{type,tier}}
 });
-test('weapon wall requires an account and successful gated room read before writing',async()=>{
+test('weapon wall requires an account and successful room read before writing, with no membership copy',async()=>{
  const t=transitions(),calls=[];let account=null;
  const wall=createWeaponWallController({transitions:t,getAccount:()=>account,
-  request:async(path,options)=>{calls.push({path,options});return path==='/api/war-room'?Response.json({error:'Coach Army required'},{status:403}):Response.json({});}});
+  request:async(path,options)=>{calls.push({path,options});return path==='/api/war-room'?Response.json({error:'Sign in required'},{status:401}):Response.json({});}});
  await wall.refresh();assert.equal(calls.length,0);assert.equal(await wall.save('rapier',1),false);
  account={user:{id:'A'}};await wall.refresh();
- assert.equal(wall.getState().mode,'gated');assert.equal(await wall.save('rapier',1),false);
+ assert.equal(wall.getState().mode,'locked');assert.doesNotMatch(wall.getState().message,/Coach Army/);assert.equal(await wall.save('rapier',1),false);
  assert.equal(calls.length,1);wall.dispose();assert.equal(t.count(),0);
 });
 test('weapon wall sends only Gala type, tier, and revision with account fence',async()=>{

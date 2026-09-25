@@ -44,9 +44,9 @@ export function createWeaponWallController({
    set({mode:'ready',message:message||'Saved Gala loadout for this account.',loadout:{...room.state.loadout},revision:room.state.revision});
   }catch(error){
    if(!current(run,ticket,expectedOwner))return;
-   const gated=error.status===403,unauthenticated=error.status===401;
-   set({mode:gated?'gated':unauthenticated?'locked':'unavailable',
-    message:gated?'Complete verified Coach Army access in the War Room.':unauthenticated?'Sign in to view your War Room loadout.':error.message||'War Room unavailable. Refresh to retry.',
+   const unauthenticated=error.status===401;
+   set({mode:unauthenticated?'locked':'unavailable',
+    message:unauthenticated?'Sign in to view your War Room loadout.':error.message||'War Room unavailable. Refresh to retry.',
     loadout:null,revision:null});
   }
  }
@@ -70,7 +70,7 @@ export function createWeaponWallController({
    if(!current(run,ticket,expectedOwner))return false;
    if(error.status===409){await refresh('War Room changed on another device. Review the refreshed loadout before saving.');return false;}
    owner=null;client.clear();
-   set({mode:error.status===403?'gated':error.status===401?'locked':'unavailable',
+   set({mode:error.status===401?'locked':'unavailable',
     message:error.message||'Could not save. Refresh to retry.',loadout:null,revision:null});
    return false;
   }finally{if(run===generation)pending=false;}
@@ -83,7 +83,7 @@ export function createWeaponWallController({
  };
 }
 
-// The cage mounts this after its own scene admission; the server checks Coach Army clearance again.
+// The cage mounts this after its own scene admission; the server still requires the signed-in owner.
 export function mountWeaponWall({host,request,transitions,getAccount,eventTarget=globalThis.window}){
  if(!host?.ownerDocument)throw Error('Weapon wall needs a host element.');
  const doc=host.ownerDocument,controller=createWeaponWallController({request,transitions,getAccount});

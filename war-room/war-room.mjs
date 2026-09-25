@@ -1,7 +1,6 @@
 import {authFetch} from '../auth-client.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN} from '../modules/ships/ship-scene-domain.mjs';
 import {authTransitions} from '../auth-transition.mjs';
-import {coachArmyComplete} from '../public-access.mjs';
 import {createWarRoomApi} from './account-api.mjs';
 import {readLook,saveLook,readBoard,saveBoard,LOOK_DEFAULTS,BOARD_CHOICES} from '../modules/portal/portal-look.mjs';
 const css=document.createElement('link');css.rel='stylesheet';css.href='/war-room/war-room.css';document.head.append(css);
@@ -9,7 +8,7 @@ const $=id=>document.getElementById(id);
 const CHECKS=[['djscratch','DJ Scratch'],['gala','Gala'],['lilboyfriend','Lil Boyfriend'],['corgi','Corgi'],['hand','Helping Hand'],['armie','Coach Armie']];
 const transitions=authTransitions(),{api}=createWarRoomApi({request:authFetch,transitions});
 const time=ms=>{if(!Number.isFinite(Number(ms)))return '—';const s=Math.max(0,Math.round(Number(ms)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
-const GUEST='Sign in and finish Coach Army to use your saved run and loadouts.';
+const GUEST='Sign in to use your saved run and loadouts.';
 let arsenal=null;
 transitions.subscribe(()=>{arsenal=null;$('saveLoadout').disabled=true;$('arsenalStatus').textContent='Account changed. Refresh the War Room.';});
 function renderArsenal(state){arsenal=state;$('saveLoadout').disabled=false;$('weaponType').value=state.loadout.type;$('weaponTier').value=String(state.loadout.tier);$('arsenalStatus').textContent=state.updatedAt?'Saved to this account.':'No saved loadout yet.';}
@@ -27,23 +26,23 @@ for(const [name,id] of Object.entries(LOOK_INPUTS))$(id).addEventListener('input
 $('lookBoards').replaceChildren(...BOARD_CHOICES.map(([id,label])=>{const b=document.createElement('button');b.type='button';b.dataset.board=id;b.textContent=label;b.onclick=()=>{saveBoard(id);renderLook();};return b;}));
 $('lookReset').addEventListener('click',()=>{for(const name of Object.keys(LOOK_INPUTS))saveLook(name,LOOK_DEFAULTS[name]);renderLook();});
 renderLook();
-// Public room and leaderboard; saved run and arsenal remain behind verified Coach Army and the server API.
+// Public room and leaderboard; saved run and arsenal need a signed-in account and the server API.
 async function load(){
  const ticket=transitions.beginRefresh();arsenal=null;$('saveLoadout').disabled=true;$('refresh').disabled=true;
  const board=api('/api/gala/leaderboard').then(value=>{if(transitions.isCurrent(ticket))renderBoard(value);},error=>{if(transitions.isCurrent(ticket))$('boardStatus').textContent='Leaderboard unavailable: '+error.message;});
  try{
   const account=await authFetch('/api/account').then(response=>response.ok?response.json():null,()=>null);transitions.assertCurrent(ticket);
-  if(!coachArmyComplete(account)){$('access').textContent='Public War Room';$('runStatus').textContent=GUEST;$('checks').replaceChildren();$('arsenalStatus').textContent=GUEST;return;}
-  $('access').textContent='Verified Coach Army access';
+  if(!account){$('access').textContent='Public War Room';$('runStatus').textContent=GUEST;$('checks').replaceChildren();$('arsenalStatus').textContent=GUEST;return;}
+  $('access').textContent='Signed-in War Room';
   const [runReply,room]=await Promise.all([api('/api/gala/install-draft'),api('/api/war-room')]);transitions.assertCurrent(ticket);renderRun(runReply.data);renderArsenal(room.state);
- }catch(error){if(!transitions.isCurrent(ticket))return;$('runStatus').textContent=error.message;$('arsenalStatus').textContent='Arsenal unavailable: '+error.message;$('access').textContent='Verified access · service unavailable';}
+ }catch(error){if(!transitions.isCurrent(ticket))return;$('runStatus').textContent=error.message;$('arsenalStatus').textContent='Arsenal unavailable: '+error.message;$('access').textContent='Signed in · service unavailable';}
  finally{await board;if(transitions.isCurrent(ticket))$('refresh').disabled=false;}
 }
 $('refresh').addEventListener('click',load);load();
 $('saveLoadout').addEventListener('click',async()=>{if(!arsenal)return;const ticket=transitions.capture(),button=$('saveLoadout');button.disabled=true;try{const reply=await api('/api/war-room/loadout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:arsenal.revision,loadout:{type:$('weaponType').value,tier:Number($('weaponTier').value)}})});transitions.assertCurrent(ticket);renderArsenal(reply.state);}catch(error){if(transitions.isCurrent(ticket))$('arsenalStatus').textContent=error.message;}finally{if(transitions.isCurrent(ticket))button.disabled=false;}});
 
-// The customizer admits itself once per ship-gate token; this room is already behind the Coach Army
-// gate, so it hands the editor a fresh token each time it (re)opens the embedded bay.
+// The customizer admits itself once per ship-gate token; this room is open to everyone,
+// so it hands the editor a fresh token each time it (re)opens the embedded bay.
 function mountCharacterBay(){
  const host=$('warRoomEditorHost'),status=$('characterBayStatus');
  if(!host||!status)return;
