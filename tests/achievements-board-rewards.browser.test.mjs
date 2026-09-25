@@ -33,10 +33,10 @@ test('achievement detail renders the exact named skin and ship rewards from each
    window.openBoard();document.querySelector('.ach-boss[data-id="strider-1"]').click();
    return [...document.querySelectorAll('.ach-detail ol li span')].map(node=>node.textContent);
   });
-  assert.match(rendered[0],/Starforged Plate/);
+  assert.match(rendered[0],/Legendary Pack/);
   assert.match(rendered[2],/Supportive Ship/);
   assert.match(rendered[4],/Direct Ship/);
-  assert.match(rendered[2],/Magma/,'#140: Chest L3 gives Magma in the freed Rubber Grip slot');assert.doesNotMatch(rendered.join(' '),/Rubber Grip/);
+  assert.match(rendered[2],/Legendary Pack/);assert.doesNotMatch(rendered.join(' '),/Magma|Rubber Grip/);
   assert.doesNotMatch(rendered.join(' '),/Weapon 1|Texture 1|Boss skin/,'catalogued names replace the generic placeholders');
  }finally{await browser?.close();server.closeAllConnections();await new Promise(resolveClose=>server.close(resolveClose));}
 });

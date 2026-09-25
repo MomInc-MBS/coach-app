@@ -119,9 +119,9 @@ test('skin unlock slots are deterministic and additive to existing first-boss re
   for (const [row, meta] of Object.entries(TRACKS)) {
     const boardRow = { chest:'strider', quads:'ringer', glutes:'manyarm', 'arms-shoulders':'wedge', yoga:'blob', 'martial-arts':'cap', cardio:'stalk', meditation:'tanka' }[row];
     const levels = bossRewards(`${boardRow}-1`);
-    assert.ok(levels[0].some(item => item.kind === 'texture'), `${row}: original L1 texture retained`);
-    assert.ok(levels[2].some(item => item.kind === 'texture'), `${row}: original L3 texture retained`);
-    assert.ok(levels[4].some(item => item.kind === 'texture'), `${row}: original L5 texture retained`);
+    assert.ok(levels[0].some(item => item.kind === 'reward-pack' && item.tier === 'legendary'), `${row}: original L1 texture retained`);
+    assert.ok(levels[2].some(item => item.kind === 'reward-pack' && item.tier === 'legendary'), `${row}: original L3 texture retained`);
+    assert.ok(levels[4].some(item => item.kind === 'reward-pack' && item.tier === 'legendary'), `${row}: original L5 texture retained`);
     for (const level of [0,2,4]) {
       const additions = levels[level].filter(item => item.kind === 'creature-skin');
       assert.equal(additions.length, 2, `${row}: two packet skins at L${level + 1}`);

@@ -1,0 +1,9 @@
+# Reward packs
+
+The existing battle pass still awards weapons at levels 1 and 3, pets at level 4, and boss availability at their existing levels. Boss texture stays at level 2; level 5 records boss completion. Existing palette slots now award Uncommon packs. Existing texture slots at levels 1, 3, and 5 award Legendary packs. A Rare pack sits beside the pet at level 4. Food palette slots become Uncommon packs; their bonuses remain. The three pack tiers select categories at exactly 90/7/3, 80/15/5, and 70/20/10 percent for color, 64-bit, and texture.
+
+The source catalog has no reward item literally named "64-bit." The original `plan/PLAN.md` §6.4 calls the boss skin a full “64-bit” reskin, and `plan/VISUAL-CHANGES-HANDOFF.md` calls 64-bit an art direction. The 64-bit outcome therefore draws from the existing boss-skin IDs. Their old direct level-5 cosmetic grants become pack loot, while level 5 still records a boss-clear unlock; boss availability remains governed by the same step progression. The separate post-download creature-skin grants stay in their existing slots.
+
+Pack ownership is stored by the battle-pass ledger under `reward-pack`; opened results use an account-scoped local record; awarded palettes/textures use the existing creator unlock store and boss skins use the existing battle-pass ledger. No signed optional-art pack entitlement is created by opening a reward pack. Daily login uses the existing `myr5:account-ready` event and grants one Uncommon pack per account and local calendar date.
+
+The opening view uses `reward-assets/canister.glb`, converted from the attached FBX with Blender 4.5.10. It renders at 64 × 64 pixels with nearest-neighbor scaling. Tier color is applied to the material and stage. Reduced-motion users see the model and result without the pop animation.

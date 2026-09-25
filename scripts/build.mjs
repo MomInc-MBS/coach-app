@@ -27,14 +27,14 @@ await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'ii
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
 await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs'],define:materialRelease.defines});
-await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','./modules/rooms/classroom.mjs'],define:materialRelease.defines});
+await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['three','three/addons/loaders/GLTFLoader.js','./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','./modules/rooms/classroom.mjs'],define:materialRelease.defines});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 await rm('dist/client/materials',{recursive:true,force:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
 console.log('Packed nutrition bytes removed:',await packNutrition());
-for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor'])await cp(folder,`dist/client/${folder}`,{recursive:true});
+for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor','reward-assets'])await cp(folder,`dist/client/${folder}`,{recursive:true});
 if(materialRelease.configured){
  await copySignedMaterialManifests({sourceDir:materialManifestSource,siteRoot:'dist/client',baseUrl:process.env.MYR5_MATERIALS_BASE_URL,publicJwk:materialRelease.publicJwk});
  const configPath='dist/client/modules/materials/material-config.mjs';let config=await readFile(configPath,'utf8');
