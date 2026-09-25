@@ -11,7 +11,7 @@ test('only the explicit authoritative Coach Army entitlement unlocks editors',()
  assert.equal(coachArmyComplete({entitlements:{coachArmy:{status:'completed',completedAt:'1700000000000'}}}),false);
  assert.equal(coachArmyComplete(null),false);
 });
-test('public entry and functional routes stay available while optional routes are gated',()=>{for(const path of ['/pose.html','/pose.html?panel=reminders','/api/reminders','/signin.html','/creature/index.html'])assert.equal(canEnterPublicRoute(path.split('?')[0],false),true,path);for(const path of ['/war-room/','/handborne/index.html','/editor/character']){assert.equal(isOptionalPublicRoute(path),true,path);assert.equal(canEnterPublicRoute(path,false),false,path);assert.equal(canEnterPublicRoute(path,true),true,path);}});
+test('public entry and functional routes stay available while optional routes are gated',()=>{for(const path of ['/pose.html','/pose.html?panel=reminders','/api/reminders','/signin.html','/creature/index.html','/war-room/','/war-room/index.html'])assert.equal(canEnterPublicRoute(path.split('?')[0],false),true,path);for(const path of ['/handborne/index.html','/editor/character']){assert.equal(isOptionalPublicRoute(path),true,path);assert.equal(canEnterPublicRoute(path,false),false,path);assert.equal(canEnterPublicRoute(path,true),true,path);}});
 test('the main Coach page never applies the optional-access visual lock',()=>{
  const html=fs.readFileSync(new URL('../pose.html',import.meta.url),'utf8');
  assert.doesNotMatch(html,/locked-public\.css/);

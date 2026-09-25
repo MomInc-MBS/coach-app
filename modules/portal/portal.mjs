@@ -32,7 +32,7 @@ const TRAIL_NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
 const TRAIL_NEON_RGB=TRAIL_NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
 const IDLE={armMs:3000,fastMs:500,slowMs:2500,pauseMs:4000,gapMs:600};
 // Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
-const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down','line-up','cross'];
+const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down'];
 const TRAIL_FADE_MS=800;
 // #20 double-tap to open: a second tap within TAP_MS and TAP_MOVE_PX of the first counts as one double-tap;
 // TAP_HIT_PX is how close (client px) it must land to a shape's stitched outline. #21 "almost": a failed
@@ -110,17 +110,14 @@ export const MENUS={
  up:{label:'Food',route:'food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
  down:{label:'Achievements',route:'achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
- hdiamond:{...LEADERBOARD,hidden:true},
- x:{label:'War Room',route:'war-room',color:'#ff10f0',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5Routes?.ROUTES?.['war-room']?.locked?.()??window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
+ hdiamond:LEADERBOARD,
+ x:{label:'War Room',route:'war-room',color:'#ff10f0',icon:ICONS.joystick,kind:'nav',open:via('war-room',()=>location.assign('/war-room/index.html'))},
  'line-lr':{label:'Meditation',route:'meditate',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
  'line-rl':{label:'Reminders',route:'reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
  'line-down':{label:'Settings',route:'settings',color:'#39ff14',icon:ICONS.gear,kind:'dialog',open:via('settings',()=>{document.getElementById('openSettings')?.click();return document.getElementById('settings');})},
  // Line-up opens the Menu sheet; it is hidden from the sheet grid itself.
- 'line-up':{label:'Menu',color:'#ffffff',icon:ICONS.star,kind:'menu',hidden:true},
  // Full-screen ship view (Ian 2026-09-22: the coach capsule view, full screen, with the ship and pixel planet). Menu sheet only.
- ship:{label:'Ship',route:'ship',color:'#b026ff',icon:ICONS.rocket,kind:'dialog',open:via('ship',()=>window.myr5Menus?.ship?.())},
  // War Room/Arcade has no gesture: Menu sheet only, same lock as before.
- warroom:{label:'Arcade / War Room',route:'war-room',color:'#1f51ff',icon:ICONS.joystick,kind:'nav',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:'Finish Coach setup to unlock the War Room.',open:via('war-room',()=>location.assign('/war-room/index.html'))},
 };
 
 // The locked intake theme disables transitions with !important; inline !important keeps the portal moving.
@@ -258,7 +255,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
-  <button id="portalMenuButton" type="button">Menu</button><button id="portalExitButton" type="button">Pod</button>`;
+  <button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
  if(!chrome.showPopover)chrome.remove(); // no Popover API (iOS Safari 16-): no UA hidden state, so it would sit over every screen; frameOn() skips framing
@@ -275,8 +272,7 @@ function buildDom(){
  // W2-2A: the app's bottom bar (routes.mjs) is up on the quilt; its centre Portal button replaces the floating Menu
  // button, and the focus trap cycles the whole bar plus Pod (and Armie's inbox button, which stays live on the quilt).
  const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
- menuBtn=barPortal||portalHome.querySelector('#portalMenuButton');
- if(bar)portalHome.querySelector('#portalMenuButton').remove();
+ menuBtn=barPortal||portalHome.querySelector('#portalExitButton');
  const exitBtn=portalHome.querySelector('#portalExitButton');
  if(bar)exitBtn.remove(); // the centre mechanical key returns to the pod when the dock is present
  else exitBtn.onclick=()=>setVisible(false);
@@ -1513,13 +1509,13 @@ function arriveFromCore(dialog,core,ms){
 function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}
 
 async function runShape(id){
- if(busy||!boardShown)return;
+ if(busy||!boardShown||!MENUS[id])return;
  const run=++sequence;busy=true;scheduleIdle();
  try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}
  finally{if(run===sequence){busy=false;scheduleIdle();}}
 }
 // Lines are open strokes with no enclosed area; portalWindow() gives them (and the X) a window to cut (#124).
-const LINE_IDS=new Set(['line-lr','line-rl','line-down','line-up']);
+const LINE_IDS=new Set(['line-lr','line-rl','line-down']);
 const lineTemplatePts=id=>SHAPES.line[(id==='line-lr'||id==='line-rl')?1:0].points;
 async function openDirect(menu,current){
  // No dive in, but the way back out is still the wormhole: the destination's own shape, or the full square.
@@ -1658,7 +1654,7 @@ function endPointer(e,cancel){
   lastTap=isDouble?null:tap;
   if(isDouble){
    const id=nearestTapShape(tap.x,tap.y);
-   if(id){buzz(12);runShape(id);}
+   if(MENUS[id]){buzz(12);runShape(id);}
   }
   return;
  }
@@ -1668,7 +1664,7 @@ function endPointer(e,cancel){
  finalizeTimer=setTimeout(()=>{
   const strokes=pendingStrokes,trailPts=pendingTrailPts;pendingStrokes=[];pendingTrailPts=[];
   const id=recognizeShape(strokes);
-  if(id){
+  if(MENUS[id]){
    // #105: on a match, the drawn trail itself flashes the destination colour before the cut starts.
    flashOutline(trailPts.map(pts=>pts.map(pt=>[pt.x,pt.y])),id==='cross'?'#ffffff':(MENUS[id]?.color||'#ffffff'));
    buzz(12); // #29
@@ -1677,7 +1673,7 @@ function endPointer(e,cancel){
   }
   // #21 "almost": close but not a match — flash the nearest candidate's outline + faint label, don't open it.
   const near=nearestShape(strokes);
-  if(near&&near.score>=ALMOST_COVER){
+  if(near&&MENUS[near.id]&&near.score>=ALMOST_COVER){
    const rect=board?board.patternRect():fallbackRect(),info=idleShapeInfo(near.id,rect);
    flashOutline(info.polys,info.color,{label:`Almost: ${info.label}`,labelPt:info.labelPt,duration:ALMOST_MS});
    buzz([12,40,12]); // #29 double-pulse
@@ -1764,7 +1760,7 @@ export async function mountPortal({visible=false}={}){
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
-  trace(strokes){const id=recognizeShape(strokes);if(id)runShape(id);return id;},
+  trace(strokes){const id=recognizeShape(strokes);if(MENUS[id])runShape(id);return MENUS[id]?id:null;},
   board:id=>loadBoard(id),
   openWorkoutHome,
   flashTransition:async({duration=520}={})=>{

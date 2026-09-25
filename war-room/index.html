@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#081f2b"><title>MYR5 · War Room</title>
-  <script src="/public-entry.mjs" data-entry="/war-room" data-module="/war-room/war-room.mjs"></script>
+  <script type="module" src="/war-room/war-room.mjs"></script>
 </head>
 <body>
   <main class="war-room" aria-labelledby="title">
-    <header class="room-header"><a href="/pose.html#portal">← Portal grimoire</a><span class="room-mark">MOM // INC.</span><span id="access" role="status">Verifying access…</span></header>
+    <header class="room-header"><a href="/pose.html#portal">← Portal grimoire</a><span class="room-mark">MOM // INC.</span><span id="access" role="status">Checking account…</span></header>
     <section class="hero"><p class="eyebrow">GALA OPERATIONS</p><h1 id="title">WAR ROOM</h1><p>One shared control surface for your saved run, identity, and ranked time.</p></section>
     <section class="panel character-bay" aria-labelledby="characterBayTitle"><div class="character-bay-head"><div><p class="eyebrow">64-BIT OPERATIONS</p><h2 id="characterBayTitle">3D character bay</h2></div><p id="characterBayStatus" role="status">Opening your character bay…</p></div><div id="warRoomEditorHost" class="character-bay-stage"></div></section>
     <section class="run-grid" aria-label="Run status">
@@ -16,7 +16,7 @@
     </section>
     <section class="panel board"><div class="section-heading"><div><p class="eyebrow">PUBLIC RECORD</p><h2>Rankings</h2></div><button id="refresh" type="button">Refresh</button></div><p id="boardStatus" role="status">Loading board…</p><table><thead><tr><th>Rank</th><th>DJ</th><th>Time</th></tr></thead><tbody id="leaderRows"></tbody></table></section>
     <section class="panel arsenal"><h2>Arsenal</h2><p>Saved loadouts are account-owned. Set your weapon here or design your 3D character above.</p><label>Weapon <select id="weaponType"><option value="rapier">Rapier</option><option value="greatsword">Greatsword</option><option value="dagger">Dagger</option><option value="sabre">Sabre</option><option value="axe">Axe</option><option value="hammer">Hammer</option><option value="mace">Mace</option><option value="flail">Flail</option><option value="spear">Spear</option><option value="trident">Trident</option><option value="halberd">Halberd</option><option value="scythe">Scythe</option><option value="bow">Bow</option><option value="crossbow">Crossbow</option><option value="chakram">Chakram</option><option value="gauntlets">Gauntlets</option><option value="staff">Staff</option><option value="wand">Wand</option><option value="tome">Tome</option><option value="cannon">Cannon</option></select></label><label>Saved tier <input id="weaponTier" type="number" min="0" max="20" step="1"></label><button id="saveLoadout" type="button">Save loadout</button><p id="arsenalStatus" role="status"></p><p class="contract">Legacy local data is not automatically claimed; import is only available after a verified account session.</p></section>
-    <footer><a href="/pose.html#portal">Return to portal</a><span>War Room is available only after verified Coach Army completion.</span></footer>
+    <footer><a href="/pose.html#portal">Return to portal</a><span>Saved runs and loadouts need a verified Coach Army account.</span></footer>
   </main>
 </body>
 </html>

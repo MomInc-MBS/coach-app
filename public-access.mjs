@@ -2,7 +2,7 @@
 // entitlements; this only prevents optional UI routes from being entered
 // before durable Coach setup is present.
 // The coach customizer is open to everyone (Ian, 2026-09-16: roster release).
-export const OPTIONAL_ROUTE_PREFIXES = Object.freeze(['/war-room','/warroom','/handborne','/character-editor','/editor']);
+export const OPTIONAL_ROUTE_PREFIXES = Object.freeze(['/handborne','/character-editor','/editor']);
 export const OPTIONAL_PRECACHE_PREFIXES = Object.freeze(['/handborne/','/war-room','/warroom','/character-editor/','/editor/','/pocket-hardware.css','/hardware-launch.css','/pod/hardware.css','/pod/hardware.mjs','/pod/whiteboard.css']);
 // This is deliberately a narrow integration seam, not an inference from
 // onboarding. The eventual account response must carry the authoritative

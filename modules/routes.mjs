@@ -21,7 +21,6 @@ const whenOpen=(selector,opening)=>new Promise(resolve=>{
  watch.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['open']});
  Promise.resolve(opening).then(dialog=>{watch.disconnect();resolve(open()||dialog);},()=>{watch.disconnect();resolve(null);});
 });
-const WAR_ROOM_LOCKED='Finish Coach setup to unlock the War Room.';
 
 // id -> {label, open() -> its dialog (or a promise of it), dialog: selector of the dialog it owns (adopted
 // however it opens), page: a no-dialog scene, focus: what a page route focuses, nav: another page, own: the
@@ -42,10 +41,8 @@ export const ROUTES={
  meditate:{label:'Meditation',dialog:'.meditation-panel',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
  reminders:{label:'Reminders',dialog:'#remindersPanel',open:()=>panel('reminders')},
  settings:{label:'Settings',dialog:'#settings',open(){$('openSettings')?.click();return $('settings');}},
- // Share isn't built: its route is today's portal Menu sheet (the traced line-up opens the same sheet).
- share:{label:'Menu',dialog:'#portalMenu',async open(){if(!quiltUp()&&!await window.myr5Menus?.portal?.())return null;await window.myr5Portal?.open?.('line-up');return $('portalMenu');}},
  ship:{label:'Ship',dialog:'dialog.ship-view',open:()=>window.myr5Menus?.ship?.()},
- 'war-room':{label:'War Room',nav:'/war-room/index.html',locked:()=>window.myr5VerifiedOptionalAccess!==true,lockedMessage:WAR_ROOM_LOCKED},
+ 'war-room':{label:'War Room',nav:'/war-room/index.html'},
  pod:{label:'Training pod',page:true,focus:'#homeScreen',open:hideQuilt},
  history:{label:'History',dialog:'#historyPanel',open:()=>panel('history')},
  install:{label:'Install',dialog:'#installPanel',open:()=>panel('install')},
