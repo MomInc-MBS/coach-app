@@ -107,7 +107,7 @@ test('a failed jelly or cogs packet can retry without poisoning the other boards
  await page.close();
 }));
 
-test('saved missing jelly falls back to quilt without Downloads; rapid picks end on working grass; only an explicit pick offers Downloads once',async()=>withPortal(async(browser,url)=>{
+test('saved or explicit missing jelly recovers to quilt without redirecting Downloads; rapid picks end on grass',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:375,height:812}});const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{localStorage.setItem('myr5.portalBoard','jelly');window.packOffers=[];window.myr5Packs={open:id=>window.packOffers.push(id)};});
@@ -118,6 +118,7 @@ test('saved missing jelly falls back to quilt without Downloads; rapid picks end
  const board=()=>page.locator('#portalHome').getAttribute('data-board'),offers=()=>page.evaluate(()=>window.packOffers.length);
  assert.equal(await board(),'quilt','cold start with a missing saved jelly falls back to quilt');
  assert.equal(await offers(),0,'cold start never opens Downloads');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.portalBoard')),'quilt','failed saved jelly is cleared for the next cold start');
  // second open/sync: storage + pageshow re-sync, then dispose and a fresh cold mount
  await page.evaluate(()=>{dispatchEvent(new Event('storage'));dispatchEvent(new Event('pageshow'));});
  await page.waitForTimeout(500);
@@ -134,12 +135,15 @@ test('saved missing jelly falls back to quilt without Downloads; rapid picks end
  assert.equal(await page.locator('.portal-wormhole.gl canvas').count(),1,'grass tunnel draws');
  await page.evaluate(()=>portal.playWormhole({direction:'out',minMs:50}));
  assert.equal(await offers(),0,'rapid picks with an available jelly never offer Downloads');
- // an actually missing board picked by hand offers Downloads exactly once
+ // An actually missing board picked by hand shows an inline failure and leaves all other boards usable.
  jellyMissing=true;
  await page.evaluate(()=>document.querySelector('#portalMenu [data-board="jelly"]').click());
- await page.waitForFunction(()=>window.packOffers.length>0&&document.getElementById('portalHome').dataset.board==='quilt');
+ await page.waitForFunction(()=>document.getElementById('portalHome').dataset.board==='quilt'&&document.getElementById('portalStatus').textContent.includes('Jelly board art is unavailable'));
  await page.waitForTimeout(500);
- assert.deepEqual(await page.evaluate(()=>window.packOffers),['grimoire-jelly'],'one explicit offer');
+ assert.equal(await offers(),0,'an explicit failed pick never redirects to Downloads');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.portalBoard')),'quilt','failed explicit pick saves a working board');
+ await page.evaluate(()=>portal.board('grass'));
+ assert.equal(await board(),'grass','a working board still opens after the failed Jelly pick');
  assert.deepEqual(errors,[]);
  await page.close();
 }));

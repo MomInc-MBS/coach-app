@@ -199,12 +199,12 @@ function updateBoardChips(){const tint=menuSheet?.querySelector('input[type=colo
 // Loads run one at a time: effects (jelly's module state) are singletons, so a superseded load disposing late
 // must never overlap the next board's init. A load superseded while queued does nothing.
 let loadQueue=Promise.resolve();
-function loadBoard(id,{explicit=false}={}){
+function loadBoard(id){
  if(!BOARDS[id])id='quilt';
- const wanted=wantedBoard=id,load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,wanted,load,explicit):null);
+ wantedBoard=id;const load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,load):null);
  loadQueue=run.catch(()=>{});return run;
 }
-async function loadBoardNow(id,wanted,load,explicit){
+async function loadBoardNow(id,load){
  status(`Loading ${BOARDS[id].label} board…`);
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
@@ -218,10 +218,10 @@ async function loadBoardNow(id,wanted,load,explicit){
  try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
  catch(error){
   console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
-  failureMessage=`${BOARDS[id].label} board art is unavailable. Download the ${BOARDS[id].label} grimoire in Downloads to keep its board and tunnel offline.`;
+  failureMessage=`${BOARDS[id].label} board art is unavailable. Quilt is ready; try the board again later or check Downloads.`;
   if(id!=='quilt'){
-   if(explicit&&load===boardLoad)window.myr5Packs?.open?.('grimoire-'+id); // Downloads opens only for a board just picked, never for a saved pick at start/sync
-   try{board=await BOARDS.quilt.create(boardHost);id='quilt';}
+   id='quilt';
+   try{board=await BOARDS.quilt.create(boardHost);}
    catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
   }else boardFailed=true;
  }
@@ -229,7 +229,7 @@ async function loadBoardNow(id,wanted,load,explicit){
  if(!boardShown)board?.pause();
  portalHome.classList.toggle('no-board',boardFailed);
  portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
- status(failureMessage);portalHome.dataset.board=id;boardId=id;if(id===wanted)store.set(BOARD_KEY,id);// an uncached pick falls back to quilt but stays the saved choice
+ status(failureMessage);portalHome.dataset.board=id;boardId=id;store.set(BOARD_KEY,id);// a failed pick recovers to quilt on this device instead of retrying every cold start
 updateBoardChips();
  return board;
  }finally{if(hiddenForLoad){portalHome.style.visibility=priorVisibility;if(!boardShown)portalHome.hidden=true;}}
@@ -312,7 +312,7 @@ function buildDom(){
   setVisible(false);menu.open?.();
  });
  menuSheet.querySelector('input[type=color]').oninput=e=>store.set(tintKey(boardId),e.target.value);
- menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected,{explicit:true});if(!lifecycle.signal.aborted)setVisible(true);});
+ menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected);if(!lifecycle.signal.aborted)setVisible(true);});
  workoutHome=document.createElement('dialog');workoutHome.id='portalWorkoutHome';workoutHome.className='portal-workout-home';document.body.append(workoutHome);
  workoutHome.addEventListener('close',restoreWorkoutHome);
 }
