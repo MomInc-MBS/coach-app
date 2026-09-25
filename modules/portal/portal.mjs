@@ -714,7 +714,7 @@ function showAura(look,why='open'){
  const xs=look.pts.map(p=>p[0]),ys=look.pts.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys),bw=Math.max(...xs)-bx,bh=Math.max(...ys)-by;
  const el=document.createElement('div');el.className='portal-aura';el.setAttribute('aria-hidden','true');el.classList.toggle('shaped',!!look.shaped);
  el.style.cssText=`--aura:${look.color};--aura-seq:${[...seq,seq[0]].join(',')};--cx:${d2(cx)}px;--cy:${d2(cy)}px`;
- const label=String(look.label||'').toUpperCase().replace(/[<&>]/g,'');
+ const label=look.id==='down'?'':String(look.label||'').toUpperCase().replace(/[<&>]/g,''); // Achievements already titles the scene inside the cut.
  // One static svg (the aperture's depth inside the outline, the name outside it) and one masked layer holding the
  // flow: two neon wheels turning against each other (the second flickering, for the fire) and the specular blob.
  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".2" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".28" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="color-mix(in srgb,${look.color} 45%,#fff)" stroke-width="2.5" stroke-linejoin="round"/>`
