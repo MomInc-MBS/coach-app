@@ -2,28 +2,31 @@
 // MIT cracked-glass core (cracked-glass-core.mjs) unchanged; this file only drives it: one big radial crack
 // where the finger lands, then, as the finger drags, a hairline along its path with small V / Y / Z cracks
 // shooting off sideways just behind it, each retracting tips-first back into its root. All drawn on the glow
-// layer only so the paint layer keeps the guides. AGPL-3.0-or-later.
+// layer only so the paint layer keeps the guides: a cyan-white core over a thin dark rim (EDGE), which emits nothing
+// but darkens the ice under it (ice.fragment), so the cracks read on the dark 3D ice and on the pale flat poster alike.
+// AGPL-3.0-or-later.
 import {generateFracture,computeFrame} from './cracked-glass-core.mjs';
 
 // Big press crack: field side as a fraction of the paint width, lifecycle (ms), fracture options.
-export const BIG={frac:.45,grow:300,hold:600,shrink:400,opts:{rays:{count:7},rings:{count:3}}};
+export const BIG={frac:.45,grow:300,hold:1000,shrink:400,opts:{rays:{count:7},rings:{count:3}}};
 // Drag trail knobs. Timings in ms: shoot out (ease-out) / hold / retract (the growth run backwards).
 // Ranges are [min,max] picked at random per crack. Screen px, so they look the same on any face size.
-// Each crack is gone 1.26 s after its birth, well inside Ian's 7 s return-to-normal rule.
-export const TRAIL={grow:110,hold:250,retract:900,
+// Each crack is gone 1.71 s after its birth (R7: held ~2x longer so it reads), well inside Ian's 7 s rule.
+export const TRAIL={grow:110,hold:700,retract:900,
  spacing:[9,20],   // screen px of finger travel between cracks
  size:[18,40],     // screen px, a crack's unit length (V prongs ~ size, Y and Z a bit shorter overall)
  sweep:[10,55],    // degrees a crack leans back from square-off the path (a wake behind the finger)
  jag:.13,          // sideways kink of each third of a segment, as a fraction of its length
- // R7 (Ian 26 Sept: "i cant see ... the ice cracks"): about 2.5x wider than first tuned so they read on a phone.
- width:4.5,hair:2.4,taper:.75, // core width at the root / of the path hairline (paint px at 1024), tip taper
+ // R7 (Ian 26 Sept: "i cant see ... the ice cracks"): 5x the first tuning; a 1024 px face is ~330 CSS px on a phone.
+ width:9,hair:5,taper:.75, // core width at the root / of the path hairline (paint px at 1024), tip taper
  max:70};          // ponytail: cap on live trail cracks; the oldest (already mostly retracted) is dropped first on a very fast drag
 const MAX_BIG=8;
 // ponytail: POOL big fractures reused with a random spin, LEVELS cached frames each, since
 // computeFrame is ~2 ms per call; raise POOL if repeats ever show.
 const POOL=6,LEVELS=16,FRAME_OPTS={quality:'normal',timeline:{crackStart:0,crackEnd:1,shatterStart:Infinity}};
-const CORE='#e8fbff',HALO='rgba(70,200,255,1)',HALO_BLUR=10,BIG_EDGE=2.5; // BIG_EDGE: paint px at 1024 stroked round the big crack's fill
-const FLAT={core:'#062331',halo:'rgba(120,225,255,1)',thick:2.4};
+// CORE: the crack line (a tight cyan GLINT round it); EDGE: the dark rim, EDGE_PX each side; BIG_EDGE: the big crack's
+// stroke. Paint px at 1024.
+const CORE='#d6fbff',GLINT='rgba(120,230,255,.9)',EDGE='rgba(2,20,32,.95)',EDGE_PX=3,BIG_EDGE=4;
 
 // --- Pure lifecycle helpers (age in ms since spawn) ------------------------------------------
 // Big crack growth 0..1: grow, hold at 1, shrink back to 0; reduced motion is fully grown until the hold ends.
@@ -92,10 +95,11 @@ export function visible(b,r){
 }
 // Add a filled tapered outline of visible points p to the current path, pointed at its last point. Every
 // outline winds the same way, so one nonzero fill unions them all.
-function ribbon(gc,p,h0,taper,len){
+// pad: added to every half-width, tip included (the dark rim round a crack).
+function ribbon(gc,p,h0,taper,len,pad=0){
  const n=p.length,o=[];
  for(let i=0;i<n;i++){
-  const a=p[i?i-1:0],b=p[i<n-1?i+1:i],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,h=i<n-1?h0*(1-taper*p[i][2]/len):0;
+  const a=p[i?i-1:0],b=p[i<n-1?i+1:i],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,h=pad+(i<n-1?h0*(1-taper*p[i][2]/len):0);
   o.push(-dy/l*h,dx/l*h);
  }
  gc.moveTo(p[0][0]+o[0],p[0][1]+o[1]);
@@ -105,9 +109,7 @@ function ribbon(gc,p,h0,taper,len){
 }
 
 // One instance per board layer: the 3D board's (ice itself) and the flat board's 2D trace (ice.trace2d, R7) each get their own.
-// core/halo: the crack colours, thick: a width factor. The flat poster is pale and busy, so its 2D trace draws dark,
-// thicker cracks with a bright rim (FLAT).
-export function iceEffect({core=CORE,halo=HALO,thick=1}={}){
+export function iceEffect(){
 let S=null; // per-instance state
 
 function frame(i,k){ // cached Path2D of big pool pattern i at growth level k (lazily computed)
@@ -128,23 +130,26 @@ function spawnTrail(p,x,y,dx,dy,k){
  p.x=x;p.y=y;S.dirty=true;
 }
 function redraw(now){
- const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale*thick;
+ const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale,pad=EDGE_PX*S.scale,glint=()=>{gc.shadowColor=GLINT;gc.shadowBlur=3*S.scale;},flat=()=>{gc.shadowBlur=0;};
  gc.clearRect(0,0,S.glow.canvas.width,S.glow.canvas.height);
- gc.save();gc.fillStyle=core;gc.shadowColor=halo;gc.shadowBlur=HALO_BLUR*S.scale;
- for(const c of S.live){
+ gc.save();gc.lineJoin='round';
+ for(const c of S.live){ // dark rim, then the core
   const age=now-c.t0,k=Math.round(crackT(age,S.reduced)*LEVELS);
   if(!k)continue;
   gc.setTransform(1,0,0,1,0,0);gc.translate(c.x,c.y);gc.rotate(c.rot);gc.translate(-f,-f);
-  gc.globalAlpha=crackAlpha(age,S.reduced);const p=frame(c.i,k);gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale*thick;gc.strokeStyle=core;gc.stroke(p);
+  gc.globalAlpha=crackAlpha(age,S.reduced);const p=frame(c.i,k);
+  flat();gc.strokeStyle=EDGE;gc.lineWidth=(BIG_EDGE+2*EDGE_PX)*S.scale;gc.stroke(p);
+  glint();gc.fillStyle=gc.strokeStyle=CORE;gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale;gc.stroke(p);
  }
- if(S.trail.length){
-  gc.setTransform(1,0,0,1,0,0);gc.globalAlpha=1;gc.beginPath();
-  for(const c of S.trail){
+ if(S.trail.length){ // every live crack in one path per pass: the rims (padded), then the cores
+  gc.setTransform(1,0,0,1,0,0);gc.globalAlpha=1;
+  const cracks=pad=>{gc.beginPath();for(const c of S.trail){
    const r=trailReach(now-c.t0,S.reduced)*c.len;
-   for(const b of c.shape){const v=visible(b,r);if(v.length>1)ribbon(gc,v,TRAIL.width*h,TRAIL.taper,c.reach);}
-   const v=visible(c.hair,r);if(v.length>1)ribbon(gc,v,TRAIL.hair*h,0,1);
-  }
-  gc.fill();
+   for(const b of c.shape){const v=visible(b,r);if(v.length>1)ribbon(gc,v,TRAIL.width*h,TRAIL.taper,c.reach,pad);}
+   const v=visible(c.hair,r);if(v.length>1)ribbon(gc,v,TRAIL.hair*h,0,1,pad);
+  }};
+  flat();cracks(pad);gc.fillStyle=EDGE;gc.fill();
+  glint();cracks(0);gc.fillStyle=CORE;gc.fill();
  }
  gc.restore();
  S.glow.texture.needsUpdate=true;
@@ -190,4 +195,6 @@ function dispose(){S=null;}
 return {init,press,move,release,step,dispose};
 }
 
-export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},...iceEffect(),trace2d:()=>iceEffect(FLAT)};
+// fragment (3D): the ice under the glow layer darkens by its alpha, so the dark rim (which emits nothing) shows as dark.
+export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},
+ fragment:'diffuseColor.rgb*=1.0-0.85*glo.a;',...iceEffect(),trace2d:iceEffect};

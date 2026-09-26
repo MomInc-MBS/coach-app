@@ -5,10 +5,10 @@ import {crackT,crackAlpha,trailReach,trailLife,crackShape,visible,BIG,TRAIL,ice}
 const near=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-9,`${msg??''} ${a} != ${b}`);
 const seeded=(s=7)=>()=>(s=(s*16807)%2147483647)/2147483647;
 
-test('big crack: grow 300 ms, hold 600 ms, shrink 400 ms, gone by 1.3 s',()=>{
- assert.equal(crackT(150),.5);assert.equal(crackT(899),1);
- assert.equal(crackT(1100),.5);assert.equal(crackAlpha(1100),.5);
- assert.equal(crackAlpha(1300),0);
+test('big crack: grow 300 ms, hold 1 s, shrink 400 ms, gone by 1.7 s',()=>{
+ assert.equal(crackT(150),.5);assert.equal(crackT(1299),1);
+ assert.equal(crackT(1500),.5);assert.equal(crackAlpha(1500),.5);
+ assert.equal(crackAlpha(1700),0);
 });
 
 test('trail reach: shoots out, holds, retracts along the same curve backwards; no fade',()=>{
@@ -18,11 +18,11 @@ test('trail reach: shoots out, holds, retracts along the same curve backwards; n
  assert.equal(trailReach(held-1),1); // hold
  near(trailReach(held+r/2),.75,'retract mirrors growth');
  for(let t=0;t<=g;t+=g/8)near(trailReach(held+r*(1-t/g)),trailReach(t),'reverse at '+t);
- assert.equal(trailReach(held+r),0);assert.equal(trailLife(),held+r);assert.ok(trailLife()<=1300);
+ assert.equal(trailReach(held+r),0);assert.equal(trailLife(),held+r);assert.ok(trailLife()>=1500&&trailLife()<=2000,'lasts ~1.5-2 s (R7)');
 });
 
 test('reduced motion: whole at once, gone after the hold',()=>{
- assert.equal(crackT(0,true),1);assert.equal(crackAlpha(899,true),1);assert.equal(crackAlpha(900,true),0);
+ assert.equal(crackT(0,true),1);assert.equal(crackAlpha(1299,true),1);assert.equal(crackAlpha(1300,true),0);
  const held=TRAIL.grow+TRAIL.hold;
  assert.equal(trailReach(0,true),1);assert.equal(trailReach(held-1,true),1);assert.equal(trailReach(held,true),0);
  assert.equal(trailLife(true),held);
@@ -60,14 +60,14 @@ test('ice: glow only, trail cracks spaced along the drag and capped, wiped once 
  ice.init({paint,glow,toWorld:(u,v)=>[u*1000,-v*1000]}); // a 1000 px wide face on screen
  const t=performance.now();
  ice.press(1,.2,.5);ice.move(1,.23,.5); // 30 screen px -> 1 to 3 cracks at 9..20 px spacing
- assert.equal(ice.step(1/60,t+50),true);assert.equal(gc.fills,2); // big + one fill for the whole trail
- assert.ok(gc.outlines>=2&&gc.outlines<=12);
+ assert.equal(ice.step(1/60,t+50),true);assert.equal(gc.fills,3); // big + the whole trail twice (dark rims, then cores)
+ assert.ok(gc.outlines>=4&&gc.outlines<=24);
  ice.move(1,.9,.5);ice.move(1,.1,.5);ice.move(1,.9,.5); // 2300 more px -> ~160 cracks, over the cap
  gc.fills=gc.outlines=0;assert.equal(ice.step(1/60,performance.now()+200),true); // all fully out: 2 (Z) to 4 (Y) outlines each, hairline included
- assert.ok(gc.outlines>=2*TRAIL.max&&gc.outlines<=4*TRAIL.max,'capped at TRAIL.max: '+gc.outlines);
- assert.equal(gc.clears,2);assert.equal(gc.fills,2);assert.equal(paint.texture.needsUpdate,undefined);
- gc.fills=0;ice.step(1/60,t+1200); // big still shrinking, trail still retracting
- assert.equal(gc.fills,2);
+ assert.ok(gc.outlines>=4*TRAIL.max&&gc.outlines<=8*TRAIL.max,'capped at TRAIL.max: '+gc.outlines);
+ assert.equal(gc.clears,2);assert.equal(gc.fills,3);assert.equal(paint.texture.needsUpdate,undefined);
+ gc.fills=0;ice.step(1/60,t+1200); // big still held, trail still retracting
+ assert.equal(gc.fills,3);
  const end=performance.now()+Math.max(trailLife(),BIG.grow+BIG.hold+BIG.shrink); // newest crack's death
  assert.equal(ice.step(1/60,end),false);assert.equal(gc.clears,4);
  glow.texture.needsUpdate=false;

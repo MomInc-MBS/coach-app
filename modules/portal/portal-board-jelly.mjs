@@ -203,9 +203,10 @@ function step(dt,frameNow){
 }
 function dispose(){S=null;}
 
-// R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth), drawn per segment as a
-// dark cut on `paint` with glowing lips on `glow` (opaque strokes, light scaled into the colour, so the round joins don't
-// stack into beads), closing into a fading seam. Own state, no THREE.
+// R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth) as a translucent lime
+// slit on `paint` (drawn opaque, deeper down its middle, then faded as a whole by SLIT.alpha, so the round joins never
+// stack into beads) inside a light rim on `glow`, tapering to a thin healing seam behind the finger. Own state, no THREE.
+const SLIT={lime:'rgb(150,240,70)',deep:'rgb(45,125,20)',deepFrac:.4,alpha:.62,rim:.008,seam:'rgb(195,255,140)',seamAlpha:.55};
 export function jellyGash(){
  let S=null;
  const rgb=(c,k)=>`rgb(${c.map(v=>v*k*255|0)})`;
@@ -220,12 +221,13 @@ export function jellyGash(){
    pc.clearRect(0,0,W,H);gc.clearRect(0,0,W,H);pc.lineCap=gc.lineCap='round';
    const segs=[...live].filter(b=>b.prev&&live.has(b.prev)).map(b=>{const a=b.prev,age=t-(a.t+b.t)/2;return {age,w:gashWidth(age)*W,x0:a.u*W,y0:a.v*H,x1:b.u*W,y1:b.v*H};});
    const line=(c,s,width,{x0,y0,x1,y1})=>{c.strokeStyle=s;c.lineWidth=width;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();};
-   for(const s of segs){ // lips first, then the cut out of them (all of it, so a join's cap never rings the cut), the dark inside on paint
-    if(s.w>.5)line(gc,rgb(TRAIL.edgeRGB,TRAIL.edgeGlow),s.w+W*.014,s);
-    else{const k=1-Math.min(1,(s.age-TRAIL.close)/(TRAIL.life-TRAIL.close));line(pc,`rgba(0,0,0,${TRAIL.seamDark*k})`,W*TRAIL.seam*2,s);line(gc,rgb(TRAIL.lipRGB,TRAIL.lipGlow*k),W*TRAIL.bulgeW*2,s);}
-   }
-   gc.globalCompositeOperation='destination-out';for(const s of segs)if(s.w>.5)line(gc,'#000',s.w,s);gc.globalCompositeOperation='source-over';
-   for(const s of segs)if(s.w>.5)line(pc,rgb(TRAIL.deepRGB,1),s.w,s);
+   const open=segs.filter(s=>s.w>.5);
+   for(const s of open)line(pc,SLIT.lime,s.w,s);for(const s of open)line(pc,SLIT.deep,s.w*SLIT.deepFrac,s); // the slit, opaque
+   pc.globalCompositeOperation='destination-in';pc.fillStyle=`rgba(0,0,0,${SLIT.alpha})`;pc.fillRect(0,0,W,H);pc.globalCompositeOperation='source-over'; // then translucent
+   for(const s of segs)if(s.w<=.5){pc.globalAlpha=SLIT.seamAlpha*(1-Math.min(1,(s.age-TRAIL.close)/(TRAIL.life-TRAIL.close)));line(pc,SLIT.seam,W*TRAIL.seam,s);} // the healing tail
+   pc.globalAlpha=1;
+   for(const s of open)line(gc,rgb(TRAIL.edgeRGB,1),s.w+2*W*SLIT.rim,s); // the rim, the slit cut out of it
+   gc.globalCompositeOperation='destination-out';for(const s of open)line(gc,'#000',s.w,s);gc.globalCompositeOperation='source-over';
    return S.trail.length>0;
   },
   dispose(){S=null;},
