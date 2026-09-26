@@ -3,7 +3,7 @@ import {resolve,sep} from 'node:path';
 import {compactModels} from './compact-models.mjs';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
-import {deploymentSize,SITES_ARCHIVE_LIMIT} from './deployment-size.mjs';
+import {deploymentSize,WORKERS_FILE_LIMIT,WORKERS_FILE_BYTES} from './deployment-size.mjs';
 import {omitDuplicateCoachIcon} from './icon-stage.mjs';
 import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
 import {build as bundleEditor} from 'esbuild';
@@ -33,7 +33,7 @@ await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:tru
 const releaseBuild=await prepareReleaseBuild();
 await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs'],plugins:[vendoredThree],define:materialRelease.defines});
 await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['three','three/addons/loaders/GLTFLoader.js','./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','./modules/rooms/classroom.mjs'],define:materialRelease.defines});
-await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/worker.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
+await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/cloudflare.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 await rm('dist/client/materials',{recursive:true,force:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
@@ -91,6 +91,6 @@ const sources={};for(const folder of ['server','db','scripts','scheduler','pod',
 for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry)&&!['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs'].includes(entry))sources[entry]=await readFile(entry,'utf8');
 await unlink('dist/client/source.json').catch(error=>{if(error?.code!=='ENOENT')throw error;});
 await writeFile('dist/client/source.json.gz',gzipSync(JSON.stringify(sources),{level:9}));
-const {payloadBytes,tarBytes,headroom}=await deploymentSize('dist');
-console.log(`Sites local tar: ${tarBytes} / ${SITES_ARCHIVE_LIMIT} bytes; ${headroom} bytes headroom (${payloadBytes} file bytes). Validate the final staged Sites archive before upload.`);
+const {files,payloadBytes,largest}=await deploymentSize('dist');
+console.log(`Workers limits: ${files} / ${WORKERS_FILE_LIMIT} files; largest ${largest.bytes} / ${WORKERS_FILE_BYTES} bytes (${largest.path}); ${payloadBytes} total bytes.`);
 console.log('Coach build ready.');

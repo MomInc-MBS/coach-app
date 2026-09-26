@@ -1,0 +1,55 @@
+// MyR5 Coach on Cloudflare Workers (replaces OpenAI Sites hosting).
+// `npm run build` first; the Worker is dist/server/index.js and the static app is dist/client.
+// Production: `wrangler deploy`. Staging (workers.dev, empty D1, no cron): `wrangler deploy --env staging`.
+// Secrets are `wrangler secret put <NAME>` per Worker, never in this file.
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "myr5-coach",
+	"main": "dist/server/index.js",
+	"compatibility_date": "2026-05-15",
+	// The Vite SSR bundle resolves @clerk/backend's crypto to `node:crypto` (webcrypto), as on Sites.
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": false,
+	"preview_urls": false,
+	// Attach only after Ian's go (needs mominc.online on Cloudflare nameservers):
+	// "routes": [{ "pattern": "myr5.mominc.online", "custom_domain": true }],
+	// Assets first, as on Sites: `/` serves index.html (200), /pose.html 307s to /pose, and
+	// only unmatched paths (/api/*, /health, /repair-coach, /icons/coach-512.png) reach the Worker.
+	"assets": { "directory": "dist/client", "binding": "ASSETS" },
+	"observability": { "enabled": true },
+	"triggers": { "crons": ["* * * * *"] },
+	// Public values (live /api/auth/config serves the Clerk ones). Clerk sign-in also needs the
+	// CLERK_JWT_KEY secret; release email stays off unless the RESEND_API_KEY secret exists.
+	"vars": {
+		"CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubW9taW5jLm9ubGluZSQ",
+		"CLERK_FRONTEND_URL": "https://clerk.mominc.online",
+		"CLERK_AUTHORIZED_PARTIES": "https://myr5.mominc.online",
+		"RELEASE_ORIGIN": "https://myr5.mominc.online",
+		"RELEASE_EMAIL_FROM": "dispatch@mominc.online"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "myr5-coach",
+			"database_id": "5731afde-1437-4fcf-9b25-1ad868b24fe3",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"env": {
+		"staging": {
+			"name": "myr5-coach-staging",
+			"workers_dev": true,
+			"triggers": { "crons": [] },
+			// No Clerk (its production keys only accept mominc.online) and no release email on staging.
+			"vars": {},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "myr5-coach-staging",
+					"database_id": "4b93f2db-21cb-4697-95ef-4611f07818e8",
+					"migrations_dir": "drizzle"
+				}
+			]
+		}
+	}
+}

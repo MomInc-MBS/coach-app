@@ -45,7 +45,7 @@ export async function signOut(returnTo='/pose.html'){
   ]);
  }catch{}finally{
   clearTimeout(timer);try{localStorage.removeItem('myr5-login-provider');}catch{}
-  // Always clear the old platform session too, even when Clerk is unavailable.
-  location.assign('/signout-with-chatgpt?return_to='+encodeURIComponent(safeReturn(returnTo)));
+  // Clerk is the only session; leave even when Clerk is unavailable.
+  location.assign(safeReturn(returnTo));
  }
 }

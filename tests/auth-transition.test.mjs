@@ -107,7 +107,7 @@ test('launch reminder facade captures epoch assertions and never replaces explic
 test('signout still revokes Clerk and redirects when coordinator and storage fail',async()=>{
  const f=fixture(),redirects=[];let clerkSignouts=0;
  const auth=authHarness(f,{invalidate(){throw Error('blocked');}},{signOut:async()=>clerkSignouts++},async()=>assert.fail('No fetch needed'),{localStorage:{getItem(){throw Error();},removeItem(){throw Error();}},location:{assign:url=>redirects.push(url)}});
- await auth.signOut();assert.equal(clerkSignouts,1);assert.equal(redirects.length,1);assert(redirects[0].startsWith('/signout-with-chatgpt?'));
+ await auth.signOut();assert.equal(clerkSignouts,1);assert.equal(redirects.length,1);assert.equal(redirects[0],'/pose.html');
 });
 test('launch signout is not held by remote unsubscribe or local cleanup failures',async()=>{
  const line=launch.split('\n').find(value=>value.startsWith("$('signOut').onclick=")),elements={signOut:{}};let signedOut=0,remoteAttempts=0;
