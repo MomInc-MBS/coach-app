@@ -15,13 +15,15 @@ export const TRAIL={grow:110,hold:250,retract:900,
  size:[18,40],     // screen px, a crack's unit length (V prongs ~ size, Y and Z a bit shorter overall)
  sweep:[10,55],    // degrees a crack leans back from square-off the path (a wake behind the finger)
  jag:.13,          // sideways kink of each third of a segment, as a fraction of its length
- width:1.8,hair:1,taper:.75, // core width at the root / of the path hairline (paint px at 1024), tip taper
+ // R7 (Ian 26 Sept: "i cant see ... the ice cracks"): about 2.5x wider than first tuned so they read on a phone.
+ width:4.5,hair:2.4,taper:.75, // core width at the root / of the path hairline (paint px at 1024), tip taper
  max:70};          // ponytail: cap on live trail cracks; the oldest (already mostly retracted) is dropped first on a very fast drag
 const MAX_BIG=8;
 // ponytail: POOL big fractures reused with a random spin, LEVELS cached frames each, since
 // computeFrame is ~2 ms per call; raise POOL if repeats ever show.
 const POOL=6,LEVELS=16,FRAME_OPTS={quality:'normal',timeline:{crackStart:0,crackEnd:1,shatterStart:Infinity}};
-const CORE='#dff7ff',HALO='rgba(110,215,255,.8)',HALO_BLUR=6;
+const CORE='#e8fbff',HALO='rgba(70,200,255,1)',HALO_BLUR=10,BIG_EDGE=2.5; // BIG_EDGE: paint px at 1024 stroked round the big crack's fill
+const FLAT={core:'#062331',halo:'rgba(120,225,255,1)',thick:2.4};
 
 // --- Pure lifecycle helpers (age in ms since spawn) ------------------------------------------
 // Big crack growth 0..1: grow, hold at 1, shrink back to 0; reduced motion is fully grown until the hold ends.
@@ -102,7 +104,11 @@ function ribbon(gc,p,h0,taper,len){
  gc.closePath();
 }
 
-let S=null; // per-instance state; a single portal board is ever active at once
+// One instance per board layer: the 3D board's (ice itself) and the flat board's 2D trace (ice.trace2d, R7) each get their own.
+// core/halo: the crack colours, thick: a width factor. The flat poster is pale and busy, so its 2D trace draws dark,
+// thicker cracks with a bright rim (FLAT).
+export function iceEffect({core=CORE,halo=HALO,thick=1}={}){
+let S=null; // per-instance state
 
 function frame(i,k){ // cached Path2D of big pool pattern i at growth level k (lazily computed)
  const f=S.field;
@@ -122,14 +128,14 @@ function spawnTrail(p,x,y,dx,dy,k){
  p.x=x;p.y=y;S.dirty=true;
 }
 function redraw(now){
- const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale;
+ const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale*thick;
  gc.clearRect(0,0,S.glow.canvas.width,S.glow.canvas.height);
- gc.save();gc.fillStyle=CORE;gc.shadowColor=HALO;gc.shadowBlur=HALO_BLUR*S.scale;
+ gc.save();gc.fillStyle=core;gc.shadowColor=halo;gc.shadowBlur=HALO_BLUR*S.scale;
  for(const c of S.live){
   const age=now-c.t0,k=Math.round(crackT(age,S.reduced)*LEVELS);
   if(!k)continue;
   gc.setTransform(1,0,0,1,0,0);gc.translate(c.x,c.y);gc.rotate(c.rot);gc.translate(-f,-f);
-  gc.globalAlpha=crackAlpha(age,S.reduced);gc.fill(frame(c.i,k));
+  gc.globalAlpha=crackAlpha(age,S.reduced);const p=frame(c.i,k);gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale*thick;gc.strokeStyle=core;gc.stroke(p);
  }
  if(S.trail.length){
   gc.setTransform(1,0,0,1,0,0);gc.globalAlpha=1;gc.beginPath();
@@ -181,5 +187,7 @@ function step(dt,now){
  return S.live.length+S.trail.length>0;
 }
 function dispose(){S=null;}
+return {init,press,move,release,step,dispose};
+}
 
-export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},init,press,move,release,step,dispose};
+export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},...iceEffect(),trace2d:()=>iceEffect(FLAT)};

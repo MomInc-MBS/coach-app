@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import {splitIndexByPolygon,pieceMaterial,fallPieces} from './portal-cut.mjs';
 import {SHAPES,fromFrame} from './portal-shapes.mjs';
 
-const IMAGE='/pod/worlds/quilt.webp',IMAGE_W=1024,IMAGE_H=1666;
+const IMAGE='/pod/worlds/quilt.webp',IMAGE_W=1024,IMAGE_H=1666,TRACE_PX=640;
 // Stitched pattern (the eight shapes) inside the quilt image, as image fractions.
 const PATTERN={left:22/IMAGE_W,top:22/IMAGE_H,right:1002/IMAGE_W,bottom:1575/IMAGE_H};
 const PATTERN_RATIO=(1002-22)/(1575-22);
@@ -77,8 +77,11 @@ function patternRectOf(host){const q=quiltRectOf(host);return {left:q.left+q.wid
 // Quilt (the default) draws its plain stitched quilt at once and its art when that arrives, so it cannot fail. A grimoire
 // board passes its poster (src), face width/height (ratio), shape frame ({x0,y0,x1,y1} face fractions) and guide, and
 // rejects when the poster doesn't load within waitMs, so the portal can keep the board it already shows.
+// trace (R7): the board's own touch effect in 2D (ice cracks, flowers, embers, weld, jelly gash) for when its 3D can't
+// draw: a factory for an effect with portal-board-glb's interface, given 2D paint/glow layers over the face (glow adds
+// light, as the 3D emissive does). The canvas redraws only while that effect animates.
 // ponytail: no cloth ripple, dent or falling piece; the cut just opens a hole.
-export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0}={}){
+export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0,trace=null}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const art=new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>fail(new Error('Board art unavailable: '+src));img.src=src;if(waitMs)setTimeout(()=>fail(new Error('Board art timed out: '+src)),waitMs);});
  let image=fallback?.(),width=1,height=1,holes=[],disposed=false;
@@ -87,18 +90,29 @@ export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,f
  canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;display:block;width:100%;height:100%';host.append(canvas);
  const faceOf=(w,h)=>{const fw=Math.min(w,h*ratio);return {left:(w-fw)/2,top:h-fw/ratio,width:fw,height:fw/ratio};};
  const rectOf=()=>{const box=host.getBoundingClientRect(),f=faceOf(box.width,box.height);return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};};
- function draw(){
-  if(disposed||!g)return;
-  const scale=Math.min(devicePixelRatio||1,2),face=faceOf(width,height);
-  canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale); // resizing also clears
-  g.setTransform(scale,0,0,scale,0,0);g.save();
-  if(holes.length){g.beginPath();g.rect(0,0,width,height);for(const poly of holes){poly.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](face.left+u*face.width,face.top+v*face.height));g.closePath();}g.clip('evenodd');}
-  g.drawImage(image,face.left,face.top,face.width,face.height);
+ // The poster and its guides. A board with a trace draws them once per size into `still` and blits that on every trace
+ // frame: re-drawing the poster and the blurred guide strokes each frame starved a phone's main thread (and a test's rAF).
+ let still=null;
+ function paintStill(c,face){
+  c.drawImage(image,face.left,face.top,face.width,face.height);
   // A GLB board's guides are carved or painted in 3D, not in its flat poster: draw the same shape paths in its frame.
   if(guide){
-   const trace=()=>{for(const [id,polys] of Object.entries(SHAPES)){if(id==='line')continue;for(const {points} of polys){g.beginPath();points.forEach(([u,v],i)=>{const [fu,fv]=fromFrame(u,v,frame);g[i?'lineTo':'moveTo'](face.left+fu*face.width,face.top+fv*face.height);});g.stroke();}}};
-   const alpha=Math.max(guide.alpha||0,.42);g.strokeStyle=guide.color||'#fff';g.lineCap=g.lineJoin='round';
-   g.shadowColor=g.strokeStyle;g.shadowBlur=8;g.globalAlpha=alpha*.65;g.lineWidth=5;trace();g.shadowBlur=0;g.globalAlpha=alpha;g.lineWidth=2;trace();
+   const trace=()=>{for(const [id,polys] of Object.entries(SHAPES)){if(id==='line')continue;for(const {points} of polys){c.beginPath();points.forEach(([u,v],i)=>{const [fu,fv]=fromFrame(u,v,frame);c[i?'lineTo':'moveTo'](face.left+fu*face.width,face.top+fv*face.height);});c.stroke();}}};
+   const alpha=Math.max(guide.alpha||0,.42);c.strokeStyle=guide.color||'#fff';c.lineCap=c.lineJoin='round';
+   c.shadowColor=c.strokeStyle;c.shadowBlur=8;c.globalAlpha=alpha*.65;c.lineWidth=5;trace();c.shadowBlur=0;c.globalAlpha=alpha;c.lineWidth=2;trace();
+  }
+ }
+ function draw(){
+  if(disposed||!g)return;
+  const scale=Math.min(devicePixelRatio||1,2),face=faceOf(width,height),W=Math.round(width*scale),H=Math.round(height*scale);
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}else{g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,H);} // resizing also clears
+  if(fx&&(still?.width!==W||still.height!==H||still.image!==image)){still=Object.assign(document.createElement('canvas'),{width:W,height:H,image});const c=still.getContext('2d');c.setTransform(scale,0,0,scale,0,0);paintStill(c,face);}
+  g.setTransform(scale,0,0,scale,0,0);g.save();
+  if(holes.length){g.beginPath();g.rect(0,0,width,height);for(const poly of holes){poly.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](face.left+u*face.width,face.top+v*face.height));g.closePath();}g.clip('evenodd');}
+  if(fx)g.drawImage(still,0,0,width,height);else paintStill(g,face);
+  if(fx){ // paint, a dark silhouette of the glow (so light glow still reads on a pale poster like Ice's), then the glow as light
+   const put=c=>g.drawImage(c,face.left,face.top,face.width,face.height);
+   g.globalAlpha=1;g.shadowBlur=0;put(fx.paint.canvas);g.filter='brightness(0)';g.globalAlpha=.8;put(fx.glow.canvas);g.filter='none';g.globalAlpha=1;g.globalCompositeOperation='lighter';put(fx.glow.canvas);
   }
   g.restore();
  }
@@ -108,15 +122,33 @@ export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,f
   if(canvas.style.visibility!=='hidden')for(const [k,v] of Object.entries(faceOf(width,height)))host.style.setProperty('--face-'+k,v+'px'); // under a live 3D board, that board owns the frame
   draw();
  }
+ // The 2D trace: its layers TRACE_PX wide in face coords (u right, v down) like the 3D board's, redrawn by rAF while it runs.
+ let fx=null,raf=0,last=0;const pointers=new Map();
+ function tick(now){raf=0;if(disposed||!fx)return;const on=fx.step?.(Math.min(1/30,Math.max(1/240,(now-last)/1000)),now);last=now;draw();if(on||pointers.size)raf=requestAnimationFrame(tick);}
+ const wake=()=>{if(!raf&&fx&&!disposed){last=performance.now();raf=requestAnimationFrame(tick);}};
  const observer=new ResizeObserver(entries=>layout(entries.at(-1).contentRect));observer.observe(host);layout();
+ if(trace&&g){
+  const layer=()=>{const c=document.createElement('canvas');c.width=TRACE_PX;c.height=Math.max(1,Math.round(TRACE_PX/ratio));return {canvas:c,ctx:c.getContext('2d'),texture:{}};};
+  const toWorld=(u,v)=>{const f=faceOf(width,height);return [f.left+u*f.width,-(f.top+v*f.height)];};
+  const next=trace(),paint=layer(),glow=layer();
+  await next.init({paint,glow,face:{w:1,h:1/ratio},toWorld,wake});
+  fx=Object.assign(next,{paint,glow});draw(); // the still is ready before the first touch
+ }
  return {
   canvas,background,faceRect:rectOf,quiltRect:rectOf,
   patternRect(){const q=rectOf();return {left:q.left+q.width*frame.x0,top:q.top+q.height*frame.y0,width:q.width*(frame.x1-frame.x0),height:q.height*(frame.y1-frame.y0)};},
   cut(poly,color,ms=1100){holes=[poly];draw();return new Promise(done=>setTimeout(done,reduced?0:ms));},
   heal(){if(holes.length){holes=[];draw();}},
-  press(){},release(){},frameMs:()=>0,pause(){},
-  resume(){layout();}, // back on screen (or back from under a 3D board): re-take the frame
-  dispose(){disposed=true;observer.disconnect();canvas.remove();},
+  press(id,x,y){
+   if(!fx)return;const r=rectOf(),u=Math.min(1,Math.max(0,(x-r.left)/r.width)),v=Math.min(1,Math.max(0,(y-r.top)/r.height)),p=pointers.get(id);
+   if(p){fx.move?.(id,u,v,p.u,p.v);p.u=u;p.v=v;}else{pointers.set(id,{u,v});fx.press?.(id,u,v);}
+   wake();
+  },
+  release(id){const p=pointers.get(id);if(p){pointers.delete(id);fx.release?.(id,p.u,p.v);wake();}},
+  frameMs:()=>0,
+  pause(){for(const [id,p] of pointers)fx.release?.(id,p.u,p.v);pointers.clear();cancelAnimationFrame(raf);raf=0;},
+  resume(){layout();wake();}, // back on screen (or back from under a 3D board): re-take the frame
+  dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();fx?.dispose?.();canvas.remove();},
  };
 }
 

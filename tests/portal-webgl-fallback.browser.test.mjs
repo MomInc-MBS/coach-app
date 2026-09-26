@@ -121,9 +121,10 @@ async function hueFamilies(page,clip){
 // Opens Food (the triangle) on the board showing, checks the wormhole through the cut once the piece has fallen, and comes back.
 async function wormholeThrough(page,label){
  await page.evaluate(()=>{window.portal.open('up');});
- await page.waitForSelector('.portal-glass',{state:'attached'});await page.waitForTimeout(1800);
+ await page.waitForSelector('.portal-glass',{state:'attached'});await page.waitForTimeout(1500);
  const box=await page.locator('.portal-glass').first().evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.left+r.width*.3,y:r.top+r.height*.4,width:r.width*.4,height:r.height*.35};});
- const families=await hueFamilies(page,box);
+ // The cut is open from ~1.3 s to the dive at ~4.8 s; a slow software GPU can take a while to show it, so look a few times.
+ let families=0;for(let i=0;i<8&&families<4;i++){if(i)await page.waitForTimeout(300);families=await hueFamilies(page,box);}
  await page.screenshot({path:resolve('.frames',`wormhole-${label}-375x812.png`)});
  assert.ok(families>=4,`${label}: the rainbow wormhole shows through the cut (${families} hue families)`);
  await page.waitForFunction(()=>document.querySelector('#mealsPanel').open,null,{timeout:15000});
@@ -161,4 +162,50 @@ test('R7: the rainbow wormhole shows through every board in 3D and flat, and the
  }
  assert.deepEqual(errors,[]);
  await flat.close();
+}));
+
+// R7 (Ian 26 Sept: "we want each board to have its own, i cant see the flowers or the burning or the ice cracks"): a finger
+// dragged across each board, mid-stroke, visibly changes the board under it: its own trace (ice cracks, flowers, the weld,
+// the jelly gash, embers), in 3D and on the flat poster when WebGL is gone. Share of a band round the stroke whose colour
+// moved by more than 60 (sum of channel deltas), from two RGBA buffers.
+const changedShare=(page,a,b)=>page.evaluate(([a,b])=>{
+ const dec=async png=>{const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+png)).blob()),c=new OffscreenCanvas(img.width,img.height),g=c.getContext('2d');g.drawImage(img,0,0);return g.getImageData(0,0,img.width,img.height).data;};
+ return Promise.all([dec(a),dec(b)]).then(([x,y])=>{let n=0;for(let i=0;i<x.length;i+=4)if(Math.abs(x[i]-y[i])+Math.abs(x[i+1]-y[i+1])+Math.abs(x[i+2]-y[i+2])>60)n++;return n/(x.length/4);});
+},[a.toString('base64'),b.toString('base64')]);
+// An S-curve across the upper face at a finger's pace (moves dispatched in-page every 16 ms); shots of the band before and
+// 450 ms into the stroke, with the portal's own overlay (idle outlines, Quilt's trail) hidden.
+async function strokeShots(page,frame){
+ const r=await page.evaluate(()=>{document.getElementById('portalOverlay').style.opacity='0';return window.portal.current().faceRect();});
+ const pts=Array.from({length:40},(_,i)=>{const t=i/39;return [r.left+r.width*(.2+.6*t),r.top+r.height*(.35+.12*Math.sin(t*Math.PI*2))];});
+ const clip={x:r.left+r.width*.15,y:r.top+r.height*.2,width:r.width*.7,height:r.height*.3},shot=()=>page.screenshot({clip});
+ const idle0=await shot();await page.waitForTimeout(450);const before=await shot();
+ await page.mouse.move(...pts[0]);await page.mouse.down();
+ await page.evaluate(pts=>{window.__drag=(async()=>{const o=document.getElementById('portalOverlay');for(const [x,y] of pts){o.dispatchEvent(new PointerEvent('pointermove',{pointerId:1,pointerType:'mouse',clientX:x,clientY:y,bubbles:true}));await new Promise(r=>setTimeout(r,16));}})();},pts.slice(1));
+ // Shots through the stroke (a slow software GPU can lag a frame or two); the most changed one counts.
+ const during=[];for(let i=0;i<3;i++){await page.waitForTimeout(200);during.push(await shot());}
+ if(frame)await page.screenshot({path:frame});
+ await page.evaluate(()=>window.__drag);await page.mouse.move(...pts.at(-1));await page.mouse.up();
+ await page.evaluate(()=>{document.getElementById('portalOverlay').style.opacity='';});
+ let trace=0;for(const d of during)trace=Math.max(trace,await changedShare(page,before,d));
+ return {idle:await changedShare(page,idle0,before),trace};
+}
+
+test('R7: every board shows its own trace under a finger, in 3D and flat',{timeout:300000},async()=>withPortal(async(browser,url)=>{
+ const errors=[];
+ for(const mode of ['3d','flat']){
+  const page=await browser.newPage({viewport:{width:375,height:812}});page.on('pageerror',e=>errors.push(e.message));
+  if(mode==='flat')await page.addInitScript(failWebGL);
+  await page.goto(url);
+  await page.evaluate(async()=>{localStorage.setItem('myr5.portalHintShown','1');const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});
+  for(const id of ['ice','grass','cogs','jelly','wood']){
+   await page.evaluate(id=>window.portal.board(id),id);
+   assert.deepEqual(await shown(page),{board:id,art:mode});
+   await page.waitForTimeout(600); // let the new board settle before measuring it at rest
+   const {idle,trace}=await strokeShots(page,resolve('.frames',`trace-${mode}-${id}-375x812.png`));
+   assert.ok(trace-idle>=.02,`${mode} ${id}: its trace shows under the finger (${(trace*100).toFixed(1)}% of the band changed; ${(idle*100).toFixed(1)}% at rest)`);
+   await page.waitForTimeout(300);
+  }
+  await page.close();
+ }
+ assert.deepEqual(errors,[]);
 }));

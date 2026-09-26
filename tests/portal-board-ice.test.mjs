@@ -55,7 +55,7 @@ test('visible: clips a branch at arc distance r, on an interpolated tip',()=>{
 test('ice: glow only, trail cracks spaced along the drag and capped, wiped once when the last one dies',()=>{
  globalThis.Path2D=class{};globalThis.matchMedia=()=>({matches:false});
  const gc={fills:0,clears:0,outlines:0,save(){},restore(){},setTransform(){},translate(){},rotate(){},beginPath(){},moveTo(){this.outlines++;},lineTo(){},closePath(){},
-  fill(){this.fills++;},clearRect(){this.clears++;}};
+  fill(){this.fills++;},stroke(){},clearRect(){this.clears++;}};
  const glow={canvas:{width:1024,height:1024},ctx:gc,texture:{}},paint={canvas:{width:1024,height:1024},ctx:{},texture:{}};
  ice.init({paint,glow,toWorld:(u,v)=>[u*1000,-v*1000]}); // a 1000 px wide face on screen
  const t=performance.now();

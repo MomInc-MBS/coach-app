@@ -94,10 +94,10 @@ test('drag lays a spaced trail that keeps the board awake, then heals to nothing
  await jelly.init({THREE,scene:{add(){}},mesh:{isMesh:true,geometry:{computeBoundingBox(){},boundingBox:{}}},material:{},uniforms,paint:{},glow,face:{w:1,h:1},toWorld:(u,v)=>[u*300,-v*300]});
  const t0=performance.now();uniforms.uTime.value=1;jelly.step(1/60,t0);
  jelly.press(1,.5,.5);
- for(let i=1;i<=10;i++)jelly.move(1,.5+i*.006,.5,.5+(i-1)*.006,.5); // .06 face widths in .006 steps: a point every 5th move (step .025)
+ for(let i=1;i<=10;i++)jelly.move(1,.5+i*.006,.5,.5+(i-1)*.006,.5); // .06 face widths in .006 steps: a point every 5th move (step .03)
  jelly.release(1,.56,.5);
  assert.ok(jelly.step(1/60,t0),'awake while the trail lives');
- assert.equal(TRAIL.step,.025);assert.equal(uniforms.uTrailN.value,3,'press + one point per TRAIL.step, release adds none on the spot');
+ assert.equal(TRAIL.step,.03);assert.equal(uniforms.uTrailN.value,3,'press + one point per TRAIL.step, release adds none on the spot');
  assert.ok(uniforms.uTrail.value.slice(1,uniforms.uTrailN.value).every(p=>p.w===1),'one joined stroke');
  const margin=TRAIL.width/2+.01,b=uniforms.uTrailBounds.value;
  assert.ok(Math.abs(b.x-(.5-margin))<1e-9&&Math.abs(b.z-(.56+margin))<1e-9,'trail bbox spans the drag (square face: no aspect scaling)');

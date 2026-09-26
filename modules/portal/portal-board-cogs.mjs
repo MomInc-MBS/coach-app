@@ -298,9 +298,9 @@ async function init({mesh,face,wake,paint,glow}){
 // A spark: {x,y,px,py (canvas px, px/py = last frame's pos, for a streak),vx,vy (px/s),born (ms),
 // life (s)}. Speeds/gravity are "canvas-width fractions/s" scaled by texW once at spawn, so they don't
 // depend on GLB.texSize.
-function spawnSparks(u,v,count){
+function spawnSparks(S,u,v,count){
  if(count<=0)return;
- const scale=pxScale(),cx=u*S.texW,cy=v*S.texH;
+ const scale=pxScale(S),cx=u*S.texW,cy=v*S.texH;
  for(let i=0;i<count&&S.sparks.length<KNOBS.sparkMax;i++){
   const a=Math.random()*TAU,spd=(KNOBS.sparkSpeedMinPx+Math.random()*(KNOBS.sparkSpeedMaxPx-KNOBS.sparkSpeedMinPx))*scale;
   S.sparks.push({x:cx,y:cy,px:cx,py:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,born:performance.now(),
@@ -309,21 +309,21 @@ function spawnSparks(u,v,count){
 }
 // A weld-trail point {u,v,t (ms),prev}: prev links to the same finger's previous point (per id, via
 // weldHeads) so two simultaneous strokes never draw a segment joining them.
-function weldPushPoint(id,u,v){
+function weldPushPoint(S,id,u,v){
  const prev=S.weldHeads.get(id)||null;
  if(prev&&Math.hypot(u-prev.u,(v-prev.v)*S.aspect)<KNOBS.weldStep)return;
  const p={u,v,t:performance.now(),prev};S.weld.push(p);S.weldHeads.set(id,p);
  if(S.weld.length>KNOBS.weldCap)S.weld.splice(0,S.weld.length-KNOBS.weldCap); // ponytail: hard cap
 }
-function weldRelease(id,u,v){
- weldPushPoint(id,u,v);S.weldHeads.delete(id);spawnSparks(u,v,KNOBS.sparkReleaseCount);
+function weldRelease(S,id,u,v){
+ weldPushPoint(S,id,u,v);S.weldHeads.delete(id);spawnSparks(S,u,v,KNOBS.sparkReleaseCount);
 }
 function heatRGBA(f,alpha){const {r,g,b}=heatColor(f);return `rgba(${r},${g},${b},${Math.max(0,alpha)})`;}
 // Canvas px per screen px right now: measured off the live rendered <canvas> (its CSS box) with the
 // same margin-fit math computeFit() uses in portal-board-glb.mjs (GLB.margin), so every weldXxxPx knob
 // stays a true screen size regardless of GLB.texSize, host width or devicePixelRatio. Cheap (one
 // clientWidth/Height read + a few multiplies); called a handful of times per frame while welding.
-function pxScale(){
+function pxScale(S){
  const el=document.querySelector('canvas.portal-board-canvas'),cw=el?.clientWidth,ch=el?.clientHeight;
  if(!cw||!ch)return 2; // not laid out yet: a reasonable guess, corrected the moment it is
  const availW=cw*(1-2*GLB.margin),availH=ch*(1-2*GLB.margin),scaleFit=Math.min(availW/S.face.w,availH/S.face.h);
@@ -332,8 +332,8 @@ function pxScale(){
 // Hot trail: a wide blurred bloom halo pass, then a crisp bright core pass (same two-pass technique
 // portal-board-glb.mjs's drawGuides uses for the shape hints) — held near-full brightness for
 // weldHotHold of the hot window, then cooling white->yellow->orange->red the rest of the way.
-function weldRenderGlow(now){
- const {ctx}=S.glow,w=S.texW,h=S.texH,scale=pxScale();
+function weldRenderGlow(S,now){
+ const {ctx}=S.glow,w=S.texW,h=S.texH,scale=pxScale(S);
  const coreW=KNOBS.weldTrailWidthPx*scale,haloW=KNOBS.weldTrailHaloPx*scale,sparkW=KNOBS.sparkWidthPx*scale;
  const segs=[];
  for(const p of S.weld){
@@ -362,8 +362,8 @@ function weldRenderGlow(now){
 // drop shadow, over a subtle straw->blue heat-tint halo just outside it.
 const BEAD_COLORS=[{r:170,g:172,b:178},{r:196,g:130,b:62}]; // grey / bronze — bright enough to separate
 // from the dark brown door even at 1x phone scale.
-function weldRenderPaint(now){
- const {ctx}=S.paint,w=S.texW,h=S.texH,scale=pxScale();
+function weldRenderPaint(S,now){
+ const {ctx}=S.paint,w=S.texW,h=S.texH,scale=pxScale(S);
  const R=KNOBS.weldBeadRadiusPx*scale,haloR=KNOBS.weldHaloRadiusPx*scale,off=1.6*scale; // ~1-2 screen px
  ctx.clearRect(0,0,w,h);
  ctx.save();
@@ -392,14 +392,14 @@ function weldRenderPaint(now){
 }
 // Redraws (clears+repaints) both canvases every frame while anything welding is live, same as one
 // frame past that to wipe the last remnants, then leaves them alone — see the sleep note on step().
-function stepWeld(dt,now){
- const grav=KNOBS.sparkGravityPx*pxScale();
+function stepWeld(S,dt,now){
+ const grav=KNOBS.sparkGravityPx*pxScale(S);
  for(const s of S.sparks){s.vy+=grav*dt;s.px=s.x;s.py=s.y;s.x+=s.vx*dt;s.y+=s.vy*dt;}
  S.sparks=S.sparks.filter(s=>(now-s.born)/1000<s.life);
- for(const d of S.drag.values())if(now-(d.lastSparkT||0)>KNOBS.sparkIdleMs){d.lastSparkT=now;spawnSparks(d.u,d.v,KNOBS.sparkIdleCount);}
+ for(const d of S.drag.values())if(now-(d.lastSparkT||0)>KNOBS.sparkIdleMs){d.lastSparkT=now;spawnSparks(S,d.u,d.v,KNOBS.sparkIdleCount);}
  let k=0;while(k<S.weld.length&&now-S.weld[k].t>KNOBS.weldHotMs+KNOBS.weldBeadMs)k++;if(k)S.weld.splice(0,k);
  const active=S.sparks.length>0||S.weld.some(p=>now-p.t<KNOBS.weldHotMs+KNOBS.weldBeadMs);
- if(active||S.weldActive){weldRenderGlow(now);weldRenderPaint(now);}
+ if(active||S.weldActive){weldRenderGlow(S,now);weldRenderPaint(S,now);}
  S.weldActive=active;
  return active;
 }
@@ -407,7 +407,7 @@ function stepWeld(dt,now){
 function press(id,u,v){
  const skip=S.fall&&new Set(S.gears.map((_,gi)=>gi).filter(gi=>S.fall.pivots.has(S.gearPivots[gi])));
  S.drag.set(id,{gi:hitGear(S.gears,S.face,u,v,skip),moved:false,u,v});
- weldPushPoint(id,u,v);spawnSparks(u,v,KNOBS.sparkPressCount);
+ weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);
 }
 function move(id,u,v,pu,pv){
  const d=S.drag.get(id);if(!d)return;
@@ -425,8 +425,8 @@ function move(id,u,v,pu,pv){
   const dxp=(u-part.u)*S.face.w,dyp=(v-part.v)*S.face.h,lim=(part.r+KNOBS.wiggleMargin)*S.face.w;
   if(Math.hypot(dxp,dyp)<lim)part.omega+=wiggleKick(vx,vy,part.rot,KNOBS.wiggleKick);
  }
- weldPushPoint(id,u,v);
- spawnSparks(u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));
+ weldPushPoint(S,id,u,v);
+ spawnSparks(S,u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));
 }
 function release(id){
  const d=S.drag.get(id);if(!d)return;
@@ -438,7 +438,7 @@ function release(id){
    if(pi>=0)pipes[pi].omega+=KNOBS.wiggleTapKick;
   }
  }
- weldRelease(id,d.u,d.v);
+ weldRelease(S,id,d.u,d.v);
  S.drag.delete(id);
 }
 function step(dt,now){
@@ -483,7 +483,7 @@ function step(dt,now){
  const f=S.fall,t=f?Math.min(1,(now-f.t0)/Math.max(1,f.ms)):1,e=t*t;
  if(f)for(const [p,z0] of f.pivots){p.position.z=z0-f.dist*e;p.rotation.x=FALL_TILT*e;p.scale.setScalar(1-e);p.visible=t<1;}
  if(!S.reducedMotion)for(const g of S.gears)if(g.idleDir)g.omega+=g.idleDir*KNOBS.hubIdleAccel*dt;
- const weldActive=stepWeld(dt,now);
+ const weldActive=stepWeld(S,dt,now);
  // Sleeps (returns false) once no gear is moving, no pipe is wobbling, no light is lit, no weld spark/
  // trail is live and no cut animation is running — the board (portal-board-glb.mjs) stops driving rAF
  // at that point. In practice that's "never" while reducedMotion is off: the hub gears' idle motor
@@ -509,8 +509,21 @@ function dispose(){
  S=null;
 }
 
+// R7: the weld trail alone in 2D, for the flat board (no gears, pipes or lights without WebGL): its own state.
+export function cogsWeld(){
+ let S=null;
+ return {
+  init({paint,glow,face}){S={face,aspect:face.h/face.w,paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,drag:new Map(),sparks:[],weld:[],weldHeads:new Map(),weldActive:false};},
+  press(id,u,v){S.drag.set(id,{u,v});weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);},
+  move(id,u,v,pu,pv){const d=S.drag.get(id);if(d){d.u=u;d.v=v;}weldPushPoint(S,id,u,v);spawnSparks(S,u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));},
+  release(id,u,v){S.drag.delete(id);weldRelease(S,id,u,v);},
+  step:(dt,now)=>stepWeld(S,dt,now),
+  dispose(){S=null;},
+ };
+}
+
 export const cogs={
  id:'cogs',asset:'/pod/worlds/boards/cogs/door.glb',flip:false,background:'#161310',
  guide:null,frame:DEFAULT_FRAME,ink:false, // the weld trail replaces the shared ink line
- init,press,move,release,step,cut,heal,dispose,
+ init,press,move,release,step,cut,heal,dispose,trace2d:cogsWeld,
 };

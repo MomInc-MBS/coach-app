@@ -10,7 +10,7 @@ import {pointInPolygon} from './portal-board-glb.mjs';
 
 const FLOWER_ASSET='/pod/worlds/boards/flower.glb',FLOWER_CAP=120,PLANT_STEP_PX=36,POP_MS=300,SPRING_LIFE=1.2;
 const FADE_MS=7000; // Ian: everything returns to normal after 7 s (2026-09-22)
-const FADE_OUT_MS=700,FLOWER_FRAC=.06,CLUSTER_FRAC=.04,FLOWER_TILT=1.2,FLOWER_LIFT=.02;
+const FADE_OUT_MS=700,FLOWER_FRAC=.075,CLUSTER_FRAC=.04,FLOWER_TILT=1.2,FLOWER_LIFT=.02;
 const BLADES=7000,BLADE_W=.015,BLOCK_EXPOSURE=.75,FIELD_INSET=.025,GUIDE_GLOW='0.6'; // inset keeps edge tufts from overhanging far
 
 // --- Pure helpers (no THREE dependency) -------------------------------------------------------
@@ -193,11 +193,40 @@ function dispose(){
  S=null;
 }
 
+// R7: the flowers in 2D, for the flat board: the same clusters along a drag, popping in and fading out after FADE_MS,
+// drawn on `paint` as five-petal blooms with a dark rim so they read on the lawn. Own state, no THREE.
+export function grassFlowers(){
+ let S=null;
+ const bloom=(g,f,k)=>{
+  const r=f.r*k;if(r<.5)return;
+  g.save();g.translate(f.x,f.y);g.rotate(f.rot);g.globalAlpha=k;g.fillStyle=f.col;g.strokeStyle='rgba(20,30,10,.55)';g.lineWidth=r*.12;
+  for(let i=0;i<5;i++){const a=i*Math.PI*2/5;g.beginPath();g.ellipse(Math.cos(a)*r*.55,Math.sin(a)*r*.55,r*.52,r*.34,a,0,Math.PI*2);g.fill();g.stroke();}
+  g.fillStyle='#ffd23a';g.beginPath();g.arc(0,0,r*.27,0,Math.PI*2);g.fill();g.stroke();g.restore();
+ };
+ const plantOne=(u,v)=>{const [h,s,l]=flowerHSL();S.flowers.push({x:u*S.W,y:v*S.H,r:S.W*FLOWER_FRAC*.5*(.8+Math.random()*.5),rot:Math.random()*Math.PI,col:`hsl(${h*360} ${s*100}% ${l*100}%)`,born:performance.now()});if(S.flowers.length>FLOWER_CAP)S.flowers.shift();};
+ const cluster=(u,v,n)=>{for(const [du,dv] of clusterOffsets(n,CLUSTER_FRAC))plantOne(clamp01(u+du),clamp01(v+dv*S.aspect));};
+ return {
+  init({paint,toWorld,wake}){S={paint,toWorld,wake,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.width/paint.canvas.height,flowers:[],last:new Map(),timer:0,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};},
+  press(id,u,v){cluster(u,v,3);S.last.set(id,S.toWorld(u,v));},
+  move(id,u,v){const cur=S.toWorld(u,v),last=S.last.get(id);if(!last){S.last.set(id,cur);return;}if(plantStep(last[0],last[1],cur[0],cur[1])){cluster(u,v,2+(Math.random()<.5));S.last.set(id,cur);}},
+  release(id){S.last.delete(id);},
+  step(dt,now){
+   const g=S.paint.ctx,n=S.flowers.length;let animating=false;
+   S.flowers=S.flowers.filter(f=>fadeLife(now-f.born)>0);
+   g.clearRect(0,0,S.W,S.H);
+   for(const f of S.flowers){const age=now-f.born,k=fadeLife(age),pop=S.reduced?1:popScale(age);if(pop<1||k<1)animating=true;bloom(g,f,pop*k);}
+   clearTimeout(S.timer);if(!animating&&S.flowers.length)S.timer=setTimeout(S.wake,Math.max(0,S.flowers[0].born+FADE_MS-now));
+   return animating||S.flowers.length!==n;
+  },
+  dispose(){clearTimeout(S?.timer);S=null;},
+ };
+}
+
 export const grass={
  id:'grass',asset:'/pod/worlds/boards/grass.glb',flip:false,background:'#0b150a',
  guide:{color:'#d8ffc0',alpha:.2,width:4},
  uniforms:{uHalfDepth:{value:0},uSpring:{value:Array.from({length:6},()=>new THREE.Vector4(0,0,0,0))},uBreeze:{value:1}},
  uniformDecls:'uniform float uHalfDepth;\nuniform vec4 uSpring[6];\nuniform float uBreeze;\n',
  vertexDisplace:VERTEX_DISPLACE,
- init,press,move,release,step,cut,heal,dispose,
+ init,press,move,release,step,cut,heal,dispose,trace2d:grassFlowers,
 };

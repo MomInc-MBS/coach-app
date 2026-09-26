@@ -57,7 +57,8 @@ const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes
 // and how long the first mount waits for 3D before the portal comes up flat (3D then takes over when it has drawn).
 export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood']);
 const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847},WAIT={poster:6000,threeD:20000,mount:4000};
-const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster}),create:host=>createGlbBoard(host,{effect})});
+// trace (R7): the flat poster keeps the board's own touch effect in 2D (ice cracks, flowers, weld, jelly gash, embers).
+const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d}),create:host=>createGlbBoard(host,{effect})});
 const BOARDS={quilt:{label:'Quilt',flat:host=>createQuiltBoard2D(host),create:host=>createQuiltBoardGL(host)},ice:grimoire('Ice',ice),grass:grimoire('Grass',grass),cogs:grimoire('Cogs',cogs),jelly:grimoire('Jelly',jelly),wood:grimoire('Wood',wood)};
 // Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
 // a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module

@@ -33,7 +33,7 @@ const BONE={zFrac:.94,seg:.0546,centre:[.5,.444],follow:.55,ridgeAmp:0,ridgeFreq
 // back along the trail); ease: closing curve exponent; life: s until seam + bulge are gone (points
 // evicted, well inside the 7 s rule); step: min spacing between trail points.
 // Ian 2026-09-26: "lets make the trail shorter for the jelly" — only the recent part of the stroke is kept (cap
-// points, oldest evicted: cap x step = .8 face widths) and the slit closes within close, so it's a short gash that
+// points, oldest evicted: cap x step = .96 face widths) and the slit closes within close, so it's a short gash that
 // follows the finger. This replaces 2026-09-24's longer, slower slit.
 // Lips: a ridge of half-width lip on each edge (normal tilt lipTilt, glossy, lipGlow sheen) plus a
 // crisp edgeGlow line on the cut edge. Inside: wallRGB at the walls to deepRGB at the centre (mixed
@@ -48,8 +48,9 @@ export const TRAIL={
  // loop, and picking Jelly took down the phone's GPU process and with it WebGL for every board. Keep it at 32 or under
  // (tests/portal-board-jelly.test.mjs); uTrailBounds still skips the loop off the gash.
  cap:32,
- step:.025,width:.04,close:.6,ease:1,life:2.1,
- lip:.0035,lipTilt:1,lipGlow:.2,lipRGB:[.8,1,.65],edgeGlow:.6,edgeRGB:[.85,1,.75],
+ // R7: wider and brighter-lipped than 24 Sept so the short gash reads on a phone.
+ step:.03,width:.055,close:.8,ease:1,life:2.3,
+ lip:.0035,lipTilt:1,lipGlow:.45,lipRGB:[.8,1,.65],edgeGlow:1.2,edgeRGB:[.85,1,.75],
  wallTilt:.7,wallRGB:[.05,.15,.03],deepRGB:[.004,.025,.004],interior:.92,interiorRough:.85,litWall:.5,litRGB:[.25,.55,.12],
  light:[-.79,.62], // key light (portal-board-glb's sun) as a face-xy direction, y up
  bulge:1.2,bulgeW:.01,wobbleHz:4.5,wobbleDecay:1.6,seam:.006,seamDark:.6,
@@ -202,6 +203,35 @@ function step(dt,frameNow){
 }
 function dispose(){S=null;}
 
+// R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth), drawn per segment as a
+// dark cut on `paint` with glowing lips on `glow` (opaque strokes, light scaled into the colour, so the round joins don't
+// stack into beads), closing into a fading seam. Own state, no THREE.
+export function jellyGash(){
+ let S=null;
+ const rgb=(c,k)=>`rgb(${c.map(v=>v*k*255|0)})`;
+ const push=(id,u,v,join)=>{const prev=join?S.heads.get(id):null;if(prev&&Math.hypot(u-prev.u,(v-prev.v)*S.aspect)<TRAIL.step)return;const p={u,v,t:performance.now()/1000,prev:prev||null};trailPush(S.trail,p);S.heads.set(id,p);};
+ return {
+  init({paint,glow}){S={paint,glow,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.height/paint.canvas.width,trail:[],heads:new Map()};},
+  press(id,u,v){push(id,u,v,false);},
+  move(id,u,v){push(id,u,v,true);},
+  release(id,u,v){push(id,u,v,true);S.heads.delete(id);},
+  step(dt,now){
+   const t=now/1000,{W,H}=S,pc=S.paint.ctx,gc=S.glow.ctx,live=new Set(trailExpire(S.trail,t));
+   pc.clearRect(0,0,W,H);gc.clearRect(0,0,W,H);pc.lineCap=gc.lineCap='round';
+   const segs=[...live].filter(b=>b.prev&&live.has(b.prev)).map(b=>{const a=b.prev,age=t-(a.t+b.t)/2;return {age,w:gashWidth(age)*W,x0:a.u*W,y0:a.v*H,x1:b.u*W,y1:b.v*H};});
+   const line=(c,s,width,{x0,y0,x1,y1})=>{c.strokeStyle=s;c.lineWidth=width;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();};
+   for(const s of segs){ // lips first, then the cut out of them (all of it, so a join's cap never rings the cut), the dark inside on paint
+    if(s.w>.5)line(gc,rgb(TRAIL.edgeRGB,TRAIL.edgeGlow),s.w+W*.014,s);
+    else{const k=1-Math.min(1,(s.age-TRAIL.close)/(TRAIL.life-TRAIL.close));line(pc,`rgba(0,0,0,${TRAIL.seamDark*k})`,W*TRAIL.seam*2,s);line(gc,rgb(TRAIL.lipRGB,TRAIL.lipGlow*k),W*TRAIL.bulgeW*2,s);}
+   }
+   gc.globalCompositeOperation='destination-out';for(const s of segs)if(s.w>.5)line(gc,'#000',s.w,s);gc.globalCompositeOperation='source-over';
+   for(const s of segs)if(s.w>.5)line(pc,rgb(TRAIL.deepRGB,1),s.w,s);
+   return S.trail.length>0;
+  },
+  dispose(){S=null;},
+ };
+}
+
 export const jelly={
  id:'jelly',asset:'/pod/worlds/boards/jelly.glb',flip:false,background:'#0d160a',ink:false, // the gash is the trace trail: no portal ink line over it
  guide:{color:'#c8ffb0',alpha:.12,width:4},
@@ -212,5 +242,5 @@ export const jelly={
  fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\n`, // fragment only (portal-board-glb.mjs)
  vertexDisplace:VERTEX_DISPLACE,
  fragment:FRAGMENT,
- init,press,move,release,step,dispose,
+ init,press,move,release,step,dispose,trace2d:jellyGash,
 };

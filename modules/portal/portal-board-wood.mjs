@@ -33,7 +33,10 @@ export function dwellAlpha(msSinceLast){
 export {COOL_MS,FADE_MS,FADE_OUT_MS};
 const lerp=(a,b,t)=>a+(b-a)*t;
 
-let S=null; // per-instance state; a single portal board is ever active at once
+// One instance per board layer: the 3D board's (wood itself) and the flat board's 2D trace (wood.trace2d, R7: embers,
+// char and glow; no scene, so no smoke) each get their own.
+export function woodEffect(){
+let S=null; // per-instance state
 
 function softCircleTexture(THREE){
  const c=document.createElement('canvas');c.width=c.height=64;
@@ -112,8 +115,8 @@ function init({THREE,scene,paint,glow,toWorld,faceZ,wake}){
  const pristine=document.createElement('canvas');pristine.width=paint.canvas.width;pristine.height=paint.canvas.height;
  pristine.getContext('2d').drawImage(paint.canvas,0,0); // the guides, as drawn before init
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const tex=reduced?null:softCircleTexture(THREE);
- const smoke=reduced?[]:Array.from({length:SMOKE_COUNT},()=>{
+ const tex=reduced||!scene?null:softCircleTexture(THREE);
+ const smoke=reduced||!scene?[]:Array.from({length:SMOKE_COUNT},()=>{
   const mat=new THREE.SpriteMaterial({map:tex,color:0xffffff,transparent:true,opacity:0,depthWrite:false,depthTest:false}); // raised carving must never hide smoke
   const sprite=new THREE.Sprite(mat);sprite.visible=false;scene.add(sprite);
   return {sprite,alive:false,t0:0,x0:0,y0:0,dir:1};
@@ -147,10 +150,12 @@ function dispose(){
  if(S){clearTimeout(S.timer);for(const s of S.smoke)s.sprite.parent?.remove(s.sprite);for(const s of S.smoke)s.sprite.material.dispose();S.smokeTex?.dispose();}
  S=null;
 }
+return {init,press,move,release,step,dispose};
+}
 
 export const wood={
  id:'wood',asset:'/pod/worlds/boards/wood.glb',flip:false,background:'#140c06',
  guide:{color:'#ffe0b0',alpha:.1,width:4},
  pattern:{left:.07,top:.03,right:.93,bottom:.78}, // measured in-browser against the carved oval's extremes
- init,press,move,release,step,dispose,
+ ...woodEffect(),trace2d:woodEffect,
 };
