@@ -102,7 +102,10 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  gltf.scene.updateMatrixWorld(true);
  const meshes=[];gltf.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});
  if(!meshes.length)throw new Error('portal-board-glb: no mesh in '+effect.asset);
- const rawGeoms=meshes.map(m=>{const g=m.geometry.clone();g.applyMatrix4(m.matrixWorld);return g;});
+ // The boards ship quantized (gltfpack: interleaved, normalized int16 positions). cut() reads position.array as flat float
+ // xyz, so it found no triangle inside the shape and the wormhole never showed through a GLB board (R7); and applyMatrix4
+ // would clamp a normalized attribute to [-1,1]. Plain float positions first.
+ const rawGeoms=meshes.map(m=>{const g=m.geometry.clone(),p=g.attributes.position;g.setAttribute('position',new THREE.Float32BufferAttribute(Float32Array.from({length:p.count*3},(_,i)=>p.getComponent(i/3|0,i%3)),3));g.applyMatrix4(m.matrixWorld);return g;});
  const rawBox=new THREE.Box3();for(const g of rawGeoms){g.computeBoundingBox();rawBox.union(g.boundingBox);}
  const size=rawBox.getSize(new THREE.Vector3());
  const rot=orientMatrix({x:size.x,y:size.y,z:size.z});

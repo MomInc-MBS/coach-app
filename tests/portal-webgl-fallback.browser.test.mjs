@@ -106,3 +106,59 @@ test('R7: picking Jelly on a phone-like GPU keeps WebGL for Jelly and every boar
  assert.deepEqual(errors,[]);
  await page.close();
 }));
+
+// Hue families (of six) covering at least 3% of the saturated pixels in a screenshot patch: the rainbow wormhole shows 4 or
+// more, a board's own art 1 or 2.
+async function hueFamilies(page,clip){
+ const png=(await page.screenshot({clip})).toString('base64');
+ return page.evaluate(async png=>{
+  const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+png)).blob()),c=new OffscreenCanvas(img.width,img.height),g=c.getContext('2d');g.drawImage(img,0,0);
+  const d=g.getImageData(0,0,img.width,img.height).data,n=[0,0,0,0,0,0];let all=0;
+  for(let i=0;i<d.length;i+=4){const r=d[i]/255,gr=d[i+1]/255,b=d[i+2]/255,mx=Math.max(r,gr,b),mn=Math.min(r,gr,b),k=mx-mn;if(mx<.35||k<.5*mx)continue;const h=mx===r?(gr-b)/k:mx===gr?2+(b-r)/k:4+(r-gr)/k;n[((Math.round(h)%6)+6)%6]++;all++;}
+  return n.filter(v=>v>.03*all).length;
+ },png);
+}
+// Opens Food (the triangle) on the board showing, checks the wormhole through the cut once the piece has fallen, and comes back.
+async function wormholeThrough(page,label){
+ await page.evaluate(()=>{window.portal.open('up');});
+ await page.waitForSelector('.portal-glass',{state:'attached'});await page.waitForTimeout(1800);
+ const box=await page.locator('.portal-glass').first().evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.left+r.width*.3,y:r.top+r.height*.4,width:r.width*.4,height:r.height*.35};});
+ const families=await hueFamilies(page,box);
+ await page.screenshot({path:resolve('.frames',`wormhole-${label}-375x812.png`)});
+ assert.ok(families>=4,`${label}: the rainbow wormhole shows through the cut (${families} hue families)`);
+ await page.waitForFunction(()=>document.querySelector('#mealsPanel').open,null,{timeout:15000});
+ await page.evaluate(()=>document.querySelector('#mealsPanel').close());
+ await page.waitForFunction(()=>document.getElementById('portalHome').hidden===false&&!document.querySelector('.portal-glass'),null,{timeout:15000});
+}
+
+test('R7: the rainbow wormhole shows through every board in 3D and flat, and the flat Quilt keeps its finger trail',{timeout:240000},async()=>withPortal(async(browser,url)=>{
+ await mkdir(resolve('.frames'),{recursive:true});
+ const open=async page=>{await page.goto(url);await page.evaluate(async()=>{localStorage.setItem('myr5.portalHintShown','1');const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});};
+ const errors=[],gl=await browser.newPage({viewport:{width:375,height:812}});gl.on('pageerror',e=>errors.push(e.message));
+ await open(gl);
+ for(const id of ['jelly','ice']){ // GLB boards: the cut must open the mesh (its positions ship quantized)
+  await gl.evaluate(id=>window.portal.board(id),id);
+  assert.deepEqual(await shown(gl),{board:id,art:'3d'});
+  await wormholeThrough(gl,`3d-${id}`);
+ }
+ await gl.close();
+
+ const flat=await browser.newPage({viewport:{width:375,height:812}});flat.on('pageerror',e=>errors.push(e.message));
+ await flat.addInitScript(failWebGL);
+ await open(flat);
+ assert.deepEqual(await shown(flat),{board:'quilt',art:'flat'});
+ // A finger on the flat Quilt draws the magical trail (the overlay lights up under it).
+ await flat.mouse.move(100,300);await flat.mouse.down();for(let i=1;i<=10;i++)await flat.mouse.move(100+i*14,300+i*8);
+ const lit=await flat.evaluate(()=>{const c=document.getElementById('portalOverlay'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>60)n++;return n;});
+ await flat.screenshot({path:resolve('.frames','trail-flat-quilt-375x812.png')});
+ await flat.mouse.up();
+ assert.ok(lit>1000,`the Quilt's finger trail draws without WebGL (${lit} lit px)`);
+ await flat.waitForTimeout(1500);
+ for(const id of ['cogs','jelly']){
+  await flat.evaluate(id=>window.portal.board(id),id);
+  assert.deepEqual(await shown(flat),{board:id,art:'flat'});
+  await wormholeThrough(flat,`flat-${id}`);
+ }
+ assert.deepEqual(errors,[]);
+ await flat.close();
+}));

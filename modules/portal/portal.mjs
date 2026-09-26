@@ -1404,6 +1404,7 @@ const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // ph.stop() freezes it (at the reveal) and endPhase() always stops it.
 function startTunnel(ph,poly,color,all){
  ph.glass.dataset.tunnel=boardId;ph.glass.style.setProperty('--tint',boardTint());
+ const [seq0,...seqN]=ringColours(color,all);ph.glass.style.setProperty('--seq0',seq0);ph.glass.style.setProperty('--seq',seqN.join(',')); // the CSS wormhole's rings (no WebGL)
  if(prefersReducedMotion())return; // the static CSS glass avoids a costly WebGL resize on an instant transition
  const t=tunnelGL();if(!t)return;
  const {gl,u,canvas}=t,{left,top,w,h}=ph.box,reduced=prefersReducedMotion(),seq=ringColours(color,all);

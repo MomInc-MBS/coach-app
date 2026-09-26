@@ -110,12 +110,16 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
    to the cut shape (JS sets the box and clip), so it only shows through the hole. JS fades it in (portal-glass-in,
    600 ms). The WebGL wormhole canvas draws the whole look (.gl); <b> and the sheen are the no-WebGL fallback. */
 .portal-glass{position:absolute;z-index:0;pointer-events:none;overflow:hidden;--glass:#fff}
-.portal-glass>b{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#fff 0,var(--glass) 18%,transparent 62%),conic-gradient(from 210deg at 50% 46%,var(--glass),#ff5f1f,#ffff33,#39ff14,var(--glass),#1f51ff,#b026ff,#ff10f0,var(--glass))}
-.portal-glass.all>b{background:radial-gradient(circle at 50% 46%,#fff 0,transparent 30%),conic-gradient(from 210deg at 50% 46%,#ff5f1f,#ffff33,#39ff14,#1f51ff,#b026ff,#ff10f0,#ff5f1f)}
+/* R7: without WebGL (Android after a GPU reset) this is the wormhole on every board: the neon rings (JS: --seq0/--seq, the
+   WebGL tunnel's ring colours) streaming into a bright core (--ring is registered so the stops can move), twisted streaks
+   turning with the rainbow, depth fog toward the rim. Compositor-cheap; still under reduced motion. */
+@property --ring{syntax:'<length>';inherits:false;initial-value:0px}
+.portal-glass>b{position:absolute;inset:-25%;background:radial-gradient(circle at 50% 46%,#fff 0,color-mix(in srgb,var(--glass) 40%,#fff) 3%,#fff0 13%),radial-gradient(circle at 50% 46%,#07040b00 22%,#07040b99 72%),repeating-conic-gradient(from 0deg at 50% 46%,#07040b00 0deg 9deg,#07040b40 13deg,#07040b00 17deg 24deg),repeating-radial-gradient(circle at 50% 46%,var(--seq0,#ff5f1f) var(--ring),var(--seq,#ffff33,#39ff14,#1f51ff,#b026ff,#ff10f0),var(--seq0,#ff5f1f) calc(var(--ring) + 168px))}
 .portal-glass>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .portal-glass.gl>b,.portal-glass.gl:after{display:none}
-.portal-glass:not(.gl)>b{animation:portal-rainbow-turn 4s linear infinite;transform-origin:50% 46%}
+.portal-glass:not(.gl)>b{animation:portal-rainbow-turn 9s linear infinite,portal-rings 2.4s linear infinite;transform-origin:50% 46%}
 @keyframes portal-rainbow-turn{to{transform:rotate(360deg)}}
+@keyframes portal-rings{from{--ring:0px}to{--ring:-168px}}
 .portal-glass:after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;right:-60%;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 42%,#ffffff55 49%,#ffffff1a 53%,transparent 60%);animation:portal-sheen 6s ease-in-out infinite alternate}
 /* Glass bezel over the board along the exact cut outline, wide enough (JS sets it) to cover the cloth's stair-stepped
    hole edge: soft shadow, smoky glass lit top-left, a neon filament with its glow, a specular line. Static, no filters. */
