@@ -1,0 +1,30 @@
+{
+  "assets": [
+    {
+      "bytes": 1122666,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "c92098d11ba3535c4765abdce87f4d2cf0e3deba5f5c5664e9e3983b2ead58de",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-arms/1.0.0/arms.m5bundle"
+        },
+        {
+          "bytes": 74090,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "bf7e003b9e3bd59411cf16a8442e7054e8c0e7648e1425a1439f0998a053b9d5",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-arms/1.0.0/arms.m5bundle"
+        }
+      ],
+      "path": "assets/arms.m5bundle",
+      "sha256": "ff0cf7e43a688e74a6a32a9d6fc73e6f9557dea3ed85ce0cce7910716d1476b4"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-arms",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "mcmu2PmtFbyozhlFOQFCmdXUQlYIlomts1hJIOctyUwiYEB/MOXacIGZa6ynr71/QgOsFjvlhctd/QbsjbmhCg=="
+}

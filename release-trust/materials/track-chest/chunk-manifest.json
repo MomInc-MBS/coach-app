@@ -1,0 +1,23 @@
+{
+  "assets": [
+    {
+      "bytes": 843781,
+      "chunks": [
+        {
+          "bytes": 843781,
+          "index": 0,
+          "offset": 0,
+          "sha256": "c76d08541a42ccf4f47cb52beea0396665ec7d77c36c61a61905f59ba9bf0c25",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-chest/1.0.0/chest.m5bundle"
+        }
+      ],
+      "path": "assets/chest.m5bundle",
+      "sha256": "c76d08541a42ccf4f47cb52beea0396665ec7d77c36c61a61905f59ba9bf0c25"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-chest",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "6uZXXkvQaUcNHbK80w1xds9KVQh0yXK39u+sFcrcoUbsJY+wmcOGWki0hiE5lCW39PXoBNn+jCdillGEQYfFAA=="
+}

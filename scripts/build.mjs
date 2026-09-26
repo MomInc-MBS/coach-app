@@ -14,6 +14,8 @@ import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
 import {packNutrition} from './pack-nutrition.mjs';
 import {copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
+// Public release trust is committed in release-trust/public-build.json; an env var of the same name overrides it.
+for(const [key,value] of Object.entries(JSON.parse(await readFile('release-trust/public-build.json','utf8'))))if(!key.startsWith('$')&&value!==null)process.env[key]??=typeof value==='string'?value:JSON.stringify(value);
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
 if(publicExpansionKey && !(publicExpansionKey.kty==='OKP' && publicExpansionKey.crv==='Ed25519' && typeof publicExpansionKey.x==='string' && /^[A-Za-z0-9_-]{43}$/.test(publicExpansionKey.x) && !/^A+$/.test(publicExpansionKey.x))) throw new Error('PUBLIC_EXPANSION_SIGNING_JWK must be a non-placeholder Ed25519 public JWK');
 if(process.env.MYR5_MATERIAL_SIGNING_PRIVATE_JWK)throw new Error('Do not expose a private material signing key to the Sites build.');

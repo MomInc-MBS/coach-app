@@ -1,0 +1,30 @@
+{
+  "assets": [
+    {
+      "bytes": 1227707,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "96732979bd4e29d4a5a620a2cb7507c0e568d30c6c963db3cd231b554b59be79",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-quads/1.0.0/quads.m5bundle"
+        },
+        {
+          "bytes": 179131,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "0bce54b9701d11ff7e2ad975506719f8c6cd3ce39af09fff2c87f97783c13b96",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-quads/1.0.0/quads.m5bundle"
+        }
+      ],
+      "path": "assets/quads.m5bundle",
+      "sha256": "928026875a70613d3ddf7d727d6a83e08ca6be869cc2959c78c341d14eef7a9e"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-quads",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "j/NP4pr2/Mehe3oEZ1KWgz5PEBJei0W5TDptODUCuitsCckGSVb9y/tBXDaJSdbe00q3NRG48EENeU9vURe3Aw=="
+}

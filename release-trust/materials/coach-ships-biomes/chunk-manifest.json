@@ -1,0 +1,485 @@
+{
+  "assets": [
+    {
+      "bytes": 9912720,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "f2765764fd81bb0ee68dcecbb8f24b3fb3d7215fa4602568fcbbdf75af525af8",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "b4affce9fb7cf2ea06e9adaa695953b25a9b03fadaa0ffc6492c9da0862d68b3",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "3e958e6d00361b1c63fe31befa1182b23723b4fd0787820777368f6f8066c1ed",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "2eae71fda821496c23ae0a8d39b06b18b67aba93d6e2b31e1bcc511833402e8b",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "6680544f0f81efb648448e647ef59e10eb1197c3ef59df7ee190ba3b87015cb7",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "e6fc194be9547f028642ab1ce14eb774b0699d70727183124475b482a7af96c8",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "701ce69f570b6285c27b56d6c7214c5df80965a8308ccf1f27e2fde48c6ea721",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "158ca3547a802f1c24a036d320f4b8d8e7db1040215feb322214281c545275ed",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "8a43506ead05071e5002aded3891f544f5ab026e49e094cbbfcb2800f0defd01",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        },
+        {
+          "bytes": 475536,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "e6dbedf1a406342412dff2be6780f1f9e3bab889e3e25de059e50c3516b2af53",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/supportive.glb"
+        }
+      ],
+      "path": "assets/ships/supportive.glb",
+      "sha256": "2770e0aa51d2cf262db2762700f4f3567cd34e44d0619f0628eae3bffdf06f09"
+    },
+    {
+      "bytes": 10461352,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "23402097030897ba7bb7bf107333aa36c5b73ff63db64c6a942511b9aa221bfc",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "436d8a9b042e45d07a40efb65376a415a62537f1c3e9c9e422c24ca86e565ab4",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "1a9df385796255e38dbb2b64d7d7f755bfe97b5b1087610aa1e3cf71cb940bff",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "8e69ea4b69f2bb16ec7c6bd06ea667ed50c44317fbb5c9ec90ea719ec3cf1cfc",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "4af9dc6357edce143f179b64efb03f6af94cf606bebedde214a0aab3340a0389",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "628483d904c68b3745eb90409fb3e303e5424688f75c83354a150be01d347166",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "e376840ce2bd710cd1ba257ae5511ddfc1c546e54e8316c658ca1cc8f86ece60",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "9103062f012725e0dc02b74755385d9b5d6b4a29bb7f77d6b0254f1a8c7da895",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "e64648862e68b8e694585d8ec7567d500984d18522dc8bc48e318e7ba8478fb8",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        },
+        {
+          "bytes": 1024168,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "cc579137cb1a17c074f4ede489f1dc5b01dafcdefed09e2c987d6164aa6c0268",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/direct.glb"
+        }
+      ],
+      "path": "assets/ships/direct.glb",
+      "sha256": "d3757906634a3b2d056147270fbb95f37516853a6ac3f668bc1fd181dc1d36db"
+    },
+    {
+      "bytes": 10085068,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "ab377a2aad7f469a5c3afd842a48ea865b1e1bcfcd39dae1bd21a325b394afc1",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "7cdd1c509d9e8d7f277f0e908376e14ffa4c37c8092a3e826738e4b0aac786d0",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "5189b144571bb13e7217de84a93e4c73cec45deb597404691f42f766410a5f24",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "43e598b8f7de4a741cd488a9dd1478e527974682d442e5bacb519f1a068759f0",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "3e25e7d1dc59e3de576e57ed694726676d4ff8b2afdfec1312c3c32caedc272a",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "cd87eae6a9046c8256f786c7a81f938e5d82953cce1b46f6aef16db9c5a96f51",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "f9676b44b771f8ca43c3c3a6412ac1044baac7e644091409b48a9f7006e06936",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "f864c5d0715bce027271713a3dcb0f6de59027db712ace5a0a730614f34d6a45",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "69ce1b9e4924a1afe26990aa059ad5c54b68d0656aac387a84540f41b0fcfe73",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        },
+        {
+          "bytes": 647884,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "1aaf24e13307eeb56bbf4a25ae1d7144ecd1bafb653fbe67a6235c898ae3f59b",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/analytical.glb"
+        }
+      ],
+      "path": "assets/ships/analytical.glb",
+      "sha256": "0bed9d9a447f75dd126cb315c449d763048034902422ad6ac7629b3803dc241f"
+    },
+    {
+      "bytes": 9944576,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "9d74ff2aa3b7c6ca4d3ca2783c549eb656148d7adf5bb73a6675172dbf1abffb",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "523a462a353592c0c7b6a873eccf2797a86434854c629fb17f397ae59ca94d60",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "792768fc8a5a6c195574c9bbe2d8a1f090adf3179e5c763ecadd4e49dc25952d",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "d04a2f1f31c2689559b0453598f85e8d7689bdc803a146f4ba68345866eafa39",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "d7a4bdee82b8090a50ed30e1c1a3ab7fbe2e674154c6bb88ea0e15e455793f81",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "02c48c3047662315d7055ef0117fb0e6ebd4be71ecda45e5b6dbd58669c06e96",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "c02451b26910974d90899e3736a9c3a1252936caa4fc6b525559324f39092d3d",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "e1b6db796df886a5a1528bbea35ba6ee1eee00a78522d05fe99d8b3a05e220ac",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "1eff2bf1af9eb6323702464eb7cd7c4d5f39191ae1c04307427d59844b98913f",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        },
+        {
+          "bytes": 507392,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "f9cca59d2cf2cc70adc847966253c615051e72617a429963ad1734c84dbdd927",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/playful.glb"
+        }
+      ],
+      "path": "assets/ships/playful.glb",
+      "sha256": "c53d74da8e12b7676cf6d06d5526938d26da05d07dd4b38af74fae845137e4df"
+    },
+    {
+      "bytes": 10341060,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "edd56ada4921456d02d13140cabcf4b25226a11804c775c94bd1605f5fe34015",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "447b925eb3541f4e4001c0078c3727451fd0f34e4a2934f9317c328ecf5512b8",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "fc36e092cf490f839661bff0b173654298648fd15b7754328d820e666386c5cd",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "046ccf0a8443348a653ac8c57ee7c0872feb1a8222313c26d362c27196d5e14e",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "9eacf012e5d03d0162a9c5cc3238d2c34788ab771c1f52df412eda05c4794a3f",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "f34a37a4c104db9f6796edd5d557f349fa58fd6d95d5fdc7549d7c3793c5f621",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "44f3eca0cc0ae08f9d81a60ff7bc1fc3ba2a19e54a84caa8a91ecffeda1b5cc8",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "c70c3cd2cf3169050114cb79cdc1710f9757b8575022de3febf841d28ef4f040",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "e0fc194e241215d4bd1f934afacd27c1d40ce8d52e8f34cec22160b57b4c32a6",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        },
+        {
+          "bytes": 903876,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "2bd20a3d8f1503bd67769f1165b1784418ebeb687581ae97d244ba420089595d",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/calm.glb"
+        }
+      ],
+      "path": "assets/ships/calm.glb",
+      "sha256": "2288a2f10b1a0affc007870f70bf25c1223c00a3d21dcbd28a7262677b78b404"
+    },
+    {
+      "bytes": 10315084,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "ca9d75894c972695ded6bc30603a44d1ab36a31f7b3ceb10da33e723373f7d60",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "72eab6b8bb19667b1cc03812b5eefa6292bde2b0932ea8d59d8f17ad46ab1618",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 2,
+          "offset": 2097152,
+          "sha256": "9cf1c6820e32c2ac6d6ef328b613d5ea1e681ead2a11daeb4d65c60033682c8d",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 3,
+          "offset": 3145728,
+          "sha256": "9df28c76b385a2a370037b771dc74de41a7531af2a5dea471dcca37166e17782",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 4,
+          "offset": 4194304,
+          "sha256": "25b2914bf6fbd69a75794549d0ebf5431e493ba7c01ce7beccbb47d3224d4be2",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 5,
+          "offset": 5242880,
+          "sha256": "0031f0120d939a91453bd523959d8af96b99b2ea873fb9e174e0c7a1afee12f3",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 6,
+          "offset": 6291456,
+          "sha256": "f866f71f191290d1b74d9eecec3d35984e1b737daa3b1ff0aa9f57780a91799c",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 7,
+          "offset": 7340032,
+          "sha256": "1ef9efa4fa4f36d7abc5cdf495c697120c0c8602a89ae965bddfc49af5cb2f2b",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 1048576,
+          "index": 8,
+          "offset": 8388608,
+          "sha256": "e5a7c0f9f04959c3b01454e987ed90f0bef4e6b250a6363cd9534c560b90c072",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        },
+        {
+          "bytes": 877900,
+          "index": 9,
+          "offset": 9437184,
+          "sha256": "b62bdd8d7ca73c5782879c040797ff523a64bb21ecce083f44b7747fb5836f68",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/mom.glb"
+        }
+      ],
+      "path": "assets/ships/mom.glb",
+      "sha256": "1deb2c0afd574bed329a401b723eeefcb5025b7a9eaf13d5dbaf6c46930ed4d6"
+    },
+    {
+      "bytes": 277137,
+      "chunks": [
+        {
+          "bytes": 277137,
+          "index": 0,
+          "offset": 0,
+          "sha256": "53e26dfbfbe97a5ddd78f12b846f00ec191fd547aef7a5763953beb18bd79c44",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/coach-ships-biomes/1.0.0/biomes.m5bundle"
+        }
+      ],
+      "path": "assets/biomes.m5bundle",
+      "sha256": "53e26dfbfbe97a5ddd78f12b846f00ec191fd547aef7a5763953beb18bd79c44"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "coach-ships-biomes",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "l1EbETMJXruyyKCTrGYBr6rlr3mAS2YUmFXlnzDcqTMhMV+SXhsizYHEF6RdWTEwIE8/4pn2kkXzDuj5EssABA=="
+}

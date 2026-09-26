@@ -18,6 +18,7 @@ test('onboarding snapshots displayed choice before fresh auth read and sends exa
 test('onboarding rejects changed owner/epoch and missing scope without guessing a destination',async()=>{
  for(const fresh of [account('B',2),account('A',3)]){let writes=0;const actions=createAccountSessionActions({transitions:coordinator(),api:async path=>{if(path.startsWith('/api/account'))return fresh;writes++;}});await assert.rejects(actions.saveOnboarding(account(),{}),{code:'account_scope_changed'});assert.equal(writes,0);}
  const actions=createAccountSessionActions({transitions:coordinator(),api:()=>assert.fail()});await assert.rejects(actions.saveOnboarding({user:{id:'A'}},{}),{code:'account_scope_unavailable'});
+ await assert.rejects(actions.startBreathing(null),{code:'account_scope_unavailable',message:'Sign in to continue.'});
 });
 test('breathing completion keeps start ticket owner and epoch through a fresh comparison',async()=>{
  const transitions=coordinator(),calls=[];const actions=createAccountSessionActions({transitions,api:async(...args)=>{calls.push(args);return args[0].startsWith('/api/account')?account():args[0].endsWith('/start')?startReply():{combat:{},targetAccountId:'A',dataEpoch:2};}});
