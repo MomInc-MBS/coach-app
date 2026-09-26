@@ -71,7 +71,8 @@ test('a missing quilt texture (no Starter pack, offline) gives a plain stitched 
  await page.goto(url);
  await page.evaluate(async()=>{const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;THREE.Scene.prototype.add=function(...nodes){window.quiltScene=this;return add.apply(this,nodes);};});
  assert.equal(await open(page),true,'the board mounts without its texture');
- assert.equal(await page.locator('#portalBoardHost canvas').count(),1);
+ await page.waitForFunction(()=>document.getElementById('portalHome').dataset.art==='3d'); // the cloth quilt over its flat twin
+ assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#portalBoardHost canvas')].filter(c=>c.getContext('webgl2')).length),1);
  assert.equal(await page.evaluate(()=>document.getElementById('portalHome').classList.contains('no-board')),false);
  const cloth=await page.evaluate(()=>{
   const map=window.quiltScene.children.find(n=>n.isMesh).material.map,g=map.image.getContext('2d'),px=(x,y)=>[...g.getImageData(x,y,1,1).data].slice(0,3);

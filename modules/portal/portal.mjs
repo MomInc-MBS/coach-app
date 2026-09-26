@@ -2,8 +2,8 @@
 // stitched shapes cuts that shape out of the 3D board — the piece falls in, neon liquid glass glows
 // through the hole behind it for a short interactive loading phase — then opens the shape's menu.
 // AGPL-3.0-or-later.
-import {createQuiltBoard,QUILT} from './portal-board.mjs';
-import {createGlbBoard} from './portal-board-glb.mjs';
+import {createQuiltBoard2D,createQuiltBoardGL,QUILT} from './portal-board.mjs';
+import {createGlbBoard,frameOf,GLB} from './portal-board-glb.mjs';
 import {ice} from './portal-board-ice.mjs';
 import {grass} from './portal-board-grass.mjs';
 import {cogs} from './portal-board-cogs.mjs';
@@ -50,15 +50,21 @@ const TAP_MS=350,TAP_MOVE_PX=32,TAP_HIT_PX=14,ALMOST_COVER=.65,ALMOST_MS=1200,HI
 // cut, glass and dive" as tracing.
 const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes(id));
 
-// Board catalogue: add one line per wave-2 board here.
+// Board catalogue: add one line per wave-2 board here. Each board is two layers: `flat`, a still picture on a 2D canvas
+// (portal-board.mjs createQuiltBoard2D) that is always mounted and never needs WebGL, and `create`, the 3D board drawn over
+// it once it has rendered. A grimoire's flat picture is its poster, laid out at its GLB face's width/height (FACE, measured)
+// with its guides drawn in its shape frame. WAIT (ms): how long a poster, then a 3D board, may take before it counts as failed,
+// and how long the first mount waits for 3D before the portal comes up flat (3D then takes over when it has drawn).
 export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood']);
-const BOARDS={quilt:{label:'Quilt',create:host=>createQuiltBoard(host)},ice:{label:'Ice',create:host=>createGlbBoard(host,{effect:ice})},grass:{label:'Grass',create:host=>createGlbBoard(host,{effect:grass})},cogs:{label:'Cogs',create:host=>createGlbBoard(host,{effect:cogs})},jelly:{label:'Jelly',create:host=>createGlbBoard(host,{effect:jelly})},wood:{label:'Wood',create:host=>createGlbBoard(host,{effect:wood})}};
+const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847},WAIT={poster:6000,threeD:20000,mount:4000};
+const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster}),create:host=>createGlbBoard(host,{effect})});
+const BOARDS={quilt:{label:'Quilt',flat:host=>createQuiltBoard2D(host),create:host=>createQuiltBoardGL(host)},ice:grimoire('Ice',ice),grass:grimoire('Grass',grass),cogs:grimoire('Cogs',cogs),jelly:grimoire('Jelly',jelly),wood:grimoire('Wood',wood)};
 // Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
 // a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module
 // is imported (window.__portalTrailProbe above is the same pattern). Its create() only touches `host` at
 // call time, never `document` at module-eval time, so importing this module without a DOM still works.
 if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
- BOARDS.__stub__={label:'Stub',create:host=>Promise.resolve({
+ BOARDS.__stub__={label:'Stub',flat:host=>Promise.resolve({
   background:'#000',
   faceRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
   patternRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
@@ -178,7 +184,11 @@ function growHole(el,pts,box,current=()=>true,ms=PORTAL.revealMs){
 let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome,workoutHome,workoutSource,workoutNode;
 let wantedBoard=null,sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
-let board=null,boardFailed=false,boardShown=false,boardId='quilt';
+// board: what the portal cuts and measures: the 3D layer (gl3) once it has drawn, else the flat layer (base) under it.
+let board=null,base=null,gl3=null,boardShown=false,boardId='quilt';
+// Per board, this session (never one global flag): '3d' drawing, 'lost' (its context dropped once: one more try), 'flat' (3D
+// failed: the flat board stays until the board is picked again or the app restarts). pending3D: 3D builds still out.
+const art={},losses={},pending3D=new Set();let ready3D=Promise.resolve();
 let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outlineFlash=null,rafId=0;
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
@@ -193,48 +203,74 @@ let hint=null,lastTap=null;
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return Object.entries(BOARDS).filter(([id])=>PRODUCTION_PORTALS.includes(id)).map(([id,b])=>`<button type="button" data-board="${id}" aria-pressed="${id===boardId}">${b.label}</button>`).join('');}
 function updateBoardChips(){const tint=menuSheet?.querySelector('input[type=color]');if(tint)tint.value=boardTint();menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));}
-// Swaps the mounted board: pauses/disposes the old one, creates the new one, falls back to the
-// quilt (then the no-board menu sheet) on failure. Pointer listeners read the `board` variable at
-// call time, so nothing needs re-wiring here.
-// Loads run one at a time: effects (jelly's module state) are singletons, so a superseded load disposing late
-// must never overlap the next board's init. A load superseded while queued does nothing.
+// Swaps the mounted board. The flat layer goes up first: a poster that doesn't arrive keeps the board already showing (the
+// last good one), else the Quilt, whose own art is drawn in code when it must be, so there is always a board. Then 3D is
+// laid over it while the portal is on screen (threeD). Pointer listeners read the `board` variable at call time.
+// Loads run one at a time: effects (jelly's module state) are singletons, so the old 3D board is disposed before the next
+// one's build can start. A load superseded while queued does nothing.
 let loadQueue=Promise.resolve();
 function loadBoard(id){
  if(!BOARDS[id])id='quilt';
- wantedBoard=id;const load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,load):null);
+ wantedBoard=id;delete art[id];losses[id]=0; // a pick (or a cold start) gives its 3D another go
+ const load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,load):null);
  loadQueue=run.catch(()=>{});return run;
 }
 async function loadBoardNow(id,load){
- status(`Loading ${BOARDS[id].label} board…`);
+ const label=BOARDS[id].label;
+ status(`Loading ${label} board…`);
+ let next,failureMessage='';
+ try{next=await BOARDS[id].flat(boardHost);}
+ catch(error){
+  console.warn(`${label} board art is unavailable.`,error);
+  if(load!==boardLoad)return null;
+  if(base){status(`${label} board art is unavailable. ${BOARDS[boardId].label} stays; try again later or check Downloads.`);updateBoardChips();return base;}
+  failureMessage=`${label} board art is unavailable. Quilt is ready; try again later or check Downloads.`;
+  id='quilt';next=await BOARDS.quilt.flat(boardHost);
+ }
+ if(load!==boardLoad){next.dispose();return null;}
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
- const old=board;board=null;boardFailed=false;old?.pause();old?.dispose(); // board is null first, so the old canvas's own context-loss event is ignored
- let failureMessage='';
- // Effects place GLB details during init, so they must measure a real host even when startup
- // keeps the portal closed. visibility:hidden lays it out without a content flash or input.
- const hiddenForLoad=portalHome.hidden,priorVisibility=portalHome.style.visibility;
- if(hiddenForLoad){portalHome.hidden=false;portalHome.style.visibility='hidden';}
- try{
- try{const created=await BOARDS[id].create(boardHost);if(load!==boardLoad){created.dispose();return null;}board=created;}
- catch(error){
-  console.warn(`${BOARDS[id].label} board unavailable, falling back.`,error);
-  failureMessage=id==='quilt'?'Quilt board art is unavailable. Return to the pod and reconnect or update Coach.':BOARDS[id].label+' board art is unavailable. Quilt is ready; try the board again later or check Downloads.';
-  if(id!=='quilt'){
-   id='quilt';
-   try{board=await BOARDS.quilt.create(boardHost);}
-   catch(error2){boardFailed=true;console.warn('Quilt board unavailable, falling back to the menu sheet.',error2);}
-  }else boardFailed=true;
- }
- if(load!==boardLoad)return null;
- if(!boardShown)board?.pause();
- // Android can drop a live WebGL context (memory pressure): the canvas would go blank, so rebuild on the quilt (2D when WebGL is gone).
- const live=board;live?.canvas?.addEventListener('webglcontextlost',e=>{e.preventDefault();if(board===live)loadBoard('quilt');});
- portalHome.classList.toggle('no-board',boardFailed);
- portalHome.style.background=board?.background||''; // the canvases are transparent; the board colour lives here, behind the glass
- status(failureMessage);portalHome.dataset.board=id;boardId=id;store.set(BOARD_KEY,id);// a failed pick recovers to quilt on this device instead of retrying every cold start
-updateBoardChips();
- return board;
- }finally{if(hiddenForLoad){portalHome.style.visibility=priorVisibility;if(!boardShown)portalHome.hidden=true;}}
+ const old=[gl3,base];gl3=null;base=board=next;for(const b of old)b?.dispose();
+ if(!boardShown)base.pause();
+ portalHome.style.background=base.background||''; // the canvases are transparent; the board colour lives here, behind the glass
+ portalHome.dataset.board=boardId=id;portalHome.dataset.art='flat';
+ store.set(BOARD_KEY,id); // the saved choice is the board on screen: a failed pick keeps the last good one, a failed start the Quilt
+ status(failureMessage);updateBoardChips();
+ threeD();
+ return base;
+}
+// 3D over the flat board: while the portal is on screen (or about to be: mount), one build per board at a time. It takes over
+// only once it has drawn on a live context and no cut is open; a throw, a timeout or a lost context leaves the flat board (fell).
+function threeD(mounting=false){
+ const id=boardId,make=BOARDS[id].create;
+ if(!make||gl3||!(boardShown||mounting)||pending3D.has(id)||art[id]==='flat'||lifecycle.signal.aborted)return ready3D;
+ pending3D.add(id);portalHome.dataset.building=''; // portal.css keeps a hidden portal laid out meanwhile: effects measure the host as they build
+ const build=make(boardHost);build.catch(()=>{}).finally(()=>{pending3D.delete(id);if(!pending3D.size)delete portalHome.dataset.building;});
+ return ready3D=(async()=>{
+  let created;
+  try{created=await Promise.race([build,sleep(WAIT.threeD).then(()=>{throw new Error(`3D took over ${WAIT.threeD} ms`);})]);}
+  catch(error){build.then(late=>late.dispose(),()=>{});return fell(id,error);} // one that turns up late is released at once
+  created.canvas.style.opacity='0'; // drawn but out of sight until it takes over (opacity, not visibility: its frame still reaches the screen)
+  while((busy||phase)&&id===boardId&&!lifecycle.signal.aborted)await sleep(250); // ponytail: polls; a sequence ends within seconds
+  if(id!==boardId||gl3||lifecycle.signal.aborted){created.dispose();return;}
+  if(created.canvas.getContext('webgl2')?.isContextLost()!==false){created.dispose();return fell(id,new Error('WebGL context lost before its first frame'));}
+  gl3=board=created;created.canvas.style.opacity='';if(base.canvas)base.canvas.style.visibility='hidden';
+  if(boardShown)created.resume();else created.pause(); // resume draws a fresh frame now it's in sight
+  art[id]='3d';portalHome.dataset.art='3d';
+ })();
+}
+function fell(id,error){
+ console.warn(`${BOARDS[id].label} 3D is unavailable; its flat board stays.`,error);
+ art[id]='flat';
+ if(id===boardId&&id!=='quilt'&&!lifecycle.signal.aborted)status(`${BOARDS[id].label} is showing its flat art: its 3D didn't load.`); // the flat quilt is its own art
+}
+// Android drops live WebGL contexts under memory pressure: the flat board takes over at once and 3D gets one more try a
+// moment later; a second loss this session leaves the board flat.
+function lost3D(){
+ const id=boardId,dead=gl3;gl3=null;board=base;
+ if(base.canvas)base.canvas.style.visibility='';base.resume();portalHome.dataset.art='flat';dead.dispose();
+ if((losses[id]=(losses[id]||0)+1)>1)return fell(id,new Error('WebGL context lost again'));
+ art[id]='lost';setTimeout(()=>threeD(),1000);
 }
 
 // #111 metal frame (portal.css .portal-frame): the energy channel, bolts at the four corners and two down each long side,
@@ -280,6 +316,7 @@ function buildDom(){
  }
  syncEnergy();
  boardHost=portalHome.querySelector('#portalBoardHost');
+ boardHost.addEventListener('webglcontextlost',e=>{if(gl3&&e.target===gl3.canvas)lost3D();},true); // capture: the event doesn't bubble
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
  objectsLayer=portalHome.querySelector('#portalObjects');
  statusEl=portalHome.querySelector('#portalStatus');
@@ -362,7 +399,7 @@ function setVisible(v){
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;frameOff();if(v)applyLook();syncEnergy();
- scheduleIdle();
+ scheduleIdle();if(v)threeD();
 }
 function fadeOutBoard(){
  const run=++visibilityRun;
@@ -375,7 +412,7 @@ function fadeInBoard(){
  endPhase();board?.heal();
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
- board?.resume();boardShown=true;frameOff();syncEnergy();backgroundBlocked(true);menuBtn.focus();scheduleIdle();
+ board?.resume();boardShown=true;frameOff();syncEnergy();backgroundBlocked(true);menuBtn.focus();scheduleIdle();threeD();
  const run=visibilityRun;
  settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
 }
@@ -1726,7 +1763,8 @@ export async function mountPortal({visible=false}={}){
  menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
- if(!boardFailed){wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL();});} // compile the wormhole while idle, not at the first cut
+ await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
+ wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL();}); // compile the wormhole while idle, not at the first cut
  resizeOverlay();overlayObserver=new ResizeObserver(resizeOverlay);overlayObserver.observe(portalHome);
  setVisible(visible&&initialVisible());
  // Back from a 'nav' portal via the bfcache: drop the stale glass and hole.
@@ -1741,12 +1779,12 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();board?.dispose();board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();gl3?.dispose();base?.dispose();gl3=base=board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
   trace(strokes){const id=recognizeShape(strokes);if(MENUS[id])runShape(id);return MENUS[id]?id:null;},
-  board:id=>loadBoard(id),
+  board:id=>loadBoard(id).then(()=>ready3D), // resolves once 3D is drawing or has fallen back to the flat board
   openWorkoutHome,
   flashTransition:async({duration=520}={})=>{
    duration=Number.isFinite(duration)?Math.max(0,Math.min(duration,10000)):520;

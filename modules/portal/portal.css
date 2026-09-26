@@ -1,7 +1,6 @@
 #portalHome{position:fixed;inset:0;z-index:35;background:#150f1e;overflow:hidden;touch-action:none}
 #portalHome[hidden]{display:none}
-#portalHome.no-board{background:radial-gradient(ellipse at 50% 30%,#2a1c38,#100a17 70%)}
-#portalHome.no-board #portalBoardHost,#portalHome.no-board #portalOverlay,#portalHome.no-board #portalShadows{display:none}
+#portalHome[hidden][data-building]{display:block;visibility:hidden;pointer-events:none}
 /* #111 MOM Inc metal frame. The board fills the window behind the overlay controls; its rail runs at the physical
    perimeter. A board sets --face-* (its face box in the host; default: the whole
    host) and the frame wraps it, above the board canvas, under the glass bezel and the trace canvas: it never takes a

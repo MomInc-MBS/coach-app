@@ -16,7 +16,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import * as THREE from 'three';
 import {splitIndexByPolygon,pieceMaterial,fallPieces} from './portal-cut.mjs';
-import {SHAPES} from './portal-shapes.mjs';
+import {SHAPES,fromFrame} from './portal-shapes.mjs';
 
 const IMAGE='/pod/worlds/quilt.webp',IMAGE_W=1024,IMAGE_H=1666;
 // Stitched pattern (the eight shapes) inside the quilt image, as image fractions.
@@ -71,57 +71,68 @@ function plainQuilt(){
 function quiltRectOf(host){const box=host.getBoundingClientRect(),f=quiltSurfaceLayout(box.width,box.height).face;return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};}
 function patternRectOf(host){const q=quiltRectOf(host);return {left:q.left+q.width*PATTERN.left,top:q.top+q.height*PATTERN.top,width:q.width*(PATTERN.right-PATTERN.left),height:q.height*(PATTERN.bottom-PATTERN.top)};}
 
-// Non-WebGL twin of the quilt (Android can refuse a context, or lose it): the same art, face layout, cut hole and
-// public interface on a plain 2D canvas, so shape navigation never falls back to a blank sheet.
-// ponytail: no cloth ripple and no falling piece; the cut just opens a hole. Add if a 2D board is ever the common path.
-export async function createQuiltBoard2D(host){
+// The flat board: one still picture on a plain 2D canvas with a board's face layout, shape frame, cut hole and public
+// interface. portal.mjs mounts it first, as the base layer under the 3D board, and shows it whenever 3D isn't drawing
+// (no WebGL, a lost context, a stalled or broken download), so the portal is never a blank sheet.
+// Quilt (the default) draws its plain stitched quilt at once and its art when that arrives, so it cannot fail. A grimoire
+// board passes its poster (src), face width/height (ratio), shape frame ({x0,y0,x1,y1} face fractions) and guide, and
+// rejects when the poster doesn't load within waitMs, so the portal can keep the board it already shows.
+// ponytail: no cloth ripple, dent or falling piece; the cut just opens a hole.
+export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const canvas=document.createElement('canvas'),g=canvas.getContext('2d');
- if(!g)throw new Error('2D canvas unavailable');
- canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
- let image;
- try{image=await new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=fail;img.src=IMAGE;});}
- catch{image=plainQuilt();}
- let width=1,height=1,holes=[],disposed=false;
+ const art=new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>fail(new Error('Board art unavailable: '+src));img.src=src;if(waitMs)setTimeout(()=>fail(new Error('Board art timed out: '+src)),waitMs);});
+ let image=fallback?.(),width=1,height=1,holes=[],disposed=false;
+ if(image)art.then(img=>{image=img;draw();},()=>{});else image=await art;
+ const canvas=document.createElement('canvas'),g=canvas.getContext('2d'); // no 2D context: a bare face, but the frame, layout and cuts still work
+ canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;display:block;width:100%;height:100%';host.append(canvas);
+ const faceOf=(w,h)=>{const fw=Math.min(w,h*ratio);return {left:(w-fw)/2,top:h-fw/ratio,width:fw,height:fw/ratio};};
+ const rectOf=()=>{const box=host.getBoundingClientRect(),f=faceOf(box.width,box.height);return {left:box.left+f.left,top:box.top+f.top,width:f.width,height:f.height};};
  function draw(){
-  if(disposed)return;
-  const scale=Math.min(devicePixelRatio||1,2),{face}=quiltSurfaceLayout(width,height);
+  if(disposed||!g)return;
+  const scale=Math.min(devicePixelRatio||1,2),face=faceOf(width,height);
   canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale); // resizing also clears
   g.setTransform(scale,0,0,scale,0,0);g.save();
   if(holes.length){g.beginPath();g.rect(0,0,width,height);for(const poly of holes){poly.forEach(([u,v],i)=>g[i?'lineTo':'moveTo'](face.left+u*face.width,face.top+v*face.height));g.closePath();}g.clip('evenodd');}
-  g.drawImage(image,face.left,face.top,face.width,face.height);g.restore();
+  g.drawImage(image,face.left,face.top,face.width,face.height);
+  // A GLB board's guides are carved or painted in 3D, not in its flat poster: draw the same shape paths in its frame.
+  if(guide){
+   const trace=()=>{for(const [id,polys] of Object.entries(SHAPES)){if(id==='line')continue;for(const {points} of polys){g.beginPath();points.forEach(([u,v],i)=>{const [fu,fv]=fromFrame(u,v,frame);g[i?'lineTo':'moveTo'](face.left+fu*face.width,face.top+fv*face.height);});g.stroke();}}};
+   const alpha=Math.max(guide.alpha||0,.42);g.strokeStyle=guide.color||'#fff';g.lineCap=g.lineJoin='round';
+   g.shadowColor=g.strokeStyle;g.shadowBlur=8;g.globalAlpha=alpha*.65;g.lineWidth=5;trace();g.shadowBlur=0;g.globalAlpha=alpha;g.lineWidth=2;trace();
+  }
+  g.restore();
  }
  function layout(box={width:host.clientWidth,height:host.clientHeight}){
-  width=Math.max(1,box.width);height=Math.max(1,box.height);
-  for(const [k,v] of Object.entries(quiltSurfaceLayout(width,height).face))host.style.setProperty('--face-'+k,v+'px');
+  if(!box.width||!box.height)return; // hidden (display:none) reads 0x0: keep the last layout
+  width=box.width;height=box.height;
+  if(canvas.style.visibility!=='hidden')for(const [k,v] of Object.entries(faceOf(width,height)))host.style.setProperty('--face-'+k,v+'px'); // under a live 3D board, that board owns the frame
   draw();
  }
- const observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();
+ const observer=new ResizeObserver(entries=>layout(entries.at(-1).contentRect));observer.observe(host);layout();
  return {
-  canvas,background:BACKGROUND,faceRect:()=>quiltRectOf(host),quiltRect:()=>quiltRectOf(host),patternRect:()=>patternRectOf(host),
+  canvas,background,faceRect:rectOf,quiltRect:rectOf,
+  patternRect(){const q=rectOf();return {left:q.left+q.width*frame.x0,top:q.top+q.height*frame.y0,width:q.width*(frame.x1-frame.x0),height:q.height*(frame.y1-frame.y0)};},
   cut(poly,color,ms=1100){holes=[poly];draw();return new Promise(done=>setTimeout(done,reduced?0:ms));},
   heal(){if(holes.length){holes=[];draw();}},
-  press(){},release(){},frameMs:()=>0,pause(){},resume(){},
+  press(){},release(){},frameMs:()=>0,pause(){},
+  resume(){layout();}, // back on screen (or back from under a 3D board): re-take the frame
   dispose(){disposed=true;observer.disconnect();canvas.remove();},
  };
 }
 
-// WebGL quilt first; when the driver refuses a renderer (or fails while building it) the 2D board stands in.
-export async function createQuiltBoard(host,opts){
- try{return await createQuiltBoardGL(host,opts);}
- catch(error){console.warn('Quilt WebGL unavailable, using the 2D board.',error);return createQuiltBoard2D(host);}
-}
-
-async function createQuiltBoardGL(host,{knobs=QUILT}={}){
+// The WebGL cloth quilt (portal.mjs lays it over the flat quilt once it has drawn).
+export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ // The art first, the renderer after: a stalled download never holds a WebGL context.
+ let texture;
+ try{texture=await new THREE.TextureLoader().loadAsync(IMAGE);}
+ catch{texture=new THREE.CanvasTexture(plainQuilt());}
  // Transparent canvas; BACKGROUND goes on #portalHome (board.background) so the neon glass shows only through a cut.
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
- let observer,texture,geometry,material,pieceMat;
+ let observer,geometry,material,pieceMat,frame=0,disposed=false; // outside the try: a failed build must also stop its frame loop
  try{ // a failure after the renderer exists must not leave its canvas and context behind
- try{texture=await new THREE.TextureLoader().loadAsync(IMAGE);}
- catch{texture=new THREE.CanvasTexture(plainQuilt());}
  texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));
@@ -145,7 +156,7 @@ async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  pieceMat=pieceMaterial(material);const warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
  const fullIndex=geometry.index;let cutting=null;
 
- let width=1,height=1,surface=quiltSurfaceLayout(1,1),frame=0,disposed=false,paused=false,awakeUntil=0,last=0,frameMs=0;
+ let width=1,height=1,surface=quiltSurfaceLayout(1,1),paused=false,awakeUntil=0,last=0,frameMs=0;
  const pointers=new Map();
  // Untransformed size (the observer's contentRect, else clientWidth): the portal can be re-shown mid-dive, scaled.
  function layout(box={width:host.clientWidth,height:host.clientHeight}){
@@ -242,5 +253,5 @@ async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   resume(){paused=false;wake();},
   dispose(){cutting?.fall.end();pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
- }catch(error){observer?.disconnect();pieceMat?.dispose();geometry?.dispose();material?.dispose();texture?.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
+ }catch(error){disposed=true;cancelAnimationFrame(frame);observer?.disconnect();pieceMat?.dispose();geometry?.dispose();material?.dispose();texture?.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
 }

@@ -24,10 +24,9 @@ export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|mo
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.webp|modules\/rooms\/reminders-computer\.css)$/;
 // W4-4E (D47): the customizer cage and the Draco decoder only it needs. Never core; the customizer stays 2D without it.
 export const CAGE_ROOM=/^\/pod\/rooms\/cage\//;
-const GRIMOIRE_GROUPS=['ice','grass','cogs','jelly','wood'].map(id=>[
- 'grimoire-'+id,
- new RegExp(`^/(?:pod/worlds/boards/${id==='cogs'?'cogs/':id==='grass'?'(?:grass|flower)\\.glb$':id+'\\.glb$'}|modules/portal/portal-tunnel-${id}\\.mjs$)`),
-]);
+// Each grimoire's art: its GLB board (cogs: its folder), its flat poster (portal.mjs's base layer) and its tunnel effect.
+const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+',jelly:'jelly\\.glb',wood:'wood\\.glb'};
+const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+id,new RegExp(`^/(?:pod/worlds/boards/(?:${art}|${id}-poster\\.webp)|modules/portal/portal-tunnel-${id}\\.mjs)$`)]);
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
