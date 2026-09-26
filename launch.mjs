@@ -28,6 +28,7 @@ import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
 import {hasPackGrant} from './packs/pack-entitlements.mjs';
 import {createPackGrantCache} from './packs/pack-grant-cache.mjs';
+import {subscribePush} from './push-subscribe.mjs';
 const accountTransitions=authTransitions();
 mountLaunch();
 mountRemindersComputer();
@@ -100,7 +101,6 @@ liveReminders.update(items);
 function resetReminderEdit(){editingReminder=null;set('saveReminder','Save reminder');$('cancelReminderEdit').hidden=true;$('reminderForm').reset();$('reminderForm').elements.timezone.value=Intl.DateTimeFormat().resolvedOptions().timeZone;reminderControls.load();}
 $('cancelReminderEdit').onclick=()=>{resetReminderEdit();set('reminderStatus','Ready for a new reminder.');};
 $('reminderForm').onsubmit=async e=>{e.preventDefault();const form=e.target,b=form.querySelector('[type=submit]');b.disabled=true;$('cancelReminderEdit').disabled=true;try{const data=Object.fromEntries(new FormData(form));data.daysPerWeek=Number(data.daysPerWeek);data.enabled=form.elements.enabled.checked;data.id=editingReminder||crypto.randomUUID();await api(editingReminder?'/api/reminders/'+editingReminder:'/api/reminders',editingReminder?'PUT':'POST',data);set('reminderStatus',account?.push.schedulerActive?'Reminder saved.':'Reminder saved; delivery starts once the online sender is connected.');resetReminderEdit();await reminders();}catch(err){set('reminderStatus',err.message);}finally{b.disabled=false;$('cancelReminderEdit').disabled=false;}};
-const fromBase64=text=>Uint8Array.from(atob(text.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(text.length/4)*4,'=')),c=>c.charCodeAt(0));
 async function syncDeviceSwitch(){
  if(deviceBusy)return;
  let ticket;try{
@@ -124,8 +124,8 @@ $('notificationSwitch').onclick=async()=>{
   else{
    if(account?.push.environment==='preview')throw Error('Notifications connect in the live app: myr5.mominc.online.');if(!account?.push.configured)throw Error('The notification sender could not connect. Retry while online.');
    if(await Notification.requestPermission()!=='granted')throw Error('Notifications were not allowed. Enable them in your phone settings.');
-   const reg=registration||await navigator.serviceWorker.ready,existing=await reg.pushManager.getSubscription(),sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:fromBase64(account.push.publicKey)});
-   try{await api('/api/push/subscribe','POST',sub.toJSON());}catch(e){if(!existing)await sub.unsubscribe();throw e;}
+   const reg=registration||await navigator.serviceWorker.ready,{subscription:sub,fresh}=await subscribePush(reg,account.push.publicKey);
+   try{await api('/api/push/subscribe','POST',sub.toJSON());}catch(e){if(fresh)await sub.unsubscribe();throw e;}
    set('pushStatus','This device is connected. Send a test to check delivery.');
   }
  }catch(e){deviceBusy=false;await syncDeviceSwitch();set('pushStatus',e.message);return;}finally{deviceBusy=false;}await syncDeviceSwitch();

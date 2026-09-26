@@ -7,9 +7,9 @@ import {openArmieInbox} from './armie-inbox.mjs';
 import {pickArmieLetter} from './armie-letters.mjs';
 import {armieNotifyBlocked} from './armie-notify-gate.mjs';
 import {authFetch} from './auth-client.mjs';
+import {subscribePush} from './push-subscribe.mjs';
 
 export const PUSH_PROMPTED_KEY = 'myr5-armie-push-prompted-v1';
-const fromBase64 = text => Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(text.length / 4) * 4, '=')), c => c.charCodeAt(0));
 
 let inboxPromise = null;
 export const armieInbox = () => inboxPromise ??= openArmieInbox().catch(error => {inboxPromise = null; throw error;});
@@ -37,7 +37,7 @@ export async function maybeRequestArmiePushPermission() {
   const account = await accountResponse.json();
   if (!account?.push?.configured || account.push.environment === 'preview') return false;
   const registration = await navigator.serviceWorker.ready;
-  const sub = (await registration.pushManager.getSubscription()) || await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: fromBase64(account.push.publicKey)});
+  const {subscription: sub} = await subscribePush(registration, account.push.publicKey);
   await authFetch('/api/push/subscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(sub.toJSON())});
   return true;
  } catch { return false; } // best-effort; the inbox already has the letter either way

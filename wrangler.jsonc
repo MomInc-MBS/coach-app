@@ -25,7 +25,8 @@
 		"CLERK_FRONTEND_URL": "https://clerk.mominc.online",
 		"CLERK_AUTHORIZED_PARTIES": "https://myr5.mominc.online",
 		"RELEASE_ORIGIN": "https://myr5.mominc.online",
-		"RELEASE_EMAIL_FROM": "dispatch@mominc.online"
+		"RELEASE_EMAIL_FROM": "dispatch@mominc.online",
+		"VAPID_SUBJECT": "https://myr5.mominc.online"
 	},
 	"d1_databases": [
 		{
