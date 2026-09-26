@@ -29,7 +29,7 @@ const VOLUMES:Record<Exclude<CageSection,'overview'>,Volume[]>={
 };
 // Where each view looks from (a direction from the section toward the camera) and what it keeps in frame.
 const VIEWS:Record<CageSection,{from:[number,number,number];coach:boolean;pad:number}>={
- overview:{from:[0,.5,1],coach:true,pad:.92},
+ overview:{from:[0,.5,1],coach:true,pad:.5},
  pedestal:{from:[0,.18,1],coach:true,pad:1.02},
  pets:{from:[.1,.95,1],coach:false,pad:1},
  weapons:{from:[-.1,.2,1],coach:false,pad:1},
