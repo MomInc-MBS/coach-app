@@ -77,3 +77,32 @@ test('no WebGL shows the picked board flat, keeps routes usable, returns to 3D w
  assert.deepEqual(errors,[]);
  await page.close();
 }));
+
+// R7 desktop repro of the Android Jelly crash (Grok's tripwire, plan/reports/jelly-android-grok.md): a phone GPU faults
+// compiling or first drawing a fragment shader with a big dynamically indexed uniform array (Jelly's uTrail was 160 vec4s),
+// the GPU process resets, every live context is lost and Chrome then refuses new ones for the page. This stub plays that
+// out on desktop: a program with a uniform vec4 array over 32 entries loses every context and blocks WebGL from then on.
+const PHONE_GPU=()=>{
+ window.__gpuReset=false;const live=[],get=HTMLCanvasElement.prototype.getContext;
+ HTMLCanvasElement.prototype.getContext=function(kind,...args){if(window.__gpuReset&&/webgl/i.test(kind))return null;const c=get.call(this,kind,...args);if(c&&/webgl/i.test(kind)&&!live.includes(c))live.push(c);return c;};
+ const link=WebGL2RenderingContext.prototype.linkProgram;
+ WebGL2RenderingContext.prototype.linkProgram=function(program){
+  link.call(this,program);
+  const src=this.getAttachedShaders(program).map(s=>this.getShaderSource(s)).join('\n'),big=[...src.matchAll(/uniform\s+vec4\s+\w+\s*\[\s*(\d+)\s*\]/g)].some(m=>+m[1]>32);
+  if(big&&!window.__gpuReset){window.__gpuReset=true;for(const c of live)c.getExtension('WEBGL_lose_context')?.loseContext();}
+ };
+};
+
+test('R7: picking Jelly on a phone-like GPU keeps WebGL for Jelly and every board after it',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(PHONE_GPU);
+ await page.goto(url);
+ await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});
+ for(const id of ['jelly','ice','quilt']){
+  await page.evaluate(id=>window.portal.board(id),id);
+  assert.deepEqual({...await shown(page),reset:await page.evaluate(()=>window.__gpuReset)},{board:id,art:'3d',reset:false},`${id} is drawing in 3D, no GPU reset`);
+ }
+ assert.deepEqual(errors,[]);
+ await page.close();
+}));

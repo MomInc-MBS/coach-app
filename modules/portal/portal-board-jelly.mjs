@@ -32,9 +32,9 @@ const BONE={zFrac:.94,seg:.0546,centre:[.5,.444],follow:.55,ridgeAmp:0,ridgeFreq
 // width: gash width at the finger; close: s until the lips meet (width -> 0, so the gash tapers
 // back along the trail); ease: closing curve exponent; life: s until seam + bulge are gone (points
 // evicted, well inside the 7 s rule); step: min spacing between trail points.
-// Ian 2026-09-24: "make the jelly slit longer and heal slower" — close raised ~3x (a normal-speed
-// drag now leaves at least half a board-width of visibly open slit behind the finger) and life
-// bumped to match (seam/bulge still finishes, well inside the 7 s rule).
+// Ian 2026-09-26: "lets make the trail shorter for the jelly" — only the recent part of the stroke is kept (cap
+// points, oldest evicted: cap x step = .8 face widths) and the slit closes within close, so it's a short gash that
+// follows the finger. This replaces 2026-09-24's longer, slower slit.
 // Lips: a ridge of half-width lip on each edge (normal tilt lipTilt, glossy, lipGlow sheen) plus a
 // crisp edgeGlow line on the cut edge. Inside: wallRGB at the walls to deepRGB at the centre (mixed
 // by interior), matte (interiorRough), walls tilting wallTilt into the cut; the wall facing the key
@@ -43,12 +43,12 @@ const BONE={zFrac:.94,seg:.0546,centre:[.5,.444],follow:.55,ridgeAmp:0,ridgeFreq
 // with it) that wobbles at wobbleHz, dying at wobbleDecay /s, over a dark seam (half-width seam,
 // seamDark); all of it fades out between close and life.
 export const TRAIL={
- // ponytail: 160 trail points in one uniform array — cap x step covers ~4 board widths, enough for
- // a fast drag to stay untruncated for the whole `life` window. A trail bbox test (uTrailBounds)
- // skips the per-pixel loop entirely off the gash, so the bigger cap stays cheap on a phone; raise
- // cap further (the GLSL array follows) if a very long fast drag still clips its tail.
- cap:160,
- step:.025,width:.04,close:1.8,ease:1,life:3.3,
+ // R7 (Android): cap is the GLSL uTrail array size and the fragment loop bound. At 160 it made Jelly's fragment shader
+ // ~206 uniform vectors (the GLES 3.0 floor is 224; every other board is under ~50), dynamically indexed in a 160-pass
+ // loop, and picking Jelly took down the phone's GPU process and with it WebGL for every board. Keep it at 32 or under
+ // (tests/portal-board-jelly.test.mjs); uTrailBounds still skips the loop off the gash.
+ cap:32,
+ step:.025,width:.04,close:.6,ease:1,life:2.1,
  lip:.0035,lipTilt:1,lipGlow:.2,lipRGB:[.8,1,.65],edgeGlow:.6,edgeRGB:[.85,1,.75],
  wallTilt:.7,wallRGB:[.05,.15,.03],deepRGB:[.004,.025,.004],interior:.92,interiorRough:.85,litWall:.5,litRGB:[.25,.55,.12],
  light:[-.79,.62], // key light (portal-board-glb's sun) as a face-xy direction, y up
@@ -89,7 +89,7 @@ export function trailBounds(pts,marginU=TRAIL.width/2+.01,marginV=marginU){
 }
 
 // Dent + ripple displacement (xy slosh, z heave) at face point p, plus its height gradient.
-// Rides in uniformDecls: a GLSL function can't be declared inside main(), where vertexDisplace goes.
+// Rides in vertexDecls: a GLSL function can't be declared inside main(), where vertexDisplace goes.
 const JELLY_FIELD=`
 vec3 jellyField(vec2 p,out vec2 grad){
 vec3 d=vec3(0.0);grad=vec2(0.0);
@@ -207,7 +207,9 @@ export const jelly={
  guide:{color:'#c8ffb0',alpha:.12,width:4},
  pattern:{left:.07,top:.055,right:.93,bottom:.87}, // measured in-browser against the carved oval's extremes
  uniforms:{uRipple:{value:[]},uHalfDepth:{value:1},uBoneZ:{value:1},uSeg:{value:1},uGridO:{value:null},uBoneFollow:{value:1},uRidgeAmp:{value:0},uRidgeFreq:{value:0},uTrail:{value:[]},uTrailN:{value:0},uTrailBounds:{value:null},uWobble:{value:1}},
- uniformDecls:`uniform vec4 uRipple[6];\nuniform float uHalfDepth;\nuniform float uBoneZ;\nuniform float uSeg;\nuniform vec2 uGridO;\nuniform float uBoneFollow;\nuniform float uRidgeAmp;\nuniform float uRidgeFreq;\nuniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\nvarying float vDepthF;\n`+JELLY_FIELD,
+ uniformDecls:'varying float vDepthF;\n',
+ vertexDecls:'uniform vec4 uRipple[6];\nuniform float uHalfDepth;\nuniform float uBoneZ;\nuniform float uSeg;\nuniform vec2 uGridO;\nuniform float uBoneFollow;\nuniform float uRidgeAmp;\nuniform float uRidgeFreq;\n'+JELLY_FIELD,
+ fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\n`, // fragment only (portal-board-glb.mjs)
  vertexDisplace:VERTEX_DISPLACE,
  fragment:FRAGMENT,
  init,press,move,release,step,dispose,

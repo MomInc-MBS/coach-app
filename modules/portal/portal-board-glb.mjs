@@ -136,10 +136,12 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   mat.customProgramCacheKey=()=>effect.id;
   mat.onBeforeCompile=shader=>{
    Object.assign(shader.uniforms,uniforms);
+   // uniformDecls go to both stages; vertexDecls/fragmentDecls to one only, so a big uniform array (jelly's trail) never
+   // takes a second stage's uniform space on a phone GPU.
    const decl=`varying vec2 vPlanar;\nuniform float uTime;\nuniform vec4 uTouch[8];\nuniform int uTouchCount;\nuniform vec2 uFaceMin;\nuniform vec2 uFaceSize;\nuniform sampler2D uPaint;\nuniform sampler2D uGlow;\nuniform sampler2D uRim;\nuniform float uGlowStrength;\nuniform float uDent;\nuniform float uDentRadius;\n${effect.uniformDecls||''}\n`;
-   shader.vertexShader=decl+shader.vertexShader.replace('#include <begin_vertex>',
+   shader.vertexShader=decl+(effect.vertexDecls||'')+shader.vertexShader.replace('#include <begin_vertex>',
     `#include <begin_vertex>\nvec2 planar=(position.xy-uFaceMin)/uFaceSize;planar.y=1.0-planar.y;vPlanar=planar;\n${effect.vertexDisplace||DEFAULT_DISPLACE}`);
-   shader.fragmentShader=decl+shader.fragmentShader
+   shader.fragmentShader=decl+(effect.fragmentDecls||'')+shader.fragmentShader
     .replace('#include <map_fragment>','#include <map_fragment>\nvec4 pnt=texture2D(uPaint,vPlanar);diffuseColor.rgb=mix(diffuseColor.rgb,pnt.rgb,pnt.a);')
     .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\nvec4 glo=texture2D(uGlow,vPlanar),cutRim=texture2D(uRim,vPlanar);totalEmissiveRadiance+=glo.rgb*glo.a*uGlowStrength+cutRim.rgb*cutRim.a*2.0;\n'+(effect.fragment||'')); // optional effect GLSL: runs before lighting, may edit diffuseColor/roughnessFactor/normal (view space)/totalEmissiveRadiance
   };

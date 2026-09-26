@@ -51,11 +51,17 @@ test('gashWidth: full at the finger, tapers to zero by close, never negative',()
  assert.ok(TRAIL.life<7,'Ian: everything a touch leaves is gone within 7 s');
 });
 
-test('TRAIL: slit stays open longer and heals slower (Ian 2026-09-24), still inside the 7 s rule',()=>{
- assert.ok(TRAIL.close>=1.5,'close raised well past the old .6 s so a normal-speed drag leaves a long open slit');
+// R7: a 160-point uTrail array (206 fragment uniform vectors, a 160-pass dynamically indexed loop) killed WebGL on
+// Android. Ian 26 Sept: "lets make the trail shorter for the jelly".
+test('TRAIL: a short gash that follows the finger, on a phone-sized fragment-only uniform array',()=>{
+ assert.ok(TRAIL.cap<=32,'the GLSL uTrail array and its loop stay phone-sized');
+ assert.ok(jelly.fragmentDecls.includes(`uniform vec4 uTrail[${TRAIL.cap}];`),'the array is TRAIL.cap long');
+ assert.ok(jelly.fragment.includes(`i<${TRAIL.cap};`),'the loop is bounded by TRAIL.cap');
+ assert.doesNotMatch(jelly.uniformDecls+jelly.vertexDecls,/uTrail/,'the trail never reaches the vertex shader');
+ assert.ok(TRAIL.cap*TRAIL.step<=1,'only the recent part of a stroke is kept (under a board width)');
+ assert.ok(TRAIL.close<=TRAIL.cap*TRAIL.step,'at a normal drag (a face width a second) the open slit fits in the points kept: its tail closes, never pops');
  assert.equal(TRAIL.life,+(TRAIL.close+1.5).toFixed(2),'life gives the seam/bulge room to finish after the slit closes');
  assert.ok(TRAIL.life<7,'Ian: everything a touch leaves is gone within 7 s');
- assert.ok(TRAIL.cap*TRAIL.step>=3,'cap x step covers a long fast drag for the whole life window without truncating its tail');
 });
 
 test('trailBounds: axis-aligned box around the trail, padded by the widest the gash gets; null when empty',()=>{
