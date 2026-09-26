@@ -74,7 +74,7 @@ function makeCanvasTex(w,h){
 // Where the eight shapes sit on the face: the board's own carving when it has one (effect.frame,
 // x0/y0/x1/y1 UV fractions — or the older effect.pattern left/top/right/bottom some boards still set),
 // else an even inset. Traces are normalised against it (see toFrame/fromFrame in portal-shapes.mjs).
-const frameOf=(effect,knobs)=>effect.frame||(effect.pattern&&{x0:effect.pattern.left,y0:effect.pattern.top,x1:effect.pattern.right,y1:effect.pattern.bottom})||{x0:knobs.inset,y0:knobs.inset,x1:1-knobs.inset,y1:1-knobs.inset};
+export const frameOf=(effect,knobs)=>effect.frame||(effect.pattern&&{x0:effect.pattern.left,y0:effect.pattern.top,x1:effect.pattern.right,y1:effect.pattern.bottom})||{x0:knobs.inset,y0:knobs.inset,x1:1-knobs.inset,y1:1-knobs.inset};
 // Each hint is drawn twice — a wide blurred halo, then a thin core — so it glows softly instead of reading as a hard wire.
 function drawGuides(paint,texW,texH,knobs,effect){
  if(effect.guide===null)return;
@@ -90,11 +90,8 @@ function drawGuides(paint,texW,texH,knobs,effect){
 }
 
 export async function createGlbBoard(host,{effect,knobs=GLB}={}){
- // Transparent canvas: the solid board colour is #portalHome's background (portal.mjs reads board.background),
- // so the neon glass can sit between the two and show only through a cut.
- const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
- const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
+ // Outside the try: a build that fails part-way must still stop its frame loop, release its context and undo its effect.
+ let renderer=null,inited=false,frame=0,disposed=false,awakeUntil=0,last=0,frameMs=0,cutting=null;
  try{
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));
@@ -161,7 +158,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  }
  computeFit();
  const toWorld=(u,v)=>[faceRect.left+u*faceRect.width,-(faceRect.top+v*faceRect.height)];
- await effect.init?.({THREE,scene,mesh:meshObjs.length===1?meshObjs[0]:group,material:meshObjs[0].material,uniforms,paint,glow,face:{w:fw,h:fh},toWorld,faceZ:0,wake});
+ await effect.init?.({THREE,scene,mesh:meshObjs.length===1?meshObjs[0]:group,material:meshObjs[0].material,uniforms,paint,glow,face:{w:fw,h:fh},toWorld,faceZ:0,wake});inited=true;
  computeFit();drawGuides(paint,texW,texH,knobs,{...effect,frame:viewFrame});
  meshObjs.forEach(m=>setupMaterial(m.material));
  // Transparent twins for cut pieces, drawn once at load (opacity 0, over the door itself: invisible) so
@@ -170,8 +167,13 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  meshObjs.forEach(o=>{if(!pieceMats.has(o.material)){const m=pieceMaterial(o.material);m.opacity=0;pieceMats.set(o.material,m);warm.push(new THREE.Mesh(o.geometry,m));}});
  warm.forEach(w=>group.add(w));
 
- let frame=0,disposed=false,awakeUntil=0,last=0,frameMs=0;const startTime=performance.now();
- const pointers=new Map();
+ // The renderer (and its WebGL context) only now, once every download is in: a stalled one never holds a context.
+ // Transparent canvas: the solid board colour is #portalHome's background (portal.mjs reads board.background),
+ // so the neon glass can sit between the two and show only through a cut.
+ renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
+ const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
+ const startTime=performance.now(),pointers=new Map();
  function layout(){
   computeFit();
   if(effect.guide!==null){paint.ctx.clearRect(0,0,texW,texH);drawGuides(paint,texW,texH,knobs,{...effect,frame:viewFrame});}
@@ -179,7 +181,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   camera.position.set(width/2,-height/2,(height/2)/Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));camera.near=camera.position.z/10;camera.far=camera.position.z*10;camera.lookAt(width/2,-height/2,0);camera.updateProjectionMatrix();
   effect.resize?.({w:fw,h:fh});wake();
  }
- function wake(){awakeUntil=performance.now()+knobs.sleepMs;if(!frame&&!disposed){last=performance.now();frame=requestAnimationFrame(tick);}}
+ function wake(){awakeUntil=performance.now()+knobs.sleepMs;if(!frame&&!disposed&&renderer){last=performance.now();frame=requestAnimationFrame(tick);}}
  function fillTouches(now){
   let i=0;for(const p of pointers.values()){if(i>=8)break;touchArr[i].set(p.u,p.v,1,(now-p.t0)/1000);i++;}
   for(;i<8;i++)touchArr[i].set(0,0,0,0);
@@ -206,7 +208,6 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  // planar uv exactly as the shader computes it) moves into a falling piece that shares the mesh's vertex
  // buffers; the mesh keeps the rest, so the board has a real hole. Effect-owned meshes/props are never
  // sliced here: an effect takes part through its optional cut(polyUv,color)/heal() hooks (pointInPolygon is exported for them).
- let cutting=null;
  const toUv=(x,y)=>[(x-faceMin.x)/fw,1-(y-faceMin.y)/fh];
  function drawRim(poly,color){
   const {ctx:c,canvas:{width:w,height:h}}=rim,s=w/512;c.clearRect(0,0,w,h);c.save();c.lineJoin='round';
@@ -263,5 +264,5 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
    paint.texture.dispose();glow.texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();
   },
  };
- }catch(error){renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
+ }catch(error){disposed=true;cancelAnimationFrame(frame);if(inited)effect.dispose?.();renderer?.dispose();renderer?.forceContextLoss();renderer?.domElement.remove();throw error;}
 }

@@ -20,9 +20,9 @@ test('strip sequence stays valid hex and only default vars are left unset',()=>{
  applyLookVars(el,{portal:'#112233',frame:LOOK_DEFAULTS.frame,strip:'#000000'});
  assert.deepEqual([...props],[['--portal-metal','#112233']]);
 });
-test('portal reads the shared look and keeps an uncached board choice',async()=>{
+test('portal reads the shared look and saves the board on screen',async()=>{
  const src=await readFile(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
- assert.match(src,/if\(id===wanted\)store\.set\(BOARD_KEY,id\)/);
+ assert.match(src,/store\.set\(BOARD_KEY,id\); \/\/ the saved choice is the board on screen/);
  assert.match(src,/energize\(restSeq\(\)\)/);
  const css=await readFile(new URL('../modules/portal/portal.css',import.meta.url),'utf8');
  assert.match(css,/#portalChrome\{--pm:var\(--frame-metal\)\}/);

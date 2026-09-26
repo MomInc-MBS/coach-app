@@ -30,6 +30,9 @@ async function openPage(browser,url,dpr=1){
  await page.waitForTimeout(300); // the board lays out on its ResizeObserver once shown
  return page;
 }
+// The board on screen and which layer draws it ('3d', or 'flat': its poster/2D quilt), and how many WebGL renderers it holds.
+const shown=page=>page.evaluate(()=>{const h=document.getElementById('portalHome');return {board:h.dataset.board,art:h.dataset.art};});
+const renderers=page=>page.evaluate(()=>[...document.querySelectorAll('#portalBoardHost canvas')].filter(c=>c.getContext('webgl2')).length);
 const boxOf=r=>({left:r.left,top:r.top,right:r.left+r.width,bottom:r.top+r.height});
 async function geometry(page){
  return page.evaluate(()=>{
@@ -91,27 +94,27 @@ test('meditation tunnel loses colour throughout its duration and lands fullscree
  await page.close();
 }));
 
-test('a failed jelly or cogs packet can retry without poisoning the other boards',async()=>withPortal(async(browser,url)=>{
+test('a failed jelly or cogs packet shows its poster, then retries without poisoning the other boards',async()=>withPortal(async(browser,url)=>{
  const page=await openPage(browser,url);
  for(const [id,asset] of [['jelly','jelly.glb'],['cogs','parts-kit.glb']]){
   let failed=false;
   await page.route('**/'+asset,route=>{if(!failed){failed=true;return route.abort('failed');}return route.continue();});
   await page.evaluate(id=>portal.board(id),id);
   assert.equal(failed,true,`${id} requested its optional asset`);
-  assert.equal(await page.locator('#portalHome').getAttribute('data-board'),'quilt',`${id} falls back to a usable quilt`);
+  assert.deepEqual(await shown(page),{board:id,art:'flat'},`${id} keeps its identity on its flat poster`);
   await page.evaluate(id=>portal.board(id),id);
-  assert.equal(await page.locator('#portalHome').getAttribute('data-board'),id,`${id} retries after the transient failure`);
-  assert.equal(await page.locator('#portalBoardHost canvas').count(),1,`${id} leaves one live renderer`);
+  assert.deepEqual(await shown(page),{board:id,art:'3d'},`${id} retries after the transient failure`);
+  assert.equal(await renderers(page),1,`${id} leaves one live renderer`);
   await page.unroute('**/'+asset);
  }
  await page.close();
 }));
 
-test('saved or explicit missing jelly recovers to quilt without redirecting Downloads; rapid picks end on grass',async()=>withPortal(async(browser,url)=>{
+test('saved or explicit missing jelly (no GLB, no poster) keeps a board up without redirecting Downloads; rapid picks end on grass',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:375,height:812}});const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{localStorage.setItem('myr5.portalBoard','jelly');window.packOffers=[];window.myr5Packs={open:id=>window.packOffers.push(id)};});
- let jellyMissing=true;await page.route('**/jelly.glb',route=>jellyMissing?route.abort('failed'):route.continue());
+ let jellyMissing=true;await page.route(/jelly(?:\.glb|-poster\.webp)$/,route=>jellyMissing?route.abort('failed'):route.continue());
  await page.goto(url);
  await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
@@ -130,18 +133,18 @@ test('saved or explicit missing jelly recovers to quilt without redirecting Down
  jellyMissing=false;
  await page.evaluate(async()=>{await Promise.all([portal.board('jelly'),portal.board('cogs'),portal.board('grass')]);});
  assert.equal(await board(),'grass','last rapid pick wins');
- assert.equal(await page.locator('#portalBoardHost canvas').count(),1,'one live renderer');
+ assert.equal(await renderers(page),1,'one live renderer');
  await page.evaluate(()=>portal.playWormhole({direction:'in',minMs:50}));await page.waitForTimeout(100);
  assert.equal(await page.locator('.portal-wormhole.gl canvas').count(),1,'grass tunnel draws');
  await page.evaluate(()=>portal.playWormhole({direction:'out',minMs:50}));
  assert.equal(await offers(),0,'rapid picks with an available jelly never offer Downloads');
- // An actually missing board picked by hand shows an inline failure and leaves all other boards usable.
+ // An actually missing board picked by hand shows an inline failure, keeps the last good board and leaves all others usable.
  jellyMissing=true;
  await page.evaluate(()=>document.querySelector('#portalMenu [data-board="jelly"]').click());
- await page.waitForFunction(()=>document.getElementById('portalHome').dataset.board==='quilt'&&document.getElementById('portalStatus').textContent.includes('Jelly board art is unavailable'));
+ await page.waitForFunction(()=>document.getElementById('portalHome').dataset.board==='grass'&&document.getElementById('portalStatus').textContent.includes('Jelly board art is unavailable'));
  await page.waitForTimeout(500);
  assert.equal(await offers(),0,'an explicit failed pick never redirects to Downloads');
- assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.portalBoard')),'quilt','failed explicit pick saves a working board');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.portalBoard')),'grass','a failed explicit pick is never saved: the last good board stays the choice');
  await page.evaluate(()=>portal.board('grass'));
  assert.equal(await board(),'grass','a working board still opens after the failed Jelly pick');
  assert.deepEqual(errors,[]);
