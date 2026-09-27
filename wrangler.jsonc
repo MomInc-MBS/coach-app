@@ -16,7 +16,11 @@
 	// Assets first, as on Sites: `/` serves index.html (200), /pose.html 307s to /pose, and
 	// only unmatched paths (/api/*, /health, /repair-coach, /icons/coach-512.png) reach the Worker.
 	"assets": { "directory": "dist/client", "binding": "ASSETS" },
-	"observability": { "enabled": true },
+	"observability": {
+		"enabled": true,
+		"logs": { "enabled": true, "head_sampling_rate": 1 },
+		"traces": { "enabled": true, "head_sampling_rate": 0.01 }
+	},
 	"triggers": { "crons": ["* * * * *"] },
 	// Public values (live /api/auth/config serves the Clerk ones). Clerk sign-in also needs the
 	// CLERK_JWT_KEY secret; release email stays off unless the RESEND_API_KEY secret exists.
