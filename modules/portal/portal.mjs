@@ -1582,7 +1582,7 @@ async function openDirect(menu,current){
 // #131: the shapes that aren't full screen open INTO their cut, the quilt staying on as the wall; the rest dive until
 // the destination fills the frame. #124: the four lines and the X get the wormhole too, shorter (PORTAL.short): a line
 // has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
-const SHAPED=new Set(['rect','oval','up','down','vdiamond','hdiamond']);
+const SHAPED=new Set(['rect','oval','up','down','vdiamond']);
 // A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
 export function lensPts([ax,ay],[bx,by],half,n=24){
  const l=Math.hypot(bx-ax,by-ay)||1,nx=-(by-ay)/l,ny=(bx-ax)/l;
@@ -1612,6 +1612,7 @@ async function portalSequence(id,current){
   menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';},{once:true});
   return;
  }
+ if(id==='hdiamond')id='vdiamond'; // Ian 26 Sept: the leaderboard is the tall diamond only; a flat trace still reaches it
  const menu=MENUS[id];if(!menu)return;
  const line=LINE_IDS.has(id),short=line||id==='x';
  if(!SHAPES[id]&&!line){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
