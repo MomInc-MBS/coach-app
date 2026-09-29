@@ -50,7 +50,7 @@ function mountCharacterBay(){
  if(!host||!status)return;
  const tell=text=>{status.textContent=text;};
  let bay=null,module=null;
- const open=()=>{module??=import('/war-room/gala-bay.js');module.then(({mountGalaBay})=>{bay?.dispose();bay=mountGalaBay(host,{tell});window.warRoomGala=bay;tell('Tap the weapon rack, animal cages, mirror or centre station. Tap your character for a closer look.');}).catch(()=>tell('Character bay could not open on this device.'));};
+ const open=()=>{module??=import('/war-room/gala-bay.js');module.then(({mountGalaBay})=>{bay?.dispose();bay=mountGalaBay(host,{tell});window.warRoomGala=bay;tell('Tap the room or your character.');}).catch(()=>tell('Bay unavailable on this device.'));};
  addEventListener('pagehide',()=>{bay?.dispose();bay=null;});
  addEventListener('pageshow',event=>{if(event.persisted)open();});
  open();

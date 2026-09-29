@@ -8,21 +8,50 @@
   <script type="module" src="/war-room/war-room.mjs"></script>
 </head>
 <body>
-  <main class="war-room" aria-labelledby="title">
-    <header class="room-header"><a href="/pose.html#portal">← Portal grimoire</a><span class="room-mark">MOM // INC.</span><span id="access" role="status">Checking account…</span></header>
-    <section class="hero"><p class="eyebrow">GALA OPERATIONS</p><h1 id="title">WAR ROOM</h1><p>One shared control surface for your saved run, identity, and ranked time.</p></section>
-    <section class="panel character-bay" aria-labelledby="characterBayTitle"><div class="character-bay-head"><div><p class="eyebrow">64-BIT OPERATIONS</p><h2 id="characterBayTitle">Gala character bay</h2></div><p id="characterBayStatus" role="status">Opening your character bay…</p></div><div id="warRoomGalaHost" class="character-bay-stage"></div></section>
-    <section class="panel look" aria-labelledby="lookTitle"><p class="eyebrow">THIS DEVICE</p><h2 id="lookTitle">Portal appearance</h2><div id="lookPreview" class="look-preview" aria-hidden="true"><i></i></div>
-      <div class="look-colors"><label>Portal metal <input id="lookPortal" type="color"></label><label>Destination frame <input id="lookFrame" type="color"></label><label>Light strip <input id="lookStrip" type="color"></label></div>
-      <div id="lookBoards" class="look-boards" role="group" aria-label="Board"></div>
-      <button id="lookReset" type="button">Reset colours</button><p class="muted">Saved on this device only, guests included. A board that is not downloaded falls back to Quilt until you download it in Downloads.</p></section>
-    <section class="run-grid" aria-label="Run status">
-      <article class="panel"><h2>Clearance</h2><p id="runStatus" role="status">Loading saved run…</p><dl id="checks" class="checks"></dl></article>
-      <article class="panel"><h2>Identity</h2><p id="identity">No DJ identity attached.</p><p class="muted">Identity edits use the Gala run service. This room never invents a name or local save.</p><button id="identityAction" disabled>Identity service unavailable</button></article>
+  <main class="war-room">
+    <section class="panel character-bay" aria-labelledby="characterBayTitle">
+      <div class="character-bay-head">
+        <a href="/pose.html#portal" class="portal-link">← Portal</a>
+        <h1 id="characterBayTitle">WAR ROOM</h1>
+        <span id="access" role="status">Checking…</span>
+        <p id="characterBayStatus" role="status" class="bay-status">Opening…</p>
+      </div>
+      <div id="warRoomGalaHost" class="character-bay-stage"></div>
     </section>
-    <section class="panel board"><div class="section-heading"><div><p class="eyebrow">PUBLIC RECORD</p><h2>Rankings</h2></div><button id="refresh" type="button">Refresh</button></div><p id="boardStatus" role="status">Loading board…</p><table><thead><tr><th>Rank</th><th>DJ</th><th>Time</th></tr></thead><tbody id="leaderRows"></tbody></table></section>
-    <section class="panel arsenal"><h2>Arsenal</h2><p>Saved loadouts are account-owned. Set your weapon here or design your 3D character above.</p><label>Weapon <select id="weaponType"><option value="rapier">Rapier</option><option value="greatsword">Greatsword</option><option value="dagger">Dagger</option><option value="sabre">Sabre</option><option value="axe">Axe</option><option value="hammer">Hammer</option><option value="mace">Mace</option><option value="flail">Flail</option><option value="spear">Spear</option><option value="trident">Trident</option><option value="halberd">Halberd</option><option value="scythe">Scythe</option><option value="bow">Bow</option><option value="crossbow">Crossbow</option><option value="chakram">Chakram</option><option value="gauntlets">Gauntlets</option><option value="staff">Staff</option><option value="wand">Wand</option><option value="tome">Tome</option><option value="cannon">Cannon</option></select></label><label>Saved tier <input id="weaponTier" type="number" min="0" max="20" step="1"></label><button id="saveLoadout" type="button">Save loadout</button><p id="arsenalStatus" role="status"></p><p class="contract">Legacy local data is not automatically claimed; import is only available after a verified account session.</p></section>
-    <footer><a href="/pose.html#portal">Return to portal</a><span>Saved runs and loadouts need a signed-in account.</span></footer>
+
+    <details class="panel controls-drawer">
+      <summary>Controls</summary>
+      <div class="controls-grid">
+        <section aria-labelledby="lookTitle">
+          <h2 id="lookTitle">Look</h2>
+          <div id="lookPreview" class="look-preview" aria-hidden="true"><i></i></div>
+          <div class="look-colors"><label>Metal <input id="lookPortal" type="color"></label><label>Frame <input id="lookFrame" type="color"></label><label>Strip <input id="lookStrip" type="color"></label></div>
+          <div id="lookBoards" class="look-boards" role="group" aria-label="Board"></div>
+          <button id="lookReset" type="button">Reset</button>
+        </section>
+        <section aria-labelledby="clearanceTitle">
+          <h2 id="clearanceTitle">Clearance</h2>
+          <p id="runStatus" role="status">Loading…</p>
+          <dl id="checks" class="checks"></dl>
+        </section>
+        <section aria-labelledby="identityTitle">
+          <h2 id="identityTitle">Identity</h2>
+          <p id="identity">No DJ identity.</p>
+        </section>
+        <section class="board" aria-labelledby="boardTitle">
+          <div class="section-heading"><h2 id="boardTitle">Rankings</h2><button id="refresh" type="button">Refresh</button></div>
+          <p id="boardStatus" role="status">Loading…</p>
+          <table><thead><tr><th>Rank</th><th>DJ</th><th>Time</th></tr></thead><tbody id="leaderRows"></tbody></table>
+        </section>
+        <section class="arsenal" aria-labelledby="arsenalTitle">
+          <h2 id="arsenalTitle">Arsenal</h2>
+          <label>Weapon <select id="weaponType"><option value="rapier">Rapier</option><option value="greatsword">Greatsword</option><option value="dagger">Dagger</option><option value="sabre">Sabre</option><option value="axe">Axe</option><option value="hammer">Hammer</option><option value="mace">Mace</option><option value="flail">Flail</option><option value="spear">Spear</option><option value="trident">Trident</option><option value="halberd">Halberd</option><option value="scythe">Scythe</option><option value="bow">Bow</option><option value="crossbow">Crossbow</option><option value="chakram">Chakram</option><option value="gauntlets">Gauntlets</option><option value="staff">Staff</option><option value="wand">Wand</option><option value="tome">Tome</option><option value="cannon">Cannon</option></select></label>
+          <label>Tier <input id="weaponTier" type="number" min="0" max="20" step="1"></label>
+          <button id="saveLoadout" type="button">Save</button>
+          <p id="arsenalStatus" role="status"></p>
+        </section>
+      </div>
+    </details>
   </main>
 </body>
 </html>

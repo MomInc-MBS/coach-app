@@ -96,7 +96,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   const equip=(next:{type:string;tier:number})=>{touch();const kept=next.type===selected.type&&next.tier===selected.tier;if(!kept&&!W.unlocked(next))next={type:next.type,tier:0};save({...saved,weapon:next},W.name(next)+'.');};
   type.onchange=()=>equip({type:type.value,tier:type.value===selected.type?selected.tier:0});tier.onchange=()=>equip({type:type.value,tier:Number(tier.value)});
   const typeLabel=el('label','Weapon'),tierLabel=el('label','Upgrade');typeLabel.append(type);tierLabel.append(tier);
-  form.append(typeLabel,tierLabel,el('p','Training unlocks upgrades. Your account’s saved loadout stays in the Arsenal below.','help'));
+  form.append(typeLabel,tierLabel,el('p','Training unlocks tiers.','help'));
   return form;
  }
  function showBay(section:Bay){
@@ -129,7 +129,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
  }
  void cagePacketReady().then(have=>{
   if(disposed)return;
-  if(!have){flatBays();tell('The 3D War Room is not on this phone yet: Install → Downloads → “3D customizer cage”. Your menus work below.');return;}
+  if(!have){flatBays();tell('Download the 3D cage: Install → Downloads.');return;}
   cage=mountCage(stage,{openTab:()=>false,showBay:()=>{},closeBay,tell,bay:showBay,labels:LABELS,volumes:{pedestal:[[.02,.64,-.01,.22,.20,.24,0]],clothing:[[.06,.3,-.31,.18,.12,.1,0]]}});
   void cage.ready.then(ok=>{if(!disposed&&!ok)flatBays();});
  });
