@@ -69,6 +69,9 @@ dialog.portal-framed::backdrop{background:#17111e!important}
 /* #131 seen through the hole: the quilt stays on as the wall, so a shaped destination's backdrop is clear (the dialog's
    clip-path is JS's). */
 dialog.portal-framed.portal-shaped::backdrop{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* R7: no two-finger zoom while the portal or any menu is up (framed or opened from the bar); one finger still scrolls, taps
+   and traces (touch-action is intersected down the tree, so this reaches everything, top-layer menus included). */
+html:has(#portalHome:not([hidden]),dialog[open]){touch-action:pan-x pan-y}
 /* A flat menu in a cut: its box is the cut's largest rectangle (JS sets --face-*), its content laid out zoomed out
    (--inset-zoom) and scrolling inside it, sliding a little with tilt behind the fixed wall. The bar and the portal's
    buttons are not its content. */
