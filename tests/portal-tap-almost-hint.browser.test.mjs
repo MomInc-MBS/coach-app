@@ -69,7 +69,7 @@ test('#20 a double-tap on a shape\'s stitched outline opens it exactly like trac
  await doubleTapAt(page,x,y);
  await page.waitForTimeout(1600); // mid glass/dive: well after the cut, before loadMinMs+reveal finish
  await page.screenshot({path:resolve(FRAMES_DIR,'tap-double-food.png')});
- await page.waitForFunction(()=>document.getElementById('mealsPanel').open===true&&document.getElementById('mealsPanel').classList.contains('portal-shaped'),{timeout:15000}); // #131: seen through its cut
+ await page.waitForFunction(()=>document.getElementById('mealsPanel').open===true&&document.getElementById('mealsPanel').classList.contains('portal-shaped')&&!document.getElementById('mealsPanel').classList.contains('portal-fullscreen'),{timeout:15000}); // #131: seen through its cut, not full screen (R7: that is a double-tap on the open menu)
  assert.deepEqual(await page.evaluate(()=>window.__vibrations),[12],'a double-tap match buzzes once, like a traced match (#29)');
  await page.close();
 }));

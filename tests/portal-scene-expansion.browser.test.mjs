@@ -81,7 +81,8 @@ test('classroom peers through the diamond; tapping the real whiteboard fills the
  await page.waitForFunction(()=>document.querySelector('#accountPanel.portal-fullscreen[data-room-view=board]'));
  assert.deepEqual(await box(page,'#accountPanel'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
  assert.equal(await page.locator('#accountPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
- assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')),false);
+ // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; only the frame goes, up out of the way.
+ assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-garage')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
  assert.equal(await page.locator('#coachDock').isVisible(),false,'whiteboard uses the whole viewport');
  await page.screenshot({path:resolve('.frames','classroom-whiteboard-fullscreen.png')});
  await page.locator('#accountPanel [data-close]').click();

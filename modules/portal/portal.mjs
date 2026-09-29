@@ -451,27 +451,21 @@ function frameDialog(dialog){
  // Back above the dialog, which opened on top of it. Re-shown a frame later: a popover hidden and shown in one task can
  // keep its old top-layer slot (under the dialog's backdrop) on WebKit. The rim is drawn then too, sized to the shown
  // frame (a hidden popover measures 0x0): it bursts open as the destination lands (not under the dive's scale).
- chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(aura?.look||framed.look,'open');});
- if(!full)peerOn(dialog);
+ chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(full?screenLook(framed.look):aura?.look||framed.look,'open');});
+ peerOn(dialog); // R7 (Ian 26 Sept): the tilt stays on every menu, full screen too
  if(!full&&framed.look.shaped)shapeDialog(dialog);
 }
-// The room remains visible through its cut until an actual scene action steps inside.
-// Keep the route/dialog identity, so Back and Close still return through their original portal.
+// The room remains visible through its cut until a double-tap or a scene action steps inside (full screen). Keep the
+// route/dialog identity, so Back and Close still return through their original portal. R7 (Ian 26 Sept): the energy and the
+// tilt stay; only the metal frame goes, up out of the way as it does for the full-screen destinations.
 function expandScene(dialog){
  if(!dialog?.open||framed?.dialog!==dialog||framed.expanded)return false;
- layoutInCut(dialog,false);peerOff();framed.expanded=true;framed.leaned=true;
+ layoutInCut(dialog,false);framed.expanded=true;framed.leaned=true;
  dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');
  dialog.style.removeProperty('clip-path');dialog.style.removeProperty('--inset-zoom');motion(dialog,'');
  setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
- dialog.querySelector(':scope>.portal-peer-ui')?.remove();hideAura();chrome.hidePopover();
+ dialog.querySelector(':scope>.portal-peer-ui')?.remove();chrome.classList.add('portal-garage');showAura(screenLook(framed.look),'lean');
  stowBoard();return true;
-}
-function contractScene(dialog){
- if(!dialog?.open||framed?.dialog!==dialog||(!framed.expanded&&!dialog.classList.contains('portal-fullscreen')))return false;
- framed.expanded=false;framed.leaned=false;dialog.classList.remove('portal-fullscreen','portal-leaned');setFace(dialog,framed.face);
- if(framed.look.shaped){dialog.classList.add('portal-shaped');layoutInCut(dialog,true);clipTo(dialog,framed.outlines.shape,{ms:prefersReducedMotion()?0:280});}
- else{dialog.classList.remove('portal-shaped');layoutInCut(dialog,true);dialog.style.removeProperty('clip-path');}
- chrome.showPopover?.();showAura(framed.look,'open');portalHome.hidden=false;if(boardBtn)boardBtn.hidden=true;board?.resume();boardShown=true;syncEnergy();backgroundBlocked(true);return true;
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
 // its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
@@ -613,6 +607,11 @@ function shapeDialog(dialog){
  else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
+ // R7 (Ian 26 Sept): a double-tap on the open menu (not on one of its controls) steps in to the full screen.
+ const at=e=>({x:e.clientX,y:e.clientY,t:e.timeStamp}),near=(a,b)=>a&&b.t-a.t<=TAP_MS&&Math.hypot(b.x-a.x,b.y-a.y)<=TAP_MOVE_PX,opts={capture:true,signal:framed.ctl.signal};
+ let down=null,tap=null;
+ dialog.addEventListener('pointerdown',e=>{down=at(e);},opts);
+ dialog.addEventListener('pointerup',e=>{const up=at(e),t=near(down,up)&&!e.target.closest?.('button,a,input,select,textarea,label,summary')?up:null;if(t&&near(tap,t)){tap=null;expandScene(dialog);}else tap=t;},opts);
  // A scene's own controls can move (a detail card opens, the classroom lays out): keep the clip round them, checked a few
  // times a second, never mid-transition or while the tilt is moving the layers (R7: each rewrite re-masks the whole menu).
  if(!framed.flat){
@@ -823,7 +822,7 @@ function peerOn(dialog){
  const access=tiltAccess();
  if(access==='free'||access==='granted')addEventListener('deviceorientation',onOrient,{signal});
  else if(access==='ask'&&(cfg.scene||cfg.chip))tiltChip(dialog);
- if(!cfg.scene){
+ if(!cfg.scene&&!dialog.classList.contains('portal-fullscreen')){ // a full-screen room keeps its own drag (meditation's)
   dialog.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!peer.sensor)peer.drag={x:e.clientX,y:e.clientY,id:e.pointerId};},{signal,passive:true});
   dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});
   for(const type of ['pointerup','pointercancel'])dialog.addEventListener(type,e=>{if(peer.drag?.id===e.pointerId){peer.drag=null;peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});

@@ -1,7 +1,8 @@
 // W2-2N (Ian 23 Sept), in the real app at 375x812 against `npm run build`:
 // #134 a vignetted energy in the portal's shape runs round an open destination, never covering it; #131 the triangles,
-// the diamond and the oval open in their cut with the quilt kept as the wall, step in to the whole window and fizzle
-// shut; #132 the rim carries the name; #135 tilt looks round the scene behind the window while the cut stays put;
+// the diamond and the oval open in their cut with the quilt kept as the wall and fizzle shut; R7 (Ian 26 Sept) no text in
+// a peer-through view, a double-tap on it steps in to the full screen with the energy on the screen's edge and the tilt
+// still on; #135 tilt looks round the scene behind the window while the cut stays put;
 // #124 the lines and the X run a short wormhole; release 5's open item: switching routes from the bar while a
 // destination is framed moves the frame to the next page, no reverse dive behind it. Frames land in .frames/ (untracked).
 import test from 'node:test';
@@ -24,7 +25,7 @@ function serve(){
 }
 async function openApp(browser,base,reducedMotion='no-preference'){
  const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion});
- await context.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{configurable:true,value:true});try{localStorage.setItem('myr5.portalHintShown','1');}catch{}});
+ await context.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{configurable:true,value:true});try{localStorage.setItem('myr5.portalHintShown','1');const d=new Date();localStorage.setItem('myr5-how-to-play-day-v1/guest',`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);}catch{}});
  const seed=await context.newPage();
  await seed.goto(base+'/onboarding.html');
  await seed.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
@@ -53,16 +54,16 @@ test.before(async()=>{
 });
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
 
-// [id, dialog, rim name, frame, its own Close, its title, its first control]. Conductor 24 Sept: title, Close and first
-// controls fully visible at 375x812 on every shaped route (a flat menu in the cut's largest rectangle, a scene's own
-// controls in front of the wall).
+// [id, dialog, frame, its own Close, its title (none while peered, back in full screen), its first control]. Conductor 24
+// Sept: Close and first controls fully visible at 375x812 on every shaped route (a scene's own controls in front of the wall).
 const SHAPED=[
- ['up','#mealsPanel','FOOD','food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-tag'],
- ['down','.ach-board','ACHIEVEMENTS','achievements','.ach-close','.ach-head h1','.ach-boss'],
- // Records peers into the 3D classroom in either diamond; its whiteboard opens the full panel.
- ['vdiamond','#accountPanel','LEADERBOARD','leaderboard','#accountPanel [data-close]','#accountPanel h2',null],
- ['hdiamond','#accountPanel','LEADERBOARD','leaderboard-squat','#accountPanel [data-close]','#accountPanel h2',null],
- ['oval','dialog.ship-view','CHOOSE WORKOUT','ship','.ship-view-close',null,'.ship-view-close'],
+ ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-flip'],
+ ['down','.ach-board','down-achievements','.ach-close','.ach-head h1','.ach-boss'],
+ // Records peers into the 3D classroom; its whiteboard opens the full panel. Ian 26 Sept: the sideways diamond opens the
+ // same tall diamond (the flat trace still reaches it).
+ ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2',null],
+ ['hdiamond','#accountPanel','hdiamond-opens-vdiamond','#accountPanel [data-close]','#accountPanel h2',null],
+ ['oval','dialog.ship-view','oval-ship','.ship-view-close','.ship-scene-status','.ship-view-close'],
 ];
 // The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
 // itself: nothing clips or covers it.
@@ -73,32 +74,38 @@ const fullyVisible=(page,sel)=>page.evaluate(sel=>{
  for(const r of rects){const k=Math.min(8,r.width/4,r.height/4);
   for(const [x,y] of [[r.left+k,r.top+k],[r.right-k,r.top+k],[r.left+k,r.bottom-k],[r.right-k,r.bottom-k],[r.left+r.width/2,r.top+r.height/2]]){const hit=document.elementFromPoint(x,y);if(!hit||!(hit===el||el.contains(hit)))return `${sel}: ${Math.round(x)},${Math.round(y)} hits ${hit?.tagName}.${hit?.className}`;}}
  return true;},sel);
-test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their cut, the energy in the portal\'s shape round them and the name on the rim, never covering the menu',{timeout:300000},async()=>{
+const opacity=(page,sel)=>page.evaluate(sel=>{const el=document.querySelector(sel);return el&&getComputedStyle(el).opacity;},sel);
+const auraPath=page=>page.evaluate(()=>document.querySelector('#portalChrome .portal-aura #portalAuraP')?.getAttribute('d'));
+const flowing=page=>page.evaluate(()=>{const a=document.querySelector('#portalChrome .portal-aura');return !!a&&[...a.querySelectorAll('.portal-aura-fire')].every(el=>el.getAnimations({subtree:true}).some(x=>x.playState==='running'));});
+const tilt=(page,gamma,beta=50)=>page.evaluate(([g,b])=>{for(let i=0;i<3;i++)dispatchEvent(new DeviceOrientationEvent('deviceorientation',{alpha:0,beta:b,gamma:g}));},[gamma,beta]);
+const eyeX=page=>page.evaluate(async()=>(await import('/modules/portal/peer.mjs')).eye.x);
+test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their cut with the energy in the portal\'s shape and no text, and a double-tap steps each in to the full screen, energy and tilt kept',{timeout:420000},async()=>{
  const {context,page}=await openApp(browser,base);
  try{
-  for(const [id,sel,name,frame,close,title,first] of SHAPED){
+  await page.evaluate(()=>localStorage.setItem('myr5.tiltPermission','granted'));
+  let tallDiamond=null;
+  for(const [id,sel,frame,close,title,first] of SHAPED){
    await page.evaluate(id=>{window.run=window.myr5Portal.open(id);},id);
    await page.waitForFunction(sel=>document.querySelector(sel)?.open&&document.querySelector(sel).classList.contains('portal-shaped'),sel,{timeout:30000});
    await page.evaluate(()=>window.run);
    if(id==='up')await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:30000});
    await page.waitForTimeout(1200);
    const s=await page.evaluate(sel=>{
-    const d=document.querySelector(sel),aura=document.querySelector('#portalChrome .portal-aura'),text=aura?.querySelector('.portal-aura-name'),t=text?.getBoundingClientRect();
+    const d=document.querySelector(sel),aura=document.querySelector('#portalChrome .portal-aura');
     return {quilt:!document.getElementById('portalHome').hidden,chrome:document.getElementById('portalChrome').matches(':popover-open'),clip:d.style.clipPath,shaped:aura?.classList.contains('shaped'),
-     name:text?.textContent,nameAt:t&&[t.left+t.width/2,t.top+t.height/2],taps:[aura,...aura.querySelectorAll('*')].every(el=>getComputedStyle(el).pointerEvents==='none'),
-     flowing:[...aura.querySelectorAll('.portal-aura-fire')].every(el=>el.getAnimations({subtree:true}).some(a=>a.playState==='running')),hash:location.hash};
+     name:!!aura?.querySelector('.portal-aura-name'),taps:[aura,...aura.querySelectorAll('*')].every(el=>getComputedStyle(el).pointerEvents==='none')};
    },sel);
    assert.equal(s.quilt,true,`${id}: the quilt stays on as the wall`);
    assert.equal(s.chrome,true,`${id}: the metal frame is up`);
    assert.match(s.clip,/^path\(/,`${id}: the destination is clipped to the cut`);
    assert.equal(s.shaped,true,`${id}: the energy runs round the cut`);
-   assert.equal(s.name,name,`${id}: the rim carries the name`);
+   assert.equal(s.name,false,`${id}: no name on the rim`);
    assert.equal(s.taps,true,`${id}: nothing in the energy takes a pointer`);
-   assert.equal(s.flowing,true,`${id}: the neons flow round the rim`);
-   assert.equal(await inside(page,sel,s.nameAt),false,`${id}: the name sits outside the window, not over the menu`);
+   assert.equal(await flowing(page),true,`${id}: the neons flow round the rim`);
+   if(title)assert.equal(await opacity(page,title),'0',`${id}: no title in the peer-through view`);
    const middle=await page.evaluate(()=>{const p=document.querySelector('.portal-aura').style;return [parseFloat(p.getPropertyValue('--cx')),parseFloat(p.getPropertyValue('--cy'))];});
    assert.equal(await reaches(page,sel,middle),true,`${id}: the menu is reachable through the middle of the cut`);
-   for(const part of [close,title,first].filter(Boolean))assert.equal(await fullyVisible(page,part),true,`${id}: fully visible and tappable`);
+   for(const part of [close,first].filter(Boolean))assert.equal(await fullyVisible(page,part),true,`${id}: fully visible and tappable`);
    if(id==='vdiamond'||id==='hdiamond'){
     await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room="ready"] .classroom-canvas'),null,{timeout:30000});
     assert.equal(await page.evaluate(()=>{
@@ -106,6 +113,8 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
      return d.classList.contains('classroom-panel')&&d.querySelectorAll('.classroom-desk').length===2&&!!d.querySelector('[data-room-board]');
     }),true,'the 3D classroom, two desks and tappable whiteboard sit in the diamond');
     assert.equal(await page.evaluate(()=>{const board=document.querySelector('#accountPanel [data-room-board]'),r=board.getBoundingClientRect();return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('[data-room-board]');}),true,'the whiteboard center is tappable through the cut');
+    if(id==='vdiamond')tallDiamond=await auraPath(page);
+    else assert.equal(await auraPath(page),tallDiamond,'the sideways diamond opens the tall one');
    }
    if(id==='oval'){
     await page.waitForFunction(()=>document.querySelector('.ship-view-stage .ship-scene[data-phase=ready]')&&!document.querySelector('.ship-scene-flash:popover-open'),null,{timeout:30000});
@@ -113,28 +122,28 @@ test('#134 #131 #132: Food, Achievements, Leaderboard and the ship open in their
     assert.ok(scene?.width>200&&scene.height>400,'the coach ship scene has a real viewport behind the oval cut');
    }
    assert.equal(await barTappable(page),true,`${id}: the bar stays tappable`);
-   await page.screenshot({path:resolve(FRAMES,`134-${frame}.png`)});
-   await page.screenshot({path:resolve(FRAMES,`131-inscribed-${id}.png`)});
-   if(id==='up'){
-    // #131 step in: the cut opens out to the whole window (the room beside the pyramid, behind the wall until now, is in
-    // reach), then steps back to the triangle.
-    const beside=await page.evaluate(()=>{const c=document.getElementById('portalChrome').style;return [parseFloat(c.getPropertyValue('--face-left'))+40,parseFloat(c.getPropertyValue('--face-top'))+200];});
-    assert.equal(await inside(page,'#mealsPanel',beside),false,'beside the triangle is the wall');
-    await page.locator('#mealsPanel [data-peer-lean]').click();
-    await page.waitForTimeout(900);
-    assert.equal(await inside(page,'#mealsPanel',beside),true,'stepped in, the whole window is in reach');
-    assert.equal(await page.evaluate(()=>document.querySelector('.portal-aura').classList.contains('shaped')),false,'the energy follows the window');
-    await page.screenshot({path:resolve(FRAMES,'131-food-step-in.png')});
-    await page.locator('#mealsPanel [data-peer-lean]').click();
-    await page.waitForTimeout(900);
-    assert.equal(await inside(page,'#mealsPanel',beside),false,'stepped back to the triangle');
-   }
-   // #130/#131: its Close fizzles the hole shut (the shell falls into the core over the wormhole) and the quilt heals.
+   await page.screenshot({path:resolve(FRAMES,`r7-peer-${frame}-peered.png`)});
+   // R7: a double-tap on the open menu (here on the wall beside the cut, which answers for the menu) steps in to the full
+   // screen: no clip, the frame up out of the way, the energy on the screen's edge, the title back, the tilt still on.
+   const corner=await page.evaluate(()=>{const c=document.getElementById('portalChrome').style;return [parseFloat(c.getPropertyValue('--face-left'))+14,parseFloat(c.getPropertyValue('--face-top'))+14];});
+   for(let i=0;i<2;i++){await page.mouse.click(...corner);await page.waitForTimeout(90);}
+   await page.waitForFunction(sel=>document.querySelector(sel).classList.contains('portal-fullscreen'),sel,{timeout:5000});
+   await page.waitForFunction(()=>document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0,null,{timeout:5000}); // the frame's garage-door exit
+   const f=await page.evaluate(sel=>{const d=document.querySelector(sel),r=d.getBoundingClientRect();return {open:d.open,clip:d.style.clipPath,box:[r.width,r.height],quilt:!document.getElementById('portalHome').hidden,
+    shaped:document.querySelector('#portalChrome .portal-aura')?.classList.contains('shaped'),frameGone:document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0};},sel);
+   assert.deepEqual(f,{open:true,clip:'',box:[375,812],quilt:false,shaped:false,frameGone:true},`${id}: full screen`);
+   assert.equal(await auraPath(page),'M0.0 0.0L375.0 0.0L375.0 812.0L0.0 812.0Z',`${id}: the energy runs round the screen's edge`);
+   assert.equal(await flowing(page),true,`${id}: the energy still flows in full screen`);
+   if(title)assert.equal(await opacity(page,title),'1',`${id}: full screen keeps its own title`);
+   await tilt(page,0);await page.waitForTimeout(400);await tilt(page,14);await page.waitForTimeout(1000);
+   assert.ok(await eyeX(page)>.8,`${id}: the tilt still looks round the scene in full screen`);
+   await tilt(page,0);await page.waitForTimeout(600);
+   await page.screenshot({path:resolve(FRAMES,`r7-peer-${frame}-full.png`)});
+   // Its Close backs out through the wormhole (the shell falls into the core) and the quilt heals.
    await page.locator(close).first().click();
    await page.waitForFunction(()=>document.querySelector('.portal-ghost')&&document.querySelector('.portal-glass'),null,{timeout:20000,polling:16});
-   if(id==='up')await page.screenshot({path:resolve(FRAMES,'131-food-fizzle.png')});
    await quiltHome(page);
-   assert.equal(await page.evaluate(()=>document.getAnimations().some(a=>a.effect?.target?.id==='portalHome')),false,`${id}: no reverse dive`);
+   assert.equal(await page.evaluate(()=>document.getAnimations().some(a=>a.effect?.target?.id==='portalHome')),false,`${id}: the way back has finished`);
   }
  }finally{await context.close();}
 });
