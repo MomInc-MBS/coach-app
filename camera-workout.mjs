@@ -5,6 +5,8 @@ export function mountCameraWorkout({video,counter,onStop}){
  // video and counter, so a fast knee/ankle can still register on the video underneath.
  const coachOverlay=document.createElement('div');coachOverlay.id='coachOverlay';stage.append(coachOverlay);
  document.body.append(stage);
+ // Dev-only: ?recordPose=1 records landmarks and up/down labels for k-NN samples (scripts/pose-samples.mjs).
+ if(new URLSearchParams(location.search).get('recordPose')==='1')import('./pose-recorder.mjs').then(({mountPoseRecorder})=>mountPoseRecorder(stage));
  let active=false,anchors=[],inert=[];
  stop.addEventListener('click',()=>onStop());
  stage.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();onStop();}});
