@@ -12,6 +12,7 @@ import {gzipSync} from 'node:zlib';
 const vendoredThree={name:'vendored-three',setup(build){build.onResolve({filter:/^three$/},()=>({path:'three',external:true}));}};
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
+import {sourceOffer} from './source-offer.mjs';
 import {packNutrition} from './pack-nutrition.mjs';
 import {assertMaterialTrustShipped,copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
 // Public release trust is committed in release-trust/public-build.json; an env var of the same name overrides it.
@@ -89,11 +90,10 @@ for(const m of cssLinks)pose=pose.replace(m[0],'');
 pose=pose.replace('<link rel="manifest"',`<link rel="stylesheet" href="/app.css?v=${releaseBuild}"><link rel="manifest"`);
 await writeFile('dist/client/pose.html',pose);await writeFile('dist/client/index.html',pose);await cp('LICENSE','dist/client/LICENSE');
 await writeOfflineWorker('dist/client',releaseBuild);
-// The AGPL source offer travels with the app, with no runtime secrets or user records.
-const sources={};for(const folder of ['server','db','scripts','scheduler','pod','local-coach'])for(const entry of await readdir(folder)){if(/\.(mjs|ts|cjs)$/.test(entry))sources[`${folder}/${entry}`]=await readFile(`${folder}/${entry}`,'utf8');}
-for(const entry of await readdir('.'))if(/\.(mjs|html|css|webmanifest)$/.test(entry)&&!['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs'].includes(entry))sources[entry]=await readFile(entry,'utf8');
-await unlink('dist/client/source.json').catch(error=>{if(error?.code!=='ENOENT')throw error;});
-await writeFile('dist/client/source.json.gz',gzipSync(JSON.stringify(sources),{level:9}));
+// The AGPL source offer travels with the app, with no runtime secrets or user records (scripts/source-offer.mjs).
+// ponytail: two copies; /source.json is the Settings link, the Account panel (launch-shell.mjs) still links the .gz.
+const sources=JSON.stringify(await sourceOffer());
+await writeFile('dist/client/source.json',sources);await writeFile('dist/client/source.json.gz',gzipSync(sources,{level:9}));
 const {files,payloadBytes,largest}=await deploymentSize('dist');
 console.log(`Workers limits: ${files} / ${WORKERS_FILE_LIMIT} files; largest ${largest.bytes} / ${WORKERS_FILE_BYTES} bytes (${largest.path}); ${payloadBytes} total bytes.`);
 console.log('Coach build ready.');
