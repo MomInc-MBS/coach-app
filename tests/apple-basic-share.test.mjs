@@ -13,7 +13,7 @@ function fakeDom(){
 }
 
 test('shipped config mounts a share action for the separate public Apple basic app',()=>{
- assert.equal(APPLE_BASIC_SHARE_URL,'https://mom-inc-fitness-basic.ianmyersrocks97.chatgpt.site');
+ assert.equal(APPLE_BASIC_SHARE_URL,'https://fitness.mominc.online');
  assert.ok(!APPLE_BASIC_SHARE_URL.includes('myr5.mominc.online'));
  const settings=fakeDom();
  const wrap=mountAppleBasicShare(settings,{nav:{}});
