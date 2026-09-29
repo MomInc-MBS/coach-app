@@ -1,6 +1,6 @@
-// #104 (W2-2E): shapes flash ambiently after 3s idle — fast pass (0.5s/shape, in order), then (#133) a 4s pause, then a
-// gentler slow pass (2.5s/shape, 0.6s apart) until the next touch; reduced motion shows every outline+label at
-// once instead. Frame captures land in .frames/ (untracked) per the brief's Verify section.
+// #104 (W2-2E): shapes flash ambiently once the quilt has been idle. R7 (Ian 26 Sept): only the slow cycle, after 7s idle
+// (2.5s per shape, 0.6s apart) until the next touch, no fast pass; reduced motion shows every outline+label at once
+// instead. Frame captures land in .frames/ (untracked) per the brief's Verify section.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -23,8 +23,8 @@ async function withPortal(run){
 }
 // W2-2B #22: a fresh page's localStorage has no "seen" flag, so the first-run hint would otherwise play
 // (and suppress the idle cycle) before any of this file's own idle timing starts — mark it seen so idle's
-// own 3s-armed cycle is what these tests measure.
-async function open(page){return page.evaluate(async()=>{try{localStorage.setItem('myr5.portalHintShown','1');}catch{}const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
+// own 7s-armed cycle is what these tests measure.
+async function open(page){return page.evaluate(async()=>{window.__openAt=performance.now();try{localStorage.setItem('myr5.portalHintShown','1');}catch{}const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
 // Labels are drawn via ctx.fillText once per idle-hint entry per frame; patched before any page script
 // runs so every draw (cycling or static) is recorded with its timestamp.
 async function recordLabels(page){
@@ -39,7 +39,7 @@ async function waitUntil(page,armedAt,targetMs){
  if(remaining>0)await page.waitForTimeout(remaining);
 }
 
-test('#104 idle ambient flash: fast pass order/timing, slow pass continues, a touch stops it instantly',async()=>withPortal(async(browser,url)=>{
+test('#104 R7 idle ambient flash: nothing for 7s, then only the slow cycle in order, a gap between shapes, a touch stops it instantly',async()=>withPortal(async(browser,url)=>{
  await mkdir(FRAMES_DIR,{recursive:true});
  const page=await browser.newPage({viewport:{width:375,height:812}});
  await recordLabels(page);
@@ -48,37 +48,20 @@ test('#104 idle ambient flash: fast pass order/timing, slow pass continues, a to
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const armedAt=await page.evaluate(()=>performance.now());
 
- // 0.2s into the fast pass: shape index 0 (rect -> "Workout").
- await waitUntil(page,armedAt,3000+200);
- await page.screenshot({path:resolve(FRAMES_DIR,'idle-fast-0.2s.png')});
- let labels=await page.evaluate(()=>window.__labels.slice());
- assert(labels.includes('Workout'),`expected Workout by 0.2s into the fast pass, got ${JSON.stringify(labels)}`);
-
- // 1.7s into the fast pass: shape index 3 (down -> "Achievements") — proves the order, not just shape 0.
- await waitUntil(page,armedAt,3000+1700);
- await page.screenshot({path:resolve(FRAMES_DIR,'idle-fast-1.7s-v2.png')});
- labels=await page.evaluate(()=>window.__labels.slice());
- assert(labels.includes('Achievements'),`expected Achievements by 1.7s into the fast pass, got ${JSON.stringify(labels)}`);
-
- // #133: past the full fast pass (11 * 0.5s = 5.5s) nothing is lit for a clear pause (IDLE.pauseMs, 4s). Watched on the
- // page's own clock from the fast pass's first flash, so a slow round-trip (or a late armedAt) can't blur the window.
- const drawnBetween=(from,to)=>page.evaluate(async([from,to])=>{const t0=window.__first.Workout,at=t=>new Promise(r=>setTimeout(r,Math.max(0,t0+t-performance.now())));await at(from);const n=window.__labels.length;await at(to);return window.__labels.slice(n);},[from,to]);
- assert.deepEqual(await drawnBetween(5500+300,5500+3600),[],'a clear pause between the fast pass and the slow cycle');
- // ...then the slow pass restarts the same order at a gentler pace.
- await page.evaluate(()=>window.__labels.length=0);
- await waitUntil(page,armedAt,3000+5500+4000+500);
+ // Timed on the page's own clock: from when the portal was asked to open (it can only arm after that), and from the first
+ // flash (the quilt shows before this round trip sees it, so armedAt runs late).
+ await page.waitForFunction(()=>window.__first?.Workout,null,{timeout:12000});
+ const first=await page.evaluate(()=>({openAt:window.__openAt,workout:window.__first.Workout}));
+ assert.ok(first.workout-first.openAt>=7000,`nothing flashes before 7s of idle (first at ${Math.round(first.workout-first.openAt)} ms)`);
+ assert.ok(first.workout-armedAt<=7300,`the cycle starts once 7s of idle are up (${Math.round(first.workout-armedAt)} ms after the quilt was seen)`);
  await page.screenshot({path:resolve(FRAMES_DIR,'idle-slow-pass.png')});
- labels=await page.evaluate(()=>window.__labels.slice());
- assert(labels.includes('Workout'),`slow pass should restart at the same order (rect first), got ${JSON.stringify(labels)}`);
- const before=await page.evaluate(()=>window.__labels.length);
- await page.waitForTimeout(400);
- const after=await page.evaluate(()=>window.__labels.length);
- assert(after>before,'the slow pass keeps drawing (still cycling, not stuck)');
- // #133: a short gap (IDLE.gapMs, 0.6s) of nothing between the slow cycle's shapes (2.5s each).
- assert.deepEqual(await drawnBetween(5500+4000+2500+120,5500+4000+2500+480),[],'a gap between slow-cycle shapes');
- await waitUntil(page,armedAt,3000+5500+4000+3100+300);
- labels=await page.evaluate(()=>window.__labels.slice());
- assert(labels.includes('Choose Workout'),`the next slow shape follows the gap, got ${JSON.stringify(labels)}`);
+ const drawnBetween=(from,to)=>page.evaluate(async([from,to])=>{const t0=window.__first.Workout,at=t=>new Promise(r=>setTimeout(r,Math.max(0,t0+t-performance.now())));await at(from);const n=window.__labels.length;await at(to);return window.__labels.slice(n);},[from,to]);
+ // No fast pass: 2.2s in it is still the first shape, rect -> "Workout" (the old fast pass was on its fifth by then).
+ assert.deepEqual([...new Set(await drawnBetween(0,2200))],['Workout'],'still Workout at the slow pace');
+ // #133: a short gap (IDLE.gapMs, 0.6s) of nothing between shapes (2.5s each), then the next shape in the order.
+ assert.deepEqual(await drawnBetween(2500+120,2500+480),[],'a gap between shapes');
+ const labels=await drawnBetween(2500+480,3100+300);
+ assert(labels.includes('Choose Workout'),`the next shape follows the gap, got ${JSON.stringify(labels)}`);
 
  // Any touch stops it instantly: reset the counter right as the touch lands (a still-cycling frame or
  // two may legitimately land in the round-trip *before* pointerdown fires — that's not the thing under
@@ -99,7 +82,7 @@ test('#104 reduced motion shows every idle outline and label at once, no cycling
  await page.goto(url);
  assert(await open(page));
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
- await page.waitForTimeout(3300);
+ await page.waitForTimeout(7300);
  await page.screenshot({path:resolve(FRAMES_DIR,'idle-reduced-motion.png')});
  const labels=await page.evaluate(()=>[...new Set(window.__labels)]);
  for(const expected of ['Workout','Choose Workout','Food','Achievements','Leaderboard','Character Editor','Meditation','Reminders','Settings','Menu'])
@@ -121,7 +104,7 @@ test('W2-FIX risk 4: a dialog opened over the quilt without going through setVis
  assert(await open(page));
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const armedAt=await page.evaluate(()=>performance.now());
- await waitUntil(page,armedAt,3000+200);
+ await waitUntil(page,armedAt,7000+300);
  assert((await page.evaluate(()=>window.__labels.length))>0,'idle cycle is running before the dialog opens');
 
  // Setup gate / reward-reveal style dialogs open directly (not through portal's own setVisible or
@@ -131,10 +114,10 @@ test('W2-FIX risk 4: a dialog opened over the quilt without going through setVis
  await page.waitForTimeout(200);
  assert.equal(await page.evaluate(()=>window.__labels.length),0,'the idle flash must stop within a frame of a dialog opening over the quilt');
 
- // Nothing re-checks eligibility once the loop is idle; closing the dialog must re-arm the 3s timer.
+ // Nothing re-checks eligibility once the loop is idle; closing the dialog must re-arm the idle timer.
  await page.evaluate(()=>document.getElementById('__probe').close());
  const closedAt=await page.evaluate(()=>performance.now());
- await waitUntil(page,closedAt,3000+200);
+ await waitUntil(page,closedAt,7000+300);
  assert((await page.evaluate(()=>window.__labels.length))>0,'the idle cycle must re-arm once the dialog closes');
  await page.close();
 }));
@@ -150,7 +133,7 @@ test('W2-FIX: dispose leaves no stray rAF drawing a frame after teardown',async(
  assert(await open(page));
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  const armedAt=await page.evaluate(()=>performance.now());
- await waitUntil(page,armedAt,3000+200);
+ await waitUntil(page,armedAt,7000+300);
  // Capture the baseline in the SAME round trip as dispose(): the stray rAF (when the bug is present)
  // fires on the very next frame, which can land before a separate, later evaluate() reads the count —
  // making a post-dispose "before" snapshot already include the stray draw and hide the bug.

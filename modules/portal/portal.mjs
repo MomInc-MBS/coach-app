@@ -25,13 +25,12 @@ export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs
 // bevel and deeper bend; fringe: the red/blue sample spread at the rim (blue bends furthest); magnify: centre lens.
 const GLASS={mapPx:3,bevel:42,bend:36,rimInset:8,fringe:.3,magnify:.035};
 // #104/#105 (W2-2E): the six neons already used for the "all menus" glass (portal.css .portal-glass.all),
-// reused for the flowing finger-trail ribbon. IDLE: 3s of no touch arms the cycle; fast pass 0.5s/shape once
-// through the order below, then a gentler 2.5s/shape loop until the next touch. TRAIL_FADE_MS: how long a
-// trail segment (live or just-released) stays lit before it's fully faded. #133 (Ian 23 Sept): a clear pauseMs after the
-// fast pass before the slow cycle starts, and a gapMs of nothing between the slow cycle's shapes.
+// reused for the flowing finger-trail ribbon. IDLE (Ian 26 Sept: "just the slow one with 7 seconds of idle time"): 7s of
+// no touch arms the cycle, 2.5s per shape in the order below with a gapMs of nothing between them, until the next touch.
+// TRAIL_FADE_MS: how long a trail segment (live or just-released) stays lit before it's fully faded.
 const TRAIL_NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
 const TRAIL_NEON_RGB=TRAIL_NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
-const IDLE={armMs:3000,fastMs:500,slowMs:2500,pauseMs:4000,gapMs:600};
+const IDLE={armMs:7000,slowMs:2500,gapMs:600};
 // Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
 const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down'];
 const TRAIL_FADE_MS=800;
@@ -194,7 +193,7 @@ let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outl
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
 // #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
-// tab visible); idleCycle is the running cycle ({phase:'fast'|'slow',t0}) or {static:true} under reduced
+// tab visible); idleCycle is the running cycle ({t0}) or {static:true} under reduced
 // motion. #105: fading holds just-released strokes still fading out, drawn alongside any live ones.
 let idleTimer=0,idleCycle=null,fading=[];
 // #22 first-run hint: {t0} while the glowing-fingertip demo plays, else null. idleEligible() also checks
@@ -1115,15 +1114,11 @@ const trailProbe={
  resume(){probeFrozen=false;pointers.delete(PROBE_ID);fading.length=0;kickRender();},
 };
 
-// #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
+// #104 idle ambient flash: which id is showing right now, and how strongly, given the time since the cycle began.
 function idleFrame(now){
- let elapsed=now-idleCycle.t0;
- if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='pause';idleCycle.t0+=IDLE_ORDER.length*IDLE.fastMs;elapsed=now-idleCycle.t0;}
- if(idleCycle.phase==='pause'){if(elapsed<IDLE.pauseMs)return null;idleCycle.phase='slow';idleCycle.t0+=IDLE.pauseMs;elapsed=now-idleCycle.t0;} // #133: nothing lit
- const fast=idleCycle.phase==='fast',dur=fast?IDLE.fastMs:IDLE.slowMs,slot=fast?dur:dur+IDLE.gapMs,idx=Math.floor(elapsed/slot)%IDLE_ORDER.length,t=elapsed%slot;
- if(t>=dur)return null; // #133: the gap between the slow cycle's shapes
- const envelope=Math.min(1,t/60,(dur-t)/60),peak=fast?.9:.5;
- return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:fast?4:3};
+ const elapsed=now-idleCycle.t0,dur=IDLE.slowMs,slot=dur+IDLE.gapMs,t=elapsed%slot;
+ if(t>=dur)return null; // #133: the gap between shapes
+ return{id:IDLE_ORDER[Math.floor(elapsed/slot)%IDLE_ORDER.length],alpha:Math.max(.12,.5*Math.min(1,t/60,(dur-t)/60))};
 }
 // Outline + label (+ arrow for a line) for one idle-flash entry; `rect` is the stitched-pattern rect.
 function idleShapeInfo(id,rect){
@@ -1177,7 +1172,7 @@ function drawIdle(now){
  const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
  if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face,false));return;}
  const f=idleFrame(now);
- if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,f.width,face);
+ if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,3,face);
 }
 
 // #22 first-run hint: a glowing fingertip traces the stitched square once, labelled, the first time the
@@ -1296,7 +1291,7 @@ function scheduleIdle(){
 function beginIdleCycle(){
  idleTimer=0;
  if(!idleEligible())return;
- idleCycle=prefersReducedMotion()?{static:true}:{phase:'fast',t0:performance.now()};
+ idleCycle=prefersReducedMotion()?{static:true}:{t0:performance.now()};
  kickRender();
 }
 
@@ -1776,7 +1771,7 @@ export async function mountPortal({visible=false}={}){
  // #104: pause/resume the idle cycle with the tab (a backgrounded tab must not keep animating).
  document.addEventListener('visibilitychange',scheduleIdle,{signal:lifecycle.signal});
  // Risk 4: a dialog over the quilt (setup gate, a reward reveal) that doesn't hide the portal still
- // blocks idleEligible() while open, but nothing then re-arms the 3s timer once it closes. 'close'
+ // blocks idleEligible() while open, but nothing then re-arms the idle timer once it closes. 'close'
  // doesn't bubble, but it still reaches a capturing listener on document for any dialog in the page.
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={

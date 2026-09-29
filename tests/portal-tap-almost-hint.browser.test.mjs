@@ -136,7 +136,7 @@ test('#22 first-run hint: animates once labelled, a touch stops it instantly, an
  await page.screenshot({path:resolve(FRAMES_DIR,'first-run-hint.png')});
  let labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Trace to start your workout'),`expected the hint label, got ${JSON.stringify(labels)}`);
- // Coordinate with idle flashing: nothing from the idle cycle's own labels this early (armMs is 3000ms,
+ // Coordinate with idle flashing: nothing from the idle cycle's own labels this early (armMs is 7000ms,
  // longer than the hint's own lap, but this also guards the "suppress idle while the hint plays" contract).
  assert(!labels.includes('Workout')&&!labels.includes('Choose Workout'),'idle flashing must stay suppressed while the hint plays');
 
@@ -151,7 +151,7 @@ test('#22 first-run hint: animates once labelled, a touch stops it instantly, an
  // Idle flashing (a different lane's feature) re-arms on its own once the hint is over, proving the two
  // were only coordinated, not permanently entangled.
  await page.evaluate(()=>window.__labels.length=0);
- await page.waitForTimeout(3300);
+ await page.waitForTimeout(7300);
  labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Workout'),'idle flashing must resume once the hint is done');
  await page.close();
