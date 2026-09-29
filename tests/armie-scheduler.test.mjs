@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {Miniflare} from 'miniflare';
 import {DAY_MS} from '../combat.mjs';
-import {runArmieLetterScheduler} from '../server/armie-scheduler.mjs';
+import {runArmieLetterPushes,runArmieLetterScheduler} from '../server/armie-scheduler.mjs';
 
 let mf,database;
 before(async () => {
@@ -47,4 +47,18 @@ test('a user with no push subscription is skipped without error', async () => {
  const result = await runArmieLetterScheduler({}, database, {now: day0 * DAY_MS + 1000, alreadySent: async () => false, markSent: async () => {}, send: async () => { throw Error('should not be called'); }});
  assert.equal(result.sent, 0);
  assert.equal(result.failed, 0);
+});
+
+test('the cron wiring pushes each letter at most once per user, even when the first push failed', async () => {
+ const day0 = 32000, user = 'cron-user', now = (day0 + 2) * DAY_MS + 1000, env = {DB: database, VAPID_PRIVATE_KEY: 'set'};
+ for (const day of [day0, day0 + 2]) await database.prepare('INSERT INTO login_days(user_id,day,logged_at) VALUES(?,?,?)').bind(user, day, day * DAY_MS).run();
+ await database.prepare('INSERT INTO subscriptions(endpoint,user_id,data,created_at) VALUES(?,?,?,?)').bind('https://fcm.googleapis.com/cron', user, JSON.stringify({endpoint: 'https://fcm.googleapis.com/cron', keys: {p256dh: 'a', auth: 'b'}}), 1000).run();
+ let calls = 0;
+ const first = await runArmieLetterPushes(env, {now, send: async () => { calls++; throw Error('push service down'); }});
+ assert.ok(first.failed >= 1 && calls === first.failed);
+ const second = await runArmieLetterPushes(env, {now: now + 60000, send: async () => { calls++; }});
+ assert.equal(second.sent, 0);
+ assert.equal(calls, first.failed);
+ assert.ok((await database.prepare('SELECT count(*) AS n FROM armie_letter_deliveries WHERE user_id=?').bind(user).first()).n >= 1);
+ assert.deepEqual(await runArmieLetterPushes({DB: database}, {now}), {sent: 0, failed: 0, configured: false});
 });
