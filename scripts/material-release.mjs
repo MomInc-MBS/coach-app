@@ -93,6 +93,13 @@ export async function copySignedMaterialManifests({sourceDir,siteRoot,baseUrl,pu
  return Object.freeze(copied);
 }
 
+/** Live shipped a bundle whose trust define was never set, so skins failed silently. Refuse that build. */
+export async function assertMaterialTrustShipped(siteRoot){
+ const manifests=await readdir(join(siteRoot,'materials')).catch(error=>{if(error?.code==='ENOENT')return [];throw error;});
+ if(!manifests.length)return;
+ for(const path of await readdir(siteRoot,{recursive:true}))if(/\.m?js$/.test(path)&&(await readFile(join(siteRoot,path),'utf8')).includes('__MYR5_MATERIAL_PUBLIC_JWK__'))throw new Error(`Signed material manifests ship in ${siteRoot}/materials, but ${path} has no material public key (__MYR5_MATERIAL_PUBLIC_JWK__ is undefined), so skins and textures would not load. Keep release-trust/public-build.json (or set MYR5_MATERIAL_PUBLIC_SIGNING_JWK) and pass materialRelease.defines to every bundle that imports modules/materials.`);
+}
+
 async function stdinSecret(){if(process.stdin.isTTY)throw new Error('Provide the signing JWK through MYR5_MATERIAL_SIGNING_PRIVATE_JWK or stdin.');let text='';for await(const chunk of process.stdin)text+=chunk;if(!text.trim())throw new Error('Signing JWK input is empty.');return text.trim();}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  try{const inputDir=process.env.MYR5_POST_DOWNLOAD_INPUT_DIR,hostRoot=process.env.MYR5_MATERIAL_HOST_STAGE_DIR,siteRoot=process.env.MYR5_MATERIAL_SITE_MANIFESTS,baseUrl=process.env.MYR5_MATERIALS_BASE_URL,secret=process.env.MYR5_MATERIAL_SIGNING_PRIVATE_JWK??await stdinSecret();const result=await signAndStageMaterialSections({inputDir,hostRoot,siteRoot,baseUrl,privateJwk:secret,keyId:process.env.MYR5_MATERIAL_SIGNING_KEY_ID||undefined});process.stdout.write(JSON.stringify(result)+'\n');}

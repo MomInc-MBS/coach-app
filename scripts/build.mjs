@@ -13,7 +13,7 @@ const vendoredThree={name:'vendored-three',setup(build){build.onResolve({filter:
 import {prepareReleaseBuild} from './release-build.mjs';
 import {writeOfflineWorker} from './offline-assets.mjs';
 import {packNutrition} from './pack-nutrition.mjs';
-import {copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
+import {assertMaterialTrustShipped,copySignedMaterialManifests,loadMaterialPublicBuildConfig} from './material-release.mjs';
 // Public release trust is committed in release-trust/public-build.json; an env var of the same name overrides it.
 for(const [key,value] of Object.entries(JSON.parse(await readFile('release-trust/public-build.json','utf8'))))if(!key.startsWith('$')&&value!==null)process.env[key]??=typeof value==='string'?value:JSON.stringify(value);
 const publicExpansionKey=process.env.PUBLIC_EXPANSION_SIGNING_JWK ? JSON.parse(process.env.PUBLIC_EXPANSION_SIGNING_JWK) : null;
@@ -50,6 +50,7 @@ if(materialRelease.configured){
  config=config.replace(/export const BUILT_PUBLIC_MATERIAL_SIGNING_JWK = [^;]+;/,`export const BUILT_PUBLIC_MATERIAL_SIGNING_JWK = ${JSON.stringify(materialRelease.publicJwk)};`).replace(/export const BUILT_MATERIAL_RESOURCE_POLICY = [^;]+;/,`export const BUILT_MATERIAL_RESOURCE_POLICY = ${JSON.stringify(materialRelease.policy)};`);
  await writeFile(configPath,config);
 }
+await assertMaterialTrustShipped('dist/client');
 // Authoring projects remain in the published source repository, not the app bundle.
 for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,
