@@ -5,6 +5,7 @@
 // be in there to stay tappable), the bar lights the route, focus goes to its heading and a polite live region
 // names it. Phone back closes it and returns to the quilt; back on the quilt asks once before leaving.
 // Bundled into app-runtime via app.mjs; no .ts imports, no build defines.
+import {openCustomizer} from './ships/ship-scene-domain.mjs';
 const $=id=>document.getElementById(id);
 // Kept by reference: the bar can sit inside a dialog that is being removed (portal dispose) and must come back.
 let dockEl=null;
@@ -38,6 +39,9 @@ export const ROUTES={
  // #148 (Ian 2026-09-23): the customizer's one door is the oval: its ship arrives and the user taps it (ship-intro.mjs
  // opens /creature/index.html with the gate the editor checks). So #customize, the X and any link to it land on the arrival.
  customize:{label:'War Room customizer',nav:'/war-room/index.html'},
+ // Ian 26 Sep: the dock's far-left key (still the gear icon) skips the arrival and opens the customizer directly,
+ // the same admission openCustomizer() gives the oval ship (ship-view.mjs, ship-intro.mjs) — not #customize/War Room.
+ customizeCoach:{label:'Customize coach',open:()=>openCustomizer()},
  meditate:{label:'Meditation',dialog:'.meditation-panel',open(){document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');}},
  reminders:{label:'Reminders',dialog:'#remindersPanel',open:()=>panel('reminders')},
  settings:{label:'Settings',dialog:'#settings',open(){$('openSettings')?.click();return $('settings');}},
