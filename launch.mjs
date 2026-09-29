@@ -28,7 +28,7 @@ import {mountReminderControls} from './reminder-controls.mjs';
 import {CADENCE_LABELS} from './reminder-settings.mjs';
 import {hasPackGrant} from './packs/pack-entitlements.mjs';
 import {createPackGrantCache} from './packs/pack-grant-cache.mjs';
-import {subscribePush} from './push-subscribe.mjs';
+import {subscribePush,staleSubscription} from './push-subscribe.mjs';
 const accountTransitions=authTransitions();
 mountLaunch();
 mountRemindersComputer();
@@ -101,13 +101,20 @@ liveReminders.update(items);
 function resetReminderEdit(){editingReminder=null;set('saveReminder','Save reminder');$('cancelReminderEdit').hidden=true;$('reminderForm').reset();$('reminderForm').elements.timezone.value=Intl.DateTimeFormat().resolvedOptions().timeZone;reminderControls.load();}
 $('cancelReminderEdit').onclick=()=>{resetReminderEdit();set('reminderStatus','Ready for a new reminder.');};
 $('reminderForm').onsubmit=async e=>{e.preventDefault();const form=e.target,b=form.querySelector('[type=submit]');b.disabled=true;$('cancelReminderEdit').disabled=true;try{const data=Object.fromEntries(new FormData(form));data.daysPerWeek=Number(data.daysPerWeek);data.enabled=form.elements.enabled.checked;data.id=editingReminder||crypto.randomUUID();await api(editingReminder?'/api/reminders/'+editingReminder:'/api/reminders',editingReminder?'PUT':'POST',data);set('reminderStatus',account?.push.schedulerActive?'Reminder saved.':'Reminder saved; delivery starts once the online sender is connected.');resetReminderEdit();await reminders();}catch(err){set('reminderStatus',err.message);}finally{b.disabled=false;$('cancelReminderEdit').disabled=false;}};
+// R8: a phone that turned reminders on before the Cloudflare move still holds a subscription under the old VAPID key.
+const movedNotice=document.createElement('aside'),MOVED_SEEN='myr5-reminders-moved-v1';movedNotice.className='reminders-moved';movedNotice.setAttribute('role','status');movedNotice.hidden=true;
+movedNotice.innerHTML='<button type="button" data-on>Reminders moved to a new server. Tap to turn them back on.</button><button type="button" data-later aria-label="Dismiss reminders notice">Later</button>';document.body.append(movedNotice);
+const movedSeen=()=>{try{return accountStorage?.getItem(MOVED_SEEN)==='1';}catch{return false;}},dismissMoved=()=>{movedNotice.hidden=true;try{accountStorage?.setItem(MOVED_SEEN,'1');}catch{}};
+movedNotice.querySelector('[data-later]').onclick=dismissMoved;
+movedNotice.querySelector('[data-on]').onclick=()=>{dismissMoved();$('notificationSwitch').click();if(!$('remindersPanel').open)$('remindersPanel').showModal();};
 async function syncDeviceSwitch(){
  if(deviceBusy)return;
  let ticket;try{
   ticket=accountTransitions.capture();
   const supported='Notification'in window&&'PushManager'in window&&'serviceWorker'in navigator;
-  const reg=registration||await navigator.serviceWorker?.getRegistration(),sub=await reg?.pushManager?.getSubscription(),on=supported&&!!sub&&Notification.permission==='granted';
+  const reg=registration||await navigator.serviceWorker?.getRegistration(),sub=await reg?.pushManager?.getSubscription(),stale=supported&&!!account&&staleSubscription(sub,account.push.publicKey),on=supported&&!!sub&&!stale&&Notification.permission==='granted';
   if(!accountTransitions.isCurrent(ticket))return;
+  movedNotice.hidden=!(stale&&Notification.permission!=='denied'&&!movedSeen());
   $('notificationSwitch').setAttribute('aria-checked',String(on));set('notificationSwitch',on?'ON':'OFF');
   $('notificationSwitch').disabled=!account||!supported||(!on&&!account.push.configured);$('testPush').disabled=!on;
   if(on&&account?.push.configured)await deviceBinding.verify(account,sub);else deviceBinding.forget();

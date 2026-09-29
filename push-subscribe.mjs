@@ -12,6 +12,13 @@ function sameKey(existingKey, key) {
  return x.length === key.length && x.every((v, i) => v === key[i]);
 }
 
+// True when this device's subscription was made under a different VAPID key (before the Cloudflare
+// move), so pushes to it fail. An unknown key (browser doesn't expose it) is not treated as stale.
+export const staleSubscription = (subscription, publicKeyBase64) => {
+ const existingKey = subscription?.options?.applicationServerKey;
+ return !!existingKey && !!publicKeyBase64 && !sameKey(existingKey, fromBase64(publicKeyBase64));
+};
+
 // Returns {subscription, fresh}. fresh is true when a new browser subscription was
 // just created (no prior subscription, or the prior one was for a stale key and got
 // unsubscribed) -- callers use it to decide whether to roll back on a failed server

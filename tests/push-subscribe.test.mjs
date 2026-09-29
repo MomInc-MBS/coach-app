@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {subscribePush, fromBase64} from '../push-subscribe.mjs';
+import {subscribePush, fromBase64, staleSubscription} from '../push-subscribe.mjs';
 
 // Two same-length base64url keys (84 chars, no padding, so every char is a full
 // 6-bit unit) that decode to different bytes -- stands in for an old vs. rotated
@@ -50,4 +50,13 @@ test('stale-key subscription is unsubscribed and replaced, not reused', async ()
  assert.equal(reg.wasUnsubscribed(), true, 'old-key subscription must be unsubscribed');
  assert.equal(fresh, true);
  assert.equal(subscription, reg.lastSubscribed(), 'must return the newly created subscription, not the stale one');
+});
+
+test('staleSubscription flags only a subscription made under another known key', () => {
+ const sub = key => ({options: {applicationServerKey: fromBase64(key).buffer}});
+ assert.equal(staleSubscription(sub(KEY_A), KEY_B), true);
+ assert.equal(staleSubscription(sub(KEY_A), KEY_A), false);
+ assert.equal(staleSubscription(null, KEY_A), false);
+ assert.equal(staleSubscription({options: {applicationServerKey: null}}, KEY_A), false);
+ assert.equal(staleSubscription(sub(KEY_A), null), false);
 });
