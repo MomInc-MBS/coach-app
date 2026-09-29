@@ -610,10 +610,10 @@ function shapeDialog(dialog){
  else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
- // A scene's own controls move with it (the pyramid's labels ride the model): keep the clip round them, a few times a
- // second and only when one has moved, never mid-transition.
+ // A scene's own controls can move (a detail card opens, the classroom lays out): keep the clip round them, checked a few
+ // times a second, never mid-transition or while the tilt is moving the layers (R7: each rewrite re-masks the whole menu).
  if(!framed.flat){
-  const f=framed,timer=setInterval(()=>{if(f!==framed||f.dialog!==dialog||f.leaned||performance.now()<f.clipBusy)return;if(pokeSig(dialog)!==f.pokeSig)clipTo(dialog,f.outlines.shape);},180);
+  const f=framed,timer=setInterval(()=>{if(f!==framed||f.dialog!==dialog||f.leaned||peer.raf||performance.now()<f.clipBusy)return;if(pokeSig(dialog)!==f.pokeSig)clipTo(dialog,f.outlines.shape);},180);
   framed.ctl.signal.addEventListener('abort',()=>clearInterval(timer));
  }
 }
@@ -799,11 +799,14 @@ function burst(kind){
 // (springing back on release). It slides each destination's layers against the fixed frame (depths below) and drives the
 // 3D scenes' off-axis cameras through peer.mjs. iOS asks once, from a chip on the first 3D destination (never a modal),
 // and the answer is kept. Off under reduced motion and in camera-only mode (D24); paused while the page is hidden.
-const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160};
+// dead (R7, Ian's Android): a new reading must move the eye by this share of full tilt (about half a degree) or it is
+// sensor noise and ignored, so a phone held still lets the look-around stop instead of restyling every frame.
+const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160,dead:.04};
 const TILT_KEY='myr5.tiltPermission';
 // Any framed destination can mark its own layers data-peer-depth="far|mid|near": they slide PEER_LAYER px at full tilt
 // (far with the eye, near against it), times the destination's strength; the dialog also carries --peer-x/--peer-y
-// (-1..1) for its own CSS. Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
+// (-1..1) while a flat menu sits in a cut (.portal-inset, the only CSS that reads them: on anything else they would restyle
+// the whole menu every frame). Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
 // layers: [selector,px] for destinations that don't mark theirs (nested ones add up); scene: a 3D scene reading peer.mjs
 // (no drag look-around: a drag there turns the scene; it fills its cut, see shapeDialog); chip: offer iOS's tilt
 // permission (the scenes always do); poke/fit: shapeDialog.
@@ -817,7 +820,7 @@ const PEER_DEPTH=[
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
-const peer={dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
+const peer={dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
 const clamp1=v=>Math.max(-1,Math.min(1,v));
 function tiltAccess(){
  if(typeof DeviceOrientationEvent==='undefined')return 'none';
@@ -838,7 +841,7 @@ function peerOn(dialog){
   dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});
   for(const type of ['pointerup','pointercancel'])dialog.addEventListener(type,e=>{if(peer.drag?.id===e.pointerId){peer.drag=null;peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
  }
- document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;}else kickPeer();},{signal});
+ document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;peer.last=0;}else kickPeer();},{signal});
  addEventListener('orientationchange',()=>{peer.base=null;},{signal});
 }
 function peerOff(){
@@ -850,7 +853,7 @@ function peerOff(){
   for(const el of dialog.querySelectorAll('[data-peer-depth]'))el.style.translate='';
  }
  for(const [el] of peer.els)el.style.translate='';
- Object.assign(peer,{dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,drag:null,sensor:false});eye.x=eye.y=0;
+ Object.assign(peer,{dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,last:0,drag:null,sensor:false});eye.x=eye.y=0;
  if(aura?.spec)aura.spec.style.translate='';
 }
 const wrap180=a=>((a+180)%360+360)%360-180;
@@ -863,11 +866,13 @@ function onOrient(e){
  if(now-peer.stillT>PEER.stillMs){peer.base.b+=wrap180(b-peer.base.b)*PEER.drift;peer.base.g+=wrap180(g-peer.base.g)*PEER.drift;}
  let dB=clamp1(wrap180(b-peer.base.b)/PEER.deg),dG=clamp1(wrap180(g-peer.base.g)/PEER.deg);
  if((screen.orientation?.angle||0)%180)[dB,dG]=[dG,-dB];
+ if(Math.abs(dG-peer.tx)+Math.abs(dB-peer.ty)<PEER.dead)return;
  // As through a real window: turn the phone's face to the left (its right edge back) and the eye is now to the window's
  // right, so the pyramid shows its right side (Ian); tip the top edge back and the eye drops below it.
  peer.tx=dG;peer.ty=dB;kickPeer();
 }
-function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last)peer.last=performance.now();peer.raf=requestAnimationFrame(stepPeer);}}
+// Each run of steps (until the eye settles) looks its depth layers up once: a scene may add layers after it opens.
+function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last){peer.last=performance.now();peer.depths=[...peer.dialog.querySelectorAll('[data-peer-depth]')];}peer.raf=requestAnimationFrame(stepPeer);}}
 function stepPeer(now){
  peer.raf=0;
  const k=1-Math.exp(-Math.max(0,now-peer.last)/PEER.smoothMs);peer.last=now; // low-pass by time, the same at any frame rate
@@ -875,11 +880,12 @@ function stepPeer(now){
  if(Math.abs(peer.tx-peer.x)+Math.abs(peer.ty-peer.y)<.002){peer.x=peer.tx;peer.y=peer.ty;peer.last=0;}else kickPeer();
  const {x,y,cfg,dialog}=peer;if(!dialog)return;
  eye.x=x;eye.y=y;
- if(cfg.move&&framed?.face&&!framed.look.shaped){dialog.style.setProperty('left',d2(framed.face.left+x*cfg.move)+'px','important');dialog.style.setProperty('top',d2(framed.face.top+y*cfg.move)+'px','important');}
- dialog.style.setProperty('--peer-x',x.toFixed(3));dialog.style.setProperty('--peer-y',y.toFixed(3));
+ const full=dialog.classList.contains('portal-fullscreen');
+ if(cfg.move&&framed?.face&&!framed.look.shaped&&!full){dialog.style.setProperty('left',d2(framed.face.left+x*cfg.move)+'px','important');dialog.style.setProperty('top',d2(framed.face.top+y*cfg.move)+'px','important');}
+ if(dialog.classList.contains('portal-inset')){dialog.style.setProperty('--peer-x',x.toFixed(3));dialog.style.setProperty('--peer-y',y.toFixed(3));}
  const slide=(el,px)=>{el.style.translate=`${d2(x*px)}px ${d2(y*px)}px`;};
  for(const [el,px] of peer.els)slide(el,px);
- for(const el of dialog.querySelectorAll('[data-peer-depth]'))slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1)); // queried live: a scene may add layers after it opens
+ for(const el of peer.depths)slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1));
  if(aura?.spec)aura.spec.style.translate=`${d2(-x*AURA.specPx)}px ${d2(-y*AURA.specPx)}px`;
 }
 // iOS 13+: DeviceOrientationEvent.requestPermission() needs a tap. A small chip in the window's corner, never a modal.
