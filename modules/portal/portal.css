@@ -62,13 +62,15 @@ dialog.portal-framed::backdrop{background:#17111e!important}
 .portal-aura-fire>.portal-aura-spec{border-radius:50%;background:radial-gradient(circle,#fff 0,#ffffffa0 22%,#fff0 68%);opacity:.75}
 .portal-aura-flash{background:radial-gradient(circle at var(--cx) var(--cy),#fff,color-mix(in srgb,var(--aura) 55%,#fff))}
 .portal-aura>b{position:absolute;inset:auto;width:6px;height:6px;margin:-3px;border-radius:50%;box-shadow:0 0 8px 2px var(--aura)}
-/* #132 the name rides the rim, outside the window (on the quilt round a hole, on the bottom rail round the window). */
+/* #132 a whole window's name rides its upper rail, outside the window. R7: a peer-through cut has none. */
 .portal-aura>svg{overflow:visible}
-.portal-aura-name{font:800 13px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.32em;fill:color-mix(in srgb,var(--aura) 70%,#fff);stroke:#0b0710;stroke-width:4px;stroke-linejoin:round;paint-order:stroke}
-.portal-aura:not(.shaped) .portal-aura-name{font-size:9.5px;letter-spacing:.38em;stroke-width:3px}
+.portal-aura-name{font:800 9.5px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.38em;fill:color-mix(in srgb,var(--aura) 70%,#fff);stroke:#0b0710;stroke-width:3px;stroke-linejoin:round;paint-order:stroke}
 /* #131 seen through the hole: the quilt stays on as the wall, so a shaped destination's backdrop is clear (the dialog's
    clip-path is JS's). */
 dialog.portal-framed.portal-shaped::backdrop{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* R7 (Ian 26 Sept): no text in a peer-through view. Its titles and status line fade out (opacity, so a screen reader still
+   has them); its controls (Close, Done, Tap the board, the pyramid's toggle) stay. Full screen brings the titles back. */
+dialog.portal-shaped :is(h1,h2,.ach-head,.ship-scene-status):not(.ach-detail *){opacity:0;pointer-events:none}
 /* R7: no two-finger zoom while the portal or any menu is up (framed or opened from the bar); one finger still scrolls, taps
    and traces (touch-action is intersected down the tree, so this reaches everything, top-layer menus included). */
 html:has(#portalHome:not([hidden]),dialog[open]){touch-action:pan-x pan-y}
@@ -230,11 +232,8 @@ body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{disp
 #coachDock.coach-dock button.dock-portal{position:absolute;left:50%;top:50%;translate:-50% -50%;width:62px;height:62px;min-width:62px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;line-height:1;letter-spacing:.04em}
 #coachDock .dock-portal svg{width:22px;height:22px;flex:none}#coachDock .dock-portal span{max-width:100%}
 
-/* A scene's title, Close and cards show in front of the wall (portal.mjs pokes), so they sit inside the cut, not over
+/* A scene's Close and cards show in front of the wall (portal.mjs pokes), so they sit inside the cut, not over
    the metal. Achievements' inverted triangle: its top edge is 29% down and it narrows to the point. */
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head{top:calc(29% + 16px);left:16%;right:calc(16% + 50px)}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head h1{font-size:18px}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head p{font-size:12px}
 .ach-board.portal-shaped:not(.portal-leaned) .ach-close{top:calc(29% + 10px);right:14%}
 .ach-board.portal-shaped:not(.portal-leaned) .ach-detail{top:calc(29% + 10px);bottom:auto;left:20%;right:20%;max-height:24%;padding:10px 8px;border-radius:8px;background:#05030cf0}
 .ach-board.portal-shaped:not(.portal-leaned) .ach-detail h2{font-size:22px}

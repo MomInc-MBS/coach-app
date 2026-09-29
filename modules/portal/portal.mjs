@@ -427,8 +427,11 @@ const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el
 const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
 const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
 // A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the upper rail.
-const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
-const shapeLook=(id,menu,pts,face,pattern)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
+const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(face)});
+// R7 (Ian 26 Sept): no text in a peer-through view, so the cut's rim (and the window it steps in to) carries no name.
+const shapeLook=(id,menu,pts)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:null});
+// R7: full screen keeps the energy, round the screen's own edge (its inward vignette; the frame has gone up out of the way).
+const screenLook=look=>({...look,pts:rectPts({left:0,top:0,width:innerWidth,height:innerHeight}),shaped:false,name:null});
 function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
@@ -606,7 +609,7 @@ function shapeDialog(dialog){
  framed.flat=!cfg.scene;framed.cfg=cfg;
  dialog.classList.add('portal-shaped');
  const r=framed.flat&&(framed.inset??=insetRect(framed.outlines.shape)),small=r&&(r.width-2*INSET.margin<INSET.minW||r.height-2*INSET.margin<INSET.minH);
- if(small){framed.leaned=true;dialog.classList.add('portal-leaned');showAura({...look,pts:rectPts(face),shaped:false,name:namePath(null,null,face)},'lean');}
+ if(small){framed.leaned=true;dialog.classList.add('portal-leaned');showAura({...look,pts:rectPts(framed.face),shaped:false},'lean');}
  else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
@@ -620,11 +623,10 @@ function shapeDialog(dialog){
 function peerCfg(dialog){return PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D;}
 // The destination's own Close (its clean-up runs), if it has one.
 function ownClose(dialog){return [...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));}
-// What of a scene shows in front of the wall: its title, its own Close and cfg.poke (visible ones only).
+// What of a scene shows in front of the wall: its own Close and cfg.poke (visible ones only). R7: never its title.
 function pokes(dialog){
  if(!framed||framed.flat||framed.leaned)return [];
- const heading=[...dialog.querySelectorAll('h1,h2')].find(h=>h.getClientRects().length&&!h.closest('.portal-peer-ui'));
- return [heading,ownClose(dialog),...(framed.cfg?.poke||[]).flatMap(s=>[...dialog.querySelectorAll(s)])].filter(el=>el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
+ return [ownClose(dialog),...(framed.cfg?.poke||[]).flatMap(s=>[...dialog.querySelectorAll(s)])].filter(el=>el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
 }
 const pokeSig=dialog=>pokes(dialog).map(el=>{const r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(v=>Math.round(v/3)).join(',');}).join(';');
 // Largest axis-aligned rectangle inside a convex outline (client px, closed), leaning a little toward width so a menu's
@@ -691,31 +693,16 @@ function lean(on){
  dialog.classList.toggle('portal-leaned',on);
  layoutInCut(dialog,!on);
  clipTo(dialog,on?f.outlines.rect:f.outlines.shape,{ms:prefersReducedMotion()?0:520,ease:'cubic-bezier(.3,0,.2,1)'});
- showAura(on?{...f.look,pts:rectPts(f.face),shaped:false,name:namePath(null,null,f.face)}:f.look,'lean');
+ showAura(on?{...f.look,pts:rectPts(f.face),shaped:false}:f.look,'lean');
 }
 function leanButton(step,on,label){if(!step)return;step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${label}`);step.textContent=on?'⤡':'⤢';}
 // The ✕ on the quilt (a destination with no Close of its own).
 function closeDestination(dialog){const own=ownClose(dialog);if(own)own.click();else dialog.close();}
-// #132: where the destination's name rides the rim (client px, drawn left to right so it reads upright, the glyphs on the
-// side away from the window: on the quilt round a hole, on the upper rail round the whole window).
+// #132: a whole window's name rides its upper rail, drawn left to right so it reads upright (the bottom rail is occupied by
+// the physical dock). R7: a cut carries none.
 const d2=v=>(+v).toFixed(1);
 const pathD=pts=>`M${pts.slice(0,-1).map(([x,y])=>d2(x)+' '+d2(y)).join('L')}Z`;
-export function namePath(id,pattern,face,gap=7){
- const line=pts=>'M'+pts.map(([x,y])=>d2(x)+' '+d2(y)).join('L');
- if(pattern&&['up','down','vdiamond','hdiamond','oval'].includes(id)){
-  const P=([u,v])=>[pattern.left+u*pattern.width,pattern.top+v*pattern.height];
-  // a -> b, moved `off` px to the left of travel (the glyphs' up side)
-  const edge=(a,b,off)=>{const [ax,ay]=P(a),[bx,by]=P(b),l=Math.hypot(bx-ax,by-ay)||1,nx=(by-ay)/l,ny=-(bx-ax)/l;return line([[ax+nx*off,ay+ny*off],[bx+nx*off,by+ny*off]]);};
-  if(id==='up')return edge([0,.71],[1,.71],-(gap+10)); // under the base, the glyphs hanging between it and the line
-  if(id==='down')return edge([0,.29],[1,.29],gap);
-  if(id==='vdiamond')return edge([0,.5],[.5,0],gap);
-  if(id==='hdiamond')return line([[face.left,face.top-gap],[face.left+face.width,face.top-gap]]);
-  const [cx,cy]=P([.5,.5]),rx=pattern.width/2+gap,ry=pattern.height/2+gap; // the oval: its upper-left arc
-  return line(Array.from({length:17},(_,i)=>{const t=Math.PI*(1+i/32);return [cx+rx*Math.cos(t),cy+ry*Math.sin(t)];}));
- }
- // Whole-window names sit above the opening; the bottom rail is occupied by the physical dock.
- const y=face.top-gap;return line([[face.left,y],[face.left+face.width,y]]);
-}
+export function namePath(face,gap=7){const y=d2(face.top-gap);return `M${d2(face.left)} ${y}L${d2(face.left+face.width)} ${y}`;}
 
 // ---- #134 the energy round the open destination ---------------------------------------------------------------------
 // Ian 23 Sept: "a vignetted colourful energy around the edge of the menu, in the shape of the portal that leads to it, but
@@ -816,7 +803,7 @@ const PEER_DEPTH=[
  ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom'],fit:{sel:'#pyramidScanner',band:[0,1]}}],
  ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]],poke:['.ship-view-note','.ship-view-fallback']}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
- ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-head','.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
+ ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
@@ -1670,7 +1657,7 @@ async function portalSequence(id,current){
 // dialog opens clipped to the cut, growing out of the core to the outline (shapeDialog), the wormhole under it stops and
 // the quilt stays on as the wall. Closing fizzles it shut (fizzleBack).
 async function openInHole(id,menu,pts,face,current){
- frameOn(face,shapeLook(id,menu,pts,face,restFace().pattern));
+ frameOn(face,shapeLook(id,menu,pts));
  let dialog=null;
  backgroundBlocked(false);
  const unwatch=watchDialog();
