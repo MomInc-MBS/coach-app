@@ -1,0 +1,30 @@
+{
+  "assets": [
+    {
+      "bytes": 1537805,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "eb01e9f223b96013cad792777daef229c731973b7d3b61c48cb1257ffd73c1c0",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-cardio/1.0.0/cardio.m5bundle"
+        },
+        {
+          "bytes": 489229,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "4086ce291e2c25c07662e9d66d00fe013ac874d85cd3a63c39756fe74f1ad284",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-cardio/1.0.0/cardio.m5bundle"
+        }
+      ],
+      "path": "assets/cardio.m5bundle",
+      "sha256": "9c8c59d696df833daa99cfccf29a5e0975d1953228d322ac0439b60770feea3b"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-cardio",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "WNRFA+XchdvXXYRykgF0QK3CTXIU0kFdSjt/ZBibt3piWo1H9jmN7rGdL7+na6bveJjYdR4eDzRFVKi4qdMKAA=="
+}

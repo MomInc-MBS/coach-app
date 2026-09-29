@@ -1,5 +1,7 @@
 const fail=code=>{throw Object.assign(Error('Account changed. Refresh before continuing.'),{code});};
 function scope(account){
+ // Signed out is not an account change: say what unlocks it (breathing and onboarding save to the account).
+ if(!account?.user)throw Object.assign(Error('Sign in to continue.'),{code:'account_scope_unavailable'});
  if(typeof account?.user?.id!=='string'||!account.user.id||!Number.isSafeInteger(account.dataEpoch)||account.dataEpoch<1)fail('account_scope_unavailable');
  return Object.freeze({ownerId:account.user.id,dataEpoch:account.dataEpoch});
 }

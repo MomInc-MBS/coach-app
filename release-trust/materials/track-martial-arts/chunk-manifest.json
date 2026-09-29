@@ -1,0 +1,30 @@
+{
+  "assets": [
+    {
+      "bytes": 1350733,
+      "chunks": [
+        {
+          "bytes": 1048576,
+          "index": 0,
+          "offset": 0,
+          "sha256": "8395e377d42d370e53f9e9082841aa53bb25a4f7f43b73771863c1a0515e4fd7",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-martial-arts/1.0.0/martial-arts.m5bundle"
+        },
+        {
+          "bytes": 302157,
+          "index": 1,
+          "offset": 1048576,
+          "sha256": "f0721d49614af71174d30d2da1122eb5820d1fdf09fbdfe2ce3786f1c8307265",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-martial-arts/1.0.0/martial-arts.m5bundle"
+        }
+      ],
+      "path": "assets/martial-arts.m5bundle",
+      "sha256": "654966fa10024710dc47e3618f68003b5ee0c07ee23c870f2d93adc0ed31854e"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-martial-arts",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "pVrwyRilcqn0LefqKa10WvIAym7Eb5pNy9NxRywZcnHNiM0I6LnnOAb6X4PJbL+xek6OM5IfYy6jm099xG7cCg=="
+}

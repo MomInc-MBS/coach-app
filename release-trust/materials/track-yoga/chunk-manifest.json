@@ -1,0 +1,23 @@
+{
+  "assets": [
+    {
+      "bytes": 950844,
+      "chunks": [
+        {
+          "bytes": 950844,
+          "index": 0,
+          "offset": 0,
+          "sha256": "e9452dbc7d6425a687945fcacd173ba6f958fee183aab01e7596d4a6aa679b8e",
+          "url": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials/track-yoga/1.0.0/yoga.m5bundle"
+        }
+      ],
+      "path": "assets/yoga.m5bundle",
+      "sha256": "e9452dbc7d6425a687945fcacd173ba6f958fee183aab01e7596d4a6aa679b8e"
+    }
+  ],
+  "keyId": "mom-material-production-v1",
+  "packId": "track-yoga",
+  "schema": "mom-material-chunks-v1",
+  "version": "1.0.0",
+  "signature": "Y6ZQRTG3JiJE2mKIvtwjp370WC/eScHXaNUxKAARpIKOkPN4XVYEQf4mg0VI04XKI5ZfTMW5EAzPTWvzqvewAA=="
+}

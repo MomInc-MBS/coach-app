@@ -1,0 +1,16 @@
+{
+  "$comment": [
+    "Public build-time trust for release builds (scripts/build.mjs). Public verification values only:",
+    "the private signing key never goes here or in the build env (build.mjs throws if it is set).",
+    "An env var with the same name overrides a value here; null leaves it unset.",
+    "MYR5_MATERIAL_*: Ed25519 public key + commit-pinned raw host for the creature-skin and ship/biome",
+    "post-download sections. The nine signed manifests are in materials/<section>/chunk-manifest.json;",
+    "the build verifies each against this key before copying it to /materials/. Recovered 2026-09-26",
+    "from Codex's release 2 build (site-b0dea68, 22 Sep); later Sites builds, incl. live v65, dropped them.",
+    "PUBLIC_EXPANSION_SIGNING_JWK: no expansion key has ever been published (null in every release)."
+  ],
+  "MYR5_MATERIAL_PUBLIC_SIGNING_JWK": {"kty":"OKP","crv":"Ed25519","x":"nfofxCZW0Pz9o2_6d2AGnwL7EA3CsA52NlF1vMcFnDY"},
+  "MYR5_MATERIALS_BASE_URL": "https://raw.githubusercontent.com/MomInc-MBS/coach-app/1c49652e0e16d0b89818d32a0748bee98b8f1418/materials",
+  "MYR5_MATERIAL_SITE_MANIFESTS": "release-trust",
+  "PUBLIC_EXPANSION_SIGNING_JWK": null
+}
