@@ -13,8 +13,8 @@ export class HandControl {
       await widestZoom(stream.getVideoTracks()[0]);if(!this.running)return;
       this.mirrored=cameraFacing(stream.getVideoTracks()[0],this.camera)==='user';this.video.style.transform=this.mirrored?'scaleX(-1)':'none';this.video.hidden=false;
       this.message('Loading hand tracker…');
-      const api=await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Hand tracker download failed. Check your connection.');if(!this.running)return;
-      const files=await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Hand runtime download timed out.');if(!this.running)return;
+      const api=await timeout(import('/vendor/mediapipe/0.10.14/vision_bundle.mjs'),20000,'Hand tracker download failed. Check your connection.');if(!this.running)return;
+      const files=await timeout(api.FilesetResolver.forVisionTasks('/vendor/mediapipe/0.10.14/wasm'),20000,'Hand runtime download timed out.');if(!this.running)return;
       let expired=false;const loading=api.HandLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.65,minHandPresenceConfidence:.6,minTrackingConfidence:.6});
       loading.then(tracker=>{if(!this.running||expired)tracker.close();},()=>{});
       try{this.tracker=await timeout(loading,45000,'Hand model loading timed out.');}catch(error){expired=true;throw error;}

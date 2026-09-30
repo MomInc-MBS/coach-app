@@ -1,5 +1,7 @@
 import {ExerciseRecognizer,GestureConfirmation} from './exercise-gestures.mjs';
 import {openCamera,cameraFacing,widestZoom} from './camera.mjs';
+// The workout's pinned tracker, same-origin (scripts/mediapipe.mjs). A template keeps esbuild from resolving it.
+const MEDIAPIPE='/vendor/mediapipe/0.10.14';
 const timeout=(promise,ms,message)=>{let t;return Promise.race([promise,new Promise((_,reject)=>{t=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(t));};
 export class HandControl {
  constructor(options){Object.assign(this,options);this.recognizer=new ExerciseRecognizer();this.confirmation=new GestureConfirmation();this.running=false;this.models=[];this.frame=0;this.lastVideo=-1;this.lastInference=-Infinity;}
@@ -11,10 +13,10 @@ export class HandControl {
    await widestZoom(stream.getVideoTracks()[0]);if(!this.running)return;
    this.video.style.transform=cameraFacing(stream.getVideoTracks()[0],this.camera)==='user'?'scaleX(-1)':'none';this.video.hidden=false;
    this.message('Loading gesture recognition…');
-   const api=await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Gesture library download timed out.');if(!this.running)return;
-   const files=await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Gesture runtime download timed out.');if(!this.running)return;
+   const api=await timeout(import(`${MEDIAPIPE}/vision_bundle.mjs`),20000,'Gesture library download timed out.');if(!this.running)return;
+   const files=await timeout(api.FilesetResolver.forVisionTasks(MEDIAPIPE+'/wasm'),20000,'Gesture runtime download timed out.');if(!this.running)return;
    const create=async(Type,modelAssetPath,options)=>{let expired=false;const loading=Type.createFromOptions(files,{baseOptions:{modelAssetPath,delegate:'CPU'},runningMode:'VIDEO',...options});loading.then(model=>{if(!this.running||expired)model.close();},()=>{});try{const model=await timeout(loading,60000,'Gesture model loading timed out.');if(this.running)this.models.push(model);return model;}catch(error){expired=true;throw error;}};
-   this.pose=await create(api.PoseLandmarker,'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',{numPoses:1});if(!this.running)return;
+   this.pose=await create(api.PoseLandmarker,MEDIAPIPE+'/pose_landmarker_lite.task',{numPoses:1});if(!this.running)return;
    this.hand=await create(api.HandLandmarker,'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',{numHands:2,minHandDetectionConfidence:.6,minTrackingConfidence:.6});if(!this.running)return;
    this.message('Make an exercise gesture, then hold thumbs up to confirm.');this.loop();
   }catch(error){this.stop();throw error;}
