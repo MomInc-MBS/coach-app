@@ -457,14 +457,15 @@ function frameDialog(dialog){
 }
 // The room remains visible through its cut until a double-tap or a scene action steps inside (full screen). Keep the
 // route/dialog identity, so Back and Close still return through their original portal. R7 (Ian 26 Sept): the energy and the
-// tilt stay; only the metal frame goes, up out of the way as it does for the full-screen destinations.
+// tilt stay; only the metal frame goes, up out of the way as it does for the full-screen destinations. Its titles and
+// controls come back (portal.css hides them while peered), iOS's tilt chip with them.
 function expandScene(dialog){
  if(!dialog?.open||framed?.dialog!==dialog||framed.expanded)return false;
  layoutInCut(dialog,false);framed.expanded=true;framed.leaned=true;
  dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');
  dialog.style.removeProperty('clip-path');dialog.style.removeProperty('--inset-zoom');motion(dialog,'');
  setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
- dialog.querySelector(':scope>.portal-peer-ui')?.remove();chrome.classList.add('portal-garage');showAura(screenLook(framed.look),'lean');
+ chrome.classList.add('portal-garage');showAura(screenLook(framed.look),'lean');
  stowBoard();return true;
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
@@ -595,9 +596,9 @@ function peerUi(dialog){
  if(framed)ui.style.setProperty('--peer-ui',framed.look.color);return ui;
 }
 // A flat menu (conductor 24 Sept) is laid out in the largest rectangle inside the cut (insetRect), a little zoomed out and
-// scrolling inside it, the rest of the cut showing the destination's still depth; a scene fills the cut, its own title,
-// Close and first controls (cfg.poke) showing through the wall as if in front of it, and cfg.fit sizes a scene layer to
-// the cut (the constellation). Without an own Close the portal adds a ✕ on the quilt.
+// scrolling inside it, the rest of the cut showing the destination's still depth; a scene fills the cut and shows nothing
+// but itself (R7, Ian 29 Sept: portal.css hides its titles and controls until full screen), and cfg.fit sizes a scene
+// layer to the cut (the constellation).
 function shapeDialog(dialog){
  const {look}=framed,ui=peerUi(dialog),cfg=peerCfg(dialog);
  framed.flat=!cfg.scene;framed.cfg=cfg;
@@ -612,22 +613,14 @@ function shapeDialog(dialog){
  let down=null,tap=null;
  dialog.addEventListener('pointerdown',e=>{down=at(e);},opts);
  dialog.addEventListener('pointerup',e=>{const up=at(e),t=near(down,up)&&!e.target.closest?.('button,a,input,select,textarea,label,summary')?up:null;if(t&&near(tap,t)){tap=null;expandScene(dialog);}else tap=t;},opts);
- // A scene's own controls can move (a detail card opens, the classroom lays out): keep the clip round them, checked a few
- // times a second, never mid-transition or while the tilt is moving the layers (R7: each rewrite re-masks the whole menu).
- if(!framed.flat){
-  const f=framed,timer=setInterval(()=>{if(f!==framed||f.dialog!==dialog||f.leaned||peer.raf||performance.now()<f.clipBusy)return;if(pokeSig(dialog)!==f.pokeSig)clipTo(dialog,f.outlines.shape);},180);
-  framed.ctl.signal.addEventListener('abort',()=>clearInterval(timer));
+ // A tap on the scene that opens one of its cards (a boss's detail, a pyramid screen or dial) steps in to show it.
+ if(cfg.cards){
+  let shut=[];const open=()=>[...dialog.querySelectorAll(cfg.cards)].filter(el=>!el.hidden);
+  dialog.addEventListener('click',()=>{shut=open();},opts);
+  dialog.addEventListener('click',()=>{if(open().some(el=>!shut.includes(el)))expandScene(dialog);},{signal:framed.ctl.signal});
  }
 }
 function peerCfg(dialog){return PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D;}
-// The destination's own Close (its clean-up runs), if it has one.
-function ownClose(dialog){return [...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));}
-// What of a scene shows in front of the wall: its own Close and cfg.poke (visible ones only). R7: never its title.
-function pokes(dialog){
- if(!framed||framed.flat||framed.leaned)return [];
- return [ownClose(dialog),...(framed.cfg?.poke||[]).flatMap(s=>[...dialog.querySelectorAll(s)])].filter(el=>el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
-}
-const pokeSig=dialog=>pokes(dialog).map(el=>{const r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(v=>Math.round(v/3)).join(',');}).join(';');
 // Largest axis-aligned rectangle inside a convex outline (client px, closed), leaning a little toward width so a menu's
 // text column stays readable (scored width^1.5 x height). For a convex shape the rectangle's sides are bounded by the
 // chords at its top and bottom edges only, so every pair of sampled chords is a candidate.
@@ -662,27 +655,14 @@ function layoutInCut(dialog,on){
  el.style.setProperty('height',d2(H)+'px','important');el.style.setProperty('align-self','start','important');el.style.setProperty('margin-top',d2(top-f.face.top-fit.band[0]*H)+'px','important');
 }
 function throughCut(el){const r=el.getBoundingClientRect();return pointInPolygon(r.left+r.width/2,r.top+r.height/2,framed.outlines.shape);}
-// clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box and the portal's pill
-// buttons (separate subpaths; nonzero fill unions them).
+// clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box (a separate subpath; nonzero
+// fill unions them). R7: nothing of a scene shows in front of the wall any more, so nothing else pokes through.
 function clipFor(dialog,pts){
  const r=dialog.getBoundingClientRect(),o=([x,y])=>`${d2(x-r.left)} ${d2(y-r.top)}`,box=el=>el?.getClientRects().length?el.getBoundingClientRect():null;
  const bar=box(document.getElementById('coachDock')),parts=bar?[`M${o([bar.left,bar.top])}L${o([bar.right,bar.top])}L${o([bar.right,bar.bottom])}L${o([bar.left,bar.bottom])}Z`]:[];
- for(const b of [...dialog.querySelectorAll(':scope>.portal-peer-ui>*')].map(box).filter(Boolean)){ // a pill round each
-  const k=Math.min(b.width,b.height)/2,arc=to=>`A${d2(k)} ${d2(k)} 0 0 1 ${o(to)}`;
-  parts.push(`M${o([b.left+k,b.top])}L${o([b.right-k,b.top])}${arc([b.right-k,b.bottom])}L${o([b.left+k,b.bottom])}${arc([b.left+k,b.top])}Z`);
- }
- for(const b of pokes(dialog).map(box)){const p=4;parts.push(`M${o([b.left-p,b.top-p])}L${o([b.right+p,b.top-p])}L${o([b.right+p,b.bottom+p])}L${o([b.left-p,b.bottom+p])}Z`);} // in front of the wall
- if(framed?.dialog===dialog){framed.pokeSig=pokeSig(dialog);holeAura();}
  return `path('M${pts.slice(0,-1).map(o).join('L')}Z${parts.join('')}')`;
 }
-// Release 6: what shows in front of the wall shows in front of the rim too (the pyramid's Scan food / Log by hand tags):
-// the rim's glow is cut out round each poked control, the same 4px margin as the dialog's clip above.
-function holeAura(){
- if(!aura)return;const p=4,boxes=framed?.dialog?pokes(framed.dialog).map(el=>el.getBoundingClientRect()):[];
- aura.el.style.clipPath=boxes.length?`path(evenodd,'M-9999 -9999H99999V99999H-9999Z${boxes.map(b=>`M${d2(b.left-p)} ${d2(b.top-p)}H${d2(b.right+p)}V${d2(b.bottom+p)}H${d2(b.left-p)}Z`).join('')}')`:'';
-}
 function clipTo(dialog,pts,{from=null,ms=0,ease='ease'}={}){
- if(framed)framed.clipBusy=performance.now()+ms+60;
  const go=()=>{if(framed?.dialog!==dialog)return;motion(dialog,ms?`clip-path ${ms}ms ${ease}`:'none');dialog.style.clipPath=clipFor(dialog,pts);};
  if(from){motion(dialog,'none');dialog.style.clipPath=clipFor(dialog,from);settle().then(go);}else go();
 }
@@ -695,8 +675,6 @@ function lean(on){
  showAura(on?{...f.look,pts:rectPts(f.face),shaped:false}:f.look,'lean');
 }
 function leanButton(step,on,label){if(!step)return;step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${label}`);step.textContent=on?'⤡':'⤢';}
-// The ✕ on the quilt (a destination with no Close of its own).
-function closeDestination(dialog){const own=ownClose(dialog);if(own)own.click();else dialog.close();}
 // #132: a whole window's name rides its upper rail, drawn left to right so it reads upright (the bottom rail is occupied by
 // the physical dock). R7: a cut carries none.
 const d2=v=>(+v).toFixed(1);
@@ -756,7 +734,7 @@ function showAura(look,why='open'){
  blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
  for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
  chrome.append(el);
- aura={el,look,spec:blob,anims:[]};holeAura();
+ aura={el,look,spec:blob,anims:[]};
  if(reduced)return;
  aura.anims.push(wa.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:AURA.spinMs,iterations:Infinity}),
   wb.animate([{transform:'rotate(360deg)'},{transform:'rotate(0deg)'}],{duration:AURA.spinMs*.62,iterations:Infinity}),
@@ -795,14 +773,14 @@ const TILT_KEY='myr5.tiltPermission';
 // the whole menu every frame). Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
 // layers: [selector,px] for destinations that don't mark theirs (nested ones add up); scene: a 3D scene reading peer.mjs
 // (no drag look-around: a drag there turns the scene; it fills its cut, see shapeDialog); chip: offer iOS's tilt
-// permission (the scenes always do); poke/fit: shapeDialog.
+// permission (the scenes always do); cards/fit: shapeDialog.
 const PEER_LAYER={far:14,mid:5,near:-4};
 const PEER_DEPTH=[
- ['#accountPanel.classroom-panel',{scene:true,poke:['[data-room-board]']}],
- ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom'],fit:{sel:'#pyramidScanner',band:[0,1]}}],
- ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]],poke:['.ship-view-note','.ship-view-fallback']}],
+ ['#accountPanel.classroom-panel',{scene:true}],
+ ['#mealsPanel',{scene:true,cards:'.pyramid-zoom,#foodDial,#mealConfirmation',fit:{sel:'#pyramidScanner',band:[0,1]}}],
+ ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
- ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
+ ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],cards:'.ach-detail',fit:{sel:'.ach-stage',band:[.075,.9]}}],
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
@@ -885,12 +863,10 @@ function tiltChip(dialog){
  chip.onclick=async()=>{
   let answer='denied';try{answer=await DeviceOrientationEvent.requestPermission();}catch{}
   try{localStorage.setItem(TILT_KEY,answer==='granted'?'granted':'denied');}catch{}
-  chip.remove();if(framed?.dialog===dialog&&framed.look.shaped)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);
+  chip.remove();
   if(answer==='granted'&&peer.dialog===dialog)addEventListener('deviceorientation',onOrient,{signal:peer.ctl.signal});
  };
- peerUi(dialog).append(chip);
- // A shaped window takes the chip into its clip once the open burst (650 ms) is over.
- setTimeout(()=>{if(framed?.dialog===dialog&&framed.look.shaped&&chip.isConnected)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);},700);
+ peerUi(dialog).append(chip); // hidden while a scene is peered at (portal.css): full screen offers it
 }
 function status(text){statusEl.textContent=text;}
 

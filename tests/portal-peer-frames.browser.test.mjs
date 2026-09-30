@@ -95,7 +95,7 @@ test('R7-PEER: the four cut-throughs, held still on a jittery Android tilt senso
     turnFps:+(w.frames.length*1000/SWEEP_MS).toFixed(1),turnP95Ms:+p95(w.frames).toFixed(1),turnClipWrites:w.clips};
    rows.push(row);
    await page.screenshot({path:resolve(FRAMES,`peer-${id}.png`)});
-   await page.locator(close).first().click();
+   await page.keyboard.press('Escape'); // its Close is hidden while peered (R7)
    await quiltHome(page);
   }
  }finally{
@@ -129,7 +129,7 @@ test('R7-PEER: two fingers never zoom an open menu or the quilt; one finger stil
   assert.equal(await pinch([40,200]),1,'the wall round the cut does not zoom');
   const bar=await page.evaluate(()=>{const r=document.getElementById('coachDock').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];});
   assert.equal(await pinch(bar),1,'the bar does not zoom');
-  await page.locator('#mealsPanel [data-close]').click();
+  await page.keyboard.press('Escape');
   await quiltHome(page);await page.waitForTimeout(600); // the healed quilt settles
   // One finger still traces the square (the pointer stroke is not eaten as a scroll or a gesture).
   const r=await page.evaluate(()=>window.myr5Portal.current().patternRect());

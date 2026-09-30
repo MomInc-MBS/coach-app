@@ -50,7 +50,7 @@ async function food(page,how){
   await page.mouse.move(...pts[0]);await page.mouse.down();for(const p of pts.slice(1))await page.mouse.move(...p,{steps:2});await page.mouse.up();
  }else await page.evaluate(()=>window.myr5Portal.open('up'));
  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,null,{timeout:15000});
- await page.locator('#mealsPanel [data-close]').first().click();
+ await page.keyboard.press('Escape'); // seen through its cut, Food shows no Close (R7)
  await portalUp(page);
 }
 

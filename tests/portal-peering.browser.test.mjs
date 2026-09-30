@@ -54,16 +54,16 @@ test.before(async()=>{
 });
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
 
-// [id, dialog, frame, its own Close, its title (none while peered, back in full screen), its first control]. Conductor 24
-// Sept: Close and first controls fully visible at 375x812 on every shaped route (a scene's own controls in front of the wall).
+// [id, dialog, frame, its own Close, its title, one of the scene's own objects]. R7 (Ian 26 and 29 Sept): peered at, a
+// scene shows nothing but itself (no title, Close or label; its own objects still take a tap); full screen brings them back.
 const SHAPED=[
- ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#mealsPanel .pyramid-flip'],
+ ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#pyramidScanner canvas'],
  ['down','.ach-board','down-achievements','.ach-close','.ach-head h1','.ach-boss'],
  // Records peers into the 3D classroom; its whiteboard opens the full panel. Ian 26 Sept: the sideways diamond opens the
  // same tall diamond (the flat trace still reaches it).
- ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2',null],
- ['hdiamond','#accountPanel','hdiamond-opens-vdiamond','#accountPanel [data-close]','#accountPanel h2',null],
- ['oval','dialog.ship-view','oval-ship','.ship-view-close','.ship-scene-status','.ship-view-close'],
+ ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],
+ ['hdiamond','#accountPanel','hdiamond-opens-vdiamond','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],
+ ['oval','dialog.ship-view','oval-ship','.ship-view-close','.ship-scene-status','.ship-scene-canvas'],
 ];
 // The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
 // itself: nothing clips or covers it.
@@ -74,7 +74,24 @@ const fullyVisible=(page,sel)=>page.evaluate(sel=>{
  for(const r of rects){const k=Math.min(8,r.width/4,r.height/4);
   for(const [x,y] of [[r.left+k,r.top+k],[r.right-k,r.top+k],[r.left+k,r.bottom-k],[r.right-k,r.bottom-k],[r.left+r.width/2,r.top+r.height/2]]){const hit=document.elementFromPoint(x,y);if(!hit||!(hit===el||el.contains(hit)))return `${sel}: ${Math.round(x)},${Math.round(y)} hits ${hit?.tagName}.${hit?.className}`;}}
  return true;},sel);
-const opacity=(page,sel)=>page.evaluate(sel=>{const el=document.querySelector(sel);return el&&getComputedStyle(el).opacity;},sel);
+const shown=(page,sel)=>page.evaluate(sel=>{const el=document.querySelector(sel);return !!el&&el.checkVisibility({visibilityProperty:true,checkVisibilityCSS:true});},sel);
+// Every bit of DOM text or control showing in a menu that isn't one of the scene's own objects (its canvas, a boss, the
+// whiteboard), and whether its hidden Close can still take focus.
+const overlays=(page,sel,close)=>page.evaluate(([sel,close])=>{
+ const d=document.querySelector(sel),text=el=>[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim());
+ const shown=[...d.querySelectorAll('*')].filter(el=>!el.closest('#coachDock')&&!el.matches('canvas,.ach-boss,[data-room-board]')&&(el.matches('button,a,input,select,textarea,[tabindex]')||text(el))
+  &&el.getClientRects().length&&el.checkVisibility({visibilityProperty:true,checkVisibilityCSS:true,opacityProperty:true,checkOpacity:true})).map(el=>el.className||el.tagName);
+ const c=document.querySelector(close);c.focus();const focused=document.activeElement===c;c.blur();
+ return {shown,focused};
+},[sel,close]);
+// Something of sel is where a tap lands (the middle of one of them reaches it).
+const tappable=(page,sel)=>page.evaluate(sel=>[...document.querySelectorAll(sel)].some(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!hit&&(hit===el||el.contains(hit));}),sel);
+// Two quick taps on the open menu (here on the wall beside the cut, which answers for the menu).
+async function doubleTap(page,sel){
+ const corner=await page.evaluate(()=>{const c=document.getElementById('portalChrome').style;return [parseFloat(c.getPropertyValue('--face-left'))+14,parseFloat(c.getPropertyValue('--face-top'))+14];});
+ await page.mouse.dblclick(...corner); // one call: two separate clicks come over a second apart on a busy machine
+ await page.waitForFunction(sel=>document.querySelector(sel).classList.contains('portal-fullscreen'),sel,{timeout:5000});
+}
 const auraPath=page=>page.evaluate(()=>document.querySelector('#portalChrome .portal-aura #portalAuraP')?.getAttribute('d'));
 const flowing=page=>page.evaluate(()=>{const a=document.querySelector('#portalChrome .portal-aura');return !!a&&[...a.querySelectorAll('.portal-aura-fire')].every(el=>el.getAnimations({subtree:true}).some(x=>x.playState==='running'));});
 const tilt=(page,gamma,beta=50)=>page.evaluate(([g,b])=>{for(let i=0;i<3;i++)dispatchEvent(new DeviceOrientationEvent('deviceorientation',{alpha:0,beta:b,gamma:g}));},[gamma,beta]);
@@ -84,7 +101,7 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
  try{
   await page.evaluate(()=>localStorage.setItem('myr5.tiltPermission','granted'));
   let tallDiamond=null;
-  for(const [id,sel,frame,close,title,first] of SHAPED){
+  for(const [id,sel,frame,close,title,scene] of SHAPED){
    await page.evaluate(id=>{window.run=window.myr5Portal.open(id);},id);
    await page.waitForFunction(sel=>document.querySelector(sel)?.open&&document.querySelector(sel).classList.contains('portal-shaped'),sel,{timeout:30000});
    await page.evaluate(()=>window.run);
@@ -102,10 +119,11 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    assert.equal(s.name,false,`${id}: no name on the rim`);
    assert.equal(s.taps,true,`${id}: nothing in the energy takes a pointer`);
    assert.equal(await flowing(page),true,`${id}: the neons flow round the rim`);
-   if(title)assert.equal(await opacity(page,title),'0',`${id}: no title in the peer-through view`);
+   assert.deepEqual(await overlays(page,sel,close),{shown:[],focused:false},`${id}: nothing but the scene shows through the cut, and its hidden Close takes no focus`);
+   assert.equal(await shown(page,title),false,`${id}: no title`);
    const middle=await page.evaluate(()=>{const p=document.querySelector('.portal-aura').style;return [parseFloat(p.getPropertyValue('--cx')),parseFloat(p.getPropertyValue('--cy'))];});
    assert.equal(await reaches(page,sel,middle),true,`${id}: the menu is reachable through the middle of the cut`);
-   for(const part of [close,first].filter(Boolean))assert.equal(await fullyVisible(page,part),true,`${id}: fully visible and tappable`);
+   assert.equal(await tappable(page,scene),true,`${id}: the scene's own objects still take a tap`);
    if(id==='vdiamond'||id==='hdiamond'){
     await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room="ready"] .classroom-canvas'),null,{timeout:30000});
     assert.equal(await page.evaluate(()=>{
@@ -123,18 +141,17 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    }
    assert.equal(await barTappable(page),true,`${id}: the bar stays tappable`);
    await page.screenshot({path:resolve(FRAMES,`r7-peer-${frame}-peered.png`)});
-   // R7: a double-tap on the open menu (here on the wall beside the cut, which answers for the menu) steps in to the full
-   // screen: no clip, the frame up out of the way, the energy on the screen's edge, the title back, the tilt still on.
-   const corner=await page.evaluate(()=>{const c=document.getElementById('portalChrome').style;return [parseFloat(c.getPropertyValue('--face-left'))+14,parseFloat(c.getPropertyValue('--face-top'))+14];});
-   for(let i=0;i<2;i++){await page.mouse.click(...corner);await page.waitForTimeout(90);}
-   await page.waitForFunction(sel=>document.querySelector(sel).classList.contains('portal-fullscreen'),sel,{timeout:5000});
+   // R7: a double-tap on the open menu steps in to the full screen: no clip, the frame up out of the way, the energy on the
+   // screen's edge, the title and Close back, the tilt still on.
+   await doubleTap(page,sel);
    await page.waitForFunction(()=>document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0,null,{timeout:5000}); // the frame's garage-door exit
    const f=await page.evaluate(sel=>{const d=document.querySelector(sel),r=d.getBoundingClientRect();return {open:d.open,clip:d.style.clipPath,box:[r.width,r.height],quilt:!document.getElementById('portalHome').hidden,
     shaped:document.querySelector('#portalChrome .portal-aura')?.classList.contains('shaped'),frameGone:document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0};},sel);
    assert.deepEqual(f,{open:true,clip:'',box:[375,812],quilt:false,shaped:false,frameGone:true},`${id}: full screen`);
    assert.equal(await auraPath(page),'M0.0 0.0L375.0 0.0L375.0 812.0L0.0 812.0Z',`${id}: the energy runs round the screen's edge`);
    assert.equal(await flowing(page),true,`${id}: the energy still flows in full screen`);
-   if(title)assert.equal(await opacity(page,title),'1',`${id}: full screen keeps its own title`);
+   assert.equal(await shown(page,title),true,`${id}: full screen shows its own title`);
+   assert.equal(await fullyVisible(page,close),true,`${id}: full screen shows its own Close`);
    await tilt(page,0);await page.waitForTimeout(400);await tilt(page,14);await page.waitForTimeout(1000);
    assert.ok(await eyeX(page)>.8,`${id}: the tilt still looks round the scene in full screen`);
    await tilt(page,0);await page.waitForTimeout(600);
@@ -145,6 +162,33 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    await quiltHome(page);
    assert.equal(await page.evaluate(()=>document.getAnimations().some(a=>a.effect?.target?.id==='portalHome')),false,`${id}: the way back has finished`);
   }
+ }finally{await context.close();}
+});
+
+test("R7 (Ian 29 Sept): with its Close hidden, a peered menu still lets you out: Escape, phone back and the bar's Portal key; a scene tap that opens a card steps in",{timeout:300000},async()=>{
+ const {context,page}=await openApp(browser,base);
+ const open=async(id,sel)=>{
+  await page.evaluate(id=>{window.run=window.myr5Portal.open(id);},id);
+  await page.waitForFunction(sel=>document.querySelector(sel)?.open&&document.querySelector(sel).classList.contains('portal-shaped'),sel,{timeout:30000});
+  await page.evaluate(()=>window.run);await page.waitForTimeout(800);
+ };
+ try{
+  for(const [id,sel,exit] of [['up','#mealsPanel','Escape'],['down','.ach-board','back'],['vdiamond','#accountPanel','portal key'],['oval','dialog.ship-view','Escape'],['up','#mealsPanel','back'],['oval','dialog.ship-view','portal key']]){
+   await open(id,sel);
+   if(exit==='Escape')await page.keyboard.press('Escape');
+   else if(exit==='back')await page.goBack();
+   else await page.locator('#coachDock [data-route="portal"]').click();
+   await page.waitForFunction(sel=>!document.querySelector(sel).open,sel,{timeout:10000}).catch(e=>{throw new Error(`${id}: ${exit} did not close it`,{cause:e});});
+   await quiltHome(page);
+  }
+  // A boss's detail card is hidden while peered, so a tap on the boss steps in to show it (a pyramid screen or dial alike).
+  await open('down','.ach-board');
+  await page.evaluate(()=>document.querySelector('.ach-board .ach-boss:not([disabled])').click());
+  await page.waitForFunction(()=>document.querySelector('.ach-board.portal-fullscreen')&&!document.querySelector('.ach-detail').hidden,null,{timeout:5000});
+  assert.equal(await shown(page,'.ach-detail'),true,'the card shows, full screen');
+  await page.goBack();
+  await page.waitForFunction(()=>!document.querySelector('.ach-board').open,null,{timeout:10000});
+  await quiltHome(page);
  }finally{await context.close();}
 });
 
@@ -181,8 +225,10 @@ test('iOS tilt permission waits for the Allow chip tap',{timeout:90000},async()=
   await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
   await page.evaluate(()=>window.run);
   await page.waitForFunction(()=>document.querySelector('.portal-tilt-chip'));
+  assert.equal(await page.locator('.portal-tilt-chip').isVisible(),false,'peered at, the scene shows no chip either (R7)');
+  await doubleTap(page,'#mealsPanel');
   assert.equal(await page.evaluate(()=>window.__tiltPermissionCalls),0,'opening the scene does not request permission');
-  await page.locator('.portal-tilt-chip').click();
+  await page.locator('.portal-tilt-chip').click(); // full screen offers it
   await page.waitForFunction(()=>window.__tiltPermissionCalls===1);
   assert.equal(await page.evaluate(()=>localStorage.getItem('myr5.tiltPermission')),'granted','the tap records the granted choice');
  }finally{await context.close();}
@@ -193,21 +239,13 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
  const settled=page=>page.waitForTimeout(1200);
  const {context,page}=await openApp(browser,base);
  try{
-  await page.evaluate(()=>{
-   localStorage.removeItem('myr5.tiltPermission');
-   Object.defineProperty(DeviceOrientationEvent,'requestPermission',{configurable:true,value:()=>Promise.resolve('granted')});
-  });
+  await page.evaluate(()=>localStorage.setItem('myr5.tiltPermission','granted')); // asking is the chip's own test, above
   await page.evaluate(()=>{window.run=window.myr5Portal.open('up');});
   await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
   await page.evaluate(()=>window.run);
-  const tiltChip=page.locator('.portal-tilt-chip');
-  if(await tiltChip.count()){
-   await tiltChip.click();
-   await page.waitForFunction(()=>localStorage.getItem('myr5.tiltPermission')==='granted');
-  }
   await page.waitForFunction(()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:30000});
   await page.waitForTimeout(900);
-  const fixed=()=>page.evaluate(()=>({clip:document.getElementById('mealsPanel').style.clipPath.split('Z')[0],face:document.getElementById('portalChrome').style.cssText})); // the cut (its labels, in front of the wall, ride the pyramid)
+  const fixed=()=>page.evaluate(()=>({clip:document.getElementById('mealsPanel').style.clipPath,face:document.getElementById('portalChrome').style.cssText})); // the cut
   const before=await fixed(),eye=()=>page.evaluate(async()=>{const {eye}=await import('/modules/portal/peer.mjs');return {...eye};});
   await tilt(page,0);await settled(page); // the baseline, caught at the first reading
   const shots=[];
@@ -220,7 +258,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   }
   assert.notDeepEqual(shots[0],shots[2],'the pyramid shows a different side at each tilt');
   assert.deepEqual(await fixed(),before,'the cut and the frame never move');
-  await page.locator('#mealsPanel [data-close]').click();
+  await page.keyboard.press('Escape'); // R7: its Close is hidden while peered
   await quiltHome(page);
   assert.deepEqual(await eye(),{x:0,y:0},'the eye is off once the destination closes');
   // A flat menu (Reminders, through a line): the whole menu slides a few px behind the fixed frame.
