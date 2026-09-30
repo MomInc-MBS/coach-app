@@ -64,16 +64,17 @@ test('W2-2I: the package is grouped for the Downloads menu; the regular coach ne
  const root=await mkdtemp(join(tmpdir(),'myr5-groups-'));
  const chest='roster/06-ridge-triad--geometric_robot_3d_model1',meditation='roster/18-quad-all--robotic_dog_3d_model',unplaced='roster/21-flyer--winged_humanoid_3d_model';
  try{
-  for(const folder of ['creature/models/roster','creature/assets','models','voice','handborne/models','food','arcade/tub-flight','war-room','pod/worlds'])await mkdir(join(root,folder),{recursive:true});
+  for(const folder of ['creature/models/roster','creature/assets','models','voice','handborne/models','food','arcade/tub-flight','war-room','pod/worlds','vendor/mediapipe/0.10.14/wasm'])await mkdir(join(root,folder),{recursive:true});
   await writeFile(join(root,'pose.html'),'coach');
-  for(const file of ['creature/models/myr5.glb','creature/models/anatomy.glb','creature/assets/phone.js','creature/models/roster/manifest.json',`creature/models/${chest}.glb`,`creature/models/${meditation}.glb`,`creature/models/${unplaced}.glb`,'models/squat.glb','handborne/models/hand.glb','food/pyramid-scanner.glb','nutrition-data.mjs','meditation.mjs','pod/worlds/great-wall.png','arcade/tub-flight/game.mjs','war-room/index.html','voice/a.mp3'])await writeFile(join(root,file),'x'+file);
+  for(const file of ['creature/models/myr5.glb','creature/models/anatomy.glb','creature/assets/phone.js','creature/models/roster/manifest.json',`creature/models/${chest}.glb`,`creature/models/${meditation}.glb`,`creature/models/${unplaced}.glb`,'models/squat.glb','handborne/models/hand.glb','food/pyramid-scanner.glb','nutrition-data.mjs','meditation.mjs','pod/worlds/great-wall.png','arcade/tub-flight/game.mjs','war-room/index.html','voice/a.mp3','vendor/mediapipe/0.10.14/pose_landmarker_lite.task','vendor/mediapipe/0.10.14/wasm/vision_wasm_internal.wasm','vendor/mediapipe/0.10.14/wasm/vision_wasm_nosimd_internal.wasm'])await writeFile(join(root,file),'x'+file);
   await writeFile(join(root,'voice/manifest.json'),JSON.stringify({phrases:{hi:'/voice/a.mp3'}}));
   await identifyVoice(root);
   const groups=Object.fromEntries(Object.entries(Object.groupBy((await offlineInventory(root)).optional,a=>a.group)).map(([id,list])=>[id,list.map(a=>a.url).sort()]));
   assert.deepEqual(groups,{
    coach:['/creature/assets/phone.js','/creature/models/anatomy.glb','/creature/models/myr5.glb','/creature/models/roster/manifest.json','/models/squat.glb'],
    'bodies-chest':[`/creature/models/${chest}.glb`],'bodies-meditation':[`/creature/models/${meditation}.glb`],'bodies-starter':[`/creature/models/${unplaced}.glb`],
-   hand:['/handborne/models/hand.glb'],food:['/nutrition-data.mjs'],meditation:['/meditation.mjs'],starter:['/food/pyramid-scanner.glb','/pod/worlds/great-wall.png'],
+   hand:['/handborne/models/hand.glb'],food:['/nutrition-data.mjs'],meditation:['/meditation.mjs'],// R9-OFFLINE: the pose tracker is Starter; the no-SIMD fallback is served online only.
+   starter:['/food/pyramid-scanner.glb','/pod/worlds/great-wall.png','/vendor/mediapipe/0.10.14/pose_landmarker_lite.task','/vendor/mediapipe/0.10.14/wasm/vision_wasm_internal.wasm'],
    games:['/arcade/tub-flight/game.mjs','/war-room/index.html'],voices:['/voice/manifest.json'],
   });
  }finally{await rm(root,{recursive:true,force:true});}

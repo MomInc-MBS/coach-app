@@ -26,6 +26,8 @@ document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
 document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
 if(!voice.available){$('voiceType').textContent='Speech unavailable in this browser';$('toggleVoice').disabled=true;}
 let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,generation=0;
+// R9-OFFLINE: the pinned pose tracker, same-origin (scripts/mediapipe.mjs) and in the Starter download, so a set runs offline.
+const MEDIAPIPE='/vendor/mediapipe/0.10.14';
 let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
 let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
 const manualStartGate=new ManualStartGate();
@@ -115,13 +117,13 @@ async function start(){
     v.style.transform=c.style.transform=state.camera==='user'?'scaleX(-1)':'none';
     await showLensInfo(stream.getVideoTracks()[0]);if(run!==generation)return;
     status('Loading tracker…');$('detail').textContent=`Video ${v.videoWidth} × ${v.videoHeight}`;state.phase='model';
-    api=api||await timeout(import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs'),20000,'Tracker library did not download. Check the phone’s internet connection.');
+    api=api||await timeout(import(`${MEDIAPIPE}/vision_bundle.mjs`),20000,'Tracker library did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
-    files=files||await timeout(api.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
+    files=files||await timeout(api.FilesetResolver.forVisionTasks(MEDIAPIPE+'/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
     // This Pixel's GPU path lost its WebGL context. CPU is the measured baseline.
     let expired=false;
-    const loading=api.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});
+    const loading=api.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:MEDIAPIPE+'/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});
     loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
     let created;
     try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
