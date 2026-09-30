@@ -63,6 +63,7 @@ export function mountRewardPacks(){
  function present(){
   clearTimeout(presentTimer);const id=available().find(id=>!presented.has(id));if(!id||overlay.open)return;
   if(document.body.dataset.tracking==='true'||document.body.dataset.cameraWorkout==='true'){presentTimer=setTimeout(present,1500);return;}
+  if(document.querySelector('dialog[open]:not(.reward-pack-dialog)')){presentTimer=setTimeout(present,500);return;}
   // The starter quilt only appears when no dialog is open: let it come up first (up to 5 s after launch).
   if(document.getElementById('portalHome')?.hidden!==false&&performance.now()<5000){presentTimer=setTimeout(present,250);return;}
   presented.add(id);show(id);

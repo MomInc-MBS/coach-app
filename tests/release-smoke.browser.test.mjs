@@ -323,6 +323,7 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    await page.goBack();
    await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
    await page.waitForFunction(route=>location.hash!=='#'+route&&window.myr5Routes.current()==='',route);
+   if(route==='ship')await page.waitForTimeout(100); // Let the previous Back/close task settle before opening #select.
   }
   // #share was removed with the Menu: the hash is not a route, opens nothing and adopts no dialog.
   await page.evaluate(()=>{location.hash='share';});

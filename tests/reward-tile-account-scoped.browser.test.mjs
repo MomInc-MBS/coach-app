@@ -26,8 +26,12 @@ test('built app opens an account-scoped reward pack and shows its earned cosmeti
   const page=await context.newPage();await page.goto('http://127.0.0.1:'+server.address().port+'/pose.html');
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
   await page.waitForFunction(()=>!!document.querySelector('.coach-dock'));
-  await page.evaluate(()=>{const account={user:{id:'reward-browser-owner'},dataEpoch:1};window.myr5AuthenticatedAccount=account;window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:account}));});
-  const dialog=page.locator('.reward-pack-dialog');await dialog.waitFor({state:'visible',timeout:10000});
+  await page.evaluate(()=>{const blocker=document.createElement('dialog');blocker.id='active-food-dialog';blocker.textContent='Saving a meal';document.body.append(blocker);blocker.showModal();const account={user:{id:'reward-browser-owner'},dataEpoch:1};window.myr5AuthenticatedAccount=account;window.dispatchEvent(new CustomEvent('myr5:account-ready',{detail:account}));});
+  const dialog=page.locator('.reward-pack-dialog');
+  await page.waitForTimeout(750);
+  assert.equal(await dialog.isVisible(),false,'a reward drop waits while another modal is in use');
+  await page.evaluate(()=>{for(const open of document.querySelectorAll('dialog[open]:not(.reward-pack-dialog)'))open.close();});
+  await dialog.waitFor({state:'visible',timeout:10000});
   const canvas=page.locator('.reward-pack-tile');
   assert.deepEqual(await canvas.evaluate(el=>[el.width,el.height]),[64,64],'reward art uses a 64×64 canvas');
   await page.evaluate(()=>{Math.random=()=>0;});
