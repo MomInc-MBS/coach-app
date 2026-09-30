@@ -49,6 +49,14 @@ test('the samples script turns a recording into a samples file under 50 KB and a
  assert.deepEqual(JSON.parse(readFileSync('tests/fixtures/pose-replay/squat-synthetic.samples.json','utf8')),samples);
  assert.deepEqual(JSON.parse(readFileSync('tests/fixtures/pose-replay/squat-synthetic.replay.json','utf8')),fixture);
 });
+test('world landmarks recorded with the frames stay in the replay and reach the engine',()=>{
+ const {fixture}=convert({...example,frames:example.frames.map(([t,p])=>[t,p,p.map(([x,y])=>[x,y,0])])},{reps:6});
+ assert.ok(fixture.frames.every(frame=>frame[2]?.length===10));
+ const update=MovementSession.prototype.update;let seen=0;
+ MovementSession.prototype.update=function(p,t,aspect,world){if(Number.isFinite(world?.[11]?.z))seen++;return update.call(this,p,t,aspect,world);};
+ try{assert.equal(replay(fixture,{samples:null}),6);}finally{MovementSession.prototype.update=update;}
+ assert.equal(seen,fixture.frames.length);
+});
 test('k-NN counts fresh squats with jitter, dropped frames, at 1.6 updates/s and mirrored; stillness counts nothing',()=>{
  const {samples}=convert(example);
  const run=(recording,{drop=0,mirror=false}={})=>{const rnd=random(9),session=new MovementSession('squat',{samples});

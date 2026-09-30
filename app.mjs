@@ -151,7 +151,7 @@ async function loop(run){
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
       // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
-      window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:result.landmarks[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0}}));
+      window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0}}));
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}

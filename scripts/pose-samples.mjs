@@ -16,15 +16,17 @@ const round=(v,d=3)=>Math.round(v*10**d)/10**d;
 const evenly=(list,n)=>list.length<=n?list:Array.from({length:n},(_,i)=>list[Math.floor(i*list.length/n)]);
 // Replay frames keep only the landmarks counting uses; the rest come back invisible.
 const points=frame=>{const p=Array.from({length:27},()=>({x:0,y:0,visibility:0}));frame.forEach(([x,y,visibility],i)=>{p[EMBED_LANDMARKS[i]]={x,y,visibility};});return p;};
+// World landmarks (metres, recorded since R9) feed the rules' toward-camera angles; older recordings replay 2D.
+const worldPoints=w=>{if(!w)return null;const p=Array(27).fill(null);w.forEach(([x,y,z],i)=>{p[EMBED_LANDMARKS[i]]={x,y,z};});return p;};
 export function replay(fixture,options={}){
  const session=new MovementSession(fixture.exercise,options);
- for(const [t,frame] of fixture.frames)session.update(points(frame),t,fixture.aspect);
+ for(const [t,frame,world] of fixture.frames)session.update(points(frame),t,fixture.aspect,worldPoints(world));
  return session.count;
 }
 export function convert(recording,{reps=null}={}){
  const {exercise,aspect=1,frames,labels=[]}=recording;
  if(MOVEMENTS[exercise]?.kind!=='reps')throw new Error(`${exercise} is not a rep exercise; the k-NN only counts reps.`);
- const t0=frames[0][0],compact=frames.map(([t,p])=>[Math.round(t-t0),EMBED_LANDMARKS.map(i=>[round(p[i][0]),round(p[i][1]),round(p[i][2],2)])]);
+ const t0=frames[0][0],compact=frames.map(([t,p,w])=>[Math.round(t-t0),EMBED_LANDMARKS.map(i=>[round(p[i][0]),round(p[i][1]),round(p[i][2],2)]),...w?[EMBED_LANDMARKS.map(i=>w[i].map(v=>round(v,4)))]:[]]);
  const labelled=compact.flatMap(([t,frame])=>{const label=labels.find(l=>t+t0>=l.from&&t+t0<=l.to)?.label;return label?[{label,f:features(points(frame),aspect)}]:[];});
  // Landmarks clear in 90% of the labelled frames are required; a side view only needs its near side.
  const need=EMBED_LANDMARKS.filter(i=>labelled.filter(({f})=>f.visible([i])&&f.p[i].visibility>=.6).length>=.9*labelled.length);

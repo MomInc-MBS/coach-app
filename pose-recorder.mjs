@@ -23,7 +23,7 @@ export function mountPoseRecorder(stage){
  addEventListener('myr5:pose',({detail})=>{
   const exercise=window.myr5TestState?.motion?.mode;if(stage.hidden||!detail.points||!exercise)return;
   if(recording?.exercise!==exercise)recording={version:1,exercise,aspect:detail.width/detail.height,frames:[],labels:[]};
-  recording.frames.push([Math.round(detail.now),detail.points.slice(0,27).map(v=>[+v.x.toFixed(4),+v.y.toFixed(4),+(v.visibility??0).toFixed(3)])]);
+  recording.frames.push([Math.round(detail.now),detail.points.slice(0,27).map(v=>[+v.x.toFixed(4),+v.y.toFixed(4),+(v.visibility??0).toFixed(3)]),...detail.world?[detail.world.slice(0,27).map(v=>[+v.x.toFixed(4),+v.y.toFixed(4),+v.z.toFixed(4)])]:[]]);
   show();
  });
 }
