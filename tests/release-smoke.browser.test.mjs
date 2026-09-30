@@ -150,7 +150,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.open('x'));
   await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
-  await page.locator('h1#title').waitFor();
+  await page.locator('h1#characterBayTitle').waitFor();
   assert.equal(await page.evaluate(()=>document.body.textContent.includes('Finish Coach setup')),false,'no Coach setup lock on the War Room');
  }finally{await context.close();}
 });
@@ -316,7 +316,7 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   // The War Room route is public: a guest hash route enters it directly, with no lock message or bounce.
   await page.evaluate(()=>{location.hash='war-room';});
   await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
-  await page.locator('h1#title').waitFor();
+  await page.locator('h1#characterBayTitle').waitFor();
   await page.goBack();
   await page.waitForURL(url=>url.pathname==='/pose.html',{timeout:15000});
   await page.waitForFunction(()=>window.myr5Routes.current()==='');
@@ -330,7 +330,7 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
   // A guest deep-link to the 3D customizer enters the public War Room too, not a Coach Army bounce.
   await page.evaluate(()=>{location.hash='customize';});
   await page.waitForURL(url=>url.pathname==='/war-room/index.html'&&!url.searchParams.has('optional'),{timeout:15000});
-  await page.locator('h1#title').waitFor();
+  await page.locator('h1#characterBayTitle').waitFor();
  }finally{await context.close();}
 });
 
