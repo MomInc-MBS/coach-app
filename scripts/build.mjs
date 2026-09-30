@@ -6,6 +6,7 @@ import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
 import {deploymentSize,WORKERS_FILE_LIMIT,WORKERS_FILE_BYTES} from './deployment-size.mjs';
 import {omitDuplicateCoachIcon} from './icon-stage.mjs';
 import {ensureAssets,ensureHandAssets,ensureThreeVendor} from './assets.mjs';
+import {ensureMediapipe} from './mediapipe.mjs';
 import {build as bundleEditor} from 'esbuild';
 import {gzipSync} from 'node:zlib';
 // All app pages share the vendored Three core; addons remain bundled by esbuild.
@@ -26,6 +27,7 @@ if(!materialRelease.configured&&materialManifestSource)throw new Error('Signed m
 await ensureAssets();
 await ensureHandAssets();
 await ensureThreeVendor();
+await ensureMediapipe();
 await bundleEditor({entryPoints:['./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/editor.js',plugins:[vendoredThree],define:materialRelease.defines});
 // The app viewer must use the same recipe catalog and materials as the editor.
 await bundleEditor({entryPoints:['./creature/source/phone.ts'],bundle:true,format:'esm',target:'es2022',minify:true,sourcemap:true,outfile:'creature/assets/phone.js',plugins:[vendoredThree],define:materialRelease.defines});

@@ -16,7 +16,7 @@ const say=text=>Object.assign(Error(text),{shown:true});
 // Group ids come from scripts/offline-assets.mjs; a row shows only when this build has that group.
 const GROUPS=[
  // W2-2O (#136): the portal experience's art, offered first (and picked) on the first open.
- ['starter','Starter: portal, pyramid, ship and worlds','The quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
+ ['starter','Starter: portal, pyramid, ship and worlds','The offline workout tracker, the quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
  ['grimoire-ice','Ice grimoire portal','Ice board art and its reflective color-matched wormhole.'],
  ['grimoire-grass','Grass grimoire portal','Grass and flower art with its dirt, roots and bugs wormhole.'],
  ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],

@@ -17,7 +17,8 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // texture, the pyramid model, the starter ship + six wonders, the still-room backdrop and the achievements
 // art (everything in pod/worlds/). Their small code (modules/portal, the ship view, the pyramid scanner,
 // the GLTF loader) stays core, so each scene opens offline and shows its own placeholder.
-export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$)/;
+// R9-OFFLINE: the pinned pose tracker (vendor/mediapipe, scripts/mediapipe.mjs) is Starter too, so camera workouts run offline.
+export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$|vendor\/mediapipe\/)/;
 export const BOARDS=/^\/pod\/worlds\/boards\//;
 const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood)\.mjs$/;
 export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|modules\/rooms\/classroom\.(?:mjs|css))$/;
@@ -32,7 +33,7 @@ const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
 const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
-const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|woff2?|ttf|otf)$/i;
+const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 
 async function identify(root,path){
@@ -98,7 +99,8 @@ export async function offlineInventory(root,template='sw.js'){
    if(entry.name.startsWith('.')||entry.name==='source')continue;
    const name=path+'/'+entry.name;
    if(entry.isDirectory())await walk(name);
-   else if(entry.isFile()&&runtime.test(entry.name))assets.push(await identify(root,name));
+   // ponytail: the no-SIMD tracker (Safari before 16.4) is served online only, never downloaded; add it to Starter if those phones matter.
+   else if(entry.isFile()&&runtime.test(entry.name)&&!entry.name.includes('nosimd'))assets.push(await identify(root,name));
   }
  }
  for(const entry of await readdir(root,{withFileTypes:true}))if(entry.isFile()&&!excluded.has(entry.name)&&runtime.test(entry.name))assets.push(await identify(root,entry.name));

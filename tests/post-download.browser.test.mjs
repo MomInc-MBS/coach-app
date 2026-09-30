@@ -314,7 +314,7 @@ test('an interrupted download resumes where it stopped, after a reload and after
  }finally{await browser?.close();await server.close();}
 });
 
-test('a first run works offline with only the core install: camera workout with counter, and manual mode',async t=>{
+test('a first run works offline with only the core install: camera start stops cleanly without the tracker, and manual mode',async t=>{
  const server=await serve();let browser;
  try{
   browser=await launch();const context=await installed(browser,server.base);
@@ -328,11 +328,11 @@ test('a first run works offline with only the core install: camera workout with 
   const page=await home(context,server.base,'/pose.html#pod');
   await page.waitForTimeout(2500);assert.equal(await menuOpen(page),false,'no menu while offline');
   assert.equal(await page.locator('.full-download-settings [data-open]').count(),1,'Install still offers the menu');
-  await startCamera(page);
-  assert.equal(await page.evaluate(()=>document.getElementById('v').paused),false);
-  assert.deepEqual(await cameraOnly(page),[]);
-  assert.equal(await page.locator('#cameraWorkout #primary').isVisible(),true,'the counter is shown');
-  await stopCamera(page);
+  // R9-OFFLINE: the pose tracker is Starter, never core. With neither the Starter download nor a camera set opened
+  // online, the camera start stops cleanly (tests/offline-camera.browser.test.mjs covers both ways it gets there).
+  await page.evaluate(()=>document.getElementById('useHologram').click());
+  await page.waitForFunction(()=>window.myr5TestState.phase==='error',null,{timeout:30000});
+  assert.match(await page.evaluate(()=>window.myr5TestState.error),/vendor\/mediapipe/);
   assert.equal(await page.locator('#cameraWorkout').isVisible(),false);
   // Manual mode (timer, no camera) also starts from core alone, in a fresh offline window.
   const manual=await home(context,server.base,'/pose.html#pod');
