@@ -332,7 +332,7 @@ test('a first run works offline with only the core install: camera start stops c
   // online, the camera start stops cleanly (tests/offline-camera.browser.test.mjs covers both ways it gets there).
   await page.evaluate(()=>document.getElementById('useHologram').click());
   await page.waitForFunction(()=>window.myr5TestState.phase==='error',null,{timeout:30000});
-  assert.match(await page.evaluate(()=>window.myr5TestState.error),/vendor\/mediapipe/);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.error),'Download Starter in Settings › Downloads to train offline.');
   assert.equal(await page.locator('#cameraWorkout').isVisible(),false);
   // Manual mode (timer, no camera) also starts from core alone, in a fresh offline window.
   const manual=await home(context,server.base,'/pose.html#pod');

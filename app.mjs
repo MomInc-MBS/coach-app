@@ -117,7 +117,7 @@ async function start(){
     v.style.transform=c.style.transform=state.camera==='user'?'scaleX(-1)':'none';
     await showLensInfo(stream.getVideoTracks()[0]);if(run!==generation)return;
     status('Loading tracker…');$('detail').textContent=`Video ${v.videoWidth} × ${v.videoHeight}`;state.phase='model';
-    api=api||await timeout(import(`${MEDIAPIPE}/vision_bundle.mjs`),20000,'Tracker library did not download. Check the phone’s internet connection.');
+    api=api||await timeout(import(`${MEDIAPIPE}/vision_bundle.mjs`).catch(()=>{throw Error('Download Starter in Settings › Downloads to train offline.');}),20000,'Tracker library did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
     files=files||await timeout(api.FilesetResolver.forVisionTasks(MEDIAPIPE+'/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
