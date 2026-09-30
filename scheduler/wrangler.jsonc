@@ -3,9 +3,7 @@
 	"main": "service.mjs",
 	"compatibility_date": "2026-05-15",
 	"triggers": {
-		"crons": [
-			"* * * * *"
-		]
+		"crons": []
 	},
 	"vars": {
 		"VAPID_SUBJECT": "https://myr5-coach.ianmyersrocks97.chatgpt.site",
