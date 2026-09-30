@@ -10,6 +10,11 @@ export function mountQuickSetup(host,initial,{save,label='Start my coach',change
   else if(key==='sessionMinutes'){input=node('input');input.type='number';input.min=1;input.max=180;input.step=1;input.inputMode='numeric';}
   else{input=node('textarea');input.rows=2;input.maxLength=2000;input.placeholder='None, or describe your limits.';}
   input.name=key;input.required=key!=='limits';input.value=key==='limits'?data.answers.armie?.q3||'':data.profile[key]??'';controls[key]=input;label.append(input);form.append(label);
+  if(key==='limits'){
+    const noLimitsBtn=node('button','No limits');noLimitsBtn.type='button';noLimitsBtn.className='no-limits-btn';
+    noLimitsBtn.addEventListener('click',()=>{input.value='None';paint();});
+    label.append(noLimitsBtn);
+  }
  }
  const status=node('p');status.role='status';const button=node('button',label);button.type='submit';button.className='setup-submit';form.append(status,button);host.replaceChildren(form);
  function collect(){data.profile.goal=controls.goal.value;data.profile.sessionMinutes=controls.sessionMinutes.value===''?null:Number(controls.sessionMinutes.value);data.answers.armie??={};data.answers.armie.q3=controls.limits.value.trim();return data;}
