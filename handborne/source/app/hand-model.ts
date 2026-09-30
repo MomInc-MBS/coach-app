@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {GLTFLoader,type GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import {REGIONS,STYLES} from './catalog';
 import {recipeCode,type Selection} from './recipe';
 import {replaceNailShape} from './nails';
@@ -7,7 +8,7 @@ import {addHandScales} from './scales';
 import {sculptMaterial,growMaterial} from './material-language';
 const files=new Map<number,Promise<GLTF>>();
 function family(id:number) {
-  if(!files.has(id)) files.set(id,new GLTFLoader().loadAsync('/handborne/models/family-'+String(id).padStart(2,'0')+'.glb?v=5').catch(error=>{files.delete(id);throw error;}));
+  if(!files.has(id)) files.set(id,new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync('/handborne/models/family-'+String(id).padStart(2,'0')+'.glb?v=5').catch(error=>{files.delete(id);throw error;}));
   return files.get(id)!;
 }
 export async function assemble(selection:Selection,nailShape:string,scalePattern='none') {

@@ -1,6 +1,6 @@
 import {build} from 'vite';
 import {resolve,sep} from 'node:path';
-import {compactModels} from './compact-models.mjs';
+import {optimizeModels} from './optimize-glb.mjs';
 import {sites} from '@openai/sites-vite-plugin';
 import {mkdir,cp,readdir,readFile,writeFile,unlink,rm} from 'node:fs/promises';
 import {deploymentSize,WORKERS_FILE_LIMIT,WORKERS_FILE_BYTES} from './deployment-size.mjs';
@@ -66,7 +66,7 @@ for(const path of [
  'dist/client/creature/assets/editor.js.map',
  'dist/client/creature/assets/phone.js.map',
 ])await unlink(path);
-console.log('Duplicate model bytes removed:',await compactModels('dist/client/creature/models')+await compactModels('dist/client/handborne/models'));
+console.log('Model bytes saved:',await optimizeModels('dist/client/creature/models')+await optimizeModels('dist/client/handborne/models'));
 // The source configuration is intentionally empty. Only a validated public
 // verification JWK may be embedded in a release; signing material is never read.
 const expansionConfigPath='dist/client/modules/new/expansion-config.mjs';
