@@ -11,6 +11,7 @@ import {applyInstalledSkin,type InstalledSkin} from './skin-materials';
 
 import * as THREE from 'three';
 import {GLTFLoader,type GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import {REGIONS,STYLES,type Region,type Design} from './design';
 import {deformMesh} from './deform';
 
@@ -25,7 +26,8 @@ function boxOf(object:THREE.Object3D|undefined){const box=new THREE.Box3();if(ob
 export type InstalledSkinResolver=(id:string)=>Promise<InstalledSkin|null>;
 // `preview` paints locked textures/colours (the editor's unsaved look-before-you-unlock layer).
 export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver,preview=false){
- const loader=new GLTFLoader();
+ // The build meshopt-compresses these models (scripts/optimize-glb.mjs).
+ const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
  const look=(region:Region)=>resolveRegionMaterial(d.styles[region],d.materials?.[region],preview);
  const load=async(name:string)=>loader.parseAsync(await bytes(assetBase+'models/'+name+'.glb'),assetBase+'models/');
  // Each region can come from a different creature. A GLTF scene can only give each node away once,
