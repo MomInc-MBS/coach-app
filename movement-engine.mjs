@@ -2,6 +2,8 @@
 // These are counting/shape heuristics, not assessments of exercise technique.
 import {EXERCISES} from './exercise-library.mjs';
 import {evaluateMovement} from './movement-rules.mjs';
+import {PoseClassifier} from './pose-classifier.mjs';
+import POSE_SAMPLES from './pose-samples.mjs';
 const LEGACY_MOVEMENTS = {
   squat: { name: 'Squats', kind: 'reps', hint: 'Keep shoulders and hips visible. Start standing tall. Feet can stay outside the picture.' },
   pushup: { name: 'Push-ups', kind: 'reps', hint: 'Place the camera beside you. Start at the top with your arm visible.' },
@@ -67,6 +69,9 @@ export class MovementSession {
     this.started=null;this.last=null;this.complete=false;this.eventTimes=[];this.side=null;this.calibration=[];this.base=null;this.filtered={};this.phase='ready';this.phaseSince=null;this.lastRep=-Infinity;
     this.candidate=null;this.missAt=null;this.previousMatch=false;this.hands={};this.kneeArmed={left:false,right:false};this.lastStep=-Infinity;
     this.message=MOVEMENTS[mode].hint;this.measurement='';this.tracking=false;this.progress=0;this.setupProgress=0;this.setupReason='';this.jointReadings='';
+    // A recorded samples file switches this exercise's reps to the k-NN classifier; {samples:null} forces the rules.
+    const samples='samples' in options?options.samples:POSE_SAMPLES[mode];
+    this.knn=samples&&MOVEMENTS[mode].kind==='reps'?new PoseClassifier(samples):null;
     return this.snapshot();
   }
   smooth(key,value,dt){const old=this.filtered[key];const a=1-Math.exp(-Math.max(dt,.01)/.085);return this.filtered[key]=old===undefined?value:old+(value-old)*a;}
@@ -112,7 +117,8 @@ export class MovementSession {
     }
   }
   recipeUpdate(f,t,dt){
-    const m=MOVEMENTS[this.mode],rule=evaluateMovement(f,m,this.side);
+    // Rule angles get the same EMA as the legacy paths (near-raw at phone rates, calmer at 30 updates/s).
+    const m=MOVEMENTS[this.mode],rule=evaluateMovement(f,m,this.side,(key,value)=>this.smooth(key,value,dt));
     if(!rule.valid){this.lose(t,rule.message);return;}
     if(rule.side&&this.side!==rule.side){this.side=rule.side;this.base=null;this.calibration=[];this.phase='ready';this.phaseSince=null;this.filtered={};}
     this.tracking=true;
@@ -125,13 +131,26 @@ export class MovementSession {
       this.progress=Number(rule.match);this.message=rule.match?'Position detected. Hold comfortably.':'Hold paused. '+m.hint;
     }else{
       let up=rule.up,down=rule.down;
-      if(m.detector==='squat'){
-        if(this.base){const travel=this.smooth('recipeMetric',(rule.sample.hipY-this.base.hipY)/this.base.torso,dt);down=travel>=(m.travel??.25);up=travel<=.09;this.progress=clamp(travel/.5,0,1);}else up=true;
+      if(rule.travel){
+        if(this.base){const travel=this.smooth('recipeMetric',(rule.sample.hipY-this.base.hipY)/this.base.torso,dt);down=travel>=rule.travel;up=travel<=.09;this.progress=clamp(travel/.5,0,1);}else up=true;
       }else this.progress=clamp(rule.metric,0,1);
       if(!this.base){this.calibrate(rule.sample??{angle:0},up,t);this.message=this.base?'Ready. Begin when you are ready.':m.hint+' Hold the starting position briefly.';this.progress=this.setupProgress;}
       else{this.repetition(down,up,t,m.minCycle??.18,m.dwell??.10);this.message=this.phase==='bottom'?'Return to your starting position.':'Move with control. Complete the full return to count.';}
     }
     this.measurement=m.measurement+' · '+m.limits;
+  }
+  // k-NN reps (pose-classifier.mjs): EMA of the "down" vote, entering at 6/10 and leaving at 4/10 as in
+  // MediaPipe's repetition counter, then the same dwell/minimum-duration gate as the rules.
+  knnUpdate(f,t,dt){
+    const m=MOVEMENTS[this.mode],need=this.knn.need;
+    if(!f.visible(need)){this.lose(t,'Counting paused: '+f.issues(need).slice(0,2).join('; ')+'.');return;}
+    this.tracking=true;
+    const down=this.smooth('knnDown',this.knn.classify(f.p).down??0,dt);
+    this.repetition(down>=.6,down<=.4,t,m.minCycle??.18,m.dwell??.10);
+    if(this.phase!=='ready')this.base??={};
+    this.progress=clamp(down,0,1);
+    this.message=this.phase==='bottom'?'Return to your starting position.':this.phase==='ready'?'Start in your recorded top position.':'Move with control. Complete the full return to count.';
+    this.measurement='Matched to recorded poses · '+m.limits;
   }
   repUpdate(f,t,dt){
     const squat=this.mode==='squat';const s=this.selectSide(f,squat?'core':'arm',t);if(!s)return;
@@ -241,7 +260,8 @@ export class MovementSession {
     if(gap>MAX_FRAME_GAP){this.lose(t);this.phase='ready';this.hold=0;this.candidate=null;}
     if(!f){this.lose(t,'No body found. Step into view.');return this.snapshot();}
     const recipe=MOVEMENTS[this.mode];
-    if(this.mode==='squat'||this.mode==='pushup')this.repUpdate(f,t,dt);
+    if(this.knn)this.knnUpdate(f,t,dt);
+    else if(this.mode==='squat'||this.mode==='pushup')this.repUpdate(f,t,dt);
     else if(['tree','warrior','horse'].includes(this.mode))this.holdUpdate(f,t,dt);
     else if(recipe.detector==='boxing')this.boxingUpdate(f,t,dt);
     else if(recipe.detector==='march')this.jogUpdate(f,t,dt);
