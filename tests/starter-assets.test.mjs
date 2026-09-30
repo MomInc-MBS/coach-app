@@ -23,8 +23,10 @@ test('W2-2O: the core list has no heavy scene assets; the Starter group holds ev
  const {core,optional}=await offlineInventory('.');
  const heavy=core.filter(a=>/\.(?:glb|gltf|bin)$/i.test(a.url)||a.url.startsWith('/pod/worlds/')||a.url==='/food/pyramid-scanner.glb');
  assert.deepEqual(heavy.map(a=>a.url),[],'no scene model or world art in core');
- const starter=optional.filter(a=>a.group==='starter');
- assert.deepEqual(starter.map(a=>a.url).sort(),[...SCENE_ART].sort(),'Starter is exactly the portal scenes’ art');
+ const starter=optional.filter(a=>a.group==='starter'),tracker=a=>a.url.startsWith('/vendor/mediapipe/');
+ // R9-OFFLINE: the pose tracker (fetched by the build, so absent from a bare checkout) is Starter too, never core.
+ assert.deepEqual(core.filter(tracker).map(a=>a.url),[],'the pose tracker is not core');
+ assert.deepEqual(starter.filter(a=>!tracker(a)).map(a=>a.url).sort(),[...SCENE_ART].sort(),'Starter is the portal scenes’ art plus the tracker');
  for(const url of ['/modules/portal/portal-board.mjs','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs','/vendor/three/GLTFLoader.js','/achievements-board.mjs','/meditation.mjs'])assert(core.some(a=>a.url===url),`${url}: the scene code stays core, so it opens offline and shows its placeholder`);
  const bytes=core.reduce((sum,a)=>sum+a.bytes,0),starterBytes=starter.reduce((sum,a)=>sum+a.bytes,0);
  assert.ok(bytes<=CORE_OFFLINE_BUDGET,`core ${(bytes/1048576).toFixed(2)} MiB stays under the 8 MiB budget`);
