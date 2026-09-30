@@ -2,21 +2,21 @@
  "apple pie": {
   "fdcId": 2707995,
   "description": "Pie, apple",
-  "servingName": "1 mini/small slice",
-  "servingG": 75,
-  "kcal": 222,
-  "proteinG": 2,
-  "fatG": 11.5,
-  "carbsG": 28.2,
+  "servingName": "1 regular slice",
+  "servingG": 150,
+  "kcal": 444,
+  "proteinG": 4.1,
+  "fatG": 22.9,
+  "carbsG": 56.3,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 21.75,
+    "amount": 43.5,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 30,
+    "amount": 60,
     "unit": "µg RAE"
    }
   ]
@@ -24,21 +24,21 @@
  "baby back ribs": {
   "fdcId": 2705894,
   "description": "Pork, ribs",
-  "servingName": "1 rib (yield after cooking, bone removed)",
-  "servingG": 35,
-  "kcal": 89,
-  "proteinG": 5.7,
-  "fatG": 5.3,
-  "carbsG": 4.2,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 343,
+  "proteinG": 21.9,
+  "fatG": 20.4,
+  "carbsG": 16.4,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.18,
+    "amount": 0.69,
     "unit": "µg"
    },
    {
     "name": "Vitamin D",
-    "amount": 0.28,
+    "amount": 1.08,
     "unit": "µg"
    }
   ]
@@ -68,21 +68,21 @@
  "beef carpaccio": {
   "fdcId": 2705822,
   "description": "Beef, NFS",
-  "servingName": "1 piece/slice, any size",
-  "servingG": 30,
-  "kcal": 69,
-  "proteinG": 8.1,
-  "fatG": 3.9,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 312,
+  "proteinG": 36.6,
+  "fatG": 17.6,
   "carbsG": 0,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.68,
+    "amount": 3.08,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 2.1,
+    "amount": 9.45,
     "unit": "µg"
    }
   ]
@@ -112,21 +112,21 @@
  "beet salad": {
   "fdcId": 2709875,
   "description": "Beets, fresh, cooked, fat added",
-  "servingName": "1 slice",
-  "servingG": 10,
-  "kcal": 7,
-  "proteinG": 0.2,
-  "fatG": 0.3,
-  "carbsG": 1,
+  "servingName": "1 cup",
+  "servingG": 175,
+  "kcal": 117,
+  "proteinG": 2.9,
+  "fatG": 4.9,
+  "carbsG": 16.9,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 9.3,
+    "amount": 162.75,
     "unit": "µg"
    },
    {
     "name": "Vitamin C",
-    "amount": 0.42,
+    "amount": 7.35,
     "unit": "mg"
    }
   ]
@@ -134,21 +134,21 @@
  "beignets": {
   "fdcId": 2708071,
   "description": "Beignet",
-  "servingName": "1 beignet",
-  "servingG": 45,
-  "kcal": 188,
-  "proteinG": 2.5,
-  "fatG": 9.1,
-  "carbsG": 24.2,
+  "servingName": "3 beignets",
+  "servingG": 135,
+  "kcal": 563,
+  "proteinG": 7.4,
+  "fatG": 27.2,
+  "carbsG": 72.5,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 43.2,
+    "amount": 129.6,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.57,
+    "amount": 1.71,
     "unit": "mg"
    }
   ]
@@ -222,21 +222,21 @@
  "bruschetta": {
   "fdcId": 2707652,
   "description": "Bruschetta",
-  "servingName": "1 slice",
-  "servingG": 43,
-  "kcal": 74,
-  "proteinG": 1.8,
-  "fatG": 3.3,
-  "carbsG": 9.2,
+  "servingName": "3 slices",
+  "servingG": 129,
+  "kcal": 221,
+  "proteinG": 5.5,
+  "fatG": 9.8,
+  "carbsG": 27.5,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 0.76,
+    "amount": 2.27,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 19.35,
+    "amount": 58.05,
     "unit": "µg"
    }
   ]
@@ -244,21 +244,21 @@
  "caesar salad": {
   "fdcId": 2709591,
   "description": "Caesar salad, with romaine, no dressing",
-  "servingName": "1 cup",
-  "servingG": 79,
-  "kcal": 61,
-  "proteinG": 3.2,
-  "fatG": 2.7,
-  "carbsG": 5.9,
+  "servingName": "1 Wendy's side salad",
+  "servingG": 113,
+  "kcal": 87,
+  "proteinG": 4.5,
+  "fatG": 3.9,
+  "carbsG": 8.5,
   "vitamins": [
    {
     "name": "Vitamin A",
-    "amount": 314.42,
+    "amount": 449.74,
     "unit": "µg RAE"
    },
    {
     "name": "Folate",
-    "amount": 38.71,
+    "amount": 55.37,
     "unit": "µg"
    }
   ]
@@ -266,21 +266,21 @@
  "cannoli": {
   "fdcId": 2708029,
   "description": "Cream puff, eclair, custard or cream filled, NS as to icing",
-  "servingName": "1 eclair (5\" x 2\" x 1-3/4\")",
-  "servingG": 102,
-  "kcal": 286,
-  "proteinG": 4.3,
-  "fatG": 24.9,
-  "carbsG": 11.3,
+  "servingName": "1 cream puff (3-1/2\" x 2\")",
+  "servingG": 112,
+  "kcal": 314,
+  "proteinG": 4.7,
+  "fatG": 27.3,
+  "carbsG": 12.4,
   "vitamins": [
    {
     "name": "Vitamin A",
-    "amount": 242.76,
+    "amount": 266.56,
     "unit": "µg RAE"
    },
    {
     "name": "Folate",
-    "amount": 28.56,
+    "amount": 31.36,
     "unit": "µg"
    }
   ]
@@ -310,21 +310,21 @@
  "carrot cake": {
   "fdcId": 2707859,
   "description": "Cake or cupcake, carrot",
-  "servingName": "1 cupcake, any size",
-  "servingG": 90,
-  "kcal": 337,
-  "proteinG": 2.2,
-  "fatG": 15.8,
-  "carbsG": 46.6,
+  "servingName": "1 cup",
+  "servingG": 120,
+  "kcal": 449,
+  "proteinG": 3,
+  "fatG": 21,
+  "carbsG": 62.2,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 2.44,
+    "amount": 3.25,
     "unit": "mg"
    },
    {
     "name": "Vitamin A",
-    "amount": 90,
+    "amount": 120,
     "unit": "µg RAE"
    }
   ]
@@ -376,21 +376,21 @@
  "cheese plate": {
   "fdcId": 2705709,
   "description": "Cheese, Cheddar",
-  "servingName": "1 cracker-size slice",
-  "servingG": 9,
-  "kcal": 37,
-  "proteinG": 2.1,
-  "fatG": 3.1,
-  "carbsG": 0.2,
+  "servingName": "1 cup, diced",
+  "servingG": 132,
+  "kcal": 540,
+  "proteinG": 30.8,
+  "fatG": 44.9,
+  "carbsG": 3.2,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.1,
+    "amount": 1.4,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 28.44,
+    "amount": 417.12,
     "unit": "µg RAE"
    }
   ]
@@ -442,21 +442,21 @@
  "chicken wings": {
   "fdcId": 2706060,
   "description": "Chicken wing, rotisserie",
-  "servingName": "1 wing, any size",
-  "servingG": 35,
-  "kcal": 90,
-  "proteinG": 8.2,
-  "fatG": 6.3,
-  "carbsG": 0.2,
+  "servingName": "4 pieces",
+  "servingG": 140,
+  "kcal": 360,
+  "proteinG": 32.8,
+  "fatG": 25.3,
+  "carbsG": 0.8,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.16,
+    "amount": 0.63,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 9.1,
+    "amount": 36.4,
     "unit": "µg RAE"
    }
   ]
@@ -464,21 +464,21 @@
  "chocolate cake": {
   "fdcId": 2707871,
   "description": "Cake, chocolate, flourless",
-  "servingName": "1 piece/slice, any size",
-  "servingG": 115,
-  "kcal": 471,
-  "proteinG": 5.6,
-  "fatG": 33.8,
-  "carbsG": 43.6,
+  "servingName": "1 cup",
+  "servingG": 120,
+  "kcal": 492,
+  "proteinG": 5.8,
+  "fatG": 35.3,
+  "carbsG": 45.5,
   "vitamins": [
    {
     "name": "Vitamin A",
-    "amount": 205.85,
+    "amount": 214.8,
     "unit": "µg RAE"
    },
    {
     "name": "Vitamin B12",
-    "amount": 0.23,
+    "amount": 0.24,
     "unit": "µg"
    }
   ]
@@ -486,21 +486,21 @@
  "chocolate mousse": {
   "fdcId": 168777,
   "description": "Desserts, mousse, chocolate, prepared-from-recipe",
-  "servingName": "1 recipe yield",
-  "servingG": 808,
-  "kcal": 1818,
-  "proteinG": 33.5,
-  "fatG": 129.3,
-  "carbsG": 129.8,
+  "servingName": "0.5 cup",
+  "servingG": 202,
+  "kcal": 455,
+  "proteinG": 8.4,
+  "fatG": 32.3,
+  "carbsG": 32.5,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 3.8,
+    "amount": 0.95,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 1131.2,
+    "amount": 282.8,
     "unit": "µg RAE"
    }
   ]
@@ -508,21 +508,21 @@
  "churros": {
   "fdcId": 2708070,
   "description": "Churros",
-  "servingName": "1 regular",
-  "servingG": 45,
-  "kcal": 189,
-  "proteinG": 2.7,
-  "fatG": 10,
-  "carbsG": 22,
+  "servingName": "3 regulars",
+  "servingG": 135,
+  "kcal": 566,
+  "proteinG": 8.2,
+  "fatG": 30,
+  "carbsG": 66,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 47.7,
+    "amount": 143.1,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.64,
+    "amount": 1.92,
     "unit": "mg"
    }
   ]
@@ -640,21 +640,21 @@
  "cup cakes": {
   "fdcId": 2707853,
   "description": "Cake or cupcake, NFS",
-  "servingName": "1 cupcake, any size",
-  "servingG": 90,
-  "kcal": 317,
-  "proteinG": 2.6,
-  "fatG": 13.3,
-  "carbsG": 48.2,
+  "servingName": "1 piece/slice, any size",
+  "servingG": 175,
+  "kcal": 616,
+  "proteinG": 5,
+  "fatG": 25.8,
+  "carbsG": 93.8,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 1.81,
+    "amount": 3.52,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 19.8,
+    "amount": 38.5,
     "unit": "µg"
    }
   ]
@@ -662,21 +662,21 @@
  "deviled eggs": {
   "fdcId": 2707181,
   "description": "Egg, deviled",
-  "servingName": "1 egg",
-  "servingG": 30,
-  "kcal": 59,
-  "proteinG": 3.5,
-  "fatG": 4.8,
-  "carbsG": 0.3,
+  "servingName": "5 eggs",
+  "servingG": 150,
+  "kcal": 297,
+  "proteinG": 17.3,
+  "fatG": 23.9,
+  "carbsG": 1.6,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.31,
+    "amount": 1.53,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 41.1,
+    "amount": 205.5,
     "unit": "µg RAE"
    }
   ]
@@ -728,21 +728,21 @@
  "edamame": {
   "fdcId": 2707436,
   "description": "Edamame, cooked",
-  "servingName": "1 pod, yields",
-  "servingG": 2,
-  "kcal": 3,
-  "proteinG": 0.2,
-  "fatG": 0.2,
-  "carbsG": 0.2,
+  "servingName": "1 cup",
+  "servingG": 160,
+  "kcal": 224,
+  "proteinG": 18.5,
+  "fatG": 12.1,
+  "carbsG": 13.8,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 5.72,
+    "amount": 457.6,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.02,
+    "amount": 1.66,
     "unit": "mg"
    }
   ]
@@ -794,21 +794,21 @@
  "falafel": {
   "fdcId": 2707408,
   "description": "Falafel",
-  "servingName": "1 patty",
-  "servingG": 17,
-  "kcal": 87,
-  "proteinG": 1.4,
-  "fatG": 7,
-  "carbsG": 4.9,
+  "servingName": "9 patties",
+  "servingG": 153,
+  "kcal": 786,
+  "proteinG": 12.7,
+  "fatG": 63,
+  "carbsG": 44.3,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 1.32,
+    "amount": 11.84,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 13.43,
+    "amount": 120.87,
     "unit": "µg"
    }
   ]
@@ -816,21 +816,21 @@
  "filet mignon": {
   "fdcId": 2705829,
   "description": "Beef, steak, ribeye, lean and fat eaten",
-  "servingName": "1 piece/slice, any size",
-  "servingG": 30,
-  "kcal": 87,
-  "proteinG": 7.1,
-  "fatG": 6.5,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 390,
+  "proteinG": 31.7,
+  "fatG": 29.2,
   "carbsG": 0,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.62,
+    "amount": 2.81,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 1.8,
+    "amount": 8.1,
     "unit": "µg"
    }
   ]
@@ -860,21 +860,21 @@
  "foie gras": {
   "fdcId": 172929,
   "description": "Pate, goose liver, smoked, canned",
-  "servingName": "1 tbsp",
-  "servingG": 13,
-  "kcal": 60,
-  "proteinG": 1.5,
-  "fatG": 5.7,
-  "carbsG": 0.6,
+  "servingName": "5 oz",
+  "servingG": 142,
+  "kcal": 656,
+  "proteinG": 16.2,
+  "fatG": 62.3,
+  "carbsG": 6.6,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 1.22,
+    "amount": 13.35,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 130.13,
+    "amount": 1421.42,
     "unit": "µg RAE"
    }
   ]
@@ -882,21 +882,21 @@
  "french fries": {
   "fdcId": 2709456,
   "description": "Potato, french fries, NFS",
-  "servingName": "1 fry, NS as to shape",
-  "servingG": 5,
-  "kcal": 11,
-  "proteinG": 0.1,
-  "fatG": 0.7,
-  "carbsG": 1.2,
+  "servingName": "1 cup",
+  "servingG": 60,
+  "kcal": 135,
+  "proteinG": 1.5,
+  "fatG": 8.4,
+  "carbsG": 13.9,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 0.1,
+    "amount": 1.25,
     "unit": "mg"
    },
    {
     "name": "Vitamin C",
-    "amount": 0.39,
+    "amount": 4.68,
     "unit": "mg"
    }
   ]
@@ -992,21 +992,21 @@
  "frozen yogurt": {
   "fdcId": 2705451,
   "description": "Frozen yogurt, NFS",
-  "servingName": "1 cup",
-  "servingG": 175,
-  "kcal": 222,
-  "proteinG": 5.3,
-  "fatG": 6.3,
-  "carbsG": 37.8,
+  "servingName": "1 scoop",
+  "servingG": 160,
+  "kcal": 203,
+  "proteinG": 4.8,
+  "fatG": 5.8,
+  "carbsG": 34.6,
   "vitamins": [
    {
     "name": "Vitamin A",
-    "amount": 85.75,
+    "amount": 78.4,
     "unit": "µg RAE"
    },
    {
     "name": "Vitamin B12",
-    "amount": 0.12,
+    "amount": 0.11,
     "unit": "µg"
    }
   ]
@@ -1014,21 +1014,21 @@
  "garlic bread": {
   "fdcId": 2707626,
   "description": "Garlic bread, NFS",
-  "servingName": "1 small slice",
-  "servingG": 39,
-  "kcal": 136,
-  "proteinG": 3.3,
-  "fatG": 6.5,
-  "carbsG": 16.2,
+  "servingName": "1 mini baguette (about 9\" long)",
+  "servingG": 185,
+  "kcal": 646,
+  "proteinG": 15.4,
+  "fatG": 30.7,
+  "carbsG": 77,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 65.13,
+    "amount": 308.95,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.46,
+    "amount": 2.18,
     "unit": "mg"
    }
   ]
@@ -1124,21 +1124,21 @@
  "guacamole": {
   "fdcId": 2709307,
   "description": "Guacamole, NFS",
-  "servingName": "1 tablespoon",
-  "servingG": 15,
-  "kcal": 23,
-  "proteinG": 0.3,
-  "fatG": 2.1,
-  "carbsG": 1.3,
+  "servingName": "2 tablespoon",
+  "servingG": 30,
+  "kcal": 47,
+  "proteinG": 0.6,
+  "fatG": 4.3,
+  "carbsG": 2.5,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 11.85,
+    "amount": 23.7,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.3,
+    "amount": 0.6,
     "unit": "mg"
    }
   ]
@@ -1146,21 +1146,21 @@
  "gyoza": {
   "fdcId": 2708705,
   "description": "Wonton, dumpling or pot sticker, fried",
-  "servingName": "1 item, any size",
-  "servingG": 25,
-  "kcal": 48,
-  "proteinG": 2.2,
-  "fatG": 2.8,
-  "carbsG": 3.5,
+  "servingName": "1 cup",
+  "servingG": 75,
+  "kcal": 144,
+  "proteinG": 6.6,
+  "fatG": 8.3,
+  "carbsG": 10.5,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.07,
+    "amount": 0.21,
     "unit": "µg"
    },
    {
     "name": "Vitamin C",
-    "amount": 2.2,
+    "amount": 6.6,
     "unit": "mg"
    }
   ]
@@ -1212,21 +1212,21 @@
  "hot dog": {
   "fdcId": 2706757,
   "description": "Frankfurters or hot dogs and sauerkraut",
-  "servingName": "1 frankfurter with sauerkraut",
-  "servingG": 120,
-  "kcal": 238,
-  "proteinG": 9.1,
-  "fatG": 20.8,
-  "carbsG": 4.1,
+  "servingName": "1 cup",
+  "servingG": 147,
+  "kcal": 291,
+  "proteinG": 11.1,
+  "fatG": 25.4,
+  "carbsG": 5,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.61,
+    "amount": 0.75,
     "unit": "µg"
    },
    {
     "name": "Vitamin C",
-    "amount": 6.12,
+    "amount": 7.5,
     "unit": "mg"
    }
   ]
@@ -1234,21 +1234,21 @@
  "huevos rancheros": {
   "fdcId": 2707191,
   "description": "Huevos rancheros",
-  "servingName": "1 egg",
-  "servingG": 118,
-  "kcal": 143,
-  "proteinG": 7.9,
-  "fatG": 7.8,
-  "carbsG": 10.4,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 163,
+  "proteinG": 9,
+  "fatG": 9,
+  "carbsG": 11.9,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.44,
+    "amount": 0.5,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 1.79,
+    "amount": 2.05,
     "unit": "mg"
    }
   ]
@@ -1256,21 +1256,21 @@
  "hummus": {
   "fdcId": 2707402,
   "description": "Hummus, plain",
-  "servingName": "1 tablespoon",
-  "servingG": 15,
-  "kcal": 36,
-  "proteinG": 1.1,
-  "fatG": 2.6,
-  "carbsG": 2.2,
+  "servingName": "2 tablespoon",
+  "servingG": 30,
+  "kcal": 73,
+  "proteinG": 2.2,
+  "fatG": 5.1,
+  "carbsG": 4.5,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 0.26,
+    "amount": 0.52,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 5.4,
+    "amount": 10.8,
     "unit": "µg"
    }
   ]
@@ -1388,16 +1388,21 @@
  "macarons": {
   "fdcId": 2707941,
   "description": "Cookie, meringue",
-  "servingName": "1 cookie",
-  "servingG": 5,
-  "kcal": 18,
-  "proteinG": 0.3,
-  "fatG": 0,
-  "carbsG": 4.1,
+  "servingName": "12 cookies",
+  "servingG": 60,
+  "kcal": 210,
+  "proteinG": 3.4,
+  "fatG": 0.2,
+  "carbsG": 48.8,
   "vitamins": [
    {
+    "name": "Vitamin B12",
+    "amount": 0.02,
+    "unit": "µg"
+   },
+   {
     "name": "Folate",
-    "amount": 0.1,
+    "amount": 1.2,
     "unit": "µg"
    }
   ]
@@ -1427,21 +1432,21 @@
  "mussels": {
   "fdcId": 2706350,
   "description": "Mussels",
-  "servingName": "1 mussel",
-  "servingG": 15,
-  "kcal": 16,
-  "proteinG": 2.3,
-  "fatG": 0.4,
-  "carbsG": 0.7,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 147,
+  "proteinG": 20.3,
+  "fatG": 3.8,
+  "carbsG": 6.3,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 1.94,
+    "amount": 17.43,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 6,
+    "amount": 54,
     "unit": "µg"
    }
   ]
@@ -1449,21 +1454,21 @@
  "nachos": {
   "fdcId": 2708576,
   "description": "Nachos, NFS",
-  "servingName": "1 chip",
-  "servingG": 7,
-  "kcal": 19,
-  "proteinG": 0.5,
-  "fatG": 1.1,
-  "carbsG": 1.7,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 358,
+  "proteinG": 10.3,
+  "fatG": 21.4,
+  "carbsG": 32.2,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.03,
+    "amount": 0.57,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.15,
+    "amount": 2.92,
     "unit": "mg"
    }
   ]
@@ -1471,21 +1476,21 @@
  "omelette": {
   "fdcId": 2707198,
   "description": "Egg omelet or scrambled egg, NS as to fat",
-  "servingName": "1 egg",
-  "servingG": 55,
-  "kcal": 102,
-  "proteinG": 6.4,
-  "fatG": 8.3,
-  "carbsG": 0.5,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 250,
+  "proteinG": 15.6,
+  "fatG": 20.3,
+  "carbsG": 1.2,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.42,
+    "amount": 1.03,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 106.15,
+    "amount": 260.55,
     "unit": "µg RAE"
    }
   ]
@@ -1493,21 +1498,21 @@
  "onion rings": {
   "fdcId": 2708245,
   "description": "Onion flavored rings",
-  "servingName": "1 piece",
-  "servingG": 2,
-  "kcal": 10,
-  "proteinG": 0.2,
-  "fatG": 0.5,
-  "carbsG": 1.3,
+  "servingName": "1 large single serving bag",
+  "servingG": 85,
+  "kcal": 424,
+  "proteinG": 6.5,
+  "fatG": 19.2,
+  "carbsG": 55.3,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 2.2,
+    "amount": 93.5,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.05,
+    "amount": 2.29,
     "unit": "mg"
    }
   ]
@@ -1515,21 +1520,21 @@
  "oysters": {
   "fdcId": 2706351,
   "description": "Oysters, raw",
-  "servingName": "1 oyster",
-  "servingG": 15,
-  "kcal": 8,
-  "proteinG": 0.9,
-  "fatG": 0.3,
-  "carbsG": 0.4,
+  "servingName": "1 cup",
+  "servingG": 225,
+  "kcal": 115,
+  "proteinG": 12.8,
+  "fatG": 3.8,
+  "carbsG": 6.1,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 1.31,
+    "amount": 19.69,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.13,
+    "amount": 1.91,
     "unit": "mg"
    }
   ]
@@ -1581,21 +1586,21 @@
  "pancakes": {
   "fdcId": 2708294,
   "description": "Pancakes, NFS",
-  "servingName": "1 miniature/bite size pancake",
-  "servingG": 10,
-  "kcal": 28,
-  "proteinG": 0.7,
-  "fatG": 1.2,
-  "carbsG": 3.5,
+  "servingName": "1 extra large pancake",
+  "servingG": 150,
+  "kcal": 423,
+  "proteinG": 11.1,
+  "fatG": 18.1,
+  "carbsG": 53,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.04,
+    "amount": 0.57,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.18,
+    "amount": 2.72,
     "unit": "mg"
    }
   ]
@@ -1625,21 +1630,21 @@
  "peking duck": {
   "fdcId": 2706141,
   "description": "Duck, Peking",
-  "servingName": "1 oz, cooked",
-  "servingG": 28.35,
-  "kcal": 44,
-  "proteinG": 1.5,
-  "fatG": 3.3,
-  "carbsG": 1.8,
+  "servingName": "1 cup, diced, cooked",
+  "servingG": 140,
+  "kcal": 216,
+  "proteinG": 7.4,
+  "fatG": 16.5,
+  "carbsG": 9.1,
   "vitamins": [
    {
     "name": "Vitamin C",
-    "amount": 3.46,
+    "amount": 17.08,
     "unit": "mg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.26,
+    "amount": 1.29,
     "unit": "mg"
    }
   ]
@@ -1669,21 +1674,21 @@
  "pizza": {
   "fdcId": 2708614,
   "description": "Pizza, cheese, from restaurant or fast food, NS as to type of crust",
-  "servingName": "1 piece, NFS",
-  "servingG": 119,
-  "kcal": 317,
-  "proteinG": 13.6,
-  "fatG": 11.5,
-  "carbsG": 39.7,
+  "servingName": "1 personal size pizza (5-7\" diameter)",
+  "servingG": 175,
+  "kcal": 466,
+  "proteinG": 19.9,
+  "fatG": 17,
+  "carbsG": 58.3,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 110.67,
+    "amount": 162.75,
     "unit": "µg"
    },
    {
     "name": "Vitamin B12",
-    "amount": 0.5,
+    "amount": 0.74,
     "unit": "µg"
    }
   ]
@@ -1691,21 +1696,21 @@
  "pork chop": {
   "fdcId": 2705866,
   "description": "Pork, chop, NS as to fat eaten",
-  "servingName": "1 thin",
-  "servingG": 90,
-  "kcal": 165,
-  "proteinG": 24.8,
-  "fatG": 6.8,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 247,
+  "proteinG": 37.1,
+  "fatG": 10.2,
   "carbsG": 0,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.55,
+    "amount": 0.82,
     "unit": "µg"
    },
    {
     "name": "Vitamin D",
-    "amount": 0.54,
+    "amount": 0.81,
     "unit": "µg"
    }
   ]
@@ -1713,21 +1718,21 @@
  "poutine": {
   "fdcId": 2709456,
   "description": "Potato, french fries, NFS",
-  "servingName": "1 fry, NS as to shape",
-  "servingG": 5,
-  "kcal": 11,
-  "proteinG": 0.1,
-  "fatG": 0.7,
-  "carbsG": 1.2,
+  "servingName": "1 cup",
+  "servingG": 60,
+  "kcal": 135,
+  "proteinG": 1.5,
+  "fatG": 8.4,
+  "carbsG": 13.9,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 0.1,
+    "amount": 1.25,
     "unit": "mg"
    },
    {
     "name": "Vitamin C",
-    "amount": 0.39,
+    "amount": 4.68,
     "unit": "mg"
    }
   ]
@@ -1801,21 +1806,21 @@
  "ravioli": {
   "fdcId": 2708760,
   "description": "Ravioli, NS as to filling, no sauce",
-  "servingName": "1 piece",
-  "servingG": 15,
-  "kcal": 28,
-  "proteinG": 1.5,
-  "fatG": 1,
-  "carbsG": 3,
+  "servingName": "1 cup",
+  "servingG": 160,
+  "kcal": 296,
+  "proteinG": 16.5,
+  "fatG": 11.2,
+  "carbsG": 31.8,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.1,
+    "amount": 1.02,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 5.7,
+    "amount": 60.8,
     "unit": "µg"
    }
   ]
@@ -1823,21 +1828,21 @@
  "red velvet cake": {
   "fdcId": 2707884,
   "description": "Cake or cupcake, red velvet",
-  "servingName": "1 cupcake, any size",
-  "servingG": 90,
-  "kcal": 320,
-  "proteinG": 2.5,
-  "fatG": 13.1,
-  "carbsG": 48.9,
+  "servingName": "1 cup",
+  "servingG": 120,
+  "kcal": 426,
+  "proteinG": 3.3,
+  "fatG": 17.5,
+  "carbsG": 65.2,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 1.79,
+    "amount": 2.39,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 20.7,
+    "amount": 27.6,
     "unit": "µg"
    }
   ]
@@ -1867,21 +1872,21 @@
  "samosa": {
   "fdcId": 2708730,
   "description": "Samosa",
-  "servingName": "1 small/individual",
-  "servingG": 25,
-  "kcal": 78,
-  "proteinG": 1.3,
-  "fatG": 4.4,
-  "carbsG": 8.3,
+  "servingName": "1 regular/large",
+  "servingG": 100,
+  "kcal": 310,
+  "proteinG": 5.1,
+  "fatG": 17.5,
+  "carbsG": 33.2,
   "vitamins": [
    {
     "name": "Vitamin E",
-    "amount": 0.6,
+    "amount": 2.38,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 11,
+    "amount": 44,
     "unit": "µg"
    }
   ]
@@ -1911,21 +1916,21 @@
  "scallops": {
   "fdcId": 2706357,
   "description": "Scallops, grilled",
-  "servingName": "1 scallop",
-  "servingG": 15,
-  "kcal": 16,
-  "proteinG": 2.3,
-  "fatG": 0.4,
-  "carbsG": 0.6,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 146,
+  "proteinG": 20.7,
+  "fatG": 3.9,
+  "carbsG": 5.5,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.23,
+    "amount": 2.05,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 2.25,
+    "amount": 20.25,
     "unit": "µg"
    }
   ]
@@ -1955,21 +1960,21 @@
  "shrimp and grits": {
   "fdcId": 2706360,
   "description": "Shrimp, NFS",
-  "servingName": "1 tiny shrimp",
-  "servingG": 5,
-  "kcal": 7,
-  "proteinG": 0.8,
-  "fatG": 0.3,
-  "carbsG": 0.2,
+  "servingName": "1 cup",
+  "servingG": 135,
+  "kcal": 197,
+  "proteinG": 20.9,
+  "fatG": 9,
+  "carbsG": 6.6,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.05,
+    "amount": 1.39,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.12,
+    "amount": 3.25,
     "unit": "mg"
    }
   ]
@@ -2021,21 +2026,21 @@
  "spring rolls": {
   "fdcId": 2708700,
   "description": "Egg roll, meatless",
-  "servingName": "1 miniature egg roll",
-  "servingG": 13,
-  "kcal": 35,
-  "proteinG": 0.7,
-  "fatG": 1.8,
-  "carbsG": 3.9,
+  "servingName": "1 egg roll",
+  "servingG": 64,
+  "kcal": 173,
+  "proteinG": 3.6,
+  "fatG": 9,
+  "carbsG": 19.2,
   "vitamins": [
    {
     "name": "Folate",
-    "amount": 8.71,
+    "amount": 42.88,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.28,
+    "amount": 1.37,
     "unit": "mg"
    }
   ]
@@ -2043,21 +2048,21 @@
  "steak": {
   "fdcId": 2705824,
   "description": "Beef, steak, NFS",
-  "servingName": "1 piece/slice, any size",
-  "servingG": 30,
-  "kcal": 69,
-  "proteinG": 8.1,
-  "fatG": 3.9,
+  "servingName": "1 regular",
+  "servingG": 160,
+  "kcal": 366,
+  "proteinG": 43.2,
+  "fatG": 20.6,
   "carbsG": 0,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.61,
+    "amount": 3.26,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.08,
+    "amount": 0.42,
     "unit": "mg"
    }
   ]
@@ -2065,21 +2070,21 @@
  "strawberry shortcake": {
   "fdcId": 2707896,
   "description": "Cake, strawberry shortcake",
-  "servingName": "1 piece/slice, any size",
-  "servingG": 175,
-  "kcal": 375,
-  "proteinG": 5.8,
-  "fatG": 8.3,
-  "carbsG": 70.2,
+  "servingName": "1 cup",
+  "servingG": 150,
+  "kcal": 321,
+  "proteinG": 5,
+  "fatG": 7.1,
+  "carbsG": 60.1,
   "vitamins": [
    {
     "name": "Vitamin C",
-    "amount": 21.7,
+    "amount": 18.6,
     "unit": "mg"
    },
    {
     "name": "Folate",
-    "amount": 50.75,
+    "amount": 43.5,
     "unit": "µg"
    }
   ]
@@ -2087,21 +2092,21 @@
  "sushi": {
   "fdcId": 2708959,
   "description": "Sushi, NFS",
-  "servingName": "1 piece",
-  "servingG": 30,
-  "kcal": 28,
-  "proteinG": 0.9,
-  "fatG": 0.2,
-  "carbsG": 5.5,
+  "servingName": "1 cup",
+  "servingG": 150,
+  "kcal": 141,
+  "proteinG": 4.4,
+  "fatG": 1,
+  "carbsG": 27.6,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.03,
+    "amount": 0.15,
     "unit": "µg"
    },
    {
     "name": "Folate",
-    "amount": 1.5,
+    "amount": 7.5,
     "unit": "µg"
    }
   ]
@@ -2109,21 +2114,21 @@
  "tacos": {
   "fdcId": 2708514,
   "description": "Taco, NFS",
-  "servingName": "1 miniature",
-  "servingG": 50,
-  "kcal": 123,
-  "proteinG": 7.7,
-  "fatG": 6.8,
-  "carbsG": 7.8,
+  "servingName": "1 large",
+  "servingG": 160,
+  "kcal": 394,
+  "proteinG": 24.5,
+  "fatG": 21.7,
+  "carbsG": 25,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.64,
+    "amount": 2.03,
     "unit": "µg"
    },
    {
     "name": "Vitamin E",
-    "amount": 0.47,
+    "amount": 1.49,
     "unit": "mg"
    }
   ]
@@ -2153,21 +2158,21 @@
  "tiramisu": {
   "fdcId": 2705702,
   "description": "Tiramisu",
-  "servingName": "1 piece",
-  "servingG": 175,
-  "kcal": 618,
-  "proteinG": 9.9,
-  "fatG": 41.8,
-  "carbsG": 51.5,
+  "servingName": "1 cup",
+  "servingG": 145,
+  "kcal": 512,
+  "proteinG": 8.2,
+  "fatG": 34.6,
+  "carbsG": 42.7,
   "vitamins": [
    {
     "name": "Vitamin A",
-    "amount": 323.75,
+    "amount": 268.25,
     "unit": "µg RAE"
    },
    {
     "name": "Vitamin B12",
-    "amount": 0.35,
+    "amount": 0.29,
     "unit": "µg"
    }
   ]
@@ -2197,21 +2202,21 @@
  "waffles": {
   "fdcId": 2708312,
   "description": "Waffle, NFS",
-  "servingName": "1 miniature/bite size waffle",
-  "servingG": 10,
-  "kcal": 31,
-  "proteinG": 0.7,
-  "fatG": 0.9,
-  "carbsG": 4.8,
+  "servingName": "1 thick / Belgian waffle",
+  "servingG": 135,
+  "kcal": 417,
+  "proteinG": 10,
+  "fatG": 12.8,
+  "carbsG": 65.3,
   "vitamins": [
    {
     "name": "Vitamin B12",
-    "amount": 0.16,
+    "amount": 2.19,
     "unit": "µg"
    },
    {
     "name": "Vitamin A",
-    "amount": 43.8,
+    "amount": 591.3,
     "unit": "µg RAE"
    }
   ]

@@ -142,8 +142,10 @@ function bestMatch(dataset, queryWords) {
  return best;
 }
 
-function pickPortion(dataset, fdcId) {
+// Every usable (nonzero gram, nameable) FDC portion row for a food, in the dataset's own seq_num order.
+function rawPortions(dataset, fdcId) {
  const rows = dataset.portionRows.filter(r => r[1] === fdcId).sort((a, b) => Number(a[2] || 0) - Number(b[2] || 0));
+ const out = [];
  for (const row of rows) {
   const [, , , amount, measureUnitId, portionDescription, modifier, gramWeight] = row;
   const grams = Number(gramWeight);
@@ -153,12 +155,56 @@ function pickPortion(dataset, fdcId) {
   // code (e.g. "90000") instead, typically paired with an empty portion_description -- skip those as
   // unlabeled rather than showing the raw code.
   if (!name && modifier && !/^\d+$/.test(modifier)) name = amount ? `${amount} ${modifier}` : modifier;
-  if (!name) { const unit = measureUnits_lookup(dataset, measureUnitId); if (unit && unit !== 'undetermined') name = amount ? `${amount} ${unit}` : unit; }
-  if (name) return {servingName: name.trim(), servingG: grams};
+  if (!name) { const unit = dataset.measureUnits.get(measureUnitId); if (unit && unit !== 'undetermined') name = amount ? `${amount} ${unit}` : unit; }
+  if (name) out.push({name: name.trim(), servingG: grams});
  }
- return null;
+ return out;
 }
-function measureUnits_lookup(dataset, id) { return dataset.measureUnits.get(id); }
+
+// A photo is of a plated meal, not a lab reference amount -- FDC's *first* portion is often a garnish-size
+// or whole-recipe outlier (french fries "1 fry" 5 g, chocolate mousse "1 recipe yield" 808 g). Rule (per
+// conductor review): drop portions that read as a crumb/garnish/whole-batch unit unless that leaves
+// nothing; from what's left, take whichever is closest to a 150 g plate by log distance (log distance
+// treats "half of 150" and "double 150" as equally far, which a plain gram difference would not); if
+// everything left is still under 60 g (sushi, wings, dumplings, mussels...), report N of that single unit
+// instead (N = round(150/unit), capped at 12) rather than one unrealistic bite.
+const EXCLUDE_PORTION_RE = /recipe|yield|miniature|bite|tiny|fry\b|chip\b|pod\b|tbsp|tablespoon|teaspoon|cracker-size/i;
+const DIP_LABELS = new Set(['guacamole', 'hummus']); // a dip is eaten a couple tablespoons at a time, not by the cup
+function closestByLogDistance(list, targetG) {
+ return list.reduce((best, p) => {
+  const d = Math.abs(Math.log(p.servingG) - Math.log(targetG));
+  return !best || d < best.d ? {...p, d} : best;
+ }, null);
+}
+function pluralizeUnit(name) {
+ const m = /^1\s+([a-zA-Z][a-zA-Z ]*)$/.exec(name); // "1 cookie" -> "cookie"; anything fancier stays "pieces"
+ if (!m) return null;
+ const noun = m[1];
+ if (/^oz$/i.test(noun)) return noun; // abbreviated units (FDC's "1 oz") don't take an 's'
+ if (/[^aeiou]y$/i.test(noun)) return noun.slice(0, -1) + 'ies'; // patty -> patties, not pattys
+ return /[sxz]$|[cs]h$/i.test(noun) ? noun + 'es' : noun + 's';
+}
+function pickPortion(dataset, fdcId, label) {
+ const all = rawPortions(dataset, fdcId);
+ if (!all.length) return null;
+ if (DIP_LABELS.has(label)) {
+  const tbsp = all.find(p => /tablespoon|tbsp/i.test(p.name));
+  if (tbsp) return {servingName: `2 ${tbsp.name.replace(/^1\s+/, '')}`, servingG: round(tbsp.servingG * 2, 0), rule: 'dip: 2x tablespoon portion'};
+  const closest = closestByLogDistance(all, 30);
+  return {servingName: closest.name, servingG: closest.servingG, rule: 'dip: closest to 30 g'};
+ }
+ const kept = all.filter(p => !EXCLUDE_PORTION_RE.test(p.name));
+ const candidates = kept.length ? kept : all;
+ const prefix = kept.length ? '' : 'no non-excluded portion; ';
+ if (candidates.every(p => p.servingG < 60)) {
+  const unit = candidates[0];
+  const n = Math.min(12, Math.max(1, Math.round(150 / unit.servingG)));
+  const name = n === 1 ? unit.name : `${n} ${pluralizeUnit(unit.name) || 'pieces'}`;
+  return {servingName: name, servingG: round(n * unit.servingG, 0), rule: `${prefix}small units only, x${n} (${unit.servingG} g each)`};
+ }
+ const closest = closestByLogDistance(candidates, 150);
+ return {servingName: closest.name, servingG: closest.servingG, rule: `${prefix}closest to 150 g`};
+}
 
 function nutrientAmountPer100g(dataset, fdcId, nutrientNbr) {
  // Foundation/SR Legacy food_nutrient.csv key nutrient_id by nutrient.csv's internal id (e.g. 1008 for
@@ -182,7 +228,7 @@ async function buildEntry(label, datasets) {
  }
  if (!picked) return {label, entry: null, note: 'no FDC match at all'};
  const {fdcId, description, coverage} = picked;
- const portion = pickPortion(dataset, fdcId);
+ const portion = pickPortion(dataset, fdcId, label);
  const servingG = portion?.servingG ?? 100;
  const servingName = portion?.servingName ?? '100 g';
  const scale = servingG / 100;
@@ -208,7 +254,7 @@ async function buildEntry(label, datasets) {
   label,
   entry: {fdcId: Number(fdcId), description, servingName, servingG, ...macros, vitamins},
   note: notes.join('; ') || null,
-  coverage, dataset: dataset.key,
+  coverage, dataset: dataset.key, portionRule: portion?.rule ?? 'no FDC portion at all',
  };
 }
 
@@ -219,10 +265,10 @@ const result = {};
 const fallbacks = [];
 const report = [];
 for (const label of LABELS) {
- const {entry, note, coverage, dataset} = await buildEntry(label, datasets);
+ const {entry, note, coverage, dataset, portionRule} = await buildEntry(label, datasets);
  if (!entry) { fallbacks.push(`${label}: NO MATCH`); continue; }
  result[label] = entry;
- report.push(`${label.padEnd(28)} -> [${dataset}] fdc:${entry.fdcId} "${entry.description}" (coverage ${coverage.toFixed(2)}, ${entry.servingName}, ${entry.servingG} g, ${entry.kcal} kcal)`);
+ report.push(`${label.padEnd(28)} -> [${dataset}] fdc:${entry.fdcId} "${entry.description}" (coverage ${coverage.toFixed(2)}, ${entry.servingName}, ${entry.servingG} g, ${entry.kcal} kcal) [${portionRule}]`);
  if (note) fallbacks.push(`${label}: ${note}`);
 }
 
