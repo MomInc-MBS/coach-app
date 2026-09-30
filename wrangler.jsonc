@@ -44,6 +44,7 @@
 		"staging": {
 			"name": "myr5-coach-staging",
 			"workers_dev": true,
+		"routes": [],
 			"triggers": { "crons": [] },
 			// No Clerk (its production keys only accept mominc.online) and no release email on staging.
 			"vars": {},
