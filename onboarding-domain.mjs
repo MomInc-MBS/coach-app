@@ -39,7 +39,7 @@ export function missingFields(v){
  for(const f of FIELDS){const a=p[f.key];if((quick?!QUICK_REQUIRED_FIELDS.includes(f.key):office&&!OFFICE_REQUIRED_FIELDS.includes(f.key))&&(a==null||typeof a==='string'&&!a.trim()))continue;if(f.type==='number'?typeof a!=='number'||!Number.isFinite(a)||a<f.min||a>f.max:f.options?!f.options.includes(String(a)):f.type==='time'?!/^([01]\d|2[0-3]):[0-5]\d$/.test(a||''):!validText(a,f.max||160))missing.push(f.label);}
  try{if(!p.timezone)throw Error();new Intl.DateTimeFormat('en',{timeZone:p.timezone}).format();}catch{if(!missing.includes('Time zone'))missing.push('Time zone');}
  if(!Array.isArray(p.exercises)||!p.exercises.length||p.exercises.some(k=>!Object.hasOwn(EXERCISES,k)))missing.push('Choose at least one movement');
- for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++){const a=v.answers?.[group.id]?.['q'+(i+1)],required=(!office&&!quick)||group.id==='armie'&&i===2;if(!required&&(a==null||typeof a==='string'&&!a.trim()))continue;if(!validText(a,2000))missing.push(group.questions[i]);}
+ for(const group of SITE_QUESTIONS)for(let i=0;i<group.questions.length;i++){const a=v.answers?.[group.id]?.['q'+(i+1)],required=!quick&&(!office||group.id==='armie'&&i===2);if(!required&&(a==null||typeof a==='string'&&!a.trim()))continue;if(!validText(a,2000))missing.push(group.questions[i]);}
  if(!validRecipe(v.appearance?.['myr5-recipe-v1']))missing.push('Save your customized coach');
  if(v.customizationConfirmed!==true)missing.push('Confirm your coach appearance');
  if((v.entryRoute??'games')==='games'&&v.armieCompleted!==true)missing.push('Finish Coach Armie');

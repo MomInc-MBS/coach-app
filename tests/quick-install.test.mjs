@@ -13,14 +13,15 @@ import {setupAllowed} from '../install-context.mjs';
 const storage=()=>{const map=new Map();return {getItem:key=>map.get(key)||null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)};};
 function quick(){const data=completeCoach();data.profile={};data.answers={};return withQuickDefaults(data);}
 function answered(){const data=quick();data.profile.goal='Build a routine';data.profile.sessionMinutes=10;data.answers.armie={q3:'Avoid jumping'};return data;}
-test('both setup routes require only goal, session length, and movement limits',()=>{
+test('both setup routes require only goal and session length; movement limits are optional, empty means none',()=>{
  for(const data of [quick(),withQuickDefaults(createOfficeDraft('America/Los_Angeles'))]){
-  assert.equal(missingFields(data).length,3);data.profile.goal='Build a routine';data.profile.sessionMinutes=10;data.answers.armie={q3:'None'};
+  assert.equal(missingFields(data).length,2);data.profile.goal='Build a routine';data.profile.sessionMinutes=10;
+  assert.deepEqual(missingFields(data),[]);assert.equal(validateOnboarding(data).answers.armie.q3,'');data.answers.armie={q3:'None'};
   assert.deepEqual(missingFields(data),[]);const saved=validateOnboarding(data);assert.equal(saved.setupMode,'quick');
   assert.equal(saved.profile.goalWeightLbs,undefined);assert.equal(saved.profile.experience,undefined);assert.equal(saved.profile.foodLimits,undefined);assert.equal(saved.answers.fuel.q1,'');
   assert.equal(dailyTargets(saved.profile,'2026-09-09').proteinGrams,null);
  }
- for(const change of [d=>delete d.profile.goal,d=>delete d.profile.sessionMinutes,d=>d.answers.armie.q3=' ',d=>d.profile.sessionMinutes=0,d=>d.profile.goalWeightLbs=-1,d=>d.answers.fuel={q1:12},d=>d.armieCompleted=false]){const data=answered();change(data);assert.throws(()=>validateOnboarding(data));}
+ for(const change of [d=>delete d.profile.goal,d=>delete d.profile.sessionMinutes,d=>d.profile.sessionMinutes=0,d=>d.profile.goalWeightLbs=-1,d=>d.answers.fuel={q1:12},d=>d.armieCompleted=false]){const data=answered();change(data);assert.throws(()=>validateOnboarding(data));}
 });
 test('short setup preserves every supplied answer and appearance without inventing personal answers',()=>{
  const initial=completeCoach(),saved=validateOnboarding(withQuickDefaults(initial));assert.deepEqual(saved.answers,initial.answers);assert.deepEqual(saved.appearance,initial.appearance);assert.equal(saved.profile.goalWeightLbs,100);assert.equal(initial.setupMode,undefined);
@@ -55,6 +56,7 @@ test('install drafts expire, reject incomplete coaches and cross-origin writes',
  const bad=await worker.fetch(new Request('https://coach.test/api/install-draft',{method:'POST',headers:{Origin:'https://wrong.test','Content-Type':'application/json'},body:JSON.stringify({data:completeCoach()})}),env);assert.equal(bad.status,403);
 });
 test('three answers save privately and unlock workouts without optional weight or questionnaire answers',async()=>{
+ const empty=answered();empty.answers.armie.q3='';const none=await client().fetch('/api/onboarding',{method:'PUT',headers:{'Content-Type':'application/json','oai-authenticated-user-id':'quick-bob','X-Target-Account':'quick-bob','X-Expected-Data-Epoch':'1'},body:JSON.stringify({data:empty,revision:0})});assert.equal(none.status,200,'an empty limits box is none');assert.equal((await none.json()).onboarding.data.answers.armie.q3,'');
  const data=answered(),c=client();const saved=await c.fetch('/api/onboarding',{method:'PUT',headers:{'Content-Type':'application/json','oai-authenticated-user-id':'quick-alice','X-Target-Account':'quick-alice','X-Expected-Data-Epoch':'1'},body:JSON.stringify({data,revision:0})});assert.equal(saved.status,200);const result=await saved.json();assert.equal(result.onboarding.targets.proteinGrams,null);assert.equal(result.onboarding.targets.reps,3);assert.equal(result.onboarding.data.setupMode,'quick');
  const start=await c.fetch('/api/workouts/start',{method:'POST',headers:{'Content-Type':'application/json','oai-authenticated-user-id':'quick-alice','X-Target-Account':'quick-alice','X-Expected-Data-Epoch':'1'},body:JSON.stringify({mode:'tree',goal:9})});assert.equal(start.status,200);
  assert.equal((await c.fetch('/api/onboarding',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data,revision:0})})).status,401);
