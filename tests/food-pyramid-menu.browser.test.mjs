@@ -318,7 +318,8 @@ test('portal Food peers at the whole pyramid until a decoded photo enters fullsc
  assert.deepEqual(await box(page,'#mealsPanel'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
  assert.deepEqual(await box(page,'#mealScanStage'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
  assert.equal(await page.locator('#mealsPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
- assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')),false);
+ // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; only the frame goes, up out of the way.
+ assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-garage')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
  assert.equal(await page.locator('#coachDock').isVisible(),false,'photo scene uses the bottom of the viewport too');
  await page.waitForFunction(()=>document.getElementById('mealScanStage').hidden);
  assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-fullscreen')),true,'recognition result stays fullscreen');

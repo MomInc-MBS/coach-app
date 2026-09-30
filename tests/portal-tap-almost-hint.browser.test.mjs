@@ -69,7 +69,7 @@ test('#20 a double-tap on a shape\'s stitched outline opens it exactly like trac
  await doubleTapAt(page,x,y);
  await page.waitForTimeout(1600); // mid glass/dive: well after the cut, before loadMinMs+reveal finish
  await page.screenshot({path:resolve(FRAMES_DIR,'tap-double-food.png')});
- await page.waitForFunction(()=>document.getElementById('mealsPanel').open===true&&document.getElementById('mealsPanel').classList.contains('portal-shaped'),{timeout:15000}); // #131: seen through its cut
+ await page.waitForFunction(()=>document.getElementById('mealsPanel').open===true&&document.getElementById('mealsPanel').classList.contains('portal-shaped')&&!document.getElementById('mealsPanel').classList.contains('portal-fullscreen'),{timeout:15000}); // #131: seen through its cut, not full screen (R7: that is a double-tap on the open menu)
  assert.deepEqual(await page.evaluate(()=>window.__vibrations),[12],'a double-tap match buzzes once, like a traced match (#29)');
  await page.close();
 }));
@@ -136,7 +136,7 @@ test('#22 first-run hint: animates once labelled, a touch stops it instantly, an
  await page.screenshot({path:resolve(FRAMES_DIR,'first-run-hint.png')});
  let labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Trace to start your workout'),`expected the hint label, got ${JSON.stringify(labels)}`);
- // Coordinate with idle flashing: nothing from the idle cycle's own labels this early (armMs is 3000ms,
+ // Coordinate with idle flashing: nothing from the idle cycle's own labels this early (armMs is 7000ms,
  // longer than the hint's own lap, but this also guards the "suppress idle while the hint plays" contract).
  assert(!labels.includes('Workout')&&!labels.includes('Choose Workout'),'idle flashing must stay suppressed while the hint plays');
 
@@ -151,7 +151,7 @@ test('#22 first-run hint: animates once labelled, a touch stops it instantly, an
  // Idle flashing (a different lane's feature) re-arms on its own once the hint is over, proving the two
  // were only coordinated, not permanently entangled.
  await page.evaluate(()=>window.__labels.length=0);
- await page.waitForTimeout(3300);
+ await page.waitForTimeout(7300);
  labels=await page.evaluate(()=>window.__labels.slice());
  assert(labels.includes('Workout'),'idle flashing must resume once the hint is done');
  await page.close();

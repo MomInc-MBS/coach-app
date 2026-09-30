@@ -90,7 +90,9 @@ test('meditation tunnel loses colour throughout its duration and lands fullscree
  const partial=await page.locator('.portal-glass').evaluate(el=>parseFloat(getComputedStyle(el).filter.match(/grayscale\(([^)]+)/)[1]));assert.ok(partial>0&&partial<1);
  await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-fullscreen')?.open,null,{timeout:10000});
  const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:0,y:0,width:375,height:812});
- assert.equal(await page.locator('#portalChrome').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+ // R7 (Ian 26 Sept): the frame stays out of the black-and-white room, but the energy runs round the screen's edge.
+ assert.equal(await page.locator('#portalChrome .portal-frame').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+ assert.equal(await page.locator('#portalChrome .portal-aura').evaluate(el=>getComputedStyle(el).visibility),'visible');
  await page.close();
 }));
 

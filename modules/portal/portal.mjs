@@ -25,13 +25,12 @@ export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs
 // bevel and deeper bend; fringe: the red/blue sample spread at the rim (blue bends furthest); magnify: centre lens.
 const GLASS={mapPx:3,bevel:42,bend:36,rimInset:8,fringe:.3,magnify:.035};
 // #104/#105 (W2-2E): the six neons already used for the "all menus" glass (portal.css .portal-glass.all),
-// reused for the flowing finger-trail ribbon. IDLE: 3s of no touch arms the cycle; fast pass 0.5s/shape once
-// through the order below, then a gentler 2.5s/shape loop until the next touch. TRAIL_FADE_MS: how long a
-// trail segment (live or just-released) stays lit before it's fully faded. #133 (Ian 23 Sept): a clear pauseMs after the
-// fast pass before the slow cycle starts, and a gapMs of nothing between the slow cycle's shapes.
+// reused for the flowing finger-trail ribbon. IDLE (Ian 26 Sept: "just the slow one with 7 seconds of idle time"): 7s of
+// no touch arms the cycle, 2.5s per shape in the order below with a gapMs of nothing between them, until the next touch.
+// TRAIL_FADE_MS: how long a trail segment (live or just-released) stays lit before it's fully faded.
 const TRAIL_NEONS=['#ff5f1f','#b026ff','#ff10f0','#1f51ff','#39ff14','#ffff33'];
 const TRAIL_NEON_RGB=TRAIL_NEONS.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
-const IDLE={armMs:3000,fastMs:500,slowMs:2500,pauseMs:4000,gapMs:600};
+const IDLE={armMs:7000,slowMs:2500,gapMs:600};
 // Ian 2026-09-23: square, oval, triangle, inverted triangle, diamond, X, then the four lines; cross last.
 const IDLE_ORDER=['rect','oval','up','down','vdiamond','x','line-lr','line-rl','line-down'];
 const TRAIL_FADE_MS=800;
@@ -194,7 +193,7 @@ let pointers=new Map(),pendingStrokes=[],pendingTrailPts=[],finalizeTimer=0,outl
 // busy: a portal sequence is running (traces ignored, touches ripple the glass); phase: the live glass {glass,pts,color,t0,pulse}.
 let busy=false,phase=null;
 // #104: idleTimer arms after IDLE.armMs of eligibility (board shown, nothing busy, no touch, no dialog,
-// tab visible); idleCycle is the running cycle ({phase:'fast'|'slow',t0}) or {static:true} under reduced
+// tab visible); idleCycle is the running cycle ({t0}) or {static:true} under reduced
 // motion. #105: fading holds just-released strokes still fading out, drawn alongside any live ones.
 let idleTimer=0,idleCycle=null,fading=[];
 // #22 first-run hint: {t0} while the glowing-fingertip demo plays, else null. idleEligible() also checks
@@ -428,8 +427,11 @@ const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el
 const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
 const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
 // A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the upper rail.
-const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(null,null,face)});
-const shapeLook=(id,menu,pts,face,pattern)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:namePath(id,pattern,face)});
+const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(face)});
+// R7 (Ian 26 Sept): no text in a peer-through view, so the cut's rim (and the window it steps in to) carries no name.
+const shapeLook=(id,menu,pts)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:null});
+// R7: full screen keeps the energy, round the screen's own edge (its inward vignette; the frame has gone up out of the way).
+const screenLook=look=>({...look,pts:rectPts({left:0,top:0,width:innerWidth,height:innerHeight}),shaped:false,name:null});
 function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
@@ -449,27 +451,22 @@ function frameDialog(dialog){
  // Back above the dialog, which opened on top of it. Re-shown a frame later: a popover hidden and shown in one task can
  // keep its old top-layer slot (under the dialog's backdrop) on WebKit. The rim is drawn then too, sized to the shown
  // frame (a hidden popover measures 0x0): it bursts open as the destination lands (not under the dive's scale).
- chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(aura?.look||framed.look,'open');});
- if(!full)peerOn(dialog);
+ chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(full?screenLook(framed.look):aura?.look||framed.look,'open');});
+ peerOn(dialog); // R7 (Ian 26 Sept): the tilt stays on every menu, full screen too
  if(!full&&framed.look.shaped)shapeDialog(dialog);
 }
-// The room remains visible through its cut until an actual scene action steps inside.
-// Keep the route/dialog identity, so Back and Close still return through their original portal.
+// The room remains visible through its cut until a double-tap or a scene action steps inside (full screen). Keep the
+// route/dialog identity, so Back and Close still return through their original portal. R7 (Ian 26 Sept): the energy and the
+// tilt stay; only the metal frame goes, up out of the way as it does for the full-screen destinations. Its titles and
+// controls come back (portal.css hides them while peered), iOS's tilt chip with them.
 function expandScene(dialog){
  if(!dialog?.open||framed?.dialog!==dialog||framed.expanded)return false;
- layoutInCut(dialog,false);peerOff();framed.expanded=true;framed.leaned=true;
+ layoutInCut(dialog,false);framed.expanded=true;framed.leaned=true;
  dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');
  dialog.style.removeProperty('clip-path');dialog.style.removeProperty('--inset-zoom');motion(dialog,'');
  setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
- dialog.querySelector(':scope>.portal-peer-ui')?.remove();hideAura();chrome.hidePopover();
+ chrome.classList.add('portal-garage');showAura(screenLook(framed.look),'lean');
  stowBoard();return true;
-}
-function contractScene(dialog){
- if(!dialog?.open||framed?.dialog!==dialog||(!framed.expanded&&!dialog.classList.contains('portal-fullscreen')))return false;
- framed.expanded=false;framed.leaned=false;dialog.classList.remove('portal-fullscreen','portal-leaned');setFace(dialog,framed.face);
- if(framed.look.shaped){dialog.classList.add('portal-shaped');layoutInCut(dialog,true);clipTo(dialog,framed.outlines.shape,{ms:prefersReducedMotion()?0:280});}
- else{dialog.classList.remove('portal-shaped');layoutInCut(dialog,true);dialog.style.removeProperty('clip-path');}
- chrome.showPopover?.();showAura(framed.look,'open');portalHome.hidden=false;if(boardBtn)boardBtn.hidden=true;board?.resume();boardShown=true;syncEnergy();backgroundBlocked(true);return true;
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
 // its first paint (MutationObserver callbacks run ahead of rendering). Returns the disconnect.
@@ -599,35 +596,31 @@ function peerUi(dialog){
  if(framed)ui.style.setProperty('--peer-ui',framed.look.color);return ui;
 }
 // A flat menu (conductor 24 Sept) is laid out in the largest rectangle inside the cut (insetRect), a little zoomed out and
-// scrolling inside it, the rest of the cut showing the destination's still depth; a scene fills the cut, its own title,
-// Close and first controls (cfg.poke) showing through the wall as if in front of it, and cfg.fit sizes a scene layer to
-// the cut (the constellation). Without an own Close the portal adds a ✕ on the quilt.
+// scrolling inside it, the rest of the cut showing the destination's still depth; a scene fills the cut and shows nothing
+// but itself (R7, Ian 29 Sept: portal.css hides its titles and controls until full screen), and cfg.fit sizes a scene
+// layer to the cut (the constellation).
 function shapeDialog(dialog){
  const {look}=framed,ui=peerUi(dialog),cfg=peerCfg(dialog);
  framed.flat=!cfg.scene;framed.cfg=cfg;
  dialog.classList.add('portal-shaped');
  const r=framed.flat&&(framed.inset??=insetRect(framed.outlines.shape)),small=r&&(r.width-2*INSET.margin<INSET.minW||r.height-2*INSET.margin<INSET.minH);
- if(small){framed.leaned=true;dialog.classList.add('portal-leaned');showAura({...look,pts:rectPts(face),shaped:false,name:namePath(null,null,face)},'lean');}
+ if(small){framed.leaned=true;dialog.classList.add('portal-leaned');showAura({...look,pts:rectPts(framed.face),shaped:false},'lean');}
  else layoutInCut(dialog,true);
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
- // A scene's own controls move with it (the pyramid's labels ride the model): keep the clip round them, a few times a
- // second and only when one has moved, never mid-transition.
- if(!framed.flat){
-  const f=framed,timer=setInterval(()=>{if(f!==framed||f.dialog!==dialog||f.leaned||performance.now()<f.clipBusy)return;if(pokeSig(dialog)!==f.pokeSig)clipTo(dialog,f.outlines.shape);},180);
-  framed.ctl.signal.addEventListener('abort',()=>clearInterval(timer));
+ // R7 (Ian 26 Sept): a double-tap on the open menu (not on one of its controls) steps in to the full screen.
+ const at=e=>({x:e.clientX,y:e.clientY,t:e.timeStamp}),near=(a,b)=>a&&b.t-a.t<=TAP_MS&&Math.hypot(b.x-a.x,b.y-a.y)<=TAP_MOVE_PX,opts={capture:true,signal:framed.ctl.signal};
+ let down=null,tap=null;
+ dialog.addEventListener('pointerdown',e=>{down=at(e);},opts);
+ dialog.addEventListener('pointerup',e=>{const up=at(e),t=near(down,up)&&!e.target.closest?.('button,a,input,select,textarea,label,summary')?up:null;if(t&&near(tap,t)){tap=null;expandScene(dialog);}else tap=t;},opts);
+ // A tap on the scene that opens one of its cards (a boss's detail, a pyramid screen or dial) steps in to show it.
+ if(cfg.cards){
+  let shut=[];const open=()=>[...dialog.querySelectorAll(cfg.cards)].filter(el=>!el.hidden);
+  dialog.addEventListener('click',()=>{shut=open();},opts);
+  dialog.addEventListener('click',()=>{if(open().some(el=>!shut.includes(el)))expandScene(dialog);},{signal:framed.ctl.signal});
  }
 }
 function peerCfg(dialog){return PEER_DEPTH.find(([s])=>dialog.matches(s))?.[1]||PEER_2D;}
-// The destination's own Close (its clean-up runs), if it has one.
-function ownClose(dialog){return [...dialog.querySelectorAll('button')].find(b=>!b.closest('.portal-peer-ui,#coachDock')&&(b.matches('[data-close],[data-meditation-close],.ach-close,.ship-view-close,#closeSettings')||/^(close|done)$/i.test(b.textContent.trim())));}
-// What of a scene shows in front of the wall: its title, its own Close and cfg.poke (visible ones only).
-function pokes(dialog){
- if(!framed||framed.flat||framed.leaned)return [];
- const heading=[...dialog.querySelectorAll('h1,h2')].find(h=>h.getClientRects().length&&!h.closest('.portal-peer-ui'));
- return [heading,ownClose(dialog),...(framed.cfg?.poke||[]).flatMap(s=>[...dialog.querySelectorAll(s)])].filter(el=>el?.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');
-}
-const pokeSig=dialog=>pokes(dialog).map(el=>{const r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(v=>Math.round(v/3)).join(',');}).join(';');
 // Largest axis-aligned rectangle inside a convex outline (client px, closed), leaning a little toward width so a menu's
 // text column stays readable (scored width^1.5 x height). For a convex shape the rectangle's sides are bounded by the
 // chords at its top and bottom edges only, so every pair of sampled chords is a candidate.
@@ -662,27 +655,14 @@ function layoutInCut(dialog,on){
  el.style.setProperty('height',d2(H)+'px','important');el.style.setProperty('align-self','start','important');el.style.setProperty('margin-top',d2(top-f.face.top-fit.band[0]*H)+'px','important');
 }
 function throughCut(el){const r=el.getBoundingClientRect();return pointInPolygon(r.left+r.width/2,r.top+r.height/2,framed.outlines.shape);}
-// clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box and the portal's pill
-// buttons (separate subpaths; nonzero fill unions them).
+// clip-path for a shaped dialog: the outline (client px -> the dialog's box) plus the bar's box (a separate subpath; nonzero
+// fill unions them). R7: nothing of a scene shows in front of the wall any more, so nothing else pokes through.
 function clipFor(dialog,pts){
  const r=dialog.getBoundingClientRect(),o=([x,y])=>`${d2(x-r.left)} ${d2(y-r.top)}`,box=el=>el?.getClientRects().length?el.getBoundingClientRect():null;
  const bar=box(document.getElementById('coachDock')),parts=bar?[`M${o([bar.left,bar.top])}L${o([bar.right,bar.top])}L${o([bar.right,bar.bottom])}L${o([bar.left,bar.bottom])}Z`]:[];
- for(const b of [...dialog.querySelectorAll(':scope>.portal-peer-ui>*')].map(box).filter(Boolean)){ // a pill round each
-  const k=Math.min(b.width,b.height)/2,arc=to=>`A${d2(k)} ${d2(k)} 0 0 1 ${o(to)}`;
-  parts.push(`M${o([b.left+k,b.top])}L${o([b.right-k,b.top])}${arc([b.right-k,b.bottom])}L${o([b.left+k,b.bottom])}${arc([b.left+k,b.top])}Z`);
- }
- for(const b of pokes(dialog).map(box)){const p=4;parts.push(`M${o([b.left-p,b.top-p])}L${o([b.right+p,b.top-p])}L${o([b.right+p,b.bottom+p])}L${o([b.left-p,b.bottom+p])}Z`);} // in front of the wall
- if(framed?.dialog===dialog){framed.pokeSig=pokeSig(dialog);holeAura();}
  return `path('M${pts.slice(0,-1).map(o).join('L')}Z${parts.join('')}')`;
 }
-// Release 6: what shows in front of the wall shows in front of the rim too (the pyramid's Scan food / Log by hand tags):
-// the rim's glow is cut out round each poked control, the same 4px margin as the dialog's clip above.
-function holeAura(){
- if(!aura)return;const p=4,boxes=framed?.dialog?pokes(framed.dialog).map(el=>el.getBoundingClientRect()):[];
- aura.el.style.clipPath=boxes.length?`path(evenodd,'M-9999 -9999H99999V99999H-9999Z${boxes.map(b=>`M${d2(b.left-p)} ${d2(b.top-p)}H${d2(b.right+p)}V${d2(b.bottom+p)}H${d2(b.left-p)}Z`).join('')}')`:'';
-}
 function clipTo(dialog,pts,{from=null,ms=0,ease='ease'}={}){
- if(framed)framed.clipBusy=performance.now()+ms+60;
  const go=()=>{if(framed?.dialog!==dialog)return;motion(dialog,ms?`clip-path ${ms}ms ${ease}`:'none');dialog.style.clipPath=clipFor(dialog,pts);};
  if(from){motion(dialog,'none');dialog.style.clipPath=clipFor(dialog,from);settle().then(go);}else go();
 }
@@ -692,31 +672,14 @@ function lean(on){
  dialog.classList.toggle('portal-leaned',on);
  layoutInCut(dialog,!on);
  clipTo(dialog,on?f.outlines.rect:f.outlines.shape,{ms:prefersReducedMotion()?0:520,ease:'cubic-bezier(.3,0,.2,1)'});
- showAura(on?{...f.look,pts:rectPts(f.face),shaped:false,name:namePath(null,null,f.face)}:f.look,'lean');
+ showAura(on?{...f.look,pts:rectPts(f.face),shaped:false}:f.look,'lean');
 }
 function leanButton(step,on,label){if(!step)return;step.setAttribute('aria-pressed',String(on));step.setAttribute('aria-label',`${on?'Step back from':'Step in to'} ${label}`);step.textContent=on?'⤡':'⤢';}
-// The ✕ on the quilt (a destination with no Close of its own).
-function closeDestination(dialog){const own=ownClose(dialog);if(own)own.click();else dialog.close();}
-// #132: where the destination's name rides the rim (client px, drawn left to right so it reads upright, the glyphs on the
-// side away from the window: on the quilt round a hole, on the upper rail round the whole window).
+// #132: a whole window's name rides its upper rail, drawn left to right so it reads upright (the bottom rail is occupied by
+// the physical dock). R7: a cut carries none.
 const d2=v=>(+v).toFixed(1);
 const pathD=pts=>`M${pts.slice(0,-1).map(([x,y])=>d2(x)+' '+d2(y)).join('L')}Z`;
-export function namePath(id,pattern,face,gap=7){
- const line=pts=>'M'+pts.map(([x,y])=>d2(x)+' '+d2(y)).join('L');
- if(pattern&&['up','down','vdiamond','hdiamond','oval'].includes(id)){
-  const P=([u,v])=>[pattern.left+u*pattern.width,pattern.top+v*pattern.height];
-  // a -> b, moved `off` px to the left of travel (the glyphs' up side)
-  const edge=(a,b,off)=>{const [ax,ay]=P(a),[bx,by]=P(b),l=Math.hypot(bx-ax,by-ay)||1,nx=(by-ay)/l,ny=-(bx-ax)/l;return line([[ax+nx*off,ay+ny*off],[bx+nx*off,by+ny*off]]);};
-  if(id==='up')return edge([0,.71],[1,.71],-(gap+10)); // under the base, the glyphs hanging between it and the line
-  if(id==='down')return edge([0,.29],[1,.29],gap);
-  if(id==='vdiamond')return edge([0,.5],[.5,0],gap);
-  if(id==='hdiamond')return line([[face.left,face.top-gap],[face.left+face.width,face.top-gap]]);
-  const [cx,cy]=P([.5,.5]),rx=pattern.width/2+gap,ry=pattern.height/2+gap; // the oval: its upper-left arc
-  return line(Array.from({length:17},(_,i)=>{const t=Math.PI*(1+i/32);return [cx+rx*Math.cos(t),cy+ry*Math.sin(t)];}));
- }
- // Whole-window names sit above the opening; the bottom rail is occupied by the physical dock.
- const y=face.top-gap;return line([[face.left,y],[face.left+face.width,y]]);
-}
+export function namePath(face,gap=7){const y=d2(face.top-gap);return `M${d2(face.left)} ${y}L${d2(face.left+face.width)} ${y}`;}
 
 // ---- #134 the energy round the open destination ---------------------------------------------------------------------
 // Ian 23 Sept: "a vignetted colourful energy around the edge of the menu, in the shape of the portal that leads to it, but
@@ -771,7 +734,7 @@ function showAura(look,why='open'){
  blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
  for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
  chrome.append(el);
- aura={el,look,spec:blob,anims:[]};holeAura();
+ aura={el,look,spec:blob,anims:[]};
  if(reduced)return;
  aura.anims.push(wa.animate([{transform:'rotate(0deg)'},{transform:'rotate(360deg)'}],{duration:AURA.spinMs,iterations:Infinity}),
   wb.animate([{transform:'rotate(360deg)'},{transform:'rotate(0deg)'}],{duration:AURA.spinMs*.62,iterations:Infinity}),
@@ -800,25 +763,28 @@ function burst(kind){
 // (springing back on release). It slides each destination's layers against the fixed frame (depths below) and drives the
 // 3D scenes' off-axis cameras through peer.mjs. iOS asks once, from a chip on the first 3D destination (never a modal),
 // and the answer is kept. Off under reduced motion and in camera-only mode (D24); paused while the page is hidden.
-const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160};
+// dead (R7, Ian's Android): a new reading must move the eye by this share of full tilt (about half a degree) or it is
+// sensor noise and ignored, so a phone held still lets the look-around stop instead of restyling every frame.
+const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160,dead:.04};
 const TILT_KEY='myr5.tiltPermission';
 // Any framed destination can mark its own layers data-peer-depth="far|mid|near": they slide PEER_LAYER px at full tilt
 // (far with the eye, near against it), times the destination's strength; the dialog also carries --peer-x/--peer-y
-// (-1..1) for its own CSS. Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
+// (-1..1) while a flat menu sits in a cut (.portal-inset, the only CSS that reads them: on anything else they would restyle
+// the whole menu every frame). Per destination: move: px the whole dialog slides (flat menus, a third of the scenes' range);
 // layers: [selector,px] for destinations that don't mark theirs (nested ones add up); scene: a 3D scene reading peer.mjs
 // (no drag look-around: a drag there turns the scene; it fills its cut, see shapeDialog); chip: offer iOS's tilt
-// permission (the scenes always do); poke/fit: shapeDialog.
+// permission (the scenes always do); cards/fit: shapeDialog.
 const PEER_LAYER={far:14,mid:5,near:-4};
 const PEER_DEPTH=[
- ['#accountPanel.classroom-panel',{scene:true,poke:['[data-room-board]']}],
- ['#mealsPanel',{scene:true,poke:['.pyramid-tag:not([data-away])','.pyramid-flip','.pyramid-zoom'],fit:{sel:'#pyramidScanner',band:[0,1]}}],
- ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]],poke:['.ship-view-note','.ship-view-fallback']}],
+ ['#accountPanel.classroom-panel',{scene:true}],
+ ['#mealsPanel',{scene:true,cards:'.pyramid-zoom,#foodDial,#mealConfirmation',fit:{sel:'#pyramidScanner',band:[0,1]}}],
+ ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
- ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],poke:['.ach-head','.ach-detail'],fit:{sel:'.ach-stage',band:[.075,.9]}}],
+ ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],cards:'.ach-detail',fit:{sel:'.ach-stage',band:[.075,.9]}}],
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
-const peer={dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
+const peer={dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
 const clamp1=v=>Math.max(-1,Math.min(1,v));
 function tiltAccess(){
  if(typeof DeviceOrientationEvent==='undefined')return 'none';
@@ -834,12 +800,12 @@ function peerOn(dialog){
  const access=tiltAccess();
  if(access==='free'||access==='granted')addEventListener('deviceorientation',onOrient,{signal});
  else if(access==='ask'&&(cfg.scene||cfg.chip))tiltChip(dialog);
- if(!cfg.scene){
+ if(!cfg.scene&&!dialog.classList.contains('portal-fullscreen')){ // a full-screen room keeps its own drag (meditation's)
   dialog.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!peer.sensor)peer.drag={x:e.clientX,y:e.clientY,id:e.pointerId};},{signal,passive:true});
   dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});
   for(const type of ['pointerup','pointercancel'])dialog.addEventListener(type,e=>{if(peer.drag?.id===e.pointerId){peer.drag=null;peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
  }
- document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;}else kickPeer();},{signal});
+ document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;peer.last=0;}else kickPeer();},{signal});
  addEventListener('orientationchange',()=>{peer.base=null;},{signal});
 }
 function peerOff(){
@@ -851,7 +817,7 @@ function peerOff(){
   for(const el of dialog.querySelectorAll('[data-peer-depth]'))el.style.translate='';
  }
  for(const [el] of peer.els)el.style.translate='';
- Object.assign(peer,{dialog:null,cfg:null,els:[],x:0,y:0,tx:0,ty:0,drag:null,sensor:false});eye.x=eye.y=0;
+ Object.assign(peer,{dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,last:0,drag:null,sensor:false});eye.x=eye.y=0;
  if(aura?.spec)aura.spec.style.translate='';
 }
 const wrap180=a=>((a+180)%360+360)%360-180;
@@ -864,11 +830,13 @@ function onOrient(e){
  if(now-peer.stillT>PEER.stillMs){peer.base.b+=wrap180(b-peer.base.b)*PEER.drift;peer.base.g+=wrap180(g-peer.base.g)*PEER.drift;}
  let dB=clamp1(wrap180(b-peer.base.b)/PEER.deg),dG=clamp1(wrap180(g-peer.base.g)/PEER.deg);
  if((screen.orientation?.angle||0)%180)[dB,dG]=[dG,-dB];
+ if(Math.abs(dG-peer.tx)+Math.abs(dB-peer.ty)<PEER.dead)return;
  // As through a real window: turn the phone's face to the left (its right edge back) and the eye is now to the window's
  // right, so the pyramid shows its right side (Ian); tip the top edge back and the eye drops below it.
  peer.tx=dG;peer.ty=dB;kickPeer();
 }
-function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last)peer.last=performance.now();peer.raf=requestAnimationFrame(stepPeer);}}
+// Each run of steps (until the eye settles) looks its depth layers up once: a scene may add layers after it opens.
+function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last){peer.last=performance.now();peer.depths=[...peer.dialog.querySelectorAll('[data-peer-depth]')];}peer.raf=requestAnimationFrame(stepPeer);}}
 function stepPeer(now){
  peer.raf=0;
  const k=1-Math.exp(-Math.max(0,now-peer.last)/PEER.smoothMs);peer.last=now; // low-pass by time, the same at any frame rate
@@ -876,11 +844,12 @@ function stepPeer(now){
  if(Math.abs(peer.tx-peer.x)+Math.abs(peer.ty-peer.y)<.002){peer.x=peer.tx;peer.y=peer.ty;peer.last=0;}else kickPeer();
  const {x,y,cfg,dialog}=peer;if(!dialog)return;
  eye.x=x;eye.y=y;
- if(cfg.move&&framed?.face&&!framed.look.shaped){dialog.style.setProperty('left',d2(framed.face.left+x*cfg.move)+'px','important');dialog.style.setProperty('top',d2(framed.face.top+y*cfg.move)+'px','important');}
- dialog.style.setProperty('--peer-x',x.toFixed(3));dialog.style.setProperty('--peer-y',y.toFixed(3));
+ const full=dialog.classList.contains('portal-fullscreen');
+ if(cfg.move&&framed?.face&&!framed.look.shaped&&!full){dialog.style.setProperty('left',d2(framed.face.left+x*cfg.move)+'px','important');dialog.style.setProperty('top',d2(framed.face.top+y*cfg.move)+'px','important');}
+ if(dialog.classList.contains('portal-inset')){dialog.style.setProperty('--peer-x',x.toFixed(3));dialog.style.setProperty('--peer-y',y.toFixed(3));}
  const slide=(el,px)=>{el.style.translate=`${d2(x*px)}px ${d2(y*px)}px`;};
  for(const [el,px] of peer.els)slide(el,px);
- for(const el of dialog.querySelectorAll('[data-peer-depth]'))slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1)); // queried live: a scene may add layers after it opens
+ for(const el of peer.depths)slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1));
  if(aura?.spec)aura.spec.style.translate=`${d2(-x*AURA.specPx)}px ${d2(-y*AURA.specPx)}px`;
 }
 // iOS 13+: DeviceOrientationEvent.requestPermission() needs a tap. A small chip in the window's corner, never a modal.
@@ -894,12 +863,10 @@ function tiltChip(dialog){
  chip.onclick=async()=>{
   let answer='denied';try{answer=await DeviceOrientationEvent.requestPermission();}catch{}
   try{localStorage.setItem(TILT_KEY,answer==='granted'?'granted':'denied');}catch{}
-  chip.remove();if(framed?.dialog===dialog&&framed.look.shaped)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);
+  chip.remove();
   if(answer==='granted'&&peer.dialog===dialog)addEventListener('deviceorientation',onOrient,{signal:peer.ctl.signal});
  };
- peerUi(dialog).append(chip);
- // A shaped window takes the chip into its clip once the open burst (650 ms) is over.
- setTimeout(()=>{if(framed?.dialog===dialog&&framed.look.shaped&&chip.isConnected)clipTo(dialog,framed.leaned?framed.outlines.rect:framed.outlines.shape);},700);
+ peerUi(dialog).append(chip); // hidden while a scene is peered at (portal.css): full screen offers it
 }
 function status(text){statusEl.textContent=text;}
 
@@ -1115,15 +1082,11 @@ const trailProbe={
  resume(){probeFrozen=false;pointers.delete(PROBE_ID);fading.length=0;kickRender();},
 };
 
-// #104 idle ambient flash: which id is showing right now, and how strongly, given the cycle's phase/elapsed.
+// #104 idle ambient flash: which id is showing right now, and how strongly, given the time since the cycle began.
 function idleFrame(now){
- let elapsed=now-idleCycle.t0;
- if(idleCycle.phase==='fast'&&elapsed>=IDLE_ORDER.length*IDLE.fastMs){idleCycle.phase='pause';idleCycle.t0+=IDLE_ORDER.length*IDLE.fastMs;elapsed=now-idleCycle.t0;}
- if(idleCycle.phase==='pause'){if(elapsed<IDLE.pauseMs)return null;idleCycle.phase='slow';idleCycle.t0+=IDLE.pauseMs;elapsed=now-idleCycle.t0;} // #133: nothing lit
- const fast=idleCycle.phase==='fast',dur=fast?IDLE.fastMs:IDLE.slowMs,slot=fast?dur:dur+IDLE.gapMs,idx=Math.floor(elapsed/slot)%IDLE_ORDER.length,t=elapsed%slot;
- if(t>=dur)return null; // #133: the gap between the slow cycle's shapes
- const envelope=Math.min(1,t/60,(dur-t)/60),peak=fast?.9:.5;
- return{id:IDLE_ORDER[idx],alpha:Math.max(.12,peak*envelope),width:fast?4:3};
+ const elapsed=now-idleCycle.t0,dur=IDLE.slowMs,slot=dur+IDLE.gapMs,t=elapsed%slot;
+ if(t>=dur)return null; // #133: the gap between shapes
+ return{id:IDLE_ORDER[Math.floor(elapsed/slot)%IDLE_ORDER.length],alpha:Math.max(.12,.5*Math.min(1,t/60,(dur-t)/60))};
 }
 // Outline + label (+ arrow for a line) for one idle-flash entry; `rect` is the stitched-pattern rect.
 function idleShapeInfo(id,rect){
@@ -1177,7 +1140,7 @@ function drawIdle(now){
  const rect=board?board.patternRect():fallbackRect(),face=board?board.faceRect():rect;
  if(idleCycle.static){IDLE_ORDER.forEach(id=>drawIdleShape(idleShapeInfo(id,rect),.35,3,face,false));return;}
  const f=idleFrame(now);
- if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,f.width,face);
+ if(f)drawIdleShape(idleShapeInfo(f.id,rect),f.alpha,3,face);
 }
 
 // #22 first-run hint: a glowing fingertip traces the stitched square once, labelled, the first time the
@@ -1296,7 +1259,7 @@ function scheduleIdle(){
 function beginIdleCycle(){
  idleTimer=0;
  if(!idleEligible())return;
- idleCycle=prefersReducedMotion()?{static:true}:{phase:'fast',t0:performance.now()};
+ idleCycle=prefersReducedMotion()?{static:true}:{t0:performance.now()};
  kickRender();
 }
 
@@ -1587,7 +1550,7 @@ async function openDirect(menu,current){
 // #131: the shapes that aren't full screen open INTO their cut, the quilt staying on as the wall; the rest dive until
 // the destination fills the frame. #124: the four lines and the X get the wormhole too, shorter (PORTAL.short): a line
 // has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
-const SHAPED=new Set(['rect','oval','up','down','vdiamond','hdiamond']);
+const SHAPED=new Set(['rect','oval','up','down','vdiamond']);
 // A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
 export function lensPts([ax,ay],[bx,by],half,n=24){
  const l=Math.hypot(bx-ax,by-ay)||1,nx=-(by-ay)/l,ny=(bx-ax)/l;
@@ -1617,6 +1580,7 @@ async function portalSequence(id,current){
   menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';},{once:true});
   return;
  }
+ if(id==='hdiamond')id='vdiamond'; // Ian 26 Sept: the leaderboard is the tall diamond only; a flat trace still reaches it
  const menu=MENUS[id];if(!menu)return;
  const line=LINE_IDS.has(id),short=line||id==='x';
  if(!SHAPES[id]&&!line){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)
@@ -1668,7 +1632,7 @@ async function portalSequence(id,current){
 // dialog opens clipped to the cut, growing out of the core to the outline (shapeDialog), the wormhole under it stops and
 // the quilt stays on as the wall. Closing fizzles it shut (fizzleBack).
 async function openInHole(id,menu,pts,face,current){
- frameOn(face,shapeLook(id,menu,pts,face,restFace().pattern));
+ frameOn(face,shapeLook(id,menu,pts));
  let dialog=null;
  backgroundBlocked(false);
  const unwatch=watchDialog();
@@ -1776,7 +1740,7 @@ export async function mountPortal({visible=false}={}){
  // #104: pause/resume the idle cycle with the tab (a backgrounded tab must not keep animating).
  document.addEventListener('visibilitychange',scheduleIdle,{signal:lifecycle.signal});
  // Risk 4: a dialog over the quilt (setup gate, a reward reveal) that doesn't hide the portal still
- // blocks idleEligible() while open, but nothing then re-arms the 3s timer once it closes. 'close'
+ // blocks idleEligible() while open, but nothing then re-arms the idle timer once it closes. 'close'
  // doesn't bubble, but it still reaches a capturing listener on document for any dialog in the page.
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={

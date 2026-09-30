@@ -30,10 +30,10 @@ test('Quilt traps focus, exposes a working Menu, honors reduced motion and retur
  assert.deepEqual(calm.after,calm.before);assert.equal(calm.svg,false);
  await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="rect"]').click();
  await page.waitForFunction(()=>document.querySelector('#portalHome').hidden);assert.equal(await page.locator('#background').evaluate(n=>n.inert),false);
- // #131: Food opens in its triangle cut, the quilt staying on as the wall; its own Close shows in front of the wall.
+ // #131: Food opens in its triangle cut, the quilt staying on as the wall; R7: it shows no Close there, Escape leaves.
  await open(page);await page.evaluate(()=>portal.open('up'));
  await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden&&document.querySelector('#mealsPanel.portal-shaped')?.open);
- await page.locator('#mealsPanel button',{hasText:'Close'}).click();await page.waitForFunction(()=>!document.querySelector('#mealsPanel').open&&!document.querySelector('#portalHome').hidden&&!document.getElementById('portalChrome').matches(':popover-open'));
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('#mealsPanel').open&&!document.querySelector('#portalHome').hidden&&!document.getElementById('portalChrome').matches(':popover-open'));
  await page.keyboard.press('Escape');assert.equal(await page.locator('#portalHome').evaluate(n=>n.hidden),true);
  await page.evaluate(()=>portal.dispose());assert.equal(await page.locator('#portalHome,#portalMenu,#portalBoardHost canvas,link[href="/modules/portal/portal.css"]').count(),0);
  assert(await open(page),'disposing permits a clean later mount');assert.equal(await page.locator('#portalHome').count(),1);

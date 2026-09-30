@@ -45,9 +45,7 @@ test('#124 a line opens a lens from its slit, the X a diamond, on PORTAL.short o
  assert.equal(portalWindow('up',rect).pts.length,4,'a closed shape: its stitched outline (closed)');
 });
 
-test('#132 the name rides outside the cut: under the triangle\'s base, above the inverted one\'s top, the rail for a window',()=>{
- const pattern={left:0,top:0,width:300,height:500},face={left:-10,top:-10,width:320,height:520},y=d=>+d.split(' ').at(-1);
- assert.ok(y(namePath('up',pattern,face))>.71*500,'below the base');
- assert.ok(y(namePath('down',pattern,face))<.29*500,'above the top edge');
- assert.ok(y(namePath(null,null,face))<face.top,'above the window, clear of the bottom dock');
+test('#132 a whole window\'s name rides its upper rail (R7: a peer-through cut has none)',()=>{
+ const face={left:-10,top:-10,width:320,height:520},y=d=>+d.split(' ').at(-1);
+ assert.ok(y(namePath(face))<face.top,'above the window, clear of the bottom dock');
 });

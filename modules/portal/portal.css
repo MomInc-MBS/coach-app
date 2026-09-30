@@ -62,13 +62,23 @@ dialog.portal-framed::backdrop{background:#17111e!important}
 .portal-aura-fire>.portal-aura-spec{border-radius:50%;background:radial-gradient(circle,#fff 0,#ffffffa0 22%,#fff0 68%);opacity:.75}
 .portal-aura-flash{background:radial-gradient(circle at var(--cx) var(--cy),#fff,color-mix(in srgb,var(--aura) 55%,#fff))}
 .portal-aura>b{position:absolute;inset:auto;width:6px;height:6px;margin:-3px;border-radius:50%;box-shadow:0 0 8px 2px var(--aura)}
-/* #132 the name rides the rim, outside the window (on the quilt round a hole, on the bottom rail round the window). */
+/* #132 a whole window's name rides its upper rail, outside the window. R7: a peer-through cut has none. */
 .portal-aura>svg{overflow:visible}
-.portal-aura-name{font:800 13px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.32em;fill:color-mix(in srgb,var(--aura) 70%,#fff);stroke:#0b0710;stroke-width:4px;stroke-linejoin:round;paint-order:stroke}
-.portal-aura:not(.shaped) .portal-aura-name{font-size:9.5px;letter-spacing:.38em;stroke-width:3px}
+.portal-aura-name{font:800 9.5px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.38em;fill:color-mix(in srgb,var(--aura) 70%,#fff);stroke:#0b0710;stroke-width:3px;stroke-linejoin:round;paint-order:stroke}
 /* #131 seen through the hole: the quilt stays on as the wall, so a shaped destination's backdrop is clear (the dialog's
    clip-path is JS's). */
 dialog.portal-framed.portal-shaped::backdrop{background:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+/* R7 (Ian 26 and 29 Sept): a scene seen through its cut shows the scene and nothing else, no text and none of "the close
+   and all that is unimportant": titles, Close/Done, labels, toggles, status lines, cards, the tilt chip. visibility (not
+   opacity), so nothing hidden takes a tap or focus. The scene's own objects stay tappable (the pyramid, the bosses, the
+   whiteboard, the ship). The ways on: phone back or Escape, the bar, and a double-tap to the full screen, which brings
+   it all back. (A flat menu in a cut, .portal-inset, is its text: it keeps it.) */
+dialog.portal-shaped:not(.portal-inset,.portal-leaned)>:not(#coachDock){visibility:hidden}
+dialog.portal-shaped:not(.portal-inset,.portal-leaned) :is(#pyramidScanner,.ach-stage,.classroom-stage,.ship-view-stage){visibility:visible}
+dialog.portal-shaped:not(.portal-inset,.portal-leaned) :is(.pyramid-ui,.paper-poster,.paper-note,.pyramid-loading-text,.classroom-note,.classroom-desks :is(button,figcaption),.classroom-board>*,.ship-scene-status){visibility:hidden}
+/* R7: no two-finger zoom while the portal or any menu is up (framed or opened from the bar); one finger still scrolls, taps
+   and traces (touch-action is intersected down the tree, so this reaches everything, top-layer menus included). */
+html:has(#portalHome:not([hidden]),dialog[open]){touch-action:pan-x pan-y}
 /* A flat menu in a cut: its box is the cut's largest rectangle (JS sets --face-*), its content laid out zoomed out
    (--inset-zoom) and scrolling inside it, sliding a little with tilt behind the fixed wall. The bar and the portal's
    buttons are not its content. */
@@ -192,11 +202,11 @@ html[data-public-state] #portalObjects .portal-object{transition:transform .6s c
 #portalMenuButton:active,#portalExitButton:active{box-shadow:0 1px #211626;translate:0 3px}
 .portal-color{display:flex;align-items:center;justify-content:space-between;gap:16px;font:13px system-ui;margin:12px 0}.portal-color input{width:48px;height:44px;padding:3px;border:1px solid #ac91a4;background:#302338}
 dialog.portal-framed.portal-fullscreen{left:0!important;top:0!important;width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;clip-path:none!important}
-#portalChrome.portal-garage .portal-aura{display:none}
+/* Full screen: the frame goes up out of the way; the energy stays, round the screen's edge (R7). */
 #portalChrome.portal-garage .portal-frame{box-shadow:none;animation:portal-garage-up .8s cubic-bezier(.4,0,.3,1) both}
-#portalChrome.portal-garage[data-destination=meditation]{visibility:hidden}
+#portalChrome.portal-garage[data-destination=meditation] .portal-frame{visibility:hidden}
 @keyframes portal-garage-up{to{transform:translateY(-110vh)}}
-@media(prefers-reduced-motion:reduce){#portalChrome.portal-garage{visibility:hidden}}
+@media(prefers-reduced-motion:reduce){#portalChrome.portal-garage .portal-frame{visibility:hidden}}
 
 
 /* A decoded meal photo and a classroom whiteboard tap step into the full destination. */
@@ -227,21 +237,6 @@ body:has(:is(#mealsPanel,#accountPanel).portal-fullscreen[open]) #coachDock{disp
 #coachDock.coach-dock button.dock-portal{position:absolute;left:50%;top:50%;translate:-50% -50%;width:62px;height:62px;min-width:62px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;line-height:1;letter-spacing:.04em}
 #coachDock .dock-portal svg{width:22px;height:22px;flex:none}#coachDock .dock-portal span{max-width:100%}
 
-/* A scene's title, Close and cards show in front of the wall (portal.mjs pokes), so they sit inside the cut, not over
-   the metal. Achievements' inverted triangle: its top edge is 29% down and it narrows to the point. */
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head{top:calc(29% + 16px);left:16%;right:calc(16% + 50px)}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head h1{font-size:18px}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-head p{font-size:12px}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-close{top:calc(29% + 10px);right:14%}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-detail{top:calc(29% + 10px);bottom:auto;left:20%;right:20%;max-height:24%;padding:10px 8px;border-radius:8px;background:#05030cf0}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-detail h2{font-size:22px}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-detail li{grid-template-columns:12px 54px 1fr;gap:6px;font-size:14px}
-.ach-board.portal-shaped:not(.portal-leaned).no-art:not(.zoomed) .ach-starter{top:calc(29% + 90px);bottom:auto;left:22%;right:22%}
-.ach-board.portal-shaped:not(.portal-leaned) .ach-starter button{white-space:normal}
-/* The Leaderboard's tall diamond: Done then the Crew scoreboard title, stacked on the axis where the cut is wide enough. */
-#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header{top:18%;min-height:0;padding:0;display:flex;flex-direction:column-reverse;align-items:center;gap:6px;text-align:center}
-#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header h2{font-size:20px;max-width:min(60vw,220px);margin:0 auto;padding:0;white-space:normal}
-#accountPanel.classroom-panel.portal-shaped:not(.portal-leaned)[data-room]:not([data-room-view=board])>header>[data-close]{position:static}
 
 #coachDock .dock-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 /* Menu content uses its natural line wrapping and an inner scroller instead of zoomed tabs that can clip on phones. */
