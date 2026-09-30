@@ -58,7 +58,10 @@ const portalSettled=page=>page.waitForFunction(()=>window.myr5Routes?.current?.(
 // W2-2A: the bottom bar's centre Portal button replaced the quilt's floating Menu button.
 const PORTAL_BUTTON='#coachDock [data-route="portal"]';
 // The tactile dock: six physical keys (no Menu key), each named for assistive tech; the centre one is the raised Portal.
-const DOCK_KEYS=[['settings','Settings'],['food','Food'],['portal','Open workout pod'],['scoreboard','Classroom leaderboard'],['achievements','Achievements'],['reminders','Reminders computer']];
+// R7-DOCKREM (Ian 26 Sep): the far-left key still looks like the gear (see the release-smoke DOCK_KEYS
+// test below), but now opens the coach customizer, not Settings; Settings stays reachable via the pod
+// ☷ button, #settings and the line-down gesture (step 3 above).
+const DOCK_KEYS=[['customizeCoach','Customize coach'],['food','Food'],['portal','Open workout pod'],['scoreboard','Classroom leaderboard'],['achievements','Achievements'],['reminders','Reminders computer']];
 // W2-2M: BEGIN on the workout start page is above the bar and is what a tap there hits, without scrolling.
 const beginClear=page=>page.evaluate(()=>{const b=document.getElementById('start').getBoundingClientRect(),bar=document.getElementById('coachDock').getBoundingClientRect();return {above:b.height>0&&b.top>=0&&b.bottom<=bar.top,hit:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('#start')!==null};});
 const centerHit=(page,selector)=>page.evaluate(sel=>{const el=document.querySelector(sel);if(!el)return false;const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!hit&&el.contains(hit);},selector); // a key's own icon/label span is part of the key
@@ -82,6 +85,26 @@ test('1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt'
   assert.equal(await page.locator('#coachDock').getAttribute('aria-label'),'Coach tools');
   assertDockKeys(await dockKeys(page),'quilt');
   assert.equal(await page.locator('#coachDock [aria-label="Menu"]').count(),0,'there is no Menu button in the dock');
+ }finally{await context.close();}
+});
+
+test('1b. the far-left dock key keeps its gear icon but opens the coach customizer, not Settings',async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  const gear=await page.evaluate(()=>{
+   const btn=document.querySelector('#coachDock .dock-settings');
+   return {route:btn.dataset.route,label:btn.getAttribute('aria-label'),circles:btn.querySelectorAll('svg circle').length,spokes:btn.querySelector('svg path')?.getAttribute('d')||''};
+  });
+  assert.equal(gear.route,'customizeCoach','the left key routes to the customizer, not settings');
+  assert.equal(gear.label,'Customize coach');
+  assert.equal(gear.circles,2,'the gear icon (two circles) is unchanged');
+  assert.match(gear.spokes,/M12 2v3M12 19v3M2 12h3M19 12h3/,'the gear icon (spokes path) is unchanged');
+  // Stub the destination: the real editor consumes myr5-ship-gate as soon as it loads (#148), so
+  // check the token this lane's route sets before that page's own script can clear it.
+  await page.route('**/creature/index.html',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>customizer stub</title>'}));
+  await page.locator('#coachDock .dock-settings').click();
+  await page.waitForURL(url=>url.pathname==='/creature/index.html');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('myr5-ship-gate')),'ship-admission-v2','the customizer gets the same admission token the oval ship sets');
  }finally{await context.close();}
 });
 
@@ -278,7 +301,9 @@ function assertDockKeys(keys,where){
 }
 const DIALOG_ROUTES=[
  ['food','#mealsPanel','food'],['reminders','#remindersPanel','reminders'],['scoreboard','#accountPanel','scoreboard'],
- ['history','#historyPanel',null],['install','#installPanel',null],['settings','#settings','settings'],
+ // R7-DOCKREM: no dock key routes to Settings any more (the far-left key opens the customizer instead), so
+ // #settings lights nothing, like history/install/meditate/ship/select below.
+ ['history','#historyPanel',null],['install','#installPanel',null],['settings','#settings',null],
  ['achievements','.ach-board','achievements'],['meditate','.meditation-panel',null],
  ['ship','dialog.ship-view',null],['select','dialog.ship-view',null],
 ];
