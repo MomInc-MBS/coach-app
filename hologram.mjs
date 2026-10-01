@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {demoPose,DEMO_BONES} from './demo-poses.mjs';
+import {coachFetch} from './coach-net.mjs';
 export async function createHologram(host,name,{still=false}={}){
   let renderer,controls,frame=0,observer,mixer,model,animateDemo=null,demoTime=0,disposed=false,playing=true;
   const scene=new THREE.Scene(),pivot=new THREE.Group();scene.add(pivot);
@@ -11,9 +12,10 @@ export async function createHologram(host,name,{still=false}={}){
   try{
     renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);host.append(renderer.domElement);
     const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableZoom=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=12;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;
-    if(['squat','pushup'].includes(name)){
-    const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),20000);let bytes;
-    try{const response=await fetch('/models/'+name+'.glb',{signal:abort.signal});if(!response.ok)throw new Error('Model file unavailable.');bytes=await response.arrayBuffer();}finally{clearTimeout(timer);}
+    // Offline or slow: the procedural wireframe figure below stands in for the downloaded model.
+    const got=['squat','pushup'].includes(name)?await coachFetch('/models/'+name+'.glb',{},{timeoutMs:20000,parse:'arrayBuffer',local:true}):null;
+    if(got?.ok){
+    const bytes=got.data;
     const gltf=await new GLTFLoader().parseAsync(bytes,'');model=gltf.scene;
     // Fit using the first animation pose, not the rig's rest pose.
     mixer=new THREE.AnimationMixer(model);gltf.animations.forEach(clip=>mixer.clipAction(clip).play());mixer.update(0);model.updateMatrixWorld(true);
