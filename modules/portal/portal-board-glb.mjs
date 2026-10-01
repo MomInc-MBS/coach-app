@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {SHAPES,fromFrame} from './portal-shapes.mjs';
+import {createPortalCutMask} from './portal-cut.mjs';
 
 export const GLB={inset:.06,texSize:1024,sleepMs:1500,dent:10,dentRadius:48,margin:.02};
 
@@ -58,7 +59,7 @@ export function fallPieces(pieces,fall,ms){
 }
 // A piece's geometry rides on the door's own vertex buffers; detach them before dispose() or WebGL
 // frees buffers the door is still drawing with.
-function sharedGeometry(src,index){const g=new THREE.BufferGeometry();for(const k in src.attributes)g.setAttribute(k,src.attributes[k]);g.setIndex(index);return g;}
+function sharedGeometry(src,index){const g=new THREE.BufferGeometry();for(const k in src.attributes)g.setAttribute(k,src.attributes[k]);g.setIndex(index?.isBufferAttribute?index.clone():new THREE.BufferAttribute(index.slice?.()||index,1));return g;}
 function disposeShared(g){for(const k in g.attributes)g.deleteAttribute(k);g.dispose();}
 
 // --- Shader injection defaults -----------------------------------------------------------------
@@ -128,24 +129,30 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  // Guides are drawn after layout and effect.init, which may discover a painted frame.
 
  const touchArr=Array.from({length:8},()=>new THREE.Vector4(0,0,0,0));
+ const uBoardTint={value:new THREE.Color('#b026ff')};
+
  const uniforms={
   uTime:{value:0},uTouch:{value:touchArr},uTouchCount:{value:0},
   uPaint:{value:paint.texture},uGlow:{value:glow.texture},uRim:{value:rim.texture},uGlowStrength:{value:1.2},
   uFaceMin:{value:new THREE.Vector2(faceMin.x,faceMin.y)},uFaceSize:{value:new THREE.Vector2(fw,fh)},
   uDent:{value:knobs.dent},uDentRadius:{value:knobs.dentRadius},
+  uBoardTint,
   ...(effect.uniforms||{}),
  };
+ const portalCutMask={value:null};
  function setupMaterial(mat){
+  const portalCutSide={value:0};mat.userData.portalCutSideUniform=portalCutSide;
   mat.customProgramCacheKey=()=>effect.id;
   mat.onBeforeCompile=shader=>{
-   Object.assign(shader.uniforms,uniforms);
+   Object.assign(shader.uniforms,uniforms,{uPortalCutMask:portalCutMask,uPortalCutSide:portalCutSide});
    // uniformDecls go to both stages; vertexDecls/fragmentDecls to one only, so a big uniform array (jelly's trail) never
    // takes a second stage's uniform space on a phone GPU.
-   const decl=`varying vec2 vPlanar;\nuniform float uTime;\nuniform vec4 uTouch[8];\nuniform int uTouchCount;\nuniform vec2 uFaceMin;\nuniform vec2 uFaceSize;\nuniform sampler2D uPaint;\nuniform sampler2D uGlow;\nuniform sampler2D uRim;\nuniform float uGlowStrength;\nuniform float uDent;\nuniform float uDentRadius;\n${effect.uniformDecls||''}\n`;
+   const decl=`varying vec2 vPlanar;\nvarying vec2 vPortalCutUv;\nuniform sampler2D uPortalCutMask;\nuniform float uPortalCutSide;\nuniform float uTime;\nuniform vec4 uTouch[8];\nuniform int uTouchCount;\nuniform vec2 uFaceMin;\nuniform vec2 uFaceSize;\nuniform sampler2D uPaint;\nuniform sampler2D uGlow;\nuniform sampler2D uRim;\nuniform float uGlowStrength;\nuniform float uDent;\nuniform float uDentRadius;\nuniform vec3 uBoardTint;\n${effect.uniformDecls||''}\n`;
    shader.vertexShader=decl+(effect.vertexDecls||'')+shader.vertexShader.replace('#include <begin_vertex>',
-    `#include <begin_vertex>\nvec2 planar=(position.xy-uFaceMin)/uFaceSize;planar.y=1.0-planar.y;vPlanar=planar;\n${effect.vertexDisplace||DEFAULT_DISPLACE}`);
+    `#include <begin_vertex>\nvec2 planar=(position.xy-uFaceMin)/uFaceSize;planar.y=1.0-planar.y;vPlanar=planar;vPortalCutUv=planar;\n${effect.vertexDisplace||DEFAULT_DISPLACE}`);
    shader.fragmentShader=decl+(effect.fragmentDecls||'')+shader.fragmentShader
-    .replace('#include <map_fragment>','#include <map_fragment>\nvec4 pnt=texture2D(uPaint,vPlanar);diffuseColor.rgb=mix(diffuseColor.rgb,pnt.rgb,pnt.a);')
+    .replace('#include <map_fragment>','#include <map_fragment>\nfloat portalCutCoverage=1.0;if(abs(uPortalCutSide)>.5){portalCutCoverage=texture2D(uPortalCutMask,vPortalCutUv).r;if(uPortalCutSide>.5&&portalCutCoverage<.5)discard;if(uPortalCutSide<-.5&&portalCutCoverage>=.5)discard;}\nfloat lum=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(lum)*uBoardTint,1.0);vec4 pnt=texture2D(uPaint,vPlanar);diffuseColor.rgb=mix(diffuseColor.rgb,pnt.rgb,pnt.a);')
+
     .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\nvec4 glo=texture2D(uGlow,vPlanar),cutRim=texture2D(uRim,vPlanar);totalEmissiveRadiance+=glo.rgb*glo.a*uGlowStrength+cutRim.rgb*cutRim.a*2.0;\n'+(effect.fragment||'')); // optional effect GLSL: runs before lighting, may edit diffuseColor/roughnessFactor/normal (view space)/totalEmissiveRadiance
   };
   mat.needsUpdate=true;
@@ -169,7 +176,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  // Transparent twins for cut pieces, drawn once at load (opacity 0, over the door itself: invisible) so
  // the first cut doesn't hitch on a shader compile.
  const pieceMats=new Map(),warm=[];
- meshObjs.forEach(o=>{if(!pieceMats.has(o.material)){const m=pieceMaterial(o.material);m.opacity=0;pieceMats.set(o.material,m);warm.push(new THREE.Mesh(o.geometry,m));}});
+ meshObjs.forEach(o=>{if(!pieceMats.has(o.material)){const m=pieceMaterial(o.material),sourceCompile=m.onBeforeCompile,side={value:0};m.userData.portalCutSideUniform=side;m.onBeforeCompile=function(shader,renderer){sourceCompile.call(this,shader,renderer);shader.uniforms.uPortalCutMask=portalCutMask;shader.uniforms.uPortalCutSide=side;};m.opacity=0;pieceMats.set(o.material,m);warm.push(new THREE.Mesh(o.geometry,m));}});
  warm.forEach(w=>group.add(w));
 
  // The renderer (and its WebGL context) only now, once every download is in: a stalled one never holds a context.
@@ -222,25 +229,24 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  }
  function cut(polyUv,color='#ffffff',ms=1100){
   heal();
-  const parts=[],pieces=[];
+  const pieces=[];portalCutMask.value=createPortalCutMask(polyUv);
   for(const mesh of meshObjs){
    const g=mesh.geometry,p=g.attributes.position.array,index=g.index||(g.setIndex([...Array(g.attributes.position.count).keys()]),g.index);
-   // ponytail: reads position.array as flat xyz (Blender exports aren't interleaved); de-interleave here if one ever is.
-   const {keep,cut:tri}=splitIndexByPolygon(p,index.array,toUv,polyUv);
-   if(!tri.length)continue;
-   let cx=0,cy=0,cz=0;for(const i of tri){cx+=p[3*i];cy+=p[3*i+1];cz+=p[3*i+2];}cx/=tri.length;cy/=tri.length;cz/=tri.length;
-   const pg=sharedGeometry(g,tri),material=pieceMats.get(mesh.material)||pieceMats.set(mesh.material,pieceMaterial(mesh.material)).get(mesh.material);
+   // Both copies retain every boundary triangle; complementary face-space discards produce the exact cut.
+   let u=0,v=0;for(const point of polyUv){u+=point[0];v+=point[1];}u/=polyUv.length;v/=polyUv.length;
+   const cx=faceMin.x+u*fw,cy=faceMin.y+(1-v)*fh,cz=0;
+   const pg=sharedGeometry(g,index.array),material=pieceMats.get(mesh.material)||pieceMats.set(mesh.material,pieceMaterial(mesh.material)).get(mesh.material);
+   mesh.material.userData.portalCutSideUniform.value=-1;material.userData.portalCutSideUniform.value=1;
    const piece=new THREE.Mesh(pg,material),pivot=new THREE.Group();piece.frustumCulled=false;piece.position.set(-cx,-cy,-cz);pivot.position.set(cx,cy,cz);pivot.add(piece);mesh.add(pivot);
-   g.setIndex(keep);parts.push({g,index});
    pieces.push({pivot,material,drop(){pivot.removeFromParent();disposeShared(pg);}});
   }
   drawRim(polyUv,color);
-  cutting={parts,fall:fallPieces(pieces,Math.max(fw,fh)*.35,ms)};effect.cut?.(polyUv,color);wake();
+  cutting={fall:fallPieces(pieces,Math.max(fw,fh)*.35,ms)};effect.cut?.(polyUv,color);wake();
   return cutting.fall.done;
  }
  function heal(){
   if(!cutting)return;
-  cutting.fall.end();for(const {g,index} of cutting.parts)g.setIndex(index);cutting=null;effect.heal?.();
+  cutting.fall.end();for(const mesh of meshObjs){mesh.material.userData.portalCutSideUniform.value=0;const piece=pieceMats.get(mesh.material);if(piece?.userData.portalCutSideUniform)piece.userData.portalCutSideUniform.value=0;}portalCutMask.value?.dispose();portalCutMask.value=null;cutting=null;effect.heal?.();
   rim.ctx.clearRect(0,0,rim.canvas.width,rim.canvas.height);rim.texture.needsUpdate=true;
   if(preservedAspect)computeFit();
   if(!disposed)renderer.render(scene,camera); // healed frame on the canvas now, even while paused
@@ -251,6 +257,13 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   faceRect:faceRectClient,
   cut,heal,
   patternRect(){const hostBox=host.getBoundingClientRect(),F=viewFrame,sx=hostBox.width/width,sy=hostBox.height/height;if(preservedAspect)return {left:hostBox.left+(faceRect.left+faceRect.width*F.x0)*sx,top:hostBox.top+(faceRect.top+faceRect.height*F.y0)*sy,width:faceRect.width*(F.x1-F.x0)*sx,height:faceRect.height*(F.y1-F.y0)*sy};return {left:hostBox.left+hostBox.width*F.x0,top:hostBox.top+hostBox.height*F.y0,width:hostBox.width*(F.x1-F.x0),height:hostBox.height*(F.y1-F.y0)};},
+  setTint(hex,selected=true){
+   if(!/^#[0-9a-f]{6}$/i.test(hex))return;
+   if(effect.id==='grass')effect.setTint?.(hex,selected);
+   else{uBoardTint.value.set(hex);effect.setTint?.(hex,selected);}
+
+   wake();
+  },
   press(id,clientX,clientY){
    const painted=faceRectClient();
    const [u,v]=faceUV(painted,clientX,clientY),cu=Math.min(1,Math.max(0,u)),cv=Math.min(1,Math.max(0,v)),ex=pointers.get(id);
@@ -264,7 +277,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   pause(){pointers.clear();cancelAnimationFrame(frame);frame=0;},
   resume:wake,
   dispose(){
-   cutting?.fall.end();disposed=true;cancelAnimationFrame(frame);observer.disconnect();effect.dispose?.();pieceMats.forEach(m=>m.dispose());rim.texture.dispose();
+   cutting?.fall.end();portalCutMask.value?.dispose();portalCutMask.value=null;disposed=true;cancelAnimationFrame(frame);observer.disconnect();effect.dispose?.();pieceMats.forEach(m=>m.dispose());rim.texture.dispose();
    group.traverse(n=>{n.geometry?.dispose();if(n.material)for(const mat of [n.material].flat()){for(const v of Object.values(mat))if(v?.isTexture)v.dispose();mat.dispose();}});
    paint.texture.dispose();glow.texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();
   },

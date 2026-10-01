@@ -36,16 +36,16 @@ test('a locked palette paints only in preview; the normal render still falls bac
  assert.equal(resolveRegionMaterial(0,choice,true).primary,palette.colors[0]);
 });
 
-test('#1 a locked battle-pass texture (no pattern files yet) still paints in preview -- honestly, with its own representative colour, not silently Flat-and-unrelated',()=>{
+test('a locked battle-pass texture previews its built-in pattern without changing its unlock status',()=>{
  memory.clear();
  const texture=TEXTURES.find(t=>t.id==='chest-plate-steel');
- assert.equal(texture.familyId,-1,'fixture: no pattern art exists for this one yet');
- const representative=findColor(texture.defaultColorId);
  const choice={textureId:'chest-plate-steel',colorId:'default-ruby',sparkle:0,metallic:0};
  const previewed=resolveRegionMaterial(0,choice,true);
- assert.equal(previewed.primary,representative.primary,"paints the texture's own representative colour, not the unrelated colour already picked for another texture");
- const real=resolveRegionMaterial(0,choice); // outside preview (not owned) it still falls all the way back, unaffected
- assert.notEqual(real.primary,representative.primary);
+ assert.equal(previewed.id,32,'preview paints the Plate Steel family');
+ assert.equal(previewed.primary,findColor('default-ruby').primary,'the selected colour stays independent from surface family');
+ assert.equal(lockSource(texture.id),'Chest L1','renderable preview does not grant a locked texture');
+ const real=resolveRegionMaterial(0,choice); // normal assembly still enforces the existing reward gate
+ assert.equal(real.detail,'flat');
 });
 
 test('save guard: a locked texture, palette or body forced into the save path is rejected and the last owned look is kept',()=>{

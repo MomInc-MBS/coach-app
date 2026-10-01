@@ -1,6 +1,6 @@
-// #149 (D46) at 375x812: the black-and-white meditation room. Three data-peer-depth layers (far wonder, mid big sleeping
-// coach, near seated character) that start grayscale and peer by depth on drag; a full session brings the colour back and
-// the coach walks off; "Stop now" wakes it, it smacks you, the wormhole hook runs and the room closes. The room runs from
+// #149 (D46) at 375x812: the black-and-white meditation room. Three data-peer-depth layers (far pixel wonder, mid four-legged
+// coach, near character) start grayscale and peer by depth on drag; completing a session restores colour. Circle exit abandons
+// immediately without saving, plays a brief cartoon bounce, then closes. The room runs from
 // source against a stub coach card + window.myr5Creature; the last test checks the real viewer's preview() from dist/client.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,6 +57,8 @@ async function openRoom({reducedMotion='no-preference',query=''}={}){
  return {context,page};
 }
 const layers=page=>page.locator('[data-peer-depth]').evaluateAll(els=>els.map(el=>({depth:el.dataset.peerDepth,filter:getComputedStyle(el).filter,x:getComputedStyle(el).translate})));
+const phase=page=>page.locator('[data-breath-run]').getAttribute('data-phase');
+const count=(page,path)=>page.evaluate(p=>window.__calls.filter(c=>c===p).length,path);
 const creature=page=>page.evaluate(()=>window.__creature);
 const called=(log,name,...args)=>log.some(([n,...a])=>n===name&&JSON.stringify(a)===JSON.stringify(args));
 async function drag(page,dx){
@@ -66,7 +68,7 @@ async function drag(page,dx){
 }
 async function start(page,mode){
  await page.locator(`[data-mode="${mode}"]`).click();
- await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:00 remaining');
+ await page.waitForFunction(()=>/\d+:\d{2} remaining/.test(document.querySelector('[data-status]').textContent));
 }
 
 test('open: three black-and-white peering layers, the big meditation coach borrowed asleep; drag peers by depth; close hands it back',async()=>{
@@ -75,16 +77,26 @@ test('open: three black-and-white peering layers, the big meditation coach borro
   const panel=document.querySelector('.meditation-panel'),character=panel.querySelector('.meditation-character');
   const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};};
   return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,far:getComputedStyle(panel.querySelector('.meditation-far')).backgroundColor,
-   character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]'))};
+   character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]')),
+   orbit:rect(panel.querySelector('.breathing-orbit')),timer:rect(panel.querySelector('[data-session-clock]')),count:rect(panel.querySelector('[data-breath-count]'))};
  });
  assert.deepEqual(layout.room,{left:0,right:375,top:0,bottom:812},'the room fills the phone viewport');
  assert.equal(layout.background,'rgb(0, 0, 0)');assert.equal(layout.far,'rgb(0, 0, 0)');
- assert.ok(layout.left.right<layout.character.left&&layout.right.left>layout.character.right,'thought bubbles flank the character');
+ assert.ok(layout.left.bottom<=812&&layout.right.bottom<=812,'both compact choices fit on screen');
+ assert.ok(layout.left.top>=layout.character.bottom&&layout.right.top>=layout.character.bottom,'exercise choices sit below the foreground character');
+ assert.ok(Math.abs((layout.timer.left+layout.timer.right)/2-(layout.orbit.left+layout.orbit.right)/2)<2,'session timer is centered on the breathing circle');
+ assert.ok(Math.abs((layout.timer.top+layout.timer.bottom)/2-(layout.orbit.top+layout.orbit.bottom)/2)<2,'session timer sits exactly at the circle center');
+ assert.ok(layout.count.top<layout.timer.top,'large breath count sits above the centered timer');
  assert.ok(layout.left.top>=0&&layout.left.bottom<=812&&layout.right.top>=0&&layout.right.bottom<=812,'both choices fit on screen');
  const open=await layers(page);
  assert.deepEqual(open.map(l=>l.depth),['far','mid','near']);
  for(const l of open)assert.match(l.filter,/^grayscale\(1\)/,l.depth+' starts black and white');
  assert.equal(await page.locator('.meditation-coach .myr5-companion-card').count(),1,'the live coach card sits in the mid layer');
+ assert.equal(await page.locator('.room-art').count(),1,'offline pixel landmarks are visible in the far layer');
+ assert.equal(await page.locator('.coach-pixel').count(),1,'the four-legged pixel coach is present behind the character');
+ assert.equal(await page.locator('.breathing-orbit').count(),1,'the circle contains a large count and the session timer');
+ assert.deepEqual(await page.locator('.meditation-character canvas').evaluate(canvas=>[canvas.width,canvas.height]),[64,96],'the player Gala avatar retains its native pixel resolution');
+ assert.equal(await page.locator('[data-pose-choice] [data-pose="seated"]').count(),1);assert.equal(await page.locator('[data-pose-choice] [data-pose="standing"]').count(),1,'both cosmetic character poses remain selectable');
  assert.equal(await page.evaluate(()=>document.body.dataset.shipView),'true','pod.mjs leaves a borrowed card alone');
  const log=await creature(page);
  for(const call of [['stage','overlay'],['sleep',true],['preview',{body:DOG,headFrom:DOG,armsFrom:DOG,feetFrom:DOG}]])assert.ok(called(log,...call),JSON.stringify(call));
@@ -99,10 +111,28 @@ test('open: three black-and-white peering layers, the big meditation coach borro
  await context.close();
 });
 
-test('reduced motion: dragging never moves the layers; an unavailable coach body says the user\'s own coach sleeps in',async()=>{
+test('one 3:30 breathing round counts breaths, retains pause time, and lets the user skip the optional hold',async()=>{
+ const {context,page}=await openRoom();await page.locator('[data-pose="standing"]').click();
+ await page.locator('[data-mode="wim-hof"]').click();await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:30 remaining');
+ assert.equal(await page.locator('[data-meditation-scene]').getAttribute('data-pose'),'standing','pose is cosmetic and independent of the seated breathing instruction');
+ const remaining=async()=>{const [m,s]=(await page.locator('[data-session-clock]').textContent()).split(':').map(Number);return m*60+s;};
+ await page.clock.runFor(5000);assert.ok([204,205,206].includes(await remaining()));
+ const pausedAt=await remaining();await page.locator('[data-breath-pause]').click();await page.clock.runFor(10000);assert.ok(Math.abs(await remaining()-pausedAt)<=1,'pause retains elapsed session time');
+ await page.locator('[data-breath-pause]').click();await page.clock.runFor(5000);assert.ok(Math.abs(await remaining()-(pausedAt-5))<=1,'resume continues from retained time');
+ await page.clock.runFor(11000);assert.equal(await phase(page),'breathe');assert.equal(await page.locator('[data-breath-count]').textContent(),'1');
+ await page.clock.runFor(3667);assert.equal(await page.locator('[data-breath-count]').textContent(),'2');
+ await page.clock.runFor(109000);assert.equal(await phase(page),'optional-hold');
+ await page.locator('[data-skip-hold]').click();assert.equal(await phase(page),'rest','skip returns to normal breathing');assert.equal(await page.locator('[data-skip-hold]').isHidden(),true);
+ assert.equal(await page.locator('[data-breath-exit]').isVisible(),true,'stop is available during the final calm period');
+ await page.locator('[data-breath-exit]').click();assert.equal(await phase(page),'');assert.equal(await count(page,'/api/breathing/complete'),0);
+ await context.close();
+});
+
+test('reduced motion: dragging never moves the layers; an unavailable body leaves the four-legged room figure visible',async()=>{
  const {context,page}=await openRoom({reducedMotion:'reduce',query:'?nobody'});
  assert.deepEqual(await drag(page,80),{far:0,mid:0,near:0});
- await page.waitForFunction(()=>/your own coach is sleeping in/.test(document.querySelector('.meditation-speech').textContent));
+ assert.equal(await page.locator('.coach-pixel').isVisible(),true);
+ assert.equal(await page.locator('.meditation-coach .myr5-companion-card').evaluate(card=>card.hidden),true);
  await context.close();
 });
 
@@ -117,21 +147,24 @@ test('a full session: colour returns to every layer, then the coach wakes, turns
  for(const call of [['sleep',false],['face',Math.PI/2],['walk',true]])assert.ok(called(log,...call),JSON.stringify(call));
  assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-wander')));
  await page.locator('[data-breath-exit]').click(); // "Done"
- assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open&&!d.classList.contains('smacked')),true);
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'completed sessions close normally');
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('smacked')||d.classList.contains('coach-lunge')),false,'completion does not trigger the early-exit bounce');
  await context.close();
 });
 
-test('Stop now: the coach wakes, lunges and smacks, the wormhole hook runs outward, and the room closes',async()=>{
- const {context,page}=await openRoom({query:'?portal'});
+test('circle exit abandons immediately without saving, bounces briefly, then closes',async()=>{
+ const {context,page}=await openRoom();
  await start(page,'wim-hof');await page.clock.runFor(5000);
  await page.locator('[data-breath-exit]').click();
- const log=await creature(page);assert.ok(called(log,'sleep',false)&&called(log,'play','encourage'),'onEarlyExit woke the coach');
- assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-lunge')));
- await page.clock.runFor(300);assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('smacked')));
- await page.clock.runFor(500);
- await page.waitForFunction(()=>!document.querySelector('.meditation-panel').open);
- const wormhole=(await creature(page)).find(([name])=>name==='wormhole');assert.equal(wormhole?.[1]?.direction,'out');
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),true);
+ assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);
+ assert.equal(await page.locator('[data-breath-run]').isHidden(),true,'active clock is abandoned before animation finishes');
+ assert.equal(await phase(page),'');
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('smacked')&&d.classList.contains('coach-lunge')),true,'the requested cartoon bounce starts immediately');
  assert.equal(await page.evaluate(p=>window.__calls.filter(c=>c===p).length,'/api/breathing/complete'),0,'nothing saved');
+ await page.clock.runFor(250);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),true,'bounce has a brief visible interval');
+ await page.clock.runFor(350);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'room closes after the brief bounce');
+ await page.clock.runFor(211000);assert.equal(await count(page,'/api/breathing/complete'),0,'abandoned session cannot complete later');
  await context.close();
 });
 

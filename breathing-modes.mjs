@@ -13,7 +13,20 @@ import {EXERCISES} from './exercise-library.mjs';
 import {BREATHING_MS} from './combat.mjs';
 
 export const PENDING_WELLNESS_REVIEW = true;
-export const SEATED_ONLY_NOTICE = 'Seated only. Never while standing, driving, or in or near water.';
+const guidedCore = {durationMs:210000,settleMs:20500,breaths:30,breathMs:110000,inhaleMs:8500/3,exhaleMs:2500/3,transitionMs:2500,optionalPauseMs:30000,recoveryInhaleMs:3000,recoveryPauseMs:15000,closingBreathingMs:29000};
+export const GUIDED_ROUND_TIMING = Object.freeze(guidedCore);
+export const GUIDED_ROUND_MS = GUIDED_ROUND_TIMING.durationMs;
+export const GENTLE_DIALOGUE = Object.freeze([
+ 'Get comfortable.',
+ 'Breathe in gently.',
+ 'Breathe out softly.',
+ 'Keep the breath easy.',
+ 'Feel your support.',
+ 'Inhale when ready.',
+ 'Return to normal.',
+ 'Stop or skip anytime.'
+]);
+export const SEATED_ONLY_NOTICE = 'Practice seated or lying down. The standing character pose is visual only, not a standing practice. Never while driving or in or near water.';
 export const NO_MEDICAL_CLAIM = 'A breathing practice, not medical treatment or advice. Stop any time, and breathe normally if you feel dizzy or unwell.';
 
 const stances = ids => Object.freeze(ids.filter(id => EXERCISES[id]).map(id => Object.freeze({id, name: EXERCISES[id].name, cue: EXERCISES[id].cue})));
@@ -21,10 +34,10 @@ const stances = ids => Object.freeze(ids.filter(id => EXERCISES[id]).map(id => O
 export const BREATHING_MODES = Object.freeze({
  'wim-hof': Object.freeze({
   id: 'wim-hof',
-  title: 'Seated intense breathing',
-  subtitle: 'Wim Hof-style rounds: deep breaths, then a breath-hold.',
+  title: 'One guided breathing round',
+  subtitle: '3:30 · 30 easy breaths with an optional pause.',
   seatedOnly: true,
-  rounds: 3, breathsPerRound: 15, inhaleMs: 1200, exhaleMs: 1200, holdMs: 15000, recoveryHoldMs: 8000,
+  rounds: 1, breathsPerRound: GUIDED_ROUND_TIMING.breaths, inhaleMs: GUIDED_ROUND_TIMING.inhaleMs, exhaleMs: GUIDED_ROUND_TIMING.exhaleMs, holdMs: GUIDED_ROUND_TIMING.optionalPauseMs, recoveryHoldMs: GUIDED_ROUND_TIMING.recoveryPauseMs, recoveryInhaleMs:GUIDED_ROUND_TIMING.recoveryInhaleMs,transitionMs:GUIDED_ROUND_TIMING.transitionMs,breathMs:GUIDED_ROUND_TIMING.breathMs,settleMs: GUIDED_ROUND_TIMING.settleMs,
  }),
  'tai-chi': Object.freeze({
   id: 'tai-chi',
@@ -42,12 +55,15 @@ export function buildScript(id) {
  const m = BREATHING_MODES[id];
  if (!m) throw Error('Unknown breathing mode: ' + id);
  const pace = {inhaleMs: m.inhaleMs, exhaleMs: m.exhaleMs}, phases = [];
- if (id === 'wim-hof') for (let r = 1; r <= m.rounds; r++) {
-  const tag = `Round ${r} of ${m.rounds}`;
+ if (id === 'wim-hof') {
   phases.push(
-   {key: 'breathe', label: `${tag} · ${m.breathsPerRound} deep breaths`, ms: m.breathsPerRound * (m.inhaleMs + m.exhaleMs), pace},
-   {key: 'hold', label: `${tag} · Breathe out and hold`, ms: m.holdMs},
-   {key: 'recover', label: `${tag} · Breathe in and hold`, ms: m.recoveryHoldMs},
+   {key:'settle',label:'Settle comfortably',ms:m.settleMs,dialogue:GENTLE_DIALOGUE[0]},
+   {key:'breathe',label:'One round · 30 easy breaths',ms:m.breathMs,pace,dialogue:GENTLE_DIALOGUE[1]},
+   {key:'transition',label:'Let the last exhale soften',ms:m.transitionMs,dialogue:'Easy exhale. Stay comfortable.'},
+   {key:'optional-hold',label:'Optional pause · skip whenever you like',ms:m.holdMs,dialogue:'Never force it. Breathe normally.'},
+   {key:'recovery',label:'Return to easy breathing',ms:m.recoveryInhaleMs,dialogue:GENTLE_DIALOGUE[7]},
+   {key:'recovery-hold',label:'Optional recovery pause · skip anytime',ms:m.recoveryHoldMs,dialogue:'Never force it. Breathe normally.'},
+   {key:'rest',label:'Let your breathing return to its natural rhythm',ms:GUIDED_ROUND_TIMING.closingBreathingMs,dialogue:GENTLE_DIALOGUE[7]},
   );
  } else for (const s of m.stances) phases.push(
   {key: 'hold', label: `Hold: ${s.name}`, ms: m.stanceHoldMs, pace, stanceId: s.id, cue: s.cue},

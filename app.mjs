@@ -18,8 +18,12 @@ import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
 import {mountRoutes,hashRoute} from './modules/routes.mjs';
+import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
 mountRoutes();
+let phoneOrientation=mountPhoneOrientation();
+window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=null;});
+window.addEventListener('pageshow',event=>{if(event.persisted&&!phoneOrientation)phoneOrientation=mountPhoneOrientation();});
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});

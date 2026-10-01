@@ -19,6 +19,6 @@ export function importCreature(raw:string){
 export function loadRecipe(storage:Storage){const raw=storage.getItem(RECIPE_KEY);return raw?importCreature(raw):fresh();}
 export function exportCompanion(recipe:unknown){return JSON.stringify({format:'myr5-companion',version:1,rigVersion:1,recipe:importCreature(JSON.stringify(recipe))},null,2);}
 export function motionSettings(raw:string|null){
- try {const d=JSON.parse(raw||'{}');return {amount:Number.isFinite(d?.amount)?Math.max(0,Math.min(1.5,d.amount)):0.65,reduced:typeof d?.reduced==='boolean'?d.reduced:false,ambient:d?.ambient!==false};}
- catch{return {amount:.65,reduced:false,ambient:true};}
+ try {const d=JSON.parse(raw||'{}');return {amount:1.5,reduced:typeof d?.reduced==='boolean'?d.reduced:false,ambient:d?.ambient!==false};}
+ catch{return {amount:1.5,reduced:false,ambient:true};}
 }

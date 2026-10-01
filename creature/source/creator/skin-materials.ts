@@ -5,21 +5,37 @@ export type InstalledSkin={id:string;displayName:string;track:string;maps:Partia
 export type PaletteTriad={primary:string;secondary:string;accent:string};
 
 const SPACE:Partial<Record<SkinMapName,'srgb'|'linear'>>={basecolor:'srgb',tintMask:'srgb',emissive:'srgb',normal:'linear',roughness:'linear',height:'linear',metalness:'linear',ao:'linear',opacity:'linear'};
+export type SkinTextureCache=Map<Uint8Array,Partial<Record<'srgb'|'linear',Promise<T.Texture>>>>;
 function textureFrom(bytes:Uint8Array,colorSpace:'srgb'|'linear',owned:Set<T.Texture>):Promise<T.Texture>{
  const url=URL.createObjectURL(new Blob([bytes],{type:'image/webp'}));
  return new Promise((resolve,reject)=>new T.TextureLoader().load(url,texture=>{URL.revokeObjectURL(url);texture.colorSpace=colorSpace==='srgb'?T.SRGBColorSpace:T.NoColorSpace;texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.needsUpdate=true;owned.add(texture);resolve(texture);},undefined,error=>{URL.revokeObjectURL(url);reject(error||new Error('Skin texture could not be decoded.'));}));
 }
 
+async function loadTexture(bytes:Uint8Array,colorSpace:'srgb'|'linear',owned:Set<T.Texture>,cache?:SkinTextureCache):Promise<T.Texture>{
+ if(!cache)return textureFrom(bytes,colorSpace,owned);
+ let spaces=cache.get(bytes);if(!spaces){spaces={};cache.set(bytes,spaces);}
+ let pending=spaces[colorSpace];if(!pending){pending=textureFrom(bytes,colorSpace,owned);spaces[colorSpace]=pending;pending.catch(()=>{if(cache.get(bytes)===spaces&&spaces[colorSpace]===pending){delete spaces[colorSpace];if(!spaces.srgb&&!spaces.linear)cache.delete(bytes);}});}
+ return pending;
+}
+
+/** Decode every supported map before a caller stages changes to any material. */
+export async function loadInstalledSkinTextures(skin:InstalledSkin,owned:Set<T.Texture>,cache?:SkinTextureCache):Promise<Map<SkinMapName,T.Texture>>{
+ const entries=Object.entries(skin.maps).filter(([name,bytes])=>name!=='preview'&&!!SPACE[name as SkinMapName]&&bytes instanceof Uint8Array) as [SkinMapName,Uint8Array][];
+ const loaded=new Map<SkinMapName,T.Texture>();
+ const results=await Promise.allSettled(entries.map(async([name,bytes])=>loaded.set(name,await loadTexture(bytes,SPACE[name]!,owned,cache))));
+ const failed=results.find((result):result is PromiseRejectedResult=>result.status==='rejected');
+ if(failed){if(!cache)for(const texture of loaded.values()){owned.delete(texture);texture.dispose();}throw failed.reason;}
+ return loaded;
+}
+
 /** Apply only maps present in the verified packet. Missing maps retain existing material defaults. */
-export async function applyInstalledSkin(mesh:T.Mesh,skin:InstalledSkin,palette:PaletteTriad,owned:Set<T.Texture>):Promise<boolean>{
+export async function applyInstalledSkin(mesh:T.Mesh,skin:InstalledSkin,palette:PaletteTriad,owned:Set<T.Texture>,cache?:SkinTextureCache):Promise<boolean>{
  const entries=Object.entries(skin.maps).filter(([name,bytes])=>name!=='preview'&&!!SPACE[name as SkinMapName]&&bytes instanceof Uint8Array) as [SkinMapName,Uint8Array][];
  if(!entries.length)return false;
  // Some roster models only carry vertex colours. Give them deterministic local
  // cylindrical UVs so an installed finish never silently samples one pixel.
  if(!mesh.geometry.getAttribute('uv')){const position=mesh.geometry.getAttribute('position');mesh.geometry.computeBoundingBox();const box=mesh.geometry.boundingBox!,center=box.getCenter(new T.Vector3()),height=Math.max(1e-6,box.max.y-box.min.y),uv=new Float32Array(position.count*2);for(let i=0;i<position.count;i++){uv[i*2]=.5+Math.atan2(position.getZ(i)-center.z,position.getX(i)-center.x)/(2*Math.PI);uv[i*2+1]=(position.getY(i)-box.min.y)/height;}mesh.geometry.setAttribute('uv',new T.BufferAttribute(uv,2));}
- const loaded=new Map<SkinMapName,T.Texture>();
- try{for(const [name,bytes] of entries)loaded.set(name,await textureFrom(bytes,SPACE[name]!,owned));}
- catch(error){for(const texture of loaded.values()){owned.delete(texture);texture.dispose();}throw error;}
+ const loaded=await loadInstalledSkinTextures(skin,owned,cache);
  if(!mesh.geometry.getAttribute('uv2')&&mesh.geometry.getAttribute('uv'))mesh.geometry.setAttribute('uv2',mesh.geometry.getAttribute('uv').clone());
  for(const raw of Array.isArray(mesh.material)?mesh.material:[mesh.material]){
   const material=raw as T.MeshPhysicalMaterial;

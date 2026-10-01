@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-// v63: every board's transition is the original full-strength rainbow wormhole; no board tunnel material is loaded or mixed in.
-test('portal transitions use the original rainbow wormhole for every board',async()=>{
+test('portal transitions select board palettes and optional materials while retaining Quilt and all-rainbow paths',async()=>{
  const src=await readFile(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
- assert(!/portal-tunnel-/.test(src),'portal.mjs must not load board tunnel materials');
- assert(!/tunnelMaterial|tunnelCore|material\(a,v,z/.test(src),'no per-board tunnel material in the shader');
- assert(!/25% over every board/.test(src),'no 25% overlay');
+ assert.match(src,/import\(`\.\/portal-tunnel-\$\{capturedBoardId\}\.mjs`\)/,'optional material import is keyed by the captured board');
+ assert.match(src,/if\(cancelled\|\|!ph\.glass\.isConnected\|\|capturedSignal\?\.aborted\)return/,'a stopped or removed phase cannot attach after loading');
+ assert.match(src,/all\|\|capturedBoardId==='quilt'\?ringColours\(color,all\)/,'Quilt and all-rainbow retain their original ring sequence');
+ assert.match(src,/const materialLoads=new Map\(\)/,'material imports are cached');
  const css=await readFile(new URL('../modules/portal/portal.css',import.meta.url),'utf8');
- assert(!/data-tunnel=/.test(css),'no per-board tunnel CSS');
+ assert.match(css,/portal-palette select/,'palette choice remains a native accessible select');
 });

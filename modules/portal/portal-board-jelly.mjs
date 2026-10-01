@@ -16,6 +16,10 @@
 const RK=12,RW=10.5,RDECAY=1.7,RSPREAD=1.8,SLOSH=.5; // spatial freq, temporal freq (rad/s: ~2.5 wobbles in 1.5 s), time decay, spatial decay (all in "face widths"), lateral/heave ratio
 const TAP_AMP=.065,DRAG_AMP=.03,RELEASE_AMP=.03; // ripple heave at the centre, in face widths
 const DENT_AMT=2.6,DENT_RAD=1.4; // finger dent vs. DEFAULT_DISPLACE (ice): deeper, wider/softer falloff
+let selectedTint=null,trail3d=null,trail2d=null;
+const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
+function tintRgb(hex,factor=1){const m=hex?.match(/^#([0-9a-f]{6})$/i);if(!m)return null;const n=parseInt(m[1],16);return `rgb(${[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v*factor)).join(',')})`;}
+function writeLinearTint(color,hex){const n=parseInt((hex||'#ffffff').slice(1),16),linear=c=>{const s=c/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;};color.r=linear(n>>16);color.g=linear((n>>8)&255);color.b=linear(n&255);color.isColor=true;}
 // Ian: bones rigid + segmented, jelly wobbles (2026-09-22)
 // zFrac: bone threshold as a fraction of depth back->front (jelly face sits ~.89-.93, rods .94-1);
 // seg: segment length in face widths, with centre: a face uv (v down) the grid is centred on — the
@@ -137,11 +141,11 @@ if(uTrailN>0&&vPlanar.x>=uTrailBounds.x&&vPlanar.x<=uTrailBounds.z&&vPlanar.y>=u
  vec2 tilt=(dir*(${F(T.lipTilt/.4289)}*amp*x*g)-dir*${F(T.wallTilt)}*inside*bd/max(hw,1e-5))*keep;
  normal=normalize(normal+vec3(tilt.x,-tilt.y,0.0));
  float lit=max(0.0,dot(vec2(-dir.x,dir.y),vec2(${F(T.light[0])},${F(T.light[1])}))); // wall/lip whose inward normal faces the light
- diffuseColor.rgb=mix(diffuseColor.rgb,mix(${V3(T.wallRGB)},${V3(T.deepRGB)},dep),inside*${F(T.interior)});
- totalEmissiveRadiance+=${V3(T.litRGB)}*${F(T.litWall)}*lit*(1.0-dep)*inside*open;
+ diffuseColor.rgb=mix(diffuseColor.rgb,mix(mix(${V3(T.wallRGB)},${V3(T.deepRGB)},dep),uTrailTint,uTrailTintMix),inside*${F(T.interior)});
+ totalEmissiveRadiance+=mix(${V3(T.litRGB)},uTrailTint,uTrailTintMix)*${F(T.litWall)}*lit*(1.0-dep)*inside*open;
  roughnessFactor=mix(mix(roughnessFactor,0.12,g*keep*open),${F(T.interiorRough)},inside);
- totalEmissiveRadiance+=${V3(T.lipRGB)}*${F(T.lipGlow)}*g*keep*(1.0-inside)*abs(amp)+${V3(T.edgeRGB)}*${F(T.edgeGlow)}*edge*(0.3+0.7*lit)*open;
- diffuseColor.rgb=mix(diffuseColor.rgb,${V3(T.deepRGB)},${F(T.seamDark)}*(1.0-smoothstep(0.0,${F(T.seam)}+aa,bd))*(1.0-open)*keep);
+ totalEmissiveRadiance+=mix(${V3(T.lipRGB)},uTrailTint,uTrailTintMix)*${F(T.lipGlow)}*g*keep*(1.0-inside)*abs(amp)+mix(${V3(T.edgeRGB)},uTrailTint,uTrailTintMix)*${F(T.edgeGlow)}*edge*(0.3+0.7*lit)*open;
+ diffuseColor.rgb=mix(diffuseColor.rgb,mix(${V3(T.deepRGB)},uTrailTint,uTrailTintMix),${F(T.seamDark)}*(1.0-smoothstep(0.0,${F(T.seam)}+aa,bd))*(1.0-open)*keep);
 }
 `;
 
@@ -166,7 +170,7 @@ function pushTrail(id,u,v,join){
  const p={u,v,t:clock(),prev:prev||null};trailPush(S.trail,p);S.heads.set(id,p);
 }
 
-async function init({THREE,mesh,material,uniforms,scene,face,toWorld}){
+async function init({THREE,mesh,material,uniforms,scene,face,toWorld,wake}){
  material.roughness=.28;material.metalness=0;
  const rim=new THREE.DirectionalLight(0x9fe8ff,1.1);rim.position.set(.7,.6,.5);scene.add(rim); // cool highlight, upper-right-front
  uniforms.uRipple.value=Array.from({length:6},()=>new THREE.Vector4(0,0,0,0));
@@ -177,8 +181,9 @@ async function init({THREE,mesh,material,uniforms,scene,face,toWorld}){
  uniforms.uGridO.value=new THREE.Vector2((BONE.centre[0]-.5)*face.w-seg/2,(.5-BONE.centre[1])*face.h-seg/2); // face centred on 0
  uniforms.uRidgeAmp.value=BONE.ridgeAmp;uniforms.uRidgeFreq.value=2*Math.PI*BONE.ridgeFreq/seg;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;uniforms.uWobble.value=reduced?0:1;
+ uniforms.uTrailTint.value={r:1,g:1,b:1,isColor:true};writeLinearTint(uniforms.uTrailTint.value,selectedTint||'#ffffff');uniforms.uTrailTintMix.value=selectedTint?1:0;
  S={uniforms,toWorld,faceW:face.w,aspect:face.h/face.w,rippleVecs:uniforms.uRipple.value,nextSlot:0,lastSpawn:new Map(),
-    reduced,trail:[],heads:new Map(),epoch:null};
+    reduced,trail:[],heads:new Map(),epoch:null,wake};trail3d=S;
 }
 function press(id,u,v){
  S.lastSpawn.set(id,[u,v]);
@@ -201,7 +206,13 @@ function step(dt,frameNow){
  S.uniforms.uTrailBounds.value.set(...(b||[0,0,0,0]));
  return active||S.trail.length>0;
 }
-function dispose(){S=null;}
+function setJellyTint(hex,selected=true){
+ if(selected&&!validTint(hex))return;
+ selectedTint=selected?hex:null;
+ if(trail3d){writeLinearTint(trail3d.uniforms.uTrailTint.value,selectedTint||'#ffffff');trail3d.uniforms.uTrailTintMix.value=selectedTint?1:0;trail3d.wake?.();}
+ if(trail2d){trail2d.tint=selectedTint;trail2d.wake?.();}
+}
+function dispose(){if(S===trail3d)trail3d=null;S=null;}
 
 // R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth) as a translucent lime
 // slit on `paint` (drawn opaque, deeper down its middle, then faded as a whole by SLIT.alpha, so the round joins never
@@ -212,7 +223,8 @@ export function jellyGash(){
  const rgb=(c,k)=>`rgb(${c.map(v=>v*k*255|0)})`;
  const push=(id,u,v,join)=>{const prev=join?S.heads.get(id):null;if(prev&&Math.hypot(u-prev.u,(v-prev.v)*S.aspect)<TRAIL.step)return;const p={u,v,t:performance.now()/1000,prev:prev||null};trailPush(S.trail,p);S.heads.set(id,p);};
  return {
-  init({paint,glow}){S={paint,glow,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.height/paint.canvas.width,trail:[],heads:new Map()};},
+  init({paint,glow,wake}){S={paint,glow,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.height/paint.canvas.width,trail:[],heads:new Map(),wake,tint:selectedTint};trail2d=S;},
+  setTint(hex,selected=true){setJellyTint(hex,selected);},
   press(id,u,v){push(id,u,v,false);},
   move(id,u,v){push(id,u,v,true);},
   release(id,u,v){push(id,u,v,true);S.heads.delete(id);},
@@ -222,15 +234,16 @@ export function jellyGash(){
    const segs=[...live].filter(b=>b.prev&&live.has(b.prev)).map(b=>{const a=b.prev,age=t-(a.t+b.t)/2;return {age,w:gashWidth(age)*W,x0:a.u*W,y0:a.v*H,x1:b.u*W,y1:b.v*H};});
    const line=(c,s,width,{x0,y0,x1,y1})=>{c.strokeStyle=s;c.lineWidth=width;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();};
    const open=segs.filter(s=>s.w>.5);
-   for(const s of open)line(pc,SLIT.lime,s.w,s);for(const s of open)line(pc,SLIT.deep,s.w*SLIT.deepFrac,s); // the slit, opaque
+   const lime=S.tint?tintRgb(S.tint):SLIT.lime,deep=S.tint?tintRgb(S.tint,.42):SLIT.deep,seam=S.tint?tintRgb(S.tint,.82):SLIT.seam,edge=S.tint?tintRgb(S.tint,.92):rgb(TRAIL.edgeRGB,1);
+   for(const s of open)line(pc,lime,s.w,s);for(const s of open)line(pc,deep,s.w*SLIT.deepFrac,s); // the slit, opaque
    pc.globalCompositeOperation='destination-in';pc.fillStyle=`rgba(0,0,0,${SLIT.alpha})`;pc.fillRect(0,0,W,H);pc.globalCompositeOperation='source-over'; // then translucent
-   for(const s of segs)if(s.w<=.5){pc.globalAlpha=SLIT.seamAlpha*(1-Math.min(1,(s.age-TRAIL.close)/(TRAIL.life-TRAIL.close)));line(pc,SLIT.seam,W*TRAIL.seam,s);} // the healing tail
+   for(const s of segs)if(s.w<=.5){pc.globalAlpha=SLIT.seamAlpha*(1-Math.min(1,(s.age-TRAIL.close)/(TRAIL.life-TRAIL.close)));line(pc,seam,W*TRAIL.seam,s);} // the healing tail
    pc.globalAlpha=1;
-   for(const s of open)line(gc,rgb(TRAIL.edgeRGB,1),s.w+2*W*SLIT.rim,s); // the rim, the slit cut out of it
+   for(const s of open)line(gc,edge,s.w+2*W*SLIT.rim,s); // the rim, the slit cut out of it
    gc.globalCompositeOperation='destination-out';for(const s of open)line(gc,'#000',s.w,s);gc.globalCompositeOperation='source-over';
    return S.trail.length>0;
   },
-  dispose(){S=null;},
+  dispose(){if(S===trail2d)trail2d=null;S=null;},
  };
 }
 
@@ -238,11 +251,11 @@ export const jelly={
  id:'jelly',asset:'/pod/worlds/boards/jelly.glb',flip:false,background:'#0d160a',ink:false, // the gash is the trace trail: no portal ink line over it
  guide:{color:'#c8ffb0',alpha:.12,width:4},
  pattern:{left:.07,top:.055,right:.93,bottom:.87}, // measured in-browser against the carved oval's extremes
- uniforms:{uRipple:{value:[]},uHalfDepth:{value:1},uBoneZ:{value:1},uSeg:{value:1},uGridO:{value:null},uBoneFollow:{value:1},uRidgeAmp:{value:0},uRidgeFreq:{value:0},uTrail:{value:[]},uTrailN:{value:0},uTrailBounds:{value:null},uWobble:{value:1}},
+ uniforms:{uRipple:{value:[]},uHalfDepth:{value:1},uBoneZ:{value:1},uSeg:{value:1},uGridO:{value:null},uBoneFollow:{value:1},uRidgeAmp:{value:0},uRidgeFreq:{value:0},uTrail:{value:[]},uTrailN:{value:0},uTrailBounds:{value:null},uWobble:{value:1},uTrailTint:{value:null},uTrailTintMix:{value:0}},
  uniformDecls:'varying float vDepthF;\n',
  vertexDecls:'uniform vec4 uRipple[6];\nuniform float uHalfDepth;\nuniform float uBoneZ;\nuniform float uSeg;\nuniform vec2 uGridO;\nuniform float uBoneFollow;\nuniform float uRidgeAmp;\nuniform float uRidgeFreq;\n'+JELLY_FIELD,
- fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\n`, // fragment only (portal-board-glb.mjs)
+ fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\nuniform vec3 uTrailTint;\nuniform float uTrailTintMix;\n`, // fragment only (portal-board-glb.mjs)
  vertexDisplace:VERTEX_DISPLACE,
  fragment:FRAGMENT,
- init,press,move,release,step,dispose,trace2d:jellyGash,
+ init,press,move,release,step,dispose,setTint:setJellyTint,tintTarget:'trace',trace2d:jellyGash,
 };

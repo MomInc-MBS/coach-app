@@ -9,7 +9,7 @@ function person(userX=.3,{scale=1,wrist=null,knee=null,ankle=null,hide=[]}={}){
  set(11,userX-.08*scale,.3);set(12,userX+.08*scale,.3);set(23,userX-.05*scale,.3+.2*scale);set(24,userX+.05*scale,.3+.2*scale);
  set(25,userX-.05*scale,.3+.4*scale);set(26,userX+.05*scale,.3+.4*scale);
  set(27,userX-.05*scale,.3+.6*scale);set(28,userX+.05*scale,.3+.6*scale);
- set(15,userX-.12,.45);set(16,userX+.12,.45);
+ set(15,userX-.06,.45);set(16,userX+.06,.45); // hands by the hips: the coach box starts at the shoulder + gap, so a resting hand must not "hover" over it
  if(wrist)set(16,...wrist);if(knee)set(26,...knee);if(ankle)set(28,...ankle);
  return p;
 }
@@ -95,4 +95,118 @@ test('spins off screen, waits about two seconds, then walks back in',()=>{
 test('keeps its last spot when the user leaves the frame',()=>{
  const {m,s,t}=standing();const lost=m.update(null,t+33);
  assert.equal(lost.phase,'pausing');assert.ok(Math.abs(lost.x-s.x)<.01&&Math.abs(lost.feetY-s.feetY)<.01);
+});
+
+test('a hand held over the coach for one second grabs it by the head; a flick drops it', () => {
+  const { m, s: initialState, t } = standing(.3);
+  const cxcy = center(initialState.box);
+  let time = t;
+  // Hover through 0.99 s: no grab yet (grabSince is the first hovering frame, t+33)
+  while (time < t + 1000) {
+    const p = person(.3, { wrist: cxcy });
+    const r = m.update(p, time += 33);
+    assert.equal(r.phase, 'pausing');
+  }
+  // A tracker blink (no landmarks for a frame) must not restart the one-second count.
+  assert.equal(m.update(null, time += 33).phase, 'pausing');
+  // Next frame should be held
+  let r = m.update(person(.3, { wrist: cxcy }), time += 33);
+  assert.equal(r.phase, 'held');
+  // The box follows the hand from the next frame on: its top sits at the wrist.
+  r = m.update(person(.3, { wrist: cxcy }), time += 33);
+  assert.equal(r.phase, 'held');
+  assert.equal(m.update(null, time += 33).phase, 'held', 'a tracker blink keeps him hanging');
+  r = m.update(person(.3, { wrist: cxcy }), time += 33); // one seen frame re-arms the speed check
+  assert.ok(Math.abs(r.box.top - cxcy[1]) < .02);
+  // Flick the hand
+  const flickP = person(.3, { wrist: [cxcy[0] + .3, cxcy[1]] });
+  r = m.update(flickP, time += 33);
+  assert.equal(r.phase, 'dropped');
+  // dropMs + 100 ms of plain frames after the flick: back on the floor and walking.
+  const dropT = time;
+  while (time < dropT + COACH.dropMs + 100) {
+    const pPlain = person(.3, {});
+    r = m.update(pPlain, time += 33);
+  }
+  assert.ok(r.phase === 'walking' || r.phase === 'pausing', 'back on its feet (' + r.phase + ')');
+  assert.equal(r.dy, 0);
+  assert.equal(COACH.grabMs, 1000);
+});
+
+test('after eight seconds of counting he charges the user, swipes, falls, and judges their balance once per set', async () => {
+  const {m,t} = standing(.3);
+  let time = t, t0 = time;
+  t0 = time;
+  // Wait for charge
+  while (true) {
+    const s = m.update(person(.3), time += 33);
+    if (s.phase === 'charge') { assert.ok(true); assert.ok(time - 33 >= COACH.chargeAfterMs, 'charged too early'); break; }
+    if (time - t0 > 20000) throw new Error('did not charge in time');
+  }
+  t0 = time;
+  // Collect phases until impressed or laughing
+  const seenPhases = new Set();
+  while (true) {
+    const s = m.update(person(.3), time += 33);
+    seenPhases.add(s.phase);
+    if (s.phase === 'impressed' || s.phase === 'laughing') { assert.ok(seenPhases.has('swiping')); assert.ok(seenPhases.has('fallen')); assert.strictEqual(s.phase, 'impressed'); assert.ok(s.shift < COACH.steady); break; }
+    if (time - t0 > 15000) throw new Error('did not judge in time');
+  }
+  t0 = time;
+  // Wait for walking or pausing
+  while (true) {
+    const s = m.update(person(.3), time += 33);
+    if (s.phase === 'walking' || s.phase === 'pausing') { assert.strictEqual(s.rotation, 0); break; }
+    if (time - t0 > 10000) throw new Error('did not return to walking in time');
+  }
+  // Ensure no re-charge
+  const start = time;
+  t0 = time;
+  while (time - start < 20000) {
+    const s = m.update(person(.3), time += 33);
+    assert.notStrictEqual(s.phase, 'charge', 'recharged unexpectedly');
+  }
+  // Restart set
+  m.begin();
+  t0 = time;
+  let found = false;
+  while (!found && time - t0 < 30000) {
+    const s = m.update(person(.3), time += 33);
+    if (s.phase === 'charge') { found = true; break; }
+  }
+  assert.ok(found, 'did not re-charge after begin');
+});
+
+test('a user who wobbles while he lies there gets laughed at', async () => {
+  const {m,t} = standing(.3);
+  let time = t, t0 = time;
+  t0 = time;
+  // Wait for charge
+  while (true) {
+    const s = m.update(person(.3), time += 33);
+    if (s.phase === 'charge') break;
+    if (time - t0 > 20000) throw new Error('did not charge in time');
+  }
+  t0 = time;
+  // Swipe and fall
+  while (true) {
+    const s = m.update(person(.3), time += 33);
+    if (s.phase === 'fallen') break;
+    if (time - t0 > 15000) throw new Error('did not fall in time');
+  }
+  t0 = time;
+  // Wobble during judgment
+  let wobblePhase = false;
+  while (!wobblePhase && time - t0 < 20000) {
+    const s = m.update(person(.3 + .14), time += 33);
+    if (s.phase === 'impressed' || s.phase === 'laughing') { wobblePhase = true; assert.strictEqual(s.phase, 'laughing'); assert.ok(s.shift >= COACH.steady); break; }
+  }
+  assert.ok(wobblePhase, 'did not reach judgment after wobble');
+});
+
+test('with play off (four-legged coaches) a hover never grabs and he never charges',()=>{
+ const m=new CoachMotion({aspect:.46,now:0,random:seeded(),play:false});m.update(person(.3),33);m.begin();
+ let time=33,cxcy=null;const phases=new Set();
+ while(time<30000){const s=m.update(person(.3,cxcy?{wrist:cxcy}:{}),time+=33);phases.add(s.phase);if(!cxcy&&s.phase==='pausing')cxcy=center(s.box);}
+ assert.ok(cxcy,'stood beside the user');assert.ok(phases.has('pausing'));assert.ok(!phases.has('held'),'no grab');assert.ok(!phases.has('charge'),'no charge');
 });

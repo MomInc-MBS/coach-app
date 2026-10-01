@@ -32,7 +32,13 @@
 <link rel="stylesheet" href="/pod/weapon-abilities.css">
 <link rel="stylesheet" href="/coach-hub.css"><link rel="stylesheet" href="/settings-frame.css"><link rel="stylesheet" href="/settings-crt.css"><link rel="stylesheet" href="/achievements-board.css"><link rel="stylesheet" href="/pod/home-character.css">
 <link rel="stylesheet" href="/camera-workout.css">
+<link rel="stylesheet" href="/pod/ship-interior.css">
 <div class="device-bezel" aria-hidden="true"><i class="case-screw case-tl"></i><i class="case-screw case-tr"></i><i class="case-screw case-bl"></i><i class="case-screw case-br"></i></div>
+<div id="podShipBackdrop" class="pod-ship-backdrop" aria-hidden="true" data-motion-running="false">
+ <img class="pod-ship-nebula" src="/pod/assets/nebula.png" alt="" draggable="false">
+ <img class="pod-ship-cutout" src="/pod/assets/ship-interior-cutout.png" alt="" draggable="false">
+ <span class="pod-ship-lights" aria-hidden="true"></span>
+</div>
 <header class="ship-header"><a class="mom-brand" href="#pod" aria-label="MOM Inc training pod"><img src="/pod/mom-inc-mark-96.webp" width="36" height="36" alt=""><span>MOM<span>INC.</span></span></a><div class="ship-location">TRAINING POD</div><button id="openSettings" class="icon-button" aria-label="Open pod settings">☷</button></header>
 <main id="homeScreen" class="pod-page">
  <nav class="pod-header-actions" aria-label="Pod character"><button id="openIdentity" type="button"><canvas id="miniAvatar" width="64" height="96" aria-hidden="true"></canvas><span id="guestLabel">Anonymous guest</span></button><a data-access-route="/creature/index.html" href="/creature/index.html">Customize coach</a></nav>

@@ -27,6 +27,9 @@ const POOL=6,LEVELS=16,FRAME_OPTS={quality:'normal',timeline:{crackStart:0,crack
 // CORE: the crack line (a tight cyan GLINT round it); EDGE: the dark rim, EDGE_PX each side; BIG_EDGE: the big crack's
 // stroke. Paint px at 1024.
 const CORE='#d6fbff',GLINT='rgba(120,230,255,.9)',EDGE='rgba(2,20,32,.95)',EDGE_PX=3,BIG_EDGE=4;
+let selectedTint=null;
+const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
+function tintRgba(hex,alpha){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${alpha})`;}
 
 // --- Pure lifecycle helpers (age in ms since spawn) ------------------------------------------
 // Big crack growth 0..1: grow, hold at 1, shrink back to 0; reduced motion is fully grown until the hold ends.
@@ -130,7 +133,7 @@ function spawnTrail(p,x,y,dx,dy,k){
  p.x=x;p.y=y;S.dirty=true;
 }
 function redraw(now){
- const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale,pad=EDGE_PX*S.scale,glint=()=>{gc.shadowColor=GLINT;gc.shadowBlur=3*S.scale;},flat=()=>{gc.shadowBlur=0;};
+ const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale,pad=EDGE_PX*S.scale,core=S.tint||CORE,glintColor=S.tint?tintRgba(S.tint,.9):GLINT,glint=()=>{gc.shadowColor=glintColor;gc.shadowBlur=3*S.scale;},flat=()=>{gc.shadowBlur=0;};
  gc.clearRect(0,0,S.glow.canvas.width,S.glow.canvas.height);
  gc.save();gc.lineJoin='round';
  for(const c of S.live){ // dark rim, then the core
@@ -139,7 +142,7 @@ function redraw(now){
   gc.setTransform(1,0,0,1,0,0);gc.translate(c.x,c.y);gc.rotate(c.rot);gc.translate(-f,-f);
   gc.globalAlpha=crackAlpha(age,S.reduced);const p=frame(c.i,k);
   flat();gc.strokeStyle=EDGE;gc.lineWidth=(BIG_EDGE+2*EDGE_PX)*S.scale;gc.stroke(p);
-  glint();gc.fillStyle=gc.strokeStyle=CORE;gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale;gc.stroke(p);
+  glint();gc.fillStyle=gc.strokeStyle=core;gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale;gc.stroke(p);
  }
  if(S.trail.length){ // every live crack in one path per pass: the rims (padded), then the cores
   gc.setTransform(1,0,0,1,0,0);gc.globalAlpha=1;
@@ -149,18 +152,19 @@ function redraw(now){
    const v=visible(c.hair,r);if(v.length>1)ribbon(gc,v,TRAIL.hair*h,0,1,pad);
   }};
   flat();cracks(pad);gc.fillStyle=EDGE;gc.fill();
-  glint();cracks(0);gc.fillStyle=CORE;gc.fill();
+  glint();cracks(0);gc.fillStyle=core;gc.fill();
  }
  gc.restore();
  S.glow.texture.needsUpdate=true;
 }
 
-function init({paint,glow,toWorld}){
+function init({paint,glow,toWorld,wake}){
  const w=paint.canvas.width;
  S={glow,toWorld,live:[],trail:[],pool:[],next:Math.floor(Math.random()*POOL),drag:new Map(),dirty:false,
   field:Math.round(w*BIG.frac),scale:w/1024,sx:w,sy:paint.canvas.height,
-  reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
+  reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,tint:selectedTint,wake};
 }
+function setTint(hex,selected=true){if(selected&&!validTint(hex))return;selectedTint=selected?hex:null;if(S){S.tint=selectedTint;S.dirty=true;S.wake?.();}}
 function press(id,u,v){
  const x=u*S.sx,y=v*S.sy;
  S.drag.set(id,{u,v,x,y,left:rand(TRAIL.spacing)});
@@ -192,9 +196,9 @@ function step(dt,now){
  return S.live.length+S.trail.length>0;
 }
 function dispose(){S=null;}
-return {init,press,move,release,step,dispose};
+return {init,setTint,press,move,release,step,dispose};
 }
 
 // fragment (3D): the ice under the glow layer darkens by its alpha, so the dark rim (which emits nothing) shows as dark.
-export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},
+export const ice={id:'ice',asset:'/pod/worlds/boards/ice.glb',flip:false,background:'#0b1a26',guide:{color:'#eaf7ff',alpha:.22,width:5},pattern:{left:.035,top:.025,right:.965,bottom:.78},tintTarget:'trace',
  fragment:'diffuseColor.rgb*=1.0-0.85*glo.a;',...iceEffect(),trace2d:iceEffect};

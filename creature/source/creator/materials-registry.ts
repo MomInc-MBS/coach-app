@@ -6,6 +6,7 @@ import {isGranted, grantUnlock, type UnlockKind} from './unlock-store';
 import PALETTE_DATA from './palettes.json';
 import {TEXTURE_SWAP} from '../../../battle-pass-rewards.mjs';
 import {RECIPE_KEY} from '../profile';
+import {builtinSurfaceProfile} from './material-patterns';
 export {grantUnlock};
 
 export type UnlockRule = 'default' | 'battle-pass' | 'aura-milestone';
@@ -54,39 +55,39 @@ const SIMPLE_COLORS: ColorDef[] = [
 ];
 
 // --- Battle-pass textures: PLAN §6.2 / plan/muse/item-catalog.json (D14: 3 per style, D16: L1/L3/L5).
-// No files exist yet — familyId -1 means "no renderable pattern"; resolveRegionMaterial() below
-// falls back to Flat if one is ever selected before it is actually unlocked *and* delivered. ---
+// Every catalogue option below has a stable built-in procedural pattern and PBR profile.
+// Built-in surfaces render locally; unlock policy remains independent from pattern availability. ---
 const SLOT_LEVEL: Record<string, 1 | 3 | 5> = { 'texture-1': 1, 'texture-2': 3, 'texture-3': 5 };
-const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: string }[] = [
- { id: 'chest-plate-steel', name: 'Plate Steel', slot: 'texture-1', track: 'chest' },
- { id: 'chest-rubber-grip', name: 'Rubber Grip', slot: 'texture-2', track: 'chest' },
- { id: 'chest-chain-mail', name: 'Chain Mail', slot: 'texture-3', track: 'chest' },
- { id: 'quads-track-rubber', name: 'Track Rubber', slot: 'texture-1', track: 'quads' },
- { id: 'quads-denim', name: 'Denim', slot: 'texture-2', track: 'quads' },
- { id: 'quads-hex-tread', name: 'Hex Tread', slot: 'texture-3', track: 'quads' },
- { id: 'glutes-sweatshirt-fleece', name: 'Sweatshirt Fleece', slot: 'texture-1', track: 'glutes' },
- { id: 'glutes-quilted', name: 'Quilted', slot: 'texture-2', track: 'glutes' },
- { id: 'glutes-peach', name: 'Peach', slot: 'texture-3', track: 'glutes' },
- { id: 'arms-hammered-bronze', name: 'Hammered Bronze', slot: 'texture-1', track: 'arms' },
- { id: 'arms-rope', name: 'Rope', slot: 'texture-2', track: 'arms' },
- { id: 'arms-leather', name: 'Leather', slot: 'texture-3', track: 'arms' },
- { id: 'yoga-cork', name: 'Cork', slot: 'texture-1', track: 'yoga' },
- { id: 'yoga-woven-mat', name: 'Woven Mat', slot: 'texture-2', track: 'yoga' },
- { id: 'yoga-petal', name: 'Petal', slot: 'texture-3', track: 'yoga' },
- { id: 'martial-arts-canvas-gi', name: 'Canvas Gi', slot: 'texture-1', track: 'martial-arts' },
- { id: 'martial-arts-bamboo', name: 'Bamboo', slot: 'texture-2', track: 'martial-arts' },
- { id: 'martial-arts-dragon-scale', name: 'Dragon Scale', slot: 'texture-3', track: 'martial-arts' },
- { id: 'cardio-mesh', name: 'Mesh', slot: 'texture-1', track: 'cardio' },
- { id: 'cardio-terry-cloth', name: 'Terry Cloth', slot: 'texture-2', track: 'cardio' },
- { id: 'cardio-pebble-path', name: 'Pebble Path', slot: 'texture-3', track: 'cardio' },
- { id: 'meditation-sand-garden', name: 'Sand Garden', slot: 'texture-1', track: 'meditation' },
- { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation' },
- { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation' },
+const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: string; familyId:number }[] = [
+ { id: 'chest-plate-steel', name: 'Plate Steel', slot: 'texture-1', track: 'chest',familyId:32 },
+ { id: 'chest-rubber-grip', name: 'Rubber Grip', slot: 'texture-2', track: 'chest',familyId:33 },
+ { id: 'chest-chain-mail', name: 'Chain Mail', slot: 'texture-3', track: 'chest',familyId:34 },
+ { id: 'quads-track-rubber', name: 'Track Rubber', slot: 'texture-1', track: 'quads',familyId:35 },
+ { id: 'quads-denim', name: 'Denim', slot: 'texture-2', track: 'quads',familyId:36 },
+ { id: 'quads-hex-tread', name: 'Hex Tread', slot: 'texture-3', track: 'quads',familyId:37 },
+ { id: 'glutes-sweatshirt-fleece', name: 'Sweatshirt Fleece', slot: 'texture-1', track: 'glutes',familyId:38 },
+ { id: 'glutes-quilted', name: 'Quilted', slot: 'texture-2', track: 'glutes',familyId:39 },
+ { id: 'glutes-peach', name: 'Peach', slot: 'texture-3', track: 'glutes',familyId:40 },
+ { id: 'arms-hammered-bronze', name: 'Hammered Bronze', slot: 'texture-1', track: 'arms',familyId:41 },
+ { id: 'arms-rope', name: 'Rope', slot: 'texture-2', track: 'arms',familyId:42 },
+ { id: 'arms-leather', name: 'Leather', slot: 'texture-3', track: 'arms',familyId:43 },
+ { id: 'yoga-cork', name: 'Cork', slot: 'texture-1', track: 'yoga',familyId:44 },
+ { id: 'yoga-woven-mat', name: 'Woven Mat', slot: 'texture-2', track: 'yoga',familyId:45 },
+ { id: 'yoga-petal', name: 'Petal', slot: 'texture-3', track: 'yoga',familyId:46 },
+ { id: 'martial-arts-canvas-gi', name: 'Canvas Gi', slot: 'texture-1', track: 'martial-arts',familyId:47 },
+ { id: 'martial-arts-bamboo', name: 'Bamboo', slot: 'texture-2', track: 'martial-arts',familyId:48 },
+ { id: 'martial-arts-dragon-scale', name: 'Dragon Scale', slot: 'texture-3', track: 'martial-arts',familyId:49 },
+ { id: 'cardio-mesh', name: 'Mesh', slot: 'texture-1', track: 'cardio',familyId:50 },
+ { id: 'cardio-terry-cloth', name: 'Terry Cloth', slot: 'texture-2', track: 'cardio',familyId:51 },
+ { id: 'cardio-pebble-path', name: 'Pebble Path', slot: 'texture-3', track: 'cardio',familyId:52 },
+ { id: 'meditation-sand-garden', name: 'Sand Garden', slot: 'texture-1', track: 'meditation',familyId:53 },
+ { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation',familyId:54 },
+ { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation',familyId:55 },
 ];
 // #140: battle-pass-rewards.mjs TEXTURE_SWAP puts 7 legacy textures in the slots of 7 of these,
-// which are open now (still no art: familyId -1 renders Flat until their patterns ship).
+// which are open now; stable procedural family ids do not alter their unlock rules.
 const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
-const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: -1, defaultColorId: 'default-slate' }));
+const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
 const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
  const id = 'legacy-' + s.id, slot = BATTLE_PASS_TEXTURES.find(t => t.id === SWAPPED_IN.get(id));
  return { id, displayName: s.name, unlockRule: slot ? 'battle-pass' : 'default', track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };
@@ -102,6 +103,10 @@ export const PALETTES: PaletteDef[] = PALETTE_DATA.map(({ name, ...p }) => ({ ..
 export const findTexture = (id: string) => TEXTURES.find(t => t.id === id);
 export const findColor = (id: string) => COLORS.find(c => c.id === id);
 export const findPalette = (id: string) => PALETTES.find(p => p.id === id);
+export function textureDefaultMetalness(id:string):number|undefined {
+ const texture=findTexture(id);if(!texture)return undefined;
+ return builtinSurfaceProfile(texture.familyId)?.metalness??(texture.legacy?LEGACY_STYLES[texture.familyId]?.metalness:texture.id==='clay'?CLAY_BASE.metalness:FLAT_BASE.metalness);
+}
 
 function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent }; }
 
@@ -149,15 +154,10 @@ globalThis.addEventListener?.('myr5:recipe', event => grandfatherSwappedTextures
 export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false) {
  if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0 };
  const texture = findTexture(choice.textureId);
- // #1: a locked battle-pass texture previews (no art exists yet, familyId -1 -> falls back to Flat's
- // shape), but honestly: paint the texture's own representative colour so it doesn't silently read as
- // "just Flat, nothing selected" -- falling back to today's colour only if that data is missing.
- const noArtPreview = preview && !!texture && texture.familyId < 0;
  const safeTexture = texture && (preview || isTextureUnlocked(texture)) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
- const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : FLAT_BASE;
- const triad = noArtPreview
-  ? colorTriad(texture!.defaultColorId) ?? colorTriad(choice.colorId, preview) ?? base
-  : colorTriad(choice.colorId, preview) ?? colorTriad(safeTexture.defaultColorId) ?? base;
+ const profile=builtinSurfaceProfile(safeTexture.familyId);
+ const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : profile ? {id:profile.id,name:profile.name,realm:'',primary:'#8b8f9a',secondary:'#4a4d55',accent:'#e7e9ee',emissive:'#000000',roughness:profile.roughness,metalness:profile.metalness,detail:profile.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')} : FLAT_BASE;
+ const triad = colorTriad(choice.colorId, preview) ?? colorTriad(safeTexture.defaultColorId, preview) ?? base;
  const metalness = Number.isFinite(choice.metallic) ? Math.max(0, Math.min(1, choice.metallic)) : base.metalness;
  const sparkle = Number.isFinite(choice.sparkle) ? Math.max(0, Math.min(1, choice.sparkle)) : 0;
  return { ...base, ...triad, metalness, sparkle };

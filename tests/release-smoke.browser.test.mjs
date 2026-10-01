@@ -285,7 +285,8 @@ test('5. one shape without reduced motion runs the real glass and dive, and the 
 const bar=page=>page.evaluate(()=>{
  const dock=document.getElementById('coachDock'),r=dock?.getBoundingClientRect(),style=dock&&getComputedStyle(dock);
  const food=dock?.querySelector('[data-route="food"]'),fr=food?.getBoundingClientRect();
- return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>40&&Math.round(r.bottom)===innerHeight,
+ const face=dock?.closest('dialog.portal-framed.portal-fullscreen')?.getBoundingClientRect();
+ return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>40&&Math.abs(r.bottom-(face?.bottom??innerHeight))<1&&(!face||(r.left>=face.left-1&&r.right<=face.right+1)),
   tappable:!!fr&&food.contains(document.elementFromPoint(fr.left+fr.width/2,fr.top+fr.height/2)),
   lit:[...dock.querySelectorAll('[aria-current="page"]')].map(b=>b.dataset.route),live:dock.querySelector('.dock-live')?.textContent||''};
 });
@@ -320,10 +321,14 @@ test('6. every route opens from its #hash with the bar visible, lit and tappable
    assert.deepEqual(state.lit,lit?[lit]:[],`#${route}: the bar lights its own item only`);
    const heading=await page.evaluate(sel=>{const h=document.activeElement;return /^H[12]$/.test(h?.tagName)&&document.querySelector(sel).contains(h);},dialogSel);
    if(!['ship','select'].includes(route))assert.equal(heading,true,`#${route}: focus moves to the route's heading`);
+   if(dialogSel)await page.evaluate(sel=>{
+    const dialog=document.querySelector(sel);
+    window.__routeNativeClose=new Promise(resolve=>dialog.addEventListener('close',()=>resolve({open:dialog.open}),{once:true,capture:true}));
+   },dialogSel);
    await page.goBack();
-   await page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel);
-   await page.waitForFunction(route=>location.hash!=='#'+route&&window.myr5Routes.current()==='',route);
-   if(route==='ship')await page.waitForTimeout(100); // Let the previous Back/close task settle before opening #select.
+   const settled=[page.waitForFunction(sel=>document.querySelector(sel)?.open!==true,dialogSel),page.waitForFunction(route=>location.hash!=='#'+route&&window.myr5Routes.current()==='',route)];
+   if(dialogSel)settled.push(page.evaluate(()=>window.__routeNativeClose).then(event=>assert.equal(event.open,false,`#${route}: the registered native close event is delivered before the next route`)));
+   await Promise.all(settled);
   }
   // #share was removed with the Menu: the hash is not a route, opens nothing and adopts no dialog.
   await page.evaluate(()=>{location.hash='share';});
@@ -499,7 +504,7 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   await page.waitForFunction(()=>document.getElementById('portalHome').hidden&&location.hash==='#workout'&&scrollY===0,null,{timeout:20000});
   await page.evaluate(()=>window.r5Run);
   assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'idle','the square does not start the workout');
-  b=await bar(page);assert.equal(b.visible&&b.tappable,true,'the bar is on the workout start page');
+  b=await bar(page);assert.equal(b.visible&&b.tappable,true,'the bar is on the workout start page: '+JSON.stringify(b));
   // W2-2M #117: the page is the viewing port (your character), the control board and BEGIN; Goals is folded up.
   assert.deepEqual(await beginClear(page),{above:true,hit:true},'BEGIN is visible without scrolling at 375x812');
   assert.deepEqual(await page.evaluate(()=>({character:!!document.querySelector('#view #homeCharacter:not([hidden])'),goalsOpen:document.getElementById('podGoals').open,orders:!!document.querySelector('#homeScreen .coach-mission')})),{character:true,goalsOpen:false,orders:false});

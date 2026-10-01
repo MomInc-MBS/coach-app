@@ -1,9 +1,11 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {builtinSurfaceProfile,sampleBuiltinSurface} from './material-patterns';
+import {refineCoachGeometry,type CoachReliefBudget} from './material-refinement';
 
 // This material language is shared verbatim by Coach and Helping Hand. Maps are
 // ordinary glTF-compatible PBR textures, so the appearance also survives export.
-export const MATERIAL_REVISION='material-sculpt-2026-09-10';
+export const MATERIAL_REVISION='material-procedural-families-2026-10-01-r2';
 export const MATERIAL_NOTES=[
  'Fine pores, palm folds and soft satin skin.',
  'Twisted roots, bark fissures and fresh leaf growth.',
@@ -41,6 +43,7 @@ function cells(x:number,y:number){
  return {pit:a,seam:b-a};
 }
 export function surfaceSample(id:number,x:number,y:number){
+ const builtIn=sampleBuiltinSurface(id,x,y);if(builtIn)return builtIn;
  const c=cells(x*5,y*5),grain=hash(Math.floor(x*180),Math.floor(y*180));
  const wave=Math.sin(x*18+Math.sin(y*9)*2),vein=Math.pow(1-Math.abs(Math.sin(x*12+Math.sin(y*7)*2)),9);
  const seam=1-T.MathUtils.smoothstep(c.seam,.025,.12),spot=1-T.MathUtils.smoothstep(c.pit,.06,.19);
@@ -80,13 +83,14 @@ export function surfaceSample(id:number,x:number,y:number){
 }
 const maps=new Map<string,{map:T.DataTexture;bump:T.DataTexture;rough:T.DataTexture;glow:T.DataTexture}>();
 function materialMaps(style:Style){
- const key=style.id+style.primary;if(maps.has(key))return maps.get(key)!;
+ const key=[MATERIAL_REVISION,style.id,style.primary,style.secondary,style.accent].join('|');if(maps.has(key))return maps.get(key)!;
  const size=192,buffers=Array.from({length:4},()=>new Uint8Array(size*size*4));
- const dark=new T.Color(style.secondary),base=new T.Color(style.primary),light=new T.Color(style.accent),color=new T.Color();
+ const dark=new T.Color(style.secondary),base=new T.Color(style.primary),light=new T.Color(style.accent),color=new T.Color(),profile=builtinSurfaceProfile(style.id);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
   const s=surfaceSample(style.id,x/size,y/size),i=(y*size+x)*4;
   color.copy(s.tint<.5?dark:base).lerp(s.tint<.5?base:light,s.tint<.5?s.tint*2:(s.tint-.5)*2);
-  for(let k=0;k<3;k++){buffers[0][i+k]=Math.round([color.r,color.g,color.b][k]*255);buffers[1][i+k]=s.height*255;buffers[2][i+k]=s.rough*255;buffers[3][i+k]=s.glow*255;}
+  const roughnessMap=profile?clamp(.9+(s.rough-profile.roughness)*.75,0,1):s.rough;
+  for(let k=0;k<3;k++){buffers[0][i+k]=Math.round([color.r,color.g,color.b][k]*255);buffers[1][i+k]=s.height*255;buffers[2][i+k]=roughnessMap*255;buffers[3][i+k]=s.glow*255;}
   for(const b of buffers)b[i+3]=255;
  }
  const textures=buffers.map(bytes=>{const tex=new T.DataTexture(bytes,size,size,T.RGBAFormat);tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.magFilter=T.LinearFilter;tex.minFilter=T.LinearMipmapLinearFilter;tex.generateMipmaps=true;tex.needsUpdate=true;return tex;});
@@ -94,7 +98,8 @@ function materialMaps(style:Style){
 }
 export function materialFor(style:Style,unit:number,original?:T.MeshStandardMaterial){
  const tex=materialMaps(style),id=style.id;
- const mat=new T.MeshPhysicalMaterial({name:style.detail+' · '+MATERIAL_REVISION,color:'white',map:tex.map,bumpMap:tex.bump,bumpScale:unit*([8,21,22].includes(id)?.0005:.007),roughnessMap:tex.rough,roughness:1,metalness:style.metalness,vertexColors:true,envMapIntensity:[18,19,14].includes(id)?1.3:1});
+ const profile=builtinSurfaceProfile(id);
+ const mat=new T.MeshPhysicalMaterial({name:style.detail+' · '+MATERIAL_REVISION,color:'white',map:tex.map,bumpMap:tex.bump,bumpScale:unit*(profile?.bump??([8,21,22].includes(id)?.0005:.007)),roughnessMap:tex.rough,roughness:profile?.roughness??1,metalness:style.metalness,vertexColors:true,envMapIntensity:[18,19,14].includes(id)?1.3:1});
  if(original){mat.side=original.side;mat.polygonOffset=original.polygonOffset;mat.polygonOffsetFactor=original.polygonOffsetFactor;}
  if([3,4,10,11,14,18,19,21].includes(id)){mat.clearcoat=id===21?1:.6;mat.clearcoatRoughness=id===21?.055:.19;}
  if([8,14,16,21].includes(id)){
@@ -104,6 +109,7 @@ export function materialFor(style:Style,unit:number,original?:T.MeshStandardMate
  if([5,8,9,10,11,12,15,17,19].includes(id)){mat.emissive.set(style.accent);mat.emissiveMap=tex.glow;mat.emissiveIntensity=id===15?2.1:id===17?1.5:.85;}
  if(id===20){mat.sheen=1;mat.sheenRoughness=.96;mat.sheenColor.set(style.accent);mat.metalness=0;}
  if(id===0||id===22){mat.sheen=.22;mat.sheenColor.set('#ffc9b1');}
+ if(profile){mat.sheen=profile.sheen;mat.sheenRoughness=profile.sheenRoughness;mat.sheenColor.set(style.accent);mat.clearcoat=Math.max(mat.clearcoat,profile.clearcoat);mat.clearcoatRoughness=profile.clearcoatRoughness;}
  mat.flatShading=[13,14].includes(id);mat.userData.materialStyle=id;return mat;
 }
 
@@ -124,23 +130,73 @@ export function applySparkle(mat:T.MeshPhysicalMaterial,sparkle:number){
  };
 }
 
-export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1){
+function authoredUvScale(g:T.BufferGeometry,matrix:T.Matrix4){
+ const uv=g.attributes.uv,p=g.attributes.position,idx=g.index;if(!uv||uv.itemSize<2)return 1.8;
+ let worldArea=0,uvArea=0;const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),ab=new T.Vector3(),ac=new T.Vector3();
+ const count=idx?.count??p.count;
+ for(let j=0;j+2<count;j+=3){const ia=idx?idx.getX(j):j,ib=idx?idx.getX(j+1):j+1,ic=idx?idx.getX(j+2):j+2;
+  a.fromBufferAttribute(p,ia).applyMatrix4(matrix);b.fromBufferAttribute(p,ib).applyMatrix4(matrix);c.fromBufferAttribute(p,ic).applyMatrix4(matrix);
+  ab.subVectors(b,a);ac.subVectors(c,a);worldArea+=ab.cross(ac).length()*.5;
+  const ux=uv.getX(ib)-uv.getX(ia),uy=uv.getY(ib)-uv.getY(ia),vx=uv.getX(ic)-uv.getX(ia),vy=uv.getY(ic)-uv.getY(ia);uvArea+=Math.abs(ux*vy-uy*vx)*.5;
+ }
+ if(!Number.isFinite(worldArea)||!Number.isFinite(uvArea)||worldArea<=1e-10||uvArea<=1e-10)return 1.8;
+ return T.MathUtils.clamp(Math.sqrt(worldArea/uvArea)*1.8,.08,64);
+}
+
+export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1,coachRelief?:CoachReliefBudget){
  if(Array.isArray(mesh.material)||!mesh.geometry.attributes.position)return;
- const old=mesh.geometry,g=old.clone();if(!g.attributes.normal)g.computeVertexNormals();
- const p=g.attributes.position,n=g.attributes.normal,uv=new Float32Array(p.count*2),colors=new Float32Array(p.count*3);
- mesh.updateWorldMatrix(true,false);const normalMatrix=new T.Matrix3().getNormalMatrix(mesh.matrixWorld),inv=mesh.matrixWorld.clone().invert(),point=new T.Vector3(),normal=new T.Vector3();
- const id=style.id,relief=unit*([0,8,20,21,22].includes(id)?.0018:id===13?.037:id===18?.018:.019);
+ // The higher-density authored-UV path is deliberately limited to known static meshes.
+ // Keep animated, morph-target, interleaved and unsupported Float16 geometry on the
+ // established path until their attributes can be refined without changing semantics.
+ if(coachRelief&&(mesh.isSkinnedMesh||mesh.geometry.attributes.skinIndex||mesh.geometry.attributes.skinWeight||Object.values(mesh.geometry.morphAttributes).some(attributes=>attributes.length)||Object.values(mesh.geometry.attributes).some(attribute=>attribute.isInterleavedBufferAttribute||attribute.isFloat16BufferAttribute||((globalThis as any).Float16Array&&attribute.array instanceof (globalThis as any).Float16Array))))coachRelief=undefined;
+ const old=mesh.geometry;
+ // Keep Original MYR5's established single-pass geometry, UVs and JS-double displacement path exact.
+ if(!coachRelief){
+  const g=old.clone();if(!g.attributes.normal)g.computeVertexNormals();
+  const p=g.attributes.position,n=g.attributes.normal,uv=new Float32Array(p.count*2),colors=new Float32Array(p.count*3);
+  mesh.updateWorldMatrix(true,false);const normalMatrix=new T.Matrix3().getNormalMatrix(mesh.matrixWorld),inv=mesh.matrixWorld.clone().invert(),point=new T.Vector3(),normal=new T.Vector3();
+  const id=style.id,relief=unit*(builtinSurfaceProfile(id)?.relief??([0,8,20,21,22].includes(id)?.0018:id===13?.037:id===18?.018:.019));
+  for(let i=0;i<p.count;i++){
+   point.fromBufferAttribute(p,i).applyMatrix4(mesh.matrixWorld);normal.fromBufferAttribute(n,i).applyMatrix3(normalMatrix).normalize();
+   const x=point.x/unit,y=point.y/unit,z=point.z/unit;
+   const u=(Math.abs(normal.z)>.45?x:z)*1.8+.5,v=y*1.8+.5,s=surfaceSample(id,u,v);uv[i*2]=u;uv[i*2+1]=v;
+   let edge=1;for(const [sx,sy,sz,r]of mesh.userData.eyeSockets??[])edge*=T.MathUtils.smoothstep(Math.hypot(point.x-sx,point.y-sy,point.z-sz),r*1.04,r*1.35);
+   point.addScaledVector(normal,(s.height-.5)*relief*amount*edge).applyMatrix4(inv);p.setXYZ(i,point.x,point.y,point.z);
+   const shade=.91+.09*Math.sin(x*3+y*4+z*2);colors.set([shade,shade,shade],i*3);
+  }
+  g.setAttribute('uv',new T.BufferAttribute(uv,2));g.setAttribute('color',new T.BufferAttribute(colors,3));g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();
+  const oldMat=mesh.material as T.MeshStandardMaterial;mesh.material=materialFor(style,unit,oldMat);mesh.geometry=g;
+  if(mesh.userData.ownedGeometry)old.dispose();mesh.userData.ownedGeometry=true;mesh.userData.ownedMaterial=true;return;
+ }
+ mesh.updateWorldMatrix(true,false);const worldScale=mesh.matrixWorld.getMaxScaleOnAxis(),refined=refineCoachGeometry(old,coachRelief,worldScale),g=refined?.geometry??old.clone();if(!g.attributes.normal)g.computeVertexNormals();
+ // Keep imported smoothing while adding only the geometric normal change caused by relief.
+ // This avoids faceting the source coach while making shallow height fields catch light.
+ const authoredNormals=new Float32Array(g.attributes.normal.array as ArrayLike<number>);g.computeVertexNormals();const geometricBefore=new Float32Array(g.attributes.normal.array as ArrayLike<number>);g.attributes.normal.array.set(authoredNormals);g.attributes.normal.needsUpdate=true;
+ const p=g.attributes.position,n=g.attributes.normal,uv=new Float32Array(p.count*2),colors=new Float32Array(p.count*3),worldPositions=new Float32Array(p.count*3),worldOffsets=new Float32Array(p.count*3);
+ const sourceUv=coachRelief?g.attributes.uv:undefined,uvScale=sourceUv?authoredUvScale(g,mesh.matrixWorld):1,vertexKeys=coachRelief?new Array<string>(p.count):undefined;
+ const normalMatrix=new T.Matrix3().getNormalMatrix(mesh.matrixWorld),inv=mesh.matrixWorld.clone().invert(),point=new T.Vector3(),normal=new T.Vector3();
+ const id=style.id,relief=unit*(builtinSurfaceProfile(id)?.relief??([0,8,20,21,22].includes(id)?.0018:id===13?.037:id===18?.018:.019));
+ const seamOffsets=coachRelief?new Map<string,{x:number;y:number;z:number;count:number}>():undefined,seamKey=(x:number,y:number,z:number)=>`${Math.round(x*1e5)},${Math.round(y*1e5)},${Math.round(z*1e5)}`;
  for(let i=0;i<p.count;i++){
-  point.fromBufferAttribute(p,i).applyMatrix4(mesh.matrixWorld);normal.fromBufferAttribute(n,i).applyMatrix3(normalMatrix).normalize();
+  const localX=p.getX(i),localY=p.getY(i),localZ=p.getZ(i);point.set(localX,localY,localZ).applyMatrix4(mesh.matrixWorld);normal.fromBufferAttribute(n,i).applyMatrix3(normalMatrix).normalize();
   const x=point.x/unit,y=point.y/unit,z=point.z/unit;
-  // Fixed object-space coordinates keep panels and pores attached during posing.
-  const u=(Math.abs(normal.z)>.45?x:z)*1.8+.5,v=y*1.8+.5,s=surfaceSample(id,u,v);
-  uv[i*2]=u;uv[i*2+1]=v;
+  // Roster UVs avoid normal-threshold seams; original MYR5 keeps its proven object projection.
+  // Both coordinates are fixed on the mesh and remain periodic for the built-in surfaces.
+  const u=sourceUv?sourceUv.getX(i)*uvScale:(Math.abs(normal.z)>.45?x:z)*1.8+.5,v=sourceUv?sourceUv.getY(i)*uvScale:y*1.8+.5,s=surfaceSample(id,u,v);
+  uv[i*2]=u;uv[i*2+1]=v;worldPositions[i*3]=point.x;worldPositions[i*3+1]=point.y;worldPositions[i*3+2]=point.z;
   let edge=1;for(const [sx,sy,sz,r]of mesh.userData.eyeSockets??[])edge*=T.MathUtils.smoothstep(Math.hypot(point.x-sx,point.y-sy,point.z-sz),r*1.04,r*1.35);
-  point.addScaledVector(normal,(s.height-.5)*relief*amount*edge).applyMatrix4(inv);p.setXYZ(i,point.x,point.y,point.z);
+  const offset=(s.height-.5)*relief*amount*edge,dx=normal.x*offset,dy=normal.y*offset,dz=normal.z*offset;worldOffsets[i*3]=dx;worldOffsets[i*3+1]=dy;worldOffsets[i*3+2]=dz;
+  if(seamOffsets){const key=seamKey(localX,localY,localZ);vertexKeys![i]=key;const group=seamOffsets.get(key)??{x:0,y:0,z:0,count:0};group.x+=dx;group.y+=dy;group.z+=dz;group.count++;seamOffsets.set(key,group);}
   const shade=.91+.09*Math.sin(x*3+y*4+z*2);colors.set([shade,shade,shade],i*3);
  }
- g.setAttribute('uv',new T.BufferAttribute(uv,2));g.setAttribute('color',new T.BufferAttribute(colors,3));g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();
+ for(let i=0;i<p.count;i++){
+  const x=worldPositions[i*3],y=worldPositions[i*3+1],z=worldPositions[i*3+2];let dx=worldOffsets[i*3],dy=worldOffsets[i*3+1],dz=worldOffsets[i*3+2];
+  if(seamOffsets){const group=seamOffsets.get(vertexKeys![i]);if(group&&group.count>1){dx=group.x/group.count;dy=group.y/group.count;dz=group.z/group.count;}}
+  point.set(x+dx,y+dy,z+dz).applyMatrix4(inv);p.setXYZ(i,point.x,point.y,point.z);
+ }
+ g.computeVertexNormals();const geometricAfter=g.attributes.normal;
+ for(let i=0;i<p.count;i++){const j=i*3,x=authoredNormals[j]+geometricAfter.array[j]-geometricBefore[j],y=authoredNormals[j+1]+geometricAfter.array[j+1]-geometricBefore[j+1],z=authoredNormals[j+2]+geometricAfter.array[j+2]-geometricBefore[j+2],length=Math.hypot(x,y,z)||1;geometricAfter.setXYZ(i,x/length,y/length,z/length);}
+ g.setAttribute('uv',new T.BufferAttribute(uv,2));g.setAttribute('color',new T.BufferAttribute(colors,3));g.computeBoundingBox();g.computeBoundingSphere();
  const oldMat=mesh.material as T.MeshStandardMaterial;mesh.material=materialFor(style,unit,oldMat);mesh.geometry=g;
  if(mesh.userData.ownedGeometry)old.dispose();mesh.userData.ownedGeometry=true;mesh.userData.ownedMaterial=true;
 }

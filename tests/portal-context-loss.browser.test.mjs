@@ -43,7 +43,11 @@ const stage=page=>page.evaluate(()=>{
  return {portal:!home.hidden&&!home.classList.contains('no-board'),frame:seen(home.querySelector('#portalBoardHost .portal-frame')),plate:seen(home.querySelector('#portalBoardHost .portal-frame b')),dock:seen(document.getElementById('coachDock')),board:home.dataset.board,art:home.dataset.art,flatColors:colors};
 });
 const loseBoard=(page,block=false)=>page.evaluate(block=>{const gl=[...document.querySelectorAll('#portalBoardHost canvas')].map(c=>c.getContext('webgl2')).find(Boolean);window.__glBlock=block;gl.getExtension('WEBGL_lose_context').loseContext();},block);
-const portalUp=page=>page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&!document.querySelector('.portal-glass'),null,{timeout:15000});
+const portalUp=page=>page.waitForFunction(()=>{
+ const home=document.getElementById('portalHome'),frame=home?.querySelector('#portalBoardHost .portal-frame'),plate=frame?.querySelector('b');
+ const visible=el=>!!el&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
+ return home?.hidden===false&&Number.parseFloat(getComputedStyle(home).opacity||'1')>=.99&&!document.querySelector('.portal-glass')&&visible(frame)&&visible(plate);
+},null,{timeout:15000});
 async function food(page,how){
  if(how==='trace'){ // a real finger trace of the triangle over the shape area, through the portal's overlay
   const pts=await page.evaluate(async()=>{const {SHAPES}=await import('/modules/portal/portal-shapes.mjs'),r=window.myr5Portal.current().patternRect();return SHAPES.up[0].points.map(([x,y])=>[r.left+x*r.width,r.top+y*r.height]);});

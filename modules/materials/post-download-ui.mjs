@@ -43,7 +43,7 @@ export function mountPostDownloadSections({ host, account=globalThis.myr5Authent
     const runEpoch=epoch,runOwner=owner,runAccount=currentAccount,abort=new AbortController();controller=abort;
     const active=()=>runEpoch===epoch&&allowed()&&owner===runOwner;
     pause.hidden=false;pause.disabled=false;pause.textContent='Pause';status.textContent='Preparing verified download…';render();
-    try{await operation({signal:abort.signal,account:runAccount,authorize:()=>active(),fetchImpl,trust,policy,store,onProgress:info=>{if(active())report(info);}});if(active()){status.textContent='Offline packs ready.';progress.value=1;}}
+    try{await operation({signal:abort.signal,account:runAccount,authorize:()=>active(),fetchImpl,trust,policy,store,onProgress:info=>{if(active())report(info);}});if(active()){status.textContent='Offline packs ready.';progress.value=1;window.dispatchEvent(new CustomEvent('myr5:sections-installed',{detail:{ownerId:runOwner,sections:[...ids]}}));}}
     catch(error){if(active()){if(abort.signal.aborted){pausedIds=[...ids];status.textContent='Download paused. Resume is available.';}else status.textContent=error.message||'Download unavailable. Try again later.';}}
     finally{if(controller===abort){controller=null;pause.hidden=true;if(active())render();}}
   }

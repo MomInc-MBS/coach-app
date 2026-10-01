@@ -115,30 +115,45 @@ async function init({THREE:T,scene,mesh,material,uniforms,toWorld,faceZ,wake}){
  tmpl.traverse(n=>{if(!n.isMesh)return;n.material.metalness=0; // Kenney ships metalness 1: black without an env map
   const c=n.material.color;if(n.material.name==='colorRed'||(c.r>.5&&c.g<.3&&c.b<.3))petal=n.material;});
  S={scene,toWorld,faceZ,uniforms,tmpl,petal,lawn:makeBlades(T,uniforms,mesh.isMesh?mesh.parent:mesh),warm,wake,reduced,faceW,aspect:faceW/faceH,
-  flowerScale:faceW*FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowers:[],pool:[],lastPlanted:new Map(),springIdx:0,timer:0};
+  flowerScale:faceW*FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowerScaleRatio:FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowers:[],pool:[],lastPlanted:new Map(),springIdx:0,timer:0,petalTint:null};
 }
 function makeFlower(){
  const obj=S.tmpl.clone(true),mats=[];let petal=null;
  obj.traverse(n=>{if(!n.isMesh)return;const m=n.material.clone();m.transparent=true;if(n.material===S.petal)petal=m;n.material=m;mats.push(m);});
- return {obj,mats,petal};
+ return {obj,mats,petal,randomColor:new THREE.Color()};
+}
+function setPetalTint(hex,selected=true){
+ if(!S)return;if(selected&&!/^#[0-9a-f]{6}$/i.test(hex||''))return;
+ S.petalTint=selected?new THREE.Color(hex):null;
+ for(const f of [...S.flowers,...S.pool])f.petal?.color.copy(S.petalTint||f.randomColor);
 }
 function plant(u,v){
  const [wx,wy]=S.toWorld(u,v);
  const f=(S.flowers.length>=FLOWER_CAP?S.flowers.shift():S.pool.pop())||makeFlower();
- f.petal?.color.setHSL(...flowerHSL());
+ f.randomColor.setHSL(...flowerHSL());f.petal?.color.copy(S.petalTint||f.randomColor);
  f.obj.position.set(wx,wy,S.faceZ+S.faceW*FLOWER_LIFT);f.obj.visible=true;f.u=u;f.v=v;
  f.obj.rotation.set(FLOWER_TILT,Math.random()*Math.PI*2,0); // stand toward the camera, random yaw about the stem
- f.target=S.flowerScale*(.8+Math.random()*.5);f.born=performance.now();
+ f.sizeFactor=.8+Math.random()*.5;f.target=S.flowerScale*f.sizeFactor;f.born=performance.now();
  f.obj.scale.setScalar(S.reduced?f.target:1e-4);
  for(const m of f.mats)m.opacity=1;
  S.scene.add(f.obj);S.flowers.push(f);
 }
 function plantCluster(u,v,n){for(const [du,dv] of clusterOffsets(n,CLUSTER_FRAC))plant(clamp01(u+du),clamp01(v+dv*S.aspect));}
-function press(id,u,v){plantCluster(u,v,3);S.lastPlanted.set(id,S.toWorld(u,v));}
+function press(id,u,v){plantCluster(u,v,3);S.lastPlanted.set(id,[u,v]);}
 function move(id,u,v){
  const cur=S.toWorld(u,v),last=S.lastPlanted.get(id);
- if(!last){S.lastPlanted.set(id,cur);return;}
- if(plantStep(last[0],last[1],cur[0],cur[1])){plantCluster(u,v,2+(Math.random()<.5));S.lastPlanted.set(id,cur);}
+ if(!last){S.lastPlanted.set(id,[u,v]);return;}
+ const old=S.toWorld(last[0],last[1]);
+ if(plantStep(old[0],old[1],cur[0],cur[1])){plantCluster(u,v,2+(Math.random()<.5));S.lastPlanted.set(id,[u,v]);}
+}
+function resize(){
+ if(!S)return;
+ const [x0,y0]=S.toWorld(0,0),[x1,y1]=S.toWorld(1,1);S.faceW=Math.abs(x1-x0);S.aspect=S.faceW/Math.max(1,Math.abs(y1-y0));S.flowerScale=S.faceW*S.flowerScaleRatio;
+ const now=performance.now();
+ for(const f of S.flowers){
+  const [x,y]=S.toWorld(f.u,f.v),age=now-f.born,k=fadeLife(age),pop=S.reduced?1:popScale(age);
+  f.obj.position.set(x,y,S.faceZ+S.faceW*FLOWER_LIFT);f.target=S.flowerScale*f.sizeFactor;f.obj.scale.setScalar(f.target*pop*k);
+ }
 }
 function release(id,u,v){
  S.lastPlanted.delete(id);
@@ -203,10 +218,11 @@ export function grassFlowers(){
   for(let i=0;i<5;i++){const a=i*Math.PI*2/5;g.beginPath();g.ellipse(Math.cos(a)*r*.55,Math.sin(a)*r*.55,r*.52,r*.34,a,0,Math.PI*2);g.fill();g.stroke();}
   g.fillStyle='#ffd23a';g.beginPath();g.arc(0,0,r*.27,0,Math.PI*2);g.fill();g.stroke();g.restore();
  };
- const plantOne=(u,v)=>{const [h,s,l]=flowerHSL();S.flowers.push({x:u*S.W,y:v*S.H,r:S.W*FLOWER_FRAC*.5*(.8+Math.random()*.5),rot:Math.random()*Math.PI,col:`hsl(${h*360} ${s*100}% ${l*100}%)`,born:performance.now()});if(S.flowers.length>FLOWER_CAP)S.flowers.shift();};
+ const plantOne=(u,v)=>{const [h,s,l]=flowerHSL(),randomColor=`hsl(${h*360} ${s*100}% ${l*100}%)`;S.flowers.push({x:u*S.W,y:v*S.H,r:S.W*FLOWER_FRAC*.5*(.8+Math.random()*.5),rot:Math.random()*Math.PI,randomColor,col:S.petalTint||randomColor,born:performance.now()});if(S.flowers.length>FLOWER_CAP)S.flowers.shift();};
  const cluster=(u,v,n)=>{for(const [du,dv] of clusterOffsets(n,CLUSTER_FRAC))plantOne(clamp01(u+du),clamp01(v+dv*S.aspect));};
  return {
-  init({paint,toWorld,wake}){S={paint,toWorld,wake,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.width/paint.canvas.height,flowers:[],last:new Map(),timer:0,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};},
+  init({paint,toWorld,wake}){S={paint,toWorld,wake,W:paint.canvas.width,H:paint.canvas.height,aspect:paint.canvas.width/paint.canvas.height,flowers:[],last:new Map(),timer:0,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,petalTint:null};},
+  setTint(hex,selected=true){if(selected&&!/^#[0-9a-f]{6}$/i.test(hex||''))return;S.petalTint=selected?hex:null;for(const f of S.flowers)f.col=S.petalTint||f.randomColor;S.wake();},
   press(id,u,v){cluster(u,v,3);S.last.set(id,S.toWorld(u,v));},
   move(id,u,v){const cur=S.toWorld(u,v),last=S.last.get(id);if(!last){S.last.set(id,cur);return;}if(plantStep(last[0],last[1],cur[0],cur[1])){cluster(u,v,2+(Math.random()<.5));S.last.set(id,cur);}},
   release(id){S.last.delete(id);},
@@ -221,6 +237,7 @@ export function grassFlowers(){
   dispose(){clearTimeout(S?.timer);S=null;},
  };
 }
+grassFlowers.tintTarget='trace';
 
 export const grass={
  id:'grass',asset:'/pod/worlds/boards/grass.glb',flip:false,background:'#0b150a',
@@ -228,5 +245,5 @@ export const grass={
  uniforms:{uHalfDepth:{value:0},uSpring:{value:Array.from({length:6},()=>new THREE.Vector4(0,0,0,0))},uBreeze:{value:1}},
  uniformDecls:'uniform float uHalfDepth;\nuniform vec4 uSpring[6];\nuniform float uBreeze;\n',
  vertexDisplace:VERTEX_DISPLACE,
- init,press,move,release,step,cut,heal,dispose,trace2d:grassFlowers,
+  init,press,move,release,resize,step,cut,heal,dispose,setTint:setPetalTint,trace2d:grassFlowers,
 };

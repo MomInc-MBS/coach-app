@@ -61,3 +61,26 @@ test('damage uses exactly streak × weapon level × 10, with a single daily ×10
 test('breathing timer requires three active minutes; hidden, paused or suspended time does not count',()=>{
  const s=new BreathingSession();s.sample(0,true);s.sample(1000,true);s.sample(2000,false);s.sample(120000,false);s.sample(121000,true);assert.equal(s.elapsed,1000);let now=121000;while(!s.complete){now+=1000;s.sample(now,true);}assert.equal(s.elapsed,BREATHING_MS);s.sample(now+10000,true);assert.equal(s.elapsed,BREATHING_MS);
 });
+
+test('the 210-second round keeps the three-minute reward floor and completes once per day',async()=>{
+ const user='single-round',now=24000*DAY_MS+1000,ticket=await startBreathing(database,user,now);
+ assert.equal(ticket.durationMs,BREATHING_MS,'server reward minimum stays three minutes');
+ await assert.rejects(completeBreathing(database,user,{id:ticket.id,activeMs:179999},now+210000),/full three-minute/);
+ await assert.rejects(completeBreathing(database,user,{id:ticket.id,activeMs:210000},now+180000),/full three-minute/,'client may not claim more active time than wall time');
+ const value={id:ticket.id,activeMs:210000};
+ const results=await Promise.all([completeBreathing(database,user,value,now+210000),completeBreathing(database,user,value,now+210000)]);
+ assert.ok(results.every(result=>result.breathingCompleted));
+ assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM breathing_sessions WHERE user_id=? AND completed_at IS NOT NULL').bind(user).first()).n,1);
+ const another=await startBreathing(database,user,now+300000);await completeBreathing(database,user,{id:another.id,activeMs:210000},now+510000);
+ assert.equal((await database.prepare('SELECT COUNT(DISTINCT CAST(completed_at/86400000 AS INTEGER)) AS n FROM breathing_sessions WHERE user_id=? AND completed_at IS NOT NULL').bind(user).first()).n,1);
+});
+
+test('a 210-second clock never finishes at 180 seconds and excludes pauses and suspension',()=>{
+ const s=new BreathingSession(210000);s.sample(0,true);for(let t=1000;t<=180000;t+=1000)s.sample(t,true);
+ assert.equal(s.elapsed,180000);assert.equal(s.complete,false);
+ s.sample(181000,false);s.sample(240000,false);s.sample(241000,true);assert.equal(s.elapsed,180000);
+ s.sample(300000,true);assert.equal(s.elapsed,181500,'suspension contributes at most the existing 1500ms sample cap');
+ for(let t=301000;!s.complete;t+=1000)s.sample(t,true);
+ assert.equal(s.elapsed,210000);s.sample(400000,true);assert.equal(s.elapsed,210000);
+ assert.equal(new BreathingSession(1).durationMs,BREATHING_MS,'short custom durations cannot lower the minimum');
+});

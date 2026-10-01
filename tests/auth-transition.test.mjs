@@ -76,18 +76,18 @@ test('fresh account mismatch stops before POST; unknown completion is quarantine
 
 const authSource=await readFile(new URL('../auth-client.mjs',import.meta.url),'utf8');
 function authHarness(f,coordinator,clerk,fetchImpl,extras={}){
- const context={authTransitions:()=>coordinator,safeReturn:path=>path,localStorage:f.storage,Headers,AbortSignal,Response,URL,fetch:fetchImpl,window:{Clerk:clerk},document:{createElement:()=>({dataset:{}}),head:{append:tag=>queueMicrotask(()=>tag.onload())}},location:{assign(){}},queueMicrotask,setTimeout,clearTimeout,...extras};
+ const context={authTransitions:()=>coordinator,safeReturn:path=>path,localStorage:f.storage,Headers,AbortSignal,Response,URL,fetch:fetchImpl,window:Object.assign(new EventTarget(),{Clerk:clerk}),Event,CustomEvent,document:{createElement:()=>({dataset:{}}),head:{append:tag=>queueMicrotask(()=>tag.onload())}},location:{assign(){}},queueMicrotask,setTimeout,clearTimeout,...extras};
  return vm.runInNewContext(authSource.replace(/^import .*;\s*$/mg,'').replace(/\bexport /g,'')+';({authFetch,loadLogin,signOut});',context);
 }
 test('actual authFetch rejects a same-provider Clerk session change while acquiring credentials',async()=>{
  const f=fixture(),transitions=f.make(),token=deferred(),acquiring=deferred(),listeners=[];f.storage.setItem('myr5-login-provider','clerk');let writes=0;
  const clerk={session:{id:'sessionA',getToken:()=>{acquiring.resolve();return token.promise;}},user:{id:'userA'},load:async()=>{},addListener:fn=>listeners.push(fn)};
- const auth=authHarness(f,transitions,clerk,async path=>{if(path==='/api/auth/config')return new Response(JSON.stringify({enabled:true,frontend:'https://clerk.test',publishableKey:'key'}));writes++;return new Response('{}');});
+ const auth=authHarness(f,transitions,clerk,async path=>{if(new URL(path,'https://coach.test').pathname==='/api/auth/config')return new Response(JSON.stringify({enabled:true,frontend:'https://clerk.test',publishableKey:'key'}));writes++;return new Response('{}');});
  const request=auth.authFetch('/api/workouts/complete',{method:'POST'});await acquiring.promise;clerk.session={id:'sessionB'};clerk.user={id:'userB'};listeners.forEach(fn=>fn());token.resolve('old-A-token');await assert.rejects(request,{code:'auth_transition'});assert.equal(writes,0);
 });
 test('actual authFetch rejects a late response after another tab transitions',async()=>{
  const f=fixture(),transitions=f.make(),other=f.make(),pending=deferred(),sent=deferred();
- const auth=authHarness(f,transitions,null,async path=>{if(path==='/api/auth/config')return new Response(JSON.stringify({enabled:false}));sent.resolve();return pending.promise;});
+ const auth=authHarness(f,transitions,null,async path=>{if(new URL(path,'https://coach.test').pathname==='/api/auth/config')return new Response(JSON.stringify({enabled:false}));sent.resolve();return pending.promise;});
  const request=auth.authFetch('/api/account');await sent.promise;other.invalidate();pending.resolve(new Response('{}',{status:401}));await assert.rejects(request,{code:'auth_transition'});
 });
 test('signout invalidates before awaiting Clerk work',async()=>{
@@ -137,7 +137,7 @@ test('auth configuration and token waits time out without sending a late account
   const f=fixture(),transitions=f.make(),held=deferred();let writes=0;
   f.storage.setItem('myr5-login-provider','clerk');
   const clerk={session:{id:'A',getToken:()=>held.promise},user:{id:'A'},load:async()=>{},addListener(){}};
-  const auth=authHarness(f,transitions,clerk,async path=>{if(path==='/api/auth/config')return phase==='configuration'?held.promise:new Response(JSON.stringify({enabled:true,frontend:'https://clerk.test',publishableKey:'key'}));writes++;return new Response('{}');},{setTimeout:fn=>setTimeout(fn,15)});
+  const auth=authHarness(f,transitions,clerk,async path=>{if(new URL(path,'https://coach.test').pathname==='/api/auth/config')return phase==='configuration'?held.promise:new Response(JSON.stringify({enabled:true,frontend:'https://clerk.test',publishableKey:'key'}));writes++;return new Response('{}');},{setTimeout:fn=>setTimeout(fn,15)});
   await assert.rejects(auth.authFetch('/api/profile',{method:'PUT'}),error=>error.code==='account_timeout');
   held.resolve(phase==='configuration'?new Response(JSON.stringify({enabled:false})):'late-token');await new Promise(resolve=>setTimeout(resolve,0));assert.equal(writes,0);
  }

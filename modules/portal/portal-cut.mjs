@@ -1,5 +1,16 @@
 import * as THREE from 'three';
 
+// One antialiased face-space mask defines both sides of a portal cut. Drawing the polygon once and
+// sampling it in each material keeps the board opening and the piece edge complementary even when
+// the falling piece translates, tilts, or scales in its own local space.
+export function createPortalCutMask(poly,size=1024){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+ const ctx=canvas.getContext('2d');ctx.clearRect(0,0,size,size);ctx.fillStyle='#fff';ctx.beginPath();
+ poly.forEach(([u,v],i)=>i?ctx.lineTo(u*size,v*size):ctx.moveTo(u*size,v*size));ctx.closePath();ctx.fill();
+ const texture=new THREE.CanvasTexture(canvas);texture.flipY=false;texture.colorSpace=THREE.NoColorSpace;texture.minFilter=THREE.LinearFilter;texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;texture.needsUpdate=true;
+ return texture;
+}
+
 export function pointInPolygon(u,v,poly){
  let inside=false;
  for(let i=0,j=poly.length-1;i<poly.length;j=i++){

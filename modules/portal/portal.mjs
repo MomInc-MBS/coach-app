@@ -9,10 +9,11 @@ import {grass} from './portal-board-grass.mjs';
 import {cogs} from './portal-board-cogs.mjs';
 import {jelly} from './portal-board-jelly.mjs';
 import {wood} from './portal-board-wood.mjs';
-import {readLook,applyLookVars,stripSeq,LOOK_DEFAULTS} from './portal-look.mjs';
+import {readLook,saveLook,applyLookVars,stripSeq,LOOK_DEFAULTS} from './portal-look.mjs';
 import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
 import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
+import {paletteFor,paletteOptions} from './portal-tunnel-palettes.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dive into the wormhole (the destination appears from its core), the healed board fading back in, one touch ripple on
@@ -57,8 +58,8 @@ const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes
 export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood']);
 const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847},WAIT={poster:6000,threeD:20000,mount:4000};
 // trace (R7): the flat poster keeps the board's own touch effect in 2D (ice cracks, flowers, weld, jelly gash, embers).
-const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d}),create:host=>createGlbBoard(host,{effect})});
-const BOARDS={quilt:{label:'Quilt',flat:host=>createQuiltBoard2D(host),create:host=>createQuiltBoardGL(host)},ice:grimoire('Ice',ice),grass:grimoire('Grass',grass),cogs:grimoire('Cogs',cogs),jelly:grimoire('Jelly',jelly),wood:grimoire('Wood',wood)};
+const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d,tint:boardTint(effect.id),tintSelected:hasBoardTint(effect.id),tintTarget:effect.id==='grass'?'trace':'poster'}),create:host=>createGlbBoard(host,{effect})});
+const BOARDS={quilt:{label:'Quilt',flat:host=>createQuiltBoard2D(host),create:host=>createQuiltBoardGL(host)},ice:grimoire('Crystal',ice),grass:grimoire('Grass',grass),cogs:grimoire('Cogs',cogs),jelly:grimoire('Jelly',jelly),wood:grimoire('Wood',wood)};
 // Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
 // a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module
 // is imported (window.__portalTrailProbe above is the same pattern). Its create() only touches `host` at
@@ -72,7 +73,11 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
  })};
 const BOARD_KEY='myr5.portalBoard';
 const tintKey=id=>'myr5.grimoireColor.'+id;
-const boardTint=()=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(boardId))||'')?store.get(tintKey(boardId)):'#b026ff';
+const boardTint=(id=boardId)=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(id))||'')?store.get(tintKey(id)):'#b026ff';
+const hasBoardTint=(id=boardId)=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(id))||'');
+const boardTintLabel=()=>boardId==='grass'?'Flower colour':'Grimoire colour';
+const paletteKey=id=>'myr5.wormholePalette.'+id;
+const materialLoads=new Map();
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
 const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 function initialBoardId(){
@@ -105,7 +110,7 @@ const ICONS={
 // W2-2A: each destination opens through the app's router (modules/routes.mjs, window.myr5Routes): it sets the
 // route's #hash, lights the bottom bar and hands back the dialog for the dive and fade-back. A page without the
 // router (a bare portal page) keeps the direct opener.
-const via=(route,direct)=>()=>window.myr5Routes?window.myr5Routes.go(route):direct();
+const via=(route,direct)=>()=>window.myr5Routes?window.myr5Routes.go(route,{portal:true}):direct();
 const LEADERBOARD={label:'Leaderboard',route:'scoreboard',color:'#ffff33',icon:ICONS.trophy,kind:'dialog',open:via('scoreboard',()=>{document.querySelector('.coach-dock [data-panel="account"]')?.click();return document.getElementById('accountPanel');})};
 // Exported so tests can check the gesture -> destination table without a DOM.
 export const MENUS={
@@ -181,7 +186,7 @@ function growHole(el,pts,box,current=()=>true,ms=PORTAL.revealMs){
  });
 }
 
-let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,overlayObserver,lifecycle,chrome,workoutHome,workoutSource,workoutNode;
+let portalHome,boardHost,overlay,ctx,objectsLayer,statusEl,menuBtn,menuSheet,boardBtn,settingsBtn,overlayObserver,lifecycle,chrome,workoutHome,workoutSlots=[];
 let wantedBoard=null,sequence=0,visibilityRun=0,boardLoad=0,menuChosen=false,focusBefore=null;
 const backgroundInert=new Map(),flashes=new Set();
 // board: what the portal cuts and measures: the 3D layer (gl3) once it has drawn, else the flat layer (base) under it.
@@ -202,7 +207,18 @@ let hint=null,lastTap=null;
 
 function menuButtonsHtml(){return Object.entries(MENUS).filter(([,m])=>!m.hidden).map(([id,m])=>`<button type="button" data-menu="${id}"><i aria-hidden="true" style="--dot:${m.color}"></i>${m.label}</button>`).join('');}
 function boardChipsHtml(){return Object.entries(BOARDS).filter(([id])=>PRODUCTION_PORTALS.includes(id)).map(([id,b])=>`<button type="button" data-board="${id}" aria-pressed="${id===boardId}">${b.label}</button>`).join('');}
-function updateBoardChips(){const tint=menuSheet?.querySelector('input[type=color]');if(tint)tint.value=boardTint();menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));}
+const htmlSafe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function paletteSelectHtml(id=boardId){
+ if(id==='quilt')return '';
+ const rows=paletteOptions(id),selected=paletteFor(id,store.get(paletteKey(id)))?.id;
+ if(!rows.length)return '';
+ return `<label class="portal-palette">Wormhole palette <select aria-label="Wormhole palette" data-palette>${rows.map(p=>`<option value="${htmlSafe(p.id)}"${p.id===selected?' selected':''}>${htmlSafe(p.label)}</option>`).join('')}</select></label>`;
+}
+function lookControlsHtml(){
+ const look=readLook();
+ return `<fieldset class="portal-look-controls"><legend>Portal appearance</legend><div>${[['portal','Metal'],['strip','Strip']].map(([key,label])=>`<label>${label}<input type="color" data-look="${key}" aria-label="${label}" value="${look[key]}"></label>`).join('')}</div><button type="button" data-look-reset>Reset portal appearance</button></fieldset>`;
+}
+function updateBoardChips(){const tint=menuSheet?.querySelector('[data-board-tint]');if(tint){tint.value=boardTint();tint.setAttribute('aria-label',boardTintLabel());const label=tint.closest('.portal-color');if(label?.firstChild?.nodeType===Node.TEXT_NODE)label.firstChild.textContent=boardTintLabel()+' ';}menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));const row=menuSheet?.querySelector('[data-palette-row]');if(row)row.innerHTML=paletteSelectHtml();}
 // Swaps the mounted board. The flat layer goes up first: a poster that doesn't arrive keeps the board already showing (the
 // last good one), else the Quilt, whose own art is drawn in code when it must be, so there is always a board. Then 3D is
 // laid over it while the portal is on screen (threeD). Pointer listeners read the `board` variable at call time.
@@ -230,7 +246,7 @@ async function loadBoardNow(id,load){
  if(load!==boardLoad){next.dispose();return null;}
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
- const old=[gl3,base];gl3=null;base=board=next;for(const b of old)b?.dispose();
+ const old=[gl3,base];gl3=null;base=board=next;lastTap=null;for(const b of old)b?.dispose();
  if(!boardShown)base.pause();
  portalHome.style.background=base.background||''; // the canvases are transparent; the board colour lives here, behind the glass
  portalHome.dataset.board=boardId=id;portalHome.dataset.art='flat';
@@ -254,6 +270,7 @@ function threeD(mounting=false){
   while((busy||phase)&&id===boardId&&!lifecycle.signal.aborted)await sleep(250); // ponytail: polls; a sequence ends within seconds
   if(id!==boardId||gl3||lifecycle.signal.aborted){created.dispose();return;}
   if(created.canvas.getContext('webgl2')?.isContextLost()!==false){created.dispose();return fell(id,new Error('WebGL context lost before its first frame'));}
+  if(id!=='quilt')created.setTint?.(boardTint(id),hasBoardTint(id));
   gl3=board=created;created.canvas.style.opacity='';if(base.canvas)base.canvas.style.visibility='hidden';
   if(boardShown)created.resume();else created.pause(); // resume draws a fresh frame now it's in sight
   art[id]='3d';portalHome.dataset.art='3d';
@@ -279,7 +296,7 @@ const FRAME_BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
 const frameHtml=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${FRAME_BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div>`;
 // Energy around the frame (Ian 23 Sept): the neons flow clockwise along a channel in the rail, one clipped channel per
 // side, each a neon stripe (ENERGY.px per colour cycle) sliding by transform: compositor-only, no repaint per frame.
-// Gentle at rest; the cut and glass surge it with the shape's colour leading, the dive (both ways) faster still.
+// Gentle at rest; the selected Strip sequence remains constant as the channel brightens and speeds up.
 // Reduced motion: static. Both frame copies share timing and rate, so handing over to the chrome is seamless; the
 // loops pause while neither copy is on screen.
 const ENERGY={px:360,loopMs:9000,surge:4,dive:10};
@@ -293,8 +310,8 @@ function energize(seq,rate=1,hot=false){
 function syncEnergy(){const on=boardShown||!!framed;energyAnims.forEach(a=>on?a.play():a.pause());}
 // War Room look (device-local, guests too): metal colours ride CSS variables, the strip colour feeds energize(). Reapplied on
 // load, return to the portal and cross-tab/bfcache changes; a board pick made elsewhere loads once (an uncached one falls back).
-const restSeq=()=>{const c=readLook().strip;return c===LOOK_DEFAULTS.strip?NEONS:stripSeq(c);};
-function applyLook(){applyLookVars();if(!phase)energize(restSeq());}
+const restSeq=()=>stripSeq(readLook().strip);
+ function applyLook(){const look=readLook();applyLookVars(document.documentElement,look);document.documentElement.style.setProperty('--portal-strip-glow',`${look.strip}40`);menuSheet?.querySelectorAll('[data-look]').forEach(input=>{input.value=look[input.dataset.look];});if(aura?.el){const seq=stripSeq(look.strip);aura.el.style.setProperty('--aura',look.strip);aura.el.style.setProperty('--aura-edge',`color-mix(in srgb,${look.strip} 45%,#fff)`);aura.el.style.setProperty('--aura-seq',[...seq,seq[0]].join(','));}if(!phase)energize(restSeq());}
 function syncLook(){applyLook();const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored]&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
@@ -305,6 +322,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
+  <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">Grimoire settings</button>
   <button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
@@ -317,6 +335,8 @@ function buildDom(){
  syncEnergy();
  boardHost=portalHome.querySelector('#portalBoardHost');
  boardHost.addEventListener('webglcontextlost',e=>{if(gl3&&e.target===gl3.canvas)lost3D();},true); // capture: the event doesn't bubble
+ const resizeFullscreenFace=()=>{const dialog=framed?.dialog;if(!dialog?.classList.contains('portal-fullscreen'))return;const face=fullscreenFace();setFace(dialog,face);setFace(chrome,face);if(aura)showAura(screenLook(framed.look,face),'open');};
+ addEventListener('resize',resizeFullscreenFace,{signal:lifecycle.signal});window.visualViewport?.addEventListener('resize',resizeFullscreenFace,{signal:lifecycle.signal});
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
  objectsLayer=portalHome.querySelector('#portalObjects');
  statusEl=portalHome.querySelector('#portalStatus');
@@ -325,10 +345,12 @@ function buildDom(){
  const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
  menuBtn=barPortal||portalHome.querySelector('#portalExitButton');
  const exitBtn=portalHome.querySelector('#portalExitButton');
+ settingsBtn=portalHome.querySelector('#portalSettingsButton');
+ settingsBtn.onclick=()=>openMenu();
  if(bar)exitBtn.remove(); // the centre mechanical key returns to the pod when the dock is present
  else exitBtn.onclick=()=>setVisible(false);
  const armie=()=>[...document.querySelectorAll('.armie-inbox-launcher')].filter(el=>el.getClientRects().length);
- const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...(bar?bar.querySelectorAll('button'):[menuBtn]),...armie(),...(exitBtn.isConnected?[exitBtn]:[])],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
+ const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...new Set([...(bar?bar.querySelectorAll('button'):[menuBtn]),settingsBtn,...armie(),...(exitBtn.isConnected?[exitBtn]:[])])],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
  portalHome.addEventListener('keydown',trap);
  bar?.addEventListener('keydown',e=>{if(boardShown&&!bar.closest('dialog'))trap(e);},{signal:lifecycle.signal});
  document.addEventListener('keydown',e=>{if(boardShown&&e.target.classList?.contains('armie-inbox-launcher'))trap(e);},{signal:lifecycle.signal});
@@ -338,7 +360,10 @@ function buildDom(){
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
  // The board picker row only earns its place once a second board ships; one option is nothing to pick from.
  const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div>`;
- menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Menu</h2></header><div class="portal-menu-grid">${menuButtonsHtml()}</div>${boardRow}<label class="portal-color">Grimoire colour <input type="color" aria-label="Grimoire colour" value="${boardTint()}"></label><p id="portalMenuStatus" role="status"></p>`;
+ menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">Grimoire</h2><button type="button" data-menu-close>Back to portal</button></header>${lookControlsHtml()}<label class="portal-color">${boardTintLabel()} <input type="color" aria-label="${boardTintLabel()}" data-board-tint value="${boardTint()}"></label>${boardRow}<div data-palette-row>${paletteSelectHtml()}</div><details class="portal-full-menu"><summary>Full menu</summary><div class="portal-menu-grid">${menuButtonsHtml()}</div></details><p id="portalMenuStatus" role="status"></p>`;
+ menuSheet.querySelector('[data-menu-close]').onclick=()=>menuSheet.close();
+ menuSheet.querySelectorAll('[data-look]').forEach(input=>input.oninput=()=>{saveLook(input.dataset.look,input.value);applyLook();});
+ menuSheet.querySelector('[data-look-reset]').onclick=()=>{for(const name of ['portal','strip'])saveLook(name,LOOK_DEFAULTS[name]);applyLook();};
  document.body.append(menuSheet);
  menuSheet.querySelectorAll('[data-menu]').forEach(btn=>btn.onclick=()=>{
   const menu=MENUS[btn.dataset.menu];
@@ -350,20 +375,32 @@ function buildDom(){
   if(menu.kind==='dialog'){const run=++sequence;openDirect(menu,()=>run===sequence&&!lifecycle.signal.aborted);return;}
   setVisible(false);menu.open?.();
  });
- menuSheet.querySelector('input[type=color]').oninput=e=>store.set(tintKey(boardId),e.target.value);
+ menuSheet.querySelector('[data-board-tint]').oninput=e=>{
+  const color=e.target.value;
+  store.set(tintKey(boardId),color);
+  if(base&&boardId!=='quilt')base.setTint?.(color);
+  if(gl3&&boardId!=='quilt')gl3.setTint?.(color);
+  menuSheet.querySelector('[data-board-tint]')?.setAttribute('value',color);
+};
+ menuSheet.addEventListener('change',e=>{if(e.target.matches('[data-palette]')){const options=paletteOptions(boardId);if(options.some(p=>p.id===e.target.value))store.set(paletteKey(boardId),e.target.value);}}, {signal:lifecycle.signal});
  menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected);if(!lifecycle.signal.aborted)setVisible(true);});
  workoutHome=document.createElement('dialog');workoutHome.id='portalWorkoutHome';workoutHome.className='portal-workout-home';document.body.append(workoutHome);
- workoutHome.addEventListener('close',restoreWorkoutHome);
+ workoutHome.addEventListener('close',()=>{if(!workoutHome.open)restoreWorkoutHome();});
 }
 
 function restoreWorkoutHome(){
- if(workoutNode&&workoutSource){workoutSource.parent.insertBefore(workoutNode,workoutSource.next);workoutSource=null;workoutNode=null;}
+ for(const {node,slot} of workoutSlots){if(slot.parentNode)slot.replaceWith(node);}
+ workoutSlots=[];
 }
 function openWorkoutHome(){
  if(!workoutHome)return null;
  if(workoutHome.open)return workoutHome;
+ if(workoutSlots.length){workoutHome.showModal();return workoutHome;}
  const home=document.getElementById('homeScreen');if(!home)return null;
- backgroundBlocked(false);workoutNode=home;workoutSource={parent:home.parentNode,next:home.nextSibling};workoutHome.append(home);workoutHome.showModal();
+ backgroundBlocked(false);
+ const nodes=[document.getElementById('podShipBackdrop'),document.querySelector('body>.ship-header'),home].filter(node=>node&&!workoutHome.contains(node));
+ workoutSlots=nodes.map(node=>{const slot=document.createComment('pod-workout-home-slot');node.parentNode?.insertBefore(slot,node);return{node,slot};});
+ workoutHome.append(...nodes);workoutHome.showModal();
  return workoutHome;
 }
 
@@ -427,11 +464,12 @@ const setFace=(el,face)=>{for(const k of ['left','top','width','height'])face?el
 const rectPts=f=>closeLoop([[f.left,f.top],[f.left+f.width,f.top],[f.left+f.width,f.top+f.height],[f.left,f.top+f.height]]);
 const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,null];
 // A full-window look (the lines, the Menu sheet, a bottom-bar switch): the window's own rectangle, the name on the upper rail.
-const windowLook=(id,menu,face)=>({id,color:boardTint(),label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(face)});
+ const windowLook=(id,menu,face)=>({id,color:boardTint(),strip:readLook().strip,label:menu?.label||'',pts:rectPts(face),shaped:false,name:namePath(face)});
 // R7 (Ian 26 Sept): no text in a peer-through view, so the cut's rim (and the window it steps in to) carries no name.
-const shapeLook=(id,menu,pts)=>({id,color:boardTint(),label:menu.label,pts,shaped:true,name:null});
-// R7: full screen keeps the energy, round the screen's own edge (its inward vignette; the frame has gone up out of the way).
-const screenLook=look=>({...look,pts:rectPts({left:0,top:0,width:innerWidth,height:innerHeight}),shaped:false,name:null});
+ const shapeLook=(id,menu,pts)=>({id,color:boardTint(),strip:readLook().strip,label:menu.label,pts,shaped:true,name:null});
+// Fullscreen destinations keep the energy and feather it inward along the inset face.
+ const screenLook=(look,face=fullscreenFace())=>({...look,pts:rectPts(face),shaped:false,fullscreen:true,name:null});
+ function fullscreenFace(){const rail=15;return {left:rail,top:rail,width:Math.max(1,innerWidth-rail*2),height:Math.max(1,innerHeight-rail*2)};}
 function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
@@ -444,28 +482,28 @@ function frameOn(face,look){
  framed.watch.observe(document.body,{subtree:true,attributeFilter:['open']});
  return true;
 }
-function frameDialog(dialog){
- if(!framed||!(dialog instanceof HTMLDialogElement)||framed.dialog===dialog)return;
- unframe(framed.dialog);framed.dialog=dialog;dialog.classList.add('portal-framed');setFace(dialog,framed.face);
- const full=dialog.matches('.meditation-panel')||dialog.id==='portalWorkoutHome';dialog.classList.toggle('portal-fullscreen',full);chrome.classList.toggle('portal-garage',full);if(full)chrome.dataset.destination=dialog.matches('.meditation-panel')?'meditation':'workout';
+ function frameDialog(dialog){
+  if(!framed||!(dialog instanceof HTMLDialogElement)||framed.dialog===dialog)return;
+  unframe(framed.dialog);framed.dialog=dialog;dialog.classList.add('portal-framed');
+  const route=framed.directRoute||dialog.dataset.route;
+  const full=framed.direct===true||dialog.matches('.meditation-panel')||dialog.id==='portalWorkoutHome',face=full?fullscreenFace():framed.face;setFace(dialog,face);setFace(chrome,face);
+  dialog.classList.toggle('portal-fullscreen',full);chrome.classList.toggle('portal-housing-fullscreen',full);chrome.classList.remove('portal-garage');if(full)chrome.dataset.destination=framed.directRoute|| (dialog.matches('.meditation-panel')?'meditation':'workout');else delete chrome.dataset.destination;
  // Back above the dialog, which opened on top of it. Re-shown a frame later: a popover hidden and shown in one task can
  // keep its old top-layer slot (under the dialog's backdrop) on WebKit. The rim is drawn then too, sized to the shown
  // frame (a hidden popover measures 0x0): it bursts open as the destination lands (not under the dive's scale).
- chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(full?screenLook(framed.look):aura?.look||framed.look,'open');});
+  chrome.hidePopover();requestAnimationFrame(()=>{if(framed?.dialog!==dialog)return;if(!chrome.matches(':popover-open'))chrome.showPopover();showAura(full?screenLook(framed.look,face):aura?.look||framed.look,'open');});
  peerOn(dialog); // R7 (Ian 26 Sept): the tilt stays on every menu, full screen too
  if(!full&&framed.look.shaped)shapeDialog(dialog);
 }
 // The room remains visible through its cut until a double-tap or a scene action steps inside (full screen). Keep the
-// route/dialog identity, so Back and Close still return through their original portal. R7 (Ian 26 Sept): the energy and the
-// tilt stay; only the metal frame goes, up out of the way as it does for the full-screen destinations. Its titles and
-// controls come back (portal.css hides them while peered), iOS's tilt chip with them.
+// route/dialog identity, so Back and Close still return through their original portal. The housing remains around the inset face.
 function expandScene(dialog){
  if(!dialog?.open||framed?.dialog!==dialog||framed.expanded)return false;
  layoutInCut(dialog,false);framed.expanded=true;framed.leaned=true;
- dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');
+ dialog.classList.remove('portal-shaped','portal-inset','portal-leaned');dialog.classList.add('portal-fullscreen');chrome.classList.add('portal-housing-fullscreen');
  dialog.style.removeProperty('clip-path');dialog.style.removeProperty('--inset-zoom');motion(dialog,'');
- setFace(dialog,{left:0,top:0,width:innerWidth,height:innerHeight});
- chrome.classList.add('portal-garage');showAura(screenLook(framed.look),'lean');
+  const face=fullscreenFace();setFace(dialog,face);setFace(chrome,face);
+  chrome.classList.remove('portal-garage');showAura(screenLook(framed.look,face),'lean');
  stowBoard();return true;
 }
 // A destination can showModal() before its open() settles (the ship view loads after): frame it as it opens, before
@@ -486,7 +524,24 @@ function unframe(dialog){
 function frameOff(){
  if(!framed)return;
  const f=framed;f.watch?.disconnect();f.ctl.abort();
- unframe(f.dialog);ghostEl?.remove();ghostEl=null;framed=null;hideAura();chrome.classList.remove('portal-garage');delete chrome.dataset.destination;chrome.hidePopover();syncEnergy();
+ if(f.directClose&&f.dialog)f.dialog.removeEventListener('close',f.directClose);
+ unframe(f.dialog);ghostEl?.remove();ghostEl=null;framed=null;hideAura();chrome.classList.remove('portal-garage','portal-housing-fullscreen');delete chrome.dataset.destination;chrome.hidePopover();syncEnergy();
+}
+function frameDirectDestination(dialog,id){
+ if(!(dialog instanceof HTMLDialogElement)||!dialog.open)return false;
+ if(framed?.direct&&framed.dialog===dialog&&framed.directRoute===id)return true;
+ const [shape,menu]=menuFor(id),route=window.myr5Routes?.ROUTES?.[id];
+ sequence++;
+ setVisible(false);
+ const face=fullscreenFace(),look=windowLook(shape,menu||{label:route?.label||id},face);
+ if(!frameOn(face,look))return false;
+ dialog.dataset.route=id;
+ framed.direct=true;framed.directRoute=id;
+ frameDialog(dialog);
+ const owner=framed;
+ owner.directClose=()=>{if(framed===owner&&owner.dialog===dialog)frameOff();};
+ dialog.addEventListener('close',owner.directClose);
+ return true;
 }
 // The bar switched routes: the next route's dialog takes the frame, full window, in its own colour and name.
 function handOver(dialog){
@@ -609,10 +664,29 @@ function shapeDialog(dialog){
  dialog.addEventListener('focusin',({target})=>{if(framed?.dialog===dialog&&!framed.leaned&&!ui.contains(target)&&target.matches?.(':focus-visible')&&!throughCut(target))lean(true);},{signal:framed.ctl.signal});
  clipTo(dialog,small?framed.outlines.rect:framed.outlines.shape,{from:scalePts(framed.outlines.shape,.04),ms:prefersReducedMotion()?0:650,ease:'cubic-bezier(.2,1.25,.4,1)'});
  // R7 (Ian 26 Sept): a double-tap on the open menu (not on one of its controls) steps in to the full screen.
- const at=e=>({x:e.clientX,y:e.clientY,t:e.timeStamp}),near=(a,b)=>a&&b.t-a.t<=TAP_MS&&Math.hypot(b.x-a.x,b.y-a.y)<=TAP_MOVE_PX,opts={capture:true,signal:framed.ctl.signal};
- let down=null,tap=null;
- dialog.addEventListener('pointerdown',e=>{down=at(e);},opts);
- dialog.addEventListener('pointerup',e=>{const up=at(e),t=near(down,up)&&!e.target.closest?.('button,a,input,select,textarea,label,summary')?up:null;if(t&&near(tap,t)){tap=null;expandScene(dialog);}else tap=t;},opts);
+ const at=e=>({x:e.clientX,y:e.clientY,t:(isFinite(e.timeStamp)&&e.timeStamp>0?e.timeStamp:performance.now()),id:e.pointerId}),near=(a,b)=>a&&b&&b.t-a.t>=0&&b.t-a.t<=TAP_MS&&Math.hypot(b.x-a.x,b.y-a.y)<=TAP_MOVE_PX,opts={capture:true,signal:framed.ctl.signal};
+ let down=null,tap=null,multitouch=false;
+ const activePointers=new Set();
+ dialog.addEventListener('pointerdown',e=>{
+   activePointers.add(e.pointerId);
+   if(multitouch) return;
+   if(activePointers.size>1){multitouch=true;down=null;tap=null;return;}
+   down=at(e);
+ },opts);
+ dialog.addEventListener('pointerup',e=>{
+   activePointers.delete(e.pointerId);
+   if(multitouch){if(activePointers.size===0)multitouch=false;return;}
+   if(!down||down.id!==e.pointerId){down=null;return;}
+   const up=at(e),t=near(down,up)&&!e.target.closest?.('button,a,input,select,textarea,label,summary')?up:null;
+   if(t&&near(tap,t)){tap=null;expandScene(dialog);}else tap=t;
+   down=null;
+ },opts);
+ dialog.addEventListener('pointercancel',e=>{
+   activePointers.delete(e.pointerId);
+   down=null;
+   tap=null;
+   if(activePointers.size===0){multitouch=false;}
+ },opts);
  // A tap on the scene that opens one of its cards (a boss's detail, a pyramid screen or dial) steps in to show it.
  if(cfg.cards){
   let shut=[];const open=()=>[...dialog.querySelectorAll(cfg.cards)].filter(el=>!el.hidden);
@@ -695,13 +769,22 @@ let aura=null;
 // round fire tongues (a seeded dash rhythm on a wide round-capped stroke). A soft glow needs no detail, so it's drawn once
 // on a canvas at AURA.maskScale and handed over as a PNG: an SVG mask re-rasterised at the screen's full density cost
 // hundreds of ms on the first frame. The hot rim line is a crisp stroke in the aura's own svg instead.
-function rimMask(pts,w,h,seed,shaped){
+function rimMask(pts,w,h,seed,shaped,fullscreen=false){
  const k=AURA.maskScale,c=document.createElement('canvas');c.width=Math.ceil(w*k);c.height=Math.ceil(h*k);
  const g=c.getContext('2d',{willReadFrequently:true}),path=new Path2D(pathD(pts)),outside=new Path2D(`M0 0H${w}V${h}H0Z${pathD(pts)}`);
  let s=seed;const r=()=>(s=(s*16807)%2147483647)/2147483647,dash=(a,b)=>Array.from({length:12},()=>[a*(.3+r()),b*(.6+r())]).flat();
  g.scale(k,k);g.strokeStyle='#fff';g.lineJoin='round';
  const band=(width,alpha,dashes=null,cap='butt')=>{g.lineWidth=width;g.globalAlpha=alpha;g.lineCap=cap;g.setLineDash(dashes||[]);g.stroke(path);};
- g.save();g.clip(path);for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);g.restore();
+ g.save();g.clip(path);
+ if(fullscreen){ // Pixel-smoothed inward 36 CSS-pixel fade, generated at the cached half-resolution mask size.
+  const image=g.createImageData(c.width,c.height),smooth=t=>t*t*(3-2*t);
+  for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+   const d=Math.min(x/k,y/k,(c.width-1-x)/k,(c.height-1-y)/k),alpha=Math.round(224*(1-smooth(Math.min(1,d/36)))),i=4*(y*c.width+x);
+   image.data[i]=image.data[i+1]=image.data[i+2]=255;image.data[i+3]=alpha;
+  }
+  g.putImageData(image,0,0);
+ }else for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);
+ g.restore();
  g.save();g.clip(outside,'evenodd');
  if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,b);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
  else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,b);band(11,.32,dash(3,26),'round');}
@@ -718,18 +801,18 @@ function auraOut(){
 function showAura(look,why='open'){
  hideAura();
  if(!look?.pts)return;
- const w=Math.max(1,chrome.clientWidth),h=Math.max(1,chrome.clientHeight),d=pathD(look.pts),[cx,cy]=centroidOf(look.pts),seq=ringColours(look.color),reduced=prefersReducedMotion();
+ const w=Math.max(1,chrome.clientWidth),h=Math.max(1,chrome.clientHeight),d=pathD(look.pts),[cx,cy]=centroidOf(look.pts),strip=readLook().strip,seq=stripSeq(strip),reduced=prefersReducedMotion();
  const xs=look.pts.map(p=>p[0]),ys=look.pts.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys),bw=Math.max(...xs)-bx,bh=Math.max(...ys)-by;
  const el=document.createElement('div');el.className='portal-aura';el.setAttribute('aria-hidden','true');el.classList.toggle('shaped',!!look.shaped);
- el.style.cssText=`--aura:${look.color};--aura-seq:${[...seq,seq[0]].join(',')};--cx:${d2(cx)}px;--cy:${d2(cy)}px`;
+ el.style.cssText=`--aura:${strip};--aura-edge:color-mix(in srgb,${strip} 45%,#fff);--aura-seq:${[...seq,seq[0]].join(',')};--cx:${d2(cx)}px;--cy:${d2(cy)}px`;
  const label=look.id==='down'?'':String(look.label||'').toUpperCase().replace(/[<&>]/g,''); // Achievements already titles the scene inside the cut.
  // One static svg (the aperture's depth inside the outline, the name outside it) and one masked layer holding the
  // flow: two neon wheels turning against each other (the second flickering, for the fire) and the specular blob.
- el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".2" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".28" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="color-mix(in srgb,${look.color} 45%,#fff)" stroke-width="2.5" stroke-linejoin="round"/>`
+ el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".2" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".28" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="var(--aura-edge)" stroke-width="2.5" stroke-linejoin="round"/>`
   +(label&&look.name?`<text class="portal-aura-name"><textPath href="#portalAuraName" startOffset="50%" text-anchor="middle">${label}</textPath></text>`:'')+'</svg>'
   +'<i class="portal-aura-fire"><i></i><i class="b"></i><i class="portal-aura-spec"></i></i>';
  const fire=el.querySelector('.portal-aura-fire'),[wa,wb,blob]=fire.children;
- setMask(fire,rimMask(look.pts,w,h,7,look.shaped));
+ setMask(fire,rimMask(look.pts,w,h,7,look.shaped,look.fullscreen));
  const R=Math.max(bw,bh)*.45,far=Math.ceil(Math.max(...[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>Math.hypot(x-cx,y-cy))));
  blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
  for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
@@ -778,13 +861,14 @@ const PEER_LAYER={far:14,mid:5,near:-4};
 const PEER_DEPTH=[
  ['#accountPanel.classroom-panel',{scene:true}],
  ['#mealsPanel',{scene:true,cards:'.pyramid-zoom,#foodDial,#mealConfirmation',fit:{sel:'#pyramidScanner',band:[0,1]}}],
+ ['#remindersPanel',{scene:true,layers:[['.reminders-computer-stage',8],['.reminders-computer-screen',3]]}],
  ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
  ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],cards:'.ach-detail',fit:{sel:'.ach-stage',band:[.075,.9]}}],
  ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
-const peer={dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null};
+const peer={dialog:null,cfg:null,els:[],depths:[],flatEls:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null,watch:null};
 const clamp1=v=>Math.max(-1,Math.min(1,v));
 function tiltAccess(){
  if(typeof DeviceOrientationEvent==='undefined')return 'none';
@@ -796,7 +880,9 @@ function peerOn(dialog){
  if(prefersReducedMotion()||document.body.dataset.cameraWorkout==='true')return;
  const cfg=peerCfg(dialog),signal=(peer.ctl=new AbortController()).signal;
  Object.assign(peer,{dialog,cfg,x:0,y:0,tx:0,ty:0,base:null,drag:null,sensor:false});
- peer.els=(cfg.layers||[]).flatMap(([s,px])=>[...dialog.querySelectorAll(s)].map(el=>[el,px]));
+ refreshPeerTargets(dialog,cfg);
+ peer.watch=new MutationObserver(()=>{if(peer.dialog!==dialog)return;refreshPeerTargets(dialog,cfg);kickPeer();});
+ peer.watch.observe(dialog,{subtree:true,childList:true,attributes:true,attributeFilter:['data-peer-depth']});
  const access=tiltAccess();
  if(access==='free'||access==='granted')addEventListener('deviceorientation',onOrient,{signal});
  else if(access==='ask'&&(cfg.scene||cfg.chip))tiltChip(dialog);
@@ -805,11 +891,15 @@ function peerOn(dialog){
   dialog.addEventListener('pointermove',e=>{const g=peer.drag;if(g?.id!==e.pointerId)return;peer.tx=clamp1((e.clientX-g.x)/PEER.dragPx);peer.ty=clamp1((e.clientY-g.y)/PEER.dragPx);kickPeer();},{signal,passive:true});
   for(const type of ['pointerup','pointercancel'])dialog.addEventListener(type,e=>{if(peer.drag?.id===e.pointerId){peer.drag=null;peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
  }
+ if(framed?.direct){
+  dialog.addEventListener('pointermove',e=>{if(peer.sensor||document.hidden)return;const r=dialog.getBoundingClientRect();peer.tx=clamp1((e.clientX-r.left-r.width/2)/(r.width*.45));peer.ty=clamp1((e.clientY-r.top-r.height/2)/(r.height*.45));kickPeer();},{signal,passive:true});
+  dialog.addEventListener('pointerleave',()=>{if(!peer.sensor){peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
+ }
  document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;peer.last=0;}else kickPeer();},{signal});
  addEventListener('orientationchange',()=>{peer.base=null;},{signal});
 }
 function peerOff(){
- peer.ctl?.abort();peer.ctl=null;cancelAnimationFrame(peer.raf);peer.raf=0;
+ peer.ctl?.abort();peer.ctl=null;peer.watch?.disconnect();peer.watch=null;cancelAnimationFrame(peer.raf);peer.raf=0;
  const {dialog}=peer;
  if(dialog){
   for(const k of ['left','top','--peer-x','--peer-y'])dialog.style.removeProperty(k);
@@ -817,8 +907,16 @@ function peerOff(){
   for(const el of dialog.querySelectorAll('[data-peer-depth]'))el.style.translate='';
  }
  for(const [el] of peer.els)el.style.translate='';
- Object.assign(peer,{dialog:null,cfg:null,els:[],depths:[],x:0,y:0,tx:0,ty:0,last:0,drag:null,sensor:false});eye.x=eye.y=0;
+ for(const el of peer.flatEls)el.style.translate='';
+ Object.assign(peer,{dialog:null,cfg:null,els:[],depths:[],flatEls:[],x:0,y:0,tx:0,ty:0,last:0,drag:null,sensor:false});eye.x=eye.y=0;
  if(aura?.spec)aura.spec.style.translate='';
+}
+function refreshPeerTargets(dialog=peer.dialog,cfg=peer.cfg){
+ if(!dialog||!cfg)return;
+ peer.els=(cfg.layers||[]).flatMap(([s,px])=>[...dialog.querySelectorAll(s)].map(el=>[el,px]));
+ peer.depths=[...dialog.querySelectorAll('[data-peer-depth]')];
+ peer.flatEls=framed?.direct&&dialog.classList.contains('portal-fullscreen')&&!cfg.scene
+  ?[...dialog.children].filter(el=>el.id!=='coachDock'&&!el.matches('.portal-peer-ui')):[];
 }
 const wrap180=a=>((a+180)%360+360)%360-180;
 function onOrient(e){
@@ -836,7 +934,7 @@ function onOrient(e){
  peer.tx=dG;peer.ty=dB;kickPeer();
 }
 // Each run of steps (until the eye settles) looks its depth layers up once: a scene may add layers after it opens.
-function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last){peer.last=performance.now();peer.depths=[...peer.dialog.querySelectorAll('[data-peer-depth]')];}peer.raf=requestAnimationFrame(stepPeer);}}
+function kickPeer(){if(!peer.raf&&peer.dialog&&!document.hidden){if(!peer.last){peer.last=performance.now();refreshPeerTargets();}peer.raf=requestAnimationFrame(stepPeer);}}
 function stepPeer(now){
  peer.raf=0;
  const k=1-Math.exp(-Math.max(0,now-peer.last)/PEER.smoothMs);peer.last=now; // low-pass by time, the same at any frame rate
@@ -850,6 +948,7 @@ function stepPeer(now){
  const slide=(el,px)=>{el.style.translate=`${d2(x*px)}px ${d2(y*px)}px`;};
  for(const [el,px] of peer.els)slide(el,px);
  for(const el of peer.depths)slide(el,(PEER_LAYER[el.dataset.peerDepth]||0)*(cfg.strength??1));
+ for(const el of peer.flatEls)slide(el,cfg.move||PEER_2D.move);
  if(aura?.spec)aura.spec.style.translate=`${d2(-x*AURA.specPx)}px ${d2(-y*AURA.specPx)}px`;
 }
 // iOS 13+: DeviceOrientationEvent.requestPermission() needs a tap. A small chip in the window's corner, never a modal.
@@ -1304,10 +1403,11 @@ export function lensMap(poly,w,h,px=GLASS.mapPx,bevel=GLASS.bevel){
  return {data,mw,mh};
 }
 const TUNNEL_VS='#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0,1);}';
-const tunnelFragment=()=>`#version 300 es
+const tunnelFragment=(material='')=>`#version 300 es
 precision highp float;
 uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
+${material}
 vec3 tunnel(vec2 p,float fz){
  float aa=1.-smoothstep(.25,.9,fz); // fade ring detail that gets finer than a pixel
  vec2 d=(p-uC)/uR;float r=max(length(d),1e-3),z=3.4/r,a=atan(d.y,d.x)+uSpin+.12*z;
@@ -1315,6 +1415,7 @@ vec3 tunnel(vec2 p,float fz){
  vec3 c=mix(seq(i),seq(i+1.),smoothstep(.65,1.,f));
  c*=mix(.85,.55+.45*(.5+.5*sin(a*7.+v*6.2832)),aa); // twisted streaks
  c+=max(pow(f,12.),1.-smoothstep(0.,1.5*fz,f))*aa*(c*.8+.35); // bright leading edge of each ring, antialiased across the wrap
+${material ? ' c=material(a,v,z,r,aa,c);' : ''}
  c=mix(c,uCore,smoothstep(7.,40.,z));            // depth fog: the far end glows
  c+=uCore*exp(-r*16.)*1.1;                        // bright core at the vanishing point
  return c*mix(1.,.78,smoothstep(1.,1.8,r));      // walls dim a little toward the opening (more turns neon yellow olive)
@@ -1342,56 +1443,91 @@ void main(){
 }`;
 // One WebGL2 context for the portal's life, created on the first glass and reused; null when unavailable (CSS glass then).
 let tunnel=null;
-function tunnelGL(){
- if(tunnel)return tunnel;
- if(tunnel){tunnel.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel.canvas.remove();tunnel=null;}
- const canvas=document.createElement('canvas'),gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
- if(!gl)return null;
- const prog=gl.createProgram();
- for(const [type,src] of [[gl.VERTEX_SHADER,TUNNEL_VS],[gl.FRAGMENT_SHADER,tunnelFragment()]]){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);gl.attachShader(prog,s);}
- gl.linkProgram(prog);
- if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){console.warn('Portal wormhole unavailable.',gl.getProgramInfoLog(prog));gl.getExtension('WEBGL_lose_context')?.loseContext();return null;}
- gl.useProgram(prog);
- const u={};for(const k of ['uRes','uC','uLP','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uMag','uN','uSeq','uCore','uTint','uBlur'])u[k]=gl.getUniformLocation(prog,k);
- gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
- for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
- for(const k of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,k,gl.LINEAR);
- canvas.addEventListener('webglcontextlost',()=>{if(tunnel?.canvas===canvas)tunnel=null;canvas.parentNode?.classList.remove('gl');canvas.remove();});
- // One 1px draw read back now: drivers compile lazily, at the first real draw, which would stall the first cut instead.
- canvas.width=canvas.height=1;gl.viewport(0,0,1,1);gl.drawArrays(gl.TRIANGLES,0,3);gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
- return tunnel={canvas,gl,u};
+function tunnelGL(material='',{activate=true}={}) {
+ const uniforms=['uRes','uC','uLP','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uMag','uN','uSeq','uCore','uTint','uBlur'];
+ if(!tunnel){
+  const canvas=document.createElement('canvas'),gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
+  if(!gl)return null;
+  const owner={canvas,gl,programs:new Map(),texture:gl.createTexture(),active:null};tunnel=owner;
+  gl.bindTexture(gl.TEXTURE_2D,owner.texture);
+  for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
+  for(const k of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,k,gl.LINEAR);
+  canvas.addEventListener('webglcontextlost',()=>{
+   owner.programs.clear();if(tunnel===owner)tunnel=null;
+   canvas.parentNode?.classList.remove('gl');canvas.remove();
+  });
+ }
+ const owner=tunnel,{gl,canvas}=owner;
+ let selected=owner.programs.get(material),compiled=false;
+ if(!selected){
+  const vs=gl.createShader(gl.VERTEX_SHADER),fs=gl.createShader(gl.FRAGMENT_SHADER),program=gl.createProgram();
+  const compile=(shader,source)=>{gl.shaderSource(shader,source);gl.compileShader(shader);return gl.getShaderParameter(shader,gl.COMPILE_STATUS);};
+  const valid=compile(vs,TUNNEL_VS)&&compile(fs,tunnelFragment(material));
+  if(!valid){gl.deleteShader(vs);gl.deleteShader(fs);gl.deleteProgram(program);return null;}
+  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)){gl.deleteProgram(program);return null;}
+  const u={};for(const k of uniforms)u[k]=gl.getUniformLocation(program,k);
+  selected={program,u};owner.programs.set(material,selected);compiled=true;
+  // Warm each new linked program once so the first full-size frame doesn't pay lazy driver setup cost.
+  // Restore the prior program: a deferred cache fill can run while another material owns a live phase.
+  if(owner.programs.size===1)canvas.width=canvas.height=1;
+  const previous=gl.getParameter(gl.CURRENT_PROGRAM),previousViewport=gl.getParameter(gl.VIEWPORT);
+  gl.useProgram(program);gl.bindTexture(gl.TEXTURE_2D,owner.texture);gl.viewport(0,0,1,1);gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));gl.useProgram(previous);gl.viewport(...previousViewport);
+ }
+ if(activate){gl.useProgram(selected.program);owner.active=selected;owner.u=selected.u;}
+ return owner;
 }
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // Runs the wormhole for one glass phase: speed ramps up across the cut + loading phase, the vanishing point drifts
 // toward the finger (and with device tilt where that needs no permission prompt). Reduced motion uses static CSS glass.
 // ph.stop() freezes it (at the reveal) and endPhase() always stops it.
-function startTunnel(ph,poly,color,all){
- ph.glass.dataset.tunnel=boardId;ph.glass.style.setProperty('--tint',boardTint());
- const [seq0,...seqN]=ringColours(color,all);ph.glass.style.setProperty('--seq0',seq0);ph.glass.style.setProperty('--seq',seqN.join(',')); // the CSS wormhole's rings (no WebGL)
- if(prefersReducedMotion())return; // the static CSS glass avoids a costly WebGL resize on an instant transition
- const t=tunnelGL();if(!t)return;
- const {gl,u,canvas}=t,{left,top,w,h}=ph.box,reduced=prefersReducedMotion(),seq=ringColours(color,all);
+async function startTunnel(ph,poly,color,all){
+ const capturedBoardId=boardId,capturedSignal=lifecycle?.signal;
+ let cancelled=false,raf=0,tiltOk=false,onTilt=null;
+ // Install cancellation before any optional material import can yield. Standalone wormholes have their own phase object.
+ ph.stop=()=>{cancelled=true;cancelAnimationFrame(raf);if(tiltOk&&onTilt)removeEventListener('deviceorientation',onTilt);};
+ const palette=!all?paletteFor(capturedBoardId,store.get(paletteKey(capturedBoardId))):null;
+ const seq=all||capturedBoardId==='quilt'?ringColours(color,all):palette?.colors||ringColours(color,all),core=palette?.core||color;
+ ph.glass.dataset.tunnel=capturedBoardId;ph.glass.style.setProperty('--tint',boardTint(capturedBoardId));
+ const [seq0,...seqN]=seq;ph.glass.style.setProperty('--seq0',seq0);ph.glass.style.setProperty('--seq',seqN.join(','));
+ if(prefersReducedMotion())return; // CSS uses the selected sequence without creating WebGL under reduced motion.
+ let material='';
+ if(!all&&palette&&capturedBoardId!=='quilt'){
+  let pending=materialLoads.get(capturedBoardId);
+  if(!pending){pending=import(`./portal-tunnel-${capturedBoardId}.mjs`).then(m=>typeof m.material==='string'?m.material:'').catch(()=> '');materialLoads.set(capturedBoardId,pending);}
+  material=await Promise.race([pending,sleep(900).then(()=> '')]);
+ }
+ if(cancelled||!ph.glass.isConnected||capturedSignal?.aborted)return;
+ const t=tunnelGL(material);if(!t)return;
+ const {gl,canvas}=t,{program,u}=t.active,{left,top,w,h}=ph.box,reduced=prefersReducedMotion();
+ const bindPhaseProgram=()=>gl.useProgram(program);
+ bindPhaseProgram();
+ gl.bindTexture(gl.TEXTURE_2D,t.texture);
  const tex=lensMap((ph.fullscreen?poly:bleedPts(poly,-GLASS.rimInset)).map(([x,y])=>[x-left,y-top]),w,h);
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,tex.mw,tex.mh,0,gl.RGBA,gl.UNSIGNED_BYTE,tex.data);
  const flat=new Float32Array(30);seq.forEach((c,i)=>flat.set(rgb(c),3*i));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
- gl.uniform3fv(u.uTint,rgb(boardTint()));
- gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(color).map(v=>v*.5+.5));
+ gl.uniform3fv(u.uTint,rgb(boardTint(capturedBoardId)));
+ gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(core).map(v=>v*.5+.5));
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  // ponytail: hardwareConcurrency is a coarse low-end hint (and capped on some browsers); the measured-frame check below is the real guard.
- let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,raf=0,tilt=null,tilt0=null;
+ let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,tilt=null,tilt0=null;
  const par=[0,0],slow=[],rest=[-.35*w,-.55*h],light=[...rest]; // #125 the specular follows the finger, else sits up-left (and leans with tilt)
  const size=()=>{
+  bindPhaseProgram();
   canvas.width=Math.max(1,Math.round(w*pr));canvas.height=Math.max(1,Math.round(h*pr));gl.viewport(0,0,canvas.width,canvas.height);
   gl.uniform2f(u.uRes,canvas.width,canvas.height);gl.uniform1f(u.uPr,pr);gl.uniform1f(u.uR,Math.max(R,1)*pr);gl.uniform1f(u.uLens,GLASS.bend*pr);gl.uniform1f(u.uBevel,GLASS.bevel*pr);gl.uniform1f(u.uFringe,lite||reduced?0:GLASS.fringe);gl.uniform1f(u.uMag,GLASS.magnify);gl.uniform1f(u.uBlur,lite||reduced?0:.18);
  };
  const draw=now=>{
+  bindPhaseProgram();
   const age=now-ph.t0;
   gl.uniform1f(u.uT,travel);gl.uniform1f(u.uSpin,reduced?0:(age*.000225)%(2*Math.PI));gl.uniform1f(u.uSweep,reduced?.45:-.35+1.7*((age/3200)%1));
   gl.uniform2f(u.uC,(cx+par[0])*pr,(cy+par[1])*pr);gl.uniform2f(u.uLP,light[0]*pr,light[1]*pr);gl.drawArrays(gl.TRIANGLES,0,3);
  };
- const onTilt=e=>{if(e.gamma==null)return;tilt0??=[e.gamma,e.beta];tilt=[-(e.gamma-tilt0[0])*R*.012,-(e.beta-tilt0[1])*R*.012];};
+ onTilt=e=>{if(e.gamma==null)return;tilt0??=[e.gamma,e.beta];tilt=[-(e.gamma-tilt0[0])*R*.012,-(e.beta-tilt0[1])*R*.012];};
  const frame=now=>{
+  if(cancelled||!ph.glass.isConnected||capturedSignal?.aborted||gl.isContextLost())return;
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   // Graceful degrade: if frames 10-40 run slow (median under ~45 fps), drop resolution and the fringe.
   if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);size();ph.glass.dataset.lite='1';}
@@ -1404,10 +1540,9 @@ function startTunnel(ph,poly,color,all){
  };
  size();ph.glass.append(canvas);ph.glass.classList.add('gl');draw(ph.t0);
  if(reduced)return;
- const tiltOk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission!=='function';
+ tiltOk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission!=='function';
  if(tiltOk)addEventListener('deviceorientation',onTilt);
  raf=requestAnimationFrame(frame);
- ph.stop=()=>{cancelAnimationFrame(raf);if(tiltOk)removeEventListener('deviceorientation',onTilt);};
 }
 // The glass sits between #portalHome's background and the board canvas, so it shows only through the cut.
 // pts: client-px polygon to clip to (null = whole screen); all: even rainbow (the cross). The box is the clip's
@@ -1443,7 +1578,7 @@ function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null,monochrome=f
  }
  phase={glass:el,bezel,pts,color,T,t0:performance.now(),pulse:false,box:{left,top,w,h}};
  startTunnel(phase,poly,color,all);
- energize(ringColours(color,all),ENERGY.surge,true);
+ energize(restSeq(),ENERGY.surge,true);
 }
 function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();phase?.bezel?.remove();phase=null;energize(restSeq());}
 // The wormhole on its own, for transitions elsewhere (a workout's rest <-> attack, leaving Meditation): 'in' opens it
@@ -1650,7 +1785,7 @@ async function openInHole(id,menu,pts,face,current){
 }
 
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}
-function endPointer(e,cancel){
+function endPointer(e,cancel){ if(cancel) lastTap=null;
  const p=pointers.get(e.pointerId);if(!p)return;
  pointers.delete(e.pointerId);board.release(e.pointerId);
  // #105: the just-released stroke keeps fading (light-painting), independent of whether it matches.
@@ -1664,8 +1799,8 @@ function endPointer(e,cancel){
   // #20: a second tap within TAP_MS and TAP_MOVE_PX of the first, near a shape's stitched outline (within
   // TAP_HIT_PX), opens it exactly as tracing does. A single tap, or a double-tap far from any outline,
   // just ripples the fabric (board.press on pointerdown already does that).
-  const tap={x:e.clientX,y:e.clientY,t:performance.now()};
-  const isDouble=lastTap&&tap.t-lastTap.t<=TAP_MS&&Math.hypot(tap.x-lastTap.x,tap.y-lastTap.y)<=TAP_MOVE_PX;
+  const tap={x:e.clientX,y:e.clientY,t:(Number.isFinite(e.timeStamp)&&e.timeStamp>0?e.timeStamp:performance.now())};
+  const isDouble=lastTap&&tap.t-lastTap.t>=0&&tap.t-lastTap.t<=TAP_MS&&Math.hypot(tap.x-lastTap.x,tap.y-lastTap.y)<=TAP_MOVE_PX;
   lastTap=isDouble?null:tap;
   if(isDouble){
    const id=nearestTapShape(tap.x,tap.y);
@@ -1696,7 +1831,7 @@ function endPointer(e,cancel){
  },450);
 }
 function wirePointerEvents(){
- overlay.addEventListener('pointerdown',e=>{
+ overlay.addEventListener('pointerdown',e=>{ if(pointers.size>0){lastTap=null;}
   stopHint(); // #22: any touch stops the first-run hint immediately, mid-animation or not.
   overlay.setPointerCapture(e.pointerId);clearTimeout(finalizeTimer);
   pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)]});
@@ -1726,11 +1861,11 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('room-ready',e=>{const f=framed;if(e.target?.id==='accountPanel'&&f?.dialog===e.target&&!f.expanded&&f.look.shaped){layoutInCut(e.target,true);clipTo(e.target,f.outlines.shape);}},{signal:lifecycle.signal});
  document.addEventListener('click',e=>{if(workoutHome?.open&&e.target.closest?.('#start')){setVisible(false);restoreWorkoutHome();workoutHome.close();}},{capture:true,signal:lifecycle.signal});
  for(const type of ['storage','pageshow'])addEventListener(type,syncLook,{signal:lifecycle.signal});
- menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
+ if(menuBtn!==portalHome.querySelector('#portalExitButton'))menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
- wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL();}); // compile the wormhole while idle, not at the first cut
+ wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL('',{activate:false});}); // compile/cache only; never switch a live phase's program
  resizeOverlay();overlayObserver=new ResizeObserver(resizeOverlay);overlayObserver.observe(portalHome);
  setVisible(visible&&initialVisible());
  // Back from a 'nav' portal via the bfcache: drop the stale glass and hole.
@@ -1749,6 +1884,7 @@ export async function mountPortal({visible=false}={}){
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
+  frameDirectDestination,
   trace(strokes){const id=recognizeShape(strokes);if(MENUS[id])runShape(id);return MENUS[id]?id:null;},
   board:id=>loadBoard(id).then(()=>ready3D), // resolves once 3D is drawing or has fallen back to the flat board
   openWorkoutHome,

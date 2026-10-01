@@ -136,6 +136,9 @@ async function waitForCard(timeoutMs = 8000) {
 function onPopState() { if (!routed() && dialog?.open && location.hash !== openHash) dialog.close(); }
 
 function onClose() {
+ // The native `close` event is queued. A same-task route handoff can close and immediately reopen this
+ // shared dialog before that event is delivered; that old event must not invalidate the new open.
+ if (dialog?.open) return;
  openEpoch++; clearShipVisual();
  document.body.dataset.shipView = '';
  if (coachStage) window.myr5Creature?.stage?.(coachStage); coachStage = null;

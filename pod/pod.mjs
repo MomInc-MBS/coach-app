@@ -12,6 +12,7 @@ import {WorkoutSessionOwner} from './workout-session-owner.mjs';
 import {combatLevel} from '../battle-pass.mjs';
 import {throughWormhole,LINES} from './set-transition.mjs';
 import {SPECIAL_LEVEL} from '../combat-config.mjs';
+import {mountShipBackdropMotion} from './ship-backdrop.mjs';
 let voiceManifest=null;
 // Fetch the clips this set will say while the camera opens; sw.js stores /voice/* in the voice cache, so RobotAudio's later fetch is a hit.
 function warmVoice(goal){try{voiceManifest??=fetch(VOICE_MANIFEST).then(r=>r.json()).catch(()=>{voiceManifest=null;return null;});voiceManifest.then(m=>{if(!m)return;const say=['Get into position.',...Array.from({length:Math.min(60,Number(goal)||0)},(_,i)=>String(i+1))];for(const p of say){const u=m.phrases[p];if(u)fetch(u,{priority:'low'}).catch(()=>{});}});}catch{}}
@@ -20,6 +21,7 @@ const time=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 const safeRead=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 export const idleStatus=text=>{const value=String(text||'').trim();return !value||value==='Ready';};
 export function initPod({voice,movements,onStop,onNext,workouts}){
+ mountShipBackdropMotion();
  let hand={enter(){},leave(){},hit(){},dispose(){},edit(){}};let handOptionalLoaded=false;const arena=initRestArena();
  window.addEventListener('myr5:optional-materials-ready',async()=>{if(handOptionalLoaded)return;handOptionalLoaded=true;const {initHandCompanion}=await import('../hand-companion.mjs');hand=initHandCompanion();},{once:true});
  // safeRead(PROGRESS) restores the last-synced circuit snapshot (and completedSets) so the

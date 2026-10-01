@@ -52,6 +52,9 @@ const MAX_OMEGA=12;
 // following its own nearest tree — give valves a `drives`-like link to their tree if two trains ever
 // spin opposite and it reads wrong.
 const VALVE_IDLE=.25,VALVE_RATIO=.15,LIGHT_COLOR='#b026ff';
+let selectedTint=null,weldTrace=null;
+const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
+function tintRgba(hex,alpha){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${Math.max(0,alpha)})`;}
 
 // All touch-reactive tuning in one place. Pipes wiggle as a damped torsion spring, angle'' =
 // -w0^2*angle - damping*angle' (w0 = 2*pi*wiggleFreqHz): underdamped, so a kick visibly oscillates a
@@ -220,6 +223,12 @@ export function weldBeadAlpha(age,hotMs,beadMs,holdFrac){
 
 // --- Effect glue -------------------------------------------------------------------------------
 let S=null; // per-instance state; one portal board is ever active at once
+function setCogsTint(hex,selected=true){
+ if(selected&&!validTint(hex))return;
+ selectedTint=selected?hex:null;
+ if(S){for(const part of S.parts)if(part.kind==='light')part.mat.emissive.set(selectedTint||LIGHT_COLOR);S.wake?.();}
+ if(weldTrace){weldTrace.tint=selectedTint;weldTrace.wake?.();}
+}
 
 // One GLTFLoader promise per file, so every slot using a kit shares a single load.
 const models=new Map();
@@ -259,7 +268,7 @@ function buildParts(parent,gltf,list,front,fw,fh,mats){
   pivot.position.set(x,y,front+(p.layer||0)*LAYER_STEP*fw+depth/2);
   part.z0=pivot.position.z; // rest z; pipes bob off this and back
   if(p.kind==='light'){
-   const mat=src.material.clone();mat.emissive.set(LIGHT_COLOR);mat.emissiveMap=mat.map;mat.emissiveIntensity=KNOBS.lightOff;m.material=mat;
+   const mat=src.material.clone();mat.emissive.set(selectedTint||LIGHT_COLOR);mat.emissiveMap=mat.map;mat.emissiveIntensity=KNOBS.lightOff;m.material=mat;
    mats.push(mat);Object.assign(part,{mat,phase:i*2.3,level:0,nearUntil:-Infinity});
   }else if(p.kind==='valve')part.dir=i%2?1:-1;
   pivot.rotation.z=rot;pivot.add(m);parent.add(pivot);parts.push(part);
@@ -292,7 +301,7 @@ async function init({mesh,face,wake,paint,glow}){
  const reducedMotion=matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  S={gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,
     paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,
-    sparks:[],weld:[],weldHeads:new Map(),weldActive:false};
+    sparks:[],weld:[],weldHeads:new Map(),weldActive:false,tint:selectedTint};
 }
 // --- Welding trail: sparks + hot streak (glow canvas) + cooling weld bead (paint canvas) -----------
 // A spark: {x,y,px,py (canvas px, px/py = last frame's pos, for a streak),vx,vy (px/s),born (ms),
@@ -345,9 +354,9 @@ function weldRenderGlow(S,now){
  ctx.clearRect(0,0,w,h);
  ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
  ctx.filter=`blur(${(haloW*.35).toFixed(1)}px)`;ctx.lineWidth=haloW;
- for(const s of segs){ctx.strokeStyle=heatRGBA(s.f,s.af*.55);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
+ for(const s of segs){ctx.strokeStyle=S.tint?tintRgba(S.tint,s.af*.55):heatRGBA(s.f,s.af*.55);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
  ctx.filter='none';ctx.lineWidth=coreW;
- for(const s of segs){ctx.strokeStyle=heatRGBA(s.f,s.af);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
+ for(const s of segs){ctx.strokeStyle=S.tint?tintRgba(S.tint,s.af):heatRGBA(s.f,s.af);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
  ctx.lineWidth=sparkW;
  for(const s of S.sparks){
   const f=(now-s.born)/1000/s.life;
@@ -513,17 +522,18 @@ function dispose(){
 export function cogsWeld(){
  let S=null;
  return {
-  init({paint,glow,face}){S={face,aspect:face.h/face.w,paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,drag:new Map(),sparks:[],weld:[],weldHeads:new Map(),weldActive:false};},
+  init({paint,glow,face,wake}){S={face,aspect:face.h/face.w,paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,drag:new Map(),sparks:[],weld:[],weldHeads:new Map(),weldActive:false,wake,tint:selectedTint};weldTrace=S;},
+  setTint(hex,selected=true){setCogsTint(hex,selected);},
   press(id,u,v){S.drag.set(id,{u,v});weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);},
   move(id,u,v,pu,pv){const d=S.drag.get(id);if(d){d.u=u;d.v=v;}weldPushPoint(S,id,u,v);spawnSparks(S,u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));},
   release(id,u,v){S.drag.delete(id);weldRelease(S,id,u,v);},
   step:(dt,now)=>stepWeld(S,dt,now),
-  dispose(){S=null;},
+  dispose(){if(S===weldTrace)weldTrace=null;S=null;},
  };
 }
 
 export const cogs={
  id:'cogs',asset:'/pod/worlds/boards/cogs/door.glb',flip:false,background:'#161310',
  guide:null,frame:DEFAULT_FRAME,ink:false, // the weld trail replaces the shared ink line
- init,press,move,release,step,cut,heal,dispose,trace2d:cogsWeld,
+ init,press,move,release,step,cut,heal,dispose,setTint:setCogsTint,tintTarget:'trace',trace2d:cogsWeld,
 };

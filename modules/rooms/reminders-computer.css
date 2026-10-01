@@ -1,38 +1,42 @@
+/* reminders-computer:glb-v2 */
+.reminders-computer-offer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .reminders-computer-offer button{min-height:44px}
 .reminders-computer-offer span{font-size:12px}
-/* The dialog keeps the art's borders (transparent) so the form sits in the screen; the art itself is a fixed ::before
-   that sways a little in 3D like the Food pyramid, so the form, the dock and the portal's own transforms stay still. */
 #remindersPanel[data-reminder-room=ready]{
- --computer-width:min(560px,calc(100vw - 12px));--computer-height:min(94dvh,calc(var(--computer-width)*2.1));
- --bt:calc(var(--computer-width)*418/750);--br:calc(var(--computer-width)*70/750);--bb:calc(var(--computer-width)*376/750);--bl:calc(var(--computer-width)*74/750);
- --computer-left:calc(50vw - var(--computer-width)/2);--computer-top:calc(50dvh - var(--computer-height)/2);
- box-sizing:border-box;width:var(--computer-width);max-width:none;
- height:var(--computer-height);max-height:none;
- padding:6px 10px!important;overflow-y:auto;overscroll-behavior:contain;
- border-style:solid!important;border-color:transparent!important;border-radius:0!important;
- border-width:var(--bt) var(--br) var(--bb) var(--bl)!important;
- background:transparent!important;box-shadow:none!important;color:#efe7ff;
+ position:fixed;inset:3dvh auto auto 50%;transform:translateX(-50%);
+ box-sizing:border-box;width:min(620px,calc(100vw - 16px));height:94dvh;max-width:none;max-height:none;
+ padding:0!important;overflow:hidden;overscroll-behavior:contain;border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;color:#efe7ff;isolation:isolate;
 }
-/* Framed in the portal the dialog is the face box (portal.css dialog.portal-framed). */
-#remindersPanel.portal-framed[data-reminder-room=ready]{--computer-width:var(--face-width);--computer-height:var(--face-height);--computer-left:var(--face-left);--computer-top:var(--face-top)}
-#remindersPanel[data-reminder-room=ready]::before{
- content:'';position:fixed;z-index:-1;pointer-events:none;box-sizing:border-box;
- left:var(--computer-left);top:var(--computer-top);width:var(--computer-width);height:var(--computer-height);
- border:solid transparent;border-width:var(--bt) var(--br) var(--bb) var(--bl);
- border-image:url('/pod/rooms/console.webp') 418 70 376 74 fill / 1 / 0 stretch;
- transform-origin:50% 45%;animation:reminders-computer-sway 9s ease-in-out infinite alternate;
- transform:perspective(1100px) rotateY(calc(var(--sway) + var(--computer-spin,0deg))) rotateZ(calc(var(--sway)/9));
+/* A portal face can be smaller than a viewport. Keep the model and its fitted screen inside that face. */
+#remindersPanel.portal-framed[data-reminder-room=ready]{
+ inset:var(--face-top) auto auto var(--face-left);width:var(--face-width);height:var(--face-height);transform:none;
 }
-/* Drag sideways (or Left/Right on the focused dialog) turns the art; vertical pans still scroll the form. */
-#remindersPanel[data-reminder-room=ready]{touch-action:pan-y;cursor:grab}
-#remindersPanel[data-reminder-room=ready] :is(button,input,select,textarea,a,label,summary){cursor:auto}
+#remindersPanel[data-reminder-room=ready]>.reminders-computer-stage,
+#remindersPanel[data-reminder-room=ready]>.reminders-computer-screen{position:absolute;inset:0;box-sizing:border-box}
+#remindersPanel[data-reminder-room=ready]>.reminders-computer-stage{z-index:0;pointer-events:none;overflow:hidden}
+.reminders-computer-canvas{display:block;width:100%;height:100%;pointer-events:none}
+#remindersPanel[data-reminder-room=ready]>.reminders-computer-screen{
+ z-index:1;inset:auto;overflow:auto;overscroll-behavior:contain;padding:8px 10px;
+ border:1px solid #8e6cc4;border-radius:8px;background:#21172feF;scrollbar-color:#9670bc #21172f;
+}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen>header{
+ display:flex;justify-content:space-between;align-items:center;gap:10px;
+ margin:0 0 8px;padding:5px 0 8px;background:transparent;border:0;border-bottom:1px solid #8e6cc4;border-radius:0;
+}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen h2{font-size:18px;margin:0}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen p{margin:6px 0}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen .status{padding:5px 8px;min-height:0}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen form{gap:8px}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen label{font-size:12px;gap:3px}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen input,
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen select{padding:7px;font-size:16px}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen .fields{gap:7px}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen button{min-height:40px;padding:6px 9px}
+#remindersPanel[data-reminder-room=ready] .reminders-computer-screen .reminders-computer-offer{display:none}
 #remindersPanel[data-reminder-room=ready]:focus-visible{outline:2px solid #b99cff;outline-offset:-2px}
-/* While the portal scales the dialog in, a transformed dialog is the fixed art's containing block. */
-#remindersPanel.portal-arriving[data-reminder-room=ready]::before{left:calc(-1*var(--bl));top:calc(-1*var(--bt))}
-@property --sway{syntax:'<angle>';inherits:false;initial-value:0deg}
-@keyframes reminders-computer-sway{from{--sway:-7deg}to{--sway:7deg}}
-@media(prefers-reduced-motion:reduce){#remindersPanel[data-reminder-room=ready]::before{animation:none}}
-#remindersPanel[data-reminder-room=ready] .reminders-computer-offer{display:none}
-#remindersPanel[data-reminder-room=ready] header{background:#281a43e8;border:1px solid #8e6cc4;border-radius:8px;padding:8px 10px;margin:0 0 8px}
 #remindersPanel[data-reminder-room=ready]::backdrop{background:radial-gradient(ellipse at 50% 40%,#3a1d63e6,#07040de6 70%)}
-@media(max-width:390px){#remindersPanel[data-reminder-room=ready]{font-size:13px}}
+#remindersPanel[data-reminder-room=ready]{touch-action:pan-y}
+#remindersPanel[data-reminder-room=ready] :is(button,input,select,textarea,a,label,summary){cursor:auto}
+@media(max-width:390px){#remindersPanel[data-reminder-room=ready]>.reminders-computer-screen{padding:6px 7px}}
+@media(prefers-reduced-motion:reduce){#remindersPanel[data-reminder-room=ready]{scroll-behavior:auto}}

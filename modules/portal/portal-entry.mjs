@@ -1,12 +1,11 @@
 let loading,mounted;
 
-export async function openQuiltPortal({shouldShow=()=>true}={}) {
+export async function ensurePortalMounted(){
   if(mounted?.disposed)loading=null;
-  if (!loading) {
-    loading = (async () => {
-      const style = document.createElement('link');
-      style.rel = 'stylesheet';
-      style.href = '/modules/portal/portal.css';
+  if(!loading){
+    loading=(async()=>{
+      const style=document.createElement('link');
+      style.rel='stylesheet';style.href='/modules/portal/portal.css';
       const styled=new Promise((resolve,reject)=>{style.onload=resolve;style.onerror=()=>reject(new Error('Portal styles unavailable.'));});
       document.head.append(style);
       try{
@@ -15,12 +14,13 @@ export async function openQuiltPortal({shouldShow=()=>true}={}) {
         const dispose=mounted.dispose;mounted.dispose=()=>{dispose();style.remove();};
         return mounted;
       }catch(error){style.remove();throw error;}
-    })().catch(error => {
-      loading = null;
-      throw error;
-    });
+    })().catch(error=>{loading=null;throw error;});
   }
-  const portal = await loading;
+  return loading;
+}
+
+export async function openQuiltPortal({shouldShow=()=>true}={}) {
+  const portal=await ensurePortalMounted();
   if(!shouldShow())return null;
   portal.show();
   return portal;

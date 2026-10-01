@@ -11,6 +11,7 @@ const $=id=>document.getElementById(id);
 // writes and the coach-hit wander/hit-test math, which run inline in the tracking loop's call stack).
 // Release 5 review: 1.6/s only engaged below the engine's own 1.33/s floor; phones stall in the 2-8/s band, so cap under 4/s.
 const COACH_CAP={minPoseHz:4,fps:10,recoverMs:2000};
+const COACH_GESTURE={spun:'laugh',held:'wiggle',swiping:'swipe',impressed:'agree',laughing:'laugh'};
 
 export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
  if(!point||!videoW||!videoH||!screenW||!screenH)return {x:0,y:0,visibility:0};
@@ -20,7 +21,7 @@ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
 }
 
 export function mountCoachOverlay(){
- let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,laughed=false,walking=false,begun=false,loading=null,lastState=null;
+ let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,gesturePhase=null,walking=false,begun=false,loading=null,lastState=null;
  let capped=false,aboveSince=null,lastRenderAt=-Infinity;
  async function ensureCard(){
   card=document.querySelector('.myr5-companion-card');if(card)return;
@@ -44,8 +45,8 @@ export function mountCoachOverlay(){
  async function enter(){
   await ensureCard();if(!card||!tracking)return;
   ensureOverlay();if(!box)return;if(card.parentElement!==box)box.append(card);
-  boxH=0;laughed=false;lastState=null;capped=false;aboveSince=null;lastRenderAt=-Infinity;window.myr5Creature?.setMaxFps?.(null);shown(false);
-  motion=new CoachMotion({aspect:innerWidth/innerHeight,now:performance.now()});if(begun)motion.begin();
+  boxH=0;gesturePhase=null;lastState=null;capped=false;aboveSince=null;lastRenderAt=-Infinity;window.myr5Creature?.setMaxFps?.(null);shown(false);
+  motion=new CoachMotion({aspect:innerWidth/innerHeight,now:performance.now(),play:!String(window.myr5Creature?.stats?.()?.recipe?.body||'').startsWith('roster/18-quad')});if(begun)motion.begin();
   window.myr5Creature?.stage('overlay');
  }
  function leave(){
@@ -59,15 +60,25 @@ export function mountCoachOverlay(){
   if(!box)return;
   const hidden=state.phase==='offstage'||state.phase==='away';
   shown(!hidden);
-  walk(state.phase==='walking');window.myr5Creature?.face?.(state.yaw);
-  if(state.phase==='spun'){if(!laughed){laughed=true;window.myr5Creature?.play('laugh');}}else laughed=false;
+  walk(state.phase==='walking'||state.phase==='charge');window.myr5Creature?.face?.(state.yaw);
+  // One clip per phase entry; `wiggle` loops, so it is re-asked every frame (a no-op while it already plays).
+  const gesture=COACH_GESTURE[state.phase];
+  if(gesture&&(state.phase!==gesturePhase||state.phase==='held'))window.myr5Creature?.play(gesture);
+  gesturePhase=gesture?state.phase:null;
   if(hidden||!state.baseHeight)return;
   // The card is sized for the coach level with the user (a resize re-renders WebGL, so only on 15% changes);
   // walking nearer or farther is a CSS scale about the card's centre, keeping the feet on the floor line.
   const w=innerWidth,h=innerHeight,base=state.baseHeight*h;
   if(!boxH||Math.abs(base-boxH)/boxH>.15){boxH=base;box.style.width=Math.max(1,base*COACH.boxWidth)+'px';box.style.height=Math.max(1,base)+'px';}
   const k=state.height*h/boxH;
-  box.style.transform=`translate(${state.x*w-boxH*COACH.boxWidth/2}px,${state.feetY*h-(k+1)*boxH/2}px) scale(${k}) rotate(${state.rotation}rad)`;
+  // held: dangles by the head, a small pendulum about the box top. fallen: toppled 90° away from the user about the
+  // feet (eased by a short transition, which also eases the get-up). Whole-card transforms, so every silhouette works.
+  const swing=state.phase==='held'?Math.sin(performance.now()/160)*.12:0;
+  const pivot=state.phase==='held'?'translate(0,-50%) ':state.phase==='fallen'?'translate(0,50%) ':'';
+  const unpivot=state.phase==='held'?' translate(0,50%)':state.phase==='fallen'?' translate(0,-50%)':'';
+  const tilt=state.rotation+swing+(state.phase==='fallen'?state.side*Math.PI/2:0);
+  box.style.transition=/^(fallen|impressed|laughing)$/.test(state.phase)?'transform .35s ease-in':'';
+  box.style.transform=`translate(${state.x*w-boxH*COACH.boxWidth/2}px,${state.feetY*h-(k+1)*boxH/2}px) scale(${k}) ${pivot}rotate(${tilt}rad)${unpivot}`;
  }
  function apply(state){lastState=state;place(state);}
  // Hysteresis: drop to capped the moment tracking is slow; only climb back out after minPoseHz has held

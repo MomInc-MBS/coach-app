@@ -9,7 +9,7 @@ export function weaponDamage(combat,weapon,now=Date.now()){
  return 10*(current?combat.loginStreak:1)*level*(current&&combat.breathingCompleted===true?100:1);
 }
 export class BreathingSession{
- constructor(){this.elapsed=0;this.last=null;this.active=false;}
- sample(now,active){if(this.last!==null&&this.active&&active)this.elapsed=Math.min(BREATHING_MS,this.elapsed+Math.max(0,Math.min(1500,now-this.last)));this.last=now;this.active=active;return this.elapsed;}
- get complete(){return this.elapsed>=BREATHING_MS;}
+ constructor(durationMs=BREATHING_MS){this.durationMs=Math.max(BREATHING_MS,Math.min(2*60*60*1000,Number(durationMs)||BREATHING_MS));this.elapsed=0;this.last=null;this.active=false;}
+ sample(now,active){if(this.last!==null&&this.active&&active)this.elapsed=Math.min(this.durationMs,this.elapsed+Math.max(0,Math.min(1500,now-this.last)));this.last=now;this.active=active;return this.elapsed;}
+ get complete(){return this.elapsed>=this.durationMs;}
 }

@@ -15,7 +15,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import * as THREE from 'three';
-import {splitIndexByPolygon,pieceMaterial,fallPieces} from './portal-cut.mjs';
+import {pieceMaterial,fallPieces,createPortalCutMask} from './portal-cut.mjs';
 import {SHAPES,fromFrame} from './portal-shapes.mjs';
 
 const IMAGE='/pod/worlds/quilt.webp',IMAGE_W=1024,IMAGE_H=1666,TRACE_PX=640;
@@ -81,10 +81,10 @@ function patternRectOf(host){const q=quiltRectOf(host);return {left:q.left+q.wid
 // draw: a factory for an effect with portal-board-glb's interface, given 2D paint/glow layers over the face (glow adds
 // light, as the 3D emissive does). The canvas redraws only while that effect animates.
 // ponytail: no cloth ripple, dent or falling piece; the cut just opens a hole.
-export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0,trace=null}={}){
+export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0,trace=null,tint=null,tintSelected=true,tintTarget='poster'}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const art=new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>fail(new Error('Board art unavailable: '+src));img.src=src;if(waitMs)setTimeout(()=>fail(new Error('Board art timed out: '+src)),waitMs);});
- let image=fallback?.(),width=1,height=1,holes=[],disposed=false;
+ let image=fallback?.(),width=1,height=1,holes=[],disposed=false,_tint=(typeof tint==='string'&&/^#[0-9A-Fa-f]{6}$/.test(tint))?tint:null,_traceTint=_tint,_traceSelected=!!tintSelected;
  if(image)art.then(img=>{image=img;draw();},()=>{});else image=await art;
  const canvas=document.createElement('canvas'),g=canvas.getContext('2d'); // no 2D context: a bare face, but the frame, layout and cuts still work
  canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;display:block;width:100%;height:100%';host.append(canvas);
@@ -93,8 +93,40 @@ export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,f
  // The poster and its guides. A board with a trace draws them once per size into `still` and blits that on every trace
  // frame: re-drawing the poster and the blurred guide strokes each frame starved a phone's main thread (and a test's rAF).
  let still=null;
+const tintCache=new Map();
  function paintStill(c,face){
-  c.drawImage(image,face.left,face.top,face.width,face.height);
+  if(_tint){
+    const tw=Math.max(1,Math.round(face.width)),th=Math.max(1,Math.round(face.height));
+    const key=`${image.src}-${tw}x${th}-${_tint}`;
+    let off;
+    if(tintCache.has(key)){
+      off=tintCache.get(key);
+    }else{
+      const tmp=document.createElement('canvas');
+      tmp.width=tw;tmp.height=th;
+      const tc=tmp.getContext('2d');
+      tc.drawImage(image,0,0,tw,th);
+      const imgData=tc.getImageData(0,0,tw,th);
+      const data=imgData.data;
+      const tintRGB=parseInt(_tint.slice(1),16);
+      const tr=(tintRGB>>16)&255, tg=(tintRGB>>8)&255, tb=tintRGB&255;
+      for(let i=0;i<data.length;i+=4){
+        const a=data[i+3];
+        if(a===0)continue;
+        const lum=data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722;
+        data[i]=lum*tr/255;
+        data[i+1]=lum*tg/255;
+        data[i+2]=lum*tb/255;
+      }
+      tc.putImageData(imgData,0,0);
+      off=tmp;
+      tintCache.clear();
+tintCache.set(key,tmp);
+    }
+    c.drawImage(off,face.left,face.top,face.width,face.height);
+  } else {
+    c.drawImage(image,face.left,face.top,face.width,face.height);
+  }
   // A GLB board's guides are carved or painted in 3D, not in its flat poster: draw the same shape paths in its frame.
   if(guide){
    const trace=()=>{for(const [id,polys] of Object.entries(SHAPES)){if(id==='line')continue;for(const {points} of polys){c.beginPath();points.forEach(([u,v],i)=>{const [fu,fv]=fromFrame(u,v,frame);c[i?'lineTo':'moveTo'](face.left+fu*face.width,face.top+fv*face.height);});c.stroke();}}};
@@ -132,13 +164,21 @@ export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,f
   const toWorld=(u,v)=>{const f=faceOf(width,height);return [f.left+u*f.width,-(f.top+v*f.height)];};
   const next=trace(),paint=layer(),glow=layer();
   await next.init({paint,glow,face:{w:1,h:1/ratio},toWorld,wake});
-  fx=Object.assign(next,{paint,glow});draw(); // the still is ready before the first touch
+  fx=Object.assign(next,{paint,glow});if(_traceTint&&/^#[0-9a-f]{6}$/i.test(_traceTint))fx.setTint?.(_traceTint,_traceSelected);draw(); // the still is ready before the first touch
  }
  return {
   canvas,background,faceRect:rectOf,quiltRect:rectOf,
   patternRect(){const q=rectOf();return {left:q.left+q.width*frame.x0,top:q.top+q.height*frame.y0,width:q.width*(frame.x1-frame.x0),height:q.height*(frame.y1-frame.y0)};},
   cut(poly,color,ms=1100){holes=[poly];draw();return new Promise(done=>setTimeout(done,reduced?0:ms));},
   heal(){if(holes.length){holes=[];draw();}},
+  setTint(hex,selected=true){
+   if(!/^#[0-9a-f]{6}$/i.test(hex))return;
+   _traceTint=hex;_traceSelected=selected;fx?.setTint?.(hex,selected);
+   if(tintTarget==='trace')return;
+   _tint=hex;
+   still=null;
+   draw();
+  },
   press(id,x,y){
    if(!fx)return;const r=rectOf(),u=Math.min(1,Math.max(0,(x-r.left)/r.width)),v=Math.min(1,Math.max(0,(y-r.top)/r.height)),p=pointers.get(id);
    if(p){fx.move?.(id,u,v,p.u,p.v);p.u=u;p.v=v;}else{pointers.set(id,{u,v});fx.press?.(id,u,v);}
@@ -163,13 +203,22 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
- let observer,geometry,material,pieceMat,frame=0,disposed=false; // outside the try: a failed build must also stop its frame loop
+ let observer,geometry,material,pieceMat,cutMask=null,frame=0,disposed=false; // outside the try: a failed build must also stop its frame loop
  try{ // a failure after the renderer exists must not leave its canvas and context behind
  texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,1,20000);
  scene.add(new THREE.HemisphereLight(0xfff4e6,0x3a2f40,1.1));
  const sun=new THREE.DirectionalLight(0xfff0dc,2.4);sun.position.set(-.7,.55,.45);scene.add(sun);
  material=new THREE.MeshStandardMaterial({map:texture,roughness:.95,metalness:0,side:THREE.DoubleSide});
+ const cutSide={value:0},cutMaskUniform={value:null};material.userData.portalCutSideUniform=cutSide;
+ material.onBeforeCompile=shader=>{
+  shader.uniforms.uPortalCutMask=cutMaskUniform;shader.uniforms.uPortalCutSide=cutSide;
+  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 portalCutUv;\nvarying vec2 vPortalCutUv;')
+   .replace('#include <begin_vertex>','#include <begin_vertex>\nvPortalCutUv=portalCutUv;');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vPortalCutUv;\nuniform sampler2D uPortalCutMask;\nuniform float uPortalCutSide;')
+   .replace('#include <alphatest_fragment>','float portalCutCoverage=1.0;if(abs(uPortalCutSide)>.5){portalCutCoverage=texture2D(uPortalCutMask,vPortalCutUv).r;if(uPortalCutSide>.5&&portalCutCoverage<.5)discard;if(uPortalCutSide<-.5&&portalCutCoverage>=.5)discard;}\n#include <alphatest_fragment>');
+ };
+ material.customProgramCacheKey=()=> 'portal-quilt-cut-mask-v1';
  const segX=knobs.segX,segY=Math.round(segX*IMAGE_H/IMAGE_W);
  // Source-pattern anchor vertices stay in the topology.  layout() moves them to the
  // current pattern boundary, so resizing or rotation never interpolates across a stitch edge.
@@ -182,10 +231,11 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  for(let t=0;t<index.length;t+=3)for(let k=0;k<3;k++){const a=index[t+k],b=index[t+(k+1)%3],o=index[t+(k+2)%3],key=Math.min(a,b)*count+Math.max(a,b);(edges.get(key)||edges.set(key,{a,b,far:[]}).get(key)).far.push(o);}
  const stretch=[],bend=[];for(const e of edges.values()){stretch.push(e.a,e.b);if(e.far.length===2)bend.push(e.far[0],e.far[1]);}
  const stretchIds=new Int32Array(stretch),bendIds=new Int32Array(bend),stretchLen=new Float32Array(stretch.length/2),bendLen=new Float32Array(bend.length/2);
- geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));geometry.setIndex(index);
+ const cutUv=new Float32Array(count*2);
+ geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(pos,3));geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));geometry.setAttribute('portalCutUv',new THREE.BufferAttribute(cutUv,2));geometry.setIndex(index);
  const mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;scene.add(mesh);
  // Transparent twin for cut pieces, drawn once at load (opacity 0 over the quilt: invisible) so the first cut doesn't hitch on a compile.
- pieceMat=pieceMaterial(material);const warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
+ pieceMat=pieceMaterial(material);const pieceSide={value:0},sourceCompile=pieceMat.onBeforeCompile;pieceMat.userData.portalCutSideUniform=pieceSide;pieceMat.onBeforeCompile=function(shader,renderer){sourceCompile.call(this,shader,renderer);shader.uniforms.uPortalCutMask=cutMaskUniform;shader.uniforms.uPortalCutSide=pieceSide;};const warm=new THREE.Mesh(geometry,pieceMat);pieceMat.opacity=0;warm.frustumCulled=false;scene.add(warm);
  const fullIndex=geometry.index;let cutting=null;
 
  let width=1,height=1,surface=quiltSurfaceLayout(1,1),paused=false,awakeUntil=0,last=0,frameMs=0;
@@ -199,7 +249,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
    const n=j*cols+i,p=3*n,u=xAxis[i],v=yAxis[j];
    rest[p]=face.left+u*face.width;
    rest[p+1]=-(face.top+v*face.height);rest[p+2]=0;
-   uv[2*n]=u;uv[2*n+1]=1-v;
+   uv[2*n]=u;uv[2*n+1]=1-v;cutUv[2*n]=u;cutUv[2*n+1]=v;
   }
   pos.set(rest);prev.set(rest);
   const dist=(ids,k,a=ids[2*k],b=ids[2*k+1])=>Math.hypot(rest[3*a]-rest[3*b],rest[3*a+1]-rest[3*b+1]);
@@ -207,7 +257,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   renderer.setSize(width,height,false);camera.aspect=width/height;
   // World units are CSS pixels on the z=0 plane: x right, y up (screen y negated).
   camera.position.set(width/2,-height/2,(height/2)/Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));camera.near=camera.position.z/10;camera.far=camera.position.z*10;camera.lookAt(width/2,-height/2,0);camera.updateProjectionMatrix();
-  geometry.attributes.position.needsUpdate=true;geometry.attributes.uv.needsUpdate=true;geometry.computeVertexNormals();wake();
+  geometry.attributes.position.needsUpdate=true;geometry.attributes.uv.needsUpdate=true;geometry.attributes.portalCutUv.needsUpdate=true;geometry.computeVertexNormals();wake();
  }
  function solve(ids,lengths,alpha){
   for(let k=0;k<lengths.length;k++){
@@ -245,29 +295,24 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  // rebuild both at full size the moment the quilt shows again.
  observer=new ResizeObserver(entries=>{const box=entries.at(-1).contentRect;if(box.width&&box.height)layout(box);});observer.observe(host);layout();renderer.render(scene,camera);scene.remove(warm);
  const quiltRect=()=>quiltRectOf(host);
- // Cut-away: grid triangles whose centroid (in quilt-image fractions, v down) is inside poly leave the
- // index -> a hole; a static copy of their current positions + uvs falls into the board. The cloth
- // keeps simulating everything (constraints on the now-invisible vertices are harmless).
+ // Both the cloth and its falling snapshot retain boundary triangles. A shared local face-space
+ // mask discards complementary pixels, so cut quality does not depend on the cloth grid density.
  function cut(poly,color,ms=1100){
   if(reduced)ms=0;
   heal();
-  const {keep,cut:tri}=splitIndexByPolygon(rest,fullIndex.array,(x,y)=>[(x-surface.face.left)/surface.face.width,(-y-surface.face.top)/surface.face.height],poly);
-  const pieces=[];
-  if(tri.length){
-   const map=new Map(),P=[],U=[],I=[];let cx=0,cy=0,cz=0;
-   for(const n of tri){let k=map.get(n);if(k===undefined){k=map.size;map.set(n,k);P.push(pos[3*n],pos[3*n+1],pos[3*n+2]);U.push(uv[2*n],uv[2*n+1]);cx+=pos[3*n];cy+=pos[3*n+1];cz+=pos[3*n+2];}I.push(k);}
-   cx/=map.size;cy/=map.size;cz/=map.size;
-   const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.Float32BufferAttribute(P,3));pg.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));pg.setIndex(I);pg.computeVertexNormals();
-   const piece=new THREE.Mesh(pg,pieceMat),pivot=new THREE.Group();piece.frustumCulled=false;piece.position.set(-cx,-cy,-cz);pivot.position.set(cx,cy,cz);pivot.add(piece);scene.add(pivot);
-   pieces.push({pivot,material:pieceMat,drop(){scene.remove(pivot);pg.dispose();}});
-   geometry.setIndex(keep);
-  }
+  cutMask=createPortalCutMask(poly);cutMaskUniform.value=cutMask;cutSide.value=-1;pieceSide.value=1;
+  const P=pos.slice(),U=uv.slice(),C=cutUv.slice(),pieceGeometry=new THREE.BufferGeometry();
+  pieceGeometry.setAttribute('position',new THREE.Float32BufferAttribute(P,3));pieceGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));pieceGeometry.setAttribute('portalCutUv',new THREE.Float32BufferAttribute(C,2));pieceGeometry.setIndex(new THREE.BufferAttribute(fullIndex.array.slice(),1));pieceGeometry.computeVertexNormals();
+  let u=0,v=0;for(const point of poly){u+=point[0];v+=point[1];}u/=poly.length;v/=poly.length;
+  const cx=surface.face.left+u*surface.face.width,cy=-(surface.face.top+v*surface.face.height),cz=0;
+  const piece=new THREE.Mesh(pieceGeometry,pieceMat),pivot=new THREE.Group();piece.frustumCulled=false;piece.position.set(-cx,-cy,-cz);pivot.position.set(cx,cy,cz);pivot.add(piece);scene.add(pivot);
+  const pieces=[{pivot,material:pieceMat,drop(){scene.remove(pivot);pieceGeometry.dispose();}}];
   cutting={fall:fallPieces(pieces,height*.35,ms)};wake();
   return cutting.fall.done;
  }
  function heal(){
   if(!cutting)return;
-  cutting.fall.end();geometry.setIndex(fullIndex);cutting=null;
+  cutting.fall.end();cutSide.value=0;pieceSide.value=0;cutMaskUniform.value=null;cutMask?.dispose();cutMask=null;cutting=null;
   if(!disposed){geometry.computeVertexNormals();renderer.render(scene,camera);} // healed frame on the canvas now, even while paused
  }
  return {
@@ -283,7 +328,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   frameMs:()=>frameMs,
   pause(){paused=true;pointers.clear();cancelAnimationFrame(frame);frame=0;},
   resume(){paused=false;wake();},
-  dispose(){cutting?.fall.end();pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
+  dispose(){cutting?.fall.end();cutMask?.dispose();cutMask=null;pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
  }catch(error){disposed=true;cancelAnimationFrame(frame);observer?.disconnect();pieceMat?.dispose();geometry?.dispose();material?.dispose();texture?.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();throw error;}
 }

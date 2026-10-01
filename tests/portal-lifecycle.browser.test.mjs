@@ -18,18 +18,22 @@ async function withPortal(run){
 }
 async function open(page){return await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();return !!window.portal.current();});}
 
-test('Quilt traps focus, exposes a working Menu, honors reduced motion and returns from Food',async()=>withPortal(async(browser,url)=>{
+test('Quilt traps focus, opens Grimoire settings, honors reduced motion and returns from Food',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url);await page.locator('#background').focus();
  await page.evaluate(async()=>{const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;THREE.Scene.prototype.add=function(...nodes){window.quiltScene=this;return add.apply(this,nodes);};});
  assert(await open(page),'real WebGL Quilt must load');
  assert.equal(await page.locator('#background').evaluate(n=>n.inert),true);
- assert.equal(await page.evaluate(()=>document.activeElement.id),'portalMenuButton');
- await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'portalExitButton');
- await page.keyboard.press('Shift+Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'portalMenuButton');
+ assert.equal(await page.evaluate(()=>document.activeElement.id),'portalExitButton');
+ await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'portalSettingsButton');
+ await page.keyboard.press('Shift+Tab');assert.equal(await page.evaluate(()=>document.activeElement.id),'portalExitButton');
  const calm=await page.evaluate(async()=>{const mesh=window.quiltScene.children.find(n=>n.isMesh),before=Array.from(mesh.geometry.attributes.position.array),r=portal.current().faceRect();portal.current().press(1,r.left+r.width/2,r.top+r.height/2);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));portal.current().release(1);return {before,after:Array.from(mesh.geometry.attributes.position.array),svg:!!document.querySelector('#portalCaustic animate')};});
  assert.deepEqual(calm.after,calm.before);assert.equal(calm.svg,false);
- await page.locator('#portalMenuButton').click();await page.locator('#portalMenu [data-menu="rect"]').click();
- await page.waitForFunction(()=>document.querySelector('#portalHome').hidden);assert.equal(await page.locator('#background').evaluate(n=>n.inert),false);
+ await page.locator('#portalSettingsButton').click();
+ assert.equal(await page.locator('#portalMenu').evaluate(n=>n.open),true);
+ assert.equal(await page.locator('#portalMenu [data-menu="up"]').count(),1);
+ await page.keyboard.press('Escape');
+ await page.waitForFunction(()=>!document.querySelector('#portalMenu').open&&!document.querySelector('#portalHome').hidden);
+ assert.equal(await page.locator('#background').evaluate(n=>n.inert),true);
  // #131: Food opens in its triangle cut, the quilt staying on as the wall; R7: it shows no Close there, Escape leaves.
  await open(page);await page.evaluate(()=>portal.open('up'));
  await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden&&document.querySelector('#mealsPanel.portal-shaped')?.open);
@@ -109,12 +113,16 @@ test('the rectangular portal frames the live workout page, restores it on close,
  await page.close();
 }));
 
-test('line-up Menu opens inside the full portal frame',async()=>withPortal(async(browser,url)=>{
+test('retired line-up and cross gestures do nothing; Grimoire settings opens Menu',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:375,height:812}});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(url);assert(await open(page));
- await page.evaluate(()=>portal.open('line-up'));
- await page.waitForFunction(()=>document.getElementById('portalMenu')?.open&&document.getElementById('portalMenu').classList.contains('portal-framed'));
- const geometry=await page.evaluate(()=>{const f=document.querySelector('#portalChrome .portal-frame')?.getBoundingClientRect(),m=document.getElementById('portalMenu').getBoundingClientRect();return {frame:{left:f.left,top:f.top,width:f.width,height:f.height},menu:{left:m.left,top:m.top,width:m.width,height:m.height}};});
- assert.deepEqual(geometry.menu,geometry.frame);
- await page.evaluate(()=>document.getElementById('portalMenu').close());await page.waitForFunction(()=>!document.getElementById('portalChrome').matches(':popover-open'));
+ await page.evaluate(async()=>{await portal.open('line-up');await portal.open('cross');});
+ assert.equal(await page.locator('#portalHome').evaluate(n=>n.hidden),false);
+ assert.equal(await page.locator('#portalMenu').evaluate(n=>n.open),false);
+ assert.equal(await page.locator('.portal-glass').count(),0);
+ await page.locator('#portalSettingsButton').click();
+ assert.equal(await page.locator('#portalMenu').evaluate(n=>n.open),true);
+ assert.equal(await page.locator('#portalMenu [data-menu="rect"]').count(),1);
+ await page.keyboard.press('Escape');
+ await page.waitForFunction(()=>!document.getElementById('portalMenu').open&&!document.getElementById('portalHome').hidden);
  await page.close();
 }));

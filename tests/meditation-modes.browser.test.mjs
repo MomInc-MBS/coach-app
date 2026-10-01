@@ -1,6 +1,6 @@
 // Rank 6c (D25/D28) at 390x844: both breathing modes -- start, hold, exit mid-hold, complete --
 // driven through the real meditation.mjs/breathing.mjs source with a stub account API and a fake
-// clock (the shared 3-minute BreathingSession runs on performance.now/setInterval). The server
+// clock (the shared BreathingSession uses each mode's active duration). The server
 // half of completion (completeBreathing + once-per-day circuit counting) is covered in
 // tests/meditation-modes.test.mjs.
 import test from 'node:test';
@@ -10,6 +10,8 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
+import {buildScript} from '../breathing-modes.mjs';
+const guidedScript=buildScript('wim-hof'),holdIndex=guidedScript.findIndex(phase=>phase.key==='optional-hold'),holdStart=guidedScript.slice(0,holdIndex).reduce((ms,phase)=>ms+phase.ms,0),holdMs=guidedScript[holdIndex].ms;
 
 const PLAN=resolve('C:/Users/ianmy/Documents/Codex/2026-09-20/myr5-consolidated-implementation-and-stack-plan/worktrees/myr5-foundation/plan');
 const SHOTS=resolve(PLAN,'reports/meditation'),WONDERS=resolve(PLAN,'assets-inbox/backgrounds/clean');
@@ -45,8 +47,8 @@ const count=(page,path)=>page.evaluate(p=>window.__calls.filter(c=>c===p).length
 const phase=page=>page.locator('[data-breath-run]').getAttribute('data-phase');
 const caption=page=>page.locator('.meditation-speech').textContent();
 async function shot(page,name){await page.screenshot({path:`${SHOTS}/${name}.png`});}
-async function reopenAfterSmack(page){assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'the early stop closes the room');await page.locator('.meditation-entry').click();}
-async function stopVisible(page){const box=await page.locator('[data-breath-exit]').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=844,'Stop now must be on screen without scrolling');}
+async function reopenAfterStop(page){if(await page.locator('.meditation-panel').evaluate(d=>d.open))await page.locator('[data-meditation-close]').click();await page.locator('.meditation-entry').click();}
+async function stopVisible(page){const box=await page.locator('[data-breath-exit]').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=844,'Circle exit must be on screen without scrolling');}
 
 async function openRoom(browser,{art=true,reducedMotion='no-preference'}={}){
  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion}),page=await context.newPage();
@@ -58,7 +60,7 @@ async function openRoom(browser,{art=true,reducedMotion='no-preference'}={}){
 }
 async function start(page,mode){
  await page.locator(`[data-mode="${mode}"]`).click();
- await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:00 remaining');
+ await page.waitForFunction(expected=>document.querySelector('[data-status]').textContent===expected,mode==='wim-hof'?'3:30 remaining':'3:00 remaining');
  assert.equal(await page.locator('[data-breath-modes]').isHidden(),true);
 }
 
@@ -77,27 +79,27 @@ test('no downloaded wonder: the bundled starter wonder for the day shows, with b
 test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold, then complete once',async()=>{
  assert.ok(existsSync(WONDERS),'clean wonder images present');
  const {context,page}=await openRoom(browser);
- assert.match(await page.locator('[data-mode="wim-hof"] .breath-seated-notice').textContent(),/Seated only.*standing.*driving.*water/);
+ assert.match(await page.locator('[data-mode="wim-hof"] .breath-seated-notice').textContent(),/seated or lying.*driving.*water/i);
  assert.match(await page.locator('.breath-note').textContent(),/not medical/);
  await shot(page,'01-wim-hof-choose');
  await start(page,'wim-hof');
- assert.equal(await page.locator('[data-seated]').isVisible(),true);assert.equal(await phase(page),'breathe');
- assert.match(await caption(page),/^Breathe (in|out)\.$/,'the caption follows each breath');
+ assert.equal(await page.locator('[data-seated]').isVisible(),true);assert.equal(await phase(page),'settle');
+ assert.match(await caption(page),/comfortable|shoulders/i,'original guidance starts with settling');
  await shot(page,'02-wim-hof-start');
- await page.clock.runFor(38000); // 15 breaths x 2.4 s placeholder pace -> into the first hold
- assert.equal(await phase(page),'hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Round 1 of 3 · Breathe out and hold · \d+s/);
- assert.equal(await caption(page),'Breathe out and hold.','the caption follows the hold, not the idle line');
+ await page.clock.runFor(holdStart+1000); // scripted settling + breathing -> optional hold
+ assert.equal(await phase(page),'optional-hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Optional pause/);
+ assert.match(await caption(page),/never force.*breathe normally/i,'optional hold guidance permits normal breathing');
  await stopVisible(page);await shot(page,'03-wim-hof-hold');
  await page.locator('[data-breath-exit]').click(); // exit mid-hold: immediate, no network wait
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);assert.equal(await page.locator('[data-breath-run]').isHidden(),true);
  assert.equal(await caption(page),'Breathe in. Breathe out.','exit restores the idle caption');
  await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0,'an exited session never completes');
- await reopenAfterSmack(page); // #149: stopping early wakes the coach, which smacks you out of the room
+ await reopenAfterStop(page); // reopen after the completed cartoon exit
  await shot(page,'04-wim-hof-exited');
- await start(page,'wim-hof');await page.clock.runFor(181000);
+ await start(page,'wim-hof');await page.clock.runFor(211000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
  assert.equal(await count(page,'/api/breathing/complete'),1);assert.equal(await phase(page),'complete');
- assert.equal(await page.locator('[data-breath-exit]').textContent(),'Done');
+ assert.equal(await page.locator('[data-breath-exit]').isVisible(),true,'the circle exit stays available after completion');
  await shot(page,'05-wim-hof-complete');await context.close();
 });
 
@@ -107,7 +109,7 @@ test('tai chi stance: existing core/balance stance hold, stance link, exit mid-h
  await start(page,'tai-chi');
  assert.equal(await page.locator('[data-seated]').isHidden(),true);
  await page.clock.runFor(3000);
- assert.equal(await phase(page),'hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Hold: Low tree pose · breathe (in|out) · \d+s/);
+ assert.equal(await phase(page),'hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Hold: Low tree pose/);
  assert.equal(await page.locator('[data-stance-link]').isVisible(),true);
  await shot(page,'06-tai-chi-start-hold');
  await page.clock.runFor(30000); // next stance
@@ -116,14 +118,14 @@ test('tai chi stance: existing core/balance stance hold, stance link, exit mid-h
  await page.locator('[data-breath-exit]').click();
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);
  await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0);
- await reopenAfterSmack(page);
+ await reopenAfterStop(page);
  await start(page,'tai-chi');await page.clock.runFor(181000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
  assert.equal(await count(page,'/api/breathing/complete'),1);
  await shot(page,'08-tai-chi-complete');await context.close();
 });
 
-test('always-visible exits and reduced motion: Close stays pinned when scrolled, Esc closes, ring is still',async()=>{
+test('always-visible exits and reduced motion: Close stays pinned when scrolled, Esc closes, breathing cue stays visible',async()=>{
  const {context,page}=await openRoom(browser,{reducedMotion:'reduce'});
  assert.equal(await page.locator('.breathing-ring').evaluate(el=>getComputedStyle(el).animationName),'none');
  await start(page,'wim-hof');
@@ -131,9 +133,9 @@ test('always-visible exits and reduced motion: Close stays pinned when scrolled,
  const close=await page.locator('[data-meditation-close]').boundingBox();assert.ok(close.y>=0&&close.y<80,'Close pinned at top after scrolling');
  await shot(page,'09-reduced-motion-scrolled');
  // Reduced motion: no per-breath flicker, but the caption still follows the hold and the recovery.
- assert.equal(await caption(page),'Breathe in. Breathe out.');
- await page.clock.runFor(38000);assert.equal(await caption(page),'Breathe out and hold.');
- await page.clock.runFor(15000);assert.equal(await phase(page),'recover');assert.equal(await caption(page),'Breathe in and hold.');
+ assert.match(await caption(page),/comfortable|shoulders/i);
+ await page.clock.runFor(holdStart+1000);assert.equal(await phase(page),'optional-hold');assert.match(await caption(page),/never force.*breathe normally/i);assert.equal(await page.locator('.breathing-ring').isVisible(),true);
+ await page.clock.runFor(holdMs);assert.equal(await phase(page),'recovery');assert.match(await caption(page),/breathe|easy|gentl|stop|skip/i);
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false);
  await page.locator('.meditation-entry').click();

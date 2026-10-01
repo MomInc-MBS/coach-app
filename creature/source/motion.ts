@@ -3,7 +3,7 @@ import type {CreatureRig} from './rig';
 export const GESTURES={
  idle:{label:'At ease',duration:7,loop:true},listening:{label:'Listening',duration:4,loop:true},thinking:{label:'Thinking',duration:5,loop:true},speaking:{label:'Speaking',duration:3.6,loop:true},
  greet:{label:'Hello',duration:2.6,loop:false},agree:{label:'Yes / understood',duration:1.9,loop:false},correct:{label:'Gentle correction',duration:2.4,loop:false},encourage:{label:'Encouragement',duration:2.8,loop:false},celebrate:{label:'Celebrate',duration:3.2,loop:false},rest:{label:'Take a breath',duration:5,loop:true},laugh:{label:'Giant laugh',duration:3.4,loop:false},swipe:{label:'Platform sweep',duration:1.8,loop:false}
- ,awaken:{label:'Pod awakening',duration:4.8,loop:false},ready:{label:'Ready to train',duration:3.3,loop:false},victory:{label:'Effort earned',duration:3.8,loop:false},walk:{label:'Walking',duration:.9,loop:true}
+ ,awaken:{label:'Pod awakening',duration:4.8,loop:false},ready:{label:'Ready to train',duration:3.3,loop:false},victory:{label:'Effort earned',duration:3.8,loop:false},walk:{label:'Walking',duration:.9,loop:true},wiggle:{label:'Wiggle',duration:.6,loop:true}
 } as const;
 export type Gesture=keyof typeof GESTURES;
 export function gestureForCue(key:string){return ({count:'agree',complete:'celebrate',ready:'greet',tracking:'correct',setup:'listening',time:'encourage'} as Record<string,Gesture>)[key]||'speaking';}
@@ -27,6 +27,8 @@ export function samplePose(id:Gesture,t:number){
  if(id==='victory'){p.leftZ=-.65*envelope;p.rightZ=.68*envelope;p.headX=-.12*envelope;p.headZ=.08*Math.sin(u*Math.PI*2)*envelope;p.bodyY=.09*envelope;p.breath=.026*envelope;}
  // One stride per foot: feet swing and lift in turn, the body waddles over the planted foot, arms swing opposite.
  if(id==='walk'){p.footLX=-.55*s;p.footRX=.55*s;p.footLZ=.18*s;p.footRZ=-.18*s;p.footLY=.16*Math.max(0,s);p.footRY=.16*Math.max(0,-s);p.bodyY=.05*Math.abs(s);p.bodyZ=.09*s;p.headZ=-.05*s;p.leftX=.45*s;p.rightX=-.45*s;p.leftZ=-.08;p.rightZ=.08;}
+ // Dangling by the head: arms and feet swing fast in opposite directions with a small body twist.
+ if(id==='wiggle'){const w=Math.sin(u*Math.PI*4);p.leftZ=-.35*w;p.rightZ=.35*w;p.footLZ=.22*w;p.footRZ=-.22*w;p.bodyZ=.08*w;p.headZ=-.04*w;}
  return p;
 }
 export function createClips(rig:CreatureRig){
@@ -43,14 +45,22 @@ export function createClips(rig:CreatureRig){
  });
 }
 export class MotionController {
- rig:CreatureRig;mixer:T.AnimationMixer;clips:T.AnimationClip[];current:Gesture='idle';action:T.AnimationAction;ambient=true;reduced=false;paused=false;amount=.65;clock=0;nextBlink=3.4;blinkStart=-100;
+ rig:CreatureRig;mixer:T.AnimationMixer;clips:T.AnimationClip[];current:Gesture='idle';action:T.AnimationAction;ambient=true;reduced=false;paused=false;amount=1.5;clock=0;nextBlink=3.4;blinkStart=-100;
  actions=new Map<Gesture,T.AnimationAction>();
+ private rawPose=new Map<string,{position:T.Vector3;quaternion:T.Quaternion;scale:T.Vector3}>();
  // #149 meditation: asleep = eyes held shut, no gesture or ambient motion, just a slow 4 s breathing bob (none under reduced motion).
  sleeping=false;
  constructor(rig:CreatureRig){this.rig=rig;this.clips=createClips(rig);this.mixer=new T.AnimationMixer(rig.root);for(const clip of this.clips){const action=this.mixer.clipAction(clip);const id=clip.name as Gesture;action.setLoop(GESTURES[id].loop?T.LoopRepeat:T.LoopOnce,GESTURES[id].loop?Infinity:1);action.clampWhenFinished=!GESTURES[id].loop;this.actions.set(id,action);}this.action=this.actions.get('idle')!;this.action.play();this.mixer.addEventListener('finished',()=>this.play('idle'));}
  play(id:Gesture){if(!Object.hasOwn(GESTURES,id))return;if(this.current===id&&GESTURES[id].loop)return;const next=this.actions.get(id)!;for(const action of this.actions.values())if(action!==this.action&&action!==next)action.stop();if(next===this.action)next.reset().play();else{this.action.fadeOut(.22);next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(.22).play();}this.action=next;this.current=id;}
  update(dt:number){
-  if(this.paused)return;dt=Math.min(.05,Math.max(0,dt));this.clock+=dt;this.mixer.update(dt);
+  if(this.paused)return;dt=Math.min(.05,Math.max(0,dt));this.clock+=dt;
+  // AnimationMixer may skip writes when a sampled track value has not changed. Since the pose below
+  // is weighted in place, feeding that weighted pose into the next sample can accumulate drift.
+  // Restore the last unweighted mixed pose before updating: this preserves constant non-rest
+  // plateaus while ensuring motion strength is applied once, even at the supported 1.5x setting.
+  for(const [name,node] of Object.entries(this.rig.nodes)){if(name.startsWith('EyeBlink'))continue;const pose=this.rawPose.get(name),rest=this.rig.rest[name];node.position.copy(pose?.position??rest.position);node.quaternion.copy(pose?.quaternion??rest.quaternion);node.scale.copy(pose?.scale??rest.scale);}
+  this.mixer.update(dt);
+  for(const [name,node] of Object.entries(this.rig.nodes)){if(name.startsWith('EyeBlink'))continue;let pose=this.rawPose.get(name);if(!pose){pose={position:new T.Vector3(),quaternion:new T.Quaternion(),scale:new T.Vector3()};this.rawPose.set(name,pose);}pose.position.copy(node.position);pose.quaternion.copy(node.quaternion);pose.scale.copy(node.scale);}
   // Scale the finished mixed pose from rest, so editor changes never accumulate.
   const strength=this.reduced||this.sleeping?0:(this.current==='idle'&&!this.ambient?0:this.amount);
   for(const [name,node] of Object.entries(this.rig.nodes)){const rest=this.rig.rest[name];if(name.startsWith('EyeBlink'))continue;const position=node.position.clone(),scale=node.scale.clone();node.quaternion.slerpQuaternions(rest.quaternion,node.quaternion.clone(),strength);node.position.copy(rest.position).lerp(position,strength);node.scale.copy(rest.scale).lerp(scale,strength);}
@@ -59,6 +69,6 @@ export class MotionController {
   for(const [name,node] of Object.entries(this.rig.nodes))if(name.startsWith('EyeBlink'))node.scale.y=1-.94*(this.sleeping?1:blink);
   if(this.sleeping&&!this.reduced){const b=Math.sin(this.clock*Math.PI/2),body=this.rig.nodes.BodyMotion,rest=this.rig.rest.BodyMotion;if(body){body.position.y=rest.position.y+.03*b;body.scale.set(rest.scale.x*(1+.006*b),rest.scale.y*(1+.02*b),rest.scale.z*(1+.006*b));}}
  }
- neutral(){this.mixer.stopAllAction();for(const [name,node] of Object.entries(this.rig.nodes)){const r=this.rig.rest[name];node.position.copy(r.position);node.scale.copy(r.scale);node.quaternion.copy(r.quaternion);}}
+ neutral(){this.mixer.stopAllAction();for(const [name,node] of Object.entries(this.rig.nodes)){const r=this.rig.rest[name];node.position.copy(r.position);node.scale.copy(r.scale);node.quaternion.copy(r.quaternion);if(!name.startsWith('EyeBlink')){let pose=this.rawPose.get(name);if(!pose){pose={position:new T.Vector3(),quaternion:new T.Quaternion(),scale:new T.Vector3()};this.rawPose.set(name,pose);}pose.position.copy(r.position);pose.quaternion.copy(r.quaternion);pose.scale.copy(r.scale);}}}
  dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.rig.root);}
 }

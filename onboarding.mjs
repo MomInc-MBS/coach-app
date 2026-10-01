@@ -48,7 +48,40 @@ async function renderForm(data,{edit=false,autoSave=false}={}){
  async function save(value){
    if(!displayedAccount){const result=await localScope.saveSetup(value,{startDay:calendarDay(Date.now(),value.profile.timezone)});restore(result.intake.appearance);clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');return;}
   const saved=await accountActions.saveOnboarding(displayedAccount,value);transitions.assertCurrent(saved.transitionTicket);
-  try{restore(saved.result.appearance);localStorage.setItem('myr5-coach-owner',saved.ownerId);}catch{}
+  try{
+  const currentOwner = localStorage.getItem('myr5-coach-owner');
+  let priorSnap = {};
+  if (currentOwner === saved.ownerId) {
+    const raw = localStorage.getItem('myr5-synced-appearance');
+    if (raw) {
+      try{
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) priorSnap = parsed;
+      }catch(e){/* ignore corrupt baseline */}
+    }
+  }
+  const canonicalKeys = ['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];
+  const merged = {};
+  for(const k of canonicalKeys){
+    const snapVal = priorSnap[k];
+    if(typeof snapVal==='string') merged[k]=snapVal;
+
+
+  }
+  const overrideKeys = ['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1'];
+  const appearance = saved.result.appearance;
+  if (appearance && typeof appearance === 'object') {
+    for(const k of overrideKeys){
+      if (appearance[k] != null) {
+        merged[k] = typeof appearance[k] === 'object' ? JSON.stringify(appearance[k]) : appearance[k];
+      }
+    }
+  }
+  const final = Object.fromEntries(canonicalKeys.filter(k => typeof merged[k]==='string').map(k=>[k, merged[k]]));
+  localStorage.setItem('myr5-synced-appearance',JSON.stringify(final));
+  restore(saved.result.appearance);
+  localStorage.setItem('myr5-coach-owner',saved.ownerId);
+}catch{}
   clearIncomingCoach();removeDraft(KEY);removeDraft(OFFICE_KEY);location.replace('/pose.html');
  }
  if(autoSave&&!missingFields(withQuickDefaults(data)).length){status.textContent=office?'Saving…':'Saving…';try{await save(data);return;}catch(e){status.textContent=e.message;}}

@@ -7,6 +7,7 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
+import {paletteFor} from '../modules/portal/portal-tunnel-palettes.mjs';
 
 async function withPortal(run){
  const source=resolve('.'),built=resolve('dist/client');
@@ -107,8 +108,8 @@ test('R7: picking Jelly on a phone-like GPU keeps WebGL for Jelly and every boar
  await page.close();
 }));
 
-// Hue families (of six) covering at least 3% of the saturated pixels in a screenshot patch: the rainbow wormhole shows 4 or
-// more, a board's own art 1 or 2.
+// Hue families (of six) covering at least 3% of the saturated pixels in a screenshot patch. Material presets include
+// near-neutral metals and narrow gemstone/candy colors, so a visible saturated family is the stable rendered-pixel floor.
 async function hueFamilies(page,clip){
  const png=(await page.screenshot({clip})).toString('base64');
  return page.evaluate(async png=>{
@@ -119,20 +120,32 @@ async function hueFamilies(page,clip){
  },png);
 }
 // Opens Food (the triangle) on the board showing, checks the wormhole through the cut once the piece has fallen, and comes back.
-async function wormholeThrough(page,label){
+async function wormholeThrough(page,label,boardId){
  await page.evaluate(()=>{window.portal.open('up');});
  await page.waitForSelector('.portal-glass',{state:'attached'});await page.waitForTimeout(1500);
+ const expected=paletteFor(boardId),render=await page.evaluate(()=>{
+  const glass=document.querySelector('.portal-glass'),canvas=glass?.querySelector('canvas'),gl=glass?.classList.contains('gl')&&canvas?.getContext('webgl2');
+  if(gl){const program=gl.getParameter(gl.CURRENT_PROGRAM),colors=Array.from({length:10},(_,i)=>Array.from(gl.getUniform(program,gl.getUniformLocation(program,`uSeq[${i}]`))||[])).flat(),n=gl.getUniform(program,gl.getUniformLocation(program,'uN'));return{mode:'webgl',colors,n:Number(n)};}
+  const style=getComputedStyle(glass?.querySelector('b')||glass);return{mode:'css',seq0:style.getPropertyValue('--seq0').trim(),seq:style.getPropertyValue('--seq').split(',').map(s=>s.trim())};
+ });
+ if(render.mode==='webgl'){
+  assert.equal(render.n,expected.colors.length,`${label}: GPU ring count follows the selected material preset`);
+  expected.colors.forEach((hex,index)=>{const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);rgb.forEach((v,c)=>assert.ok(Math.abs(render.colors[index*3+c]-v)<.01,`${label}: GPU ring ${index} channel ${c} matches ${hex}`));});
+ }else{
+  assert.equal(render.seq0,expected.colors[0],`${label}: CSS fallback starts with the selected palette`);
+  assert.deepEqual(render.seq,expected.colors.slice(1),`${label}: CSS fallback preserves the selected palette sequence`);
+ }
  const box=await page.locator('.portal-glass').first().evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.left+r.width*.3,y:r.top+r.height*.4,width:r.width*.4,height:r.height*.35};});
- // The cut is open from ~1.3 s to the dive at ~4.8 s; a slow software GPU can take a while to show it, so look a few times.
- let families=0;for(let i=0;i<8&&families<4;i++){if(i)await page.waitForTimeout(300);families=await hueFamilies(page,box);}
+ // Capture the actual pixels too: selected GL uniforms alone must not mask a blank or stalled tunnel.
+ let families=0;for(let i=0;i<8&&families<1;i++){if(i)await page.waitForTimeout(300);families=await hueFamilies(page,box);}
  await page.screenshot({path:resolve('.frames',`wormhole-${label}-375x812.png`)});
- assert.ok(families>=4,`${label}: the rainbow wormhole shows through the cut (${families} hue families)`);
+ assert.ok(families>=1,`${label}: selected wormhole colors show through the cut (${families} hue families)`);
  await page.waitForFunction(()=>document.querySelector('#mealsPanel').open,null,{timeout:15000});
  await page.evaluate(()=>document.querySelector('#mealsPanel').close());
  await page.waitForFunction(()=>document.getElementById('portalHome').hidden===false&&!document.querySelector('.portal-glass'),null,{timeout:15000});
 }
 
-test('R7: the rainbow wormhole shows through every board in 3D and flat, and the flat Quilt keeps its finger trail',{timeout:240000},async()=>withPortal(async(browser,url)=>{
+test('R7: selected wormhole palettes show through 3D boards, while the flat Quilt keeps its finger trail',{timeout:240000},async()=>withPortal(async(browser,url)=>{
  await mkdir(resolve('.frames'),{recursive:true});
  const open=async page=>{await page.goto(url);await page.evaluate(async()=>{localStorage.setItem('myr5.portalHintShown','1');const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();window.portal.show();});};
  const errors=[],gl=await browser.newPage({viewport:{width:375,height:812}});gl.on('pageerror',e=>errors.push(e.message));
@@ -140,7 +153,7 @@ test('R7: the rainbow wormhole shows through every board in 3D and flat, and the
  for(const id of ['jelly','ice']){ // GLB boards: the cut must open the mesh (its positions ship quantized)
   await gl.evaluate(id=>window.portal.board(id),id);
   assert.deepEqual(await shown(gl),{board:id,art:'3d'});
-  await wormholeThrough(gl,`3d-${id}`);
+  await wormholeThrough(gl,`3d-${id}`,id);
  }
  await gl.close();
 
@@ -158,7 +171,7 @@ test('R7: the rainbow wormhole shows through every board in 3D and flat, and the
  for(const id of ['cogs','jelly']){
   await flat.evaluate(id=>window.portal.board(id),id);
   assert.deepEqual(await shown(flat),{board:id,art:'flat'});
-  await wormholeThrough(flat,`flat-${id}`);
+  await wormholeThrough(flat,`flat-${id}`,id);
  }
  assert.deepEqual(errors,[]);
  await flat.close();

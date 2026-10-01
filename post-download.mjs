@@ -6,6 +6,7 @@
 // the first open and never over the quilt portal (the portal waits, hidden, until it closes); Settings
 // and Install reopen it (window.myr5Packs.open). Nothing is forced: the app works with just the core.
 import {ROWS,TRACKS,LEVELS_PER_BOSS} from './battle-pass-rewards.mjs';
+import {RELEASE} from './release-info.mjs';
 
 const STATE='myr5-full-download',CHOSEN='myr5-download-groups',SEEN='myr5-downloads-seen';
 const BUSY=['camera','model','tracking','manual'];
@@ -17,7 +18,7 @@ const say=text=>Object.assign(Error(text),{shown:true});
 const GROUPS=[
  // W2-2O (#136): the portal experience's art, offered first (and picked) on the first open.
  ['starter','Starter: portal, pyramid, ship and worlds','The offline workout tracker, the quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
- ['grimoire-ice','Ice grimoire portal','Ice board art and its reflective color-matched wormhole.'],
+ ['grimoire-ice','Crystal grimoire portal','Crystal board art and its reflective color-matched wormhole.'],
  ['grimoire-grass','Grass grimoire portal','Grass and flower art with its dirt, roots and bugs wormhole.'],
  ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],
  ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
@@ -45,7 +46,7 @@ export function mountPostDownload({host}){
  if(!worker||!globalThis.caches||!host)return null;
  const menu=document.createElement('dialog'),bar=document.createElement('section'),settings=document.createElement('section'),note=document.createElement('p');
  menu.id='downloadsMenu';menu.className='downloads-menu';menu.setAttribute('aria-labelledby','downloadsTitle');menu.setAttribute('aria-describedby','downloadsText');
- const status='<p role="status" data-text></p><progress max="1" value="0" aria-label="Download progress"></progress><span data-bytes></span><button type="button" data-toggle></button>';
+const status='<p role="status" data-text></p><progress max="1" value="0" aria-label="Download progress"></progress><span data-bytes></span><button type="button" data-toggle></button><button type="button" data-update hidden>Update Coach to continue downloads</button>';
  menu.innerHTML='<div class="downloads-page"><h2 id="downloadsTitle">Downloads</h2><p id="downloadsText">MyR5 already works. Pick what else to keep on this phone for offline use. You can change this any time in Settings.</p><p class="hint" data-cellular hidden>You’re on mobile data. Wi‑Fi is best for big downloads.</p><fieldset data-groups><legend>What to download</legend></fieldset><section data-packs></section></div>'
   +'<footer class="downloads-footer"><div class="downloads-status">'+status+'</div><p data-total></p><div class="actions"><button type="button" class="main-action" data-download>Download selected</button><button type="button" data-later>Not now</button></div></footer>';
  bar.className='full-download-bar';bar.setAttribute('aria-label','MyR5 downloads');bar.hidden=true;
@@ -99,15 +100,15 @@ export function mountPostDownload({host}){
  const boxes=()=>[...list.querySelectorAll('[data-group]')];
  function paint(){
   const total=plan?.total||0,left=Math.max(0,(plan?.remaining||0)-got),done=total-left;
-  const text=phase==='done'?(total?'Ready offline. Your downloads work without a connection.':'MyR5 works with what’s on this phone. Choose downloads for more offline.'):phase==='downloading'?'Downloading your picks…':phase==='paused'?'Download paused.':phase==='error'?message:phase==='checking'?'Checking this device…':`${mb(left)} of your picks still to download.`;
+  const text=phase==='done'?(total?'Ready offline. Your downloads work without a connection.':'MyR5 works with what’s on this phone. Choose downloads for more offline.'):phase==='downloading'?'Downloading your picks…':phase==='paused'?'Download paused.':phase==='error'||phase==='stale'?message:phase==='checking'?'Checking this device…':`${mb(left)} of your picks still to download.`;
   const toggle=phase==='downloading'?'Pause':phase==='paused'||phase==='error'?'Resume':phase==='ready'?`Download ${mb(left)}`:'';
   for(const box of [bar,settings,menuStatus]){
-   const active=['downloading','paused','error'].includes(phase)&&total>0;
+   const active=['downloading','paused','error','stale'].includes(phase)&&total>0;
    box.querySelector('[data-text]').textContent=text;box.querySelector('progress').value=total?done/total:0;box.querySelector('progress').hidden=!active;
    box.querySelector('[data-bytes]').textContent=active?`${mb(done)} of ${mb(total)}`:'';
-   const button=box.querySelector('[data-toggle]');button.hidden=!toggle;button.textContent=toggle;
+   const button=box.querySelector('[data-toggle]');button.hidden=!toggle;button.textContent=toggle;box.querySelector('[data-update]').hidden=phase!=='stale';
   }
-  menuStatus.hidden=!['checking','downloading','paused','error'].includes(phase);
+  menuStatus.hidden=!['checking','downloading','paused','error','stale'].includes(phase);
   if(menu.open)sync();
  }
  // The menu: one toggle and size per group; Extra coach bodies splits by workout section.
@@ -153,7 +154,7 @@ export function mountPostDownload({host}){
   }
   const selected=all.filter(box=>box.checked&&!saved(box)).reduce((sum,box)=>sum+left(box),0);
   menu.querySelector('[data-total]').textContent=busyNow?'':selected?`Selected: ${mb(selected)}`:'Nothing new selected.';
-  const download=menu.querySelector('[data-download]');download.disabled=busyNow||!selected;download.hidden=busyNow;
+  const download=menu.querySelector('[data-download]');download.disabled=busyNow||phase==='stale'||!selected;download.hidden=busyNow||phase==='stale';
  }
  list.addEventListener('change',event=>{
   const all=event.target.dataset.all;
@@ -203,16 +204,36 @@ export function mountPostDownload({host}){
  async function save(asset,signal){
   const cache=await caches.open(asset.cache||plan.cache);
   for(let attempt=1;;attempt++){
+   let responseAccepted=false;
    try{
     // HTML may be rewritten in transit by edge security products; the worker allows that too.
     const response=await fetch(asset.url,{cache:'no-cache',headers:{'x-myr5-package':'1'},signal,...(asset.url.endsWith('.html')?{}:{integrity:asset.integrity})});
     if(!response.ok)throw Error('HTTP '+response.status);
+    responseAccepted=true;
     await cache.put(asset.key||asset.url,response);return;
    }catch(error){
-    if(signal.aborted||error.name==='QuotaExceededError'||attempt===3)throw error;
+    if(signal.aborted||error.name==='QuotaExceededError')throw error;
+    if(attempt===3){
+     if(!responseAccepted&&await newerReleaseAvailable(signal)&&!signal.aborted)throw Object.assign(Error('A newer Coach release is live. Update Coach to continue downloads; saved files and choices are kept.'),{code:'stale_release'});
+     throw error;
+    }
     await new Promise(resolve=>setTimeout(resolve,1500*attempt));
    }
   }
+ }
+ async function newerReleaseAvailable(signal){
+  if(signal.aborted)return false;
+  const probe=new AbortController(),abort=()=>probe.abort();
+  const timer=setTimeout(abort,5000);
+  if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});
+  try{
+   const response=await fetch('/api/releases/current',{cache:'no-store',credentials:'omit',signal:probe.signal});
+   if(signal.aborted||probe.signal.aborted)return false;
+   if(!response.ok)return false;
+   const current=await response.json();
+   if(signal.aborted||probe.signal.aborted)return false;
+   return typeof current?.id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(current.id)&&current.id!==RELEASE.id;
+  }catch{return false;}finally{clearTimeout(timer);signal.removeEventListener('abort',abort);}
  }
  async function start(){
   if(controller)return;
@@ -232,11 +253,19 @@ export function mountPostDownload({host}){
    phase='done';bar.hidden=false;clearTimeout(doneTimer);doneTimer=0;
   }catch(error){
    if(signal.aborted){phase='paused';write(localStorage,STATE,'paused');}
+   else if(error.code==='stale_release'){phase='stale';message=error.message;}
    else{phase='error';message=error.shown?error.message:error.name==='QuotaExceededError'?'Not enough free space. Free some up, then resume.':'Download stopped. Check your connection; it continues where it left off.';}
   // Keep saved bytes against this plan until the next worker plan replaces both plan and got.
   }finally{controller=null;paint();if(menu.open)renderMenu();}
  }
  for(const box of [bar,settings,menuStatus])box.querySelector('[data-toggle]').onclick=()=>controller?controller.abort():void start();
+ for(const box of [bar,settings,menuStatus])box.querySelector('[data-update]').onclick=()=>{
+  // Recovery is a user action: stop the old release's request, leave its verified cache alone,
+  // and let the normal recovery page coordinate activation with any active workout clients.
+  controller?.abort();
+  if(menu.open)menu.close('stale-update');
+  window.open('/repair-coach','_blank','noopener,noreferrer');
+ };
  bar.querySelector('[data-hide]').onclick=()=>{bar.hidden=true;};
  // A roster body, or a portal scene's Starter art, that isn't on this phone downloads by itself when it's
  // needed (sw.js). The note is a popover so it also shows over a scene's dialog; never over a workout.

@@ -21,7 +21,8 @@ test.beforeAll(async()=>{server=http.createServer(async(req,res)=>{const path=ne
   await expect(page.locator('#leaderRows tr')).toHaveCount(1);
   await expect(page.locator('#saveLoadout')).toBeDisabled();
   await expect(page.locator('#arsenalStatus')).not.toContainText('Coach Army');
-  await expect(page.locator('#lookPortal')).toBeEnabled();
+  await expect(page.locator('#lookTitle, #lookPreview, #lookPortal, #lookFrame, #lookStrip, #lookBoards, #lookReset')).toHaveCount(0);
+  expect(requests).not.toContain('/modules/portal/portal-look.mjs');
   expect(requests).toContain('/war-room/war-room.mjs');
   expect(requests).toContain('/war-room/war-room.css');
   expect(requests).toContain('/api/gala/leaderboard');

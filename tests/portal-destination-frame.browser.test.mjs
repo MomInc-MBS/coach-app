@@ -26,6 +26,8 @@ function serve(){
 async function openApp(browser,base,reducedMotion){
  const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion});
  await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));
+ // This guest has read today's field manual; its automatic modal has separate coverage.
+ await context.addInitScript(()=>{const d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;localStorage.setItem('myr5-how-to-play-day-v1/guest',day);});
  const seed=await context.newPage();
  await seed.goto(base+'/onboarding.html');
  await seed.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
@@ -107,7 +109,7 @@ test("energy surges through the dive, a line's destination (Reminders) opens ins
   assert(!s.chrome&&!s.framed&&!s.ghost&&!s.hidden,`the quilt is back and the chrome handed back to its frame: ${JSON.stringify(s)}`);
   e=await energy(page);assert(e.every(a=>a.state==='running'&&a.rate===1),'energy back to rest');
   // Release 5: the bottom bar's Portal button replaced the floating Menu button (W2-2A).
-  assert.equal(await page.evaluate(()=>{const p=document.querySelector('#coachDock [data-route="portal"]'),b=p.getBoundingClientRect();return document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)===p;}),true);
+  assert.equal(await page.evaluate(()=>{const p=document.querySelector('#coachDock [data-route="portal"]'),b=p.getBoundingClientRect(),hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);return !!hit&&p.contains(hit);}),true,'the dock Portal key or its own icon receives the centre tap');
  }finally{await context.close();}
 });
 
@@ -116,9 +118,10 @@ test('reduced motion: static energy, destinations still framed, a quick fade bac
  try{
   assert.deepEqual(await energy(page),[],'no energy animation under reduced motion');
   assert.equal(await page.evaluate(()=>document.querySelector('#portalHome .portal-energy').style.getPropertyValue('--energy').split(',').length),6,'the six neons sit static in the channel');
-  // Menu sheet -> Ship (no gesture): the ship view sits in the frame's window too.
-  await page.locator('#coachDock [data-route="portal"]').click();
-  await page.locator('#portalMenu [data-menu="ship"]').click();
+  // Full menu -> Choose Workout (no gesture): this route opens the ship view in the frame's window.
+  await page.locator('#portalSettingsButton').click();
+  await page.locator('#portalMenu details>summary').click();
+  await page.locator('#portalMenu').getByRole('button',{name:'Choose Workout',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&getComputedStyle(document.querySelector('dialog.ship-view')).position==='fixed'&&document.getElementById('portalChrome').matches(':popover-open'));
   const ship=await page.evaluate(()=>{const r=document.querySelector('dialog.ship-view').getBoundingClientRect(),c=document.getElementById('portalChrome');return{box:{left:r.left,top:r.top,width:r.width,height:r.height},face:Object.fromEntries(['left','top','width','height'].map(k=>[k,parseFloat(c.style.getPropertyValue('--face-'+k))])),chrome:c.matches(':popover-open')};});
   assert(ship.chrome,'the chrome frames the ship view');

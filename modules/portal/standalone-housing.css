@@ -1,0 +1,24 @@
+#portalChrome.portal-standalone{--portal-rail:15px;--pm:var(--portal-metal,#4d3d4f);}
+#portalChrome.portal-standalone .portal-frame{--face-left:15px;--face-top:15px;--face-width:calc(100vw - 30px);--face-height:calc(100dvh - 30px);}
+#portalChrome.portal-standalone .portal-standalone-aura{position:absolute;z-index:2;inset:15px;box-sizing:border-box;pointer-events:none;border:36px solid transparent;border-radius:4px;box-shadow:inset 0 0 23px 7px var(--aura,#b026ff),0 0 16px var(--aura,#b026ff);opacity:.2;filter:blur(7px);mask:linear-gradient(#000 0 0) border-box,linear-gradient(#000 0 0) padding-box;mask-composite:exclude;-webkit-mask:linear-gradient(#000 0 0) border-box,-webkit-linear-gradient(#000 0 0) padding-box;-webkit-mask-composite:xor;}
+#portalChrome.portal-standalone .portal-energy{opacity:.86}
+#portalChrome.portal-standalone .portal-energy.hot{opacity:1}
+#portalChrome.portal-standalone .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b;}
+.editor-tilt-request{min-width:44px;min-height:40px;padding:0 10px;border:1px solid #e0c9ef;border-radius:999px;background:#201728e8;color:#fff;font:600 12px system-ui,sans-serif;pointer-events:auto;touch-action:manipulation}
+.editor-tilt-request:focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
+#coachDock.coach-dock a[aria-current=page]{color:#fff7e0;border-color:#ffb24d;background:#4d305f;box-shadow:0 0 0 1px #ffb24d,0 0 14px #ffb24d80}
+#coachDock.coach-dock{position:fixed;z-index:40;inset:auto 15px 15px!important;width:auto;height:64px;grid-template-columns:44px 44px minmax(62px,1fr) 44px 44px 44px;grid-template-rows:44px;align-content:center;align-items:center;gap:0 4px;padding:0 5px;border:1px solid #8d7490;border-radius:4px;background:linear-gradient(160deg,#59475d,#302438 55%,#211926);box-shadow:inset 0 1px #ead8e866,0 0 0 2px #17111d,0 0 12px #0009}
+#coachDock.coach-dock a.dock-control{position:relative;grid-row:1;box-sizing:border-box;width:44px;height:44px;min-width:44px;padding:0;display:grid;place-items:center;border:0;border-radius:0;background:none;box-shadow:none;filter:drop-shadow(0 3px 0 #130d18) drop-shadow(0 0 1px #000);color:#f4e4fa}
+#coachDock .dock-control>span{width:36px;height:36px;display:grid;place-items:center;color:#f6e5d5;background:linear-gradient(145deg,#a58a9c,#5a4560 55%,#3b2c42);box-shadow:inset 2px 2px #ffffff40,inset -2px -3px #0006}
+#coachDock .dock-settings{grid-column:1}#coachDock .dock-settings>span{border-radius:50%}
+#coachDock .dock-food{grid-column:2}#coachDock .dock-food>span{width:40px;height:30px;border-radius:5px 5px 9px 9px}
+#coachDock .dock-scoreboard{grid-column:4}#coachDock .dock-scoreboard>span{border-radius:14px 14px 6px 6px}
+#coachDock .dock-achievements{grid-column:5}#coachDock .dock-achievements>span{clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);background:linear-gradient(145deg,#f2c46f,#b98033)}
+#coachDock .dock-pod{grid-column:6}#coachDock .dock-pod>span{width:30px;border-radius:15px}
+#coachDock.coach-dock a.dock-control span{pointer-events:none}
+#coachDock.coach-dock a.dock-portal{position:absolute;grid-row:1;left:50%;top:50%;translate:-50% -50%;justify-self:center;box-sizing:border-box;width:62px;height:53px;min-width:62px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:2px solid #9a8295;border-top-color:#cbb5c5;border-bottom-color:#4b384d;border-radius:4px;background:linear-gradient(145deg,#806979,#4a394e 80%);box-shadow:0 0 0 3px #1c1421,0 6px 0 2px #130d18,inset 1px 2px #e0c3d366,inset -2px -3px #25182c99;color:#fff;font-size:8px;line-height:1}
+#coachDock.coach-dock svg{display:block;width:20px;height:20px}
+#coachDock.coach-dock .dock-portal{flex-direction:column;gap:1px;font-size:8px;line-height:1}
+#coachDock.coach-dock .dock-portal svg{width:18px;height:18px}
+.editor-shell{translate:var(--editor-peer-x,0px) var(--editor-peer-y,0px);rotate:var(--editor-peer-tilt,0deg);}
+@media(prefers-reduced-motion:reduce){.editor-shell{translate:none!important;rotate:none!important}#portalChrome.portal-standalone .portal-standalone-aura{filter:none;opacity:.16}}

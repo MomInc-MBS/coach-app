@@ -20,7 +20,15 @@ export const COACH = {
   pauseMs: [1500, 4000],
   crossRoom: 0.15, // the other side must be this much roomier before it crosses over
   horizon: 0, // camera height: 0 = the user's hips, 1 = their knees, negative = above the hips
-  turnRate: 8
+  turnRate: 8,
+  grabMs: 1000,
+  holdMs: 3000,
+  dropMs: 400,
+  grabLimbs: [15, 16, 19, 20],
+  chargeAfterMs: 8000, // counting time in the set before he charges (once per begin())
+  judgeMs: 1200,       // how long he lies there judging the user's balance
+  steady: 0.15,        // max hip-centre shift ÷ torso length that still counts as "didn't budge"
+  swipeMs: 1800, agreeMs: 1900, laughMs: 3400 // rig clip lengths (GESTURES.swipe/agree/laugh in creature/source/motion.ts)
 };
 
 const VISIBLE = 0.45;
@@ -58,7 +66,8 @@ export function spot(a, side, z, aspect, extra = 0) {
 }
 
 export class CoachMotion {
-  constructor({ aspect = 0.46, now = 0, random = Math.random } = {}) {
+  constructor({ aspect = 0.46, now = 0, random = Math.random, play = true } = {}) {
+    this.play = play; // false = kick-only (four-legged coaches): no grab, no charge
     this.aspect = aspect;
     this.random = random;
     this.prevNow = now;
@@ -75,10 +84,21 @@ export class CoachMotion {
     this.hitStartNow = 0;
     this.direction = 1;
     this.flyFrom = 0;
+    this.grabLimb = -1;
+    this.grabSince = 0;
+    this.heldSince = 0;
+    this.dropAt = 0;
+    this.dy = 0;
+    this.dropFrom = 0;
+    this.charged = false;
+    this.beginNow = 0;
+    this.phaseAt = 0;
+    this.hip0 = 0;
+    this.shift = 0;
   }
 
   // Reps are counting: walk in on the next frame that sees the user.
-  begin() { this.begun = true; }
+  begin() { this.begun = true; this.charged = false; this.beginNow = this.prevNow; }
 
   target() { const s = this.slot; return spot(this.anchor, s.side, s.z, this.aspect, s.extra); }
 
@@ -126,41 +146,95 @@ export class CoachMotion {
     } else if (this.phase === 'walking' || this.phase === 'pausing') {
       // Hit test against where the coach was drawn last frame.
       const drawn = project(a, this.X, this.z, this.aspect).box;
-      if (raw && this.prevPoints) {
-        for (const idx of COACH.hitLimbs) {
-          const cur = points[idx], prev = this.prevPoints[idx];
-          if (!seen(cur) || !seen(prev) || distH(prev, cur, this.aspect) / dt <= COACH.hitSpeed) continue;
-          if (cur.x < drawn.left || cur.x > drawn.right || cur.y < drawn.top || cur.y > drawn.bottom) continue;
-          this.phase = 'spun';
-          this.hitStartNow = now;
-          this.direction = Math.sign(cur.x - prev.x) || (a.x < 0.5 ? 1 : -1);
-          this.flyFrom = (drawn.left + drawn.right) / 2;
-          break;
-        }
+      // Hover grab: a grab limb resting inside the box for grabMs lifts the coach by the head.
+      let hover = -1;
+      if (raw && this.play) for (const idx of COACH.grabLimbs) {
+        const p = points[idx];
+        if (seen(p) && p.x >= drawn.left && p.x <= drawn.right && p.y >= drawn.top && p.y <= drawn.bottom) { hover = idx; break; }
       }
-      if (this.phase !== 'spun') {
-        let t = this.target();
-        // The user stepped into its spot behind them: re-plan (a clear depth, or cross over in front).
-        if (t.z > 1 && !t.fits && !this.slot.hurry) { this.pick(); t = this.target(); }
-        const dx = (t.X - this.X) * this.aspect / a.height, dz = (t.z - this.z) * COACH.roomDepth, d = Math.hypot(dx, dz);
-        if (this.phase === 'pausing' && d > 0.3) this.phase = 'walking';
-        if (this.phase === 'walking') {
-          const step = COACH.stride * dt;
-          if (d <= step) {
-            this.X = t.X; this.z = t.z; this.phase = 'pausing';
-            const [lo, hi] = COACH.pauseMs;
-            this.until = this.slot.hurry ? now : now + lo + this.random() * (hi - lo);
-          } else {
-            this.X += (t.X - this.X) * step / d; this.z += (t.z - this.z) * step / d;
-            yawTarget = Math.atan2(dx, -dz); // face where it walks: right = +π/2, away = π
+      // A frame with no user (tracker blink) keeps the timer: only a hand seen elsewhere resets it.
+      if (raw && hover < 0) this.grabLimb = -1;
+      else if (hover >= 0) {
+        if (this.grabLimb !== hover) { this.grabLimb = hover; this.grabSince = now; }
+        if (now - this.grabSince >= COACH.grabMs) { this.phase = 'held'; this.heldSince = now; }
+      }
+      if (this.play && this.phase === 'pausing' && !this.charged && now - this.beginNow >= COACH.chargeAfterMs) {
+        this.charged = true;
+        this.phase = 'charge';
+        this.slot = { side: this.slot.side, z: 1, extra: -COACH.gap };
+      }
+
+      if (this.phase !== 'held' && this.phase !== 'charge') {
+        // Kick test against where the coach was drawn last frame.
+        if (raw && this.prevPoints) {
+          for (const idx of COACH.hitLimbs) {
+            const cur = points[idx], prev = this.prevPoints[idx];
+            if (!seen(cur) || !seen(prev) || distH(prev, cur, this.aspect) / dt <= COACH.hitSpeed) continue;
+            if (cur.x < drawn.left || cur.x > drawn.right || cur.y < drawn.top || cur.y > drawn.bottom) continue;
+            this.phase = 'spun';
+            this.hitStartNow = now;
+            this.direction = Math.sign(cur.x - prev.x) || (a.x < 0.5 ? 1 : -1);
+            this.flyFrom = (drawn.left + drawn.right) / 2;
+            break;
           }
         }
-        if (this.phase === 'pausing') {
-          this.X = t.X; this.z = t.z; // small user shifts: stay put beside them
-          yawTarget = -this.slot.side * 0.35; // turned a little toward the user
-          if (now >= this.until) { this.pick(); this.phase = 'walking'; }
+        if (this.phase !== 'spun') {
+          let t = this.target();
+          // The user stepped into its spot behind them: re-plan (a clear depth, or cross over in front).
+          if (t.z > 1 && !t.fits && !this.slot.hurry) { this.pick(); t = this.target(); }
+          const dx = (t.X - this.X) * this.aspect / a.height, dz = (t.z - this.z) * COACH.roomDepth, d = Math.hypot(dx, dz);
+          if (this.phase === 'pausing' && d > 0.3) this.phase = 'walking';
+          if (this.phase === 'walking') {
+            const step = COACH.stride * dt;
+            if (d <= step) {
+              this.X = t.X; this.z = t.z; this.phase = 'pausing';
+              const [lo, hi] = COACH.pauseMs;
+              this.until = this.slot.hurry ? now : now + lo + this.random() * (hi - lo);
+            } else {
+              this.X += (t.X - this.X) * step / d; this.z += (t.z - this.z) * step / d;
+              yawTarget = Math.atan2(dx, -dz); // face where it walks: right = +π/2, away = π
+            }
+          }
+          if (this.phase === 'pausing') {
+            this.X = t.X; this.z = t.z; // small user shifts: stay put beside them
+            yawTarget = -this.slot.side * 0.35; // turned a little toward the user
+            if (now >= this.until) { this.pick(); this.phase = 'walking'; }
+          }
         }
       }
+    } else if (this.phase === 'charge') {
+      const t = this.target(), dx = (t.X - this.X) * this.aspect / a.height, dz = (t.z - this.z) * COACH.roomDepth, d = Math.hypot(dx, dz), step = COACH.stride * dt;
+      if (d <= step) { this.X = t.X; this.z = t.z; this.phase = 'swiping'; this.phaseAt = now; yawTarget = -this.slot.side * Math.PI / 2; }
+      else { this.X += (t.X - this.X) * step / d; this.z += (t.z - this.z) * step / d; yawTarget = Math.atan2(dx, -dz); }
+    } else if (this.phase === 'swiping') {
+      yawTarget = -this.slot.side * Math.PI / 2; // squared up to the user
+      if (now - this.phaseAt >= COACH.swipeMs) { this.phase = 'fallen'; this.phaseAt = now; this.hip0 = raw ? raw.x : a.x; this.shift = 0; }
+    } else if (this.phase === 'fallen') {
+      // Judge: the biggest hip-centre shift while he lies there, in torso lengths (x in the same units distH uses).
+      if (raw) this.shift = Math.max(this.shift, Math.abs(raw.x - this.hip0) * this.aspect / (a.height / COACH.heightPerTorso));
+      if (now - this.phaseAt >= COACH.judgeMs) { this.phase = this.shift < COACH.steady ? 'impressed' : 'laughing'; this.phaseAt = now; }
+    } else if (this.phase === 'impressed' || this.phase === 'laughing') {
+      yawTarget = -this.slot.side * 0.35;
+      if (now - this.phaseAt >= (this.phase === 'impressed' ? COACH.agreeMs : COACH.laughMs)) { this.pick(); this.phase = 'walking'; }
+    } else if (this.phase === 'held') {
+      const p = points?.[this.grabLimb], prev = this.prevPoints?.[this.grabLimb];
+      const flick = seen(p) && seen(prev) && distH(prev, p, this.aspect) / dt > COACH.hitSpeed;
+      // A tracker blink (no user this frame) keeps him hanging; a seen-but-gone hand, a flick or holdMs drops him.
+      if ((raw && !seen(p)) || flick || now - this.heldSince >= COACH.holdMs) {
+        this.phase = 'dropped';
+        this.dropAt = now;
+        this.dropFrom = this.dy;
+        this.grabLimb = -1;
+      } else if (raw) {
+        // The box top-centre follows the limb; feet hang below it.
+        this.X = 0.5 + (p.x - 0.5) * this.z;
+        const base = project(a, this.X, this.z, this.aspect);
+        this.dy = p.y + base.height - base.feetY;
+      }
+    } else if (this.phase === 'dropped') {
+      const u = Math.min((now - this.dropAt) / COACH.dropMs, 1);
+      this.dy = this.dropFrom * (1 - u);
+      if (u >= 1) { this.dy = 0; this.phase = 'walking'; }
     } else if (this.phase === 'spun') {
       const u = Math.min((now - this.hitStartNow) / COACH.spinMs, 1), half = halfWidth(a, this.z, this.aspect);
       const off = this.direction > 0 ? 1 + half : -half, x = this.flyFrom + (off - this.flyFrom) * u;
@@ -176,6 +250,11 @@ export class CoachMotion {
     this.prevPoints = Array.isArray(points) ? points.map(p => p && { x: p.x, y: p.y, visibility: p.visibility }) : null;
 
     const placed = a ? project(a, this.X, this.z, this.aspect) : { x: 0, feetY: 0, height: 0, box: { left: 0, right: 0, top: 0, bottom: 0 } };
-    return { phase: this.phase, z: this.z, yaw: this.yaw, rotation: this.rotation, baseHeight: a?.height ?? 0, ...placed };
+    if (this.dy !== 0) {
+      placed.feetY += this.dy;
+      placed.box.top += this.dy;
+      placed.box.bottom += this.dy;
+    }
+    return { phase: this.phase, z: this.z, yaw: this.yaw, rotation: this.rotation, baseHeight: a?.height ?? 0, ...placed, dy: this.dy, side: this.slot?.side ?? 1, shift: this.shift };
   }
 }

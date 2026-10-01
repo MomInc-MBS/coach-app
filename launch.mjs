@@ -44,6 +44,7 @@ window.addEventListener('myr5:reminder-defaults',e=>reminderControls.load(e.deta
 let editingReminder=null;
 const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1','mominc-avatar-v1','myr5-pod-power-v1','handborne-recipe-v4','mbs-dj-identity-v1'];
 let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false,packGrantCache=null;
+window.addEventListener('myr5:login-ready',()=>{queueMicrotask(()=>{if(account===null && !accountTransitionBusy){void refresh().catch(()=>{});} });});
 let localHistoryRepository=null,guestHistoryChoice=null,accountTransitionBusy=false;
 let expansionMounted=false;
 async function mountVerifiedExpansion(value){
@@ -143,12 +144,36 @@ async function localHistory(){try{localHistoryRepository??=await openLocalCoach(
 async function goals(){try{const {items}=await api('/api/goals');const list=$('goalList');list.replaceChildren();if(!items.length){list.textContent='No goals yet.';return;}for(const item of items){const row=document.createElement('article');row.className='goal-entry';row.dataset.status=item.status;const title=document.createElement('h4');title.textContent=item.title;row.append(title);if(item.note){const note=document.createElement('p');note.textContent=item.note;row.append(note);}const actions=document.createElement('div');actions.className='actions';if(item.status==='active')actions.append(button('Complete',async()=>{await updateGoal(item,{status:'completed'});}));if(item.status==='completed')actions.append(button('Reopen',async()=>{await updateGoal(item,{status:'active'});}));if(item.status!=='archived')actions.append(button('Archive',async()=>{await updateGoal(item,{status:'archived'});}));row.append(actions);list.append(row);}}catch(e){set('goalStatus',e.message);}}
 async function updateGoal(item,data){try{await api('/api/goals/'+item.id,'PATCH',data);set('goalStatus','Goal saved.');await goals();}catch(e){set('goalStatus','Could not save goal: '+e.message);}}
 $('goalForm').onsubmit=async e=>{e.preventDefault();const form=e.target,submit=form.querySelector('[type=submit]');submit.disabled=true;try{await api('/api/goals','POST',Object.fromEntries(new FormData(form)));form.reset();set('goalStatus','Goal saved.');await goals();}catch(err){set('goalStatus','Could not save goal: '+err.message);}finally{submit.disabled=false;}};
-$('saveProfile').onclick=async()=>{try{const data=Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]).filter(([,v])=>v!=null));const result=await api('/api/profile','PUT',{revision,data});revision=result.revision;await refresh();set('accountStatus','Appearance saved to your account.');}catch(e){set('accountStatus',e.message);}};
-$('restoreProfile').onclick=async()=>{const value=await refresh();if(!value)return;for(const key of keys){const v=value.profile[key];if(v!=null){localStorage.setItem(key,v);window.dispatchEvent(new StorageEvent('storage',{key,newValue:v}));}}window.dispatchEvent(new Event('mominc-avatar-change'));set('accountStatus','Saved appearance restored.');};
+$('saveProfile').onclick = async () => {
+  try {
+    const ticket = accountTransitions.capture();
+    if (!account) throw new Error('No account');
+    const owner = account.user.id;
+    const dataEpoch = account.dataEpoch;
+    const data = Object.fromEntries(keys.map(k => [k, localStorage.getItem(k)]).filter(([, v]) => v != null));
+    const result = await api('/api/profile', 'PUT', { revision: revision, data });
+    // Update global revision before any further checks
+
+    accountTransitions.assertCurrent(ticket);
+    if (!account || account.user.id !== owner || account.dataEpoch !== dataEpoch) {
+      throw new Error('Account changed');
+    }
+    revision = result.revision;
+    const baseline = JSON.stringify(data);
+    if (localStorage.getItem('myr5-coach-owner') === owner) {
+      localStorage.setItem('myr5-synced-appearance', baseline);
+    }
+    await refresh();
+    set('accountStatus', 'Appearance saved to your account.');
+  } catch (e) {
+    set('accountStatus', e.message);
+  }
+};
+$('restoreProfile').onclick=async()=>{try{const ticket=accountTransitions.capture();const originalOwner=account?.user?.id;const originalEpoch=account?.dataEpoch;if(!originalOwner||originalEpoch===undefined){throw new Error('No account');}const value = await refresh();if (!value) return;if(account==null){throw new Error('Account missing after refresh');}accountTransitions.assertCurrent(ticket); if(account?.user?.id !== originalOwner || account?.dataEpoch !== originalEpoch) { throw new Error("Account changed"); } if(value.user.id!==originalOwner||value.dataEpoch!==originalEpoch){throw new Error("Stale account");}const profile=value.profile;if(!profile){throw new Error('Profile missing');}for(const key of keys){const raw=profile[key];if(raw!=null){localStorage.setItem(key,raw);window.dispatchEvent(new StorageEvent('storage',{key,newValue:raw}));}else{localStorage.removeItem(key);window.dispatchEvent(new StorageEvent('storage',{key,newValue:null}));}}localStorage.setItem('myr5-coach-owner',value.user.id);const snapshot=Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]).filter(([,v])=>v!=null));localStorage.setItem('myr5-synced-appearance',JSON.stringify(snapshot));window.dispatchEvent(new Event('mominc-avatar-change'));set('accountStatus','Saved appearance restored.');}catch(e){set('accountStatus',e.message);}}
 $('refreshAccount').onclick=async()=>{await refresh();await workouts();};
 $('exportData').onclick=async()=>{try{download(JSON.stringify(await api('/api/export'),null,2),'myr5-data.json');}catch(e){set('accountStatus',e.message);}};
-$('signOut').onclick=async e=>{e.preventDefault();const target=account;accountTransitionBusy=true;try{try{accountTransitions.invalidate();}catch{}packGrantCache?.deactivate();void (async()=>{try{const sub=await registration?.pushManager.getSubscription();if(sub&&target){try{await api('/api/push/unsubscribe','POST',{endpoint:sub.endpoint},{'X-Target-Account':target.user.id,'X-Expected-Data-Epoch':String(target.dataEpoch)});}catch{}try{await sub.unsubscribe();}catch{}}}catch{}})();for(const k of [...keys,'myr5-workout-progress-v1'])try{localStorage.removeItem(k);}catch{}try{clearCoachAccount();}catch{}await signOut();}catch(err){set('accountStatus',err.message);}finally{accountTransitionBusy=false;}};
-$('deleteAccount').onclick=async()=>{const captured=account;accountTransitionBusy=true;try{accountTransitions.invalidate();const target=captured&&Number.isSafeInteger(captured.dataEpoch)?captured:await api('/api/account?core=1');const receipt=await api('/api/account','DELETE',{confirm:$('deleteConfirm').value,expectedDataEpoch:target.dataEpoch},{'X-Target-Account':target.user.id});const through=validateAccountDeletionReceipt(receipt,target.user.id,target.dataEpoch);packGrantCache?.remove(target.user.id);accountWorkoutSync.forgetDeletedAccount(target.user.id,through);if(!receipt.alreadyDeleted)for(const k of [...keys,'myr5-workout-progress-v1'])localStorage.removeItem(k);clearCoachAccount();location.reload();}catch(e){set('accountStatus',e.message);}finally{accountTransitionBusy=false;}};
+$('signOut').onclick=async e=>{e.preventDefault();const target=account;accountTransitionBusy=true;try{try{accountTransitions.invalidate();}catch{}packGrantCache?.deactivate();void (async()=>{try{const sub=await registration?.pushManager.getSubscription();if(sub&&target){try{await api('/api/push/unsubscribe','POST',{endpoint:sub.endpoint},{'X-Target-Account':target.user.id,'X-Expected-Data-Epoch':String(target.dataEpoch)});}catch{}try{await sub.unsubscribe();}catch{}}}catch{}})();for(const k of [...keys,'myr5-workout-progress-v1','myr5-coach-owner','myr5-synced-appearance'])try{localStorage.removeItem(k);}catch{}try{clearCoachAccount();}catch{}await signOut();}catch(err){set('accountStatus',err.message);}finally{accountTransitionBusy=false;}};
+$('deleteAccount').onclick=async()=>{const captured=account;accountTransitionBusy=true;try{accountTransitions.invalidate();const target=captured&&Number.isSafeInteger(captured.dataEpoch)?captured:await api('/api/account?core=1');const receipt=await api('/api/account','DELETE',{confirm:$('deleteConfirm').value,expectedDataEpoch:target.dataEpoch},{'X-Target-Account':target.user.id});const through=validateAccountDeletionReceipt(receipt,target.user.id,target.dataEpoch);packGrantCache?.remove(target.user.id);accountWorkoutSync.forgetDeletedAccount(target.user.id,through);if(!receipt.alreadyDeleted)for(const k of [...keys,'myr5-workout-progress-v1','myr5-coach-owner','myr5-synced-appearance'])localStorage.removeItem(k);clearCoachAccount();location.reload();}catch(e){set('accountStatus',e.message);}finally{accountTransitionBusy=false;}};
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installApp').hidden=false;set('installStatus','Coach is ready to install on your home screen.');});window.addEventListener('appinstalled',()=>{set('installStatus','Coach is installed.');$('installApp').hidden=true;});
 set('installStatus',matchMedia('(display-mode: standalone)').matches?'Coach is running as an installed app.':'Install Coach for a full-screen training pod.');
 $('installApp').onclick=async()=>{if(installPrompt){await installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installApp').hidden=true;}};

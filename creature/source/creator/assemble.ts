@@ -7,7 +7,8 @@ import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
 import {sculptMaterial,growMaterial,applySparkle} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
 import {colorTriad,resolveRegionMaterial} from './materials-registry';
-import {applyInstalledSkin,type InstalledSkin} from './skin-materials';
+import {applyInstalledSkin,loadInstalledSkinTextures,type InstalledSkin,type SkinTextureCache} from './skin-materials';
+import {createCoachReliefBudget} from './material-refinement';
 
 import * as THREE from 'three';
 import {GLTFLoader,type GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -37,7 +38,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  const [gltf,anatomy,hands,...extras]=await Promise.all([load('myr5'),load('anatomy'),load('hands-v2'),...extraIds.map(load)]);
  const installedSkins=new Map<Region,InstalledSkin>();
  if(resolveInstalledSkin)for(const region of REGIONS){const id=d.materials?.[region]?.textureId;if(!id?.startsWith('creature-'))continue;try{const skin=await resolveInstalledSkin(id);if(skin?.id===id)installedSkins.set(region,skin);}catch{/* Missing, revoked, offline, or untrusted optional packs fail closed to built-in materials. */}}
- const skinTextures=new Set<THREE.Texture>();
+ const skinTextures=new Set<THREE.Texture>(),skinTextureCache:SkinTextureCache=new Map();
  const sources=new Map<string,GLTF>([['myr5',gltf],...extraIds.map((id,i)=>[id,extras[i]] as [string,GLTF])]);
  const scene=(id:string)=>sources.get(id)!.scene;
 
@@ -88,7 +89,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  if(eyeOverride?.eyeOffset)eyeOffset.add(new THREE.Vector3(...eyeOverride.eyeOffset));
  const eyeMoved=eyeOffset.lengthSq()>1e-8||Math.abs(eyeScale-1)>1e-4;
 
- const root=new THREE.Group(),details=new THREE.Group();details.name='Style ornaments';root.add(details);
+ const root=new THREE.Group(),details=new THREE.Group(),coachRelief=createCoachReliefBudget();details.name='Style ornaments';root.add(details);
  const materials:THREE.MeshStandardMaterial[]=[];
     const regions={} as Record<Region,THREE.Group>;
    for(const region of REGIONS){const source=scene(from[region]).getObjectByName(region);if(!source){throw Error('A creature section could not load.');}
@@ -118,7 +119,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     if(o.name==='Iris'&&o.userData.irisType!==d.pupil){o.geometry.dispose();o.geometry=pupilGeometry(d.pupil);o.geometry.scale(1.48,1.48,1);o.userData.basePosition=new THREE.Vector3(.04,2.1475,1.133);o.userData.baseScale=new THREE.Vector3(1,1,1);o.userData.irisType=d.pupil;}
     if(/^Iris.fiber/.test(o.name))o.visible=d.pupil==='round';
     if(/^Crown.scale/.test(o.name))o.visible=d.styles[region]===0;
-    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible&&style.id!==0){sculptMaterial(o,style,1,d.detail);applySparkle(o.material as THREE.MeshPhysicalMaterial,style.sparkle);}
+    deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible){const customSkin=d.materials?.[region]?.textureId?.startsWith('creature-')??false,alternate=from[region]!=='myr5'&&!customSkin;if(style.id!==0){sculptMaterial(o,style,1,d.detail,alternate?coachRelief:undefined);applySparkle(o.material as THREE.MeshPhysicalMaterial,style.sparkle);}}
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
    });
   }
@@ -149,11 +150,16 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  })();
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
  const disposeAssembly=()=>{const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());};
- try{
-  for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate',preview)??colorTriad('default-slate')!;const group=e.regions[region];
-   const tasks:Promise<boolean>[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)tasks.push(applyInstalledSkin(object,skin,triad,skinTextures));});const results=await Promise.allSettled(tasks),failed=results.find(result=>result.status==='rejected');if(failed?.status==='rejected')throw failed.reason;
-  }
- }catch(error){skinTextures.forEach(texture=>texture.dispose());disposeAssembly();throw error;}
+ for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate',preview)??colorTriad('default-slate')!,group=e.regions[region];
+  let meshes:THREE.Mesh[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)meshes.push(object);});
+  try{await loadInstalledSkinTextures(skin,skinTextures,skinTextureCache);}catch{/* Optional corrupted skin: this whole region keeps its built-in materials. */continue;}
+  const previous=meshes.map(mesh=>({mesh,material:mesh.material})),stagedMaterials=new Set<THREE.Material>();
+  const stage=(material:THREE.Material)=>{const clone=material.clone();clone.onBeforeCompile=material.onBeforeCompile;clone.customProgramCacheKey=material.customProgramCacheKey.bind(material);stagedMaterials.add(clone);return clone;};
+  for(const {mesh}of previous)mesh.material=Array.isArray(mesh.material)?mesh.material.map(stage):stage(mesh.material);
+  const results=await Promise.allSettled(meshes.map(mesh=>applyInstalledSkin(mesh,skin,triad,skinTextures,skinTextureCache))),failed=results.find(result=>result.status==='rejected');
+  if(failed?.status==='rejected'){for(const state of previous)state.mesh.material=state.material;stagedMaterials.forEach(material=>material.dispose());continue;}
+  const replaced=new Set<THREE.Material>();for(const state of previous)for(const material of Array.isArray(state.material)?state.material:[state.material])replaced.add(material);replaced.forEach(material=>material.dispose());
+ }
  root.userData.recipe=JSON.parse(JSON.stringify(d));root.userData.eyeOffset=eyeOffset;root.userData.eyeScale=eyeScale;root.userData.eyeSurfaceZ=surfaceZ;root.userData.pivots=pivots;
  return {root,skinTextures,dispose:disposeAssembly};
 }

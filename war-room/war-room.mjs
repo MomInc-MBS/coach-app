@@ -2,7 +2,6 @@ import {authFetch} from '../auth-client.mjs';
 import {equipmentProgress} from '../pod/rest-arena.mjs';
 import {authTransitions} from '../auth-transition.mjs';
 import {createWarRoomApi} from './account-api.mjs';
-import {readLook,saveLook,readBoard,saveBoard,LOOK_DEFAULTS,BOARD_CHOICES} from '../modules/portal/portal-look.mjs';
 const css=document.createElement('link');css.rel='stylesheet';css.href='/war-room/war-room.css';document.head.append(css);
 const $=id=>document.getElementById(id);
 const CHECKS=[['djscratch','DJ Scratch'],['gala','Gala'],['lilboyfriend','Lil Boyfriend'],['corgi','Corgi'],['hand','Helping Hand'],['armie','Coach Armie']];
@@ -16,18 +15,6 @@ transitions.subscribe(()=>{galaProgress(null);arsenal=null;$('saveLoadout').disa
 function renderArsenal(state){arsenal=state;$('saveLoadout').disabled=false;$('weaponType').value=state.loadout.type;$('weaponTier').value=String(state.loadout.tier);$('arsenalStatus').textContent=state.updatedAt?'Saved to this account.':'No saved loadout yet.';}
 function renderRun(run){$('runStatus').textContent=run?'Run '+(run.completedAt?'complete':'in progress')+'.':'No saved Gala run found.';$('identity').textContent=run?.djName||'No DJ identity attached.';$('checks').replaceChildren(...CHECKS.map(([key,label])=>{const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=run?.completed?.includes(key)?'✓ complete':'— pending';row.append(dt,dd);return row;}));}
 function renderBoard(board){const rows=board.items||[];$('leaderRows').replaceChildren(...rows.map(item=>{const tr=document.createElement('tr');for(const value of [String(item.rank).padStart(2,'0'),item.djName||'Unnamed DJ',time(item.durationMs)]){const td=document.createElement('td');td.textContent=value;tr.append(td);}return tr;}));$('boardStatus').textContent=rows.length?'Live escapee records.':'No ranked runs yet.';}
-// Portal appearance: local-device only, works for guests; the portal reads the same keys (modules/portal/portal-look.mjs).
-const LOOK_INPUTS={portal:'lookPortal',frame:'lookFrame',strip:'lookStrip'};
-function renderLook(){
- const look=readLook();
- for(const [name,id] of Object.entries(LOOK_INPUTS))$(id).value=look[name];
- $('lookPreview').style.cssText=`--p:${look.portal};--f:${look.frame};--s:${look.strip}`;
- $('lookBoards').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.board===readBoard())));
-}
-for(const [name,id] of Object.entries(LOOK_INPUTS))$(id).addEventListener('input',event=>{saveLook(name,event.target.value);renderLook();});
-$('lookBoards').replaceChildren(...BOARD_CHOICES.map(([id,label])=>{const b=document.createElement('button');b.type='button';b.dataset.board=id;b.textContent=label;b.onclick=()=>{saveBoard(id);renderLook();};return b;}));
-$('lookReset').addEventListener('click',()=>{for(const name of Object.keys(LOOK_INPUTS))saveLook(name,LOOK_DEFAULTS[name]);renderLook();});
-renderLook();
 // Public room and leaderboard; saved run and arsenal need a signed-in account and the server API.
 async function load(){
  const ticket=transitions.beginRefresh();arsenal=null;$('saveLoadout').disabled=true;$('refresh').disabled=true;

@@ -6,6 +6,7 @@
 // names it. Phone back closes it and returns to the quilt; back on the quilt asks once before leaving.
 // Bundled into app-runtime via app.mjs; no .ts imports, no build defines.
 import {openCustomizer} from './ships/ship-scene-domain.mjs';
+import {ensurePortalMounted} from './portal/portal-entry.mjs';
 const $=id=>document.getElementById(id);
 // Kept by reference: the bar can sit inside a dialog that is being removed (portal dispose) and must come back.
 let dockEl=null;
@@ -55,7 +56,7 @@ export const ROUTES={
 export const PANEL_ROUTES={meals:'food',reminders:'reminders',account:'scoreboard',history:'history',install:'install'};
 export function hashRoute(hash=location.hash){const id=hash.slice(1);return Object.hasOwn(ROUTES,id)?id:'';}
 
-let active=null,expectBack=false,guardArmed=false,guardHref='',hintTimer=0;
+let active=null,expectBack=false,guardArmed=false,guardHref='',hintTimer=0,routeGeneration=0;
 const pending=new Map();
 
 function paint(){
@@ -89,9 +90,9 @@ function showQuiltLater(force=false){
 }
 
 function adopt(id,dialog){
- if(active&&active.dialog===dialog&&active.id===id)return;
+ if(active&&active.dialog===dialog&&active.id===id)return active;
  const route=ROUTES[id],flags=pending.get(id)||{};pending.delete(id);
- const prev=active,entry={id,dialog,own:!!route.own,pushed:false,deepLink:!!flags.deepLink,reason:''};
+ const prev=active,entry={id,dialog,own:!!route.own,pushed:false,deepLink:!!flags.deepLink,portalOrigin:!!flags.portal,reason:''};
  active=entry;
  if(prev)finish(prev,'switch');
  if(!entry.own){
@@ -105,13 +106,21 @@ function adopt(id,dialog){
  if(dialog){
   dialog.dataset.route=id;
   const bar=dock();if(bar)dialog.append(bar);
-  dialog.addEventListener('close',()=>finish(entry,entry.reason||'user'),{once:true});
+  entry.closeListener=()=>{
+   // A native close event can arrive after this shared dialog was reopened in the same task.
+   // Keep this session's listener armed for its eventual real close.
+   if(dialog.open||entry.done)return;
+   dialog.removeEventListener('close',entry.closeListener);
+   finish(entry,entry.reason||'user');
+  };
+  dialog.addEventListener('close',entry.closeListener);
  }
- paint();announce(entry);
+ paint();announce(entry);return entry;
 }
 function finish(entry,reason){
  if(entry.done)return;
  entry.done=true;entry.reason=reason;
+ if(entry.dialog&&entry.closeListener)entry.dialog.removeEventListener('close',entry.closeListener);
  if(active===entry)active=null;
  const {dialog}=entry;
  if(dialog&&dialog!==active?.dialog){
@@ -126,17 +135,34 @@ function finish(entry,reason){
  paint();
 }
 
-export function go(id,{deepLink=false,fromHash=false}={}){
+// Any direct dialog route gets the same hardware surround and tilt as a room opened from the quilt.
+// Portal-origin routes carry {portal:true}, so their shaped-cut presentation stays intact.
+const HOUSING_ROUTES=new Set(['food','achievements','reminders','scoreboard','meditate','settings','ship','select','history','install']);
+export function go(id,{deepLink=false,fromHash=false,portal=false}={}){
  const route=ROUTES[id];if(!route)return undefined;
  if(route.nav){
   if(active)active.reason='nav';
   if(hashRoute())history.replaceState(history.state?.myr5Home?history.state:null,'',bare());
   location.assign(route.nav);return undefined;
  }
- if(active?.id===id&&(!active.dialog||active.dialog.open))return active.dialog||undefined;
- const request={deepLink,fromHash};pending.set(id,request);
+ if(active?.id===id&&(!active.dialog||active.dialog.open)){
+  const current=active;
+  if(current.dialog&&HOUSING_ROUTES.has(id)&&!portal)return ensurePortalMounted().then(housing=>{if(active===current&&current.dialog.open)housing.frameDirectDestination?.(current.dialog,id);return current.dialog;});
+  return active.dialog||undefined;
+ }
+ const generation=++routeGeneration;pending.clear();
+ const request={deepLink,fromHash,portal,generation};pending.set(id,request);
  let result;
- try{result=route.open();}catch(error){pending.delete(id);throw error;}
+ try{
+  result=HOUSING_ROUTES.has(id)&&!portal
+   ?(async()=>{
+     const housing=await ensurePortalMounted();if(pending.get(id)!==request||routeGeneration!==generation)return null;
+     const opened=route.open();
+     const finishHousing=dialog=>{if(dialog instanceof HTMLDialogElement&&dialog.open&&routeGeneration===generation&&(pending.get(id)===request||(active?.id===id&&active.dialog===dialog)))housing.frameDirectDestination?.(dialog,id);return dialog;};
+     return opened instanceof Promise?finishHousing(await opened):finishHousing(opened);
+    })()
+   :route.open();
+ }catch(error){pending.delete(id);throw error;}
  // Only this request may adopt: an older, slower open of the same route (the ship view's) must not take it back.
  const settle=dialog=>{
   if(pending.get(id)!==request)return;
@@ -177,14 +203,18 @@ function armGuard(){
 // Closes whatever route is open and brings up the quilt. Used by the bar's centre Portal off the quilt, and by
 // anything else that wants to send the user home (#56's rest exit, a stopped/paused set, the Settings PORTAL link).
 export function home(){
+ routeGeneration++;pending.clear();
  if(active){const entry=active;if(entry.dialog?.open)entry.reason='portal';finish(entry,'portal');}
  showQuiltLater(true);
 }
 // The bar's centre Portal: on the quilt the portal's own handler opens the Menu sheet; anywhere else it goes
 // home to the quilt (closing the open route).
 function dockRoute(event){
- const button=event.target.closest?.('#coachDock [data-route]:not([data-panel])');
+const button=event.target.closest?.('#coachDock [data-route]');
  if(!button||button.dataset.route==='portal')return;
+ // Route.open() may activate the same panel button as its legacy opener. The opener's
+ // request owns this click; adopting it again would invalidate its housing continuation.
+ if(button.hasAttribute('data-panel')&&pending.has(button.dataset.route))return;
  go(button.dataset.route);
 }
 function portalButton(event){
@@ -205,15 +235,28 @@ export function mountRoutes(){
  // A plain tap on a legacy customizer link enters the War Room scene.
  document.addEventListener('click',event=>{const link=event.target.closest?.('a[href]');if(!link||event.defaultPrevented||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;const url=new URL(link.href,location.href);if(url.origin===location.origin&&/^\/creature\/(index\.html)?$/.test(url.pathname)){event.preventDefault();go('customize');}});
  new MutationObserver(records=>{
+  const newlyOpen=new Set();let homeChanged=false;
   for(const {target,attributeName} of records){
-   if(attributeName==='open'&&target.tagName==='DIALOG'&&target.open){
-    const owns=key=>ROUTES[key].dialog&&target.matches(ROUTES[key].dialog);
-    const id=[...pending.keys()].find(owns)||Object.keys(ROUTES).find(key=>!ROUTES[key].shared&&owns(key));
-    if(id)adopt(id,target);
-   }else if(attributeName==='hidden'&&target.id==='portalHome'){
-    if(quiltUp()&&active&&!active.dialog)finish(active,'user');
-    paint();
+   if(attributeName==='open'&&target.tagName==='DIALOG'&&target.open)newlyOpen.add(target);
+   else if(attributeName==='hidden'&&target.id==='portalHome')homeChanged=true;
+  }
+  for(const target of newlyOpen){
+   const owns=key=>ROUTES[key].dialog&&target.matches(ROUTES[key].dialog);
+   // A shared dialog can represent Ship or Coach arrival. Preserve the alias already adopted for
+   // this open session; a second record from close/reopen must not fall back to the first alias.
+   const current=active?.dialog===target&&owns(active.id)?active.id:null;
+   const id=[...pending.keys()].reverse().find(owns)||current||Object.keys(ROUTES).find(key=>!ROUTES[key].shared&&owns(key));
+   if(id){
+    const request=pending.get(id),generation=request?.generation??routeGeneration;
+    const entry=adopt(id,target);
+    if(HOUSING_ROUTES.has(id)&&!entry.portalOrigin){
+     void ensurePortalMounted().then(housing=>{if(active===entry&&target.open&&routeGeneration===generation)housing.frameDirectDestination?.(target,id);});
+    }
    }
+  }
+  if(homeChanged){
+   if(quiltUp()&&active&&!active.dialog)finish(active,'user');
+   paint();
   }
  }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open','hidden']});
  return window.myr5Routes={
