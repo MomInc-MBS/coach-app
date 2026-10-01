@@ -11,14 +11,17 @@ export async function coachFetch(url,opts={},{timeoutMs=8000,fallback=null,parse
  }
  if(!coachOnline())return down(fallback);
  for(let attempt=0;;attempt++){
+  // Plain controller + timer: AbortSignal.any is missing before Safari 17.4 and would mute every older iPhone.
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),timeoutMs),relay=()=>ctl.abort();
+  opts.signal?.addEventListener('abort',relay,{once:true});
   try{
-   const signal=opts.signal?AbortSignal.any([opts.signal,AbortSignal.timeout(timeoutMs)]):AbortSignal.timeout(timeoutMs);
-   const response=await fetchImpl(url,{...opts,signal});
+   const response=await fetchImpl(url,{...opts,signal:ctl.signal});
    if(response.status<500){ // 4xx is an answer, not an outage
     const data=!response.ok?fallback:parse==='response'?response:await response[parse]();
     downUntil=0;return {ok:response.ok,data,fallback:!response.ok,status:response.status};
    }
   }catch(error){if(opts.signal?.aborted)return down(fallback);}
+  finally{clearTimeout(timer);opts.signal?.removeEventListener('abort',relay);}
   if(attempt>=retry)break;
   await new Promise(r=>setTimeout(r,backoffMs));
  }
