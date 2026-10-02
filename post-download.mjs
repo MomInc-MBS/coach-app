@@ -284,7 +284,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  // Nothing appears over a workout or camera-only mode; the menu waits until the app is idle.
  const ticker=setInterval(()=>{
   if(menu.open&&busy())menu.close('busy');
-  if(!note.hidden&&busy())showNote('');
+   if(note.textContent)showNote(note.textContent);
   if(wantMenu&&idle()&&navigator.onLine){wantMenu=false;openMenu(true);}
   if(phase==='done'&&!bar.hidden&&!doneTimer&&idle())doneTimer=setTimeout(()=>{bar.hidden=true;},6000);
  },1000);

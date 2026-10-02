@@ -2,6 +2,7 @@
 // (before the quilt, reachable again from Settings and Install), a download of only the picked groups,
 // resume after an interruption, a first run offline with only the core install, an update, and a roster
 // body fetched on demand. Runs against the production build (dist/client). Frames go to .frames/.
+import {guideSeen,noTiltPermission} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -45,6 +46,7 @@ async function launch(){return chromium.launch({channel:'msedge',headless:true,a
 // A returning guest with onboarding done and the core offline shell installed and controlling.
 async function installed(browser,base){
  const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera']});
+ await context.addInitScript(guideSeen);await context.addInitScript(noTiltPermission);
  await context.route(TRACKER,route=>route.fulfill({contentType:'text/javascript',body:STUB}));
  const page=await context.newPage();await page.goto(base+'/__test__');
  await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
@@ -132,7 +134,8 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   assert.equal(await page.evaluate(()=>document.getElementById('settings').open),true,'back in Settings');
   await page.locator('#closeSettings').click();
   // Install reopens it too.
-  await page.evaluate(()=>document.querySelector('[data-panel="install"]').click());await page.locator('.full-download-settings [data-open]').click();await waitMenu(page);
+  await page.evaluate(()=>window.myr5Routes.go('install')); // the dock keys are routes now; Install opens through the portal
+  await page.locator('.full-download-settings [data-open]').click();await waitMenu(page);
   await page.locator('#downloadsMenu [data-later]').click();await page.locator('#installPanel [data-close]').first().click();
   await context.close();
 
@@ -400,7 +403,8 @@ test('W2-2O without the Starter pack, online: each scene fetches its art on dema
   server.slow.add('/pod/worlds/quilt.webp');
   let page=await home(context,server.base);
   await waitMenu(page);await page.getByRole('button',{name:'Not now'}).click();
-  await noteShows(page,'Downloading…');
+  // R16/R17: the quilt now mounts (and fetches its art) behind the open menu, where the note is held back (busy), so it may be
+  // done before 'Not now'; the note's own timing is covered by the Achievements step below.
   await page.screenshot({path:resolve(SHOTS,'w2-2o-online-quilt-downloading-375x812.png')});
   await noteGone(page);
   await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&document.querySelector('#portalBoardHost canvas'),null,{timeout:15000});
@@ -427,7 +431,7 @@ test('W2-2O without the Starter pack, online: each scene fetches its art on dema
   await page.waitForFunction(()=>document.querySelector('.meditation-panel').classList.contains('has-wonder-art'),null,{timeout:30000});
   assert.equal(await page.locator('.meditation-starter').isVisible(),false);
   await page.close();page=await home(context,server.base,'/pose.html#pod');
-  await page.evaluate(()=>document.querySelector('.coach-dock [data-panel="meals"]').click());
+  await page.evaluate(()=>window.myr5Menus.food());
   await page.waitForFunction(()=>document.querySelector('#mealsPanel.pyramid-mode #pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),null,{timeout:60000});
   assert.equal(await page.locator('#pyramidStarter').count(),0);
   for(const url of ['/pod/worlds/achievements.jpg','/food/pyramid-scanner.glb'])assert.equal(await kept(page,url),true,url+' is kept for offline');
@@ -476,7 +480,7 @@ test('W2-2O without the Starter pack, offline: plain quilt, and each scene shows
   await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-meditation-375x812.png')});
   await page.close();page=await home(context,server.base,'/pose.html#pod');
   // Food: the plain panel (Camera, lists) and the offer, instead of the pyramid.
-  await page.evaluate(()=>document.querySelector('.coach-dock [data-panel="meals"]').click());
+  await page.evaluate(()=>window.myr5Menus.food());
   await page.waitForFunction(()=>document.getElementById('pyramidStarter')&&!document.getElementById('mealsPanel').classList.contains('pyramid-mode'),null,{timeout:30000});
   assert.equal(await page.locator('#pyramidStarter button').isVisible(),true);assert.equal(await page.locator('#foodCamera').isVisible(),true);
   await page.screenshot({path:resolve(SHOTS,'w2-2o-offline-food-375x812.png')});
