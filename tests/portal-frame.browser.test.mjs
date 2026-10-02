@@ -52,7 +52,11 @@ test('#111 the metal cap fills above the proportionate board and never takes a p
  assert(pattern.left>=face.left&&pattern.top>=face.top&&pattern.right<=face.right&&pattern.bottom<=face.bottom,'the stitched pattern stays inside the face');
  assert.equal(g.bolts.length,8,'four corner bolts and two along each long edge');
  for(const bolt of g.bolts){const cx=bolt.left+bolt.width/2,cy=bolt.top+bolt.height/2;assert(cx<face.left||cx>face.right||cy<face.top||cy>face.bottom,'bolts sit on the rail, not the board');}
- assert(g.plate.top+g.plate.height/2<face.top&&Math.abs(g.plate.left+g.plate.width/2-187.5)<1,'nameplate top centre, on the rail');
+ // R20 (Ian 2 Oct): the Grimoire key sits in the top rail at the left, the engraved logo right of it; neither covers the board.
+ const key=await page.locator('#portalSettingsButton').evaluate(el=>{const q=el.getBoundingClientRect();return{left:q.left,top:q.top,right:q.right,bottom:q.bottom};});
+ assert(key.left<40&&key.top>=0&&key.bottom<=face.top,`Grimoire key in the top rail at the left, above the board: ${JSON.stringify(key)}`);
+ assert(g.plate.top>=0&&g.plate.top+g.plate.height<=face.top&&g.plate.left>=key.right&&g.plate.height>=20,`engraved logo on the rail, right of the key: ${JSON.stringify(g.plate)}`);
+ assert(Math.abs((g.plate.top+g.plate.height/2)-(key.top+key.bottom)/2)<2,'logo and key share the rail line');
  // Nothing on the frame catches a pointer: the full-screen trace canvas is on top everywhere, rail included.
  const hits=await page.evaluate(({face,rail})=>[[face.left-rail/2,face.top+100],[face.left+face.width+rail/2,face.top+face.height/2],[187.5,face.top-rail/2],[face.left-rail/2,face.top-rail/2]].map(([x,y])=>document.elementFromPoint(x,y)?.id),{face:g.face,rail:g.rail});
  assert.deepEqual(hits,['portalOverlay','portalOverlay','portalOverlay','portalOverlay']);
