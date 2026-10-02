@@ -93,6 +93,8 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
 
  let plan=null,phase='checking',message='',got=0,controller=null,wantMenu=false,autoMenu=false,firstPick=false,restorePortal=false,doneTimer=0,progress=null;
  const busy=()=>document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||BUSY.includes(window.myr5TestState?.phase);
+ // A ?panel= or #route deep link came for one thing; nothing auto-opens over it (the quilt portal waits the same way).
+ const deepLinked=()=>new URLSearchParams(location.search).has('panel')||!!window.myr5Routes?.hashRoute?.();
  const idle=()=>!busy()&&!document.hidden&&!document.querySelector('dialog[open]');
  const cellular=()=>navigator.connection?.type==='cellular'||navigator.connection?.saveData===true;
  // null: the whole package (a download chosen before the menu existed, or Everything).
@@ -188,7 +190,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
   // Not just "not mounted yet": the mount can finish (window.myr5Portal set, still hidden) while this
   // menu was open, since shouldShow() only gets one check, at mount time, and this menu wasn't open
   // yet then. Always route through the shared opener; it no-ops fast when already mounted (#risk 1).
-  else if(autoMenu&&window.coachPlan&&!new URLSearchParams(location.search).has('panel')&&!['#pod','#ship'].includes(location.hash))void window.myr5Menus?.portal?.({shouldShow:idle});
+  else if(autoMenu&&window.coachPlan&&!deepLinked())void window.myr5Menus?.portal?.({shouldShow:idle});
   restorePortal=false;autoMenu=false;
  });
  for(const button of [settings,entry].map(node=>node.querySelector('[data-open]')).filter(Boolean))button.onclick=()=>openMenu(false);
@@ -285,7 +287,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  const ticker=setInterval(()=>{
   if(menu.open&&busy())menu.close('busy');
   if(!note.hidden&&busy())showNote('');
-  if(wantMenu&&idle()&&navigator.onLine){wantMenu=false;openMenu(true);}
+  if(wantMenu&&!deepLinked()&&idle()&&navigator.onLine){wantMenu=false;openMenu(true);}
   if(phase==='done'&&!bar.hidden&&!doneTimer&&idle())doneTimer=setTimeout(()=>{bar.hidden=true;},6000);
  },1000);
  window.addEventListener('online',()=>{if(read(localStorage,STATE)==='on'&&['ready','error'].includes(phase)&&!cellular())void start();});
@@ -302,6 +304,6 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
   if(plan.remaining&&state==='on'&&navigator.onLine&&!cellular())return void start();
   if(plan.remaining&&state==='paused'){phase='paused';bar.hidden=false;paint();return;}
   // A deep link (?panel=) came for one thing; like the quilt, the menu waits for a plain open.
-  if(!read(localStorage,SEEN)&&!new URLSearchParams(location.search).has('panel')&&Object.values(plan.groups||{}).some(group=>group.remaining))wantMenu=true;
+  if(!read(localStorage,SEEN)&&!deepLinked()&&Object.values(plan.groups||{}).some(group=>group.remaining))wantMenu=true;
  })();
 }

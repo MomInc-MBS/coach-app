@@ -1,5 +1,5 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-10-01-release-17-'+BUILD_ID,title:'Release 17: Stable coach and portal views',date:'2026-10-01',url:'https://myr5.mominc.online/repair-coach',notes:[
+export const RELEASE=Object.freeze({id:'2026-10-02-release-20-'+BUILD_ID,title:'Release 20: Fixes and polish',date:'2026-10-02',url:'https://myr5.mominc.online/repair-coach',notes:[
  'See-through portals: while a portal opens, you can already see where it leads in the middle of the wormhole.',
  'Your coach keeps going offline: voice cues fall back to captions and the exercise hologram to a wireframe figure, and both come back when you reconnect.',
  'The Cogs grimoire throws real welding-torch sparks, your chosen colour turns the cogs and lamps metallic, and tracing leaves a weld line.',
