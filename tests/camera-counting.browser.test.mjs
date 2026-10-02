@@ -1,3 +1,4 @@
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -46,6 +47,7 @@ test('camera workouts count reps through the real start paths, including at a ph
   ]){
    // A fresh profile per case: one set's workout lease never leaks into the next.
    const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],serviceWorkers:'block'});page=await context.newPage();
+   await context.addInitScript(guideSeen);
    await page.route('**/vendor/mediapipe/0.10.14/vision_bundle.mjs',route=>route.fulfill({contentType:'text/javascript',body:FAKE_VISION}));
    await page.goto(base+'/__test__');await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();localStorage.setItem('myr5-downloads-seen','1');},completeCoach());
    await page.goto(base+'/pose.html?case='+mode+'-'+begin+(begin==='portal'?'':'#pod'));
