@@ -223,7 +223,11 @@ html[data-public-state] #portalObjects .portal-object{transition:transform .6s c
 .portal-color{display:flex;align-items:center;justify-content:space-between;gap:16px;font:13px system-ui;margin:12px 0}.portal-color input{width:48px;height:44px;padding:3px;border:1px solid #ac91a4;background:#302338}
 /* Full scenes stay inside the inset face; the room reserves its dock within that face. */
 #portalChrome.portal-housing-fullscreen .portal-frame:before{bottom:calc(-1*var(--portal-rail));padding-bottom:var(--portal-rail)}
-dialog.portal-framed.portal-fullscreen #coachDock{left:var(--portal-rail,15px)!important;right:var(--portal-rail,15px)!important;bottom:var(--portal-rail,15px)!important;width:auto!important;height:var(--myr5-bar)!important}
+/* R20 (Ian 2 Oct): the dock is a fixed console below the housing on every page, never inside the frame or its glow. The
+   chrome (frame, matte, aura) stops at the dock's top edge, so it never paints over the keys. */
+#portalChrome{bottom:var(--myr5-bar)}
+:is(body[data-tracking=true],body[data-screen=rest]) #portalChrome{bottom:0}
+dialog.portal-framed.portal-fullscreen #coachDock{left:0!important;right:0!important;bottom:0!important;width:auto!important;height:var(--myr5-bar)!important}
 
 
 /* A decoded meal photo and a classroom whiteboard tap step into the full destination. */

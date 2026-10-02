@@ -16,7 +16,7 @@ export async function mountStandaloneHousing({content=document.querySelector('.e
  if(leftEarly){links.forEach(link=>link.remove());view?.removeEventListener('pagehide',beforeReady);return ()=>{};}
  let chrome=doc.getElementById('portalChrome');if(!chrome){chrome=doc.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');doc.body.append(chrome);}
  chrome.classList.add('portal-standalone');chrome.innerHTML=frameMarkup();
- const face=()=>{const rail=15;for(const [key,value] of Object.entries({left:rail,top:rail,width:Math.max(1,innerWidth-2*rail),height:Math.max(1,innerHeight-2*rail)}))chrome.style.setProperty('--face-'+key,value+'px');};
+ const face=()=>{const rail=15;for(const [key,value] of Object.entries({left:rail,top:rail,width:Math.max(1,innerWidth-2*rail),height:Math.max(1,innerHeight-2*rail-(doc.getElementById('coachDock')?.getBoundingClientRect().height||0))}))chrome.style.setProperty('--face-'+key,value+'px');};
  const updateLook=()=>paintHousing(chrome,doc);
  face();updateLook();
  if(chrome.showPopover){if(!chrome.matches(':popover-open'))chrome.showPopover();}else chrome.removeAttribute('popover');

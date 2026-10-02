@@ -1,7 +1,7 @@
 /* W2-2A (#5): one bottom bar on every route (routes.mjs). Fixed to the bottom; inside a route's dialog while it is
    open (a modal makes everything outside it inert), so it is styled by id + all:unset to shrug off dialog button rules
    (and !important where a dialog forces one, e.g. the Settings terminal's square corners). */
-:root{--myr5-bar:calc(64px + env(safe-area-inset-bottom))}
+:root{--myr5-bar:calc(88px + env(safe-area-inset-bottom))} /* R20: the dock console is 88px everywhere (portal.css draws it); one height for every page */
 #coachDock.coach-dock{position:fixed;inset:auto 0 0;z-index:40;box-sizing:border-box;width:auto;height:var(--myr5-bar);margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) 58px repeat(3,minmax(0,1fr));align-items:center;gap:3px;padding:0 6px env(safe-area-inset-bottom);border:0;border-top:1px solid #685077;border-radius:0;background:#171123f2;box-shadow:0 -6px 18px #08050f99;font:600 12px/1.1 system-ui,sans-serif}@media(max-width:400px){#coachDock.coach-dock{font-size:11px}}
 #coachDock.coach-dock button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;min-width:0;height:46px;padding:0 1px;border:1px solid #70547c;border-radius:9px!important;background:#30223e;color:#f2deab;font:inherit;text-align:center;hyphens:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s,background-color .15s}
 #coachDock.coach-dock button:focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
