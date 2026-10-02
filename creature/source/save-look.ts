@@ -2,12 +2,12 @@
 // (a preview, devtools, an imported file) leaves with no locked texture, colour, palette or body,
 // so the account sync that reads storage never sees one either. Nothing here grants anything.
 import type {Design,Region,MaterialChoice} from './creator/design';
-import {lockSource} from './creator/materials-registry';
+import {isLocked as idLocked} from './creator/materials-registry';
 import {bodyLockSection} from './creator/track-placements';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {RECIPE_KEY} from './profile';
 
-const ownedChoice=(c?:MaterialChoice):c is MaterialChoice=>!!c&&!lockSource(c.textureId)&&!lockSource(c.colorId);
+const ownedChoice=(c?:MaterialChoice):c is MaterialChoice=>!!c&&!idLocked(c.textureId)&&!idLocked(c.colorId);
 export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 
 /** Locked material regions fall back to `lastOwned`'s choice for that region (or the original style);

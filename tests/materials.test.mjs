@@ -24,7 +24,7 @@ async function loadCreator(){
  return import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
 }
 const mod=await loadCreator();
-const {fresh,parseRecipe,STYLES,TEXTURES,COLORS,PALETTES,resolveRegionMaterial,colorTriad,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,grantUnlock,isGranted,lockSource,FLAT_TEXTURE,BUILTIN_SURFACE_PROFILES,builtinSurfaceProfile,sampleBuiltinSurface,surfaceSample,materialFor,sculptMaterial,MATERIAL_REVISION,textureDefaultMetalness,createCoachReliefBudget,refineCoachGeometry,THREE}=mod;
+const {fresh,parseRecipe,STYLES,TEXTURES,COLORS,PALETTES,resolveRegionMaterial,colorTriad,isTextureUnlocked,isColorUnlocked,isPaletteUnlocked,grantUnlock,isGranted,isLocked,FLAT_TEXTURE,BUILTIN_SURFACE_PROFILES,builtinSurfaceProfile,sampleBuiltinSurface,surfaceSample,materialFor,sculptMaterial,MATERIAL_REVISION,textureDefaultMetalness,createCoachReliefBudget,refineCoachGeometry,THREE}=mod;
 
 test('an old recipe (no materials field) parses, round-trips and resolves exactly like today',()=>{
  const old=fresh();delete old.materials;
@@ -54,12 +54,10 @@ test('parseRecipe accepts a valid optional materials override and rejects malfor
 test('registry has Flat+Clay, every legacy family, and stable procedural ids for all 24 battle-pass textures',()=>{
  assert.equal(isTextureUnlocked(FLAT_TEXTURE),true);
  assert.equal(TEXTURES.filter(t=>t.legacy).length,STYLES.length);
- // #140: 7 legacy families moved into the battle pass; 7 catalog placeholders took their place as open textures.
- for(const t of TEXTURES.filter(t=>t.legacy))assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
- assert.deepEqual(TEXTURES.filter(t=>t.legacy&&t.unlockRule==='battle-pass').map(t=>t.displayName).sort(),['Crystal','Fluffy','Glacial','Jelly','Magma','Spectral','Stone Golem']);
- const battlePass=TEXTURES.filter(t=>t.unlockRule==='battle-pass');
- assert.equal(battlePass.length,24);
- for(const t of battlePass){assert.equal(isTextureUnlocked(t),false);assert.ok(t.track&&[1,3,5].includes(t.passLevel));}
+ // R18 G1: exactly 13 textures are free (pinned in r18-unlocks.test.mjs); every other one is pack-only, legacy included.
+ for(const t of TEXTURES)assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
+ assert.equal(TEXTURES.filter(t=>t.unlockRule==='default').length,13);
+ assert.equal(TEXTURES.filter(t=>t.unlockRule==='battle-pass').length,TEXTURES.length-13);
  const builtins=TEXTURES.filter(t=>t.familyId>=32).sort((a,b)=>a.familyId-b.familyId);
  assert.equal(builtins.length,24);assert.deepEqual(builtins.map(t=>t.familyId),Array.from({length:24},(_,i)=>32+i));
  for(const [i,t] of builtins.entries()){const p=builtinSurfaceProfile(t.familyId);assert.ok(p,`${t.displayName} profile exists`);assert.equal(p.name,t.displayName,`${t.displayName} keeps its named pattern`);assert.equal(p.id,32+i);assert.equal(textureDefaultMetalness(t.id),p.metalness);}
@@ -91,12 +89,12 @@ test('D32: every palette is a primary/secondary/accent triad of valid hex, with 
 
 test('a locked battle-pass texture stays locked in normal assembly while its preview uses the named pattern',()=>{
  const locked=TEXTURES.find(t=>t.familyId===32);
- const choice={textureId:locked.id,colorId:'default-gold',sparkle:0,metallic:0};
+ const choice={textureId:locked.id,colorId:'default-ruby',sparkle:0,metallic:0};
  const resolved=resolveRegionMaterial(0,choice);
  assert.equal(resolved.id,FLAT_TEXTURE.familyId,'a normal render still blocks locked texture ids');
  const preview=resolveRegionMaterial(0,choice,true);
  assert.equal(preview.id,locked.familyId);assert.equal(preview.detail,builtinSurfaceProfile(locked.familyId)?.name.toLowerCase().replace(/[^a-z0-9]+/g,'-'));
- assert.equal(preview.primary,colorTriad('default-gold')?.primary,'preview shows the selected colour over the real pattern');
+ assert.equal(preview.primary,colorTriad('default-ruby')?.primary,'preview shows the selected colour over the real pattern');
 });
 
 test('all 24 named surfaces return distinguishable phone-scale height/roughness patterns and material relief',()=>{
@@ -121,7 +119,7 @@ test('all 49 registry choices resolve in preview; saved zero metalness and unloc
   assert.equal(normally.id,isTextureUnlocked(t)?t.familyId:FLAT_TEXTURE.familyId,`${t.displayName} normal unlock gate`);
   assert.equal(resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:0},true).metalness,0,`${t.displayName} preserves explicit saved slider zero`);
  }
- assert.equal(lockSource('chest-plate-steel'),'Chest L1');assert.equal(isTextureUnlocked(TEXTURES.find(t=>t.id==='chest-plate-steel')),false);
+ assert.equal(isLocked('chest-plate-steel'),true);assert.equal(isTextureUnlocked(TEXTURES.find(t=>t.id==='chest-plate-steel')),false);
 });
 
 test('repeat-wrapped geometry samples match texture-domain samples for all 24 families and Quilted rises inside each seam',()=>{

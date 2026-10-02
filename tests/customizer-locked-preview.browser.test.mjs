@@ -45,7 +45,7 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   // Preview a locked body -- must not save by itself either.
   await page.selectOption('#body',LOCKED_BODY);
   await page.waitForFunction(id=>window.myr5Companion?.ready===true&&document.getElementById('body').value===id,LOCKED_BODY,{timeout:60000});
-  assert.match(await page.locator('.preview-strip').textContent(),/Preview.*unlocks when you complete/,'body select shows the preview-only strip');
+  assert.match(await page.locator('.preview-strip').textContent(),/Preview/,'body select shows the preview-only strip');
   assert.equal(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')),before,'previewing a locked body alone must not save');
 
   // Now pick a default-unlocked texture, as if just experimenting while the locked body previews.

@@ -3,8 +3,8 @@ import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
 import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
-import type {Design,Region,MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,lockSource,resolveRegionMaterial,colorTriad,textureDefaultMetalness} from './creator/materials-registry';
+import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
+import {TEXTURES,COLORS,PALETTES,isLocked as idLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad,textureDefaultMetalness} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
 import {isGranted} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
@@ -75,14 +75,10 @@ function clearPreview(){previewDraft=null;}
 function shown():Design{return previewDraft??recipe;}
 function isLocked(design:Design):boolean{
  if(bodyLock(design.body))return true;
- for(const mc of Object.values(design.materials??{}))if(lockSource(mc.textureId)||lockSource(mc.colorId))return true;
+ for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(idLocked(mc.textureId)||idLocked(mc.colorId)))return true;}
  return false;
 }
-function previewMessage(design:Design):string{
- const section=bodyLock(design.body);if(section)return'Preview only · unlocks when you complete '+section;
- for(const mc of Object.values(design.materials??{})){const source=lockSource(mc.textureId)||lockSource(mc.colorId);if(source)return'Preview only · unlocks at '+source;}
- return'Preview only';
-}
+function previewMessage(_design:Design):string{return'Preview only';} // R18: no unlock hints anywhere; locked items show just a lock
 // A locked pick starts or continues the draft. #1 bug: while already previewing, even an unlocked pick
 // must stay in the draft too -- otherwise a texture/colour tweak silently drops the body being previewed
 // and falls through to commit(), which would save. commit() below enforces this for every caller.
@@ -92,7 +88,8 @@ function pick(patch:Partial<MaterialChoice>){const base=shown();commit({...base,
 function pickTexture(textureId:string){
  const base=shown(),texture=TEXTURES.find(t=>t.id===textureId);
  const presetMetalness=textureDefaultMetalness(textureId);
- const patch=(r:Region):Partial<MaterialChoice>=>{const current=base.materials?.[r],changed=current?.textureId!==textureId;return {...(!current?{colorId:texture?.defaultColorId??DEFAULT_MATERIAL.colorId}:{}),textureId,...(changed&&presetMetalness!==undefined?{metallic:presetMetalness}:{})};};
+ const defaultColor=texture&&!idLocked(texture.defaultColorId)?texture.defaultColorId:DEFAULT_MATERIAL.colorId;
+ const patch=(r:Region):Partial<MaterialChoice>=>{const current=base.materials?.[r],changed=current?.textureId!==textureId;return {...(!current?{colorId:defaultColor}:{}),textureId,...(changed&&presetMetalness!==undefined?{metallic:presetMetalness}:{})};};
  commit({...base,materials:Object.fromEntries(REGIONS.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),...patch(r)}])) as Design['materials']});
 }
 function endPreview(){if(!previewing())return false;clearPreview();render('Back to your look');return true;}
@@ -101,7 +98,7 @@ function syncMaterials(){
  ($('textureId') as HTMLSelectElement).value=mc.textureId;
  const texture=TEXTURES.find(t=>t.id===mc.textureId);
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
- for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===mc.colorId));
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]')){const row=b.dataset.channel,region=COLOUR_CHANNELS.find(c=>c.id===row)?.regions[0];b.setAttribute('aria-pressed',String(row?b.dataset.color===(regionChoice(shown().materials,region!)?.colorId??DEFAULT_MATERIAL.colorId):false));}
  ($('sparkle') as HTMLInputElement).value=String(mc.sparkle);$('sparkleValue').textContent=mc.sparkle.toFixed(2);
  ($('metallic') as HTMLInputElement).value=String(mc.metallic);$('metallicValue').textContent=mc.metallic.toFixed(2);
  ($('materialClear') as HTMLButtonElement).disabled=!shown().materials?.[selected];
@@ -118,14 +115,10 @@ function sync(){
  syncMomOnly();
  syncMaterials();
  syncSkinChoice();
- // #1: keep a clear fallback message for any future catalogue entry without a material family,
- // instead of leaving the strip's "unlocks at X" as the only clue its preview is generic.
- // #140: the same check covers an owned pick too, since `look` is `recipe` itself when not previewing.
- const unlocks:string[]=[],mc=look.materials?.[selected];
- if(mc?.textureId){const t=TEXTURES.find(x=>x.id===mc.textureId);if(t&&t.familyId<0)unlocks.push(`${t.displayName} pattern is coming`);const source=lockSource(mc.textureId);if(source)unlocks.push('unlocks at '+source);}
- if(mc?.colorId){const source=lockSource(mc.colorId);if(source)unlocks.push('unlocks at '+source);}
- const bodySection=bodyLock(look.body);if(bodySection)unlocks.push('unlocks when you complete '+bodySection);
- strip.hidden=!unlocks.length;strip.textContent=(previewing()?'Preview · ':'')+unlocks.join(' · ');
+ // R18: no unlock hints. The strip says only "Preview" (and flags a catalogue entry with no pattern yet).
+ const notes:string[]=[],mc=look.materials?.[selected];
+ if(mc?.textureId){const t=TEXTURES.find(x=>x.id===mc.textureId);if(t&&t.familyId<0)notes.push(`${t.displayName} pattern is coming`);}
+ strip.hidden=!previewing()&&!notes.length;strip.textContent=[...(previewing()?['Preview']:[]),...notes].join(' · ');
  ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
 }
 const queue=new LatestPreview<{recipe:Design;message:string;preview:boolean}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe,job.preview))throw Error('Preview was interrupted.');},(job,error)=>{
@@ -164,16 +157,33 @@ for(const region of REGIONS){const b=document.createElement('button'),dot=docume
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 // Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
-const lockedLabel=(name:string,id:string)=>{const source=lockSource(id);return source?`${name} (locked — ${source})`:name;};
-for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(lockSource(t.id)?'🔒 ':'')+lockedLabel(t.displayName,t.id);if(isGranted('texture',t.id))sparkleOption(o,'texture',t.id);$('textureId').append(o);}
+for(const t of TEXTURES){const o=document.createElement('option');o.value=t.id;o.textContent=(idLocked(t.id)?'🔒 ':'')+t.displayName;if(isGranted('texture',t.id))sparkleOption(o,'texture',t.id);$('textureId').append(o);}
 watchSelect($('body') as HTMLSelectElement);watchSelect($('textureId') as HTMLSelectElement);
 $('textureId').addEventListener('change',()=>pickTexture(($('textureId') as HTMLSelectElement).value));
 const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches){const b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=lockedLabel(s.name,s.id);b.setAttribute('aria-label',b.title);b.style.background=s.background;b.style.height='34px';if(lockSource(s.id)){b.dataset.locked='';b.textContent='🔒';}b.onclick=()=>onPick(s.id);if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);grid.append(b);}}
-swatchGrid($('colorSwatches'),id=>pick({colorId:id}));
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;b.style.height='34px';if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);return b;}
+function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches)grid.append(swatchButton(s,()=>onPick(s.id)));}
+// R18 G3: three single-colour rows (Body, Head, Eyes) + a palette grid that fills all three at once.
+// Each row offers every colour def plus the free hexes no def starts with.
+const hexDefs=new Set(COLORS.map(c=>c.primary.toLowerCase())),rowColours=[...COLORS.map(c=>({id:c.id,name:c.displayName,hex:c.primary})),...FREE_COLOURS.filter(h=>!hexDefs.has(h)).map(h=>({id:h,name:h.toUpperCase(),hex:h}))];
+function setChannel(channel:typeof COLOUR_CHANNELS[number],colorId:string){
+ const base=shown();commit({...base,materials:{...base.materials,...Object.fromEntries(channel.regions.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),colorId}]))}});
+}
+const colorRoot=$('colorSwatches');
+function colourRow(label:string,fill:(grid:HTMLElement)=>void){
+ const row=document.createElement('div');row.className='colour-row';row.setAttribute('role','group');row.setAttribute('aria-label',label);
+ const name=document.createElement('strong');name.textContent=label;const grid=document.createElement('div');grid.className='material-grid';
+ fill(grid);row.append(name,grid);colorRoot.append(row);
+}
+for(const channel of COLOUR_CHANNELS)colourRow(channel.label,grid=>{for(const c of rowColours){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(channel,c.id));b.dataset.channel=channel.id;grid.append(b);}});
+colourRow('Palettes',grid=>{for(const p of PALETTES)grid.append(swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>{
+ const ids=paletteChannelIds(p),base=shown(),materials={...base.materials};
+ COLOUR_CHANNELS.forEach((channel,n)=>{for(const r of channel.regions)materials[r]={...(materials[r]??DEFAULT_MATERIAL),colorId:ids[n]};});
+ commit({...base,materials});
+}));});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};delete materials[selected];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
 for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
 Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
@@ -237,7 +247,7 @@ async function previewShip(){
  }catch{if(run!==shipPreviewEpoch)return;status.textContent='The ship preview could not load.';retry.hidden=false;}
 }
 $('shipPreviewRetry').onclick=()=>{closeShipPreview();void previewShip();};
-swatchGrid($('shipSwatches'),id=>{const source=lockSource(id);if(source){tell('Locked for your ship too · unlocks at '+source);return;}persistShipEditor(id);syncShipEditor();});
+swatchGrid($('shipSwatches'),id=>{if(idLocked(id)){tell('Locked for your ship too');return;}persistShipEditor(id);syncShipEditor();});
 syncShipEditor();watchSelect($('shipChoice') as HTMLSelectElement);watchSelect($('skinChoice') as HTMLSelectElement);$('shipChoice').addEventListener('change',()=>{persistShipEditor();void previewShip();});window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});
 let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,pendingSkinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,skinEpoch=0,skinChoices:{id:string;displayName:string}[]=[];
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}

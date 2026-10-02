@@ -84,12 +84,12 @@ const WEAPONS=[
 const TEXTURES=[
  ['chest-plate-steel','Plate Steel','Now with 40% more clank.'],['chest-rubber-grip','Rubber Grip','For hands that mean business.'],['chest-chain-mail','Chain Mail','Medieval. But make it cardio.'],
  ['quads-track-rubber','Track Rubber','Smells faintly of starting blocks.'],['quads-denim','Denim','For legs that never skip jeans either.'],['quads-hex-tread','Hex Tread','Grip: gecko-grade.'],
- ['glutes-sweatshirt-fleece','Sweatshirt Fleece','Like a hug from laundry day.'],['glutes-quilted','Quilted','Grandma approved. Gains approved harder.'],['glutes-peach','Peach','Ripe. Do not squeeze the coach.'],
- ['arms-hammered-bronze','Hammered Bronze','Shiny. Slightly dented. Like all of us.'],['arms-rope','Rope','Climb every metaphor.'],['arms-leather','Leather','Broken in. Like you, after set three.'],
- ['yoga-cork','Cork','Floats. Like your downward dog.'],['yoga-woven-mat','Woven Mat','Hand-woven by extremely calm spiders.'],['yoga-petal','Petal','Delicate. Unlike your warrior two.'],
- ['martial-arts-canvas-gi','Canvas Gi','It has seen things. Mostly laundry.'],['martial-arts-bamboo','Bamboo','Bends. Does not break. Unlike resolutions.'],['martial-arts-dragon-scale','Dragon Scale','The dragon is fine. It donated.'],
- ['cardio-mesh','Mesh','Maximum airflow. Minimum excuses.'],['cardio-terry-cloth','Terry Cloth','Absorbs sweat and bad decisions.'],['cardio-pebble-path','Pebble Path','A tiny trail, wherever you go.'],
- ['meditation-sand-garden','Sand Garden','Raked by a very patient rake.'],['meditation-river-stone','River Stone','Smooth. Unbothered. Goals.'],['meditation-moss','Moss','Grows on you. Literally, now.'],
+ ['glutes-sweatshirt-fleece','Sweatshirt Fleece','Like a hug from laundry day.'],['glutes-quilted','Quilted','Grandma approved. Gains approved harder.'],['glutes-peach','Speckled','Ripe. Do not squeeze the coach.'],
+ ['arms-hammered-bronze','Hammered Bronze','Shiny. Slightly dented. Like all of us.'],['arms-rope','Fine Stripe','Climb every metaphor.'],['arms-leather','Snake Skin','Broken in. Like you, after set three.'],
+ ['yoga-cork','Holey','Floats. Like your downward dog.'],['yoga-woven-mat','Woven Mat','Hand-woven by extremely calm spiders.'],['yoga-petal','Petal','Delicate. Unlike your warrior two.'],
+ ['martial-arts-canvas-gi','Graph Paper','It has seen things. Mostly laundry.'],['martial-arts-bamboo','Bamboo','Bends. Does not break. Unlike resolutions.'],['martial-arts-dragon-scale','Dragon Scale','The dragon is fine. It donated.'],
+ ['cardio-mesh','Cool Graph Paper','Maximum airflow. Minimum excuses.'],['cardio-terry-cloth','Terry Cloth','Absorbs sweat and bad decisions.'],['cardio-pebble-path','Pebble Path','A tiny trail, wherever you go.'],
+ ['meditation-sand-garden','Wiggles','Raked by a very patient rake.'],['meditation-river-stone','River Stone','Smooth. Unbothered. Goals.'],['meditation-moss','Moss','Grows on you. Literally, now.'],
 ];
 // #140 (D45; slots approved D47): the once-free legacy textures (materials-registry.ts `legacy-<n>`,
 // names = catalog.ts STYLES) are battle-pass rewards now, each in the slot of a catalog texture above,
@@ -120,7 +120,35 @@ const PET_LINES={
 
 const item=(kind,[id,name,line])=>({kind,id,name,line});
 const rewardPack=(tier,id)=>({kind:'reward-pack',id:`reward-pack:${tier}:${id}`,tier,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,line:'Open for one random cosmetic.'});
-export const textureRewardPool=()=>TEXTURES.map(t=>item('texture',TEXTURE_SWAP[t[0]]??t));
+// R18 G1 (Ian's spec): EXACTLY these 13 textures are free; every other texture, legacy ones included,
+// is pack-only. materials-registry.ts derives every texture's unlockRule from this list.
+export const FREE_TEXTURE_IDS=Object.freeze(['flat','clay','legacy-4','legacy-22', // Flat, Clay, Reptilian, Baby
+ 'glutes-peach','arms-rope','arms-leather','yoga-cork','martial-arts-canvas-gi','cardio-mesh','meditation-sand-garden', // Speckled, Fine Stripe, Snake Skin, Holey, Graph Paper, Cool Graph Paper, Wiggles
+ 'martial-arts-bamboo','meditation-moss']); // Bamboo, Moss
+// catalog.ts STYLES names, id order (legacy-<n> textures; legacy-color-<n> colours are "<name> (original)").
+export const LEGACY_NAMES=Object.freeze(['Mortal','Verdant','Mycelial','Chitin','Reptilian','Abyssal','Coral','Skeletal','Spectral','Infernal','Celestial','Voidborn','Eldritch','Stone Golem','Crystal','Magma','Glacial','Stormcharged','Clockwork Robot','Neon Synth','Fluffy','Jelly','Baby']);
+// The texture pack pool: every non-free texture, once. (TEXTURE_SWAP below only decides which texture a
+// battle-pass slot names; the pack pool never depends on it, so no texture can be unreachable.)
+export const textureRewardPool=()=>[
+ ...TEXTURES.map(t=>item('texture',t)),
+ ...LEGACY_NAMES.map((name,n)=>item('texture',[`legacy-${n}`,name,''])),
+].filter(t=>!FREE_TEXTURE_IDS.includes(t.id));
+// R18 G2: the 15 free colours are the top hexes by count (scripts/colour-census.mjs); everything else
+// is pack-only. Pool = every palette + every non-free single colour of the registry.
+export const FREE_COLOURS=Object.freeze([
+ '#111111', // 2 (Static Pop + Caution Tape Couture)
+ '#ffffff', // 2 (Static Pop + Caution Tape Couture)
+ '#8b8f9a','#4a4d55','#e7e9ee', // count 1 each, ties in first-appearance order: Slate
+ '#b7a68e','#7a6b57','#ddcdb3', // 1 each: Warm Clay
+ '#a23b4a','#4f1620','#f2a3ae', // 1 each: Ruby
+ '#2d5aa0','#122a4d','#a9c9f5', // 1 each: Sapphire
+ '#4c7a3f', // 1: Moss primary
+]);
+export const colourRewardPool=()=>[
+ ...PALETTES.map(p=>({kind:'palette',id:p.id,name:p.name})),
+ ...[['default-gold','Gold'],['default-charcoal','Charcoal'],['default-blush','Blush']].map(([id,name])=>({kind:'color',id,name})),
+ ...LEGACY_NAMES.map((name,n)=>({kind:'color',id:`legacy-color-${n}`,name:`${name} (original)`})),
+];
 function packCosmetics(levels,bossId){
  for(let level=0;level<levels.length;level++)levels[level]=levels[level].flatMap(reward=>{
   if(reward.kind==='palette')return [rewardPack('uncommon',`${bossId}:L${level+1}:${reward.id}`)];

@@ -1,7 +1,6 @@
 // Earned cosmetic packs. Ownership is recorded with the existing battle-pass ledger;
 // opening uses the existing material unlock store. Pack odds are category odds, not item odds.
-import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
-import {BOSSES,textureRewardPool} from './battle-pass-rewards.mjs';
+import {BOSSES,textureRewardPool,colourRewardPool} from './battle-pass-rewards.mjs';
 import * as ledger from './unlock-ledger.mjs';
 import * as store from './creature/source/creator/unlock-store.ts';
 
@@ -21,7 +20,7 @@ export function rollCategory(tier,random=Math.random){
  return roll<odds.color?'color':roll<odds.color+odds['64-bit']?'64-bit':'texture';
 }
 const pools={
- color:PALETTES.filter(item=>item.unlockRule==='battle-pass').map(item=>({kind:'palette',id:item.id,name:item.name})),
+ color:colourRewardPool(),
  '64-bit':BOSSES.map(boss=>({kind:'boss-skin',id:boss.id+'-skin',name:boss.name+' Skin'})),
  texture:textureRewardPool(),
 };

@@ -6,7 +6,7 @@ import {getCoach} from './coaching';
 import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
 import {sculptMaterial,growMaterial,applySparkle} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
-import {colorTriad,resolveRegionMaterial} from './materials-registry';
+import {colorTriad,resolveRegionMaterial,regionChoice} from './materials-registry';
 import {applyInstalledSkin,loadInstalledSkinTextures,type InstalledSkin,type SkinTextureCache} from './skin-materials';
 import {createCoachReliefBudget} from './material-refinement';
 
@@ -29,7 +29,7 @@ export type InstalledSkinResolver=(id:string)=>Promise<InstalledSkin|null>;
 export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver,preview=false){
  // The build meshopt-compresses these models (scripts/optimize-glb.mjs).
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
- const look=(region:Region)=>resolveRegionMaterial(d.styles[region],d.materials?.[region],preview);
+ const look=(region:Region)=>resolveRegionMaterial(d.styles[region],regionChoice(d.materials,region),preview);
  const load=async(name:string)=>loader.parseAsync(await bytes(assetBase+'models/'+name+'.glb'),assetBase+'models/');
  // Each region can come from a different creature. A GLTF scene can only give each node away once,
  // so every distinct source id is parsed once and reused across the regions that name it.
@@ -150,7 +150,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  })();
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
  const disposeAssembly=()=>{const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());};
- for(const [region,skin]of installedSkins){const selected=d.materials?.[region],triad=colorTriad(selected?.colorId||'default-slate',preview)??colorTriad('default-slate')!,group=e.regions[region];
+ for(const [region,skin]of installedSkins){const selected=regionChoice(d.materials,region),triad=colorTriad(selected?.colorId||'default-slate',preview)??colorTriad('default-slate')!,group=e.regions[region];
   let meshes:THREE.Mesh[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)meshes.push(object);});
   try{await loadInstalledSkinTextures(skin,skinTextures,skinTextureCache);}catch{/* Optional corrupted skin: this whole region keeps its built-in materials. */continue;}
   const previous=meshes.map(mesh=>({mesh,material:mesh.material})),stagedMaterials=new Set<THREE.Material>();

@@ -113,7 +113,7 @@ test('not downloaded: the flat customizer works, fetches nothing from the cage p
  const link=page.locator('#panel-files [data-cage-download]');
  assert.equal(await link.isVisible(),true);assert.equal(await link.getAttribute('href'),'/pose.html#install');
  // The 2D editor still edits and saves.
- await page.click('#tab-materials');await page.click('#colorSwatches [data-color="default-ruby"]');
+ await page.click('#tab-materials');await page.click('#colorSwatches [data-channel="body"][data-color="default-ruby"]');
  await page.waitForFunction(()=>window.myr5Companion.recipe.materials?.body?.colorId==='default-ruby'&&window.myr5Companion.ready,null,{timeout:60000});
  await shot(page,'not-downloaded-375x812');
  assert.deepEqual(errors,[]);

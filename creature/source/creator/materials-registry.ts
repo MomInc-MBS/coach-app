@@ -1,13 +1,13 @@
 // Rank 4 runtime material registry: textures, colours and palettes.
 // Adding a texture/colour/palette is a new entry (+ files for battle-pass packs) here —
 // no other code changes. See plan/PLAN.md "Rank 4" and plan/reports/audit-materials.md.
-import {STYLES as LEGACY_STYLES, type MaterialChoice} from './design';
+import {STYLES as LEGACY_STYLES, COLOUR_SOURCE, type MaterialChoice, type Region} from './design';
 import {isGranted, grantUnlock, type UnlockKind} from './unlock-store';
 import PALETTE_DATA from './palettes.json';
-import {TEXTURE_SWAP} from '../../../battle-pass-rewards.mjs';
+import {TEXTURE_SWAP,FREE_TEXTURE_IDS,FREE_COLOURS} from '../../../battle-pass-rewards.mjs';
 import {RECIPE_KEY} from '../profile';
 import {builtinSurfaceProfile} from './material-patterns';
-export {grantUnlock};
+export {grantUnlock,FREE_COLOURS};
 
 export type UnlockRule = 'default' | 'battle-pass' | 'aura-milestone';
 export type Track = 'chest' | 'quads' | 'glutes' | 'arms' | 'yoga' | 'martial-arts' | 'cardio' | 'meditation';
@@ -25,6 +25,8 @@ export type ColorDef = { id: string; displayName: string; unlockRule: UnlockRule
 export type PaletteDef = { id: string; displayName: string; tagline: string; unlockRule: 'aura-milestone' | 'battle-pass'; unlockAtDay?: number; reward?: string; colors: [string, string, string] };
 
 const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule }) => item.unlockRule === 'default' || isGranted(kind, item.id);
+// R18 G2: a single-colour def is free exactly when its primary is one of the 15 free hexes (battle-pass-rewards.mjs FREE_COLOURS).
+const colourRule = (c: { primary: string }): UnlockRule => FREE_COLOURS.includes(c.primary.toLowerCase()) ? 'default' : 'battle-pass';
 export const isTextureUnlocked = (t: TextureDef) => isUnlocked('texture', t);
 export const isColorUnlocked = (c: ColorDef) => isUnlocked('color', c);
 export const isPaletteUnlocked = (p: PaletteDef) => isUnlocked('palette', p);
@@ -40,10 +42,10 @@ const CLAY_TEXTURE: TextureDef = { id: 'clay', displayName: 'Clay', unlockRule: 
 // before for legacy `styles` recipes, and are also exposed as ordinary registry textures +
 // their historical colour, `legacy:true`, unlockRule 'default' -- except the 7 that #140 moved
 // into the battle pass (LEGACY_TEXTURES, below the battle-pass table they take slots from). ---
-const LEGACY_COLORS: ColorDef[] = LEGACY_STYLES.map(s => ({ id: 'legacy-color-' + s.id, displayName: s.name + ' (original)', unlockRule: 'default', primary: s.primary, secondary: s.secondary, accent: s.accent }));
+const LEGACY_COLORS: ColorDef[] = LEGACY_STYLES.map(s => ({ id: 'legacy-color-' + s.id, displayName: s.name + ' (original)', unlockRule: colourRule(s), primary: s.primary, secondary: s.secondary, accent: s.accent }));
 
 // --- Simple default colours: "basic colours auto" (audit M7). Any of these tints any texture. ---
-const SIMPLE_COLORS: ColorDef[] = [
+const SIMPLE_COLORS: ColorDef[] = ([
  { id: 'default-slate', displayName: 'Slate', unlockRule: 'default', primary: '#8b8f9a', secondary: '#4a4d55', accent: '#e7e9ee' },
  { id: 'default-clay', displayName: 'Warm Clay', unlockRule: 'default', primary: '#b7a68e', secondary: '#7a6b57', accent: '#ddcdb3' },
  { id: 'default-ruby', displayName: 'Ruby', unlockRule: 'default', primary: '#a23b4a', secondary: '#4f1620', accent: '#f2a3ae' },
@@ -52,7 +54,7 @@ const SIMPLE_COLORS: ColorDef[] = [
  { id: 'default-gold', displayName: 'Gold', unlockRule: 'default', primary: '#c9a13a', secondary: '#5f4a15', accent: '#ffe9a8' },
  { id: 'default-charcoal', displayName: 'Charcoal', unlockRule: 'default', primary: '#333238', secondary: '#131318', accent: '#8d8d96' },
  { id: 'default-blush', displayName: 'Blush', unlockRule: 'default', primary: '#d98fa0', secondary: '#7a3d49', accent: '#ffdbe4' },
-];
+] as ColorDef[]).map(c => ({ ...c, unlockRule: colourRule(c) }));
 
 // --- Battle-pass textures: PLAN §6.2 / plan/muse/item-catalog.json (D14: 3 per style, D16: L1/L3/L5).
 // Every catalogue option below has a stable built-in procedural pattern and PBR profile.
@@ -84,15 +86,14 @@ const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: strin
  { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation',familyId:54 },
  { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation',familyId:55 },
 ];
-// #140: battle-pass-rewards.mjs TEXTURE_SWAP puts 7 legacy textures in the slots of 7 of these,
-// which are open now; stable procedural family ids do not alter their unlock rules.
-// R18 G1: 8 battle-pass textures + Bamboo + Moss are now free.
+// R18 G1: only FREE_TEXTURE_IDS (battle-pass-rewards.mjs) are free; TEXTURE_SWAP now just names which legacy
+// texture sits in a battle-pass slot (and drives the #140 grandfather below), it never unlocks anything.
 const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
-const FREE_BATTLE_PASS_TEXTURE_IDS = new Set(['glutes-peach', 'arms-rope', 'arms-leather', 'yoga-cork', 'martial-arts-canvas-gi', 'cardio-mesh', 'meditation-sand-garden', 'martial-arts-bamboo', 'meditation-moss']);
-const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: FREE_BATTLE_PASS_TEXTURE_IDS.has(t.id) || Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
+const textureRule = (id: string): UnlockRule => FREE_TEXTURE_IDS.includes(id) ? 'default' : 'battle-pass';
+const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: textureRule(t.id), track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
 const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
  const id = 'legacy-' + s.id, slot = BATTLE_PASS_TEXTURES.find(t => t.id === SWAPPED_IN.get(id));
- return { id, displayName: s.name, unlockRule: slot ? 'battle-pass' : 'default', track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };
+ return { id, displayName: s.name, unlockRule: textureRule(id), track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };
 });
 
 export const TEXTURES: TextureDef[] = [FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES];
@@ -112,23 +113,32 @@ export function textureDefaultMetalness(id:string):number|undefined {
 
 function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent }; }
 
-/** The tint triad for a colour or palette id, or undefined if it doesn't exist or isn't unlocked yet
- * (`preview` paints a locked one too — the editor's look-before-you-unlock layer, never saved). */
+// R18 G2/G3: a colour channel holds ONE colour. A "#rrggbb" colorId is a single hex: free if it is one of
+// the 15 FREE_COLOURS, otherwise owned when any owned colour or palette contains it (so unlocking a
+// palette gives you its three hexes for the Body/Head/Eyes rows). Existing ids (default-ruby, pal-03, ...) still work.
+const HEX = /^#[0-9a-f]{6}$/i;
+const mix = (hex: string, to: number, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + to * t).toString(16).padStart(2, '0')).join('');
+const hexOwned = (hex: string) => FREE_COLOURS.includes(hex) || COLORS.some(c => isColorUnlocked(c) && [c.primary, c.secondary, c.accent].some(h => h.toLowerCase() === hex)) || PALETTES.some(p => isPaletteUnlocked(p) && p.colors.some(h => h.toLowerCase() === hex));
+/** A palette as three single-colour channel ids: primary -> body, secondary -> head, accent -> eyes. */
+export const paletteChannelIds = (p: PaletteDef) => p.colors.map(h => h.toLowerCase()) as [string, string, string];
+
+/** The tint triad for a colour, hex or palette id, or undefined if it doesn't exist or isn't unlocked yet
+ * (`preview` paints a locked one too � the editor's look-before-you-unlock layer, never saved). */
 export function colorTriad(id: string, preview = false): { primary: string; secondary: string; accent: string } | undefined {
+ if (HEX.test(id)) { const hex = id.toLowerCase(); return preview || hexOwned(hex) ? { primary: hex, secondary: mix(hex, 0, .55), accent: mix(hex, 255, .55) } : undefined; }
  const c = findColor(id); if (c) return preview || isColorUnlocked(c) ? { primary: c.primary, secondary: c.secondary, accent: c.accent } : undefined;
  const p = findPalette(id); if (p) return preview || isPaletteUnlocked(p) ? triadFromPalette(p) : undefined;
  return undefined;
 }
 
-// Section names as the achievements board shows them (battle-pass-rewards.mjs TRACKS).
-const TRACK_NAMES: Record<Track, string> = { chest: 'Chest', quads: 'Quads', glutes: 'Glutes', arms: 'Arms & Shoulders', yoga: 'Yoga', 'martial-arts': 'Martial Arts', cardio: 'Cardio', meditation: 'Meditation' };
-/** Where a locked texture/colour/palette unlocks ("Chest L1", "Aura day 5", "Battle pass"), or
- * null when the player owns it or it isn't a registry item (installed creature skins guard themselves). */
-export function lockSource(id: string): string | null {
- const t = findTexture(id); if (t) return isTextureUnlocked(t) ? null : t.track ? `${TRACK_NAMES[t.track]} L${t.passLevel}` : 'Battle pass';
- const c = findColor(id); if (c) return isColorUnlocked(c) ? null : 'Battle pass';
- const p = findPalette(id); if (p) return isPaletteUnlocked(p) ? null : p.unlockAtDay ? `Aura day ${p.unlockAtDay}` : 'Battle pass';
- return null;
+/** True when a texture/colour/palette id is a registry item the player doesn't own yet (the UI shows just a lock).
+ * Installed creature skins and unknown ids guard themselves and are never "locked" here. */
+export function isLocked(id: string): boolean {
+ const t = findTexture(id); if (t) return !isTextureUnlocked(t);
+ if (HEX.test(id)) return !hexOwned(id.toLowerCase());
+ const c = findColor(id); if (c) return !isColorUnlocked(c);
+ const p = findPalette(id); if (p) return !isPaletteUnlocked(p);
+ return false;
 }
 
 // #140 grandfather: a coach saved while the swapped-in legacy textures were still free keeps them.
@@ -153,6 +163,13 @@ globalThis.addEventListener?.('myr5:recipe', event => grandfatherSwappedTextures
  * always falls back to Flat/its default colour rather than ever throwing or loading nothing.
  * `preview` lets a locked texture/colour paint (editor preview only; save-look.ts guards saves).
  */
+/** G3: the material choice a region really renders with. Body colour drives body, arms, feet and collar;
+ * head and eyes have their own. Old saves map body<-body region, head<-head, eyes<-eye. */
+export function regionChoice(materials: Partial<Record<Region, MaterialChoice>> | undefined, region: Region): MaterialChoice | undefined {
+ const own = materials?.[region], source = materials?.[COLOUR_SOURCE[region]];
+ return own && source && source !== own ? { ...own, colorId: source.colorId } : own;
+}
+
 export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false) {
  if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0 };
  const texture = findTexture(choice.textureId);
