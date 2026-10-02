@@ -1,0 +1,60 @@
+Exception in thread Thread-3 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 641: character maps to <undefined>
+{"model": "openai/gpt-oss-20b", "ctx": 32768, "load_s": 12.2, "wall_s": 0.6, "tok_s": 186.40596700614384, "ttft_s": 0.17657599999999998, "completion_tokens": 75, "content_chars": 162, "reasoning_chars": 66, "content_head": "```js\nfunction clamp(n, lo, hi) { return Math.min(Math.max(n, lo), hi); }\n\n// Example call:\nconst result = clamp(10, 0, 5);\nconsole.log(result); // outputs 5\n``"}
+   lms ps: IDENTIFIER            MODEL                 STATUS    SIZE        CONTEXT    PARALLEL    DEVICE    TTL | openai/gpt-oss-20b    openai/gpt-oss-20b    IDLE      12.11 GB    32768      4           Local | 
+Exception in thread Thread-9 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 673: character maps to <undefined>
+{"model": "qwen/qwen3.6-35b-a3b", "ctx": 32768, "load_s": 162.1, "wall_s": 48.6, "tok_s": 8.389629181964686, "ttft_s": 1.047218, "completion_tokens": 400, "content_chars": 0, "reasoning_chars": 1311, "content_head": ""}
+   lms ps: IDENTIFIER              MODEL                   STATUS    SIZE        CONTEXT    PARALLEL    DEVICE    TTL | qwen/qwen3.6-35b-a3b    qwen/qwen3.6-35b-a3b    IDLE      22.07 GB    32768      4           Local | 
+Exception in thread Thread-15 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 849: character maps to <undefined>
+{"model": "mistralai/devstral-small-2-2512", "ctx": 32768, "load_s": 16.7, "wall_s": 8.6, "tok_s": 6.254383211655405, "ttft_s": 2.468224, "completion_tokens": 39, "content_chars": 105, "reasoning_chars": 0, "content_head": "```javascript\nfunction clamp(n, lo, hi) {\n  return Math.min(Math.max(n, lo), hi);\n}\n\nclamp(5, 1, 10);\n```"}
+   lms ps: IDENTIFIER                         MODEL                              STATUS    SIZE        CONTEXT    PARALLEL    DEVICE    TTL | mistralai/devstral-small-2-2512    mistralai/devstral-small-2-2512    IDLE      15.21 GB    32768      4           Local | 
+Exception in thread Thread-21 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ianmy\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f in position 609: character maps to <undefined>
+qwen/qwen3.8-27b: REQUEST FAILED HTTPConnectionPool(host='127.0.0.1', port=1234): Read timed out. (read timeout=600)
+BENCH_EXIT=0

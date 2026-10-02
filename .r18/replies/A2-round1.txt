@@ -1,0 +1,18 @@
+=== COPY assets-inbox/r18/waterfall-reference.png -> pod/worlds/meditation-waterfall.png ===
+=== FILE meditation.mjs LINE 11 ===
+ const dialog=document.createElement('dialog');dialog.className='launch-panel meditation-panel';dialog.setAttribute('aria-labelledby','meditation-title');dialog.innerHTML='<header><h2 id="meditation-title">The still room</h2><button data-meditation-close>Close</button></header><section data-meditation-scene><div class="meditation-stage"><div class="meditation-layer meditation-far" data-peer-depth="far" aria-hidden="true"></div><div class="meditation-layer meditation-mid" data-peer-depth="mid" aria-hidden="true"><div class="meditation-platform"></div><div class="meditation-coach"></div></div><div class="meditation-layer meditation-near" data-peer-depth="near"><button class="meditation-character" aria-label="Tap your Gala character"><canvas width="64" height="96"></canvas></button><div class="forest-canopy" aria-hidden="true"></div><div class="meditation-can" aria-hidden="true"><b>FUEL</b><i></i></div><div class="meditation-powder" aria-hidden="true">· · · · ·</div><p class="meditation-speech" role="status">Breathe in. Breathe out.</p></div></div><button data-breath-pause type="button">Pause</button></section><section data-meditation-arcade hidden></section><div class="meditation-blackout" aria-hidden="true">'+Array.from({length:8},(_,i)=>'<i style="--strip:'+i+'"></i>').join('')+'</div>';document.body.append(dialog);
+=== FILE meditation.mjs LINE 19 ===
+ const orbit=document.createElement('div');orbit.className='breathing-orbit';const ring=dialog.querySelector('.breathing-ring'),stopCircle=document.createElement('button'),count=document.createElement('b'),sessionClock=document.createElement('small'),direction=document.createElement('i');count.className='breath-count';count.dataset.breathCount='';count.textContent='—';sessionClock.dataset.sessionClock='';sessionClock.textContent='3:30';direction.className='breath-direction';direction.dataset.breathDirection='';direction.textContent='SETTLE';stopCircle.type='button';stopCircle.className='breathing-ring-stop';stopCircle.dataset.breathingStop='';stopCircle.dataset.breathExit='';stopCircle.setAttribute('aria-label','Stop the breathing session and leave the room');stopCircle.hidden=true;orbit.append(ring,stopCircle,count,sessionClock,direction);const hud=document.createElement('div');hud.className='breath-hud';hud.append(count,sessionClock,direction,stopCircle);dialog.querySelector('.meditation-near').append(hud);
+=== FILE meditation.css APPEND ===
+.meditation-panel .room-art{display:none!important}
+.meditation-panel .forest-canopy{display:none!important}
+.meditation-panel .meditation-far{background:url('/pod/worlds/meditation-waterfall.png') center bottom / cover no-repeat;image-rendering:pixelated!important}
+.meditation-panel .meditation-mid{opacity:.75!important}
+.meditation-panel .meditation-coach{opacity:.5!important}
+.meditation-panel .breath-hud{position:absolute;left:0;right:0;bottom:12%;display:grid;place-items:center;z-index:5;pointer-events:none}
+.meditation-panel .breath-hud .breath-count{font-size:clamp(48px,14vw,84px);top:auto!important;bottom:auto!important;position:static!important}
+.meditation-panel .breath-hud .breathing-ring-stop{position:static;width:44px;height:44px;pointer-events:auto;background:none;border:0;padding:0;margin:0}
+.meditation-panel .meditation-character{left:25%;bottom:6% !important;height:20vh!important}
+.meditation-panel .meditation-coach{z-index:1!important}
+.meditation-panel .breathing-orbit{display:none!important}
+=== END ===
