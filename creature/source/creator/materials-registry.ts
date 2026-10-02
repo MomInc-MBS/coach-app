@@ -67,27 +67,29 @@ const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: strin
  { id: 'quads-hex-tread', name: 'Hex Tread', slot: 'texture-3', track: 'quads',familyId:37 },
  { id: 'glutes-sweatshirt-fleece', name: 'Sweatshirt Fleece', slot: 'texture-1', track: 'glutes',familyId:38 },
  { id: 'glutes-quilted', name: 'Quilted', slot: 'texture-2', track: 'glutes',familyId:39 },
- { id: 'glutes-peach', name: 'Peach', slot: 'texture-3', track: 'glutes',familyId:40 },
+ { id: 'glutes-peach', name: 'Speckled', slot: 'texture-3', track: 'glutes',familyId:40 },
  { id: 'arms-hammered-bronze', name: 'Hammered Bronze', slot: 'texture-1', track: 'arms',familyId:41 },
- { id: 'arms-rope', name: 'Rope', slot: 'texture-2', track: 'arms',familyId:42 },
- { id: 'arms-leather', name: 'Leather', slot: 'texture-3', track: 'arms',familyId:43 },
- { id: 'yoga-cork', name: 'Cork', slot: 'texture-1', track: 'yoga',familyId:44 },
+ { id: 'arms-rope', name: 'Fine Stripe', slot: 'texture-2', track: 'arms',familyId:42 },
+ { id: 'arms-leather', name: 'Snake Skin', slot: 'texture-3', track: 'arms',familyId:43 },
+ { id: 'yoga-cork', name: 'Holey', slot: 'texture-1', track: 'yoga',familyId:44 },
  { id: 'yoga-woven-mat', name: 'Woven Mat', slot: 'texture-2', track: 'yoga',familyId:45 },
  { id: 'yoga-petal', name: 'Petal', slot: 'texture-3', track: 'yoga',familyId:46 },
- { id: 'martial-arts-canvas-gi', name: 'Canvas Gi', slot: 'texture-1', track: 'martial-arts',familyId:47 },
+ { id: 'martial-arts-canvas-gi', name: 'Graph Paper', slot: 'texture-1', track: 'martial-arts',familyId:47 },
  { id: 'martial-arts-bamboo', name: 'Bamboo', slot: 'texture-2', track: 'martial-arts',familyId:48 },
  { id: 'martial-arts-dragon-scale', name: 'Dragon Scale', slot: 'texture-3', track: 'martial-arts',familyId:49 },
- { id: 'cardio-mesh', name: 'Mesh', slot: 'texture-1', track: 'cardio',familyId:50 },
+ { id: 'cardio-mesh', name: 'Cool Graph Paper', slot: 'texture-1', track: 'cardio',familyId:50 },
  { id: 'cardio-terry-cloth', name: 'Terry Cloth', slot: 'texture-2', track: 'cardio',familyId:51 },
  { id: 'cardio-pebble-path', name: 'Pebble Path', slot: 'texture-3', track: 'cardio',familyId:52 },
- { id: 'meditation-sand-garden', name: 'Sand Garden', slot: 'texture-1', track: 'meditation',familyId:53 },
+ { id: 'meditation-sand-garden', name: 'Wiggles', slot: 'texture-1', track: 'meditation',familyId:53 },
  { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation',familyId:54 },
  { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation',familyId:55 },
 ];
 // #140: battle-pass-rewards.mjs TEXTURE_SWAP puts 7 legacy textures in the slots of 7 of these,
 // which are open now; stable procedural family ids do not alter their unlock rules.
+// R18 G1: 8 battle-pass textures + Bamboo + Moss are now free.
 const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
-const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
+const FREE_BATTLE_PASS_TEXTURE_IDS = new Set(['glutes-peach', 'arms-rope', 'arms-leather', 'yoga-cork', 'martial-arts-canvas-gi', 'cardio-mesh', 'meditation-sand-garden', 'martial-arts-bamboo', 'meditation-moss']);
+const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: FREE_BATTLE_PASS_TEXTURE_IDS.has(t.id) || Object.hasOwn(TEXTURE_SWAP, t.id) ? 'default' : 'battle-pass', track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
 const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
  const id = 'legacy-' + s.id, slot = BATTLE_PASS_TEXTURES.find(t => t.id === SWAPPED_IN.get(id));
  return { id, displayName: s.name, unlockRule: slot ? 'battle-pass' : 'default', track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };
