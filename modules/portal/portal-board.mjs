@@ -97,7 +97,7 @@ const tintCache=new Map();
  function paintStill(c,face){
   if(_tint){
     const tw=Math.max(1,Math.round(face.width)),th=Math.max(1,Math.round(face.height));
-    const key=`${image.src}-${tw}x${th}-${_tint}`;
+    const metal=!!trace?.metal&&_traceSelected,key=`${image.src}-${tw}x${th}-${_tint}-${metal}`;
     let off;
     if(tintCache.has(key)){
       off=tintCache.get(key);
@@ -114,6 +114,11 @@ const tintCache=new Map();
         const a=data[i+3];
         if(a===0)continue;
         const lum=data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722;
+        if(metal){ // anodized metal (Cogs): deeper shadows, tint through the mids, a white-hot specular top
+         const l=lum/255,k=.12+1.35*l,s=l>.55?((l-.55)/.45)**2*.7:0;
+         data[i]=Math.min(255,tr*k)*(1-s)+255*s;data[i+1]=Math.min(255,tg*k)*(1-s)+255*s;data[i+2]=Math.min(255,tb*k)*(1-s)+255*s;
+         continue;
+        }
         data[i]=lum*tr/255;
         data[i+1]=lum*tg/255;
         data[i+2]=lum*tb/255;

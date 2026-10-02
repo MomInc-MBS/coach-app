@@ -47,6 +47,9 @@ test('Cogs selected color reaches live emissive lamps, survives activation and r
   await page.evaluate(()=>{const b=portal.current(),r=b.faceRect(),p=window.__lampLayout;b.press(72,r.left+r.width*p.u,r.top+r.height*p.v);});await page.waitForFunction(()=>window.__lamps.some(m=>m.emissiveIntensity>.1));
   await page.evaluate(()=>{const input=document.querySelector('[data-board-tint]');input.value='#ff00ff';input.dispatchEvent(new Event('input',{bubbles:true}));});const changed=await sample();assert.ok(changed.lamps.every(m=>m.color==='ff00ff'),'existing lamps repaint while lit');assert.ok(changed.lamps.some(m=>m.intensity>.1),'color change retains lamp activation');assert.deepEqual(changed.parts,initial.parts,'lamp color does not overwrite physical gear or plate material colors');
   await page.evaluate(()=>{portal.current().release(72);return portal.board('cogs');});const restored=await sample();assert.ok(restored.lamps.length>0&&restored.lamps.every(m=>m.color==='ff00ff'),'recreated lamps restore the selected color');
+  const finish=()=>page.evaluate(()=>window.__parts.filter(m=>m.userData.cogsMetal).map(m=>({metalness:m.metalness,roughness:m.roughness,env:!!m.envMap,map:!!m.metalnessMap})));
+  const tinted=await finish();assert.ok(tinted.length&&tinted.every(m=>m.metalness>=.8&&m.roughness>=.3&&m.roughness<=.45&&m.env&&!m.map),'a selected tint gives the kit parts an anodized metal finish: '+JSON.stringify(tinted[0]));
+  await page.evaluate(()=>portal.current().setTint('#b026ff',false));assert.ok((await finish()).every(m=>!m.env&&m.map),'no selected tint restores the stock material values');
  }finally{await context.close();}
 });
 
