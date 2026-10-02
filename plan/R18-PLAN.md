@@ -51,13 +51,13 @@ Files: `creature/index.html`, `creature/source/editor-workbench.ts`, `viewer.ts`
 4. Remove the Motion tab.
 5. Move the Coach (personality) tab into Reminders (`coach-hub.mjs`, next to Coach tone) and remove it from the customizer.
 6. Files tab: replace the big download buttons with small download icon buttons.
-7. Remove any 64-bit war-room background and its menu from the customizer.
+7. Remove the war-room cage background and its bay buttons (Cage/Coach/Pets/Weapons/Mirror/Clothes, `cage.ts`) from the customizer. The customizer shows only the close-up coach on a plain backdrop (Ian, 2 Oct: the menu is the War Room's). The War Room page keeps its cage.
 8. Remove all "unlocks at …" / "Preview only · unlocks at …" hint text. Locked items show only a lock.
 9. Dropped: previewing the coach into the portal (not worth it).
 
 ### G. Catalog: free items, renames, colours, pack odds (LOCAL)
 Files: `creator/materials-registry.ts`, `palettes.json`, `battle-pass-rewards.mjs` (`TEXTURE_SWAP`), `reward-packs.mjs`, `unlock-store.ts`, `assemble.ts`, `design.ts`
-1. **Free textures (exactly these, plus Flat):** Reptilian, Baby, Clay, Speckled (was Peach), Fine Stripe (was Rope), Snake Skin (was Leather), Holey (was Cork), Graph Paper (was Canvas Gi), Cool Graph Paper (was Mesh), Bamboo, Wiggles (was Sand Garden), Moss. Every other texture is pack-only.
+1. **Free textures (exactly these, plus Flat):** Reptilian, Baby, Clay, Speckled (was Peach), Fine Stripe (was Rope), Snake Skin (was Leather), Holey (was Cork; confirmed by Ian), Graph Paper (was Canvas Gi), Cool Graph Paper (was Mesh), Bamboo, Wiggles (was Sand Garden), Moss. Every other texture is pack-only.
 2. **Free colours:** count every hex across `palettes.json`, `SIMPLE_COLORS` and `LEGACY_COLORS`. The 15 most frequent are free. Every other colour and palette is pack-only. The list is written into the registry as a literal array, so it never drifts.
 3. **Three colour channels:** body (body, arms, feet, collar), head and eyes. The Colour tab shows three swatch rows. Unlocking a colour combo fills all three channels, which is what makes combos worth chasing.
 4. **Pack odds (pinned by a test so they can't change silently):**
@@ -72,8 +72,8 @@ Files: `creator/materials-registry.ts`, `palettes.json`, `battle-pass-rewards.mj
 
 ### H. Grimoire CRT + 64 menu terminal (LOCAL)
 Files: `modules/portal/portal.mjs` (L325, L360–363), `portal.css` (`.portal-menu*`), `creature/source/war-room-gala.ts` (LABELS L19–26)
-1. The Grimoire settings sheet becomes an old CRT screen: dark curved glass, scanlines, slight glow, orange monospace text, titled "GRIMOIRE SETTINGS". Reuse the `settings-crt.*` scanline styles.
-2. In the 64 (war room) menu, remove the Room and Gala options. The remaining options render as orange terminal lines (`> PETS_`) inside a translucent hologram window.
+1. The Grimoire settings sheet becomes an old CRT screen: dark curved glass, scanlines, slight glow, orange monospace text, titled "GRIMOIRE SETTINGS" (confirmed by Ian). Reuse the `settings-crt.*` scanline styles.
+2. In the War Room bay menu (`war-room/`, screenshot assets-inbox/r18/war-room-now.png), remove the Room and Gala options. The remaining options render as orange terminal lines (`> PETS_`) inside a translucent hologram window.
 
 ## Order
 1. Post the R18 claim to `t3-coordination.ndjson` (no deploy).
