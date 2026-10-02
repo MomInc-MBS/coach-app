@@ -308,3 +308,6 @@
 @media(max-height:700px){.meditation-panel .breath-settle,.meditation-panel .breath-cue{top:22%}}
 @media(orientation:landscape){.meditation-panel .breath-settle,.meditation-panel .breath-cue{left:27%;top:30%}}
 .meditation-panel:has([data-breath-modes]:not([hidden])) .breath-hud{visibility:hidden} /* start screen: the idle 3:30 chip sat under the safety note */
+/* R20: the portal's "Tilt to look around" tab sits on the dock's top edge, left; lift the counter chip and Begin clear of it */
+.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breath-hud{translate:0 -36px}
+.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breathing-session .breath-modes{translate:0 -44px}
