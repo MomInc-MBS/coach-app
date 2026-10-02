@@ -54,6 +54,7 @@ async function food(page,how){
   await page.mouse.move(...pts[0]);await page.mouse.down();for(const p of pts.slice(1))await page.mouse.move(...p,{steps:2});await page.mouse.up();
  }else await page.evaluate(()=>window.myr5Portal.open('up'));
  await page.waitForFunction(()=>document.getElementById('mealsPanel')?.open===true,null,{timeout:15000});
+ await page.waitForFunction(()=>document.getElementById('mealsPanel').classList.contains('portal-shaped'),null,{timeout:15000}); // peered: its Escape handler is armed
  await page.keyboard.press('Escape'); // seen through its cut, Food shows no Close (R7)
  await portalUp(page);
 }
@@ -65,6 +66,8 @@ test('context losses while cycling every board never blank the stage; routes and
   const context=await browser.newContext({viewport:{width:375,height:812},userAgent:UA,serviceWorkers:'block',reducedMotion:'reduce'});
   await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));
   await context.addInitScript(GL_PROBE);
+  // R17 phone-orientation: this phone UA gets the 'Rotate your phone upright' modal when the (headless) screen reports landscape.
+  await context.addInitScript(()=>{try{Object.defineProperty(screen.orientation,'type',{configurable:true,get:()=>'portrait-primary'});}catch{}});
   // The once-a-day How to Play popup is covered by its own checks; start from a day it was already seen.
   await context.addInitScript((()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};}));
   const seed=await context.newPage();await seed.goto(base+'/onboarding.html');
