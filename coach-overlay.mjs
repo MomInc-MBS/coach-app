@@ -15,7 +15,7 @@ const COACH_GESTURE={spun:'laugh',held:'wiggle',swiping:'swipe',impressed:'agree
 
 export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
  if(!point||!videoW||!videoH||!screenW||!screenH)return {x:0,y:0,visibility:0};
- const scale=Math.max(screenW/videoW,screenH/videoH),offX=(screenW-videoW*scale)/2,offY=(screenH-videoH*scale)/2;
+ const scale=Math.min(screenW/videoW,screenH/videoH),offX=(screenW-videoW*scale)/2,offY=(screenH-videoH*scale)/2;
  const px=mirrored?1-point.x:point.x;
  return {x:(offX+px*videoW*scale)/screenW,y:(offY+point.y*videoH*scale)/screenH,visibility:point.visibility??0};
 }
