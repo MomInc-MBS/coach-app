@@ -75,6 +75,13 @@ Files: `modules/portal/portal.mjs` (L325, L360–363), `portal.css` (`.portal-me
 1. The Grimoire settings sheet becomes an old CRT screen: dark curved glass, scanlines, slight glow, orange monospace text, titled "GRIMOIRE SETTINGS" (confirmed by Ian). Reuse the `settings-crt.*` scanline styles.
 2. In the War Room bay menu (`war-room/`, screenshot assets-inbox/r18/war-room-now.png), remove the Room and Gala options. The remaining options render as orange terminal lines (`> PETS_`) inside a translucent hologram window.
 
+### I. Camera: show the full picture, fewer joints per exercise (LOCAL)
+Files: `camera-workout.css` (L5), `movement-rules.mjs`, `movement-engine.mjs` (L86 `required`)
+1. Show the whole camera frame: `#cameraWorkout>video` uses `object-fit:contain` instead of `cover`. The MOM Inc housing and a dark backdrop fill the edges. The pose overlay must still line up with the video, so check the drawing code that maps landmarks to the screen.
+2. Audit every exercise's required joints (`need` in movement-rules, `required` in movement-engine). Upper-body moves never require knees or ankles. Lower-body moves never require wrists or elbows. Core moves require only the shoulder and hip, plus the knee where the angle needs it. Keep the minimum set that still counts reps correctly, and add one test that pins each exercise's joint list.
+
+Ian, 2 Oct: the War Room stays visually as it is. Only lane H's change applies there (Room and Gala removed, terminal/hologram menu style).
+
 ## Order
 1. Post the R18 claim to `t3-coordination.ndjson` (no deploy).
 2. The Haiku runner works the local queue in this order: E, D, B, H (small, builds confidence), then C, G, F, A (big; NVIDIA reviews A and G once reachable).
