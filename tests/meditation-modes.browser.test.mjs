@@ -127,14 +127,14 @@ test('tai chi stance: existing core/balance stance hold, stance link, exit mid-h
 
 test('always-visible exits and reduced motion: Close stays pinned when scrolled, Esc closes, breathing cue stays visible',async()=>{
  const {context,page}=await openRoom(browser,{reducedMotion:'reduce'});
- assert.equal(await page.locator('.breathing-ring').evaluate(el=>getComputedStyle(el).animationName),'none');
+ assert.equal(await page.locator('.breathing-ring').count(),0,'no breathing circle; the cue is the small counter chip');
  await start(page,'wim-hof');
  await page.locator('.meditation-panel').evaluate(d=>d.scrollTo(0,d.scrollHeight));
  const close=await page.locator('[data-meditation-close]').boundingBox();assert.ok(close.y>=0&&close.y<80,'Close pinned at top after scrolling');
  await shot(page,'09-reduced-motion-scrolled');
  // Reduced motion: no per-breath flicker, but the caption still follows the hold and the recovery.
  assert.match(await caption(page),/comfortable|shoulders/i);
- await page.clock.runFor(holdStart+1000);assert.equal(await phase(page),'optional-hold');assert.match(await caption(page),/never force.*breathe normally/i);assert.equal(await page.locator('.breathing-ring').isVisible(),true);
+ await page.clock.runFor(holdStart+1000);assert.equal(await phase(page),'optional-hold');assert.match(await caption(page),/never force.*breathe normally/i);assert.equal(await page.locator('[data-breath-direction]').isVisible(),true,'the breathing cue chip stays visible');
  await page.clock.runFor(holdMs);assert.equal(await phase(page),'recovery');assert.match(await caption(page),/breathe|easy|gentl|stop|skip/i);
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false);

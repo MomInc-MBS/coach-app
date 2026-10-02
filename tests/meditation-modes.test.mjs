@@ -15,7 +15,7 @@ test('two modes live in one data config, flagged pending wellness review, seated
  assert.equal(PENDING_WELLNESS_REVIEW,true);
  assert.equal(BREATHING_MODES['wim-hof'].seatedOnly,true);
  assert.equal(BREATHING_MODES['tai-chi'].seatedOnly,false);
- assert.match(SEATED_ONLY_NOTICE,/seated or lying down/);for(const word of [/standing/,/driving/,/water/])assert.match(SEATED_ONLY_NOTICE,word);
+ assert.match(SEATED_ONLY_NOTICE,/seated or lying down/);for(const word of [/driving/,/water/])assert.match(SEATED_ONLY_NOTICE,word);
  assert.match(NO_MEDICAL_CLAIM,/not medical/);assert.doesNotMatch(NO_MEDICAL_CLAIM,/cure|treats|heal|boost|immun/i);
  for(const mode of Object.values(BREATHING_MODES))for(const [key,value] of Object.entries(mode))if(key.endsWith('Ms')||key==='rounds'||key==='breathsPerRound')assert.ok(Number.isFinite(value)&&value>0,`${mode.id}.${key}`);
 });

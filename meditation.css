@@ -271,6 +271,23 @@
 .meditation-panel .meditation-speech{opacity:0}.meditation-panel .meditation-speech.bubble{animation:bubble 5s ease forwards}@keyframes bubble{0%{opacity:0}10%,90%{opacity:1}100%{opacity:0}}
 /* R18 A6: the four-legged coach behind the waterfall leaps out through the water at the viewer (700 ms), then the dialog closes */
 .meditation-panel.coach-leap .meditation-mid{z-index:4;opacity:1!important}.meditation-panel.coach-leap .meditation-coach{animation:coach-leap .7s cubic-bezier(.4,0,.8,.6) forwards}.meditation-panel.coach-leap .meditation-far{animation:coach-splash .7s ease-out}
-@keyframes coach-leap{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-10%) scale(1.5)}70%{opacity:1}100%{transform:translateY(6%) scale(4.2);opacity:.15}}@keyframes coach-splash{40%{filter:brightness(1.7) saturate(1.3)}}
+@keyframes coach-leap{0%{transform:translateY(0) scale(1);opacity:.45}35%{transform:translateY(-8%) scale(1.9);opacity:.85}70%{transform:translateY(4%) scale(3.6);opacity:.95}100%{transform:translateY(14%) scale(6);opacity:0}}@keyframes coach-splash{40%{filter:brightness(1.7) saturate(1.3)}}
 /* R18 A3: while a session runs the controls sit at the top, so the seated character (the centre of the colour circle) and the counter stay visible. */
-.meditation-panel:has([data-breath-run]:not([hidden])) .breathing-session{top:56px;bottom:auto}
+@media(orientation:portrait){.meditation-panel:has([data-breath-run]:not([hidden])) .breathing-session{top:56px;bottom:auto}}
+/* R18 polish: a clear scene. No platform diamond; the coach is a solid dark shadow; the counter is a small chip; the top panel fades after Accept. */
+.meditation-panel .meditation-platform{display:none}
+.meditation-panel .meditation-coach{left:14%;right:14%;bottom:34%;height:36%;filter:brightness(0);opacity:.45}
+.meditation-panel .meditation-coach .coach-pixel{filter:brightness(0)}
+.meditation-panel .breath-hud{left:auto;right:5%;width:auto;bottom:3%;display:flex;gap:8px;align-items:center;justify-content:flex-end;pointer-events:none}
+.meditation-panel .breath-hud .breath-count{position:static!important;transform:none!important;font:700 14px/1 ui-monospace,monospace!important;letter-spacing:0;text-shadow:1px 1px #000;order:2}
+.meditation-panel .breath-hud [data-session-clock]{position:static!important;transform:none!important;font-size:14px!important;padding:3px 8px;box-shadow:none;order:1}
+.meditation-panel .breath-hud .breath-direction{position:static!important;transform:none!important;font-size:11px!important;order:3}
+.meditation-panel .breath-hud .breathing-ring-stop{order:4;width:auto;height:auto;padding:3px 8px;border:2px solid #fff;background:#000;color:#fff;font:700 12px ui-monospace,monospace;transform:none!important}.meditation-panel .breath-hud .breathing-ring-stop::before{content:"Exit"}
+.meditation-panel .breathing-session{transition:opacity .6s ease}.meditation-panel.hud-calm .breathing-session{opacity:.07}
+/* leap splash: a burst of water drops from the middle of the falls */
+.meditation-panel.coach-leap .meditation-stage::before{content:'';position:absolute;left:50%;top:48%;width:10px;height:10px;margin:-5px;border-radius:50%;z-index:6;pointer-events:none;background:#e9fbff;box-shadow:-60px -30px #bff3ff,60px -30px #e9fbff,-90px 10px #7fe3f5,90px 10px #bff3ff,-40px 50px #e9fbff,40px 50px #7fe3f5,0 -70px #bff3ff,-20px 80px #bff3ff,25px -55px #e9fbff,-75px -65px #7fe3f5,80px -60px #bff3ff;animation:coach-drops .7s ease-out forwards}
+@keyframes coach-drops{from{transform:scale(.2);opacity:1}to{transform:scale(3.2);opacity:0}}
+.meditation-panel.coach-leap .breathing-session{opacity:0;pointer-events:none}
+/* in the routed room the dock sits inside the panel: lift the chip and the character above it */
+.meditation-panel:has(>#coachDock) .breath-hud{bottom:calc(var(--myr5-bar) + 6px)}.meditation-panel:has(>#coachDock) .meditation-character{bottom:calc(6% + var(--myr5-bar))!important}
+@media(orientation:landscape){.meditation-panel .breath-hud{left:30%;right:auto}}.meditation-panel .breath-hud .breathing-ring-stop{min-width:44px;min-height:32px}

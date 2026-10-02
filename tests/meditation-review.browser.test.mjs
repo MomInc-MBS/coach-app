@@ -11,7 +11,8 @@ const beforeHold=()=>{let ms=0;for(const phase of buildScript('wim-hof')){if(pha
 // Reuse the existing source-backed scene fixture, including account receipts and coach calls.
 const fixture=await readFile(new URL('./meditation-scene.browser.test.mjs',import.meta.url),'utf8');
 const html=fixture.match(/const PAGE=`([\s\S]*?)`;/)[1].replace('mountMeditation({api,getAccount','mountMeditation({api,onComplete:async()=>{window.__completionEntered=true;if(window.__completionGate)await window.__completionGate;},getAccount');
-const routedHtml=html.replace('<footer class="crew-footer"></footer>','<footer id="coachDock" class="coach-dock crew-footer"><button data-route="pod">Pod</button><button data-route="meditate">Meditate</button></footer>')
+const routedHtml=html.replace('<link rel="stylesheet" href="/launch.css">','<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script><link rel="stylesheet" href="/launch.css">')
+ .replace('<footer class="crew-footer"></footer>','<footer id="coachDock" class="coach-dock crew-footer"><button data-route="pod">Pod</button><button data-route="meditate">Meditate</button></footer>')
  .replace("import {mountMeditation} from '/meditation.mjs';","import {mountMeditation} from '/meditation.mjs'; import {mountRoutes} from '/modules/routes.mjs';")
  .replace('window.__ready=true;','mountRoutes();window.__ready=true;');
 const root=resolve('.'),shots=resolve('.frames/meditation-review');
@@ -34,7 +35,7 @@ async function room(viewport={width:375,height:812},{reducedMotion='no-preferenc
  await page.clock.install({time:new Date('2026-09-22T12:00:00Z')});
  await page.goto(base+(integrated?'/__review-route__':'/__review__'));await page.waitForFunction(()=>window.__ready);
  await beforeOpen?.(page);
- if(integrated){await page.evaluate(()=>window.myr5Routes.go('meditate'));await page.locator('.meditation-panel[data-route="meditate"]').waitFor();}else await page.locator('.meditation-entry').click();
+ if(integrated){await page.evaluate(()=>window.myr5Routes.go('meditate'));await page.locator('.meditation-panel[data-route="meditate"]').waitFor();await page.addStyleTag({content:'.portal-peer-ui{display:none!important}/* the portal frame tilt chip is out of scope here */'});}else await page.locator('.meditation-entry').click();
  return {context,page};
 }
 async function start(page,mode){await page.locator(`[data-mode="${mode}"]`).click();if(mode==='wim-hof')await page.locator('[data-seated-accept]').click();await page.waitForFunction(()=>/remaining/.test(document.querySelector('[data-status]').textContent));await page.clock.runFor(250);}
@@ -45,13 +46,13 @@ async function visibleAvatarBounds(page){return page.locator('.meditation-charac
  if(maxX<0)throw Error('The player avatar canvas is empty');const r=canvas.getBoundingClientRect();if(!r.width||!r.height)throw Error('The player avatar canvas is hidden');return {x:r.x+minX*r.width/width,y:r.y+minY*r.height/height,width:(maxX-minX+1)*r.width/width,height:(maxY-minY+1)*r.height/height};
 });}
 
-test('the room renders the saved player Gala avatar at its native pixel resolution in both poses',async()=>{
+test('the room renders the saved player Gala avatar at its native pixel resolution, seated only',async()=>{
  const {context,page}=await room({width:375,height:812},{integrated:true,beforeOpen:page=>page.evaluate(()=>{
   const A=window.GalaAvatar,look=A.normalize({...structuredClone(A.defaultLook),name:'Review player look',dye:3});localStorage.setItem('mominc-avatar-v1',JSON.stringify(look));window.__avatarDraws=[];const draw=A.draw;A.draw=(canvas,look,options)=>{window.__avatarDraws.push({look:structuredClone(look),options:structuredClone(options)});return draw(canvas,look,options);};
  })});
  const canvas=page.locator('.meditation-character canvas');assert.equal(await canvas.isVisible(),true);assert.deepEqual(await canvas.evaluate(el=>[el.width,el.height]),[64,96]);assert.equal(await canvas.evaluate(el=>getComputedStyle(el).imageRendering),'pixelated');
- const seated=await canvas.evaluate(el=>el.toDataURL());await visibleAvatarBounds(page);await page.locator('[data-pose="standing"]').click();assert.notEqual(await canvas.evaluate(el=>el.toDataURL()),seated,'standing pose changes the rendered pixels');
- const draws=await page.evaluate(()=>window.__avatarDraws);assert.ok(draws.some(draw=>draw.look.name==='Review player look'&&draw.look.dye===3&&draw.options.pose.meditate));assert.ok(draws.some(draw=>draw.look.name==='Review player look'&&draw.look.dye===3&&draw.options.pose.meditationStanding));await context.close();
+ await visibleAvatarBounds(page);assert.equal(await page.locator('[data-pose]').count(),0,'the standing pose selector is gone');
+ const draws=await page.evaluate(()=>window.__avatarDraws);assert.ok(draws.some(draw=>draw.look.name==='Review player look'&&draw.look.dye===3&&draw.options.pose.meditate));assert.ok(!draws.some(draw=>draw.options.pose.meditationStanding),'the room never draws the standing pose');await context.close();
 });
 
 test('the accessible circle exits without a character poke, while five avatar taps preserve Tub Flight and its completion link',async()=>{
@@ -68,9 +69,8 @@ test('the accessible circle exits without a character poke, while five avatar ta
 });
 
 test('single round runs 210 active seconds, freezes when paused/hidden, and saves once',async()=>{
- const {context,page}=await room();await page.locator('[data-pose="standing"]').click();await start(page,'wim-hof');
+ const {context,page}=await room();await start(page,'wim-hof');
  assert.equal(await page.locator('progress').getAttribute('max'),'210000');
- assert.equal(await page.locator('[data-meditation-scene]').getAttribute('data-pose'),'standing');
  await page.clock.runFor(19000);const before=await page.locator('[data-session-clock]').textContent(),countBefore=await page.locator('[data-breath-count]').textContent();
  await page.locator('[data-breath-pause]').click();await page.clock.runFor(20000);assert.equal(await page.locator('[data-session-clock]').textContent(),before);assert.equal(await page.locator('[data-breath-count]').textContent(),countBefore,'phase countdown pauses with session clock');
  await page.locator('[data-breath-pause]').click();await page.clock.runFor(250);
@@ -80,22 +80,22 @@ test('single round runs 210 active seconds, freezes when paused/hidden, and save
  await page.clock.runFor(10000);assert.equal(await calls(page),1);await context.close();
 });
 
-test('WHM instructs seated practice with independent character pose; ring follows phases',async()=>{
- const {context,page}=await room();await page.addStyleTag({content:'.meditation-panel .breathing-orbit .breathing-ring{transition:none!important}'});await page.locator('[data-pose="standing"]').click();await start(page,'wim-hof');assert.match(await page.locator('[data-seated]').textContent(),/seated|lying/i);assert.equal(await page.locator('[data-meditation-scene]').getAttribute('data-pose'),'standing');
+test('WHM instructs seated practice; the counter chip follows phases',async()=>{
+ const {context,page}=await room();await start(page,'wim-hof');assert.match(await page.locator('[data-seated]').textContent(),/seated|lying/i);
  assert.equal(await page.locator('.coach-pixel').isHidden(),true,'successful live coach preview hides the illustrative fallback');
  const coachLog=await page.evaluate(()=>window.__creature),previewIndex=coachLog.findIndex(([name,parts])=>name==='preview'&&parts),sleepIndex=coachLog.findLastIndex(([name,sleeping])=>name==='sleep'&&sleeping===true);assert.ok(sleepIndex>previewIndex,'sleep is restored after loading the preview rig');
- const scale=()=>page.locator('.breathing-ring').evaluate(el=>Number(getComputedStyle(el).transform.match(/matrix\(([^,]+)/)?.[1]||1));
- await page.clock.runFor(guided.settleMs);const initial=await scale();await page.clock.runFor(guided.inhaleMs/2);const expanded=await scale();assert.ok(expanded>initial,'ring expands during inhale');
- await page.clock.runFor(guided.inhaleMs/2+250);assert.equal(await page.locator('[data-breath-count]').getAttribute('data-breath'),'out');const exhale=await scale();await page.clock.runFor(guided.exhaleMs/2);assert.ok(await scale()<exhale,'ring contracts during exhale');
+ const scale=()=>page.locator('.breath-hud').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--breath-progress')));
+ await page.clock.runFor(guided.settleMs);const initial=await scale();await page.clock.runFor(guided.inhaleMs/2);const expanded=await scale();assert.ok(expanded>initial,'breath progress rises during inhale');
+ await page.clock.runFor(guided.inhaleMs/2+250);assert.equal(await page.locator('[data-breath-count]').getAttribute('data-breath'),'out');const exhale=await scale();await page.clock.runFor(guided.exhaleMs/2);assert.ok(await scale()<exhale,'breath progress falls during exhale');
  const advanceTo=async time=>{const elapsed=await page.locator('progress').evaluate(el=>el.value);await page.clock.runFor(time-elapsed);};
- await advanceTo(beforeHold()-guided.transitionMs+100);assert.equal(await page.locator('[data-breath-direction]').textContent(),'OUT');const releaseStart=await scale();await page.clock.runFor(1000);assert.ok(await scale()<releaseStart,'final release contracts the ring');
- await advanceTo(beforeHold()+guided.holdMs+100);assert.equal(await page.locator('[data-breath-direction]').textContent(),'IN');const recoveryStart=await scale();await page.clock.runFor(1000);assert.ok(await scale()>recoveryStart,'recovery inhale expands the ring');
+ await advanceTo(beforeHold()-guided.transitionMs+100);assert.equal(await page.locator('[data-breath-direction]').textContent(),'OUT');const releaseStart=await scale();await page.clock.runFor(1000);assert.ok(await scale()<releaseStart,'final release falls');
+ await advanceTo(beforeHold()+guided.holdMs+100);assert.equal(await page.locator('[data-breath-direction]').textContent(),'IN');const recoveryStart=await scale();await page.clock.runFor(1000);assert.ok(await scale()>recoveryStart,'recovery inhale rises');
  await page.locator('[data-meditation-close]').click();await page.clock.runFor(60000);assert.equal(await calls(page),0);assert.equal(await page.locator('#coachMount > .myr5-companion-card').count(),1);await context.close();
 });
 
 for(const reducedMotion of ['no-preference','reduce'])test(`breathing cue remains phase-driven with motion preference ${reducedMotion}`,async()=>{
- const {context,page}=await room({width:375,height:748},{reducedMotion});await page.addStyleTag({content:'.meditation-panel .breathing-orbit .breathing-ring{transition:none!important}'});await start(page,'wim-hof');await page.clock.runFor(guided.settleMs);
- const scale=()=>page.locator('.breathing-ring').evaluate(el=>Number(getComputedStyle(el).transform.match(/matrix\(([^,]+)/)?.[1]||1));
+ const {context,page}=await room({width:375,height:748},{reducedMotion});await start(page,'wim-hof');await page.clock.runFor(guided.settleMs);
+ const scale=()=>page.locator('.breath-hud').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--breath-progress')));
  const inhaleStart=await scale();await page.clock.runFor(guided.inhaleMs/2);assert.ok(await scale()>inhaleStart,'inhale visibly expands');
  await page.clock.runFor(guided.inhaleMs/2+100);const exhaleStart=await scale();await page.clock.runFor(guided.exhaleMs/2);assert.ok(await scale()<exhaleStart,'exhale visibly contracts');await context.close();
 });
@@ -133,17 +133,16 @@ test('returning from a cached page restores a usable room and account fencing',a
 for(const {width,height,integrated=false} of [{width:375,height:812},{width:375,height:748},{width:375,height:667},{width:375,height:603},{width:812,height:375},{width:375,height:812,integrated:true},{width:375,height:667,integrated:true},{width:812,height:375,integrated:true}])test(`controls fit ${width}x${height}${integrated?' integrated route':''}`,async()=>{
  const viewport={width,height},size=`${width}x${height}${integrated?'-route':''}`;
  const {context,page}=await room(viewport,{integrated});
- if(integrated){const panelBox=await page.locator('.meditation-panel').boundingBox();assert.ok(Math.abs(panelBox.height-(height-64))<1,'real router reserves the 64px dock');assert.equal(await page.locator('.meditation-panel > #coachDock').count(),1,'router adopts the real dock into the room');}
+ if(integrated){const panelBox=await page.locator('.meditation-panel').boundingBox();assert.ok(panelBox.y+panelBox.height<=height+1&&panelBox.height<height,'the framed room stays inside the viewport with the dock'+JSON.stringify(panelBox));assert.equal(await page.locator('.meditation-panel > #coachDock').count(),1,'router adopts the real dock into the room');}
  await page.screenshot({path:resolve(shots,`choice-${size}.png`)});
  const choiceErrors=[];for(const mode of ['wim-hof','tai-chi']){const locator=page.locator(`[data-mode="${mode}"]`),box=await locator.boundingBox();if(!(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height))choiceErrors.push(`${mode} outside viewport: ${JSON.stringify(box)}`);if(!await locator.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}))choiceErrors.push(`${mode} covered by another choice`);}
  await start(page,'wim-hof');await page.screenshot({path:resolve(shots,`active-${size}.png`)});
- const standingRoom=await room(viewport,{integrated});await standingRoom.page.locator('[data-pose="standing"]').click();await start(standingRoom.page,'wim-hof');await standingRoom.page.screenshot({path:resolve(shots,`standing-${size}.png`)});await standingRoom.context.close();
+
  assert.deepEqual(choiceErrors,[]);
  const landscape=width>height,captionMin=landscape?24:2*Math.max(12,Math.min(19,width*.037)),phaseMin=landscape?20:24;
  for(const [selector,minSize] of [['.meditation-speech',captionMin],['[data-phase-label]',phaseMin]]){const typography=await page.locator(selector).evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),scroll:[el.scrollWidth,el.scrollHeight],client:[el.clientWidth,el.clientHeight],overflow:getComputedStyle(el).overflow,clipped:el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1}));assert.ok(typography.size>=minSize-.05,`${selector} guide text is at least twice its previous size (${minSize}px)`);assert.equal(typography.clipped,false,JSON.stringify(typography)+`${selector} enlarged text fits without clipping`);}
- for(const selector of ['[data-breath-exit]','[data-breath-pause]','[data-meditation-close]','[data-breath-count]','[data-session-clock]']){const locator=page.locator(selector),box=await locator.boundingBox();assert.ok(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height,`${selector} within viewport`);if(selector.includes('exit')||selector.includes('pause')||selector.includes('close'))assert.equal(await locator.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,`${selector} is reachable`);}
- const clockBox=await page.locator('[data-session-clock]').boundingBox(),ringBox=await page.locator('.breathing-ring').boundingBox();assert.ok(Math.abs(clockBox.x+clockBox.width/2-ringBox.x-ringBox.width/2)<10,'session timer horizontally centered in ring');assert.ok(Math.abs(clockBox.y+clockBox.height/2-ringBox.y-ringBox.height/2)<10,'session timer vertically centered in ring');
- assert.ok(ringBox.width>100&&ringBox.height>100,'breathing circle has a substantial visible size');
+ for(const selector of ['[data-breath-exit]','[data-breath-pause]','[data-meditation-close]','[data-breath-count]','[data-session-clock]']){const locator=page.locator(selector),box=await locator.boundingBox();assert.ok(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height,`${selector} within viewport`);if(selector.includes('exit')||selector.includes('pause')||selector.includes('close'))assert.equal(await locator.evaluate(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return el.contains(hit)||('covered by '+hit?.className+' '+JSON.stringify(r));}),true,`${selector} is reachable`);}
+ const clockBox=await page.locator('[data-session-clock]').boundingBox();assert.equal(await page.locator('.breathing-ring,.meditation-platform').evaluateAll(els=>els.every(el=>getComputedStyle(el).display==='none')),true,'no ring or diamond covers the scene');assert.ok(clockBox.width<120&&clockBox.height<40,'the counter is a small chip');assert.ok(clockBox.y>height*.5,'the counter sits low');
  const overlaps=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
  const visibleFigure=await visibleAvatarBounds(page);
  assert.equal(overlaps(clockBox,visibleFigure),false,'foreground figure leaves center timer readable');

@@ -57,6 +57,10 @@ test('seated overlay holds the clock until Accept, then fades out and is removed
  await page.clock.runFor(G.breathMs-15*(G.inhaleMs+G.exhaleMs)+500);await settle(page);await page.waitForTimeout(2800);
  assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('meditation-colour')),'full colour at the final breath');
  await page.screenshot({path:'.frames/r18-reveal-100.png'});
+ const panel=()=>page.locator('.breathing-session').evaluate(el=>+getComputedStyle(el).opacity);
+ assert.ok(await panel()<.2,'the top panel is near-invisible after Accept');
+ await page.mouse.click(187,500);await page.waitForTimeout(900);assert.equal(await panel(),1,'a tap brings the panel back');
+ await page.screenshot({path:'.frames/r18-panel-tap.png'});
  await context.close();
 });
 
@@ -74,7 +78,7 @@ test('early exit: the coach leaps for ~700 ms, then the dialog closes; nothing s
  await page.locator('[data-mode="tai-chi"]').click();await page.clock.runFor(3000);
  await page.locator('[data-breath-exit]').click();
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-leap')&&d.open),true);
- await page.locator('.meditation-coach').evaluate(el=>{const a=el.getAnimations().find(x=>x.animationName==='coach-leap');a.pause();a.currentTime=350;}); // freeze the 700 ms leap at its midpoint
+ await page.evaluate(()=>document.getAnimations().filter(x=>['coach-leap','coach-drops'].includes(x.animationName)).forEach(x=>{x.pause();x.currentTime=350;})); // freeze the 700 ms leap at its midpoint
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),true);await page.screenshot({path:'.frames/r18-leap-mid.png'});
  await page.clock.runFor(800);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'dialog closes after the leap');
  await context.close();

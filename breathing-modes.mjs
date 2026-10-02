@@ -26,7 +26,7 @@ export const GENTLE_DIALOGUE = Object.freeze([
  'Return to normal.',
  'Stop or skip anytime.'
 ]);
-export const SEATED_ONLY_NOTICE = 'Practice seated or lying down. The standing character pose is visual only, not a standing practice. Never while driving or in or near water.';
+export const SEATED_ONLY_NOTICE = 'Practice seated or lying down. Never while driving or in or near water.';
 export const NO_MEDICAL_CLAIM = 'A breathing practice, not medical treatment or advice. Stop any time, and breathe normally if you feel dizzy or unwell.';
 
 const stances = ids => Object.freeze(ids.filter(id => EXERCISES[id]).map(id => Object.freeze({id, name: EXERCISES[id].name, cue: EXERCISES[id].cue})));

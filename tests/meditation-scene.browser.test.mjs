@@ -76,27 +76,21 @@ test('open: three black-and-white peering layers, the big meditation coach borro
  const layout=await page.evaluate(()=>{
   const panel=document.querySelector('.meditation-panel'),character=panel.querySelector('.meditation-character');
   const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};};
-  return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,far:getComputedStyle(panel.querySelector('.meditation-far')).backgroundColor,
-   character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]')),
-   orbit:rect(panel.querySelector('.breathing-orbit')),timer:rect(panel.querySelector('[data-session-clock]')),count:rect(panel.querySelector('[data-breath-count]'))};
+  return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]')),
+   rings:panel.querySelectorAll('.breathing-ring,.breathing-orbit').length,platform:getComputedStyle(panel.querySelector('.meditation-platform')).display,coach:getComputedStyle(panel.querySelector('.meditation-coach')).filter};
  });
  assert.deepEqual(layout.room,{left:0,right:375,top:0,bottom:812},'the room fills the phone viewport');
- assert.equal(layout.background,'rgb(0, 0, 0)');assert.equal(layout.far,'rgb(0, 0, 0)');
+ assert.equal(layout.background,'rgb(0, 0, 0)');assert.equal(layout.rings,0,'no breathing circle');assert.equal(layout.platform,'none','no diamond panel in the scene');assert.match(layout.coach,/brightness\(0\)/,'the coach is a solid dark shadow');
  assert.ok(layout.left.bottom<=812&&layout.right.bottom<=812,'both compact choices fit on screen');
- assert.ok(layout.left.top>=layout.character.bottom&&layout.right.top>=layout.character.bottom,'exercise choices sit below the foreground character');
- assert.ok(Math.abs((layout.timer.left+layout.timer.right)/2-(layout.orbit.left+layout.orbit.right)/2)<2,'session timer is centered on the breathing circle');
- assert.ok(Math.abs((layout.timer.top+layout.timer.bottom)/2-(layout.orbit.top+layout.orbit.bottom)/2)<2,'session timer sits exactly at the circle center');
- assert.ok(layout.count.top<layout.timer.top,'large breath count sits above the centered timer');
- assert.ok(layout.left.top>=0&&layout.left.bottom<=812&&layout.right.top>=0&&layout.right.bottom<=812,'both choices fit on screen');
  const open=await layers(page);
  assert.deepEqual(open.map(l=>l.depth),['far','mid','near']);
  assert.match(await page.locator('.meditation-grey').evaluate(el=>getComputedStyle(el).backdropFilter),/^grayscale\(1\)/,'the room starts black and white (one veil over the stack, no inherited filter)');
  assert.equal(await page.locator('.meditation-coach .myr5-companion-card').count(),1,'the live coach card sits in the mid layer');
  assert.equal(await page.locator('.room-art').count(),1,'offline pixel landmarks are visible in the far layer');
  assert.equal(await page.locator('.coach-pixel').count(),1,'the four-legged pixel coach is present behind the character');
- assert.equal(await page.locator('.breathing-orbit').count(),1,'the circle contains a large count and the session timer');
+ assert.equal(await page.locator('.breath-hud [data-session-clock]').count(),1,'the counter is a small chip in the HUD');
  assert.deepEqual(await page.locator('.meditation-character canvas').evaluate(canvas=>[canvas.width,canvas.height]),[64,96],'the player Gala avatar retains its native pixel resolution');
- assert.equal(await page.locator('[data-pose-choice] [data-pose="seated"]').count(),1);assert.equal(await page.locator('[data-pose-choice] [data-pose="standing"]').count(),1,'both cosmetic character poses remain selectable');
+ assert.equal(await page.locator('[data-pose]').count(),0,'no pose selector: the character is always seated');
  assert.equal(await page.evaluate(()=>document.body.dataset.shipView),'true','pod.mjs leaves a borrowed card alone');
  const log=await creature(page);
  for(const call of [['stage','overlay'],['sleep',true],['preview',{body:DOG,headFrom:DOG,armsFrom:DOG,feetFrom:DOG}]])assert.ok(called(log,...call),JSON.stringify(call));
@@ -112,9 +106,8 @@ test('open: three black-and-white peering layers, the big meditation coach borro
 });
 
 test('one 3:30 breathing round counts breaths, retains pause time, and lets the user skip the optional hold',async()=>{
- const {context,page}=await openRoom();await page.locator('[data-pose="standing"]').click();
- await page.locator('[data-mode="wim-hof"]').click();await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:30 remaining');
- assert.equal(await page.locator('[data-meditation-scene]').getAttribute('data-pose'),'standing','pose is cosmetic and independent of the seated breathing instruction');
+ const {context,page}=await openRoom();
+ await page.locator('[data-mode="wim-hof"]').click();await page.locator('[data-seated-accept]').click();await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:30 remaining');
  const remaining=async()=>{const [m,s]=(await page.locator('[data-session-clock]').textContent()).split(':').map(Number);return m*60+s;};
  await page.clock.runFor(5000);assert.ok([204,205,206].includes(await remaining()));
  const pausedAt=await remaining();await page.locator('[data-breath-pause]').click();await page.clock.runFor(10000);assert.ok(Math.abs(await remaining()-pausedAt)<=1,'pause retains elapsed session time');

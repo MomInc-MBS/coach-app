@@ -31,7 +31,10 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  scene.append(controls);
  // R18 A4: the seated warning is a full-scene overlay; nothing ticks until Accept, then it fades out (600 ms) and is hidden.
  const seated=document.createElement('div');seated.className='breath-seated-overlay';seated.dataset.seated='';seated.hidden=true;seated.innerHTML='<div role="alertdialog" aria-label="Before you begin"><p class="breath-seated-notice">'+SEATED_ONLY_NOTICE+'</p><button type="button" data-seated-accept>Accept</button></div>';dialog.append(seated);
- seated.querySelector('button').onclick=()=>{held=false;seated.classList.add('fading');setTimeout(()=>{seated.hidden=true;seated.classList.remove('fading');},600);};
+ // R18 polish: after Accept the top panel fades to near-invisible; any tap brings it back for 4 s.
+ let calmTimer=0;const calm=on=>dialog.classList.toggle('hud-calm',on),rest=()=>{clearTimeout(calmTimer);calmTimer=setTimeout(()=>ticket&&!held&&calm(true),4000);};
+ dialog.addEventListener('pointerdown',()=>{if(ticket&&!held){calm(false);rest();}},true);
+ seated.querySelector('button').onclick=()=>{held=false;if(ticket)calm(true);seated.classList.add('fading');setTimeout(()=>{seated.hidden=true;seated.classList.remove('fading');},600);};
  controls.querySelector('.breath-actions').append(pause);
  const $=selector=>controls.querySelector(selector);
  const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]');
@@ -57,7 +60,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  }
  function reset({keepPose=false}={}){
   run++;clock=new BreathingSession();duration=BREATHING_MS;ticket=null;saving=false;finished=false;awaitingRetry=false;script=null;
-  if(caption&&speech)bubble(speech,IDLE_CAPTION);caption='';totalBreaths=0;shown=-1;held=false;
+  if(caption&&speech)bubble(speech,IDLE_CAPTION);caption='';totalBreaths=0;shown=-1;held=false;clearTimeout(calmTimer);dialog.classList.remove('hud-calm');
   bar.max=BREATHING_MS;bar.value=0;sessionClock&&(sessionClock.textContent='3:30');countEl&&(countEl.textContent='—');directionEl&&(directionEl.textContent='READY');pause.disabled=true;pause.hidden=true;pause.textContent='Pause';dialog.classList.remove('breathing-paused');
   modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;skipHold.hidden=true;stanceLink.hidden=true;runEl.dataset.phase='';
   if(stopCircle)stopCircle.hidden=true;phaseEl.textContent='';statusEl.textContent=DEFAULT_STATUS;dialog.classList.remove('meditation-colour');
@@ -80,7 +83,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   try{
    const value=await actions.startBreathing(getAccount?.());
    if(current!==run||!transitions.isCurrent(value.transitionTicket))return;
-   ticket=value;clock=new BreathingSession(duration);pause.disabled=false;pause.hidden=false;if(stopCircle)stopCircle.hidden=false;statusEl.textContent=formatTime(duration)+' remaining';
+   ticket=value;clock=new BreathingSession(duration);pause.disabled=false;pause.hidden=false;if(stopCircle)stopCircle.hidden=false;statusEl.textContent=formatTime(duration)+' remaining';if(!held)calm(true);
   }catch(error){if(current===run){reset();statusEl.textContent=error.message;}}
  }
  for(const id of MODE_IDS)modesEl.querySelector(`[data-mode="${id}"]`).onclick=()=>startSession(id);
