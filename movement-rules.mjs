@@ -34,7 +34,7 @@ const push={need:'s e w h',gate:['horizontal >= .5','wristDrop >= .12'],up:['s-e
 const incline={...push,gate:['horizontal >= .28','wristDrop >= .12']};
 const squat={gate:['core','hipDrop >= .55'],travel:.25};
 const hinge={need:'s h k',gate:['kneeDrop >= .35'],up:['s-h-k > 158'],down:['s-h-k < 135'],metric:'s-h-k 180 -65'};
-const plank={need:'s e w h k',gate:['horizontal > .65'],match:['s-h-k > 155','wristDrop > .2','s-e-w > 145']};
+const plank={need:'s e h k',gate:['horizontal > .65'],match:['s-h-k > 155','wristDrop > .2','s-e-w > 145']};
 const raise={gate:[UPPER,'upright'],up:['both h-s-w < 30'],down:['both h-s-w > 75','both s-e-w > 145'],metric:'both h-s-w 0 90'};
 const standing=[LEGS,'upright'],straightLegs=['both kneeOut < .55','both kneeY > .7','spread < 1.2'];
 const balance={gate:standing,either:true,match:['otherKneeOut < .55','otherKneeY > .5','kneeGap > .15','kneeOut > .4']};
@@ -49,7 +49,7 @@ export const RULES={
  hinge,'small-hinge':{...hinge,down:['s-h-k < 155']},
  bridge:{need:'s h k',gate:['horizontal >= .5','kneeDrop < .2','shoulderDrop >= .1'],up:['s-h-k < 145'],down:['s-h-k > 162'],metric:'s-h-k 125 50'},
  plank,'forearm-plank':{...plank,match:['s-h-k > 155','wristDrop > .2','s-e-w > 60','s-e-w < 120']},
- sideplank:{gate:['clear 11 12 23 24 e k'],match:['shoulderStackY > .3','shoulderStackX < .5','horizontal > .7','s-h-k > 153','elbowY > .15']},
+ sideplank:{need:'s e h k',gate:['clear 11 12 23 24 e k'],match:['shoulderStackY > .3','shoulderStackX < .5','horizontal > .7','s-h-k > 153','elbowY > .15']},
  raise,'overhead-reach':{...raise,down:['both h-s-w > 150','both s-e-w > 145'],metric:'both h-s-w 0 160'},
  press:{gate:[UPPER,'upright'],up:['both s-e-w < 115','both wristY < .2'],down:['both wristY < -.65','both s-e-w > 155'],metric:'both h-s-w 0 90'},
  balance,'low-tree':{...balance,match:['otherKneeOut < .55','otherKneeY > .5','kneeGap > .08','kneeOut > .2']},
