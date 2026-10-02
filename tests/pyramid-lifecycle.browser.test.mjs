@@ -1,3 +1,4 @@
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -23,6 +24,7 @@ async function withScanner(run){
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   const context=await browser.newContext({serviceWorkers:'block'});
+  await context.addInitScript(guideSeen);
   await run(context,'http://127.0.0.1:'+server.address().port);
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
@@ -82,7 +84,7 @@ test('reduced motion keeps knobs, glow, lens and released drag steady',async()=>
  const page=await context.newPage();await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base+'/__pyramid__');
  await page.evaluate(async()=>{
   const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;
-  THREE.Scene.prototype.add=function(...args){window.scannerScene=this;return add.apply(this,args);};
+  const scenes=new Set();Object.defineProperty(window,'scannerScene',{configurable:true,get:()=>[...scenes].find(s=>s.getObjectByName('lens'))});THREE.Scene.prototype.add=function(...args){scenes.add(this);return add.apply(this,args);}; // other Scenes (portal boards) add too: the pyramid scene is the one holding the lens
   const {mountPyramidScanner}=await import('/food/pyramid-scanner.mjs');window.scanner=await mountPyramidScanner(document.querySelector('#foodCamera'));THREE.Scene.prototype.add=add;
   window.sampleMotion=()=>new Promise(resolve=>{
    const frames=[];function sample(){const stage=window.scannerScene.children.find(n=>n.isGroup),knob=stage.getObjectByName('knob_0'),lens=stage.getObjectByName('lens');frames.push({stage:stage.matrix.toArray(),knob:knob.matrix.toArray(),glow:knob.material.emissiveIntensity,lens:lens.children[0].material.opacity,rotation:stage.children[0].rotation.y,steam:stage.children[0].getObjectsByProperty('isSprite',true).filter(n=>n.visible&&n.parent.name!=='lens').length});if(frames.length===12)resolve(frames);else requestAnimationFrame(sample);}requestAnimationFrame(sample);
@@ -96,6 +98,8 @@ test('reduced motion keeps knobs, glow, lens and released drag steady',async()=>
  assert.equal(tapped[0].glow,.32,'tapping must still toggle the knob');
  // #34: no meal is logged in this fixture, so the idle halo sits at its brighter "empty" static level under reduced motion.
  for(const frame of tapped){assert.deepEqual(frame,tapped[0]);assert.deepEqual(frame.knob,idle[0].knob);assert.equal(frame.steam,0);assert.equal(frame.lens,.3+.35);}
- await page.mouse.move(210,115);await page.mouse.down();await page.mouse.move(240,115,{steps:3});await page.mouse.up();
+ // Drag from a bare canvas spot found on the live page (the zoom tags and screens moved, so fixed pixels hit a button).
+ const dragBox=await page.evaluate(()=>{const c=document.querySelector('#pyramidScanner canvas'),r=c.getBoundingClientRect();for(let fy=.3;fy<=.9;fy+=.05)for(let fx=.2;fx<=.7;fx+=.05){const x=r.left+r.width*fx,y=r.top+r.height*fy;if(document.elementFromPoint(x,y)===c&&document.elementFromPoint(x+30,y)===c)return {x,y};}return null;});assert(dragBox,'a bare canvas spot to drag on');
+ await page.mouse.move(dragBox.x,dragBox.y);await page.mouse.down();await page.mouse.move(dragBox.x+30,dragBox.y,{steps:3});await page.mouse.up();
  const dragged=await page.evaluate(()=>window.sampleMotion());assert.notEqual(dragged[0].rotation,tapped[0].rotation,'direct rotation stays available');for(const frame of dragged)assert.equal(frame.rotation,dragged[0].rotation,'no inertia after release');
 }));
