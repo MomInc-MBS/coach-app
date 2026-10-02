@@ -1,7 +1,10 @@
 import {readLook,applyLookVars,stripSeq} from './portal-look.mjs';
 
 const BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
-const frameMarkup=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div><div class="portal-standalone-aura" aria-hidden="true"></div>`;
+export const frameMarkup=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div><div class="portal-standalone-aura" aria-hidden="true"></div>`;
+
+/** Applies the saved metal colour and strip colour to a frameMarkup() host (shared with the camera workout). */
+export function paintHousing(chrome,doc=document){const look=readLook();applyLookVars(doc.documentElement,look);chrome.style.setProperty('--portal-strip-glow',`${look.strip}40`);chrome.querySelector('.portal-standalone-aura')?.style.setProperty('--aura',look.strip);const seq=stripSeq(look.strip);for(const [i,channel] of [...chrome.querySelectorAll('.portal-energy>span')].entries()){channel.style.setProperty('--dir',i%2?'180deg':'90deg');channel.firstElementChild.style.background=`repeating-linear-gradient(${i%2?'180deg':'90deg'},${seq.map((color,j)=>`${color} ${j*90}px ${(j+1)*90}px`).join(',')})`;}}
 
 /** A lightweight persistent frame for the separately-loaded coach customizer. */
 export async function mountStandaloneHousing({content=document.querySelector('.editor-shell'),doc=document}={}){
@@ -14,7 +17,7 @@ export async function mountStandaloneHousing({content=document.querySelector('.e
  let chrome=doc.getElementById('portalChrome');if(!chrome){chrome=doc.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');doc.body.append(chrome);}
  chrome.classList.add('portal-standalone');chrome.innerHTML=frameMarkup();
  const face=()=>{const rail=15;for(const [key,value] of Object.entries({left:rail,top:rail,width:Math.max(1,innerWidth-2*rail),height:Math.max(1,innerHeight-2*rail)}))chrome.style.setProperty('--face-'+key,value+'px');};
- const updateLook=()=>{const look=readLook();applyLookVars(doc.documentElement,look);chrome.style.setProperty('--portal-strip-glow',`${look.strip}40`);chrome.querySelector('.portal-standalone-aura')?.style.setProperty('--aura',look.strip);const seq=stripSeq(look.strip);for(const [i,channel] of [...chrome.querySelectorAll('.portal-energy>span')].entries()){channel.style.setProperty('--dir',i%2?'180deg':'90deg');channel.firstElementChild.style.background=`repeating-linear-gradient(${i%2?'180deg':'90deg'},${seq.map((color,j)=>`${color} ${j*90}px ${(j+1)*90}px`).join(',')})`;}};
+ const updateLook=()=>paintHousing(chrome,doc);
  face();updateLook();
  if(chrome.showPopover){if(!chrome.matches(':popover-open'))chrome.showPopover();}else chrome.removeAttribute('popover');
  const reduced=view?.matchMedia?.('(prefers-reduced-motion: reduce)');let raf=0,tx=0,ty=0,x=0,y=0,disposed=false,sensorBase=null;

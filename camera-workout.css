@@ -9,4 +9,8 @@ body[data-camera-workout=true]>:not(#cameraWorkout){display:none!important}
 #cameraWorkout #primary .flip-tile:after{display:none}
 #cameraWorkout #primary .flip-half{background:none;color:#fff}
 #cameraWorkout .camera-workout-counter:focus-visible{outline:3px solid white;outline-offset:4px}
-#cameraWorkout #coachOverlay{position:absolute;inset:0;pointer-events:none;z-index:1}
+#cameraWorkout #coachOverlay{position:absolute;inset:0;pointer-events:none}
+/* Housing frame: edge only, never intercepts input. The counter sits above it; the AR coach overlay above both. */
+#cameraWorkout .camera-workout-housing{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#cameraWorkout .camera-workout-counter{z-index:2}
+#cameraWorkout #coachOverlay{z-index:3}
