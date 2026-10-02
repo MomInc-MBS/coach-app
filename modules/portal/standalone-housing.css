@@ -1,4 +1,5 @@
 :root{--myr5-bar:calc(88px + env(safe-area-inset-bottom))}
+@media(orientation:landscape) and (max-height:500px){:root{--myr5-bar:calc(64px + env(safe-area-inset-bottom))}} /* R20: a lower console on landscape phones, every page alike */
 :is(#portalChrome,#cameraWorkout).portal-standalone{--portal-rail:15px;--pm:var(--portal-metal,#4d3d4f);}
 :is(#portalChrome,#cameraWorkout).portal-standalone .portal-frame{--face-left:15px;--face-top:15px;--face-width:calc(100vw - 30px);--face-height:calc(100dvh - 30px);}
 /* R20: the customizer's housing ends above its dock (the chrome stops at the dock's top edge: portal.css). */

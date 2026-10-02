@@ -289,5 +289,7 @@
 @keyframes coach-drops{from{transform:scale(.2);opacity:1}to{transform:scale(3.2);opacity:0}}
 .meditation-panel.coach-leap .breathing-session{opacity:0;pointer-events:none}
 /* in the routed room the dock sits inside the panel: lift the chip and the character above it */
-.meditation-panel:has(>#coachDock) .breath-hud{bottom:calc(var(--myr5-bar) + 6px)}.meditation-panel:has(>#coachDock) .meditation-character{bottom:calc(6% + var(--myr5-bar))!important}
+/* R20: the room now ends at the 88px console's top edge (R19's 64px bar overlapped its last 24px): lift by 40px to
+   keep the chip and character where they stood on screen. */
+.meditation-panel:has(>#coachDock) .breath-hud{bottom:calc(40px + env(safe-area-inset-bottom) + 6px)}.meditation-panel:has(>#coachDock) .meditation-character{bottom:calc(6% + 40px + env(safe-area-inset-bottom))!important}
 @media(orientation:landscape){.meditation-panel .breath-hud{left:30%;right:auto}}.meditation-panel .breath-hud .breathing-ring-stop{min-width:44px;min-height:32px}
