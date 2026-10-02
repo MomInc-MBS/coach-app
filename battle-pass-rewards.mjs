@@ -169,6 +169,10 @@ function packCosmetics(levels,bossId){
   return [reward];
  });
  levels[3].push(rewardPack('rare',`${bossId}:L4:64-bit`));
+ // R20: L2 (boss texture) and L5 (Boss beaten) otherwise show no pack on the board.
+ const hasPack=level=>level.some(reward=>reward.kind==='reward-pack');
+ if(!hasPack(levels[1]))levels[1].push(rewardPack('uncommon',`${bossId}:L2:bonus`));
+ if(!hasPack(levels[4]))levels[4].push(rewardPack('legendary',`${bossId}:L5:bonus`));
  return levels;
 }
 const find=(list,id)=>list.find(row=>row[0]===id);

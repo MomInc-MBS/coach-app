@@ -86,7 +86,7 @@ test('D32 palette fill becomes Uncommon packs in original slots',()=>{
  assert.equal(filled.length,30);
  for(const boss of filled){
   const levels=bossRewards(boss.id);
-  assert.deepEqual(levels.map(items=>items.filter(item=>item.tier==='uncommon').length),[1,0,1,1,0],boss.id);
+  assert.deepEqual(levels.map(items=>items.filter(item=>item.tier==='uncommon').length),[1,1,1,1,0],boss.id);
   assert(levels[3].some(item=>item.tier==='rare'),boss.id);
   assert(levels[1].some(item=>item.kind==='boss-texture'),boss.id);
   assert(!levels[4].some(item=>item.kind==='boss-skin'),boss.id);
@@ -133,4 +133,16 @@ test('step source: live coachProgress, else the cached progress snapshot',()=>{
  globalThis.coachProgress={circuit:{tracks:steps({cardio:20})}};
  assert.equal(loadProgress()['stalk-1'],4);
  delete globalThis.coachProgress;
+});
+
+test('R20: every boss shows a pack on level 2 (Uncommon) and level 5 (Legendary), granted once',()=>{
+ for(const boss of BOSSES){
+  const levels=bossRewards(boss.id);
+  assert(levels[1].some(item=>item.kind==='reward-pack'&&item.tier==='uncommon'),boss.id);
+  assert(levels[4].some(item=>item.kind==='reward-pack'&&item.tier==='legendary'),boss.id);
+  const ids=levels.flat().filter(item=>item.kind==='reward-pack').map(item=>item.id);
+  assert.equal(new Set(ids).size,ids.length,boss.id);
+ }
+ assert.equal(bossRewards('warden-1')[1].filter(item=>item.kind==='reward-pack').length,1);
+ assert.equal(bossRewards('strider-1')[4].filter(item=>item.kind==='reward-pack').length,1,'first bosses keep their L5 texture pack, no bonus added');
 });
