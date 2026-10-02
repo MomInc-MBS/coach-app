@@ -47,5 +47,5 @@ test('a dialog opened over the quilt portal stays tappable; a closed-but-drawn o
 
  // After it closes, the portal's own Menu button is hit-testable again.
  await page.evaluate(()=>document.getElementById('downloadSheet').close());
- assert.equal(await page.locator('#portalMenuButton').evaluate(rectHitsSelf()),true);
+ assert.equal(await page.locator('#portalExitButton').evaluate(rectHitsSelf()),true);
 }));

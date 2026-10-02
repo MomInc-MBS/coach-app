@@ -59,5 +59,7 @@ html[data-public-state] .ach-board .ach-parallax{transition:transform .9s cubic-
 .ach-board.no-art .ach-art{visibility:hidden}
 .ach-board.no-art .ach-boss:not([data-state=locked]){box-shadow:0 0 14px var(--glow),inset 0 0 0 1px var(--glow)}
 .ach-board.no-art:not(.zoomed) .ach-starter{position:absolute;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#05030ccc;text-align:center}
+/* Framed fullscreen (portal): the dock rides inside the dialog, so the offer sits above it, not under it. */
+.portal-framed.ach-board.no-art:not(.zoomed) .ach-starter,.portal-framed .ach-board.no-art:not(.zoomed) .ach-starter{bottom:calc(max(16px,env(safe-area-inset-bottom)) + var(--myr5-bar))}
 .ach-starter p{margin:0;font-size:15px;letter-spacing:.08em;color:#d9d2ee}
 .ach-starter button{min-height:44px;padding:0 18px;border:1px solid #fff9;border-radius:22px;background:#ffffff1f;color:#fff;font:inherit;font-size:15px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}

@@ -21,7 +21,7 @@ export function mountCameraWorkout({video,counter,onStop}){
  return {setActive(next){if(next===active)return;active=next;
  if(next){
   anchors=[video,counter].map(node=>{const marker=document.createComment('camera-workout-return');node.before(marker);return [node,marker];});
-  stage.prepend(video);stop.append(counter);stage.hidden=false;document.body.dataset.cameraWorkout='true';
+  stage.prepend(video);stop.append(counter);stage.hidden=false;stage.inert=false;document.body.dataset.cameraWorkout='true';
   inert=[...document.body.children].filter(node=>node!==stage).map(node=>[node,node.inert]);for(const [node] of inert)node.inert=true;
   stop.focus({preventScroll:true});void showHousing();
  }else{

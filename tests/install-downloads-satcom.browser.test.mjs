@@ -5,6 +5,7 @@
 // Downloads menu's Download selected / Not now buttons, and that reduced motion is static. Runs
 // against the production build (dist/client), same harness shape as post-download.browser.test.mjs.
 // Frames go to .frames/.
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -32,6 +33,7 @@ async function serve(){
 async function launch(){return chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});}
 async function installed(browser,base,extra={}){
  const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],...extra});
+ await context.addInitScript(guideSeen);
  await context.route(TRACKER,route=>route.fulfill({contentType:'text/javascript',body:STUB}));
  const page=await context.newPage();await page.goto(base+'/__test__');
  await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());
@@ -65,9 +67,11 @@ test('SATCOM frame on Install: present, settles to DOWNLOAD LINK, keeps its own 
   // load, a slow host can otherwise let the real 900ms acquire->lock timer fire between two
   // separate steps, making "opens in the acquiring state" flaky even though nothing is wrong
   // (same trick as tests/settings-frame.browser.test.mjs).
-  const initial=await page.evaluate(()=>{
+  // Routes now open through the portal's wormhole, so the panel opens a moment after go(): wait for it inside the evaluate.
+  const initial=await page.evaluate(async()=>{
    window.myr5Routes.go('install');
    const panel=document.getElementById('installPanel');
+   for(const end=performance.now()+5000;!panel.open&&performance.now()<end;)await new Promise(requestAnimationFrame);
    return {open:panel.open,frame:panel.classList.contains('satcom-frame'),bolts:panel.querySelectorAll('.satcom-bolt').length,link:panel.querySelector('.satcom-top [data-link]')?.textContent};
   });
   assert.equal(initial.open,true,'Install panel opens');

@@ -4,6 +4,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {extname,resolve,sep} from 'node:path';
 import {chromium} from 'playwright';
+import {boardBundle} from './board-bundle.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 function startServer(){
@@ -13,9 +14,10 @@ function startServer(){
    res.writeHead(200,{'Content-Type':'text/html'});
    res.end('<!doctype html><body><script type="module">import {openAchievements} from "/achievements-board.mjs";window.openBoard=openAchievements;</script></body>');return;
   }
+  if(pathname==='/achievements-board.mjs'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(await boardBundle());return;}
   if(pathname==='/battle-pass.mjs'){
    res.writeHead(200,{'Content-Type':'text/javascript'});
-   res.end('export const selectedTracks=()=>new Set(["chest"]);export const loadProgress=()=>({});');return;
+   res.end('export const selectedTracks=()=>new Set(["chest"]);export const loadProgress=()=>({});export const battlePassState=()=>({bosses:[]});');return;
   }
   const file=resolve(root,'.'+decodeURIComponent(pathname));
   if(file!==root&&!file.startsWith(root+sep)){res.writeHead(403);res.end();return;}
@@ -104,9 +106,10 @@ function startServerNoCharset(){
    res.end('<!doctype html><head><link rel=stylesheet href=/achievements-board.css></head><body><script type="module">import {openAchievements} from "/achievements-board.mjs";window.openBoard=openAchievements;</script></body>');
    return;
   }
+  if(pathname==='/achievements-board.mjs'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(await boardBundle());return;}
   if(pathname==='/battle-pass.mjs'){
    res.writeHead(200,{'Content-Type':'text/javascript'});
-   res.end('export const selectedTracks=()=>new Set(["chest"]);export const loadProgress=()=>({});');
+   res.end('export const selectedTracks=()=>new Set(["chest"]);export const loadProgress=()=>({});export const battlePassState=()=>({bosses:[]});');
    return;
   }
   const file=resolve(root,'.'+decodeURIComponent(pathname));

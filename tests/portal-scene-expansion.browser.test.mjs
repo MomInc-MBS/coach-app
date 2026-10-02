@@ -1,5 +1,6 @@
 // W3-3A (#3, #13, #31, #32, #35, #38, D36): the floating pyramid IS the Food menu, checked at 375x812.
 // Same harness as pyramid-lifecycle.browser.test.mjs: current launch.mjs/food/* source over a built dist/client.
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -43,6 +44,7 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,friend
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   const context=await browser.newContext({serviceWorkers:'block',viewport:{width:375,height:812},hasTouch:true,reducedMotion});
+  await context.addInitScript(guideSeen);
   const base='http://127.0.0.1:'+server.address().port,page=await context.newPage(),warnings=[];
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());});
   // Observe the text painted onto each screen texture, and capture the scene + camera for projections.
@@ -58,7 +60,7 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,friend
   await page.waitForFunction(()=>window.myr5Menus?.food);
   await page.evaluate(async()=>{
    const THREE=await import('/vendor/three/three.module.js'),add=THREE.Scene.prototype.add;
-   THREE.Scene.prototype.add=function(...args){window.pyramidScene=this;return add.apply(this,args);};
+   const scenes=new Set();Object.defineProperty(window,'pyramidScene',{configurable:true,get:()=>[...scenes].find(s=>s.getObjectByName('lens'))});THREE.Scene.prototype.add=function(...args){scenes.add(this);return add.apply(this,args);}; // other Scenes (portal boards) add too: the pyramid scene is the one holding the lens
    window.projectNode=name=>{const node=window.pyramidScene.getObjectByName(name),camera=window.pyramidScene.children.find(n=>n.isCamera),rect=document.querySelector('#pyramidScanner canvas').getBoundingClientRect(),p=node.getWorldPosition(new THREE.Vector3()).project(camera);return {x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2};};
    // The update banner and setup gate are not part of this screen.
    const style=document.createElement('style');style.textContent='.app-update-banner{display:none!important}';document.head.append(style);
@@ -79,11 +81,11 @@ test('classroom peers through the diamond; tapping the real whiteboard fills the
  await page.screenshot({path:resolve('.frames','classroom-diamond.png')});
  await page.locator('[data-room-board]').click();
  await page.waitForFunction(()=>document.querySelector('#accountPanel.portal-fullscreen[data-room-view=board]'));
- assert.deepEqual(await box(page,'#accountPanel'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
+ assert.deepEqual(await box(page,'#accountPanel'),{left:15,top:15,right:360,bottom:797,width:345,height:782});
  assert.equal(await page.locator('#accountPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
- // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; only the frame goes, up out of the way.
- assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-garage')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
- assert.equal(await page.locator('#coachDock').isVisible(),false,'whiteboard uses the whole viewport');
+ // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; R16/R17: the frame stays as the 15px rail (portal-housing-fullscreen).
+ assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-housing-fullscreen')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
+ assert.equal(await page.locator('#coachDock').isVisible(),true,'R16/R17: the dock stays up inside the rail on the whiteboard');
  await page.screenshot({path:resolve('.frames','classroom-whiteboard-fullscreen.png')});
  await page.locator('#accountPanel [data-close]').click();
  await page.waitForFunction(()=>!document.getElementById('portalHome').hidden&&!document.querySelector('.portal-glass'),null,{timeout:10000});

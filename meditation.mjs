@@ -31,7 +31,7 @@ export function mountMeditation({api,onComplete,getAccount,backgroundLookup}={})
   const requestEpoch=epoch,{id,url}=await todaysBackground(backgroundLookup);let art=null;
   if(url)try{const img=new Image();img.src=url;await img.decode();if(requestEpoch!==epoch||!dialog.open)return;const base=bottomColour(img);art={url:`url("${url}")`,base,grey:base&&grey(base)};pixelateWonder(img);}catch{}
   if(requestEpoch!==epoch||!dialog.open)return;
-  dialog.dataset.wonder=art?id:'';dialog.classList.toggle('has-wonder-art',!!art);starter.hidden=true;
+   dialog.dataset.wonder=art?id:'';dialog.classList.toggle('has-wonder-art',!!art);starter.hidden=!!art;
   for(const key of ['url','base','grey'])art?.[key]?dialog.style.setProperty('--wonder-'+key,art[key]):dialog.style.removeProperty('--wonder-'+key);
  }
  function pixelateWonder(img){try{const canvas=document.createElement('canvas');canvas.className='room-pixels';canvas.width=56;canvas.height=64;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=false;ctx.drawImage(img,0,0,canvas.width,canvas.height);const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);for(let i=0;i<pixels.data.length;i+=4){const y=Math.round(.2126*pixels.data[i]+.7152*pixels.data[i+1]+.0722*pixels.data[i+2]);const v=y<70?0:y<135?88:y<200?176:255;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=v;}ctx.putImageData(pixels,0,0);far.prepend(canvas);}catch{}}

@@ -209,7 +209,10 @@ async function offerPyramidStarter(){
 }
 function releasePyramid(){pyramidGen++;pyramidRequest?.abort();pyramidRequest=null;pyramidScanner?.dispose();pyramidScanner=null;}
 // The pyramid fits between the Food header and whatever the bottom sheet is showing.
-function foodFrame(){const panel=$('mealsPanel');return {top:panel.querySelector('header').offsetHeight,bottom:panel.querySelector('.food-sheet').offsetTop};} // layout px: unaffected by the portal's arrival scale
+function foodFrame(){const panel=$('mealsPanel'),dock=document.getElementById('coachDock');let bottom=panel.querySelector('.food-sheet').offsetTop;
+ // Framed fullscreen Food carries the dock inside the dialog: end the pyramid's frame (and the flip switch) above it.
+ if(dock?.offsetHeight){const p=panel.getBoundingClientRect(),d=dock.getBoundingClientRect();if(d.top>p.top&&d.top<p.bottom)bottom=Math.min(bottom,(d.top-p.top)*panel.offsetHeight/(p.height||1));}
+ return {top:panel.querySelector('header').offsetHeight,bottom};} // layout px: unaffected by the portal's arrival scale
 new ResizeObserver(()=>pyramidScanner?.reframe()).observe($('mealsPanel').querySelector('.food-sheet'));
 // D36: the pyramid's dials. knob_0 opens the existing manual entry; knob_1/knob_2 toggle the Water and Today cards.
 let foodDialReturn=null;

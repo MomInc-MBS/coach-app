@@ -5,6 +5,7 @@
 // still on; #135 tilt looks round the scene behind the window while the cut stays put;
 // #124 the lines and the X run a short wormhole; release 5's open item: switching routes from the bar while a
 // destination is framed moves the frame to the next page, no reverse dive behind it. Frames land in .frames/ (untracked).
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -25,6 +26,7 @@ function serve(){
 }
 async function openApp(browser,base,reducedMotion='no-preference'){
  const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block',reducedMotion});
+ await context.addInitScript(guideSeen);
  await context.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{configurable:true,value:true});try{localStorage.setItem('myr5.portalHintShown','1');const d=new Date();localStorage.setItem('myr5-how-to-play-day-v1/guest',`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);}catch{}});
  const seed=await context.newPage();
  await seed.goto(base+'/onboarding.html');
@@ -144,11 +146,11 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    // R7: a double-tap on the open menu steps in to the full screen: no clip, the frame up out of the way, the energy on the
    // screen's edge, the title and Close back, the tilt still on.
    await doubleTap(page,sel);
-   await page.waitForFunction(()=>document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0,null,{timeout:5000}); // the frame's garage-door exit
+   await page.waitForFunction(sel=>document.querySelector(sel).classList.contains('portal-fullscreen'),sel,{timeout:5000}); // R16/R17: stepped in, the frame stays as the rail (no garage-door exit)
    const f=await page.evaluate(sel=>{const d=document.querySelector(sel),r=d.getBoundingClientRect();return {open:d.open,clip:d.style.clipPath,box:[r.width,r.height],quilt:!document.getElementById('portalHome').hidden,
-    shaped:document.querySelector('#portalChrome .portal-aura')?.classList.contains('shaped'),frameGone:document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom<0};},sel);
-   assert.deepEqual(f,{open:true,clip:'',box:[375,812],quilt:false,shaped:false,frameGone:true},`${id}: full screen`);
-   assert.equal(await auraPath(page),'M0.0 0.0L375.0 0.0L375.0 812.0L0.0 812.0Z',`${id}: the energy runs round the screen's edge`);
+    shaped:document.querySelector('#portalChrome .portal-aura')?.classList.contains('shaped'),frameStays:document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom>0};},sel);
+   assert.deepEqual(f,{open:true,clip:'',box:[345,782],quilt:false,shaped:false,frameStays:true},`${id}: full screen`);
+   assert.equal(await auraPath(page),'M15.0 15.0L360.0 15.0L360.0 797.0L15.0 797.0Z',`${id}: the energy runs round the screen's edge`);
    assert.equal(await flowing(page),true,`${id}: the energy still flows in full screen`);
    assert.equal(await shown(page,title),true,`${id}: full screen shows its own title`);
    assert.equal(await fullyVisible(page,close),true,`${id}: full screen shows its own Close`);
@@ -199,13 +201,13 @@ test('release 5: switching routes from the bar while a destination is framed mov
   await page.evaluate(()=>{window.run=window.myr5Portal.open('up');});
   await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
   await page.evaluate(()=>window.run);
-  for(const [route,sel,name] of [['reminders','#remindersPanel','REMINDERS'],['history','#historyPanel','HISTORY']]){
+  for(const [route,sel,name] of [['reminders','#remindersPanel','REMINDERS'],['scoreboard','#accountPanel','LEADERBOARD']]){
    await page.locator(`#coachDock [data-route="${route}"]`).click();
    await page.waitForFunction(([route,sel])=>document.querySelector(sel)?.open&&location.hash==='#'+route,[route,sel],{timeout:10000});
    await page.waitForTimeout(700);
    const s=await page.evaluate(sel=>({framed:document.querySelector(sel).classList.contains('portal-framed'),shaped:document.querySelector(sel).classList.contains('portal-shaped'),chrome:document.getElementById('portalChrome').matches(':popover-open'),
     quilt:!document.getElementById('portalHome').hidden,glass:!!document.querySelector('.portal-glass'),open:document.querySelectorAll('dialog[open]').length,name:document.querySelector('.portal-aura-name')?.textContent,dives:window.__dives}),sel);
-   assert.deepEqual(s,{framed:true,shaped:false,chrome:true,quilt:false,glass:false,open:1,name,dives:0},`#${route}: framed in the whole window, nothing playing behind it`);
+   assert.deepEqual(s,{framed:true,shaped:false,chrome:true,quilt:false,glass:false,open:1,name:undefined,dives:0},`#${route}: framed in the whole window, nothing playing behind it`);
    assert.equal(await barTappable(page),true);
    await page.screenshot({path:resolve(FRAMES,`r5-switch-to-${route}.png`)});
   }
@@ -234,7 +236,7 @@ test('iOS tilt permission waits for the Allow chip tap',{timeout:90000},async()=
  }finally{await context.close();}
 });
 
-test('#135 tilt looks round the pyramid through the triangle (the cut stays put), flat menus slide a little, reduced motion stays still',{timeout:240000},async()=>{
+test('#135 tilt looks round the pyramid through the triangle (the cut stays put), flat menus stay still, reduced motion stays still',{timeout:240000},async()=>{
  const tilt=(page,gamma,beta=50)=>page.evaluate(([g,b])=>{for(let i=0;i<3;i++)dispatchEvent(new DeviceOrientationEvent('deviceorientation',{alpha:0,beta:b,gamma:g}));},[gamma,beta]);
  const settled=page=>page.waitForTimeout(1200);
  const {context,page}=await openApp(browser,base);
@@ -265,10 +267,11 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   await page.evaluate(()=>{window.run=window.myr5Portal.open('line-rl');});
   await page.waitForFunction(()=>document.querySelector('#remindersPanel.portal-framed'),null,{timeout:30000});
   await page.evaluate(()=>window.run);await page.waitForTimeout(600);
-  const left=()=>page.evaluate(()=>parseFloat(getComputedStyle(document.getElementById('remindersPanel')).left)),rest=await left(); // its box, not the arrival's scale
+  const left=()=>page.evaluate(()=>parseFloat(getComputedStyle(document.getElementById('remindersPanel')).getPropertyValue('--peer-x')||0)*3),rest=await left(); // portal-inset menus slide their content by --peer-x*3px (portal.css), not the dialog's own left
   await tilt(page,0);await settled(page);await tilt(page,20);await settled(page);
   const moved=await left()-rest;
-  assert.ok(moved>2&&moved<=4.01,`a flat menu slides a third of the scenes' range (${moved}px)`);
+  // R16/R17: a flat menu (Reminders) opens in the whole window like a page, not in a cut, so the tilt leaves it still.
+  assert.equal(moved,0,`a flat menu no longer slides under tilt (${moved}px)`);
   await page.screenshot({path:resolve(FRAMES,'126-menu-vignette-depth.png')});
  }finally{await context.close();}
  const still=await openApp(browser,base,'reduce');
@@ -283,7 +286,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
  }finally{await still.context.close();}
 });
 
-test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then dives into the oval ship arrival (#148)',{timeout:180000},async()=>{
+test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then opens the War Room',{timeout:180000},async()=>{
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>{const a=Element.prototype.animate;window.__anims=[];Element.prototype.animate=function(k,t){const x=a.call(this,k,t);window.__anims.push({el:this.id||this.getAttribute?.('class')||'',ms:t?.duration,x});return x;};});
@@ -302,7 +305,7 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   // Landed (not mid-arrival): meditation occupies the phone in black and white.
   await page.waitForFunction(()=>{const d=document.querySelector('.meditation-panel'),c=getComputedStyle(d);return !d.classList.contains('portal-arriving')&&c.transform==='none'&&c.opacity==='1';},null,{timeout:30000});
   const med=await page.evaluate(()=>{const d=document.querySelector('.meditation-panel'),r=d.getBoundingClientRect();return {w:r.width,h:r.height,vw:innerWidth,vh:innerHeight,bg:getComputedStyle(d).backgroundColor};});
-  assert.ok(Math.abs(med.w-med.vw)<1&&Math.abs(med.h-med.vh)<1&&med.bg==='rgb(0, 0, 0)',`Meditation fills the black viewport (${JSON.stringify(med)})`);
+  assert.ok(Math.abs(med.w-(med.vw-30))<1&&Math.abs(med.h-(med.vh-30))<1&&med.bg==='rgb(0, 0, 0)',`Meditation fills the black face inside the 15px rail (${JSON.stringify(med)})`);
   await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'127-meditation.png')});
   await page.locator('.meditation-panel [data-meditation-close]').click();
@@ -318,7 +321,7 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'124-x-mid-sequence.png')});
   await page.evaluate(()=>window.__heldX());
-  await page.waitForFunction(()=>document.querySelector('dialog.ship-view')?.open===true&&location.hash==='#select',null,{timeout:30000});
-  assert.equal(new URL(page.url()).pathname,'/pose.html','the X stays in the app');
+  // e68b19f (25 Sept): the X now opens the War Room (a route that navigates to /war-room/), no longer the ship view.
+  await page.waitForURL(/\/war-room\//,{timeout:30000});
  }finally{await context.close();}
 });

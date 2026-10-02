@@ -92,7 +92,7 @@ for(const width of [375,390])test(`ice double tap opens the carved triangle and 
  assert.ok(dialogUps[1].eventTime-dialogUps[0].eventTime>=0&&dialogUps[1].eventTime-dialogUps[0].eventTime<350,'native dialog input stays within the double-tap interval');
  try{await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-fullscreen')?.open,null,{timeout:5000});}
  catch(error){console.log('dialog tap diagnostics',JSON.stringify(await page.evaluate(()=>({events:repairEvents,dialog:document.getElementById('mealsPanel').className}))));throw error;}
- const rect=await page.locator('#mealsPanel').boundingBox();assert.deepEqual(rect,{x:0,y:0,width,height:812});
+ const rect=await page.locator('#mealsPanel').boundingBox();assert.deepEqual(rect,{x:15,y:15,width:width-30,height:782});
  await mkdir(FRAMES_DIR,{recursive:true});await page.screenshot({path:resolve(FRAMES_DIR,`repair-ice-menu-fullscreen-${width}.png`)});
  await page.close();
 }));

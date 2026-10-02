@@ -34,7 +34,7 @@ test('the update toast stays tappable and clear of the Menu button, dialog backd
 
  // #7: the toast is exempt from the inert sweep, its button is hit-testable, and it no longer sits on the Menu button.
  const toast=await page.evaluate(()=>{
-  const banner=document.querySelector('.app-update-banner'),btn=document.getElementById('toastGotIt'),menuBtn=document.getElementById('portalMenuButton');
+  const banner=document.querySelector('.app-update-banner'),btn=document.getElementById('toastGotIt'),menuBtn=document.getElementById('portalExitButton');
   const br=btn.getBoundingClientRect(),mr=menuBtn.getBoundingClientRect();
   const overlap=!(br.right<mr.left||br.left>mr.right||br.bottom<mr.top||br.top>mr.bottom);
   return {inert:banner.inert,hit:document.elementFromPoint(br.left+br.width/2,br.top+br.height/2)===btn,overlap};

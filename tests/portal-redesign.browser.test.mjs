@@ -65,11 +65,12 @@ test('phone device keeps artwork proportional and renders every downloaded tunne
  assert.deepEqual(errors,[]);
  await page.evaluate(()=>{portal.show();const home=document.createElement('main');home.id='homeScreen';home.innerHTML='<button id="start">BEGIN</button>';document.body.append(home);portal.open('rect');});
  await page.waitForFunction(()=>document.querySelector('#portalWorkoutHome.portal-fullscreen')?.open,{},{timeout:20000});
- const rect=await page.locator('#portalWorkoutHome').boundingBox();assert.deepEqual(rect,{x:0,y:0,width:375,height:812});
+ const rect=await page.locator('#portalWorkoutHome').boundingBox();assert.deepEqual(rect,{x:15,y:15,width:345,height:782});
  assert.equal(await page.locator('#portalChrome').getAttribute('data-destination'),'workout');
  await page.waitForTimeout(850);
- assert.ok(await page.locator('#portalChrome .portal-frame').evaluate(el=>el.getBoundingClientRect().bottom<0),'frame retracts above viewport');
- assert.equal(await page.locator('#start').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;}),true,'the retracted frame must not cover the workout start page');
+ // R16/R17: the metal frame stays up as a 15px rail round the fullscreen destination (it no longer retracts above the viewport).
+ assert.ok(await page.locator('#portalChrome .portal-frame').evaluate(el=>el.getBoundingClientRect().bottom>0),'frame stays as the rail round the workout page');
+ assert.equal(await page.locator('#start').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;}),true,'the frame must not cover the workout start page');
  await page.screenshot({path:resolve(FRAMES_DIR,'redesign-workout.png')});
  await page.evaluate(()=>document.getElementById('portalWorkoutHome').close());
  await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden,{},{timeout:10000});
@@ -89,9 +90,9 @@ test('meditation tunnel loses colour throughout its duration and lands fullscree
  await page.waitForTimeout(600);
  const partial=await page.locator('.portal-glass').evaluate(el=>parseFloat(getComputedStyle(el).filter.match(/grayscale\(([^)]+)/)[1]));assert.ok(partial>0&&partial<1);
  await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-fullscreen')?.open,null,{timeout:10000});
- const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:0,y:0,width:375,height:812});
- // R7 (Ian 26 Sept): the frame stays out of the black-and-white room, but the energy runs round the screen's edge.
- assert.equal(await page.locator('#portalChrome .portal-frame').evaluate(el=>getComputedStyle(el).visibility),'hidden');
+ const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:15,y:15,width:345,height:782});
+ // R16/R17: the frame stays as the 15px rail round the room, with the energy running round the screen's edge.
+ assert.equal(await page.locator('#portalChrome .portal-frame').evaluate(el=>getComputedStyle(el).visibility),'visible');
  assert.equal(await page.locator('#portalChrome .portal-aura').evaluate(el=>getComputedStyle(el).visibility),'visible');
  await page.close();
 }));

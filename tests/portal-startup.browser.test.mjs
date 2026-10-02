@@ -1,3 +1,4 @@
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -19,7 +20,7 @@ test('installed Coach starts at Quilt only after setup and preserves panel deep 
  const base='http://127.0.0.1:'+server.address().port;let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
-  async function installedContext(){const context=await browser.newContext({serviceWorkers:'block'});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));return context;}
+  async function installedContext(){const context=await browser.newContext({serviceWorkers:'block'});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));await context.addInitScript(guideSeen);return context;}
   async function browserContext(){return browser.newContext({serviceWorkers:'block'});}
   // Seed from a script-free page: onboarding.html redirects a non-installed tab to /install.html mid-evaluate
   // (destroyed context, or an evaluate that never settles).
@@ -32,13 +33,14 @@ test('installed Coach starts at Quilt only after setup and preserves panel deep 
   const web=await browserContext();await seed(web);const webHome=await web.newPage();await webHome.goto(base+'/pose.html');await webHome.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);assert.equal(await webHome.locator('#portalHome').getAttribute('aria-label'),'Quilt portal');await web.close();
 
   // #ship joins ?panel= and #pod as a deep link the starter portal must not cover on load.
-  const shipLink=await installedContext();await seed(shipLink);const ship=await shipLink.newPage();await ship.goto(base+'/pose.html#ship');await ship.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);await ship.waitForTimeout(300);assert.equal(await ship.locator('#portalHome').count(),0);await shipLink.close();
+  const shipLink=await installedContext();await seed(shipLink);const ship=await shipLink.newPage();await ship.goto(base+'/pose.html#ship');await ship.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);await ship.waitForTimeout(300);// R16/R17: the portal mounts behind the ship route (housing for its frame); the quilt just must not be showing.
+  assert.equal(await ship.evaluate(()=>!document.getElementById('portalHome')||document.getElementById('portalHome').hidden),true);await shipLink.close();
 
   const stale=await installedContext();await seed(stale);const broken=await stale.newPage();await broken.route('**/launch-runtime.mjs*',route=>route.fulfill({status:503,contentType:'text/javascript',body:'// stale runtime fixture'}));await broken.goto(base+'/pose.html');await broken.waitForFunction(()=>document.getElementById('coachStartupRecovery')?.open===true);await broken.waitForTimeout(500);assert.equal(await broken.locator('#coachStartupRecovery').isVisible(),true);assert.equal(await broken.locator('#portalHome').count(),0,'a seeded local coach must not open Quilt while startup recovery is active');await stale.close();
 
   const firstRun=await installedContext();const setup=await firstRun.newPage();await setup.goto(base+'/pose.html');await setup.waitForFunction(()=>document.getElementById('coachSetupGate')?.open===true);assert.equal(await setup.locator('#portalHome').count(),0);await firstRun.close();
 
-  const deepLink=await installedContext();await seed(deepLink);const install=await deepLink.newPage();await install.goto(base+'/pose.html?panel=install');await install.waitForFunction(()=>document.getElementById('installPanel')?.open===true);assert.equal(await install.locator('#portalHome').count(),0);await deepLink.close();
+  const deepLink=await installedContext();await seed(deepLink);const install=await deepLink.newPage();await install.goto(base+'/pose.html?panel=install');await install.waitForFunction(()=>document.getElementById('installPanel')?.open===true);assert.equal(await install.evaluate(()=>!document.getElementById('portalHome')||document.getElementById('portalHome').hidden),true,'a panel deep link does not show the Quilt');await deepLink.close();
 
   const active=await installedContext();await seed(active);const workout=await active.newPage();let heldCss,holdCssReady;const cssHeld=new Promise(resolve=>holdCssReady=resolve);await workout.route('**/modules/portal/portal.css',route=>{heldCss=route;holdCssReady();});await workout.goto(base+'/pose.html');await cssHeld;await workout.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);await workout.locator('#openSettings').click();await workout.locator('#settings .settings-group summary',{hasText:'Workout'}).click();await workout.locator('#camera').selectOption('manual');await workout.locator('#closeSettings').click();await workout.locator('#start').click();await workout.waitForFunction(()=>window.myr5TestState?.phase==='manual');await heldCss.continue();await workout.waitForFunction(()=>document.getElementById('portalHome'));assert.equal(await workout.locator('#portalHome').isVisible(),false);assert.equal(await workout.locator('#stop').isDisabled(),false);await active.close();
 

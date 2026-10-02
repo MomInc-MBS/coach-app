@@ -1,3 +1,4 @@
+import {guideSeen} from './guide-seen.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -19,6 +20,7 @@ test('opening Food loads the deployed pyramid module and model assets',async()=>
  try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   const page=await browser.newPage(),responses=new Map(),failures=[],warnings=[];page.on('response',res=>{const path=new URL(res.url()).pathname;if(path.startsWith('/food/')||path.startsWith('/vendor/three/'))responses.set(path,res.status());});page.on('console',msg=>{if(msg.type()==='error')failures.push(msg.text());if(msg.type()==='warning')warnings.push(msg.text());});page.on('requestfailed',req=>failures.push(`${req.url()} ${req.failure()?.errorText||''}`));
+  await page.addInitScript(guideSeen);
   // Observe actual text painted onto the six model textures, not a test-only state API.
   await page.addInitScript(()=>{
    const labels=new Set(['FOOD','CALORIES','PROTEIN','FAT','CARBS','VITAMINS']),canvases=new WeakMap(),original=CanvasRenderingContext2D.prototype.fillText;
