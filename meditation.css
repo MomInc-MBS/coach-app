@@ -255,3 +255,14 @@
 @container meditation-scene (orientation: landscape) and (max-height: 600px){.meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{top:58px;padding-block:0;line-height:1.2!important}}
 
 .meditation-panel .room-pixels{display:none!important}.meditation-panel.meditation-colour.has-wonder-art .meditation-far{background:#000!important}
+.meditation-panel .room-art{display:none!important}
+.meditation-panel .forest-canopy{display:none!important}
+.meditation-panel .meditation-far{background:url('/pod/worlds/meditation-waterfall.png') center bottom / cover no-repeat;image-rendering:pixelated!important}
+.meditation-panel.meditation-colour.has-wonder-art .meditation-far{background:url('/pod/worlds/meditation-waterfall.png') center bottom / cover no-repeat;image-rendering:pixelated!important}
+.meditation-panel.has-wonder-art .meditation-far{background:url('/pod/worlds/meditation-waterfall.png') center bottom / cover no-repeat;image-rendering:pixelated!important}
+.meditation-panel .meditation-mid{opacity:.75!important}
+.meditation-panel .breath-hud{position:absolute;left:0;right:0;bottom:12%;display:grid;place-items:center;z-index:5;pointer-events:none}
+.meditation-panel .breath-hud .breath-count{font-size:clamp(48px,14vw,84px);top:auto!important;bottom:auto!important;position:static!important}
+.meditation-panel .breath-hud .breathing-ring-stop{position:static;width:44px;height:44px;pointer-events:auto;background:none;border:0;padding:0;margin:0}
+.meditation-panel .meditation-character{left:25%;bottom:6% !important;height:20vh!important}
+.meditation-panel .meditation-coach{z-index:1!important}
