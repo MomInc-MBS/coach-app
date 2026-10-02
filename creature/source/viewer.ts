@@ -7,19 +7,19 @@ import {createRig,disposeObject,type CreatureRig} from './rig';
 import {MotionController,type Gesture} from './motion';
 import {importCreature,motionSettings} from './profile';
 import {sampleShot,SHOTS,type Cinematic} from './cinematic-shots';
-import {regionBounds,frameRegion} from './creator/camera-focus';
+import {regionBounds,frameRegion,regionFrame} from './creator/camera-focus';
 import {REGIONS,type Region} from './creator/design';
 import {podCameraFrame} from './pod-camera';
 
-export const ZOOM_MIN=.6,ZOOM_MAX=1.8;
+export const ZOOM_MIN=0,ZOOM_MAX=1;
 export class CreatureViewer {
  regionBoxes=new Map<Region,T.Box3>();focused:Region|null=null;
  // #9: 'body' frames the whole creature (every region) plus a little headroom for raised arms and hops;
  // side 1 is the front view, -1 the back (kept for later part focus so Back stays Back).
-  side=1;zoom=1;baseDistance=0;
-  applyZoom(){if(!this.baseDistance)return;const d=this.baseDistance/this.zoom,dir=this.camera.position.clone().sub(this.orbit.target).normalize();this.camera.position.copy(this.orbit.target).addScaledVector(dir,d);this.orbit.update();}
+  side=1;zoom=0;
+  applyZoom(){if(!this.bodyBounds||this.bodyBounds.isEmpty())return;const bb=this.bodyBounds.clone();bb.max.y+=(bb.max.y-bb.min.y)*.08;const full=regionFrame(this.camera,bb,1.15,this.side);if(!full)return;let box:T.Box3|undefined;for(const b of[this.regionBoxes.get('head'),this.regionBoxes.get('eye')])if(b&&!b.isEmpty())box=box?box.union(b):b.clone();const h=box?regionFrame(this.camera,box,1.45,this.side):null,head=h??full,t=this.zoom,target=full.target.clone().lerp(head.target,t),distance=full.distance+(head.distance-full.distance)*t,dir=this.camera.position.clone().sub(this.orbit.target);dir.length()<1e-6?dir.set(0,0,this.side):dir.normalize();this.orbit.minDistance=Math.min(.7,head.distance*.5);this.orbit.maxDistance=Math.max(14,full.distance*2);this.orbit.target.copy(target);this.camera.position.copy(target).addScaledVector(dir,distance);this.orbit.update();}
   setZoom(z:number){this.zoom=Math.min(ZOOM_MAX,Math.max(ZOOM_MIN,Number.isFinite(z)?z:1));this.applyZoom();return this.zoom;}
-  focusRegion(region:Region){this.focused=region;const box=region==='body'?this.bodyBounds.clone():this.regionBoxes.get(region);if(region==='body'&&box&&!box.isEmpty())box.max.y+=(box.max.y-box.min.y)*.08;if(!box)return false;const ok=frameRegion(this.camera,this.orbit,box,region==='body'?1.04:1.2,this.side);if(ok){this.baseDistance=this.camera.position.distanceTo(this.orbit.target);this.applyZoom();}return ok;}
+  focusRegion(region:Region){this.focused=region;if(region==='body'){const ok=!!this.bodyBounds&&!this.bodyBounds.isEmpty();if(ok){this.camera.position.copy(this.orbit.target).add(new T.Vector3(0,0,this.side));this.applyZoom();}return ok;}const box=this.regionBoxes.get(region);if(!box)return false;return frameRegion(this.camera,this.orbit,box,1.2,this.side);}
  homeElapsed=0;homeMoving=false;bodyBounds=new T.Box3();
  setHomeMotion(moving:boolean){this.homeMoving=moving;}
  homeView(){

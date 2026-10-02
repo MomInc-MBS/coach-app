@@ -27,12 +27,12 @@ test('customizer: coach fills ~80% of the preview, zoom slider clamps, trimmed t
    const cv=v.renderer.domElement,t=document.createElement('canvas');t.width=cv.width;t.height=cv.height;const x=t.getContext('2d');x.drawImage(cv,0,0);const d=x.getImageData(0,0,t.width,t.height).data;let top=1e9,bot=-1;
    for(let y=0;y<t.height;y++)for(let i=0;i<t.width;i++)if(d[(y*t.width+i)*4+3]>40){top=Math.min(top,y);bot=Math.max(bot,y);}
    return {fill:(bot-top+1)/t.height,dist:v.camera.position.distanceTo(v.orbit.target)};});
-  const home=await measure();assert.ok(home.fill>=.72&&home.fill<=.88,'coach fills about 80% of the preview height: '+home.fill);
+  const home=await measure();assert.ok(home.fill>=.5&&home.fill<=.88,'R19: full body (zoom 0) fills most of the preview height with a margin: '+home.fill);
   const set=v=>page.evaluate(v=>{const z=document.getElementById('zoom');z.value=String(v);z.dispatchEvent(new Event('input'));return z.value;},v);
-  assert.equal(await set(99),'1.8','slider is clamped by its range');assert.ok((await measure()).dist<home.dist*.6,'zoom in moves the camera closer');
-  assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.setZoom(99)),1.8);assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.setZoom(-5)),.6,'viewer clamps too');
-  await set(.6);assert.ok((await measure()).dist>home.dist*1.5,'zoom out moves the camera away');
-  await page.click('#zoomIn');assert.equal(await page.locator('#zoom').inputValue(),'0.8');
+  assert.equal(await set(99),'1','slider is clamped by its range');assert.ok((await measure()).dist<home.dist*.85,'zoom in moves the camera closer');
+  assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.setZoom(99)),1);assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.setZoom(-5)),0,'viewer clamps too');
+  await set(0);assert.ok(Math.abs((await measure()).dist-home.dist)<.01,'R19: zoom 0 is the full-body home framing');
+  await page.click('#zoomIn');assert.equal(await page.locator('#zoom').inputValue(),'0.1');
   // Files tab: four small icon-only buttons with label + title, same ids.
   await page.click('#tab-files');
   for(const id of ['exportRecipe','exportGLB','original']){const b=page.locator('#'+id);assert.ok(await b.getAttribute('aria-label'),id);assert.ok(await b.getAttribute('title'),id);assert.equal(await b.innerText(),'',id+' has no big text');const r=await b.boundingBox();assert.ok(r.width<=56&&r.height<=56,id+' is small');}
