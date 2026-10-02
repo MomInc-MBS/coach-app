@@ -10,7 +10,8 @@
 /* War Room metal (portal.mjs applyLookVars): unset keeps the stock look; set, the rail shades derive from one colour. */
 #portalHome,#portalChrome{--pm:var(--portal-metal)}
 .portal-frame{--mh:color-mix(in srgb,var(--pm) 62%,#fff);--md:color-mix(in srgb,var(--pm) 75%,#000);--mx:color-mix(in srgb,var(--pm) 55%,#000);--me:color-mix(in srgb,var(--pm) 90%,#fff)}
-#portalBoardHost{position:absolute;z-index:1;inset:var(--portal-rail) var(--portal-rail) calc(88px + var(--portal-rail))}
+#portalHome,#portalChrome{--portal-top-band:52px;--portal-key-w:100px;--portal-key-end:124px}
+#portalBoardHost{position:absolute;z-index:1;inset:var(--portal-top-band) var(--portal-rail) calc(88px + var(--portal-rail))}
 .portal-frame{--screw:#cbbab0 0 1.4px,#57474f 1.9px 3px,#0000 3.5px;position:absolute;z-index:1;box-sizing:border-box;left:var(--face-left,0px);top:var(--face-top,0px);width:var(--face-width,100%);height:var(--face-height,100%);border-radius:3px;pointer-events:none;box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b}
 .portal-frame:before{content:'';position:absolute;inset:calc(-1*var(--portal-rail));padding:var(--portal-rail);border-radius:calc(var(--portal-rail)/2 + 3px);background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),repeating-linear-gradient(0deg,#0000 0 2px,#00000010 2px 3px),linear-gradient(160deg,var(--mh,#7e6a7c),var(--pm,#4d3d4f) 26%,var(--md,#3b2f42) 52%,var(--mx,#2b2132) 78%,var(--me,#564458));box-shadow:inset 0 1px #e6d2da99,inset 1px 0 #d6c0cc44,inset 0 -2px #000a,inset -1px 0 #0007;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 /* The lip: a dark seam, a back-lit bevel line on the rail's inner edge, and the rail's shadow falling onto the board. */
@@ -156,9 +157,13 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
 #portalStatus:empty{display:none}
 #portalMenuButton{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10;min-height:48px;min-width:120px;padding:0 22px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 15px/1 var(--font,system-ui);backdrop-filter:blur(10px);box-shadow:0 6px 20px #0007}
 #portalExitButton{position:fixed;right:12px;top:max(12px,env(safe-area-inset-top));z-index:10;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 14px/1 var(--font,system-ui)}
-#portalSettingsButton{position:fixed;left:12px;top:max(12px,env(safe-area-inset-top));z-index:10;min-height:44px;padding:0 14px 0 12px;border-radius:12px/12px;border:3px solid #3a3040;background:#1a1420;-webkit-appearance:none;appearance:none;color:#ff8800;font-family:monospace;font-weight:700;font-size:13px;text-shadow:0 0 4px #ff8800,0 0 9px #ff880099;box-shadow:0 0 0 1px #0d0a10,0 2px 4px #000c,inset 0 1px 0 #ffffff30;touch-action:manipulation;isolation:isolate}
-#portalSettingsButton::before{content:"";position:absolute;inset:3px;pointer-events:none;border-radius:16px/12px;background:repeating-linear-gradient(#00000066 0 1px,transparent 1px 3px),radial-gradient(ellipse 90% 100% at 50% 40%,#3a2008 0,#150b06 70%,#050304 100%);box-shadow:inset 0 0 10px 2px #000,inset 0 0 0 1px #00000099;z-index:-1}
-#portalSettingsButton::after{content:"";position:absolute;inset:3px;pointer-events:none;border-radius:16px/12px;background:radial-gradient(ellipse 55% 45% at 22% 18%,#ffffff66,transparent 70%),radial-gradient(ellipse 80% 80% at 50% 50%,transparent 55%,#000000aa 100%);z-index:1}
+/* R20 (Ian 2 Oct): the Grimoire opener is a metal key set into the top rail at the left, like the dock keys (raised on a
+   dark shadow, pressed down on tap), with its label lit CRT-orange in a small recessed screen. The board starts below
+   the 52px top band (#portalBoardHost), so the key and the engraved logo beside it cover nothing. */
+#portalSettingsButton{position:fixed;left:12px;top:4px;z-index:10;box-sizing:border-box;height:44px;min-height:44px;width:var(--portal-key-w,100px);margin:0;padding:0 0 1px;border:0;border-radius:4px;background:none;-webkit-appearance:none;appearance:none;color:#ff8800;font:700 11px/1 ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.12em;text-shadow:0 0 4px #ff8800,0 0 9px #ff880099;filter:drop-shadow(0 3px 0 #130d18) drop-shadow(0 0 1px #000);touch-action:manipulation;isolation:isolate;cursor:pointer}
+#portalSettingsButton::before{content:"";position:absolute;inset:4px 0;z-index:-1;pointer-events:none;border-radius:4px;background:linear-gradient(145deg,#a58a9c,#5a4560 55%,#3b2c42);box-shadow:inset 2px 2px #ffffff40,inset -2px -3px #0006}
+#portalSettingsButton::after{content:"";position:absolute;inset:10px 7px;z-index:-1;pointer-events:none;border-radius:3px;background:repeating-linear-gradient(#00000066 0 1px,#0000 1px 3px),radial-gradient(ellipse 90% 100% at 50% 40%,#3a2008,#150b06 70%,#050304);box-shadow:inset 0 0 6px 1px #000,0 1px #ffffff30}
+#portalSettingsButton:active{filter:drop-shadow(0 1px 0 #130d18) drop-shadow(0 0 1px #000);translate:0 2px}
 #portalSettingsButton:focus-visible,.portal-palette select:focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
 /* The "Updated: …" toast (app-updates.mjs) sits over the portal's bottom controls at its default
    position; while the quilt is up, lift it clear of the Menu button (it's exempted from the portal's
@@ -167,7 +172,7 @@ body:has(#portalHome:not([hidden])) .app-update-banner{bottom:calc(76px + env(sa
 /* Release 5: Armie's inbox button (armie-inbox-ui.mjs) sits bottom-right above the bar, which on the quilt is the
    metal frame's corner bolt and the board face. While the quilt is up it moves to the top-left of the band above the
    frame, level with Pod (exempt from the inert sweep and in the focus cycle, portal.mjs, so it works there). */
-body:has(#portalHome:not([hidden])) .armie-inbox-launcher{top:calc(max(12px,env(safe-area-inset-top)) + 2px);bottom:auto;left:calc(12px + env(safe-area-inset-left,0px));right:auto}
+body:has(#portalHome:not([hidden])) .armie-inbox-launcher{top:calc(max(12px,env(safe-area-inset-top)) + 2px);bottom:auto;left:auto;right:calc(12px + env(safe-area-inset-right,0px))} /* R20: top-right, clear of the Grimoire key */
 /* Any dialog opened over the quilt: the board should still glow through instead of going near-black. */
 body:has(#portalHome:not([hidden])) dialog::backdrop{background:#0c081266}
 .portal-transition-flash{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;z-index:10000;pointer-events:none;background:radial-gradient(ellipse at center,#fff 0%,#fff8dc 45%,#ffd86a 100%);animation:portal-transition-flash .52s ease-in-out both}
@@ -209,7 +214,7 @@ html[data-public-state] #portalObjects .portal-object{transition:transform .6s c
 
 /* Full device metalwork surrounds the proportionate board. The upper plate occupies the
    unused height; texture pixels are never pulled into it. */
-#portalBoardHost .portal-frame{--cap:calc(var(--face-top,0px) + var(--portal-rail));--side:calc(var(--face-left,0px) + var(--portal-rail))}
+#portalBoardHost .portal-frame{--cap:calc(var(--face-top,0px) + var(--portal-top-band));--side:calc(var(--face-left,0px) + var(--portal-rail))}
 #portalChrome .portal-frame{--cap:var(--face-top,15px);--side:var(--face-left,15px)}
 .portal-frame:before{top:calc(-1*var(--cap));left:calc(-1*var(--side));right:calc(-1*var(--side));bottom:calc(-88px - env(safe-area-inset-bottom));padding:var(--cap) var(--side) calc(88px + env(safe-area-inset-bottom));background:repeating-linear-gradient(0deg,#0000 0 25px,#0b071966 26px,#d3bed92e 27px,#0000 29px),repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(160deg,var(--mh,#7e6a7c),var(--pm,#4d3d4f) 26%,var(--md,#3b2f42) 52%,var(--mx,#2b2132) 78%,var(--me,#564458))}
 .portal-frame b{top:calc(var(--cap)/-2);height:23px;line-height:21px;letter-spacing:.27em}

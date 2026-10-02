@@ -322,7 +322,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
-  <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">Grimoire settings</button>
+  <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">GRIMOIRE</button>
   <button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
