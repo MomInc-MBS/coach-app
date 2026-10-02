@@ -58,6 +58,10 @@ test('SATCOM frame: acquiring -> locked status strip, and a static locked frame 
   const buildBox=await page.locator('#settings .satcom-bottom [data-build]').boundingBox();
   assert.ok(buildBox.y+buildBox.height<=812,`BUILD strip bottom ${buildBox.y+buildBox.height} must be within the 812px viewport`);
   await page.screenshot({path:resolve(FRAMES,'settings-locked.png')});
+  // R20 (Ian 2 Oct): scrolled to the end, the last controls (Cinematics, Replay) sit above the dock, not behind it.
+  const reach=await page.evaluate(()=>{const s=document.getElementById('settings');s.scrollTop=1e6;const dock=document.getElementById('coachDock').getBoundingClientRect(),box=s.getBoundingClientRect();return [...s.querySelectorAll('.cinematic-settings button')].map(b=>{const r=b.getBoundingClientRect();return {text:b.textContent.trim(),top:r.top,bottom:r.bottom,limit:Math.min(dock.top,box.bottom)};});});
+  assert.ok(reach.length>=2,'the cinematics row is in Settings '+JSON.stringify(reach));
+  for(const r of reach)assert.ok(r.bottom<=r.limit+.5&&r.top>=0,`"${r.text}" is reachable above the dock ${JSON.stringify(r)}`);
   await normal.close();
 
   const reduced=await installedContext({reducedMotion:'reduce'});

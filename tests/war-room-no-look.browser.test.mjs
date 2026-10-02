@@ -45,6 +45,8 @@ test('War Room keeps its account and leaderboard controls without portal appeara
  assert.equal(await page.locator('#saveLoadout').isDisabled(),true,'guest loadout editing keeps its existing account gate');
  assert.ok(requested.includes('/api/gala/leaderboard'));
  assert.ok(requested.includes('/war-room/gala-bay.js'));
- assert.ok(!requested.includes('/modules/portal/portal-look.mjs'),'War Room no longer imports portal appearance storage');
+ // R20 (Ian 2 Oct): the War Room wears the shared housing and dock, which reads the saved metal/strip look (never edits it).
+ assert.ok(requested.includes('/modules/portal/standalone-housing.mjs'),'War Room mounts the shared metal housing');
+ assert.equal(await page.locator('#coachDock [data-route="portal"]').count(),1,'War Room has the app dock');
  assert.deepEqual(pageErrors,[],'the source page mounts with no null-node or runtime errors');
 });

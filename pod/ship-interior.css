@@ -17,7 +17,7 @@ body[data-screen="pod"] .pod-ship-backdrop[data-visible="true"]{visibility:visib
 body .pod-ship-backdrop[data-visible="false"]{visibility:hidden}
 #portalWorkoutHome.portal-framed.portal-fullscreen{
  display:flex!important;flex-direction:column;overflow:hidden;background:transparent!important;
- padding:0 0 calc(var(--myr5-bar,64px) + var(--portal-rail,15px))!important;
+ padding:0!important; /* R20: the dock sits below the housing now, so the room reserves no band for it */
 }
 #portalWorkoutHome>.pod-ship-backdrop{position:absolute;inset:0;width:auto;height:auto;left:0;transform:none;z-index:0;border-radius:inherit}
 #portalWorkoutHome>#homeScreen{flex:1 1 auto;min-height:0;height:auto;overflow:hidden}

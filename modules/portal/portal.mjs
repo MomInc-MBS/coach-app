@@ -322,7 +322,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
-  <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">Grimoire settings</button>
+  <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">GRIMOIRE</button>
   <button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
  chrome=document.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');chrome.innerHTML=frameHtml();document.body.append(chrome);
@@ -469,7 +469,9 @@ const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,
  const shapeLook=(id,menu,pts)=>({id,color:boardTint(),strip:readLook().strip,label:menu.label,pts,shaped:true,name:null});
 // Fullscreen destinations keep the energy and feather it inward along the inset face.
  const screenLook=(look,face=fullscreenFace())=>({...look,pts:rectPts(face),shaped:false,fullscreen:true,name:null});
- function fullscreenFace(){const rail=15;return {left:rail,top:rail,width:Math.max(1,innerWidth-rail*2),height:Math.max(1,innerHeight-rail*2)};}
+ // R20 (Ian 2 Oct): the housing ends above the dock, a separate console fixed below it (0 while the dock is hidden).
+ const dockHeight=()=>document.getElementById('coachDock')?.getBoundingClientRect().height||0;
+ function fullscreenFace(){const rail=15;return {left:rail,top:rail,width:Math.max(1,innerWidth-rail*2),height:Math.max(1,innerHeight-rail*2-dockHeight())};}
 function frameOn(face,look){
  frameOff();
  if(!chrome.showPopover||!face)return false; // no popover API (Safari before 17): destinations open as they always have
