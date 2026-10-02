@@ -34,13 +34,14 @@
 .portal-energy>span>span{position:absolute;left:0;top:0;background:repeating-linear-gradient(var(--dir),var(--energy));box-shadow:inset 0 0 1px 1px #0d0a10b0}
 .portal-energy>span:nth-child(odd)>span{--dir:90deg;height:100%;width:calc(100% + var(--energy-px))}
 .portal-energy>span:nth-child(even)>span{--dir:180deg;width:100%;height:calc(100% + var(--energy-px))}
-/* Engraved nameplate, top centre on the rail (clear of Menu and the bottom bar), screwed on, a status LED either side. */
-.portal-frame b{position:absolute;left:50%;top:calc(var(--portal-rail)/-2);translate:-50% -50%;height:17px;padding:0 11px 0 14px;box-sizing:border-box;border:1px solid #120d16;border-radius:3px;background:radial-gradient(circle at 6px 50%,var(--screw)),radial-gradient(circle at calc(100% - 6px) 50%,var(--screw)),repeating-linear-gradient(90deg,#0000 0 2px,#ffffff0a 2px 3px),linear-gradient(#ae99a5,#806b7c 48%,#5f4c5f);box-shadow:inset 0 1px #f1e1e7aa,inset 0 -1px #0007,0 2px 3px #000b;font:800 8.5px/15px ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.34em;color:#281e2c;text-shadow:0 1px #eadae199,0 -1px #0005;white-space:nowrap}
-.portal-frame b:before,.portal-frame b:after{content:'';position:absolute;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:var(--led);box-shadow:0 0 0 1px #0d0a10,0 0 5px var(--led);animation:portal-led 3.2s ease-in-out infinite alternate}
-.portal-frame b:before{--led:#39ff14;left:-11px}
-.portal-frame b:after{--led:#b026ff;right:-11px;animation-delay:-1.6s}
-@keyframes portal-led{from{opacity:.4}to{opacity:.85}}
-@media (prefers-reduced-motion:reduce){.portal-frame b:before,.portal-frame b:after{animation:none;opacity:.7}}
+/* R20 (Ian 2 Oct): the MOM Inc logo engraved into the top rail, right of the Grimoire key's slot (#portalSettingsButton).
+   The logo's ink (pod/mom-inc-engrave.png: black deep, purple shallower) is a mask: a dark cut with a lit lower lip.
+   Its box is measured from the frame's top-left so it stays put through a dive; it fills a 52px top band, or shrinks
+   into a plain 15px rail. */
+.portal-frame b{--eh:clamp(11px,calc(var(--cap,var(--portal-rail)) - 28px),24px);position:absolute;left:calc(var(--portal-key-end,124px) - var(--side,var(--portal-rail)));top:calc(min(var(--cap,var(--portal-rail)),var(--portal-top-band,52px))/2 - var(--cap,var(--portal-rail)));translate:0 -50%;width:calc(var(--eh)*363/72);height:var(--eh);font-size:0;color:#0000;pointer-events:none}
+.portal-frame b:before,.portal-frame b:after{content:'';position:absolute;inset:0;-webkit-mask:url(/pod/mom-inc-engrave.png) center/contain no-repeat;mask:url(/pod/mom-inc-engrave.png) center/contain no-repeat}
+.portal-frame b:after{background:#e8d4e070;translate:0 1px}
+.portal-frame b:before{z-index:1;background:linear-gradient(#0b060eee,#2a1d30cc)}
 /* The border stays when a destination opens: #portalChrome, a top-layer copy of the frame at the board's rest box (JS sets
    --face-*) above the destination dialog, with a matte of the board colour over the rest of the screen, so the dive
    plays in the frame's window and the dialog (.portal-framed) sits in it. Camera-only mode hides it with every other
@@ -217,7 +218,6 @@ html[data-public-state] #portalObjects .portal-object{transition:transform .6s c
 #portalBoardHost .portal-frame{--cap:calc(var(--face-top,0px) + var(--portal-top-band));--side:calc(var(--face-left,0px) + var(--portal-rail))}
 #portalChrome .portal-frame{--cap:var(--face-top,15px);--side:var(--face-left,15px)}
 .portal-frame:before{top:calc(-1*var(--cap));left:calc(-1*var(--side));right:calc(-1*var(--side));bottom:calc(-88px - env(safe-area-inset-bottom));padding:var(--cap) var(--side) calc(88px + env(safe-area-inset-bottom));background:repeating-linear-gradient(0deg,#0000 0 25px,#0b071966 26px,#d3bed92e 27px,#0000 29px),repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(160deg,var(--mh,#7e6a7c),var(--pm,#4d3d4f) 26%,var(--md,#3b2f42) 52%,var(--mx,#2b2132) 78%,var(--me,#564458))}
-.portal-frame b{top:calc(var(--cap)/-2);height:23px;line-height:21px;letter-spacing:.27em}
 #coachDock.coach-dock{height:calc(88px + env(safe-area-inset-bottom));gap:8px;padding:9px 12px calc(12px + env(safe-area-inset-bottom));border-top:0;background:repeating-linear-gradient(90deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(#493a50,#2b2132);box-shadow:inset 0 2px #ad97ad66,inset 0 6px 9px #0007;backdrop-filter:none}
 #coachDock.coach-dock button,#coachDock.coach-dock button.dock-portal{position:relative;height:53px;min-width:0;border:2px solid #9a8295;border-top-color:#cbb5c5;border-bottom-color:#4b384d;border-radius:4px!important;background:linear-gradient(145deg,#806979,#4a394e 80%);box-shadow:0 0 0 3px #1c1421,0 6px 0 2px #130d18,inset 1px 2px #e0c3d366,inset -2px -3px #25182c99;color:#f6e5d5;transform:none;translate:none}
 #coachDock.coach-dock button:active,#coachDock.coach-dock button[aria-current=page]{transform:translateY(4px);box-shadow:0 0 0 3px #1c1421,0 2px 0 2px #130d18,inset 1px 2px 5px #0008;border-top-color:#9b8194;color:#fff3d3}
