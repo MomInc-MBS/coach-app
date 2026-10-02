@@ -34,7 +34,7 @@ const push={need:'s e w h',gate:['horizontal >= .5','wristDrop >= .12'],up:['s-e
 const incline={...push,gate:['horizontal >= .28','wristDrop >= .12']};
 const squat={gate:['core','hipDrop >= .55'],travel:.25};
 const hinge={need:'s h k',gate:['kneeDrop >= .35'],up:['s-h-k > 158'],down:['s-h-k < 135'],metric:'s-h-k 180 -65'};
-const plank={need:'s e h k',gate:['horizontal > .65'],match:['s-h-k > 155','wristDrop > .2','s-e-w > 145']};
+const plank={need:'s e w h k',gate:['horizontal > .65'],match:['s-h-k > 155','wristDrop > .2','s-e-w > 145']};
 const raise={gate:[UPPER,'upright'],up:['both h-s-w < 30'],down:['both h-s-w > 75','both s-e-w > 145'],metric:'both h-s-w 0 90'};
 const standing=[LEGS,'upright'],straightLegs=['both kneeOut < .55','both kneeY > .7','spread < 1.2'];
 const balance={gate:standing,either:true,match:['otherKneeOut < .55','otherKneeY > .5','kneeGap > .15','kneeOut > .4']};

@@ -36,7 +36,7 @@ test('lower-body exercises never require wrists or elbows', () => {
   }
 });
 
-test('core/plank exercises require s,e,h,k but not wrist', () => {
+test('core/plank exercises require core joints', () => {
   // Map core exercises to their detector rules
   const coreRules = {
     'knee-plank': 'plank',
@@ -52,16 +52,16 @@ test('core/plank exercises require s,e,h,k but not wrist', () => {
     const rule = RULES[detector];
     if (!rule || !rule.need) continue;
     const needs = rule.need.split(' ');
-    assert.ok(!needs.includes('w'), `${id} (${detector}) should not require wrist, got need:'${rule.need}'`);
     assert.ok(needs.includes('s') || needs.includes('e') || needs.includes('h') || needs.includes('k'),
       `${id} (${detector}) must require at least one core joint, got need:'${rule.need}'`);
   }
 });
 
-test('plank requires exactly s,e,h,k (no wrist)', () => {
+// plank's match reads wristDrop and the s-e-w angle, so the wrist must stay required.
+test('plank requires s,e,w,h,k', () => {
   const rule = RULES['plank'];
   assert.ok(rule, 'plank rule must exist');
-  assert.equal(rule.need, 's e h k', `plank need should be 's e h k', got '${rule.need}'`);
+  assert.equal(rule.need, 's e w h k', `plank need should be 's e w h k', got '${rule.need}'`);
 });
 
 test('sideplank requires exactly s,e,h,k (no wrist)', () => {
