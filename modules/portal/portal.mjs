@@ -1405,7 +1405,7 @@ export function lensMap(poly,w,h,px=GLASS.mapPx,bevel=GLASS.bevel){
 const TUNNEL_VS='#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0,1);}';
 const tunnelFragment=(material='')=>`#version 300 es
 precision highp float;
-uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;out vec4 o;
+uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;uniform sampler2D uPeek;uniform float uPeekOn;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
 ${material}
 vec3 tunnel(vec2 p,float fz){
@@ -1429,6 +1429,7 @@ void main(){
  vec2 off=n*uLens*bend;                           // refraction: the thick bevel shows the tunnel from further out
  vec3 c=uFringe>0.&&bend>.02?vec3(tunnel(p+off*(1.-uFringe),fz).r,tunnel(p+off,fz).g,tunnel(p+off*(1.+uFringe),fz).b):tunnel(p+off,fz); // dispersion: blue bends furthest
  if(uBlur>0.)c=mix(c,tunnel(uC+(p+off-uC)*1.016,fz),uBlur); // short radial exposure
+ if(uPeekOn>0.){vec2 q=(p+off)/uRes;c=mix(c,pow(texture(uPeek,vec2(q.x,1.-q.y)).rgb,vec3(.4545)),uPeekOn*(1.-smoothstep(.3,.75,length((p0-uC)/uRes)*2.))*step(0.,sd));} // PORTAL-PEEK: the destination in the centre, the wormhole at the rim
  float l=dot(c,vec3(.299,.587,.114));c=mix(vec3(l),c,1.45)*.9+.07; // frosted: lifted, saturation boosted
  c=mix(c,vec3(l)*.55+.42,.2*bend);                // frost in the bevel band only: a milky thick edge against the clear middle
  vec2 L=normalize(uLP-p0);float lit=max(dot(n,L),0.),far=max(-dot(n,L),0.); // lit from the finger (or the top-left)
@@ -1444,7 +1445,7 @@ void main(){
 // One WebGL2 context for the portal's life, created on the first glass and reused; null when unavailable (CSS glass then).
 let tunnel=null;
 function tunnelGL(material='',{activate=true}={}) {
- const uniforms=['uRes','uC','uLP','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uMag','uN','uSeq','uCore','uTint','uBlur'];
+ const uniforms=['uRes','uC','uLP','uR','uT','uSpin','uSweep','uLens','uBevel','uPr','uFringe','uMag','uN','uSeq','uCore','uTint','uBlur','uPeek','uPeekOn'];
  if(!tunnel){
   const canvas=document.createElement('canvas'),gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,powerPreference:'low-power'});
   if(!gl)return null;
@@ -1480,6 +1481,30 @@ function tunnelGL(material='',{activate=true}={}) {
 }
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+// PORTAL-PEEK (R17, on by default; localStorage.myr5PortalPeek="0" is the kill switch): the destination rendered offscreen (portal-peek.mjs)
+// and sampled in the wormhole's centre on texture unit 1. Loads after the wormhole starts; fades in once ready; any
+// failure, a lost context or the lite fallback leaves the plain wormhole.
+function startPeek(ph,{gl,active:{program,u}},w,h){
+ let flag=null;try{flag=localStorage.getItem('myr5PortalPeek');}catch{}
+ if(!ph.peek||flag==='0')return null;
+ const s={peek:null,tex:null,on:0,n:0,dead:false};
+ import('./portal-peek.mjs').then(m=>m.openPeek(ph.peek,w,h)).then(peek=>{
+  if(!peek)return;if(s.dead||gl.isContextLost())return peek.dispose();
+  s.peek=peek;s.tex=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,s.tex);
+  for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
+  for(const k of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,k,gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,peek.width,peek.height,0,gl.RGBA,gl.UNSIGNED_BYTE,null);gl.activeTexture(gl.TEXTURE0);
+ }).catch(()=>{});
+ s.frame=(dt,now)=>{
+  if(!s.peek)return;if(s.peek.lost()){s.stop();gl.useProgram(program);gl.uniform1f(u.uPeekOn,0);return;}
+  if(s.n++&1)return; // ponytail: half rate (each read stalls the GPU); go every frame if phones show judder
+  s.peek.render(now);const px=s.peek.read();
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,s.tex);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,s.peek.width,s.peek.height,gl.RGBA,gl.UNSIGNED_BYTE,px);gl.activeTexture(gl.TEXTURE0);
+  s.on=Math.min(1,s.on+dt*5);gl.useProgram(program);gl.uniform1f(u.uPeekOn,s.on);
+ };
+ s.stop=()=>{s.dead=true;s.peek?.dispose();s.peek=null;if(s.tex)gl.deleteTexture(s.tex);s.tex=null;};
+ return s;
+}
 // Runs the wormhole for one glass phase: speed ramps up across the cut + loading phase, the vanishing point drifts
 // toward the finger (and with device tilt where that needs no permission prompt). Reduced motion uses static CSS glass.
 // ph.stop() freezes it (at the reveal) and endPhase() always stops it.
@@ -1518,6 +1543,7 @@ async function startTunnel(ph,poly,color,all){
   bindPhaseProgram();
   canvas.width=Math.max(1,Math.round(w*pr));canvas.height=Math.max(1,Math.round(h*pr));gl.viewport(0,0,canvas.width,canvas.height);
   gl.uniform2f(u.uRes,canvas.width,canvas.height);gl.uniform1f(u.uPr,pr);gl.uniform1f(u.uR,Math.max(R,1)*pr);gl.uniform1f(u.uLens,GLASS.bend*pr);gl.uniform1f(u.uBevel,GLASS.bevel*pr);gl.uniform1f(u.uFringe,lite||reduced?0:GLASS.fringe);gl.uniform1f(u.uMag,GLASS.magnify);gl.uniform1f(u.uBlur,lite||reduced?0:.18);
+  gl.uniform1i(u.uPeek,1);gl.uniform1f(u.uPeekOn,0); // PORTAL-PEEK
  };
  const draw=now=>{
   bindPhaseProgram();
@@ -1530,16 +1556,17 @@ async function startTunnel(ph,poly,color,all){
   if(cancelled||!ph.glass.isConnected||capturedSignal?.aborted||gl.isContextLost())return;
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   // Graceful degrade: if frames 10-40 run slow (median under ~45 fps), drop resolution and the fringe.
-  if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);size();ph.glass.dataset.lite='1';}
+  if(!lite&&slow.length<40&&slow.push(dt)===40&&slow.slice(10).sort((a,b)=>a-b)[15]>.022){lite=true;pr=Math.min(pr,.75);pk?.stop();size();ph.glass.dataset.lite='1';} // PORTAL-PEEK: lite drops the peek
   const T=ph.T,d=ph.diveT0?Math.min(1,(now-ph.diveT0)/T.reveal):ph.backT0?Math.max(0,1-(now-ph.backT0)/T.reveal):0; // the dive adds up to tunnelDive rings/s (the dive back sheds it)
   travel=(travel+dt*1.25*(PORTAL.tunnelFrom+(PORTAL.tunnelTo-PORTAL.tunnelFrom)*easeInOut((now-ph.t0)/(T.cut+T.load))+PORTAL.tunnelDive*d*d))%seq.length;
   const finger=[...pointers.values()].at(-1)?.pts.at(-1);let tx=(tilt?.[0]||0)+(finger?(finger.x-left-cx)*.12:0),ty=(tilt?.[1]||0)+(finger?(finger.y-top-cy)*.12:0);
   const k=Math.min(1,.2*R/(Math.hypot(tx,ty)||1));par[0]+=(tx*k-par[0])*Math.min(1,dt*5);par[1]+=(ty*k-par[1])*Math.min(1,dt*5);
   const lx=finger?finger.x-left:rest[0]-(tilt?.[0]||0)*8,ly=finger?finger.y-top:rest[1]-(tilt?.[1]||0)*8;light[0]+=(lx-light[0])*Math.min(1,dt*9);light[1]+=(ly-light[1])*Math.min(1,dt*9);
-  draw(now);raf=requestAnimationFrame(frame);
+  pk?.frame(dt,now);draw(now);raf=requestAnimationFrame(frame); // PORTAL-PEEK
  };
  size();ph.glass.append(canvas);ph.glass.classList.add('gl');draw(ph.t0);
  if(reduced)return;
+ const pk=startPeek(ph,t,w,h),stop0=ph.stop;if(pk)ph.stop=()=>{stop0();pk.stop();}; // PORTAL-PEEK
  tiltOk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission!=='function';
  if(tiltOk)addEventListener('deviceorientation',onTilt);
  raf=requestAnimationFrame(frame);
@@ -1552,7 +1579,7 @@ async function startTunnel(ph,poly,color,all){
 // T: this sequence's {cut,load,reveal} ms (#124's lines and X run PORTAL.short of them); axis: a line's [a,b], whose
 // glowing bezel starts as a slit along it and opens into the lens over the cut, the wormhole pouring through the tear.
 const FULL_T={cut:PORTAL.cutMs,load:PORTAL.loadMinMs,reveal:PORTAL.revealMs};
-function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null,monochrome=false}={}){
+function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null,monochrome=false,peek=null}={}){
  endPhase();
  const poly=pts||closeLoop([[0,0],[innerWidth,0],[innerWidth,innerHeight],[0,innerHeight]]),clip=pts?bleedPts(pts):poly;
  const xs=clip.map(p=>p[0]),ys=clip.map(p=>p[1]),left=Math.floor(Math.min(...xs)),top=Math.floor(Math.min(...ys)),w=Math.ceil(Math.max(...xs))-left,h=Math.ceil(Math.max(...ys))-top;
@@ -1576,7 +1603,7 @@ function showGlass(pts,color,all=false,edge=pts,{T=FULL_T,axis=null,monochrome=f
    bezel.animate([{transform:`rotate(${d2(a)}deg) scale(1,.04) rotate(${d2(-a)}deg)`},{transform:'none'}],{duration:T.cut,easing:'cubic-bezier(.5,0,.2,1)'});
   }
  }
- phase={glass:el,bezel,pts,color,T,t0:performance.now(),pulse:false,box:{left,top,w,h}};
+ phase={glass:el,bezel,pts,color,T,t0:performance.now(),pulse:false,box:{left,top,w,h},peek}; // PORTAL-PEEK: peek = destination route
  startTunnel(phase,poly,color,all);
  energize(restSeq(),ENERGY.surge,true);
 }
@@ -1724,7 +1751,7 @@ async function portalSequence(id,current){
  if(menu.locked?.()){status(menu.lockedMessage);return;}
  status('');
  const k=short?PORTAL.short:1,T={cut:PORTAL.cutMs*k,load:PORTAL.loadMinMs*k,reveal:PORTAL.revealMs*k},reduced=prefersReducedMotion();
- showGlass(pts,menu.color,false,pts,{T,axis:win.axis,monochrome:menu.route==='meditate'});
+ showGlass(pts,menu.color,false,pts,{T,axis:win.axis,monochrome:menu.route==='meditate',peek:menu.route}); // PORTAL-PEEK: route
  await cutBoard(pts,menu.color,reduced?0:T.cut);
  if(!current())return;
  // Loading phase: the glass stays live (touch ripples, breathing outline) for at least T.load.
