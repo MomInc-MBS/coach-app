@@ -16,7 +16,7 @@ const G=globalThis as any;
 export const MIRROR=['body','skin','face','hair','facial'];
 export const CLOTHES=['headwear','neck','torso','shoulders','arms','hands','legs','feet','held','back'];
 export const IDLE_WALK_MS=10000;
-export const LABELS:Record<CageSection,{label:string;name:string}>={ pets:{label:'Pets',name:'Animal cages: pet'}, weapons:{label:'Weapons',name:'Weapon rack: weapon'}, mirror:{label:'Mirror',name:'Mirror: alien features'}, clothing:{label:'Clothes',name:'Centre station: clothes'}, overview:{label:'Room',name:'War Room: overview'}, pedestal:{label:'Coach',name:'War Room: pedestal'}};
+export const LABELS:Record<CageSection,{label:string;name:string}>={ pets:{label:'Pets',name:'Animal cages: pet'}, weapons:{label:'Weapons',name:'Weapon rack: weapon'}, mirror:{label:'Mirror',name:'Mirror: alien features'}, clothing:{label:'Clothes',name:'Centre station: clothes'}, overview:{label:'Room',name:'Whole War Room'}, pedestal:{label:'Gala',name:'Your Gala character: face'}};
 // Which performer scene plays: idle loops, a face tap zooms in once, and ten idle seconds send the character walking off and back.
 export function sceneClock(mode:{name:'idle'|'face'|'walk';since:number},now:number,idleSince:number,scenes:{name:string;duration:number}[]){
  const start=(name:string)=>{let t=0;for(const s of scenes){if(s.name===name)return {t,duration:s.duration};t+=s.duration;}return null;};
@@ -124,7 +124,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   if(disposed)return;
   if(!have){flatBays();tell('Download the 3D cage: Install → Downloads.');return;}
   cage=mountCage(stage,{openTab:()=>false,showBay:()=>{},closeBay,tell,bay:showBay,labels:LABELS,volumes:{pedestal:[[.02,.64,-.01,.22,.20,.24,0]],clothing:[[.06,.3,-.31,.18,.12,.1,0]]}});
-  stage.querySelectorAll('[data-cage-section=overview],[data-cage-section=pedestal]').forEach(el=>el.remove());
+  stage.mount.querySelectorAll('[data-cage-section=overview],[data-cage-section=pedestal]').forEach(el=>el.remove());
   void cage.ready.then(ok=>{if(!disposed&&!ok)flatBays();});
  });
  const tick=(now:number)=>{

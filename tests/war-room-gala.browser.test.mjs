@@ -30,7 +30,7 @@ async function harness(t){
  return {page,seen,errors,base};
 }
 const look=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('mominc-avatar-v1')));
-const tap=async(page,section)=>{await page.click('[data-cage-section="overview"]');await page.waitForTimeout(800);const p=await page.evaluate(s=>window.warRoomGala.cage.project(s),section);assert.ok(p,section+' projects on screen');await page.mouse.click(p.x,p.y);};
+const tap=async(page,section)=>{await page.evaluate(()=>window.warRoomGala.cage.select('overview'));await page.waitForTimeout(800);const p=await page.evaluate(s=>window.warRoomGala.cage.project(s),section);assert.ok(p,section+' projects on screen');await page.mouse.click(p.x,p.y);};
 
 test('a guest dresses their Gala character from the War Room bays at 375×812, with no coach and no account write',async t=>{
  const {page,seen,errors,base}=await harness(t);
@@ -41,7 +41,7 @@ test('a guest dresses their Gala character from the War Room bays at 375×812, w
  assert.ok(await page.evaluate(()=>window.warRoomGala.stage.renderer.info.render.triangles)>140000,'the cage room is drawn');
  assert.ok(await page.evaluate(()=>!!window.warRoomGala.stage.scene.getObjectByName('gala-character')),'the Gala character stands in the room');
  const labels=await page.locator('.cage-bays button').allTextContents();
- assert.deepEqual(labels,['Room','Gala','Pets','Weapons','Mirror','Clothes']);
+ assert.deepEqual(labels,['Pets','Weapons','Mirror','Clothes'],'R18 H: Room and Gala buttons are removed');
  const stage=await page.locator('.gala-bay-stage').boundingBox();
  for(const b of await page.locator('.cage-bays button').all()){const r=await b.boundingBox();assert.ok(r.x>=stage.x-.5&&r.x+r.width<=stage.x+stage.width+.5&&r.height>=36,'bay button fits the phone stage');}
  await mkdir(frames,{recursive:true});await page.screenshot({path:resolve(frames,'room-375x812.png')});

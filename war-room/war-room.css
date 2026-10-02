@@ -34,7 +34,10 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;p
 .controls-drawer[open] summary::before{content:'\25bc '}
 .controls-grid{display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
 .controls-grid h2{margin:0 0 6px;font:13px monospace;color:#f1ffcc;text-transform:uppercase;letter-spacing:.05em}
-.bay-terminal-line{background-color:rgba(0,0,0,.7);color:#ff8800;font-family:'Courier New',monospace;border:none;padding:.4rem .8rem;margin:.2rem;box-shadow:0 0 6px #ff8800;transition:background-color .2s}
-.bay-terminal-line:hover{background-color:rgba(255,136,0,.1)}
-.cage-bays button{background-color:rgba(0,0,0,.7);color:#ff8800;font-family:'Courier New',monospace;border:none;padding:.4rem .8rem;margin:.2rem;box-shadow:0 0 6px #ff8800;transition:background-color .2s}
-.cage-bays button:hover{background-color:rgba(255,136,0,.1)}
+/* R18 H: the 3D bay buttons are an orange terminal in a translucent glass hologram panel (War Room page only: this file is not loaded elsewhere). */
+.war-room .cage-bays{gap:2px;padding:4px 6px;border:1px solid #ff880088;border-radius:8px;background:linear-gradient(#0a120e66,#04080acc),repeating-linear-gradient(0deg,#0000 0 2px,#ff880014 2px 3px);background-blend-mode:normal;backdrop-filter:blur(3px);box-shadow:0 0 14px #ff880055,inset 0 0 18px #ff880022}
+.war-room .cage-bays button{flex:1 1 auto;background:none;border:0;border-radius:0;box-shadow:none;color:#ff9a1f;font:700 .8125rem 'Courier New',monospace;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 0 6px #ff8800aa;min-height:36px;padding:4px 6px;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;white-space:nowrap}
+.war-room .cage-bays button::before{content:'> '}.war-room .cage-bays button::after{content:'_';animation:bay-cursor 1s steps(1) infinite}
+.war-room .cage-bays button[aria-pressed=true]{background:#ff88002e;color:#ffd08a;text-shadow:0 0 8px #ffb347}
+.war-room .cage-bays button:hover{background:#ff880022}
+@keyframes bay-cursor{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.war-room .cage-bays button::after{animation:none}}
