@@ -1,5 +1,6 @@
 // Event-driven cues: no language model or microphone needed during exercise.
 import {RobotAudio} from './robot-audio.mjs';
+import {coachOnline} from './coach-net.mjs';
 function myr5VoiceState(state){if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('myr5:response',{detail:{state}}));}
 export const INTRO = {
  squat:'Watch the squat. Start tall, lower, then return to your starting height. Keep your shoulders and hips in view. Feet can be outside the picture.',
@@ -56,7 +57,7 @@ export class CoachVoice {
   const item=this.queue.shift(),epoch=this.epoch;this.current=item;
   this.caption(item.text);myr5VoiceState('speaking');let finished=false;
   const finish=()=>{clearTimeout(item.timer);if(finished||epoch!==this.epoch)return;finished=true;this.current=null;item.resolve();myr5VoiceState('idle');this.pump();};
-  const unavailable=()=>{if(epoch!==this.epoch)return;this.onMode('Voice unavailable · captions on');finish();};
+  const unavailable=()=>{if(epoch!==this.epoch)return;this.onMode(coachOnline()?'Voice unavailable · captions on':'Offline · captions on, voice returns when you reconnect');finish();};
   item.timer=setTimeout(()=>{if(epoch===this.epoch){this.robot.stop();globalThis.speechSynthesis?.cancel();finish();}},Math.max(10000,5000+item.text.length*220));
   if(this.robot.unlock())this.robot.play(item.text).then(played=>{if(epoch===this.epoch){if(played)finish();else unavailable();}},unavailable);
   else unavailable();
