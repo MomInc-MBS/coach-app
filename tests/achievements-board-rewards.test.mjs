@@ -20,9 +20,9 @@ test('the detail data names skin and ship grants while preserving shared-boss re
  assert(first[2].some(item=>item.kind==='ship'&&item.name==='Supportive Ship'));
  assert(first[4].some(item=>item.kind==='ship'&&item.name==='Direct Ship'));
  assert.deepEqual(levelRewardsForBoss('warden-1').map(items=>items.map(item=>item.kind)),[
-  ['reward-pack'],['boss-texture'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock']
+  ['reward-pack'],['boss-texture','reward-pack'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock','reward-pack']
  ]);
  assert.deepEqual(levelRewardsForBoss('lume-1').map(items=>items.map(item=>item.kind)),[
-  ['reward-pack'],['boss-texture'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock']
+  ['reward-pack'],['boss-texture','reward-pack'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock','reward-pack']
  ]);
 });
