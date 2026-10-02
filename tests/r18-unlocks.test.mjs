@@ -34,13 +34,13 @@ test('every non-free texture is in the texture pack pool, and the pool holds not
  assert.equal(textureRewardPool().length,pool.size,'no duplicate pool entries');
 });
 
-test('the 15 free colours are the top 15 hexes by count',()=>{
- assert.deepEqual([...FREE_COLOURS],['#111111','#ffffff','#8b8f9a','#4a4d55','#e7e9ee','#b7a68e','#7a6b57','#ddcdb3','#a23b4a','#4f1620','#f2a3ae','#2d5aa0','#122a4d','#a9c9f5','#4c7a3f']);
- const n=new Map(),add=h=>n.set(h.toLowerCase(),(n.get(h.toLowerCase())||0)+1);
+test('the 15 free colours span the hue range and each already exists in the census',()=>{
+ assert.deepEqual([...FREE_COLOURS],['#060409','#ffffff','#7f7d78','#ff3b30','#ff8a2a','#ffd100','#2bd97c','#008c8c','#2454d6','#6a2bd9','#f59ec4','#7a5530','#c4a77d','#0b1a45','#9fe2bf']);
+ const census=new Set(),add=h=>census.add(h.toLowerCase());
  for(const c of COLORS)[c.primary,c.secondary,c.accent].forEach(add);
  for(const p of PALETTES)p.colors.forEach(add);
- const top=[...n].sort((a,b)=>b[1]-a[1]).slice(0,15);
- assert.deepEqual(top.map(([h])=>h),[...FREE_COLOURS]);
+ for(const h of FREE_COLOURS)assert.ok(census.has(h),h);
+ assert.equal(new Set(FREE_COLOURS).size,15);
  for(const h of FREE_COLOURS){assert.equal(isLocked(h),false,h);assert.ok(colorTriad(h));}
  assert.equal(isLocked('#0a0a0a'),true);
 });
@@ -68,11 +68,11 @@ test('three channels: body colour reaches body, arms, feet and collar; head and 
 
 test('an owned palette fills the three channels: primary body, secondary head, accent eyes',()=>{
  memory.clear();
- const p=PALETTES.find(p=>p.id==='pal-50');
+ const p=PALETTES.find(p=>!p.colors.some(h=>FREE_COLOURS.includes(h.toLowerCase())));
  assert.equal(isLocked(p.id),true);
  const [body,head,eyes]=paletteChannelIds(p);
  assert.deepEqual([body,head,eyes],p.colors.map(h=>h.toLowerCase()));
- assert.equal(isLocked(body),true,'#ffd100 is not free until the palette is owned');
+ assert.equal(isLocked(body),true,`${body} is not free until the palette is owned`);
  m.grantUnlock('palette',p.id);
  for(const h of [body,head,eyes]){assert.equal(isLocked(h),false);assert.equal(colorTriad(h).primary,h);}
 });
@@ -81,4 +81,14 @@ test('no "unlocks at" text anywhere in creature/source',()=>{
  const walk=d=>readdirSync(d).flatMap(f=>{const q=join(d,f);return statSync(q).isDirectory()?walk(q):[q];});
  for(const f of walk('creature/source').filter(f=>/\.(ts|mjs|js|html|css)$/.test(f)))assert.doesNotMatch(readFileSync(f,'utf8'),/unlocks at/i,f);
  for(const f of ['creature/index.html','creature/creature.css'])assert.doesNotMatch(readFileSync(f,'utf8'),/unlocks at/i,f);
+});
+
+test('G5: every single-colour pack reward carries the registry primary, so the pack screen can show a swatch',async()=>{
+ const {rewardSummary}=await import('../reward-pack-ui.mjs');
+ for(const item of colourRewardPool().filter(i=>i.kind==='color')){
+  assert.equal(item.hex.toLowerCase(),COLORS.find(c=>c.id===item.id).primary.toLowerCase(),item.id);
+  assert.deepEqual(rewardSummary({category:'color',reward:item}).colors,[item.hex],item.id);
+ }
+ assert.deepEqual(rewardSummary({category:'color',reward:{kind:'color',id:'#ff3b30',name:'x'}}).colors,['#ff3b30'],'a hex colour id is its own swatch');
+ assert.equal(rewardSummary({category:'texture',reward:{kind:'texture',id:'flat',name:'Flat'}}).colors.length,0);
 });

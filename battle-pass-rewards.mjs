@@ -20,6 +20,7 @@
 import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
 import SKIN_CATALOG from './creature/source/creator/creature-skins.json' with {type:'json'};
 import {FOOD_BONUS_DAMAGE_MULTIPLIER} from './combat-config.mjs';
+import {STYLES as LEGACY_STYLES} from './creature/source/creator/catalog.ts';
 
 // D30 rows, top to bottom — ids/order/counts must match achievements-board.mjs TIERS.
 export const ROWS=Object.freeze([
@@ -133,21 +134,31 @@ export const textureRewardPool=()=>[
  ...TEXTURES.map(t=>item('texture',t)),
  ...LEGACY_NAMES.map((name,n)=>item('texture',[`legacy-${n}`,name,''])),
 ].filter(t=>!FREE_TEXTURE_IDS.includes(t.id));
-// R18 G2: the 15 free colours are the top hexes by count (scripts/colour-census.mjs); everything else
-// is pack-only. Pool = every palette + every non-free single colour of the registry.
+// R18 G2b: the 15 free colours span the hue range; each is the nearest (Lab) hex
+// already present in the census of palettes.json + SIMPLE_COLORS + LEGACY_COLORS
+// (scripts/colour-census.mjs). Everything else is pack-only.
 export const FREE_COLOURS=Object.freeze([
- '#111111', // 2 (Static Pop + Caution Tape Couture)
- '#ffffff', // 2 (Static Pop + Caution Tape Couture)
- '#8b8f9a','#4a4d55','#e7e9ee', // count 1 each, ties in first-appearance order: Slate
- '#b7a68e','#7a6b57','#ddcdb3', // 1 each: Warm Clay
- '#a23b4a','#4f1620','#f2a3ae', // 1 each: Ruby
- '#2d5aa0','#122a4d','#a9c9f5', // 1 each: Sapphire
- '#4c7a3f', // 1: Moss primary
+ '#060409', // black
+ '#ffffff', // white
+ '#7f7d78', // grey
+ '#ff3b30', // red
+ '#ff8a2a', // orange
+ '#ffd100', // yellow
+ '#2bd97c', // green
+ '#008c8c', // teal
+ '#2454d6', // blue
+ '#6a2bd9', // purple
+ '#f59ec4', // pink
+ '#7a5530', // brown
+ '#c4a77d', // tan
+ '#0b1a45', // navy
+ '#9fe2bf', // mint
 ]);
+// R18 G5: every colour item carries its primary `hex`, so the pack screen can show a swatch (a test pins these to the registry).
 export const colourRewardPool=()=>[
  ...PALETTES.map(p=>({kind:'palette',id:p.id,name:p.name})),
- ...[['default-gold','Gold'],['default-charcoal','Charcoal'],['default-blush','Blush']].map(([id,name])=>({kind:'color',id,name})),
- ...LEGACY_NAMES.map((name,n)=>({kind:'color',id:`legacy-color-${n}`,name:`${name} (original)`})),
+ ...[['default-slate','Slate','#8b8f9a'],['default-clay','Warm Clay','#b7a68e'],['default-ruby','Ruby','#a23b4a'],['default-sapphire','Sapphire','#2d5aa0'],['default-moss','Moss','#4c7a3f'],['default-gold','Gold','#c9a13a'],['default-charcoal','Charcoal','#333238'],['default-blush','Blush','#d98fa0']].map(([id,name,hex])=>({kind:'color',id,name,hex})), // R18 G2b: none of the 8 simple colours is a free hex
+ ...LEGACY_NAMES.map((name,n)=>({kind:'color',id:`legacy-color-${n}`,name:`${name} (original)`,hex:n?LEGACY_STYLES[n].primary:'#7946aa'})), // design.ts restyles #0 as Original MYR5
 ];
 function packCosmetics(levels,bossId){
  for(let level=0;level<levels.length;level++)levels[level]=levels[level].flatMap(reward=>{

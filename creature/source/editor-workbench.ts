@@ -62,7 +62,7 @@ function tell(text:string){$('creatureStatus').textContent=text;}
 function coachPreview(){const coach=getCoach(shown().coach);$('coachTone').textContent=coach.tone;$('coachLine').textContent=coach.lines[($('coachSituation') as HTMLSelectElement).value as Situation||'start'];}
 // Texture/colour/sparkle/metallic override for the selected part (Rank 4 registry, Rank 5 UI).
 // No override -> renders exactly like the legacy `styles[region]` index (old saves keep working).
-const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'default-slate',sparkle:0,metallic:0};
+const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0};
 function materialChoice():MaterialChoice{return shown().materials?.[selected]??DEFAULT_MATERIAL;}
 function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){const base=shown();commit({...base,materials:{...base.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
 // #1/#102 Preview locked looks: a design that contains a locked body or locked material paints the

@@ -56,14 +56,14 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
   await page.waitForFunction(()=>['head','eye','collar','body','arms','feet'].every(r=>window.myr5Companion?.recipe?.materials?.[r]?.textureId==='clay')&&window.myr5Companion?.ready===true,null,{timeout:60000});
   await page.click('#tab-materials');
   await page.click('[data-region="body"]');
-  await page.click('#colorSwatches [data-channel="body"][data-color="default-ruby"]');
-  await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.body?.colorId==='default-ruby'&&window.myr5Companion?.ready===true,null,{timeout:60000});
-  assert.notEqual(await page.evaluate(()=>window.myr5Companion.recipe.materials.head.colorId),'default-ruby');
+  await page.click('#colorSwatches [data-channel="body"][data-color="#ff3b30"]');
+  await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.body?.colorId==='#ff3b30'&&window.myr5Companion?.ready===true,null,{timeout:60000});
+  assert.notEqual(await page.evaluate(()=>window.myr5Companion.recipe.materials.head.colorId),'#ff3b30');
   await page.click('#tab-body');
   await page.selectOption('#body','myr5');
   await page.waitForFunction(()=>window.myr5Companion?.recipe?.body==='myr5'&&window.myr5Companion?.ready===true,null,{timeout:60000});
   recipe=await page.evaluate(()=>window.myr5Companion.recipe);
-  assert.equal(recipe.materials.body.textureId,'clay');assert.equal(recipe.materials.body.colorId,'default-ruby');
+  assert.equal(recipe.materials.body.textureId,'clay');assert.equal(recipe.materials.body.colorId,'#ff3b30');
   assert.equal(recipe.headFrom,'myr5'); // body switch re-normalized the mixing fields too
   assert.equal(await page.locator('#fingersField').isVisible(),true); // mom-only controls are back
 

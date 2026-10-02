@@ -17,7 +17,7 @@ const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade ·
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
 const STARTER_BODY='roster/21-flyer--winged_humanoid_3d_model'; // Flyer 1, no placement
 const row=(id,n,levels)=>Object.fromEntries(Array.from({length:n},(_,i)=>[`${id}-${i+1}`,levels]));
-const owned={...fresh(),materials:{body:{textureId:'flat',colorId:'default-sapphire',sparkle:0,metallic:0}}};
+const owned={...fresh(),materials:{body:{textureId:'flat',colorId:'#2454d6',sparkle:0,metallic:0}}};
 
 test('R18: only the free 13 textures and 15 colours are open; the rest read as locked (no unlock text)',()=>{
  memory.clear();
@@ -26,7 +26,7 @@ test('R18: only the free 13 textures and 15 colours are open; the rest read as l
  assert.equal(isLocked('legacy-15'),true);assert.equal(isLocked('legacy-14'),true);assert.equal(isLocked('legacy-13'),true);
  assert.equal(isLocked('arms-rope'),false);assert.equal(isLocked('chest-rubber-grip'),true);assert.equal(isLocked('legacy-3'),true);assert.equal(isLocked('legacy-4'),false);
  assert.equal(isLocked('pal-01'),true);
- assert.equal(isLocked('flat'),false);assert.equal(isLocked('default-ruby'),false);assert.equal(isLocked('default-gold'),true);assert.equal(isLocked('creature-anything'),false);assert.equal(isLocked('#111111'),false);assert.equal(isLocked('#0a0a0a'),true);
+ assert.equal(isLocked('flat'),false);assert.equal(isLocked('default-ruby'),true);assert.equal(isLocked('#ff3b30'),false);assert.equal(isLocked('default-gold'),true);assert.equal(isLocked('creature-anything'),false);assert.equal(isLocked('#060409'),false);assert.equal(isLocked('#0a0a0a'),true);
 });
 
 test('a locked palette paints only in preview; the normal render still falls back',()=>{
@@ -39,10 +39,10 @@ test('a locked palette paints only in preview; the normal render still falls bac
 test('a locked battle-pass texture previews its built-in pattern without changing its unlock status',()=>{
  memory.clear();
  const texture=TEXTURES.find(t=>t.id==='chest-plate-steel');
- const choice={textureId:'chest-plate-steel',colorId:'default-ruby',sparkle:0,metallic:0};
+ const choice={textureId:'chest-plate-steel',colorId:'#ff3b30',sparkle:0,metallic:0};
  const previewed=resolveRegionMaterial(0,choice,true);
  assert.equal(previewed.id,32,'preview paints the Plate Steel family');
- assert.equal(previewed.primary,findColor('default-ruby').primary,'the selected colour stays independent from surface family');
+ assert.equal(previewed.primary,'#ff3b30','the selected colour stays independent from surface family');
  assert.equal(isLocked(texture.id),true,'renderable preview does not grant a locked texture');
  const real=resolveRegionMaterial(0,choice); // normal assembly still enforces the existing reward gate
  assert.equal(real.detail,'flat');
@@ -51,7 +51,7 @@ test('a locked battle-pass texture previews its built-in pattern without changin
 test('save guard: a locked texture, palette or body forced into the save path is rejected and the last owned look is kept',()=>{
  memory.clear();
  // As devtools could: hand the save path a recipe carrying locked ids directly.
- const forced={...owned,body:CHEST_BODY,headFrom:CHEST_BODY,armsFrom:CHEST_BODY,feetFrom:CHEST_BODY,materials:{body:{textureId:'chest-plate-steel',colorId:'default-sapphire',sparkle:.3,metallic:0},head:{textureId:'flat',colorId:'pal-01',sparkle:0,metallic:0}}};
+ const forced={...owned,body:CHEST_BODY,headFrom:CHEST_BODY,armsFrom:CHEST_BODY,feetFrom:CHEST_BODY,materials:{body:{textureId:'chest-plate-steel',colorId:'#2454d6',sparkle:.3,metallic:0},head:{textureId:'flat',colorId:'pal-01',sparkle:0,metallic:0}}};
  const kept=saveRecipe(localStorage,forced,owned,new Set(['myr5']));
  const stored=JSON.parse(localStorage.getItem(RECIPE_KEY));
  assert.deepEqual(stored,kept);
@@ -71,7 +71,7 @@ test('save guard keeps what is owned: granted items, clean recipes unchanged',()
 
 test('#140 grandfather: a coach saved with a newly locked texture keeps it, once per device, and nothing else is granted',()=>{
  memory.clear();
- const magma={textureId:'legacy-15',colorId:'default-slate',sparkle:0,metallic:0},before={...fresh(),materials:{body:magma,head:{...magma,textureId:'flat'}}};
+ const magma={textureId:'legacy-15',colorId:'#7f7d78',sparkle:0,metallic:0},before={...fresh(),materials:{body:magma,head:{...magma,textureId:'flat'}}};
  assert.equal(resolveRegionMaterial(0,magma).detail,'flat','locked for a user who never had it');
  grandfatherSwappedTextures(before);
  assert.equal(isLocked('legacy-15'),false);assert.equal(resolveRegionMaterial(0,magma).detail,'magma');

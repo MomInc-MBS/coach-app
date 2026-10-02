@@ -89,12 +89,12 @@ test('D32: every palette is a primary/secondary/accent triad of valid hex, with 
 
 test('a locked battle-pass texture stays locked in normal assembly while its preview uses the named pattern',()=>{
  const locked=TEXTURES.find(t=>t.familyId===32);
- const choice={textureId:locked.id,colorId:'default-ruby',sparkle:0,metallic:0};
+ const choice={textureId:locked.id,colorId:'#ff3b30',sparkle:0,metallic:0};
  const resolved=resolveRegionMaterial(0,choice);
  assert.equal(resolved.id,FLAT_TEXTURE.familyId,'a normal render still blocks locked texture ids');
  const preview=resolveRegionMaterial(0,choice,true);
  assert.equal(preview.id,locked.familyId);assert.equal(preview.detail,builtinSurfaceProfile(locked.familyId)?.name.toLowerCase().replace(/[^a-z0-9]+/g,'-'));
- assert.equal(preview.primary,colorTriad('default-ruby')?.primary,'preview shows the selected colour over the real pattern');
+ assert.equal(preview.primary,colorTriad('#ff3b30')?.primary,'preview shows the selected colour over the real pattern');
 });
 
 test('all 24 named surfaces return distinguishable phone-scale height/roughness patterns and material relief',()=>{
@@ -104,7 +104,7 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
   const mean=heights.reduce((a,b)=>a+b,0)/heights.length,variance=heights.reduce((a,b)=>a+(b-mean)**2,0)/heights.length,roughMean=rough.reduce((a,b)=>a+b,0)/rough.length;
   assert.ok(variance>.0001,`${t.displayName} has visible height variation at a 24x24 sample`);
   const signature=heights.map(v=>Math.round(v*255)).join(',');assert.ok(!fingerprints.has(signature),`${t.displayName} does not reuse another texture's pattern`);fingerprints.add(signature);
-  const profile=builtinSurfaceProfile(t.familyId);assert.ok(profile);const style=resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:profile.metalness},true);
+  const profile=builtinSurfaceProfile(t.familyId);assert.ok(profile);const style=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:profile.metalness},true);
   assert.equal(style.id,t.familyId);assert.equal(style.roughness,profile.roughness);assert.equal(style.metalness,profile.metalness);
  }
  assert.equal(fingerprints.size,24);
@@ -113,11 +113,11 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
 test('all 49 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
  assert.equal(TEXTURES.length,49);
  for(const t of TEXTURES){
-  const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:0},true);
+  const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);
-  const normally=resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:0});
+  const normally=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0});
   assert.equal(normally.id,isTextureUnlocked(t)?t.familyId:FLAT_TEXTURE.familyId,`${t.displayName} normal unlock gate`);
-  assert.equal(resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:0},true).metalness,0,`${t.displayName} preserves explicit saved slider zero`);
+  assert.equal(resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true).metalness,0,`${t.displayName} preserves explicit saved slider zero`);
  }
  assert.equal(isLocked('chest-plate-steel'),true);assert.equal(isTextureUnlocked(TEXTURES.find(t=>t.id==='chest-plate-steel')),false);
 });
@@ -133,7 +133,7 @@ test('repeat-wrapped geometry samples match texture-domain samples for all 24 fa
 test('every built-in family sculpts measurable vertex relief on a real mesh',()=>{
  const geometry=new THREE.SphereGeometry(.6,32,20),base=geometry.attributes.position.array.slice();
  for(const t of TEXTURES.filter(t=>t.familyId>=32)){
-  const style=resolveRegionMaterial(0,{textureId:t.id,colorId:'default-slate',sparkle:0,metallic:textureDefaultMetalness(t.id)??0},true),mesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial());
+  const style=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:textureDefaultMetalness(t.id)??0},true),mesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial());
   sculptMaterial(mesh,style,1,1);
   const after=mesh.geometry.attributes.position.array;let displacement=0;for(let i=0;i<after.length;i+=3)displacement=Math.max(displacement,Math.hypot(after[i]-base[i],after[i+1]-base[i+1],after[i+2]-base[i+2]));
   assert.ok(displacement>.0002,`${t.displayName} deforms actual vertices (${displacement})`);mesh.geometry.dispose();mesh.material.dispose();
@@ -160,21 +160,21 @@ test('alternate static meshes refine within budget while authored normals and UV
  const limited=createCoachReliefBudget(12,8,8),noRoom=refineCoachGeometry(geometry,limited);assert.equal(noRoom,undefined);assert.equal(limited.usedTriangles,0,'a tight coach budget cleanly skips refinement');
  const animated=geometry.clone();animated.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(new Uint16Array(24),4));animated.setAttribute('skinWeight',new THREE.Float32BufferAttribute(new Float32Array(24),4));const skinBudget=createCoachReliefBudget();assert.equal(refineCoachGeometry(animated,skinBudget),undefined,'skinned geometry safely bypasses the static path');assert.equal(skinBudget.usedTriangles,0);
  const half=geometry.clone();half.setAttribute('halfProbe',new THREE.Float16BufferAttribute([1,1,1,1,1,1],1));const halfBudget=createCoachReliefBudget();assert.equal(refineCoachGeometry(half,halfBudget),undefined,'Three Float16BufferAttribute marker bypasses safe static refinement');assert.equal(halfBudget.usedTriangles,0);
- const flatMesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial()),flatBudget=createCoachReliefBudget();sculptMaterial(flatMesh,resolveRegionMaterial(0,{textureId:'cardio-terry-cloth',colorId:'default-slate',sparkle:0,metallic:0},true),1,0,flatBudget);const refinedBaseline=refined.geometry.attributes.normal,flatNormals=flatMesh.geometry.attributes.normal;assert.equal(flatMesh.geometry.attributes.position.count,refined.geometry.attributes.position.count);for(let i=0;i<flatNormals.count;i++)assert.ok(Math.hypot(flatNormals.getX(i)-refinedBaseline.getX(i),flatNormals.getY(i)-refinedBaseline.getY(i),flatNormals.getZ(i)-refinedBaseline.getZ(i))<1e-6,'zero displacement retains interpolated authored normals');
- const reliefMesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial()),reliefBudget=createCoachReliefBudget();sculptMaterial(reliefMesh,resolveRegionMaterial(0,{textureId:'cardio-terry-cloth',colorId:'default-slate',sparkle:0,metallic:0},true),1,1,reliefBudget);let normalDelta=0;for(let i=0;i<refinedBaseline.count;i++)normalDelta=Math.max(normalDelta,Math.hypot(reliefMesh.geometry.attributes.normal.getX(i)-refinedBaseline.getX(i),reliefMesh.geometry.attributes.normal.getY(i)-refinedBaseline.getY(i),reliefMesh.geometry.attributes.normal.getZ(i)-refinedBaseline.getZ(i)));assert.ok(normalDelta>.005,`nonconstant height adds a measurable normal slope (${normalDelta})`);
+ const flatMesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial()),flatBudget=createCoachReliefBudget();sculptMaterial(flatMesh,resolveRegionMaterial(0,{textureId:'cardio-terry-cloth',colorId:'#7f7d78',sparkle:0,metallic:0},true),1,0,flatBudget);const refinedBaseline=refined.geometry.attributes.normal,flatNormals=flatMesh.geometry.attributes.normal;assert.equal(flatMesh.geometry.attributes.position.count,refined.geometry.attributes.position.count);for(let i=0;i<flatNormals.count;i++)assert.ok(Math.hypot(flatNormals.getX(i)-refinedBaseline.getX(i),flatNormals.getY(i)-refinedBaseline.getY(i),flatNormals.getZ(i)-refinedBaseline.getZ(i))<1e-6,'zero displacement retains interpolated authored normals');
+ const reliefMesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial()),reliefBudget=createCoachReliefBudget();sculptMaterial(reliefMesh,resolveRegionMaterial(0,{textureId:'cardio-terry-cloth',colorId:'#7f7d78',sparkle:0,metallic:0},true),1,1,reliefBudget);let normalDelta=0;for(let i=0;i<refinedBaseline.count;i++)normalDelta=Math.max(normalDelta,Math.hypot(reliefMesh.geometry.attributes.normal.getX(i)-refinedBaseline.getX(i),reliefMesh.geometry.attributes.normal.getY(i)-refinedBaseline.getY(i),reliefMesh.geometry.attributes.normal.getZ(i)-refinedBaseline.getZ(i)));assert.ok(normalDelta>.005,`nonconstant height adds a measurable normal slope (${normalDelta})`);
  flatMesh.geometry.dispose();flatMesh.material.dispose();reliefMesh.geometry.dispose();reliefMesh.material.dispose();half.dispose();seamGeometry.dispose();seamMesh.material.dispose();g.dispose();geometry.dispose();animated.dispose();
 });
 
 test('texture map cache includes the full triad and revision',()=>{
- const style={...resolveRegionMaterial(0,{textureId:'chest-plate-steel',colorId:'default-slate',sparkle:0,metallic:0},true)};
+ const style={...resolveRegionMaterial(0,{textureId:'chest-plate-steel',colorId:'#7f7d78',sparkle:0,metallic:0},true)};
  const a=materialFor(style,1),b=materialFor({...style,secondary:'#012345'},1),c=materialFor({...style,accent:'#fedcba'},1);
  assert.equal(a.userData.materialStyle,32);assert.notEqual(a.map,b.map);assert.notEqual(a.map,c.map);assert.notEqual(b.map,c.map);
  assert.match(a.name,new RegExp(MATERIAL_REVISION));a.dispose();b.dispose();c.dispose();
 });
 
 test('any colour choice applies to any texture choice, and colours are independently locked/unlocked',()=>{
- const a=resolveRegionMaterial(0,{textureId:'clay',colorId:'default-ruby',sparkle:0,metallic:0});
- const b=resolveRegionMaterial(0,{textureId:'legacy-3',colorId:'default-ruby',sparkle:0,metallic:0});
+ const a=resolveRegionMaterial(0,{textureId:'clay',colorId:'#ff3b30',sparkle:0,metallic:0});
+ const b=resolveRegionMaterial(0,{textureId:'legacy-3',colorId:'#ff3b30',sparkle:0,metallic:0});
  assert.equal(a.primary,b.primary);assert.notEqual(a.id,b.id);
  const palette=PALETTES[0];
  assert.equal(colorTriad(palette.id),undefined);
@@ -184,6 +184,6 @@ test('any colour choice applies to any texture choice, and colours are independe
 });
 
 test('metallic and sparkle are continuous and pass straight through',()=>{
- const resolved=resolveRegionMaterial(0,{textureId:'flat',colorId:'default-slate',sparkle:.73,metallic:.4});
+ const resolved=resolveRegionMaterial(0,{textureId:'flat',colorId:'#7f7d78',sparkle:.73,metallic:.4});
  assert.equal(resolved.sparkle,.73);assert.equal(resolved.metalness,.4);
 });

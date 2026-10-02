@@ -27,7 +27,9 @@ const CATEGORY={color:'Colour palette','64-bit':'64-bit boss skin',texture:'Text
 // What the tile says about an opened pack: the actual item, what kind it is, and its colours when it is a palette.
 export function rewardSummary(opened){
  const reward=opened?.reward||{};
- const colors=reward.kind==='palette'?PALETTES.find(item=>item.id===reward.id)?.colors||[]:[];
+ // A single colour (pool items carry `hex`; a hex id is itself one) shows one swatch the way a palette shows its bands.
+ const single=reward.kind==='color'?[/^#[0-9a-f]{6}$/i.test(reward.id)?reward.id:reward.hex].filter(Boolean):[];
+ const colors=reward.kind==='palette'?PALETTES.find(item=>item.id===reward.id)?.colors||[]:single;
  return {title:reward.name||'Reward',detail:CATEGORY[opened?.category]||'Cosmetic',colors};
 }
 const shade=(hex,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v+amount))));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');};

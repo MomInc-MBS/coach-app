@@ -35,8 +35,8 @@ export const isPaletteUnlocked = (p: PaletteDef) => isUnlocked('palette', p);
 // familyId 30/31 have matching cases added to surfaceSample() in material-language.ts.
 const FLAT_BASE = { id: 30, name: 'Flat', realm: '', primary: '#c7c3ce', secondary: '#6d6a75', accent: '#ffffff', emissive: '#000000', roughness: .55, metalness: 0, detail: 'flat' } as const;
 const CLAY_BASE = { id: 31, name: 'Clay', realm: '', primary: '#b7a68e', secondary: '#7a6b57', accent: '#ddcdb3', emissive: '#000000', roughness: .92, metalness: 0, detail: 'clay' } as const;
-export const FLAT_TEXTURE: TextureDef = { id: 'flat', displayName: 'Flat', unlockRule: 'default', familyId: FLAT_BASE.id, defaultColorId: 'default-slate' };
-const CLAY_TEXTURE: TextureDef = { id: 'clay', displayName: 'Clay', unlockRule: 'default', familyId: CLAY_BASE.id, defaultColorId: 'default-clay' };
+export const FLAT_TEXTURE: TextureDef = { id: 'flat', displayName: 'Flat', unlockRule: 'default', familyId: FLAT_BASE.id, defaultColorId: '#7f7d78' };
+const CLAY_TEXTURE: TextureDef = { id: 'clay', displayName: 'Clay', unlockRule: 'default', familyId: CLAY_BASE.id, defaultColorId: '#c4a77d' };
 
 // --- The 22 (well, 23: 0-22) existing procedural surface families keep working exactly as
 // before for legacy `styles` recipes, and are also exposed as ordinary registry textures +
@@ -90,7 +90,7 @@ const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: strin
 // texture sits in a battle-pass slot (and drives the #140 grandfather below), it never unlocks anything.
 const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
 const textureRule = (id: string): UnlockRule => FREE_TEXTURE_IDS.includes(id) ? 'default' : 'battle-pass';
-const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: textureRule(t.id), track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: 'default-slate' }));
+const BATTLE_PASS_TEXTURES: TextureDef[] = BATTLE_PASS_SOURCE.map(t => ({ id: t.id, displayName: t.name, unlockRule: textureRule(t.id), track: t.track as Track, passLevel: SLOT_LEVEL[t.slot], packId: 'pack-' + t.track, familyId: t.familyId, defaultColorId: '#7f7d78' }));
 const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
  const id = 'legacy-' + s.id, slot = BATTLE_PASS_TEXTURES.find(t => t.id === SWAPPED_IN.get(id));
  return { id, displayName: s.name, unlockRule: textureRule(id), track: slot?.track, passLevel: slot?.passLevel, legacy: true, familyId: s.id, defaultColorId: 'legacy-color-' + s.id };

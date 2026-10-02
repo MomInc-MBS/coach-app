@@ -34,7 +34,7 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   // Seed a known, already-saved coach (owned "flat" texture on body) so the repro has a real baseline
   // to compare against -- a fresh, never-saved page has nothing in storage yet.
   await page.evaluate(()=>{
-   const seed={...window.myr5Companion.recipe,materials:{body:{textureId:'flat',colorId:'default-slate',sparkle:0,metallic:0}}};
+   const seed={...window.myr5Companion.recipe,materials:{body:{textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0}}};
    localStorage.setItem('myr5-recipe-v1',JSON.stringify(seed));
   });
   await page.reload();
