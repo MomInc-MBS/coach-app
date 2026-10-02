@@ -18,7 +18,7 @@ test('starter ship, six starter wonders and the still-room WebP fit their budget
  assert.match(await readFile('pod/retro-rooms.css','utf8'),/--room-world:url\('\/pod\/worlds\/great-wall\.webp'\)/);
 });
 // W2-2O (#136) undoes W2-FIX risk 2: the portal experience's art is one optional Starter download, never core.
-const SCENE_ART=['/pod/worlds/quilt.webp','/food/pyramid-scanner.glb','/pod/worlds/starter/supportive.glb',...STARTER_WONDERS.map(starterWonderUrl),'/pod/worlds/great-wall.webp','/pod/worlds/achievements.jpg'];
+const SCENE_ART=['/pod/worlds/quilt.webp','/food/pyramid-scanner.glb','/pod/worlds/starter/supportive.glb',...STARTER_WONDERS.map(starterWonderUrl),'/pod/worlds/great-wall.webp','/pod/worlds/achievements.jpg','/pod/worlds/meditation-waterfall.png']; // R18 lane A2: the meditation waterfall backdrop
 test('W2-2O: the core list has no heavy scene assets; the Starter group holds every one of them',async t=>{
  const {core,optional}=await offlineInventory('.');
  const heavy=core.filter(a=>/\.(?:glb|gltf|bin)$/i.test(a.url)||a.url.startsWith('/pod/worlds/')||a.url==='/food/pyramid-scanner.glb');
