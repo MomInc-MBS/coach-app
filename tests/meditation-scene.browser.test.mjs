@@ -76,12 +76,12 @@ test('open: three black-and-white peering layers, the big meditation coach borro
  const layout=await page.evaluate(()=>{
   const panel=document.querySelector('.meditation-panel'),character=panel.querySelector('.meditation-character');
   const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};};
-  return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,character:rect(character),left:rect(panel.querySelector('[data-mode="wim-hof"]')),right:rect(panel.querySelector('[data-mode="tai-chi"]')),
+  return {room:rect(panel),background:getComputedStyle(panel).backgroundColor,character:rect(character),begin:rect(panel.querySelector('[data-begin]')),taiChi:panel.querySelectorAll('[data-mode="tai-chi"]').length,
    rings:panel.querySelectorAll('.breathing-ring,.breathing-orbit').length,platform:getComputedStyle(panel.querySelector('.meditation-platform')).display,coach:getComputedStyle(panel.querySelector('.meditation-coach')).filter};
  });
  assert.deepEqual(layout.room,{left:0,right:375,top:0,bottom:812},'the room fills the phone viewport');
  assert.equal(layout.background,'rgb(0, 0, 0)');assert.equal(layout.rings,0,'no breathing circle');assert.equal(layout.platform,'none','no diamond panel in the scene');assert.match(layout.coach,/brightness\(0\)/,'the coach is a solid dark shadow');
- assert.ok(layout.left.bottom<=812&&layout.right.bottom<=812,'both compact choices fit on screen');
+ assert.ok(layout.begin.bottom<=812,'Begin fits on screen');assert.equal(layout.taiChi,0,'R20: only Begin on the start screen');
  const open=await layers(page);
  assert.deepEqual(open.map(l=>l.depth),['far','mid','near']);
  assert.match(await page.locator('.meditation-grey').evaluate(el=>getComputedStyle(el).backdropFilter),/^grayscale\(1\)/,'the room starts black and white (one veil over the stack, no inherited filter)');
@@ -131,7 +131,7 @@ test('reduced motion: dragging never moves the layers; an unavailable body leave
 
 test('a full session: colour returns to every layer, then the coach wakes, turns and walks off; Done does not smack',async()=>{
  const {context,page}=await openRoom();
- await start(page,'tai-chi');await page.clock.runFor(181000);
+ await start(page,'wim-hof');await page.clock.runFor(211000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
  assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('meditation-colour')));
  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.meditation-grey')).opacity==='0',null,{timeout:6000});

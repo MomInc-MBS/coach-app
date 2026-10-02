@@ -1,4 +1,4 @@
-// Rank 6c (D25/D28) at 390x844: both breathing modes -- start, hold, exit mid-hold, complete --
+// Rank 6c (D25/D28) at 390x844, R20 flow: Begin -> seated warning -> settle countdown -> breathing; hold, exit mid-hold, complete --
 // driven through the real meditation.mjs/breathing.mjs source with a stub account API and a fake
 // clock (the shared BreathingSession uses each mode's active duration). The server
 // half of completion (completeBreathing + once-per-day circuit counting) is covered in
@@ -68,22 +68,25 @@ let server,base,browser;
 test.before(async()=>{await mkdir(SHOTS,{recursive:true});server=await serve();base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 test.after(async()=>{await browser?.close();server?.close();});
 
-test('no downloaded wonder: the bundled starter wonder for the day shows, with both mode cards on screen',async()=>{
+test('no downloaded wonder: the bundled starter wonder for the day shows, with the one Begin button on screen',async()=>{
  const {context,page}=await openRoom(browser,{art:false});
  await page.waitForFunction(()=>document.querySelector('.meditation-panel').classList.contains('has-wonder-art'));
  assert.equal(await page.locator('.meditation-panel').getAttribute('data-wonder'),'great-wall-of-china-a','2026-09-22 is starter day 0');
- for(const mode of ['wim-hof','tai-chi']){const box=await page.locator(`[data-mode="${mode}"]`).boundingBox();assert.ok(box.y+box.height<=844,mode+' card visible without scrolling');}
+ const box=await page.locator('[data-begin]').boundingBox();assert.ok(box.y+box.height<=844,'Begin visible without scrolling');
+ assert.equal((await page.locator('[data-breath-modes] button').allTextContents()).join('|'),'Begin','R20: Begin is the only start choice; tai chi is not offered');
  await shot(page,'00-starter-choose');await context.close();
 });
 
-test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold, then complete once',async()=>{
+test('Begin -> seated warning -> settle countdown -> breathing, hold, exit mid-hold, then complete once',async()=>{
  assert.ok(existsSync(WONDERS),'clean wonder images present');
  const {context,page}=await openRoom(browser);
- assert.match(await page.locator('[data-mode="wim-hof"] .breath-seated-notice').textContent(),/seated or lying.*driving.*water/i);
+ assert.equal(await page.locator('[data-begin] .breath-seated-notice').count(),0,'the warning is its own screen after Begin, not on the button');
  assert.match(await page.locator('.breath-note').textContent(),/not medical/);
  await shot(page,'01-wim-hof-choose');
  await start(page,'wim-hof');
- assert.match(await page.locator('[data-seated] .breath-seated-notice').textContent(),/seated or lying/);assert.equal(await phase(page),'settle');
+ assert.match(await page.locator('[data-seated] .breath-seated-notice').textContent(),/seated or lying.*driving.*water/i);assert.equal(await phase(page),'settle');
+ assert.equal(await page.locator('[data-settle-countdown]').isVisible(),true,'a settle countdown follows the warning');assert.equal(await page.locator('[data-settle-countdown] b').textContent(),'20');assert.equal(await page.locator('[data-breath-cue]').isHidden(),true);
+ await page.clock.runFor(5000);assert.equal(await page.locator('[data-settle-countdown] b').textContent(),'15','the settle timer counts down');
  assert.match(await caption(page),/comfortable|shoulders/i,'original guidance starts with settling');
  await shot(page,'02-wim-hof-start');
  await page.clock.runFor(holdStart+1000); // scripted settling + breathing -> optional hold
@@ -101,28 +104,6 @@ test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold
  assert.equal(await count(page,'/api/breathing/complete'),1);assert.equal(await phase(page),'complete');
  assert.equal(await page.locator('[data-breath-exit]').isVisible(),true,'the circle exit stays available after completion');
  await shot(page,'05-wim-hof-complete');await context.close();
-});
-
-test('tai chi stance: existing core/balance stance hold, stance link, exit mid-hold, then complete once',async()=>{
- const {context,page}=await openRoom(browser);
- assert.equal(await page.locator('[data-mode="tai-chi"] .breath-seated-notice').count(),0);
- await start(page,'tai-chi');
- assert.equal(await page.locator('[data-seated]').isHidden(),true);
- await page.clock.runFor(3000);
- assert.equal(await phase(page),'hold');assert.match(await page.locator('[data-phase-label]').textContent(),/Hold: Low tree pose/);
- assert.equal(await page.locator('[data-stance-link]').isVisible(),true);
- await shot(page,'06-tai-chi-start-hold');
- await page.clock.runFor(30000); // next stance
- assert.match(await page.locator('[data-phase-label]').textContent(),/Hold: Knee-lift balance/);
- await stopVisible(page);await shot(page,'07-tai-chi-hold-2');
- await page.locator('[data-breath-exit]').click();
- assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);
- await page.clock.runFor(200000);assert.equal(await count(page,'/api/breathing/complete'),0);
- await reopenAfterStop(page);
- await start(page,'tai-chi');await page.clock.runFor(181000);
- await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
- assert.equal(await count(page,'/api/breathing/complete'),1);
- await shot(page,'08-tai-chi-complete');await context.close();
 });
 
 test('always-visible exits and reduced motion: Close stays pinned when scrolled, Esc closes, breathing cue stays visible',async()=>{

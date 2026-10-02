@@ -291,3 +291,20 @@
 /* in the routed room the dock sits inside the panel: lift the chip and the character above it */
 .meditation-panel:has(>#coachDock) .breath-hud{bottom:calc(var(--myr5-bar) + 6px)}.meditation-panel:has(>#coachDock) .meditation-character{bottom:calc(6% + var(--myr5-bar))!important}
 @media(orientation:landscape){.meditation-panel .breath-hud{left:30%;right:auto}}.meditation-panel .breath-hud .breathing-ring-stop{min-width:44px;min-height:32px}
+
+/* R20 meditation: one Begin button, a settle countdown, the steady in/out cue, and a per-tick colour pulse. */
+.meditation-grey{transition:--reveal-r 60ms linear,opacity 2.5s ease}
+/* Begin sits bottom-right, above the chip, clear of the seated character at bottom-left */
+.meditation-panel .breathing-session .breath-modes{display:grid;grid-template-columns:1fr;justify-items:end}
+.meditation-panel .breathing-session .breath-modes[hidden]{display:none}
+.meditation-panel .breath-begin{min-height:56px;width:min(46vw,190px)!important;padding:0 20px;border:3px solid #fff;border-radius:0;background:#000;color:#fff;box-shadow:4px 4px #777;font:700 22px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto;cursor:pointer}
+.meditation-panel .breath-begin:focus-visible{outline:3px solid #fff;outline-offset:5px}
+.meditation-panel .breath-settle,.meditation-panel .breath-cue{position:absolute;left:50%;right:auto;width:max-content;transform:translateX(-50%);top:30%;z-index:5;margin:0;pointer-events:none;color:#fff;text-align:center;text-shadow:3px 3px #000}
+.meditation-panel .breath-settle{display:flex;justify-content:center;align-items:baseline;gap:12px}
+.meditation-panel .breath-settle[hidden],.meditation-panel .breath-cue[hidden]{display:none}
+.meditation-panel .breath-settle small{font:700 16px ui-monospace,monospace;letter-spacing:.2em;text-transform:uppercase}
+.meditation-panel .breath-settle b{font:900 min(72px,18vw,11vh)/1 ui-monospace,monospace}
+.meditation-panel .breath-cue{font:700 min(42px,8.5vw,8vh)/1 ui-monospace,monospace;opacity:1;animation:none}
+@media(max-height:700px){.meditation-panel .breath-settle,.meditation-panel .breath-cue{top:22%}}
+@media(orientation:landscape){.meditation-panel .breath-settle,.meditation-panel .breath-cue{left:27%;top:30%}}
+.meditation-panel:has([data-breath-modes]:not([hidden])) .breath-hud{visibility:hidden} /* start screen: the idle 3:30 chip sat under the safety note */
