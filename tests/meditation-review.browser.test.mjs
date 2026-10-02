@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
-import {BREATHING_MODES,GENTLE_DIALOGUE,buildScript} from '../breathing-modes.mjs';
+import {BREATHING_MODES,GENTLE_DIALOGUE,GUIDED_ROUND_TIMING,buildScript} from '../breathing-modes.mjs';
 const guided=BREATHING_MODES['wim-hof'];
 const beforeHold=()=>{let ms=0;for(const phase of buildScript('wim-hof')){if(phase.key==='optional-hold')return ms;ms+=phase.ms;}throw Error('Missing optional hold');};
 
@@ -135,7 +135,7 @@ for(const {width,height,integrated=false} of [{width:375,height:812},{width:375,
  const {context,page}=await room(viewport,{integrated});
  if(integrated){const panelBox=await page.locator('.meditation-panel').boundingBox();assert.ok(panelBox.y+panelBox.height<=height+1&&panelBox.height<height,'the framed room stays inside the viewport with the dock'+JSON.stringify(panelBox));assert.equal(await page.locator('.meditation-panel > #coachDock').count(),1,'router adopts the real dock into the room');}
  await page.screenshot({path:resolve(shots,`choice-${size}.png`)});
- const choiceErrors=[];for(const mode of ['wim-hof','tai-chi']){const locator=page.locator(`[data-mode="${mode}"]`),box=await locator.boundingBox();if(!(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height))choiceErrors.push(`${mode} outside viewport: ${JSON.stringify(box)}`);if(!await locator.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}))choiceErrors.push(`${mode} covered by another choice`);}
+ const choiceErrors=[],begin=page.locator('[data-begin]'),beginBox=await begin.boundingBox();assert.equal(await page.locator('[data-mode="tai-chi"]').count(),0,'R20: the start screen offers only Begin');assert.equal((await begin.textContent()).trim(),'Begin');if(!(beginBox&&beginBox.x>=0&&beginBox.y>=0&&beginBox.x+beginBox.width<=viewport.width&&beginBox.y+beginBox.height<=viewport.height))choiceErrors.push(`Begin outside viewport: ${JSON.stringify(beginBox)}`);if(!await begin.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}))choiceErrors.push('Begin is covered');
  await start(page,'wim-hof');await page.screenshot({path:resolve(shots,`active-${size}.png`)});
 
  assert.deepEqual(choiceErrors,[]);
@@ -152,5 +152,9 @@ for(const {width,height,integrated=false} of [{width:375,height:812},{width:375,
  assert.equal(overlaps(await page.locator('.meditation-speech').boundingBox(),await page.locator('[data-meditation-close]').boundingBox()),false,'Close does not cover guidance');
  const captionErrors=await page.locator('.meditation-speech').evaluate((el,captions)=>{const saved=el.textContent,errors=[];for(const text of captions){el.textContent=text;const r=el.getBoundingClientRect(),run=document.querySelector('.breath-run').getBoundingClientRect(),close=document.querySelector('[data-meditation-close]').getBoundingClientRect();const overlaps=b=>r.x<b.right&&r.right>b.x&&r.y<b.bottom&&r.bottom>b.y;if(el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1||overlaps(run)||overlaps(close))errors.push(text);}el.textContent=saved;return errors;},[...new Set([...GENTLE_DIALOGUE,...buildScript('wim-hof').map(p=>p.dialogue).filter(Boolean)])]);
  assert.deepEqual(captionErrors,[],'all original guidance captions remain unclipped and clear of controls');
+ assert.equal(overlaps(beginBox,visibleFigure),false,'Begin leaves the seated figure visible');
+ // R20: the settle countdown and the steady in/out cue sit on screen, clear of the guidance bubble, the figure and Close.
+ for(const [selector,ms] of [['[data-settle-countdown]',0],['[data-breath-cue]',GUIDED_ROUND_TIMING.settleMs+500]]){await page.clock.runFor(ms);const box=await page.locator(selector).boundingBox();assert.ok(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height,`${selector} within viewport ${JSON.stringify(box)}`);for(const [other,b] of [['guidance',await page.locator('.meditation-speech').boundingBox()],['figure',visibleFigure],['Close',await page.locator('[data-meditation-close]').boundingBox()]])assert.equal(overlaps(box,b),false,`${selector} clear of ${other}`);}
+ await page.screenshot({path:resolve(shots,`cue-${size}.png`)});
  await context.close();
 });

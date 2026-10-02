@@ -54,7 +54,7 @@ function breathingHarness(transitions,api){
  const context={Event,setTimeout,clearTimeout,createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,...breathingModes,countBreaths:breathingModes.totalBreaths,document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
  const mount=vm.runInNewContext(breathing.replace(/^import .*;\s*$/mg,'').replace(/^export /mg,'')+';mountBreathing;',context);
  mount({dialog,scene,pause,api,getAccount:()=>account(),transitions,onComplete:()=>callbacks++});
- return {modes:el('[data-breath-modes]'),runView:el('[data-breath-run]'),status:el('[data-status]'),start:(mode='wim-hof')=>el(`[data-mode="${mode}"]`).onclick(),exit:()=>el('[data-breath-exit]').onclick(),finish(){completeNext=true;tick();},callbacks:()=>callbacks};
+ return {modes:el('[data-breath-modes]'),runView:el('[data-breath-run]'),status:el('[data-status]'),start:()=>el('[data-begin]').onclick(),exit:()=>el('[data-breath-exit]').onclick(),finish(){completeNext=true;tick();},callbacks:()=>callbacks};
 }
 test('actual breathing caller resets on transition and suppresses late completion UI/callback',async()=>{
  const transitions=coordinator(),post=deferred(),sent=deferred();
@@ -64,8 +64,8 @@ test('actual breathing caller resets on transition and suppresses late completio
 test('breathing exit is immediate mid-session: back to mode choice, nothing saved, next session still completes once',async()=>{
  const transitions=coordinator(),completes=[];
  const h=breathingHarness(transitions,async(path,method,body)=>{if(path.startsWith('/api/account'))return account();if(path.endsWith('/start'))return startReply();completes.push(body);return {combat:{},targetAccountId:'A',dataEpoch:2};});
- await h.start('wim-hof');assert.equal(h.runView.hidden,false);assert.equal(h.modes.hidden,true);
+ await h.start();assert.equal(h.runView.hidden,false);assert.equal(h.modes.hidden,true);
  h.exit();assert.equal(h.runView.hidden,true);assert.equal(h.modes.hidden,false);
  h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,0);assert.equal(h.callbacks(),0);
- await h.start('tai-chi');h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,1);assert.equal(h.callbacks(),1);assert.match(h.status.textContent,/Breathing complete/);
+ await h.start();h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,1);assert.equal(h.callbacks(),1);assert.match(h.status.textContent,/Breathing complete/);
 });

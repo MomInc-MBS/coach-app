@@ -103,3 +103,22 @@ export function breathsDone(script, ms) {
 }
 // Colour circle radius in px: strictly under maxR until the final breath, exactly maxR on it.
 export const revealRadius = (done, total, maxR) => total > 0 && done >= total ? maxR : maxR * Math.max(0, done) / Math.max(1, total);
+// R20: breath-synced colour pulse. Breath i (0-based, inhale then exhale): the inhale contracts from the last exhale's
+// peak to the character (minR), the exhale expands to peak(i), which grows with i; the last exhale peak is exactly maxR.
+// phase is 'in' | 'out' (anything else = between breaths), progress 0..1 through that half-breath.
+export function pulseRadius(breathIndex, total, phase, progress, maxR, minR = 0) {
+ if (total <= 0) return 0;
+ if (breathIndex >= total) return maxR;
+ const peak = i => i < 0 ? 0 : minR + (maxR - minR) * (i + 1) / total;
+ const e = (1 - Math.cos(Math.PI * Math.max(0, Math.min(1, progress)))) / 2; // ease in-out
+ if (phase === 'out') return minR + (peak(breathIndex) - minR) * e;
+ if (phase === 'in') return minR + (peak(breathIndex - 1) - minR) * (1 - e);
+ return breathIndex > 0 ? minR : 0;
+}
+// Which half-breath is showing at `ms` and how far through it (0..1); null outside paced phases.
+export function breathPhaseProgress(script, ms) {
+ const p = phaseAt(script, ms);
+ if (!p.pace || !p.breath) return {breath: null, progress: 0};
+ const offset = (p.ms - p.remainingMs) % (p.pace.inhaleMs + p.pace.exhaleMs);
+ return {breath: p.breath, progress: p.breath === 'in' ? offset / p.pace.inhaleMs : (offset - p.pace.inhaleMs) / p.pace.exhaleMs};
+}
