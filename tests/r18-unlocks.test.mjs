@@ -92,3 +92,9 @@ test('G5: every single-colour pack reward carries the registry primary, so the p
  assert.deepEqual(rewardSummary({category:'color',reward:{kind:'color',id:'#ff3b30',name:'x'}}).colors,['#ff3b30'],'a hex colour id is its own swatch');
  assert.equal(rewardSummary({category:'texture',reward:{kind:'texture',id:'flat',name:'Flat'}}).colors.length,0);
 });
+
+test('every free colour has a name for its swatch, in FREE_COLOURS order',async()=>{
+ const {FREE_COLOUR_NAMES}=await import('../battle-pass-rewards.mjs');
+ assert.deepEqual([...FREE_COLOUR_NAMES],['Black','White','Grey','Red','Orange','Yellow','Green','Teal','Blue','Purple','Pink','Brown','Tan','Navy','Mint']);
+ assert.equal(FREE_COLOUR_NAMES.length,FREE_COLOURS.length);
+});

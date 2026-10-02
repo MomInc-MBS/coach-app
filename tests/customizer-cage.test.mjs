@@ -38,13 +38,12 @@ test('the shipped cage is the supplied Draco model plus exactly the decoder this
  assert.ok(total<1_010_000,'packet stays about 1 MB: '+total);
 });
 
-test('the Downloads menu offers the cage, and the customizer only loads it from the downloaded package',async()=>{
+test('the Downloads menu offers the cage for the War Room, and the customizer no longer loads it',async()=>{
  const [menu,cage,workbench]=await Promise.all(['../post-download.mjs','../creature/source/cage.ts','../creature/source/editor-workbench.ts'].map(p=>readFile(new URL(p,import.meta.url),'utf8')));
  assert.match(menu,/\['room-cage','3D customizer cage',/);
  assert.match(cage,/name\.startsWith\('myr5-package-'\)/);
  assert.doesNotMatch(cage.replace(/^\s*\/\/.*$/gm,''),/saveRecipe|localStorage|\/api\/war-room|commit\(/,'the cage never saves a look or a loadout');
- assert.match(workbench,/if\(!have\)\{cageStyle\(\);cageOffer\.hidden=false/);
- assert.match(workbench,/function cageOpen\(menu:'body'\|'materials'\)\{const tab=tabs\.find\(b=>b\.dataset\.menu===menu\);if\(!tab\|\|tab\.hidden/);
+ assert.doesNotMatch(workbench,/from '\.\/cage'|mountCage|cagePacketReady|cageOpen|cageBay/,'R18 F5: the customizer never loads the cage; only the War Room keeps it');
 });
 
 test('the cage bays call the two adapters, and never call pet or weapon rewards account-owned',async()=>{

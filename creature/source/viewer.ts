@@ -11,12 +11,15 @@ import {regionBounds,frameRegion} from './creator/camera-focus';
 import {REGIONS,type Region} from './creator/design';
 import {podCameraFrame} from './pod-camera';
 
+export const ZOOM_MIN=.6,ZOOM_MAX=1.8;
 export class CreatureViewer {
  regionBoxes=new Map<Region,T.Box3>();focused:Region|null=null;
  // #9: 'body' frames the whole creature (every region) plus a little headroom for raised arms and hops;
  // side 1 is the front view, -1 the back (kept for later part focus so Back stays Back).
- side=1;
- focusRegion(region:Region){this.focused=region;const box=region==='body'?this.bodyBounds.clone():this.regionBoxes.get(region);if(region==='body'&&box&&!box.isEmpty())box.max.y+=(box.max.y-box.min.y)*.08;return box?frameRegion(this.camera,this.orbit,box,1.2,this.side):false;}
+  side=1;zoom=1;baseDistance=0;
+  applyZoom(){if(!this.baseDistance)return;const d=this.baseDistance/this.zoom,dir=this.camera.position.clone().sub(this.orbit.target).normalize();this.camera.position.copy(this.orbit.target).addScaledVector(dir,d);this.orbit.update();}
+  setZoom(z:number){this.zoom=Math.min(ZOOM_MAX,Math.max(ZOOM_MIN,Number.isFinite(z)?z:1));this.applyZoom();return this.zoom;}
+  focusRegion(region:Region){this.focused=region;const box=region==='body'?this.bodyBounds.clone():this.regionBoxes.get(region);if(region==='body'&&box&&!box.isEmpty())box.max.y+=(box.max.y-box.min.y)*.08;if(!box)return false;const ok=frameRegion(this.camera,this.orbit,box,region==='body'?1.04:1.2,this.side);if(ok){this.baseDistance=this.camera.position.distanceTo(this.orbit.target);this.applyZoom();}return ok;}
  homeElapsed=0;homeMoving=false;bodyBounds=new T.Box3();
  setHomeMotion(moving:boolean){this.homeMoving=moving;}
  homeView(){

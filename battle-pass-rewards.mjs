@@ -154,6 +154,7 @@ export const FREE_COLOURS=Object.freeze([
  '#0b1a45', // navy
  '#9fe2bf', // mint
 ]);
+export const FREE_COLOUR_NAMES=Object.freeze(['Black','White','Grey','Red','Orange','Yellow','Green','Teal','Blue','Purple','Pink','Brown','Tan','Navy','Mint']); // same order as FREE_COLOURS
 // R18 G5: every colour item carries its primary `hex`, so the pack screen can show a swatch (a test pins these to the registry).
 export const colourRewardPool=()=>[
  ...PALETTES.map(p=>({kind:'palette',id:p.id,name:p.name})),

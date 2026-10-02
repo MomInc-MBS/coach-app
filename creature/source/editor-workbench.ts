@@ -1,10 +1,10 @@
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
-import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,COACHES,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
-import {SITUATIONS,getCoach,type Situation} from './creator/coaching';
+import {REGIONS,LABELS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
+
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,isLocked as idLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad,textureDefaultMetalness} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,isLocked as idLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
 import {isGranted} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
@@ -16,9 +16,10 @@ import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection}
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
-import {mountCage,cagePacketReady,cageStyle} from './cage';
+
 import {localVerifiedBridge} from '../../modules/ships/verified-ship-assets.mjs';
 import {mountShipPreview} from './ship-preview';
+import {FREE_COLOUR_NAMES} from '../../battle-pass-rewards.mjs';
 export {CreatureViewer,GESTURES,importCreature};
 // #148: the ship's admission is single-use. A reload can resume this exact editor history entry, but
 // navigating here again (including Back/Forward) needs another completed ship reveal and tap.
@@ -46,7 +47,7 @@ const MOM_APPROVED_BODY_ID='myr5';
 const MOM_ONLY_FIELD_IDS=['fingersField','toesField','furField','digitsHelp'];
 let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='body',ready=false,activeRange:string|null=null;
 let settings=motionSettings(null),initialError='';
-try{recipe=loadRecipe(localStorage);settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
+try{recipe=zeroFinish(loadRecipe(localStorage));settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
 let saved=recipe; // the last recipe written to storage: the owned look saveRecipe() falls back to
 // #102: bodies already saved stay usable even if their section is locked (only new picks lock).
 const grandfathered=new Set<string>(BODY_KEYS.map(key=>recipe[key]));
@@ -59,10 +60,11 @@ const systemMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const base=document.body.dataset.modelBase?new URL(document.body.dataset.modelBase,location.href).href:new URL('../',import.meta.url).href;
 let viewer:CreatureViewer|undefined;
 function tell(text:string){$('creatureStatus').textContent=text;}
-function coachPreview(){const coach=getCoach(shown().coach);$('coachTone').textContent=coach.tone;$('coachLine').textContent=coach.lines[($('coachSituation') as HTMLSelectElement).value as Situation||'start'];}
+
 // Texture/colour/sparkle/metallic override for the selected part (Rank 4 registry, Rank 5 UI).
 // No override -> renders exactly like the legacy `styles[region]` index (old saves keep working).
 const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0};
+function zeroFinish(d:Design):Design{return d.materials?{...d,materials:Object.fromEntries(Object.entries(d.materials).map(([r,c])=>[r,c&&{...c,sparkle:0,metallic:0}])) as Design['materials']}:d;} // hoisted: used by the load on L49
 function materialChoice():MaterialChoice{return shown().materials?.[selected]??DEFAULT_MATERIAL;}
 function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){const base=shown();commit({...base,materials:{...base.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
 // #1/#102 Preview locked looks: a design that contains a locked body or locked material paints the
@@ -87,9 +89,8 @@ function pick(patch:Partial<MaterialChoice>){const base=shown();commit({...base,
 // per part. A part with no material of its own yet takes the texture's own colour (TextureDef.defaultColorId).
 function pickTexture(textureId:string){
  const base=shown(),texture=TEXTURES.find(t=>t.id===textureId);
- const presetMetalness=textureDefaultMetalness(textureId);
  const defaultColor=texture&&!idLocked(texture.defaultColorId)?texture.defaultColorId:DEFAULT_MATERIAL.colorId;
- const patch=(r:Region):Partial<MaterialChoice>=>{const current=base.materials?.[r],changed=current?.textureId!==textureId;return {...(!current?{colorId:defaultColor}:{}),textureId,...(changed&&presetMetalness!==undefined?{metallic:presetMetalness}:{})};};
+ const patch=(r:Region):Partial<MaterialChoice>=>{const current=base.materials?.[r];return {...(!current?{colorId:defaultColor}:{}),textureId};};
  commit({...base,materials:Object.fromEntries(REGIONS.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),...patch(r)}])) as Design['materials']});
 }
 function endPreview(){if(!previewing())return false;clearPreview();render('Back to your look');return true;}
@@ -99,8 +100,6 @@ function syncMaterials(){
  const texture=TEXTURES.find(t=>t.id===mc.textureId);
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
  for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]')){const row=b.dataset.channel,region=COLOUR_CHANNELS.find(c=>c.id===row)?.regions[0];b.setAttribute('aria-pressed',String(row?b.dataset.color===(regionChoice(shown().materials,region!)?.colorId??DEFAULT_MATERIAL.colorId):false));}
- ($('sparkle') as HTMLInputElement).value=String(mc.sparkle);$('sparkleValue').textContent=mc.sparkle.toFixed(2);
- ($('metallic') as HTMLInputElement).value=String(mc.metallic);$('metallicValue').textContent=mc.metallic.toFixed(2);
  ($('materialClear') as HTMLButtonElement).disabled=!shown().materials?.[selected];
 }
 function syncMomOnly(){
@@ -109,7 +108,7 @@ function syncMomOnly(){
 }
 function sync(){
  const look=shown();
- for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','coach','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
+ for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
  for(const b of document.querySelectorAll<HTMLButtonElement>('[data-region]')){const region=b.dataset.region as Region;b.setAttribute('aria-pressed',String(region===selected));b.querySelector('i')!.style.background=resolveRegionMaterial(recipe.styles[region],recipe.materials?.[region]).primary;}
  $('partLabel').textContent=LABELS[selected];
  syncMomOnly();
@@ -119,7 +118,7 @@ function sync(){
  const notes:string[]=[],mc=look.materials?.[selected];
  if(mc?.textureId){const t=TEXTURES.find(x=>x.id===mc.textureId);if(t&&t.familyId<0)notes.push(`${t.displayName} pattern is coming`);}
  strip.hidden=!previewing()&&!notes.length;strip.textContent=[...(previewing()?['Preview']:[]),...notes].join(' · ');
- ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;coachPreview();
+ ($('undo') as HTMLButtonElement).disabled=!undo.length&&!previewing();($('redo') as HTMLButtonElement).disabled=!redo.length;
 }
 const queue=new LatestPreview<{recipe:Design;message:string;preview:boolean}>(async job=>{if(!viewer)throw Error('3D is unavailable.');if(!await viewer.setRecipe(job.recipe,job.preview))throw Error('Preview was interrupted.');},(job,error)=>{
  if(error){tell('Could not update the preview. '+(error instanceof Error?error.message:String(error)));return;}
@@ -132,6 +131,7 @@ function render(message:string,persist=false){
  tell('Updating preview…');queue.request({recipe:look,message,preview:previewing()});
 }
 function commit(next:Design,rangeId:string|null=null){
+ next=zeroFinish(next);
  // #1 root fix: the one guarded path every caller (materials, body, sliders, selects, applyAll,
  // import) routes through. A locked pick, or any further edit made while a locked pick is already
  // only being previewed, becomes a draft -- never `recipe`, never undo/redo, never storage -- until
@@ -149,9 +149,9 @@ function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for
 {const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(track:TrackId)=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(track)).flatMap(p=>PICKER_BODIES.filter(b=>b.id===p.stableId));
  for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],inSection(t)])] as [string,typeof PICKER_BODIES][]){
   const g=document.createElement('optgroup');g.label=label;for(const b of bodies){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;if(!section&&TRACK_PLACEMENTS.find(p=>p.stableId===b.id)?.tracks.some(t=>sectionComplete(t,progress)))sparkleOption(o,'body',b.id);g.append(o);}$('body').append(g);}}
-options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);options('coach',COACHES.map(c=>[c.id,c.name]));options('coachSituation',SITUATIONS);
+options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
-$('coachSituation').addEventListener('change',coachPreview);
+
 function focusPart(region:Region,frame=true){selected=region;sync();if(frame)viewer?.focusRegion(region);}
 for(const region of REGIONS){const b=document.createElement('button'),dot=document.createElement('i');dot.setAttribute('aria-hidden','true');b.append(dot,SHORT[region]);b.title=LABELS[region];b.dataset.region=region;b.onclick=()=>focusPart(region);$('parts').append(b);}
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
@@ -168,7 +168,7 @@ function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of colorSwatches)grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3: three single-colour rows (Body, Head, Eyes) + a palette grid that fills all three at once.
 // Each row offers every colour def plus the free hexes no def starts with.
-const hexDefs=new Set(COLORS.map(c=>c.primary.toLowerCase())),rowColours=[...COLORS.map(c=>({id:c.id,name:c.displayName,hex:c.primary})),...FREE_COLOURS.filter(h=>!hexDefs.has(h)).map(h=>({id:h,name:h.toUpperCase(),hex:h}))];
+const rowColours=[...FREE_COLOURS.map((h,n)=>({id:h,name:FREE_COLOUR_NAMES[n],hex:h})),...COLORS.filter(c=>!FREE_COLOURS.includes(c.primary.toLowerCase())).map(c=>({id:c.id,name:c.displayName,hex:c.primary}))]; // free hexes first, then the locked defs
 function setChannel(channel:typeof COLOUR_CHANNELS[number],colorId:string){
  const base=shown();commit({...base,materials:{...base.materials,...Object.fromEntries(channel.regions.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),colorId}]))}});
 }
@@ -185,9 +185,8 @@ colourRow('Palettes',grid=>{for(const p of PALETTES)grid.append(swatchButton({ki
  commit({...base,materials});
 }));});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};delete materials[selected];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
-for(const id of ['sparkle','metallic'] as const){const input=$(id) as HTMLInputElement;input.addEventListener('input',()=>setMaterial({[id]:Number(input.value)},id));for(const event of ['change','blur','pointercancel'])input.addEventListener(event,()=>{activeRange=null;});}
-Object.entries(GESTURES).forEach(([id,gesture])=>{const b=document.createElement('button');b.textContent=gesture.label;b.dataset.gesture=id;b.setAttribute('aria-pressed',String(id==='idle'));b.onclick=()=>{viewer?.play(id as Gesture);$('motionLabel').textContent=gesture.label;};$('gestures').append(b);});
-for(const id of ['body','eyeLayout','fingers','toes','eye','pupil','coach'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
+
+for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
  // #102: a locked body previews like a locked texture (commit()'s guard below catches it). An owned
  // body is one of the three ways to leave a preview, so it starts from `recipe` (the last saved
  // look), not from `shown()` -- any locked tweaks made mid-preview are discarded, never carried
@@ -265,25 +264,7 @@ async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
 skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;pickTexture(id);});
 window.addEventListener('myr5:account-ready',event=>void refreshSkinEditor((event as CustomEvent).detail));window.addEventListener('myr5:account-cleared',()=>void refreshSkinEditor(null));window.addEventListener('myr5:battle-pass',()=>void refreshSkinEditor());window.addEventListener('storage',event=>{if(event.key?.startsWith('myr5-battle-pass-ledger-v1/account/')||event.key==='myr5-battle-pass-ledger-v1')void refreshSkinEditor();});
 const installedSections=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!detail||typeof detail!=='object'||typeof detail.ownerId!=='string'||!Array.isArray(detail.sections)||!detail.sections.every((section:unknown)=>typeof section==='string'))return;const active=window.myr5AuthenticatedAccount,owner=typeof active==='string'?active:active?.user?.id;if(owner&&detail.ownerId===owner&&detail.sections.some((section:string)=>section.startsWith('track-')))void refreshSkinEditor(active);};window.addEventListener('myr5:sections-installed',installedSections);
-// frame=false (the cage): its own camera already moved to the bay, so the tab opens without refocusing on a part.
-function openMenu(tab:HTMLButtonElement,frame=true){if(tab.hidden)return;activeRange=null;closeBay();bayPanel.hidden=true;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye',frame);else if(tab.dataset.menu==='body')focusPart('body',frame);else if(tab.dataset.menu==='materials')focusPart(selected,frame);else if(tab.dataset.menu==='skin')syncSkinChoice();void previewShip();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
-// W4-4E: the cage's narrow way into this tab state, instead of synthetic clicks. It may open only Species or
-// Colour, and never a hidden tab. Pets, weapons and clothing have no tab: their bay shows in the console instead,
-// with every tab unselected (the last one stays keyboard-reachable) until a tab is picked again.
-const bayPanel=document.createElement('section');bayPanel.id='panel-bay';bayPanel.setAttribute('aria-labelledby','bayTitle');bayPanel.tabIndex=-1;bayPanel.hidden=true;document.querySelector('.console-scroll')?.append(bayPanel);
-function cageOpen(menu:'body'|'materials'){const tab=tabs.find(b=>b.dataset.menu===menu);if(!tab||tab.hidden||!['body','materials'].includes(menu))return false;openMenu(tab,false);return true;}
-let bayClose:(()=>void)|null=null;
-function closeBay(){const close=bayClose;bayClose=null;close?.();}
-function cageBay(title:string,kicker:string,body:Node,onClose?:()=>void){
- activeRange=null;closeBay();closeShipPreview();bayClose=onClose??null;for(const b of tabs){b.setAttribute('aria-selected','false');$(b.getAttribute('aria-controls')!).hidden=true;}
- const heading=document.createElement('div'),label=document.createElement('div'),small=document.createElement('small'),h2=document.createElement('h2');heading.className='panel-heading';small.textContent=kicker;h2.id='bayTitle';h2.textContent=title;label.append(small,h2);heading.append(label);
- bayPanel.replaceChildren(heading,body);bayPanel.hidden=false;(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;
-}
-// Before the packet is on this phone: the flat customizer, plus a clear way to get the cage (Files is the
-// customizer's Downloads tab, D47). Built now, not later, so the War Room's embed rewrites its link too.
-const cageOffer=document.createElement('p');cageOffer.className='help';cageOffer.hidden=true;cageOffer.innerHTML='<strong>3D cage</strong> · not on this phone yet. Open <a href="/pose.html#install" data-cage-download>Install → Downloads</a> and pick “3D customizer cage” (about 1 MB). Until then the customizer works as it does now.';
-$('panel-files').append(cageOffer);
-const cageButton=document.createElement('button');cageButton.type='button';cageButton.className='cage-offer';cageButton.textContent='Get the 3D cage';cageButton.hidden=true;cageButton.onclick=()=>{openMenu(filesTab);cageOffer.scrollIntoView({block:'nearest'});};
+function openMenu(tab:HTMLButtonElement,frame=true){if(tab.hidden)return;activeRange=null;for(const b of tabs){const active=b===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;$(b.getAttribute('aria-controls')!).hidden=!active;}if(tab!==shipTab){shipTab.setAttribute('aria-selected','false');shipPanel.hidden=true;}if(tab.dataset.menu==='face')focusPart('eye',frame);else if(tab.dataset.menu==='body')focusPart('body',frame);else if(tab.dataset.menu==='materials')focusPart(selected,frame);else if(tab.dataset.menu==='skin')syncSkinChoice();void previewShip();(document.querySelector('.console-scroll') as HTMLElement).scrollTop=0;}
 tabs.forEach(b=>{b.onclick=()=>openMenu(b);b.onkeydown=event=>{const enabled=tabs.filter(tab=>!tab.hidden),index=enabled.indexOf(b);let next=index;if(event.key==='ArrowRight')next=(index+1)%enabled.length;else if(event.key==='ArrowLeft')next=(index+enabled.length-1)%enabled.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=enabled.length-1;else return;event.preventDefault();openMenu(enabled[next]);enabled[next].focus();};});
 // Rank 5: the grid's "apply to all parts" copied a legacy style index; with the grid gone, this
 // copies the selected part's actual texture+colour+sparkle+metallic choice to every part instead.
@@ -292,20 +273,18 @@ $('undo').onclick=()=>{if(endPreview()||!undo.length)return;activeRange=null;red
 $('redo').onclick=()=>{if(!redo.length)return;activeRange=null;clearPreview();undo.push(recipe);recipe=redo.pop()!;render('Redo applied',true);};
 $('original').onclick=()=>{clearPreview();commit(fresh());};
 // Done (or the brand link) leaves on the owned look; the preview was never saved.
-for(const a of document.querySelectorAll('.editor-header a,.coach-dock a,[data-cage-download]'))a.addEventListener('click',()=>{endPreview();try{sessionStorage.removeItem(SHIP_GATE);}catch{}});
+for(const a of document.querySelectorAll('.editor-header a,.coach-dock a'))a.addEventListener('click',()=>{endPreview();try{sessionStorage.removeItem(SHIP_GATE);}catch{}});
 $('importFile').addEventListener('change',async event=>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;try{if(file.size>MAX_IMPORT_BYTES)throw Error('Choose a MYR5 recipe smaller than 64 KB.');clearPreview();commit(importCreature(await file.text()));}catch(error){tell((error as Error).message);}finally{input.value='';}});
 $('exportRecipe').onclick=()=>download(new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}),'myr5-recipe.json');
 $('exportGLB').onclick=async()=>{if(!ready||!viewer||previewing())return;try{tell('Preparing your animated model…');download(await viewer.exportGLB(),'myr5-animated.glb');tell('Animated model downloaded');}catch(error){tell((error as Error).message);}};
 $('front').onclick=()=>viewer?.resetView();
 $('back').onclick=()=>viewer?.resetView(-1);
+const zoom=$('zoom') as HTMLInputElement,setZoom=(z:number)=>{zoom.value=String(viewer?.setZoom(z)??z);};zoom.addEventListener('input',()=>setZoom(Number(zoom.value)));$('zoomIn').onclick=()=>setZoom(Number(zoom.value)+.2);$('zoomOut').onclick=()=>setZoom(Number(zoom.value)-.2);
 $('pauseMotion').onclick=()=>{if(!viewer)return;viewer.setPaused(!viewer.paused);$('pauseMotion').textContent=viewer.paused?'Play motion':'Pause motion';$('pauseMotion').setAttribute('aria-pressed',String(viewer.paused));};
 function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced||systemMotion.matches});}
-($('ambient') as HTMLInputElement).checked=settings.ambient;($('reduced') as HTMLInputElement).checked=settings.reduced;
-function changeMotion(){settings={amount:1.5,ambient:($('ambient') as HTMLInputElement).checked,reduced:($('reduced') as HTMLInputElement).checked};applyMotion();try{localStorage.setItem(MOTION_KEY,JSON.stringify(settings));}catch{tell('Motion changed for this visit. Storage is unavailable.');}}
-for(const id of ['ambient','reduced'])$(id).addEventListener('change',changeMotion);
 systemMotion.addEventListener('change',applyMotion);
 window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=importCreature(event.newValue);for(const key of BODY_KEYS)grandfathered.add(recipe[key]);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
-const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;document.querySelectorAll<HTMLButtonElement>('[data-gesture]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gesture===current)));},250);
+const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;},250);
 window.addEventListener('pagehide',()=>{closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 // D34 post-download: listen for body download state from service worker
 const pendingBodyUrls=new Set<string>();let bodyDownloadTimer=0;const originalStatus='Your coach is ready';
@@ -317,13 +296,5 @@ navigator.serviceWorker?.addEventListener('message',({data})=>{
  else if(pendingBodyUrls.size)tell('Downloading this body…');
  else tell(originalStatus);
 });
-let cage:ReturnType<typeof mountCage>|null=null;
-try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},get cage(){return cage;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
+try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.focusRegion(selected);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
 catch(error){tell('3D could not start. '+(error as Error).message);}
-// W4-4E: the cage joins only when its optional packet is downloaded and the 3D viewer started.
-void cagePacketReady().then(have=>{
- if(!viewer||viewer.disposed)return;
- if(!have){cageStyle();cageOffer.hidden=false;cageButton.hidden=false;$('creatureStage').append(cageButton);return;}
- cage=mountCage(viewer,{openTab:cageOpen,showBay:cageBay,closeBay,tell});
-});
-window.addEventListener('pagehide',()=>cage?.dispose());

@@ -90,192 +90,23 @@ test('mixed nonrest plateaus survive repeated weighting, pause, reduced mode, sl
  });assert.equal(result.pauseHeld,true);for(const [key,value]of Object.entries(result))if(key!=='pauseHeld')assert.ok(value<1e-5,key+': '+JSON.stringify(result));
 });
 
-test('customizer permanently uses maximum motion while retaining pause, ambient and still controls',{timeout:90000},async t=>{
+test('customizer permanently uses maximum motion; the Motion tab is gone but old motion data still loads',{timeout:90000},async t=>{
  const {page,open}=await harness(t);await open();
  for(const raw of [JSON.stringify({amount:.65,ambient:true,reduced:false}),JSON.stringify({amount:0,ambient:false,reduced:true}),JSON.stringify({amount:99}),'{bad']){
   await page.evaluate(raw=>localStorage.setItem('myr5-motion-v1',raw),raw);await open();assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.settings.amount),1.5,'legacy or malformed movement settings cannot lower or exceed the fixed maximum');
  }
  assert.equal(await page.locator('#amount,#amountValue,input[type="range"][name="amount"]').count(),0,'the intensity setting is removed');
- await page.click('#tab-motion');await page.locator('#ambient').uncheck();assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.settings.ambient),false);assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-motion-v1')).amount),1.5);
- await page.locator('#reduced').check();assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.motion.reduced),true);await page.locator('#reduced').uncheck();
+ for(const id of ['#tab-motion','#panel-motion','#gestures','#ambient','#reduced'])assert.equal(await page.locator(id).count(),0,id+' is removed (R18 F2)');
  await page.locator('#pauseMotion').click();assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.motion.paused),true);await page.locator('#pauseMotion').click();assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.motion.paused),false);
- assert.equal(await page.locator('#gestures [data-gesture="celebrate"]').count(),1);
 });
 
-test('not downloaded: the flat customizer works, fetches nothing from the cage packet and shows the way to get it',async t=>{
- const {page,seen,errors,open}=await harness(t);await open();
+// R18 F5: the war-room cage and its bay buttons are gone from the customizer for good (the War Room page keeps them: war-room-gala tests).
+test('the customizer shows only the close-up coach: no cage, no bays, no cage offer, even with the packet downloaded',async t=>{
+ const {page,seen,open,download}=await harness(t);await download();seen.length=0;await open();
+ await page.waitForTimeout(1500);
+ for(const sel of ['.cage-bays','.cage-offer','.cage-weapon-wall','#panel-bay'])assert.equal(await page.locator(sel).count(),0,sel);
  assert.equal(await page.locator('.editor-shell').getAttribute('data-cage'),null);
- assert.equal(await page.locator('.cage-bays').count(),0);
- assert.deepEqual(seen.filter(p=>p.startsWith('/pod/rooms/cage/')),[],'no cage byte is fetched before download');
- assert.equal(await page.locator('.cage-offer').isVisible(),true);
- await page.click('.cage-offer');
- assert.equal(await page.locator('#tab-files').getAttribute('aria-selected'),'true');
- const link=page.locator('#panel-files [data-cage-download]');
- assert.equal(await link.isVisible(),true);assert.equal(await link.getAttribute('href'),'/pose.html#install');
- // The 2D editor still edits and saves.
- await page.click('#tab-materials');await page.click('#colorSwatches [data-channel="body"][data-color="#ff3b30"]');
- await page.waitForFunction(()=>window.myr5Companion.recipe.materials?.body?.colorId==='#ff3b30'&&window.myr5Companion.ready,null,{timeout:60000});
- await shot(page,'not-downloaded-375x812');
- assert.deepEqual(errors,[]);
-});
-
-test('downloaded: the cage surrounds the live coach at 375×812; bays, taps and keys open real controls without saving anything',async t=>{
- const {page,seen,errors,open,download}=await harness(t,{pets:['push-pet']});await download();await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='ready',null,{timeout:60000});
- await page.waitForTimeout(900);
- const stats=await page.evaluate(()=>window.myr5Companion.viewer.stats());
- assert(stats.triangles>140000,'cage geometry is drawn in the viewer: '+stats.triangles);
- assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.floorObjects.every(o=>!o.visible)),true,'the cage pedestal replaces the viewer disc');
- assert.equal(await page.evaluate(()=>!!window.myr5Companion.viewer.rig),true,'the live coach is in the scene');
- // Phone frame: the bay buttons sit inside the 3D stage, clear of every other app control.
- const stage=await box(page,'#creatureStage'),bays=await box(page,'.cage-bays');
- assert(inside(bays,stage),'bay buttons stay inside the stage');
- for(const other of ['.preview-toolbar','.design-console','.coach-dock','.editor-header'])assert(!overlaps(bays,await box(page,other)),'bay buttons clear '+other);
- assert(stage.height>=200,'the stage has room for the cage: '+stage.height);
- assert.deepEqual(await page.locator('.cage-bays button').evaluateAll(b=>b.map(x=>x.getAttribute('aria-label'))),['Whole cage','Coach pedestal: species','Pet cages','Weapon wall','Mirror: colours','Clothing bay']);
- for(const b of await page.locator('.cage-bays button').all()){const r=await b.boundingBox();assert(r.height>=36&&r.width>=44&&inside(r,bays),'whole touch target in view');}
- assert.equal(await page.locator('.cage-bays').evaluate(el=>el.scrollWidth<=el.clientWidth&&[...el.children].every(b=>b.scrollWidth<=b.clientWidth)),true,'no bay label is clipped');
- await shot(page,'cage-overview-375x812');
-
- const before=await page.evaluate(()=>({recipe:JSON.stringify(window.myr5Companion.recipe),storage:JSON.stringify(Object.entries(localStorage).sort()),undo:document.getElementById('undo').disabled}));
- // Pets: granted device pets plus None, None selected until a pet is tapped; every tab unselected.
- await page.click('[data-cage-section="pets"]');
- assert.equal(await page.locator('#panel-bay').isVisible(),true);
- assert.equal(await page.locator('#bayTitle').textContent(),'Pet cages');
- assert.match(await page.locator('#panel-bay').textContent(),/Selected on this device/);
- assert.match(await page.locator('#panel-bay').textContent(),/No pet appears with your coach yet/);
- assert.deepEqual(await page.locator('[data-pet-choice]').evaluateAll(b=>b.map(x=>x.dataset.petChoice)),['','push-pet']);
- assert.equal(await page.locator('[data-pet-choice=""]').getAttribute('aria-pressed'),'true');
- assert.equal(await page.locator('.menu-tabs [aria-selected=true]').count(),0);
- await page.waitForTimeout(800);await shot(page,'cage-pets-375x812');
- // Weapons by keyboard: battle-pass rewards, then a separate Gala form that stays locked for a guest.
- await page.focus('[data-cage-section="weapons"]');await page.keyboard.press('Enter');
- assert.equal(await page.locator('#bayTitle').textContent(),'Weapon wall');
- assert.match(await page.locator('#panel-bay').textContent(),/Battle-pass weapons/);
- assert.equal(await page.locator('[data-gala-loadout] h3').textContent(),'Gala War Room loadout');
- assert.match(await page.locator('[data-gala-loadout] [role=status]').textContent(),/Sign in/);
- assert.equal(await page.locator('[data-gala-loadout] button:has-text("Save loadout")').isDisabled(),true,'guest form is locked');
- assert.equal(await page.locator('[data-gala-loadout] select').isDisabled(),true);
- await page.waitForTimeout(800);await shot(page,'cage-weapons-375x812');
- await page.click('[data-cage-section="clothing"]');
- assert.equal(await page.locator('#bayTitle').textContent(),'Clothing bay');
- assert.match(await page.locator('#panel-bay').textContent(),/Nothing to wear yet/);
- await page.waitForTimeout(800);await shot(page,'cage-clothing-375x812');
- const after=await page.evaluate(()=>({recipe:JSON.stringify(window.myr5Companion.recipe),storage:JSON.stringify(Object.entries(localStorage).sort()),undo:document.getElementById('undo').disabled}));
- assert.deepEqual(after,before,'bays never write the recipe, undo history or storage');
- assert.deepEqual(seen.filter(p=>p.startsWith('/api/war-room')),[],'a guest never reaches the War Room API');
- // Mirror opens Colour; the pedestal opens Species (the existing tabs, through the bridge).
- await page.click('[data-cage-section="mirror"]');
- assert.equal(await page.locator('#tab-materials').getAttribute('aria-selected'),'true');
- assert.equal(await page.locator('#panel-materials').isVisible(),true);assert.equal(await page.locator('#panel-bay').isHidden(),true);
- await page.waitForTimeout(800);await shot(page,'cage-mirror-375x812');
- await page.click('[data-cage-section="pedestal"]');
- assert.equal(await page.locator('#tab-body').getAttribute('aria-selected'),'true');
- // Tapping the scene itself: a quick tap on a bay selects it; a tab still works after a bay.
- await page.click('[data-cage-section="overview"]');await page.waitForTimeout(800);
- for(const section of ['pets','weapons','mirror']){
-  const at=await page.evaluate(s=>window.myr5Companion.cage.project(s),section);
-  assert.equal(await page.evaluate(([x,y])=>window.myr5Companion.cage.pick(x,y),[at.x,at.y]),section,section+' hit volume is under its anchor');
-  await page.mouse.click(at.x,at.y);
-  assert.equal(await page.evaluate(()=>window.myr5Companion.cage.section),section,'tap on '+section);
-  await page.click('[data-cage-section="overview"]');await page.waitForTimeout(800);
- }
- await page.click('[data-cage-section="pets"]');await page.click('#tab-face');
- assert.equal(await page.locator('#panel-bay').isHidden(),true);assert.equal(await page.locator('#panel-face').isVisible(),true);
- // A locked preview still never saves while the cage is up.
- await page.click('#tab-materials');const locked=await page.locator('#colorSwatches button[data-locked]').first();
- if(await locked.count()){const saved=await page.evaluate(()=>JSON.stringify(window.myr5Companion.recipe));await locked.click();await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>JSON.stringify(window.myr5Companion.recipe)),saved,'locked colour stays a preview');}
- // Hidden page: the one render loop stops drawing.
- const hidden=await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});const v=window.myr5Companion.viewer,a=v.stats().renders;await new Promise(r=>setTimeout(r,500));return v.stats().renders-a;});
- assert.equal(hidden,0,'no frames while hidden');
- assert.deepEqual(errors,[]);
-});
-
-test('reduced motion: section changes jump the camera instead of gliding',async t=>{
- const {page,open,download}=await harness(t,{reducedMotion:'reduce'});await download();await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='ready',null,{timeout:60000});
- await page.click('[data-cage-section="weapons"]');
- const [a,b]=await page.evaluate(async()=>{const c=window.myr5Companion.viewer.camera,a=c.position.toArray();await new Promise(r=>setTimeout(r,300));return [a,c.position.toArray()];});
- for(let i=0;i<3;i++)assert(Math.abs(a[i]-b[i])<1e-3,'camera is already at the weapon wall');
-});
-
-test('through the real service worker: the room-cage group downloads its three files and the cage then loads from the package',async t=>{
- const {page,seen,errors,open,base}=await harness(t);
- await page.goto(base+'/privacy.html');
- await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
- await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
- // What post-download.mjs does for a picked group: ask for the plan, then fetch each missing file whole, checked.
- const plan=await page.evaluate(async()=>{
-  const ask=()=>new Promise(resolve=>{const c=new MessageChannel();c.port1.onmessage=({data})=>resolve(data);navigator.serviceWorker.controller.postMessage({type:'PACKAGE_PLAN',adopt:true,groups:['room-cage']},[c.port2]);});
-  const plan=await ask(),cache=await caches.open(plan.cache);
-  for(const asset of plan.missing)await cache.put(asset.url,await fetch(asset.url,{cache:'no-cache',headers:{'x-myr5-package':'1'},integrity:asset.integrity}));
-  const after=await ask();return {missing:plan.missing.map(a=>a.url).sort(),left:after.groups['room-cage'].remaining};
- });
- assert.deepEqual(plan.missing,[...CAGE].sort());assert.equal(plan.left,0,'the group is complete');
- seen.length=0;await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='ready',null,{timeout:60000});
- assert.deepEqual(seen.filter(p=>p.startsWith('/pod/rooms/cage/')),[],'decoder and model came from the package cache');
- assert.deepEqual(errors,[]);
-});
-
-test('a broken packet falls back to the flat customizer with a clear note',async t=>{
- const {page,errors,open,download}=await harness(t,{broken:true});await download();await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='failed',null,{timeout:60000});
- assert.equal(await page.locator('.cage-bays').count(),0);
- assert.equal(await page.evaluate(()=>window.myr5Companion.viewer.floorObjects.every(o=>o.visible)),true);
- assert.match(await page.locator('#creatureStatus').textContent(),/3D cage could not load|Your coach is ready|Coach updated/);
- await page.click('#tab-face');assert.equal(await page.locator('#panel-face').isVisible(),true);
- assert.deepEqual(errors,[]);
-});
-
-test('pet cages: choosing saves only the device preference, survives reopen, and a lost grant falls back to None',async t=>{
- const {page,errors,open,download}=await harness(t,{pets:['push-pet']});await download();await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='ready',null,{timeout:60000});
- const recipe=()=>page.evaluate(()=>JSON.stringify({recipe:window.myr5Companion.recipe,stored:localStorage.getItem('myr5-recipe-v1'),ledger:localStorage.getItem('myr5-battle-pass-ledger-v1'),undo:document.getElementById('undo').disabled}));
- const before=await recipe();
- await page.click('[data-cage-section="pets"]');
- await page.focus('[data-pet-choice="push-pet"]');await page.keyboard.press('Enter');
- assert.equal(await page.locator('[data-pet-choice="push-pet"]').getAttribute('aria-pressed'),'true');
- assert.equal(await page.evaluate(()=>document.activeElement?.dataset.petChoice),'push-pet','focus stays on the choice');
- assert.match(await page.locator('[data-pet-status]').textContent(),/: Selected on this device/);
- assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-cage-selection-v1'))),{version:1,petId:'push-pet'});
- assert.equal(await recipe(),before,'choosing a pet never touches the coach recipe or grants anything');
- assert((await box(page,'[data-pet-choice="push-pet"]')).height>=44,'touch target');
- await page.click('[data-cage-section="weapons"]');await page.click('[data-cage-section="pets"]');
- assert.equal(await page.locator('[data-pet-choice="push-pet"]').getAttribute('aria-pressed'),'true','reopen keeps it');
- // The grant disappears while the bay is closed: reopening revalidates.
- await page.click('#tab-face');await page.evaluate(()=>localStorage.setItem('myr5-battle-pass-ledger-v1',JSON.stringify({pet:[]})));
- await page.click('[data-cage-section="pets"]');
- assert.equal(await page.locator('[data-pet-choice]').count(),1,'only None remains');
- assert.equal(await page.locator('[data-pet-choice=""]').getAttribute('aria-pressed'),'true');
- // Storage that refuses the write shows an error and keeps the previous choice.
- await page.evaluate(()=>localStorage.setItem('myr5-battle-pass-ledger-v1',JSON.stringify({pet:['push-pet']})));
- await page.click('[data-cage-section="weapons"]');await page.click('[data-cage-section="pets"]');
- await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw Error('full');};});
- await page.click('[data-pet-choice="push-pet"]');
- assert.match(await page.locator('#panel-bay [role=alert]').textContent(),/could not be saved/);
- assert.equal(await page.locator('[data-pet-choice="push-pet"]').getAttribute('aria-pressed'),'false');
- await shot(page,'cage-pets-error-375x812');
- assert.deepEqual(errors,[]);
-});
-
-test('weapon wall: the Gala form is removed and its listeners detached when the bay closes; the loadout is never auto-saved',async t=>{
- const {page,seen,errors,open,download}=await harness(t);await download();await open();
- await page.waitForFunction(()=>document.querySelector('.editor-shell')?.dataset.cage==='ready',null,{timeout:60000});
- await page.click('[data-cage-section="weapons"]');
- assert.equal(await page.locator('.cage-weapon-wall').count(),1);
- await page.click('[data-cage-section="pets"]');
- assert.equal(await page.locator('.cage-weapon-wall').count(),0,'another bay disposes it');
- await page.click('[data-cage-section="weapons"]');await page.click('#tab-face');
- assert.equal(await page.locator('.cage-weapon-wall').count(),0,'a console tab disposes it');
- await page.evaluate(()=>{window.myr5AuthenticatedAccount={user:{id:'A'}};window.dispatchEvent(new CustomEvent('myr5:account-ready'));});
- await page.waitForTimeout(200);
- assert.deepEqual(seen.filter(p=>p.startsWith('/api/war-room')),[],'a disposed form no longer reacts to account events');
- await page.evaluate(()=>{window.myr5AuthenticatedAccount=null;});
- await page.click('[data-cage-section="weapons"]');
- assert.equal(await page.locator('.cage-weapon-wall').count(),1);
- await page.evaluate(()=>window.myr5Companion.cage.dispose());
- assert.equal(await page.locator('.cage-weapon-wall').count(),0,'disposing the cage disposes the form');
- assert.deepEqual(seen.filter(p=>p.startsWith('/api/war-room/loadout')),[],'no loadout write without pressing Save');
- assert.deepEqual(errors,[]);
+ assert.equal(await page.evaluate(()=>window.myr5Companion.cage),undefined);
+ assert.deepEqual(seen.filter(p=>p.startsWith('/pod/rooms/cage/')),[],'the customizer never fetches a cage byte');
+ assert.deepEqual(await page.locator('.menu-tabs [role=tab]:not([hidden])').allTextContents(),['Species','Colour','Face','Files']);
 });

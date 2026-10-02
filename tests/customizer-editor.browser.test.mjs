@@ -28,7 +28,7 @@ test('customizer editor: body-first tab, no limb-mixing UI, mom-only gating, sav
 
   // Body (#139: labelled Species) is the first tab and opens by default; Files stays last (#146).
   assert.equal(await page.locator('#tab-body').getAttribute('aria-selected'),'true');
-  assert.deepEqual(await page.locator('.menu-tabs [role=tab]:not([hidden])').allTextContents(),['Species','Colour','Face','Motion','Coach','Files']);
+  assert.deepEqual(await page.locator('.menu-tabs [role=tab]:not([hidden])').allTextContents(),['Species','Colour','Face','Files']);
   assert.equal(await page.locator('#panel-body').isHidden(),false);
   assert.equal(await page.locator('#panel-materials').isHidden(),true);
 
