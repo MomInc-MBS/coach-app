@@ -24,6 +24,8 @@ function serve(){
   const pathname=new URL(req.url,'http://local').pathname;
   if(pathname==='/favicon.ico'){res.writeHead(204);res.end();return;}
   if(pathname==='/'){res.writeHead(200,{'Content-Type':TYPES['.html']});res.end(fixture);return;}
+  // R16/R17: housing routes (ship...) wait for the portal to mount before opening; this test is about the route handoff only.
+  if(pathname==='/modules/portal/portal-entry.mjs'){res.writeHead(200,{'Content-Type':TYPES['.js']});res.end('export const ensurePortalMounted=async()=>({frameDirectDestination(){}});');return;}
   try{const file=resolve(root,'.'+pathname);if(!file.startsWith(root+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}
   catch{res.writeHead(404);res.end();}
  });
