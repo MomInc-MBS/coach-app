@@ -100,8 +100,11 @@ function syncMaterials(){
  ($('textureId') as HTMLSelectElement).value=mc.textureId;
  const texture=TEXTURES.find(t=>t.id===mc.textureId);
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
- for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]')){const row=b.dataset.channel,region=COLOUR_CHANNELS.find(c=>c.id===row)?.regions[0];b.setAttribute('aria-pressed',String(row?b.dataset.color===(regionChoice(shown().materials,region!)?.colorId??DEFAULT_MATERIAL.colorId):false));}
- ($('materialClear') as HTMLButtonElement).disabled=!shown().materials?.[selected];
+ // R20: the toggle shows each part's current colour as a dot; the single grid marks the active part's colour.
+ const partColour=(c:typeof COLOUR_CHANNELS[number])=>regionChoice(shown().materials,c.regions[0])?.colorId??DEFAULT_MATERIAL.colorId;
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-part]')){const c=COLOUR_CHANNELS.find(x=>x.id===b.dataset.part)!,on=c===activeChannel;b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;(b.firstElementChild as HTMLElement).style.background=colorTriad(partColour(c))?.primary??partColour(c);}
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.kind==='color'&&b.dataset.color===partColour(activeChannel)));
+ ($('materialClear') as HTMLButtonElement).disabled=!activeChannel.regions.some(r=>shown().materials?.[r]);
 }
 function syncMomOnly(){
  const show=shown().body===MOM_APPROVED_BODY_ID;
@@ -165,30 +168,35 @@ const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;b.style.height='34px';if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);return b;}
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);return b;}
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>idLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
-// R18 G3: three single-colour rows (Body, Head, Eyes) + a palette grid that fills all three at once.
-// Each row offers every colour def plus the free hexes no def starts with.
+// R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
+// that fills all three parts at once. Every colour def plus the free hexes no def starts with.
 const rowColours=[...FREE_COLOURS.map((h,n)=>({id:h,name:FREE_COLOUR_NAMES[n],hex:h})),...COLORS.filter(c=>!FREE_COLOURS.includes(c.primary.toLowerCase())).map(c=>({id:c.id,name:c.displayName,hex:c.primary}))]; // free hexes first, then the locked defs
+let activeChannel:typeof COLOUR_CHANNELS[number]=COLOUR_CHANNELS[0];
 function setChannel(channel:typeof COLOUR_CHANNELS[number],colorId:string){
  const base=shown();commit({...base,materials:{...base.materials,...Object.fromEntries(channel.regions.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),colorId}]))}});
 }
+function choosePart(channel:typeof COLOUR_CHANNELS[number]){activeChannel=channel;selected=channel.regions[0];sync();}
 const colorRoot=$('colorSwatches');
-function colourRow(label:string,fill:(grid:HTMLElement)=>void){
- const row=document.createElement('div');row.className='colour-row';row.setAttribute('role','group');row.setAttribute('aria-label',label);
- const name=document.createElement('strong');name.textContent=label;const grid=document.createElement('div');grid.className='material-grid';
- fill(grid);row.append(name,grid);colorRoot.append(row);
-}
 function fillColours(){colorRoot.replaceChildren();
-for(const channel of COLOUR_CHANNELS)colourRow(channel.label,grid=>{for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(channel,c.id));b.dataset.channel=channel.id;grid.append(b);}});
-colourRow('Palettes',grid=>{for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id)))grid.append(swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>{
+const toggle=document.createElement('div');toggle.className='part-toggle';toggle.setAttribute('role','radiogroup');toggle.setAttribute('aria-label','Part to colour');
+for(const channel of COLOUR_CHANNELS){const b=document.createElement('button');b.type='button';b.dataset.part=channel.id;b.setAttribute('role','radio');b.append(document.createElement('i'),channel.label);b.onclick=()=>choosePart(channel);
+ b.onkeydown=e=>{const n=COLOUR_CHANNELS.indexOf(channel),d=e.key==='ArrowRight'||e.key==='ArrowDown'?1:e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:0;if(!d)return;e.preventDefault();const next=COLOUR_CHANNELS[(n+d+COLOUR_CHANNELS.length)%COLOUR_CHANNELS.length];choosePart(next);(toggle.querySelector(`[data-part="${next.id}"]`) as HTMLElement).focus();};
+ toggle.append(b);}
+const grid=document.createElement('div');grid.className='material-grid';grid.id='colourGrid';grid.setAttribute('role','group');grid.setAttribute('aria-label','Colours');
+for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(activeChannel,c.id));b.dataset.kind='color';grid.append(b);}
+const label=document.createElement('strong');label.textContent='Palettes';
+const palettes=document.createElement('div');palettes.className='material-grid';palettes.id='paletteGrid';palettes.setAttribute('role','group');palettes.setAttribute('aria-label','Palettes');
+for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>{
  const ids=paletteChannelIds(p),base=shown(),materials={...base.materials};
  COLOUR_CHANNELS.forEach((channel,n)=>{for(const r of channel.regions)materials[r]={...(materials[r]??DEFAULT_MATERIAL),colorId:ids[n]};});
  commit({...base,materials});
-}));});}
+});b.dataset.kind='palette';palettes.append(b);}
+colorRoot.append(toggle,grid,label,palettes);}
 fillColours();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
-$('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};delete materials[selected];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
+$('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
 
 for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
  // #102: a locked body previews like a locked texture (commit()'s guard below catches it). An owned
