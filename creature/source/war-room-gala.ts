@@ -17,8 +17,6 @@ export const MIRROR=['body','skin','face','hair','facial'];
 export const CLOTHES=['headwear','neck','torso','shoulders','arms','hands','legs','feet','held','back'];
 export const IDLE_WALK_MS=10000;
 export const LABELS:Record<CageSection,{label:string;name:string}>={
- overview:{label:'Room',name:'Whole War Room'},
- pedestal:{label:'Gala',name:'Your Gala character: face'},
  pets:{label:'Pets',name:'Animal cages: pet'},
  weapons:{label:'Weapons',name:'Weapon rack: weapon'},
  mirror:{label:'Mirror',name:'Mirror: alien features'},
@@ -124,7 +122,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
  let cage:ReturnType<typeof mountCage>|null=null;
  function flatBays(){
   const row=el('div','','cage-bays');row.setAttribute('role','group');row.setAttribute('aria-label','War Room sections');
-  for(const s of SECTIONS){const b=el('button',LABELS[s.id].label);b.type='button';b.setAttribute('aria-label',LABELS[s.id].name);b.dataset.cageSection=s.id;b.onclick=()=>{for(const x of row.children)x.setAttribute('aria-pressed',String(x===b));if(s.id==='overview')closeBay();else showBay(s.id);};row.append(b);}
+  for(const s of SECTIONS){if(s.id==='overview'||s.id==='pedestal')continue;const b=el('button',LABELS[s.id].label);b.type='button';b.setAttribute('aria-label',LABELS[s.id].name);b.dataset.cageSection=s.id;b.classList.add('bay-terminal-line');b.onclick=()=>{for(const x of row.children)x.setAttribute('aria-pressed',String(x===b));if(s.id==='overview')closeBay();else showBay(s.id);};row.append(b);}
   stageEl.append(row);
  }
  void cagePacketReady().then(have=>{
