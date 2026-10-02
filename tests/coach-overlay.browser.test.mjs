@@ -79,9 +79,11 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
    others:[...document.body.children].filter(n=>n.id!=='cameraWorkout'&&getComputedStyle(n).display!=='none').map(n=>n.tagName),
    canvasVisible:document.getElementById('c').checkVisibility(),
    liveStop:document.getElementById('liveStop'),
-   stageChildren:[...document.getElementById('cameraWorkout').children].map(n=>n.tagName+(n.id?'#'+n.id:''))
+   stageChildren:[...document.getElementById('cameraWorkout').children].filter(n=>!n.classList.contains('camera-workout-housing')).map(n=>n.tagName+(n.id?'#'+n.id:'')),
+   // R17: the metal housing (edge frame, aria-hidden, no pointer events) is the only other thing allowed on the camera view
+   housing:[...document.querySelectorAll('#cameraWorkout>.camera-workout-housing')].map(n=>n.getAttribute('aria-hidden')+' '+getComputedStyle(n).pointerEvents)
   }));
   assert.deepEqual(shell.others,[]);assert.equal(shell.canvasVisible,false);assert.equal(shell.liveStop,null);
-  assert.deepEqual(shell.stageChildren,['VIDEO#v','BUTTON','DIV#coachOverlay']);
+  assert.deepEqual(shell.stageChildren,['VIDEO#v','BUTTON','DIV#coachOverlay']);assert(shell.housing.every(h=>h==='true none'),JSON.stringify(shell.housing));
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });
