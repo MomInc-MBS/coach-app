@@ -1,0 +1,69 @@
+
+ ⛅️ wrangler 4.92.0 (update available 4.147.0)
+──────────────────────────────────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+
+  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the `-e|--env` flag or CLOUDFLARE_ENV env variable.
+  If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example `--env=""`.
+
+
+🌀 Building list of assets...
+✨ Read 1773 files from the assets directory D:\myr5-work\release-18\dist\client
+🌀 Starting asset upload...
+🌀 Found 33 new or modified static assets to upload. Proceeding with upload...
++ /release-build.mjs
++ /modules/portal/standalone-housing.css
++ /war-room/war-room.css
++ /movement-rules.mjs
++ /scoreboard.mjs
++ /achievements-board.mjs
++ /coach-hub.mjs
++ /meditation.css
++ /app.css
++ /creature/assets/editor.js
++ /pod/worlds/meditation-waterfall.png
++ /camera-workout.css
++ /coach-hub.css
++ /breathing-modes.mjs
++ /reward-pack-ui.mjs
++ /creature/creature.css
++ /meditation.mjs
++ /index.html
++ /sw.js
++ /war-room/gala-bay.js
++ /launch-runtime.mjs
++ /source.json.gz
++ /reward-packs.mjs
++ /release-info.mjs
++ /coach-overlay.mjs
++ /creature/index.html
++ /breathing.mjs
++ /battle-pass-rewards.mjs
++ /modules/portal/portal.css
++ /modules/portal/portal.mjs
++ /creature/assets/phone.js
++ /app-runtime.mjs
++ /source.json
+Uploaded 11 of 33 assets
+Uploaded 22 of 33 assets
+Uploaded 33 of 33 assets
+✨ Success! Uploaded 33 files (1690 already uploaded) (3.97 sec)
+
+Total Upload: 201.66 KiB / gzip: 57.83 KiB
+Worker Startup Time: 11 ms
+Your Worker has access to the following bindings:
+Binding                                                                   Resource                  
+env.DB (myr5-coach)                                                       D1 Database               
+env.ASSETS                                                                Assets                    
+env.CLERK_PUBLISHABLE_KEY ("pk_live_Y2xlcmsubW9taW5jLm9ubGluZSQ")         Environment Variable      
+env.CLERK_FRONTEND_URL ("https://clerk.mominc.online")                    Environment Variable      
+env.CLERK_AUTHORIZED_PARTIES ("https://myr5.mominc.online")               Environment Variable      
+env.RELEASE_ORIGIN ("https://myr5.mominc.online")                         Environment Variable      
+env.RELEASE_EMAIL_FROM ("dispatch@mominc.online")                         Environment Variable      
+env.VAPID_SUBJECT ("https://myr5.mominc.online")                          Environment Variable      
+
+Uploaded myr5-coach (9.00 sec)
+Deployed myr5-coach triggers (2.39 sec)
+  myr5.mominc.online (custom domain)
+  schedule: * * * * *
+Current Version ID: 3bd146b1-62d4-4c8b-aee2-9e7ad075f3b8

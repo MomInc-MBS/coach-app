@@ -1,0 +1,77 @@
+﻿
+ ⛅️ wrangler 4.92.0 (update available 4.147.0)
+──────────────────────────────────────────────
+node.exe : [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.jsonc configuration:[0m
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33m▲ [43;33m...figuration:[0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+  
+    - "env.staging" environment configuration
+      - The following vars exist at the top level, but not on "env.staging.vars".
+        This is probably not what you want, since "vars" configuration is not inherited by environments.
+        Please add these vars to "env.staging.vars":
+        - CLERK_PUBLISHABLE_KEY
+        - CLERK_FRONTEND_URL
+        - CLERK_AUTHORIZED_PARTIES
+        - RELEASE_ORIGIN
+        - RELEASE_EMAIL_FROM
+        - VAPID_SUBJECT
+
+
+🌀 Building list of assets...
+✨ Read 1773 files from the assets directory D:\myr5-work\release-18\dist\client
+🌀 Starting asset upload...
+🌀 Found 33 new or modified static assets to upload. Proceeding with upload...
++ /release-build.mjs
++ /modules/portal/standalone-housing.css
++ /war-room/war-room.css
++ /movement-rules.mjs
++ /scoreboard.mjs
++ /achievements-board.mjs
++ /coach-hub.mjs
++ /meditation.css
++ /app.css
++ /creature/assets/editor.js
++ /pod/worlds/meditation-waterfall.png
++ /camera-workout.css
++ /coach-hub.css
++ /breathing-modes.mjs
++ /reward-pack-ui.mjs
++ /creature/creature.css
++ /meditation.mjs
++ /index.html
++ /sw.js
++ /war-room/gala-bay.js
++ /launch-runtime.mjs
++ /source.json.gz
++ /reward-packs.mjs
++ /release-info.mjs
++ /coach-overlay.mjs
++ /creature/index.html
++ /breathing.mjs
++ /battle-pass-rewards.mjs
++ /modules/portal/portal.css
++ /modules/portal/portal.mjs
++ /creature/assets/phone.js
++ /app-runtime.mjs
++ /source.json
+Uploaded 11 of 33 assets
+Uploaded 22 of 33 assets
+Uploaded 33 of 33 assets
+✨ Success! Uploaded 33 files (1690 already uploaded) (2.52 sec)
+
+Total Upload: 201.66 KiB / gzip: 57.83 KiB
+Worker Startup Time: 9 ms
+Your Worker has access to the following bindings:
+Binding                              Resource         
+env.DB (myr5-coach-staging)          D1 Database      
+env.ASSETS                           Assets           
+
+Uploaded myr5-coach-staging (7.64 sec)
+Deployed myr5-coach-staging triggers (0.92 sec)
+  https://myr5-coach-staging.mominc-coach.workers.dev
+Current Version ID: 983cc8d6-97cf-4199-912e-2c02c295ce4e
