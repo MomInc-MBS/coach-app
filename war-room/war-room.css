@@ -36,3 +36,5 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;p
 .controls-grid h2{margin:0 0 6px;font:13px monospace;color:#f1ffcc;text-transform:uppercase;letter-spacing:.05em}
 .bay-terminal-line{background-color:rgba(0,0,0,.7);color:#ff8800;font-family:'Courier New',monospace;border:none;padding:.4rem .8rem;margin:.2rem;box-shadow:0 0 6px #ff8800;transition:background-color .2s}
 .bay-terminal-line:hover{background-color:rgba(255,136,0,.1)}
+.cage-bays button{background-color:rgba(0,0,0,.7);color:#ff8800;font-family:'Courier New',monospace;border:none;padding:.4rem .8rem;margin:.2rem;box-shadow:0 0 6px #ff8800;transition:background-color .2s}
+.cage-bays button:hover{background-color:rgba(255,136,0,.1)}
