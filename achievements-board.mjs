@@ -161,21 +161,20 @@ function zoom(b,btn){
  dialog.classList.add('zoomed');
  detail.style.setProperty('--glow',b.color);
  const path=b.track?TRACK_NAMES[b.track]:'Shared';
- detail.innerHTML=`<h2>${b.name}</h2><hr><p class="ach-status">${path} · ${b.state==='done'?'every level beaten':`${b.levels} of ${MAX_LEVEL} levels beaten · beat level ${b.levels+1} next`}</p><ol>${LEVELS.map((rewards,i)=>`<li data-step="${i<b.levels?'done':i===b.levels?'next':'todo'}"><b>Level ${i+1}</b><span>${rewards.join(' · ')}</span></li>`).join('')}</ol><button type="button" class="ach-back">Back</button>`;
+ detail.innerHTML=`<h2>${b.name}</h2><hr><ol>${LEVELS.map((rewards,i)=>`<li data-step="${i<b.levels?'done':i===b.levels?'next':'todo'}"><b>Level ${i+1}</b><span>${rewards.join(' · ')}</span></li>`).join('')}</ol><button type="button" class="ach-back">Back</button>`;
  detail.hidden=false;detail.querySelector('.ach-back').onclick=unzoom;
  const rewards=levelRewardsForBoss(b.id);
  // Each earned reward gets its own sparkle (state rows mirror the catalog rows, plus `granted`); it clears once that line is on screen.
  const shown=battlePassState().bosses.find(x=>x.id===b.id)?.rewards||[];
  detail.querySelectorAll('ol li span').forEach((span,i)=>{
-  const items=rewards[i]||[];if(!items.length){span.textContent='No reward';return;}
+  const items=rewards[i]||[];if(!items.length){span.textContent='';return;}
   // Build a concise description for the level: weapon name + pack tier
   const weapon=items.find(it=>it.kind==='weapon');
   const pack=items.find(it=>it.tier);
   const parts=[];
   if(weapon)parts.push(weapon.name);
   if(pack)parts.push(`${pack.tier[0].toUpperCase()}${pack.tier.slice(1)} Pack`);
-  if(parts.length===0)parts.push(`Level ${i+1}`);else parts.unshift(`Level ${i+1}`);
-  span.textContent=parts.join(' · ');
+  span.textContent=parts.length?' · '+parts.join(' · '):'';
  });
 }
 function unzoom(){
