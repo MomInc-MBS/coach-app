@@ -168,7 +168,14 @@ function zoom(b,btn){
  const shown=battlePassState().bosses.find(x=>x.id===b.id)?.rewards||[];
  detail.querySelectorAll('ol li span').forEach((span,i)=>{
   const items=rewards[i]||[];if(!items.length){span.textContent='No reward';return;}
-  span.replaceChildren(...items.flatMap((item,j)=>{const part=document.createElement('i'),held=shown[i]?.items[j];part.textContent=`${item.name}${item.line?` — ${item.line}`:''}`;if(held?.granted)sparkle(part,held.kind,held.id);return j?[' · ',part]:[part];}));
+  // Build a concise description for the level: weapon name + pack tier
+  const weapon=items.find(it=>it.kind==='weapon');
+  const pack=items.find(it=>it.tier);
+  const parts=[];
+  if(weapon)parts.push(weapon.name);
+  if(pack)parts.push(`${pack.tier[0].toUpperCase()}${pack.tier.slice(1)} Pack`);
+  if(parts.length===0)parts.push(`Level ${i+1}`);else parts.unshift(`Level ${i+1}`);
+  span.textContent=parts.join(' · ');
  });
 }
 function unzoom(){
