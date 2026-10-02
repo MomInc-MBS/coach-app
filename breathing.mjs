@@ -24,16 +24,15 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  controls.innerHTML='<div class="breath-modes" data-breath-modes>'+MODE_IDS.map(id=>{const m=BREATHING_MODES[id];return `<button type="button" class="breath-mode-card" data-mode="${id}"><strong>${m.title}</strong><small>${m.subtitle}</small>`+(m.seatedOnly?`<small class="breath-seated-notice">${SEATED_ONLY_NOTICE}</small>`:'')+'</button>';}).join('')+'</div>'
   +'<div class="breath-run" data-breath-run hidden><p class="breath-seated-notice" data-seated hidden>'+SEATED_ONLY_NOTICE+'</p><p class="breath-phase" data-phase-label></p><progress max="'+BREATHING_MS+'" value="0" aria-label="Breathing session progress"></progress>'
   +'<div class="breath-actions"><button type="button" data-retry hidden>Save breathing bonus</button><button type="button" data-skip-hold hidden>Skip · breathe normally</button></div>'
-  +'<button type="button" class="breath-stance-link" data-stance-link hidden>Check this stance with the camera coach</button></div><div class="pose-choice" data-pose-choice aria-label="Character pose"><span>Character pose · visual only</span><button type="button" data-pose="seated" aria-pressed="true">Seated</button><button type="button" data-pose="standing" aria-pressed="false">Standing</button></div>'
+  +'<button type="button" class="breath-stance-link" data-stance-link hidden>Check this stance with the camera coach</button></div>'
   +'<p data-status role="status"></p><p class="breath-note">'+NO_MEDICAL_CLAIM+'</p>';
  scene.append(controls);
  controls.querySelector('.breath-actions').append(pause);
- controls.querySelector('[data-breath-modes]').append(controls.querySelector('[data-pose-choice]'));
  const $=selector=>controls.querySelector(selector);
- const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),seated=$('[data-seated]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),poseChoice=$('[data-pose-choice]'),poseButtons=[...(poseChoice.querySelectorAll?.('[data-pose]')||[])],countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]');
+ const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),seated=$('[data-seated]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]');
  // Both exercises and the decorative pose selector share a compact, reachable control strip.
  const speech=scene.querySelector?.('.meditation-speech'),reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
- let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS,selectedPose='seated';
+ let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS;
  function renderPhase(ms){
   const p=phaseAt(script,ms);runEl.dataset.phase=p.key;skipHold.hidden=!['optional-hold','recovery-hold'].includes(p.key);
   phaseEl.textContent=({settle:'Settle gently',breathe:p.breath==='in'?'Breathe in':'Breathe out',transition:'Easy exhale','optional-hold':'Optional pause',recovery:'Easy inhale','recovery-hold':'Optional recovery',rest:'Breathe normally'})[p.key]||p.label;
@@ -48,7 +47,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   run++;clock=new BreathingSession();duration=BREATHING_MS;ticket=null;saving=false;finished=false;awaitingRetry=false;script=null;
   if(caption&&speech)speech.textContent=IDLE_CAPTION;caption='';
   bar.max=BREATHING_MS;bar.value=0;sessionClock&&(sessionClock.textContent='3:30');countEl&&(countEl.textContent='—');directionEl&&(directionEl.textContent='READY');pause.disabled=true;pause.hidden=true;pause.textContent='Pause';dialog.classList.remove('breathing-paused');
-  modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;skipHold.hidden=true;stanceLink.hidden=true;if(!keepPose)stagePose('seated');runEl.dataset.phase='';
+  modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;skipHold.hidden=true;stanceLink.hidden=true;runEl.dataset.phase='';
   if(stopCircle)stopCircle.hidden=true;phaseEl.textContent='';statusEl.textContent=DEFAULT_STATUS;
  }
  async function finish(){
@@ -63,7 +62,6 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   }catch(error){if(current===run){statusEl.textContent=error.message;retry.hidden=false;awaitingRetry=true;}}
   finally{if(current===run)saving=false;}
  }
- function stagePose(pose){selectedPose=pose;scene.dataset.pose=pose;scene.dispatchEvent(new Event('meditationposechange'));for(const button of poseButtons)button.setAttribute('aria-pressed',String(button.dataset.pose===pose));}
  async function startSession(id){
   reset({keepPose:true});duration=id==='wim-hof'?GUIDED_ROUND_MS:BREATHING_MS;bar.max=duration;script=buildScript(id);seated.hidden=!BREATHING_MODES[id]?.seatedOnly;modesEl.hidden=true;runEl.hidden=false;statusEl.textContent='Starting…';sessionClock&&(sessionClock.textContent=formatTime(duration));renderPhase(0);
   const current=run;
@@ -74,7 +72,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   }catch(error){if(current===run){reset();statusEl.textContent=error.message;}}
  }
  for(const id of MODE_IDS)modesEl.querySelector(`[data-mode="${id}"]`).onclick=()=>startSession(id);
- for(const button of poseButtons)button.onclick=()=>stagePose(button.dataset.pose);
+ 
  // Abandon the ticket before the exit animation. This path never calls completion/save.
  const stopNow=()=>{const early=!!ticket&&!finished&&!clock.complete,transitionTicket=ticket?.transitionTicket;reset();if(early)void onEarlyExit?.({isCurrent:()=>!transitionTicket||transitions.isCurrent(transitionTicket)});else if(dialog.open)dialog.close();};
  if(stopCircle)stopCircle.onclick=stopNow;

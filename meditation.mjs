@@ -22,8 +22,8 @@ export function mountMeditation({api,onComplete,getAccount,backgroundLookup}={})
  // Cancelled with the room: reset() clears the timer, so the awaiting sequence simply never resumes.
  const wait=ms=>new Promise(resolve=>later(resolve,ms));
  const say=line=>{speech.textContent=line;};
- function portrait(){character.dataset.expression=taps>=3?'focused':'calm';try{const avatar=window.GalaAvatar,canvas=character.querySelector('canvas');let look=avatar.defaultLook;try{look=avatar.normalize(JSON.parse(localStorage.getItem('mominc-avatar-v1')));}catch{}avatar.draw(canvas,look,{base:false,weapon:false,prop:false,blink:false,pose:scene.dataset.pose==='standing'?{meditationStanding:true}:{meditate:true}});}catch{}}
- scene.addEventListener('meditationposechange',portrait);
+ function portrait(){character.dataset.expression=taps>=3?'focused':'calm';try{const avatar=window.GalaAvatar,canvas=character.querySelector('canvas');let look=avatar.defaultLook;try{look=avatar.normalize(JSON.parse(localStorage.getItem('mominc-avatar-v1')));}catch{}avatar.draw(canvas,look,{base:false,weapon:false,prop:false,blink:false,pose:{meditate:true}});}catch{}}
+
  function reset(){epoch++;timers.forEach(clearTimeout);timers=[];game?.dispose();game=null;taps=0;transitioning=false;scene.hidden=false;arcade.hidden=true;dialog.classList.remove('snorting','blacking-out','meditation-colour','coach-lunge','coach-wander','smacked');peer(0,0);stage.dataset.annoyed='0';character.disabled=false;dialog.classList.remove('breathing-paused');breathPause.textContent='Pause';say('Breathe in. Breathe out.');portrait();}
  // D28: the day's "wonders" pack background when a caller-supplied lookup has it downloaded,
  // otherwise today's bundled starter wonder; the neutral gradient only shows if the image fails.

@@ -92,16 +92,11 @@
 .meditation-panel .meditation-character canvas{display:none}
 .meditation-panel .meditation-character .pose{display:none;position:absolute;inset:0}
 .meditation-panel .meditation-character .pose svg{width:100%;height:100%;image-rendering:pixelated;filter:drop-shadow(5px 5px 0 #000)}
-.meditation-panel [data-meditation-scene][data-pose="standing"] .pose-standing,.meditation-panel [data-meditation-scene]:not([data-pose="standing"]) .pose-seated{display:block}
 .meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{bottom:21%;z-index:5;max-width:700px;margin:0 auto;padding:7px 16px;border:2px solid #fff;background:#000;color:#fff;font:700 clamp(14px,4vw,21px)/1.35 ui-monospace,monospace;text-align:center;text-shadow:none;box-shadow:4px 4px #777}
 .meditation-panel .breathing-session{bottom:max(12px,env(safe-area-inset-bottom));padding-inline:12px}
 .meditation-panel .breath-run:not([hidden]) [data-status]{top:calc(50% - min(34vw,190px) - 42px);font:700 16px ui-monospace,monospace;text-shadow:2px 2px #000}
 .meditation-panel .breath-mode-card[data-mode="gentle-guided"]{left:50%;right:auto;top:55%;width:min(72vw,290px);min-height:126px;transform:translateX(-50%)}
 .meditation-panel .breath-mode-card[data-mode="gentle-guided"]::after{display:none}
-.meditation-panel .pose-choice{display:flex;justify-content:center;gap:8px;padding:8px;background:#000e;border:2px solid #fff}
-.meditation-panel .pose-choice[hidden]{display:none}
-.meditation-panel .pose-choice button{min-height:42px;padding:6px 12px;border:2px solid #fff;border-radius:0;background:#000;color:#fff;font:700 13px ui-monospace,monospace}
-.meditation-panel .pose-choice button[aria-pressed="true"]{background:#fff;color:#000}
 .meditation-panel.breathing-paused .breathing-ring{transition:none}
 @media(max-height:650px){.meditation-panel .breathing-orbit{top:40%;width:min(54vh,280px)}.meditation-panel .meditation-character{bottom:5%;height:clamp(150px,29vh,200px)}.meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{bottom:19%}.meditation-panel .breath-mode-card{top:29%}.meditation-panel .breath-mode-card[data-mode="gentle-guided"]{top:52%}}
 @media(prefers-reduced-motion:reduce){.meditation-panel .breathing-ring{transform:scale(.9);transition:none}}
@@ -130,10 +125,6 @@
 .meditation-panel .breath-exit{background:#000!important;border:2px solid #fff!important;border-radius:0!important;color:#fff!important}
 .meditation-panel .breath-actions [data-skip-hold]:not([hidden]){grid-column:1/-1}
 .meditation-panel .breath-actions [data-retry]:not([hidden]){grid-column:1/-1}
-.meditation-panel .pose-choice{position:relative;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px;max-width:760px;margin:0 auto;padding:5px 7px;background:#000e;pointer-events:auto}
-.meditation-panel .pose-choice[hidden]{display:none}
-.meditation-panel .pose-choice span{font:700 10px/1.15 ui-monospace,monospace;color:#fff}
-.meditation-panel .pose-choice button{min-height:36px;padding:4px 8px;font-size:11px}
 .meditation-panel .breath-modes{position:static;inset:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;margin:auto;pointer-events:auto;z-index:6}
 .meditation-panel .breath-modes[hidden]{display:none}
 .meditation-panel .breath-mode-card{position:relative;inset:auto;transform:none;width:auto;min-height:85px;padding:8px!important;border:3px solid #fff!important;background:#000e!important;box-shadow:4px 4px #777!important;pointer-events:auto}
@@ -146,7 +137,6 @@
 .meditation-panel .breath-seated-notice{font-size:9px!important;line-height:1.15}
 .meditation-panel .breathing-session [data-status]{position:static;top:auto;left:auto;right:auto;z-index:auto;margin:0;text-align:center;font:10px ui-monospace,monospace;pointer-events:none}
 .meditation-panel .breath-note{display:block;max-width:760px;margin:0 auto!important;padding:2px 5px;font:10px/1.2 ui-monospace,monospace!important;text-align:center;pointer-events:none;text-shadow:1px 1px #000}
-.meditation-panel .breath-mode-card:focus-visible,.meditation-panel .pose-choice button:focus-visible,.meditation-panel .breath-actions button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media(max-height:700px){.meditation-panel .breathing-orbit{top:29%;width:min(48vh,240px)}.meditation-panel .breath-count{top:calc(50% - 65px);font-size:clamp(58px,18vw,100px)}.meditation-panel [data-session-clock]{font-size:17px;padding:4px 8px}.meditation-panel .breath-direction{left:calc(50% + 48px);top:50%;font-size:9px}.meditation-panel .meditation-character{bottom:31%;height:min(20vh,140px)}.meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{top:64%}.meditation-panel .breath-mode-card{min-height:65px;padding:5px!important}.meditation-panel .breath-note{font-size:8px!important}}
 @media (orientation:portrait) and (min-height:701px) and (max-height:780px){.meditation-panel .meditation-character{bottom:39%}.meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{top:61%}}
 @media(max-width:340px){.meditation-panel .breath-modes{width:100%;gap:5px}.meditation-panel .breath-mode-card{padding:5px!important}.meditation-panel .breath-mode-card small{font-size:8px}}
@@ -164,9 +154,6 @@
  .meditation-panel .breathing-session progress{height:6px}
  .meditation-panel .breath-actions{gap:4px}
  .meditation-panel .breath-actions button{min-height:38px!important;padding:3px 5px!important;font-size:11px!important}
- .meditation-panel .pose-choice{grid-template-columns:1fr auto auto;gap:4px;padding:3px 5px}
- .meditation-panel .pose-choice button{min-height:32px;padding:3px 6px;font-size:10px}
- .meditation-panel .pose-choice span{font-size:8px}
  .meditation-panel .breath-modes{gap:5px}
  .meditation-panel .breath-mode-card{min-height:66px;padding:5px!important}
  .meditation-panel .breath-mode-card small{font-size:9px}
@@ -198,13 +185,9 @@
 .meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{font-size:clamp(28px,7vw,38px)!important;line-height:1.13!important;max-width:min(94vw,900px);padding:10px 13px;z-index:6}
 .meditation-panel .breath-run:not([hidden]) .breath-phase{font-size:clamp(20px,5vw,26px)!important;line-height:1.14;max-height:none;overflow:visible}
 .meditation-panel .breath-modes{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
-.meditation-panel .breath-modes>.pose-choice{grid-column:1/-1}
 .meditation-panel .breath-mode-card{min-height:76px}
 .meditation-panel .breath-mode-card strong{font-size:clamp(14px,3.8vw,19px)}
 .meditation-panel .breath-mode-card small{font-size:clamp(11px,3vw,15px)}
-.meditation-panel .pose-choice{grid-template-columns:1fr auto auto;gap:8px;align-items:center}
-.meditation-panel .pose-choice span{font-size:clamp(12px,3vw,15px)}
-.meditation-panel .pose-choice button{min-height:44px;font-size:clamp(13px,3.2vw,16px)}
 .meditation-panel .breath-note{font-size:12px!important;line-height:1.2}
 .meditation-panel .breath-run:not([hidden]) .breath-seated-notice{font-size:13px!important;line-height:1.15}
 .meditation-panel .breath-actions button{font-size:14px!important}
@@ -227,8 +210,6 @@
  .meditation-panel .breath-mode-card{min-height:62px;padding:5px!important}
  .meditation-panel .breath-mode-card strong{font-size:14px}
  .meditation-panel .breath-mode-card small{font-size:11px}
- .meditation-panel .pose-choice{padding:3px 5px}
- .meditation-panel .pose-choice button{min-height:38px}
  .meditation-panel .breath-run:not([hidden]){gap:3px;padding:5px 7px}
  .meditation-panel .breath-run:not([hidden]) .breath-phase{font-size:24px!important}
  .meditation-panel .breath-actions button{min-height:36px!important;font-size:12px!important}
@@ -243,7 +224,6 @@
  .meditation-panel .meditation-speech,.meditation-panel .meditation-near .meditation-speech{top:43%;left:36%;right:3%;width:auto;box-sizing:border-box;font-size:clamp(27.75px,7.4vw,30px)!important;max-height:none;overflow:visible}
  .meditation-panel .breath-mode-card{min-height:50px;padding:3px!important}
  .meditation-panel .breath-mode-card small,.meditation-panel .breath-note{font-size:9px!important}
- .meditation-panel .pose-choice button{min-height:32px}
  .meditation-panel .breath-run:not([hidden]) .breath-phase{font-size:24px!important}
  .meditation-panel .breath-actions button{min-height:32px!important;font-size:11px!important}
 }
@@ -256,9 +236,6 @@
  .meditation-panel .breath-modes{gap:4px}
  .meditation-panel .breath-mode-card{min-height:46px;padding:3px!important}
  .meditation-panel .breath-mode-card small{font-size:10px}
- .meditation-panel .pose-choice{gap:3px;padding:2px}
- .meditation-panel .pose-choice button{min-height:30px;font-size:11px}
- .meditation-panel .pose-choice span{font-size:10px}
  .meditation-panel .breath-phase{font-size:20px!important}
  .meditation-panel .breath-note{font-size:9px!important}
 }
