@@ -13,6 +13,8 @@
 /* R20: the same 88px console as the app (portal.css draws it), full width at the bottom, keys in the app's order. */
 #coachDock.coach-dock{position:fixed;z-index:40;inset:auto 0 0!important;width:auto;margin:0}
 #coachDock.coach-dock>a{grid-column:auto!important}
+#coachDock.coach-dock a{text-decoration:none}
+#coachDock.coach-dock a.dock-portal{font:600 10px/1 system-ui,sans-serif;letter-spacing:.4px}
 #coachDock.coach-dock a.dock-control{position:relative;grid-row:1;box-sizing:border-box;width:44px;height:44px;min-width:44px;padding:0;display:grid;place-items:center;border:0;border-radius:0;background:none;box-shadow:none;filter:drop-shadow(0 3px 0 #130d18) drop-shadow(0 0 1px #000);color:#f4e4fa}
 #coachDock .dock-control>span{width:36px;height:36px;display:grid;place-items:center;color:#f6e5d5;background:linear-gradient(145deg,#a58a9c,#5a4560 55%,#3b2c42);box-shadow:inset 2px 2px #ffffff40,inset -2px -3px #0006}
 #coachDock .dock-settings>span{border-radius:50%}

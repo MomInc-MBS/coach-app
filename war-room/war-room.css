@@ -1,5 +1,5 @@
 :root{color-scheme:dark;--ink:#d7f8ed;--muted:#8daeb0;--line:#356473;--panel:#0e2c38;--accent:#91f6c4;--yellow:#e4f28c;--bar:44px}*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#0b0716;color:var(--ink);font:16px/1.5 system-ui,sans-serif}
-.war-room{position:fixed;inset:0}
+.war-room{position:fixed;inset:15px 15px calc(var(--myr5-bar,88px) + 15px);overflow:hidden} /* R20: inside the metal housing, above the dock */
 .panel{background:linear-gradient(145deg,#123747,#0a2430);border:1px solid var(--line);box-shadow:0 12px 30px #0004}
 button{border:1px solid var(--accent);background:#183f48;color:var(--ink);padding:10px 14px;cursor:pointer;font-weight:600;min-height:44px}button:disabled{cursor:not-allowed;opacity:.55}
 label{font-size:13px}
@@ -8,7 +8,7 @@ label{font-size:13px}
 table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #35647366}th{color:var(--muted);font:11px monospace;text-transform:uppercase}td:first-child,td:last-child{font-family:monospace}
 
 /* The 3D character bay is the whole viewport; a CSS backdrop stands in for a room until the room model loads. */
-.character-bay{position:fixed;inset:0;z-index:0;border:0;box-shadow:none}
+.character-bay{position:absolute;inset:0;z-index:0;border:0;box-shadow:none}
 .character-bay-head{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 10px;background:linear-gradient(#000c,#0000)}
 .character-bay-head h1{flex:1 1 auto;margin:0;font:700 15px/1.1 monospace;color:#f1ffcc;letter-spacing:.04em}
 .character-bay-head #access{font:11px monospace;color:var(--accent)}
@@ -27,7 +27,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;p
 .gala-weapon{display:contents}.gala-bay-panel .help{grid-column:1/-1;margin:2px 0;font-size:12px;color:var(--muted)}
 
 /* Controls: a compact, collapsed-by-default drawer that overlays the bay, pinned above the bottom safe area. */
-.controls-drawer{position:fixed;left:0;right:0;bottom:0;z-index:3;max-height:70vh;overflow:auto;border-left:0;border-right:0;border-bottom:0;padding:0 12px env(safe-area-inset-bottom)}
+.controls-drawer{position:absolute;left:0;right:0;bottom:0;z-index:3;max-height:70vh;overflow:auto;border-left:0;border-right:0;border-bottom:0;padding:0 12px env(safe-area-inset-bottom)}
 .controls-drawer summary{display:flex;align-items:center;min-height:var(--bar);margin:0;cursor:pointer;font:700 13px monospace;color:var(--accent);list-style:none}
 .controls-drawer summary::-webkit-details-marker{display:none}
 .controls-drawer summary::before{content:'\25b2 '}
