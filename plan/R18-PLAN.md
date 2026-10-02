@@ -70,6 +70,10 @@ Files: `creator/materials-registry.ts`, `palettes.json`, `battle-pass-rewards.mj
 
    Within a category the pick is uniform over items you don't own yet, then over everything if you own them all. Creature-skin collections stay 16 rare / 16 epic / 16 legendary.
 
+**Ian, 2 Oct (decisions):**
+- The free colours are 15 that span the range: black, white, grey, red, orange, yellow, green, teal, blue, purple, pink, brown, tan, navy and mint. For each one, use the closest hex that already exists in the colour census, so it matches the existing palettes.
+- No grandfathering. Colours and textures a player owns that are now locked reset to the free set.
+
 ### H. Grimoire CRT + 64 menu terminal (LOCAL)
 Files: `modules/portal/portal.mjs` (L325, L360–363), `portal.css` (`.portal-menu*`), `creature/source/war-room-gala.ts` (LABELS L19–26)
 1. The Grimoire settings sheet becomes an old CRT screen: dark curved glass, scanlines, slight glow, orange monospace text, titled "GRIMOIRE SETTINGS" (confirmed by Ian). Reuse the `settings-crt.*` scanline styles.
