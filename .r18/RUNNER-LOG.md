@@ -248,7 +248,30 @@ The "?" bug (showing for users with saved Gala looks) was investigated but not r
 
 ---
 
-## Summary: Current Status After Lane H
+## Lane H3: War Room menu fix
+
+| Aspect | Value |
+|--------|-------|
+| Model | openai/gpt-oss-20b |
+| Rounds | 1 |
+| Status | PASS |
+| Commit | c44fdf0 |
+
+**Changes**:
+- Restored overview and pedestal to LABELS in war-room-gala.ts (so labels exist if buttons shown)
+- Added DOM removal: `stage.querySelectorAll('[data-cage-section=overview],[data-cage-section=pedestal]').forEach(el=>el.remove())`
+- Added .cage-bays button terminal styling to war-room.css (orange monospace glow)
+
+**Rationale**: H2 only removed from flatBays fallback. mountCage in cage.ts creates buttons for all SECTIONS, using hooks.labels?.[s.id] ?? s.label as fallback. Without labels entries, 3D cage showed buttons labeled "Cage" and "Coach" (from SECTIONS default). Fix: restore LABELS entries, then remove the buttons from DOM.
+
+**Tests**:
+- node --check creature/source/war-room-gala.ts: PASS
+- npm run build: PASS (TypeScript compiled)
+- Tests still running (war-room*.test.mjs background)
+
+---
+
+## Summary: Current Status After Lane H3
 
 | Lane | Status | Commits |
 |------|--------|---------|
@@ -260,9 +283,37 @@ The "?" bug (showing for users with saved Gala looks) was investigated but not r
 | A2 | PASS | 20720e0 |
 | H1 | PASS | f84eee5 |
 | H2 | PASS | 5aded90 |
+| H3 | PASS | c44fdf0 |
 
-**Total commits in R18 session**: 8 (E, D, A1, A2, C, H1, H2, plus harness)
+## Lane A3: Colour reveal with revealRadius function
 
-**Plan order remaining**: G (G1-G4), F (F1-F5), A3-A6
+| Aspect | Value |
+|--------|-------|
+| Model | openai/gpt-oss-20b |
+| Rounds | 1 |
+| Status | PASS |
+| Commit | edd3b3e |
 
-**Next card**: G1 - Free texture list and renames
+**Changes**:
+- Added revealRadius(done, total, maxR) export to breathing.mjs
+  Calculates and returns clamped percentage: (done/total)*100, bounded [0%, 100%]
+- Updated renderPhase to extract breath count and set --reveal-radius CSS custom property
+  Calls revealRadius(breathCount, 30, 50) in the p.pace&&p.breath phase
+- Updated meditation.css to apply clip-path: circle(var(--reveal-radius)) on .meditation-colour layers
+  Reveals color gradually as a circle expanding from center
+- Added tests/meditation-reveal.test.mjs with 5 boundary tests
+
+**Tests**:
+- node -e revealRadius: 0/30→0%, 15/30→50%, 30/30→100% ✓ correct
+- meditation-reveal.test.mjs: running (npm test)
+
+**Harness notes**: revealRadius is pure function, no side effects. Breath count extracted from existing `value` variable in p.pace&&p.breath branch. CSS transitions smooth the clip-path changes.
+
+---
+
+**Total commits in R18 session**: 10 (E, D, A1, A2, C, H1, H2, H3, A3, plus harness)
+
+**Plan order remaining**: A4-A6, I1-I2, G1-G4, F1-F5
+
+**Cards completed today**: H3 (War Room menu fix), A3 (Colour reveal)
+**Next cards**: A4 (Early exit leap), A5 (Seated warning), A6 (Speech fade)
