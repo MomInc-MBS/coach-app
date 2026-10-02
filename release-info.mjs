@@ -1,5 +1,8 @@
 import {BUILD_ID} from './release-build.mjs';
 export const RELEASE=Object.freeze({id:'2026-10-01-release-17-'+BUILD_ID,title:'Release 17: Stable coach and portal views',date:'2026-10-01',url:'https://myr5.mominc.online/repair-coach',notes:[
+ 'See-through portals: while a portal opens, you can already see where it leads in the middle of the wormhole.',
+ 'Your coach keeps going offline: voice cues fall back to captions and the exercise hologram to a wireframe figure, and both come back when you reconnect.',
+ 'Camera workouts sit inside the same metal MOM Inc housing and light strip as the other rooms, with the camera view left clear.',
  'The pod galaxy tilts with your interaction, while the controls follow with a smaller, delayed movement.',
  'Shaped portal cuts keep a clean outline on both the opening and falling piece, without jagged mesh triangles.',
  'Achievements, Food, Reminders, the school whiteboard, and the coach customizer keep the metal housing and feathered light strip. Button-opened menus tilt too, and the customizer uses the current navigation.',
