@@ -1,6 +1,6 @@
 :is(#portalChrome,#cameraWorkout).portal-standalone{--portal-rail:15px;--pm:var(--portal-metal,#4d3d4f);}
 :is(#portalChrome,#cameraWorkout).portal-standalone .portal-frame{--face-left:15px;--face-top:15px;--face-width:calc(100vw - 30px);--face-height:calc(100dvh - 30px);}
-:is(#portalChrome,#cameraWorkout).portal-standalone .portal-standalone-aura{position:absolute;z-index:2;inset:15px;box-sizing:border-box;pointer-events:none;border:36px solid transparent;border-radius:4px;box-shadow:inset 0 0 23px 7px var(--aura,#b026ff),0 0 16px var(--aura,#b026ff);opacity:.2;filter:blur(7px);mask:linear-gradient(#000 0 0) border-box,linear-gradient(#000 0 0) padding-box;mask-composite:exclude;-webkit-mask:linear-gradient(#000 0 0) border-box,-webkit-linear-gradient(#000 0 0) padding-box;-webkit-mask-composite:xor;}
+:is(#portalChrome,#cameraWorkout).portal-standalone .portal-standalone-aura{position:absolute;z-index:60;inset:0;pointer-events:none;box-sizing:border-box;opacity:.95;background:linear-gradient(to bottom,transparent,var(--aura,#b026ff)) top/100% 15px no-repeat, linear-gradient(to top,transparent,var(--aura,#b026ff)) bottom/100% 15px no-repeat, linear-gradient(to right,transparent,var(--aura,#b026ff)) left/15px 100% no-repeat, linear-gradient(to left,transparent,var(--aura,#b026ff)) right/15px 100% no-repeat}
 #portalChrome.portal-standalone .portal-energy{opacity:.86}
 #portalChrome.portal-standalone .portal-energy.hot{opacity:1}
 :is(#portalChrome,#cameraWorkout).portal-standalone .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b;}
@@ -21,4 +21,4 @@
 #coachDock.coach-dock .dock-portal{flex-direction:column;gap:1px;font-size:8px;line-height:1}
 #coachDock.coach-dock .dock-portal svg{width:18px;height:18px}
 .editor-shell{translate:var(--editor-peer-x,0px) var(--editor-peer-y,0px);rotate:var(--editor-peer-tilt,0deg);}
-@media(prefers-reduced-motion:reduce){.editor-shell{translate:none!important;rotate:none!important}#portalChrome.portal-standalone .portal-standalone-aura{filter:none;opacity:.16}}
+@media(prefers-reduced-motion:reduce){.editor-shell{translate:none!important;rotate:none!important}#portalChrome.portal-standalone .portal-standalone-aura{opacity:.8}}

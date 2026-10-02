@@ -776,17 +776,18 @@ function rimMask(pts,w,h,seed,shaped,fullscreen=false){
  g.scale(k,k);g.strokeStyle='#fff';g.lineJoin='round';
  const band=(width,alpha,dashes=null,cap='butt')=>{g.lineWidth=width;g.globalAlpha=alpha;g.lineCap=cap;g.setLineDash(dashes||[]);g.stroke(path);};
  g.save();g.clip(path);
- if(fullscreen){ // Pixel-smoothed inward 36 CSS-pixel fade, generated at the cached half-resolution mask size.
-  const image=g.createImageData(c.width,c.height),smooth=t=>t*t*(3-2*t);
-  for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
-   const d=Math.min(x/k,y/k,(c.width-1-x)/k,(c.height-1-y)/k),alpha=Math.round(224*(1-smooth(Math.min(1,d/36)))),i=4*(y*c.width+x);
-   image.data[i]=image.data[i+1]=image.data[i+2]=255;image.data[i+3]=alpha;
-  }
-  g.putImageData(image,0,0);
- }else for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);
+ if(!fullscreen)for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);
  g.restore();
  g.save();g.clip(outside,'evenodd');
- if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,b);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
+ if(fullscreen){
+   const image=g.createImageData(c.width,c.height),smooth=t=>t*t*(3-2*t),xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys),bx2=Math.max(...xs),by2=Math.max(...ys),rail=Math.max(1,Math.min(bx,by,w-bx2,h-by2));
+   for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+    const X=x/k,Y=y/k,dx=Math.max(bx-X,0,X-bx2),dy=Math.max(by-Y,0,Y-by2),d=Math.hypot(dx,dy),alpha=(d==0||d>=rail)?0:Math.round(255*(1-smooth(d/rail))**.8),i=4*(y*c.width+x);
+    image.data[i]=image.data[i+1]=image.data[i+2]=255;image.data[i+3]=alpha;
+   }
+   g.putImageData(image,0,0);
+  }
+  else if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,b);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
  else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,b);band(11,.32,dash(3,26),'round');}
  g.restore();
  return `url("${c.toDataURL()}")`;

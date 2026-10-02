@@ -6,3 +6,4 @@
 - K2 standalone aura: local gpt-oss-20b (card K2), applied unchanged.
 - K rimMask fullscreen: see below.
 - Tests: tests/r19-customizer.browser.test.mjs written by Claude; r18-customizer and customizer-editor tests updated by Claude for the new slider range / no chips.
+- K rimMask fullscreen (rail-only outward feathered glow): NVIDIA Kimi K3 (card K), applied unchanged. tests/r19-glow written by Claude. portal-persistent-housing 'each direct menu tilts' fails identically on release-18 (pre-existing, waits for #settings).
