@@ -117,7 +117,7 @@ test('reduced motion: static energy, destinations still framed, a quick fade bac
  const {context,page}=await openApp(browser,base,'reduce');
  try{
   assert.deepEqual(await energy(page),[],'no energy animation under reduced motion');
-  assert.equal(await page.evaluate(()=>document.querySelector('#portalHome .portal-energy').style.getPropertyValue('--energy').split(',').length),6,'the six neons sit static in the channel');
+  assert.equal(await page.evaluate(()=>document.querySelector('#portalHome .portal-energy').style.getPropertyValue('--energy').split(',').length),await page.evaluate(async()=>{const {readLook,stripSeq}=await import('/modules/portal/portal-look.mjs');return stripSeq(readLook().strip).length;}),'the selected Strip sequence sits static in the channel (R17 look: no longer the fixed six neons)');
   // Full menu -> Choose Workout (no gesture): this route opens the ship view in the frame's window.
   await page.locator('#portalSettingsButton').click();
   await page.locator('#portalMenu details>summary').click();
