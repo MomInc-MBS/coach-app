@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
+import {stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,beadAlpha,stepSpark,KNOBS,METAL,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
 
 const TAU=Math.PI*2;
 
@@ -184,4 +184,31 @@ test('cogs effect: door.glb asset, guide off (the lines are painted in), a defau
  assert.deepEqual(cogs.frame,DEFAULT_FRAME);
  assert.equal(typeof cogs.flip,'boolean');
  for(const fn of ['init','press','move','release','step','cut','heal','dispose'])assert.equal(typeof cogs[fn],'function',fn);
+});
+
+// --- R17 torch: spark bounce and the bead's own timeline --------------------------------------------
+test('stepSpark: falls under gravity and bounces once off its floor, losing speed',()=>{
+ const s={x:0,y:0,vx:100,vy:0,floor:10};
+ let bounced=false;
+ for(let i=0;i<120;i++){const vy=s.vy;stepSpark(s,1/60,1500,.38);if(vy>0&&s.vy<0){bounced=true;assert.ok(-s.vy<vy*.5,'the bounce keeps well under half the fall speed');}}
+ assert.ok(bounced,'it hit the floor and came back up');
+ assert.equal(s.floor,Infinity,'one bounce only, then it falls away');
+ assert.ok(s.y>10,'after the bounce it falls past the floor');
+});
+test('stepSpark: a spark with no floor just falls',()=>{
+ const s={x:0,y:0,vx:0,vy:0,floor:Infinity};
+ for(let i=0;i<30;i++)stepSpark(s,1/60,1500,.38);
+ assert.ok(s.vy>0&&s.y>0);
+});
+test('beadAlpha: the bead is there from the moment it is laid, holds, and is gone inside 7 s',()=>{
+ assert.equal(beadAlpha(0),1);
+ assert.equal(beadAlpha(KNOBS.weldHotMs),1,'still full as the glow cools off it');
+ assert.equal(beadAlpha(KNOBS.weldHotMs+KNOBS.weldBeadMs+1),0);
+ assert.ok(KNOBS.weldHotMs+KNOBS.weldBeadMs<=7000,"Ian's 7 s rule");
+});
+test('torch knobs: sparks stay capped and the metal finish is in the metal range',()=>{
+ assert.ok(KNOBS.sparkMax>0&&KNOBS.sparkMax<=256);
+ assert.ok(METAL.metalness>=.8&&METAL.metalness<=1);
+ assert.ok(METAL.roughness>=.3&&METAL.roughness<=.45);
+ assert.ok(KNOBS.tintHaloMix<=.3,'the tint only leans the halo; the sparks stay incandescent');
 });

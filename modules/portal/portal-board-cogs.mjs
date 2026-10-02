@@ -54,7 +54,6 @@ const MAX_OMEGA=12;
 const VALVE_IDLE=.25,VALVE_RATIO=.15,LIGHT_COLOR='#b026ff';
 let selectedTint=null,weldTrace=null;
 const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
-function tintRgba(hex,alpha){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${Math.max(0,alpha)})`;}
 
 // All touch-reactive tuning in one place. Pipes wiggle as a damped torsion spring, angle'' =
 // -w0^2*angle - damping*angle' (w0 = 2*pi*wiggleFreqHz): underdamped, so a kick visibly oscillates a
@@ -91,24 +90,36 @@ export const KNOBS={
  // so tall kit parts (gears etc, proud of the door surface) occlude it same as they'd occlude any
  // door-texture art; a separate transparent overlay mesh above the door would fix that if it matters
  // later, but the open panelling has plenty of clear room for it today.
- sparkSpeedMinPx:500,sparkSpeedMaxPx:1200, // screen px/s, radial spray
- sparkGravityPx:750,                        // screen px/s^2, downward
- sparkLifeMin:.32,sparkLifeMax:.65,         // s — the wider range reads as "some fly further"
- sparkWidthPx:3.5,                          // screen px, streak stroke width
- sparkPressCount:9,sparkReleaseCount:5,sparkIdleCount:2,sparkIdleMs:90, // idle trickle while held
- sparkPerFrac:.006,sparkMoveMax:10,         // sparks per face-width-fraction of travel per move event
- sparkMax:140,                              // ponytail: hard cap on live sparks
- weldStep:.016,            // face-width fraction: trail-point spacing (overlapping dimes, not a mush)
+ sparkSpeedMinPx:300,sparkSpeedMaxPx:1100, // screen px/s, radial spray (slow ones dribble, fast ones fly)
+ sparkGravityPx:1500,                       // screen px/s^2, downward: sparks arc over and fall
+ sparkLifeMin:.35,sparkLifeMax:.9,          // s — the wider range reads as "some fly further"
+ sparkWidthPx:2.4,                          // screen px, streak stroke width (thin incandescent wire)
+ sparkStreakS:.02,                          // s of velocity drawn behind each spark: its motion-blur streak
+ sparkBounce:.35,                           // fraction of sparks that hit a "floor" below the torch and skitter
+ sparkFloorMinPx:30,sparkFloorMaxPx:110,    // screen px below the torch where a bouncing spark lands
+ sparkBounceKeep:.38,                       // vertical speed kept on the bounce (horizontal keeps .8)
+ sparkPressCount:24,sparkReleaseCount:6,sparkIdleCount:4,sparkIdleMs:45, // press flare spray; trickle while held
+ sparkPerFrac:.004,sparkMoveMax:12,         // sparks per face-width-fraction of travel per move event
+ sparkMax:200,                              // ponytail: hard cap on live sparks
+ torchCorePx:9,            // screen px, white-hot core radius at the contact point while a finger is down
+ torchBloomPx:40,          // screen px, blue-white -> warm bloom around the core
+ torchFlareMs:220,         // the press flare: core+bloom swell this long after touch-down
+ torchFlareScale:2.2,      // how much bigger the bloom is at the instant of the press
+ tintHaloMix:.22,          // the selected tint only tints the outer halo of the hot trail, this much
+ weldStep:.016,            // face-width fraction: trail-point spacing
  weldHotMs:1000,            // hot-glow portion of the trail
  weldHotHold:.35,           // fraction of weldHotMs held near-full brightness before it starts cooling
  weldBeadMs:4000,           // bead hold (weldBeadHold) + fade after the trail cools
  weldBeadHold:.625,         // 2.5s hold / 4s = .625, fading over the remaining 1.5s
  weldTrailWidthPx:6,        // screen px, hot-trail core stroke width
- weldTrailHaloPx:16,        // screen px, hot-trail bloom halo width
- weldBeadRadiusPx:6.5,      // screen px, bead "dime" radius (~13px seam width)
- weldHaloRadiusPx:10,       // screen px, heat-tint (straw->blue) halo just outside the bead
+ weldTrailHaloPx:18,        // screen px, hot-trail bloom halo width
+ weldBeadRadiusPx:5,        // screen px, bead half-width (~10px seam)
+ weldRipplePx:3.8,          // screen px between "stack of dimes" ripples along the bead
+ weldHaloRadiusPx:11,       // screen px, heat-tint band (straw next to the bead -> blue outside) half-width
  weldCap:260,               // ponytail: hard cap on stored trail points
 };
+// The tint picker recolours the kit parts (cogs, lamps, pipes...) as anodized metal (see metalFinish).
+export const METAL={metalness:.92,roughness:.36,envIntensity:1.15};
 // z step between stacked layers, as a fraction of face width. `layer` is a unique index across every
 // part (0..N, no repeats) rather than a small per-spot count, so this only needs to clear ordinary
 // z-fighting, not carry any real depth — kept tiny (250 parts * this ~= 1% of face width) so a part
@@ -221,12 +232,55 @@ export function weldBeadAlpha(age,hotMs,beadMs,holdFrac){
  return bf<holdFrac?1:Math.max(0,1-(bf-holdFrac)/(1-holdFrac));
 }
 
+// Linear 0..1 blend of the heat colour with the tint, as an rgba() string: the hot trail's outer halo only.
+function haloRGBA(f,tint,mix,alpha){
+ const {r,g,b}=heatColor(f);if(!tint)return `rgba(${r},${g},${b},${Math.max(0,alpha)})`;
+ const n=parseInt(tint.slice(1),16),m=a=>Math.round(a);
+ return `rgba(${m(r+((n>>16)-r)*mix)},${m(g+(((n>>8)&255)-g)*mix)},${m(b+((n&255)-b)*mix)},${Math.max(0,alpha)})`;
+}
+
+// --- Metal finish for the kit parts --------------------------------------------------------------
+// One shared tint/mix uniform pair for every kit material: the selected tint turns the parts' baked
+// brass/copper albedo into luminance x tint (anodized metal), with real metalness/roughness and a small
+// studio env map so the metal has something to reflect. No tint -> mix 0 and the original PBR values,
+// i.e. the stock look.
+const uMetalTint={value:new THREE.Color(1,1,1)},uMetalMix={value:0};
+let envTex=null;
+// A tiny equirect "studio": dark floor, grey horizon, bright sky and two softbox stripes for highlights.
+function studioEnv(){
+ if(envTex)return envTex;
+ const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
+ const g=x.createLinearGradient(0,0,0,64);g.addColorStop(0,'#f4f6fa');g.addColorStop(.42,'#8a9098');g.addColorStop(.55,'#3a3d44');g.addColorStop(1,'#0e0f12');
+ x.fillStyle=g;x.fillRect(0,0,128,64);x.fillStyle='#ffffff';x.fillRect(18,8,10,22);x.fillRect(80,4,22,9);
+ envTex=new THREE.CanvasTexture(c);envTex.mapping=THREE.EquirectangularReflectionMapping;envTex.colorSpace=THREE.SRGBColorSpace;
+ return envTex;
+}
+function metalFinish(mat){
+ if(mat.userData.cogsMetal)return;
+ mat.userData.cogsMetal={metalness:mat.metalness,roughness:mat.roughness,metalnessMap:mat.metalnessMap,roughnessMap:mat.roughnessMap,envMap:mat.envMap,envMapIntensity:mat.envMapIntensity};
+ mat.onBeforeCompile=shader=>{
+  shader.uniforms.uMetalTint=uMetalTint;shader.uniforms.uMetalMix=uMetalMix;
+  shader.fragmentShader='uniform vec3 uMetalTint;\nuniform float uMetalMix;\n'+shader.fragmentShader
+   .replace('#include <map_fragment>','#include <map_fragment>\n{float ml=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=mix(diffuseColor.rgb,uMetalTint*clamp(.35+1.4*ml,0.,1.2),uMetalMix);}')
+   .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n#ifdef USE_EMISSIVEMAP\ntotalEmissiveRadiance=mix(totalEmissiveRadiance,emissive*(.4+dot(emissiveColor.rgb,vec3(.2126,.7152,.0722))),uMetalMix);\n#endif');
+ };
+ mat.customProgramCacheKey=()=>'cogs-metal';mat.needsUpdate=true;
+}
+function applyMetal(mats){
+ const on=!!selectedTint;uMetalMix.value=on?1:0;if(on)uMetalTint.value.set(selectedTint);
+ for(const mat of mats){
+  const o=mat.userData.cogsMetal;if(!o)continue;
+  if(mat.userData.cogsOn!==on){mat.userData.cogsOn=on;mat.needsUpdate=true;} // maps/env swap: recompile once
+  Object.assign(mat,on?{metalness:METAL.metalness,roughness:METAL.roughness,metalnessMap:null,roughnessMap:null,envMap:studioEnv(),envMapIntensity:METAL.envIntensity}:o);
+ }
+}
+
 // --- Effect glue -------------------------------------------------------------------------------
 let S=null; // per-instance state; one portal board is ever active at once
 function setCogsTint(hex,selected=true){
  if(selected&&!validTint(hex))return;
  selectedTint=selected?hex:null;
- if(S){for(const part of S.parts)if(part.kind==='light')part.mat.emissive.set(selectedTint||LIGHT_COLOR);S.wake?.();}
+ if(S){for(const part of S.parts)if(part.kind==='light')part.mat.emissive.set(selectedTint||LIGHT_COLOR);applyMetal(S.mats);S.tint=selectedTint;S.wake?.();}
  if(weldTrace){weldTrace.tint=selectedTint;weldTrace.wake?.();}
 }
 
@@ -266,15 +320,27 @@ function buildParts(parent,gltf,list,front,fw,fh,mats){
   const x=(p.u-.5)*fw,y=(.5-p.v)*fh,{m,depth}=fitModel(src,p.r*fw,false),pivot=new THREE.Group();
   const rot=(p.rot||0)*Math.PI/180,part={...p,pivot,rot,angle:0,omega:0};
   pivot.position.set(x,y,front+(p.layer||0)*LAYER_STEP*fw+depth/2);
-  part.z0=pivot.position.z; // rest z; pipes bob off this and back
+  part.z0=pivot.position.z;part.top=part.z0+depth/2; // rest z; pipes bob off this and back
   if(p.kind==='light'){
-   const mat=src.material.clone();mat.emissive.set(selectedTint||LIGHT_COLOR);mat.emissiveMap=mat.map;mat.emissiveIntensity=KNOBS.lightOff;m.material=mat;
+   // A previous board may have left the shared kit material in its metal state: start the clone from the stock values.
+   const mat=src.material.clone(),stock=src.material.userData.cogsMetal;mat.userData={};if(stock)Object.assign(mat,stock);mat.emissive.set(selectedTint||LIGHT_COLOR);mat.emissiveMap=mat.map;mat.emissiveIntensity=KNOBS.lightOff;m.material=mat;
    mats.push(mat);Object.assign(part,{mat,phase:i*2.3,level:0,nearUntil:-Infinity});
   }else if(p.kind==='valve')part.dir=i%2?1:-1;
   pivot.rotation.z=rot;pivot.add(m);parent.add(pivot);parts.push(part);
   if(isGear){gearPivots[gi]=pivot;gi++;}
  });
  return {parts,gearPivots};
+}
+
+// The weld trail's own two layers in 3D, floating just above the tallest kit part so gears and pipes
+// never hide the sparks or the bead: the bead layer (normal blend) and the glow layer (additive) on top.
+// The door's own paint/glow inputs stay blank, so the trail isn't drawn twice.
+function weldLayer(parent,w,h,fw,fh,z,additive){
+ const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace; // flipY default: canvas row 0 = plane top
+ const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,toneMapped:false,...(additive?{blending:THREE.AdditiveBlending}:{})});
+ const mesh=new THREE.Mesh(new THREE.PlaneGeometry(fw,fh),material);mesh.position.z=z;mesh.renderOrder=additive?11:10;mesh.frustumCulled=false;parent.add(mesh);
+ return {canvas,ctx:canvas.getContext('2d'),texture,mesh};
 }
 
 async function init({mesh,face,wake,paint,glow}){
@@ -298,30 +364,40 @@ async function init({mesh,face,wake,paint,glow}){
  const hubBuild=gltf?buildParts(mesh.parent,gltf,hubList,front,fw,fh,mats):{parts:[],gearPivots:[]};
  gears.push(...hubGears);gearPivots.push(...hubBuild.gearPivots);parts.push(...hubBuild.parts);
  mats.push(...new Set(parts.map(p=>p.pivot.children[0].material)));
+ for(const m of mats)metalFinish(m);applyMetal(mats);
+ const top=parts.reduce((z,p)=>Math.max(z,p.top),front)+KNOBS.wiggleBob*fw+.01*fw,tw=paint.canvas.width,th=paint.canvas.height;
+ const beadLayer=weldLayer(mesh.parent,tw,th,fw,fh,top,false),glowLayer=weldLayer(mesh.parent,tw,th,fw,fh,top+.002*fw,true);
  const reducedMotion=matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  S={gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,
-    paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,
+    paint:beadLayer,glow:glowLayer,layers:[beadLayer,glowLayer],texW:tw,texH:th,
     sparks:[],weld:[],weldHeads:new Map(),weldActive:false,tint:selectedTint};
 }
-// --- Welding trail: sparks + hot streak (glow canvas) + cooling weld bead (paint canvas) -----------
-// A spark: {x,y,px,py (canvas px, px/py = last frame's pos, for a streak),vx,vy (px/s),born (ms),
-// life (s)}. Speeds/gravity are "canvas-width fractions/s" scaled by texW once at spawn, so they don't
-// depend on GLB.texSize.
+// --- Welding trail: torch core + sparks + hot streak (glow layer) + cooling weld bead (paint layer) ---
+// A spark: {x,y (canvas px),vx,vy (px/s),born (ms),life (s),floor (canvas y it bounces off once, or
+// Infinity)}. Speeds/gravity are screen px scaled to canvas px at spawn (S.scale, refreshed per frame).
 function spawnSparks(S,u,v,count){
  if(count<=0)return;
- const scale=pxScale(S),cx=u*S.texW,cy=v*S.texH;
- for(let i=0;i<count&&S.sparks.length<KNOBS.sparkMax;i++){
-  const a=Math.random()*TAU,spd=(KNOBS.sparkSpeedMinPx+Math.random()*(KNOBS.sparkSpeedMaxPx-KNOBS.sparkSpeedMinPx))*scale;
-  S.sparks.push({x:cx,y:cy,px:cx,py:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,born:performance.now(),
-   life:KNOBS.sparkLifeMin+Math.random()*(KNOBS.sparkLifeMax-KNOBS.sparkLifeMin)});
+ const scale=S.scale||pxScale(S),cx=u*S.texW,cy=v*S.texH,now=performance.now(),K=KNOBS;
+ for(let i=0;i<count&&S.sparks.length<K.sparkMax;i++){
+  const a=Math.random()*TAU,spd=(K.sparkSpeedMinPx+Math.random()*(K.sparkSpeedMaxPx-K.sparkSpeedMinPx))*scale;
+  const floor=Math.random()<K.sparkBounce?cy+(K.sparkFloorMinPx+Math.random()*(K.sparkFloorMaxPx-K.sparkFloorMinPx))*scale:Infinity;
+  S.sparks.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,born:now,floor,
+   life:K.sparkLifeMin+Math.random()*(K.sparkLifeMax-K.sparkLifeMin)});
  }
 }
-// A weld-trail point {u,v,t (ms),prev}: prev links to the same finger's previous point (per id, via
-// weldHeads) so two simultaneous strokes never draw a segment joining them.
+// One spark step: gravity, move, and a single damped bounce off its floor (the skitter). Pure, tested.
+export function stepSpark(s,dt,grav,keep){
+ s.vy+=grav*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;
+ if(s.y>s.floor&&s.vy>0){s.y=s.floor;s.vy*=-keep;s.vx*=.8;s.floor=Infinity;}
+ return s;
+}
+// A weld-trail point {u,v,t (ms),prev,d}: prev links to the same finger's previous point (per id, via
+// weldHeads) so two simultaneous strokes never draw a segment joining them; d is the running seam
+// length (face widths) so the bead's ripples sit at fixed spacing however the points fall.
 function weldPushPoint(S,id,u,v){
- const prev=S.weldHeads.get(id)||null;
- if(prev&&Math.hypot(u-prev.u,(v-prev.v)*S.aspect)<KNOBS.weldStep)return;
- const p={u,v,t:performance.now(),prev};S.weld.push(p);S.weldHeads.set(id,p);
+ const prev=S.weldHeads.get(id)||null,len=prev?Math.hypot(u-prev.u,(v-prev.v)*S.aspect):0;
+ if(prev&&len<KNOBS.weldStep)return;
+ const p={u,v,t:performance.now(),prev,d:prev?prev.d+len:0};S.weld.push(p);S.weldHeads.set(id,p);
  if(S.weld.length>KNOBS.weldCap)S.weld.splice(0,S.weld.length-KNOBS.weldCap); // ponytail: hard cap
 }
 function weldRelease(S,id,u,v){
@@ -329,93 +405,119 @@ function weldRelease(S,id,u,v){
 }
 function heatRGBA(f,alpha){const {r,g,b}=heatColor(f);return `rgba(${r},${g},${b},${Math.max(0,alpha)})`;}
 // Canvas px per screen px right now: measured off the live rendered <canvas> (its CSS box) with the
-// same margin-fit math computeFit() uses in portal-board-glb.mjs (GLB.margin), so every weldXxxPx knob
-// stays a true screen size regardless of GLB.texSize, host width or devicePixelRatio. Cheap (one
-// clientWidth/Height read + a few multiplies); called a handful of times per frame while welding.
+// same margin-fit math computeFit() uses in portal-board-glb.mjs (GLB.margin), so every xxxPx knob
+// stays a true screen size regardless of GLB.texSize, host width or devicePixelRatio. Read once per
+// frame (stepWeld caches it on S.scale).
 function pxScale(S){
  const el=document.querySelector('canvas.portal-board-canvas'),cw=el?.clientWidth,ch=el?.clientHeight;
  if(!cw||!ch)return 2; // not laid out yet: a reasonable guess, corrected the moment it is
  const availW=cw*(1-2*GLB.margin),availH=ch*(1-2*GLB.margin),scaleFit=Math.min(availW/S.face.w,availH/S.face.h);
  return S.texW/(scaleFit*S.face.w);
 }
-// Hot trail: a wide blurred bloom halo pass, then a crisp bright core pass (same two-pass technique
-// portal-board-glb.mjs's drawGuides uses for the shape hints) — held near-full brightness for
-// weldHotHold of the hot window, then cooling white->yellow->orange->red the rest of the way.
-function weldRenderGlow(S,now){
- const {ctx}=S.glow,w=S.texW,h=S.texH,scale=pxScale(S);
- const coreW=KNOBS.weldTrailWidthPx*scale,haloW=KNOBS.weldTrailHaloPx*scale,sparkW=KNOBS.sparkWidthPx*scale;
- const segs=[];
- for(const p of S.weld){
-  if(!p.prev)continue;
-  const age=now-p.t;if(age>=KNOBS.weldHotMs)continue;
-  const f=age/KNOBS.weldHotMs,af=f<KNOBS.weldHotHold?1:1-(f-KNOBS.weldHotHold)/(1-KNOBS.weldHotHold);
-  segs.push({x0:p.prev.u*w,y0:p.prev.v*h,x1:p.u*w,y1:p.v*h,f,af});
- }
+// The bead shows from the moment a point is laid (the hot glow sits on top of it while it cools), holds,
+// then fades, all within weldHotMs+weldBeadMs.
+export const beadAlpha=age=>{const K=KNOBS,total=K.weldHotMs+K.weldBeadMs;return weldBeadAlpha(age,0,total,(K.weldHotMs+K.weldBeadHold*K.weldBeadMs)/total);};
+const HOT_BUCKETS=8,BEAD_BUCKETS=8;
+// Hot trail, bucketed by age: each bucket is ONE path, so overlapping segment caps don't stack into a
+// row of brighter dots (the old per-segment strokes did). Blurred halo pass, then a crisp core pass:
+// white-hot, cooling yellow->orange->red. The selected tint only leans the outer halo a little.
+function weldRenderGlow(S,now,scale){
+ const {ctx}=S.glow,w=S.texW,h=S.texH,K=KNOBS;
+ const coreW=K.weldTrailWidthPx*scale,haloW=K.weldTrailHaloPx*scale,sparkW=K.sparkWidthPx*scale;
  ctx.clearRect(0,0,w,h);
- ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
- ctx.filter=`blur(${(haloW*.35).toFixed(1)}px)`;ctx.lineWidth=haloW;
- for(const s of segs){ctx.strokeStyle=S.tint?tintRgba(S.tint,s.af*.55):heatRGBA(s.f,s.af*.55);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
- ctx.filter='none';ctx.lineWidth=coreW;
- for(const s of segs){ctx.strokeStyle=S.tint?tintRgba(S.tint,s.af):heatRGBA(s.f,s.af);ctx.beginPath();ctx.moveTo(s.x0,s.y0);ctx.lineTo(s.x1,s.y1);ctx.stroke();}
- ctx.lineWidth=sparkW;
+ ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';ctx.lineJoin='round';
+ for(let pass=0;pass<2;pass++){
+  ctx.filter=pass?'none':`blur(${(haloW*.35).toFixed(1)}px)`;ctx.lineWidth=pass?coreW:haloW;
+  for(let b=0;b<HOT_BUCKETS;b++){
+   let any=false;ctx.beginPath();
+   for(const p of S.weld){
+    const age=now-p.t;if(!p.prev||age>=K.weldHotMs||Math.min(HOT_BUCKETS-1,(age/K.weldHotMs*HOT_BUCKETS)|0)!==b)continue;
+    ctx.moveTo(p.prev.u*w,p.prev.v*h);ctx.lineTo(p.u*w,p.v*h);any=true;
+   }
+   if(!any)continue;
+   const f=(b+.5)/HOT_BUCKETS,af=f<K.weldHotHold?1:1-(f-K.weldHotHold)/(1-K.weldHotHold);
+   ctx.strokeStyle=pass?heatRGBA(f,af):haloRGBA(f,S.tint,K.tintHaloMix,af*.55);ctx.stroke();
+  }
+ }
+ ctx.filter='none';
+ // Sparks: thin incandescent streaks (white -> yellow -> orange as they cool), each with a faint warm
+ // sheath, drawn back along their velocity so a fast one reads as a streak and a slow one as a dot.
  for(const s of S.sparks){
-  const f=(now-s.born)/1000/s.life;
-  ctx.strokeStyle=heatRGBA(Math.min(1,f),1-f);
-  ctx.beginPath();ctx.moveTo(s.px,s.py);ctx.lineTo(s.x,s.y);ctx.stroke();
+  const f=Math.min(1,(now-s.born)/1000/s.life),x0=s.x-s.vx*K.sparkStreakS,y0=s.y-s.vy*K.sparkStreakS,a=1-f*f;
+  ctx.lineWidth=sparkW*(2.2-f);ctx.strokeStyle=heatRGBA(.35+f*.5,a*.14);ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(s.x,s.y);ctx.stroke();
+  ctx.lineWidth=sparkW*(1-.55*f);ctx.strokeStyle=heatRGBA(f*.85,a);ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(s.x,s.y);ctx.stroke();
+ }
+ // The torch itself at each finger: a white-hot core in a blue-white bloom that fades to a warm edge,
+ // flickering, and swollen for a moment right after touch-down (the press flare).
+ for(const d of S.drag.values()){
+  const k=Math.max(0,1-(now-(d.t0||0))/K.torchFlareMs),fl=.88+Math.random()*.24,cx=d.u*w,cy=d.v*h;
+  const R=K.torchBloomPx*scale*(1+(K.torchFlareScale-1)*k)*fl,core=K.torchCorePx*scale*(1+.6*k)*fl;
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(Math.min(.5,core/R),'rgba(225,238,255,.95)');
+  g.addColorStop(Math.min(.6,core/R*2.2),'rgba(140,180,255,.45)');g.addColorStop(.75,'rgba(255,160,60,.16)');g.addColorStop(1,'rgba(255,110,30,0)');
+  ctx.fillStyle=g;ctx.fillRect(cx-R,cy-R,2*R,2*R);
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx,cy,core*.55,0,TAU);ctx.fill();
  }
  ctx.restore();S.glow.texture.needsUpdate=true;
 }
-// Grey/bronze "dimes" (alternating bright metal tones, near-opaque while held so they read at a
-// glance against the dark door): each is a base fill + a darker rim crescent on the trailing
-// (lower-right) edge + a crisp specular highlight streak on the leading (upper-left) edge + a small
-// drop shadow, over a subtle straw->blue heat-tint halo just outside it.
-const BEAD_COLORS=[{r:170,g:172,b:178},{r:196,g:130,b:62}]; // grey / bronze — bright enough to separate
-// from the dark brown door even at 1x phone scale.
-function weldRenderPaint(S,now){
- const {ctx}=S.paint,w=S.texW,h=S.texH,scale=pxScale(S);
- const R=KNOBS.weldBeadRadiusPx*scale,haloR=KNOBS.weldHaloRadiusPx*scale,off=1.6*scale; // ~1-2 screen px
+// The weld bead: one continuous seam, not a row of dots. Per alpha bucket the seam is one path stroked
+// several times: a blue heat-tint band, a straw band inside it, a drop shadow, the steel bead body, a
+// lighter crown and a thin specular ridge (upper-left lit, like the rest of the board). Then the
+// "stack of dimes": overlapping ripple arcs every weldRipplePx along the seam, convex in the travel
+// direction, each a dark crease with a bright lip behind it.
+const BEAD_STROKES=[ // [width: multiple of the bead half-width R, or a heat band; offset in R; style]
+ ['halo',0,'rgba(58,78,170,.26)'],['wide',0,'rgba(110,96,150,.22)'],['mid',0,'rgba(196,156,72,.36)'],[2,.3,'rgba(6,5,4,.8)'],
+ [2,0,'rgb(118,120,126)'],[1.25,-.08,'rgb(162,164,170)'],[.36,-.36,'rgba(250,250,255,.8)'],
+];
+function weldRenderPaint(S,now,scale){
+ const {ctx}=S.paint,w=S.texW,h=S.texH,K=KNOBS,R=K.weldBeadRadiusPx*scale,halo=K.weldHaloRadiusPx*scale;
+ const sp=K.weldRipplePx*scale/w,rr=R*.82; // ripple spacing in face widths, ripple radius in canvas px
  ctx.clearRect(0,0,w,h);
- ctx.save();
- // Heat-tint halo first, one pass under everything (not per-bead) so overlapping dimes don't stack
- // it into a wash: a subtle straw->blue-ish band traced along the whole visible seam.
- S.weld.forEach((p)=>{
-  const alpha=weldBeadAlpha(now-p.t,KNOBS.weldHotMs,KNOBS.weldBeadMs,KNOBS.weldBeadHold);
-  if(alpha<=0)return;
-  const cx=p.u*w,cy=p.v*h;
-  const grad=ctx.createRadialGradient(cx,cy,R*.9,cx,cy,haloR);
-  grad.addColorStop(0,`rgba(196,162,92,${.18*alpha})`);grad.addColorStop(.6,`rgba(120,108,145,${.1*alpha})`);grad.addColorStop(1,'rgba(90,80,150,0)');
-  ctx.globalAlpha=1;ctx.fillStyle=grad;ctx.beginPath();ctx.arc(cx,cy,haloR,0,TAU);ctx.fill();
- });
- S.weld.forEach((p,i)=>{
-  const alpha=weldBeadAlpha(now-p.t,KNOBS.weldHotMs,KNOBS.weldBeadMs,KNOBS.weldBeadHold);
-  if(alpha<=0)return;
-  const cx=p.u*w,cy=p.v*h,c=BEAD_COLORS[i%2];
-  ctx.globalAlpha=alpha*.75;ctx.fillStyle='rgb(8,7,6)';ctx.beginPath();ctx.arc(cx+off,cy+off,R,0,TAU);ctx.fill(); // drop shadow
-  ctx.globalAlpha=alpha*.92;ctx.fillStyle=`rgb(${c.r},${c.g},${c.b})`;ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.fill(); // near-opaque body
-  ctx.globalAlpha=alpha*.85;ctx.strokeStyle=`rgb(${Math.round(c.r*.4)},${Math.round(c.g*.4)},${Math.round(c.b*.4)})`;
-  ctx.lineWidth=R*.34;ctx.lineCap='round';ctx.beginPath();ctx.arc(cx,cy,R*.84,Math.PI*.05,Math.PI*.75);ctx.stroke(); // dark rim, trailing edge
-  ctx.globalAlpha=alpha*.9;ctx.strokeStyle='rgb(255,250,235)';
-  ctx.lineWidth=R*.26;ctx.beginPath();ctx.arc(cx,cy,R*.6,Math.PI*1.05,Math.PI*1.55);ctx.stroke(); // specular streak, leading edge
- });
+ ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+ for(let b=1;b<=BEAD_BUCKETS;b++){
+  let any=false;ctx.beginPath();
+  for(const p of S.weld){if(Math.ceil(beadAlpha(now-p.t)*BEAD_BUCKETS)!==b)continue;const q=p.prev||p;ctx.moveTo(q.u*w,q.v*h);ctx.lineTo(p.u*w,p.v*h);any=true;}
+  if(!any)continue;
+  ctx.globalAlpha=b/BEAD_BUCKETS;
+  for(const [wd,off,style] of BEAD_STROKES){
+   ctx.lineWidth=wd==='halo'?2*halo:wd==='wide'?R*.6+halo*1.4:wd==='mid'?R*1.2+halo*.8:wd*R;ctx.strokeStyle=style;
+   if(off){ctx.translate(off*R,off*R);ctx.stroke();ctx.setTransform(1,0,0,1,0,0);}else ctx.stroke();
+  }
+  // ripples: dark crease, then the bright lip just behind it
+  for(let pass=0;pass<2;pass++){
+   ctx.beginPath();
+   for(const p of S.weld){
+    if(!p.prev||Math.ceil(beadAlpha(now-p.t)*BEAD_BUCKETS)!==b)continue;
+    const q=p.prev,dx=(p.u-q.u)*w,dy=(p.v-q.v)*h,len=p.d-q.d;if(len<=0)continue;
+    const th=Math.atan2(dy,dx),back=pass?rr*.55:rr*.35,ox=Math.cos(th)*back,oy=Math.sin(th)*back;
+    for(let k=Math.ceil(q.d/sp);k*sp<=p.d;k++){
+     const t=(k*sp-q.d)/len,cx=q.u*w+dx*t-ox,cy=q.v*h+dy*t-oy;
+     ctx.moveTo(cx+Math.cos(th-1.15)*rr,cy+Math.sin(th-1.15)*rr);ctx.arc(cx,cy,rr,th-1.15,th+1.15);
+    }
+   }
+   ctx.lineWidth=(pass?.7:.9)*scale;ctx.strokeStyle=pass?'rgba(232,234,242,.55)':'rgba(34,34,40,.75)';ctx.stroke();
+  }
+ }
  ctx.restore();S.paint.texture.needsUpdate=true;
 }
-// Redraws (clears+repaints) both canvases every frame while anything welding is live, same as one
-// frame past that to wipe the last remnants, then leaves them alone — see the sleep note on step().
+// Redraws (clears+repaints) both canvases every frame while anything welding is live (or a finger is
+// down: the torch core flickers), and one frame past that to wipe the last remnants, then leaves them
+// alone — see the sleep note on step().
 function stepWeld(S,dt,now){
- const grav=KNOBS.sparkGravityPx*pxScale(S);
- for(const s of S.sparks){s.vy+=grav*dt;s.px=s.x;s.py=s.y;s.x+=s.vx*dt;s.y+=s.vy*dt;}
- S.sparks=S.sparks.filter(s=>(now-s.born)/1000<s.life);
- for(const d of S.drag.values())if(now-(d.lastSparkT||0)>KNOBS.sparkIdleMs){d.lastSparkT=now;spawnSparks(S,d.u,d.v,KNOBS.sparkIdleCount);}
- let k=0;while(k<S.weld.length&&now-S.weld[k].t>KNOBS.weldHotMs+KNOBS.weldBeadMs)k++;if(k)S.weld.splice(0,k);
- const active=S.sparks.length>0||S.weld.some(p=>now-p.t<KNOBS.weldHotMs+KNOBS.weldBeadMs);
- if(active||S.weldActive){weldRenderGlow(S,now);weldRenderPaint(S,now);}
+ const K=KNOBS,scale=S.scale=pxScale(S),grav=K.sparkGravityPx*scale;
+ let n=0;for(const s of S.sparks)if((now-s.born)/1000<s.life)S.sparks[n++]=stepSpark(s,dt,grav,K.sparkBounceKeep);
+ S.sparks.length=n; // compacted in place: no per-frame array
+ for(const d of S.drag.values())if(now-(d.lastSparkT||0)>K.sparkIdleMs){d.lastSparkT=now;spawnSparks(S,d.u,d.v,K.sparkIdleCount);}
+ let k=0;while(k<S.weld.length&&now-S.weld[k].t>K.weldHotMs+K.weldBeadMs)k++;if(k)S.weld.splice(0,k);
+ const active=S.sparks.length>0||S.weld.length>0||S.drag.size>0;
+ if(active||S.weldActive){weldRenderGlow(S,now,scale);weldRenderPaint(S,now,scale);}
  S.weldActive=active;
  return active;
 }
 
 function press(id,u,v){
  const skip=S.fall&&new Set(S.gears.map((_,gi)=>gi).filter(gi=>S.fall.pivots.has(S.gearPivots[gi])));
- S.drag.set(id,{gi:hitGear(S.gears,S.face,u,v,skip),moved:false,u,v});
+ S.drag.set(id,{gi:hitGear(S.gears,S.face,u,v,skip),moved:false,u,v,t0:performance.now()});
  weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);
 }
 function move(id,u,v,pu,pv){
@@ -501,7 +603,7 @@ function step(dt,now){
 }
 // Scale to 0 rather than fade: no transparent material twins to compile, swap or restore.
 function cut(poly){
- heal();
+ heal();S.weld.length=0;S.weldHeads.clear(); // the weld layer floats above the parts: don't leave a bead hanging over the hole
  const pivots=new Map();
  for(const part of S.parts)if(pointInPolygon(part.u,part.v,poly))pivots.set(part.pivot,part.pivot.position.z);
  const ms=matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:FALL_MS;
@@ -513,6 +615,7 @@ function heal(){
  S.fall=null;
 }
 function dispose(){
+ for(const l of S.layers){l.mesh.removeFromParent();l.mesh.geometry.dispose();l.mesh.material.dispose();l.texture.dispose();}
  for(const part of S.parts){part.pivot.removeFromParent();part.pivot.traverse(n=>n.geometry?.dispose());}
  for(const m of new Set(S.mats))m.dispose();
  S=null;
@@ -524,13 +627,15 @@ export function cogsWeld(){
  return {
   init({paint,glow,face,wake}){S={face,aspect:face.h/face.w,paint,glow,texW:paint.canvas.width,texH:paint.canvas.height,drag:new Map(),sparks:[],weld:[],weldHeads:new Map(),weldActive:false,wake,tint:selectedTint};weldTrace=S;},
   setTint(hex,selected=true){setCogsTint(hex,selected);},
-  press(id,u,v){S.drag.set(id,{u,v});weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);},
+  press(id,u,v){S.drag.set(id,{u,v,t0:performance.now()});weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);},
   move(id,u,v,pu,pv){const d=S.drag.get(id);if(d){d.u=u;d.v=v;}weldPushPoint(S,id,u,v);spawnSparks(S,u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));},
   release(id,u,v){S.drag.delete(id);weldRelease(S,id,u,v);},
   step:(dt,now)=>stepWeld(S,dt,now),
   dispose(){if(S===weldTrace)weldTrace=null;S=null;},
  };
 }
+
+cogsWeld.metal=true; // the flat poster tints as anodized metal, not a flat wash (portal-board.mjs paintStill)
 
 export const cogs={
  id:'cogs',asset:'/pod/worlds/boards/cogs/door.glb',flip:false,background:'#161310',
