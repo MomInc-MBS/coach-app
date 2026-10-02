@@ -1,9 +1,9 @@
-#portalChrome.portal-standalone{--portal-rail:15px;--pm:var(--portal-metal,#4d3d4f);}
-#portalChrome.portal-standalone .portal-frame{--face-left:15px;--face-top:15px;--face-width:calc(100vw - 30px);--face-height:calc(100dvh - 30px);}
-#portalChrome.portal-standalone .portal-standalone-aura{position:absolute;z-index:2;inset:15px;box-sizing:border-box;pointer-events:none;border:36px solid transparent;border-radius:4px;box-shadow:inset 0 0 23px 7px var(--aura,#b026ff),0 0 16px var(--aura,#b026ff);opacity:.2;filter:blur(7px);mask:linear-gradient(#000 0 0) border-box,linear-gradient(#000 0 0) padding-box;mask-composite:exclude;-webkit-mask:linear-gradient(#000 0 0) border-box,-webkit-linear-gradient(#000 0 0) padding-box;-webkit-mask-composite:xor;}
+:is(#portalChrome,#cameraWorkout).portal-standalone{--portal-rail:15px;--pm:var(--portal-metal,#4d3d4f);}
+:is(#portalChrome,#cameraWorkout).portal-standalone .portal-frame{--face-left:15px;--face-top:15px;--face-width:calc(100vw - 30px);--face-height:calc(100dvh - 30px);}
+:is(#portalChrome,#cameraWorkout).portal-standalone .portal-standalone-aura{position:absolute;z-index:2;inset:15px;box-sizing:border-box;pointer-events:none;border:36px solid transparent;border-radius:4px;box-shadow:inset 0 0 23px 7px var(--aura,#b026ff),0 0 16px var(--aura,#b026ff);opacity:.2;filter:blur(7px);mask:linear-gradient(#000 0 0) border-box,linear-gradient(#000 0 0) padding-box;mask-composite:exclude;-webkit-mask:linear-gradient(#000 0 0) border-box,-webkit-linear-gradient(#000 0 0) padding-box;-webkit-mask-composite:xor;}
 #portalChrome.portal-standalone .portal-energy{opacity:.86}
 #portalChrome.portal-standalone .portal-energy.hot{opacity:1}
-#portalChrome.portal-standalone .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b;}
+:is(#portalChrome,#cameraWorkout).portal-standalone .portal-frame{box-shadow:0 0 0 calc(var(--portal-rail) + 1px) #0e0a12,0 8px 16px calc(var(--portal-rail) - 2px) #000b;}
 .editor-tilt-request{min-width:44px;min-height:40px;padding:0 10px;border:1px solid #e0c9ef;border-radius:999px;background:#201728e8;color:#fff;font:600 12px system-ui,sans-serif;pointer-events:auto;touch-action:manipulation}
 .editor-tilt-request:focus-visible{outline:3px solid #ffb24d;outline-offset:2px}
 #coachDock.coach-dock a[aria-current=page]{color:#fff7e0;border-color:#ffb24d;background:#4d305f;box-shadow:0 0 0 1px #ffb24d,0 0 14px #ffb24d80}
