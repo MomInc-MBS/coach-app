@@ -958,7 +958,7 @@ function tiltChip(dialog){
  if(f){
   const dockEl=document.getElementById('coachDock'),dock=dockEl?.getClientRects().length?dockEl.getBoundingClientRect():null;
   chip.style.left=f.left+8+'px';
-  chip.style.top=Math.max(f.top+8,Math.min(f.top+f.height-48,dock?.top==null?Infinity:dock.top-48))+'px';
+  chip.style.top=Math.max(f.top+8,Math.min(f.top+f.height-26,dock?.top==null?Infinity:dock.top-26))+'px'; // R19: a slim tab sitting on the dock's top edge, left side (meditation's counter chip is bottom-right)
  }
  chip.onclick=async()=>{
   let answer='denied';try{answer=await DeviceOrientationEvent.requestPermission();}catch{}
