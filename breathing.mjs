@@ -33,7 +33,8 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  const seated=document.createElement('div');seated.className='breath-seated-overlay';seated.dataset.seated='';seated.hidden=true;seated.innerHTML='<div role="alertdialog" aria-label="Before you begin"><p class="breath-seated-notice">'+SEATED_ONLY_NOTICE+'</p><button type="button" data-seated-accept>Accept</button></div>';dialog.append(seated);
  // R18 polish: after Accept the top panel fades to near-invisible; any tap brings it back for 4 s.
  let calmTimer=0;const calm=on=>dialog.classList.toggle('hud-calm',on),rest=()=>{clearTimeout(calmTimer);calmTimer=setTimeout(()=>ticket&&!held&&calm(true),4000);};
- dialog.addEventListener('pointerdown',()=>{if(ticket&&!held){calm(false);rest();}},true);
+ let swallow=false;dialog.addEventListener('pointerdown',event=>{if(ticket&&!held){swallow=dialog.classList.contains('hud-calm')&&!event.target.closest?.('[data-breath-exit],[data-meditation-close]');calm(false);rest();}},true);
+ dialog.addEventListener('click',event=>{if(swallow){swallow=false;event.stopPropagation();event.preventDefault();}},true); // the first tap on a faded panel only reveals it
  seated.querySelector('button').onclick=()=>{held=false;if(ticket)calm(true);seated.classList.add('fading');setTimeout(()=>{seated.hidden=true;seated.classList.remove('fading');},600);};
  controls.querySelector('.breath-actions').append(pause);
  const $=selector=>controls.querySelector(selector);

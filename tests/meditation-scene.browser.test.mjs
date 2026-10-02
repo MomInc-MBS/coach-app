@@ -110,12 +110,12 @@ test('one 3:30 breathing round counts breaths, retains pause time, and lets the 
  await page.locator('[data-mode="wim-hof"]').click();await page.locator('[data-seated-accept]').click();await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='3:30 remaining');
  const remaining=async()=>{const [m,s]=(await page.locator('[data-session-clock]').textContent()).split(':').map(Number);return m*60+s;};
  await page.clock.runFor(5000);assert.ok([204,205,206].includes(await remaining()));
- const pausedAt=await remaining();await page.locator('[data-breath-pause]').click();await page.clock.runFor(10000);assert.ok(Math.abs(await remaining()-pausedAt)<=1,'pause retains elapsed session time');
- await page.locator('[data-breath-pause]').click();await page.clock.runFor(5000);assert.ok(Math.abs(await remaining()-(pausedAt-5))<=1,'resume continues from retained time');
+ const pausedAt=await remaining();await page.mouse.click(5,450);await page.locator('[data-breath-pause]').click();await page.clock.runFor(10000);assert.ok(Math.abs(await remaining()-pausedAt)<=1,'pause retains elapsed session time');
+ await page.mouse.click(5,450);await page.locator('[data-breath-pause]').click();await page.clock.runFor(5000);assert.ok(Math.abs(await remaining()-(pausedAt-5))<=1,'resume continues from retained time');
  await page.clock.runFor(11000);assert.equal(await phase(page),'breathe');assert.equal(await page.locator('[data-breath-count]').textContent(),'1');
  await page.clock.runFor(3667);assert.equal(await page.locator('[data-breath-count]').textContent(),'2');
  await page.clock.runFor(109000);assert.equal(await phase(page),'optional-hold');
- await page.locator('[data-skip-hold]').click();assert.equal(await phase(page),'rest','skip returns to normal breathing');assert.equal(await page.locator('[data-skip-hold]').isHidden(),true);
+ await page.mouse.click(5,450);await page.locator('[data-skip-hold]').click();assert.equal(await phase(page),'rest','skip returns to normal breathing');assert.equal(await page.locator('[data-skip-hold]').isHidden(),true);
  assert.equal(await page.locator('[data-breath-exit]').isVisible(),true,'stop is available during the final calm period');
  await page.locator('[data-breath-exit]').click();assert.equal(await phase(page),'');assert.equal(await count(page,'/api/breathing/complete'),0);
  await context.close();

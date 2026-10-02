@@ -61,7 +61,7 @@ test('the accessible circle exits without a character poke, while five avatar ta
  assert.match(await circle.getAttribute('aria-label')||'',/exit|leave|end|stop/i,'circle names its exit action');
  await page.evaluate(()=>{const character=document.querySelector('.meditation-character'),original=character.onclick;window.__characterClicks=0;character.onclick=event=>{window.__characterClicks++;return original.call(character,event);};});
  await start(page,'wim-hof');await circle.click();assert.equal(await page.evaluate(()=>window.__characterClicks),0,'circle tap never pokes the player');assert.equal(await page.locator('[data-breath-run]').isHidden(),true);await page.clock.runFor(5000);assert.equal(await calls(page),0);assert.equal(await page.locator('.meditation-panel').evaluate(el=>el.open),false,'cartoon bounce finishes by leaving the room');
- await page.locator('.meditation-entry').click();await start(page,'wim-hof');for(let i=0;i<5;i++)await page.locator('.meditation-character').click();await page.clock.runFor(3100);
+ await page.locator('.meditation-entry').click();await start(page,'wim-hof');await page.mouse.click(5,450);for(let i=0;i<5;i++)await page.locator('.meditation-character').click();await page.clock.runFor(3100);
  assert.equal(await page.locator('[data-meditation-scene]').isHidden(),true);assert.equal(await page.locator('[data-meditation-arcade] canvas').isVisible(),true);await page.locator('[data-meditation-arcade] [data-flap]').click();
  // Expose only the existing game's returned test instance; exercise its actual completion callback.
  await page.evaluate(()=>{window.__reviewTubFlight.game.phase='complete';});await page.clock.runFor(50);
@@ -72,8 +72,8 @@ test('single round runs 210 active seconds, freezes when paused/hidden, and save
  const {context,page}=await room();await start(page,'wim-hof');
  assert.equal(await page.locator('progress').getAttribute('max'),'210000');
  await page.clock.runFor(19000);const before=await page.locator('[data-session-clock]').textContent(),countBefore=await page.locator('[data-breath-count]').textContent();
- await page.locator('[data-breath-pause]').click();await page.clock.runFor(20000);assert.equal(await page.locator('[data-session-clock]').textContent(),before);assert.equal(await page.locator('[data-breath-count]').textContent(),countBefore,'phase countdown pauses with session clock');
- await page.locator('[data-breath-pause]').click();await page.clock.runFor(250);
+ await page.mouse.click(5,450);await page.locator('[data-breath-pause]').click();await page.clock.runFor(20000);assert.equal(await page.locator('[data-session-clock]').textContent(),before);assert.equal(await page.locator('[data-breath-count]').textContent(),countBefore,'phase countdown pauses with session clock');
+ await page.mouse.click(5,450);await page.locator('[data-breath-pause]').click();await page.clock.runFor(250);
  await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:true}));await page.clock.runFor(20000);const hiddenTime=await page.locator('[data-session-clock]').textContent();assert.equal(hiddenTime,before);
  await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,value:false}));await page.clock.runFor(181000);assert.equal(await calls(page),0,'three minutes must not finish the 210-second round');
  await page.clock.runFor(30000);await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));assert.equal(await calls(page),1);assert.equal(await page.locator('[data-session-clock]').textContent(),'0:00');
@@ -115,7 +115,7 @@ test('a delayed completion callback cannot wake the room after account invalidat
 test('optional hold can be skipped and cartoon early exit immediately abandons saving',async()=>{
  const {context,page}=await room();await start(page,'wim-hof');await page.clock.runFor(beforeHold()+1000);
  assert.equal(await page.locator('[data-breath-run]').getAttribute('data-phase'),'optional-hold');assert.equal(await page.locator('[data-skip-hold]').isVisible(),true);
- await page.locator('[data-skip-hold]').click();assert.notEqual(await page.locator('[data-breath-run]').getAttribute('data-phase'),'optional-hold');assert.equal(await calls(page),0);
+ await page.mouse.click(5,450);await page.locator('[data-skip-hold]').click();assert.notEqual(await page.locator('[data-breath-run]').getAttribute('data-phase'),'optional-hold');assert.equal(await calls(page),0);
  await page.clock.runFor(35000);assert.equal(await page.locator('[data-breath-run]').getAttribute('data-phase'),'rest','skipping the first hold also removes the later recovery hold');
  await page.locator('[data-breath-exit]').click();assert.equal(await page.locator('[data-breath-run]').isHidden(),true,'session clock is abandoned immediately');await page.clock.runFor(1000);assert.equal(await calls(page),0);
  await page.clock.runFor(60000);assert.equal(await calls(page),0);await context.close();

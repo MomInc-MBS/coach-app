@@ -283,7 +283,7 @@
 .meditation-panel .breath-hud [data-session-clock]{position:static!important;transform:none!important;font-size:14px!important;padding:3px 8px;box-shadow:none;order:1}
 .meditation-panel .breath-hud .breath-direction{position:static!important;transform:none!important;font-size:11px!important;order:3}
 .meditation-panel .breath-hud .breathing-ring-stop{order:4;width:auto;height:auto;padding:3px 8px;border:2px solid #fff;background:#000;color:#fff;font:700 12px ui-monospace,monospace;transform:none!important}.meditation-panel .breath-hud .breathing-ring-stop::before{content:"Exit"}
-.meditation-panel .breathing-session{transition:opacity .6s ease}.meditation-panel.hud-calm .breathing-session{opacity:.07}
+.meditation-panel .breathing-session{transition:opacity .6s ease}.meditation-panel.hud-calm .breathing-session{opacity:.07;pointer-events:none}
 /* leap splash: a burst of water drops from the middle of the falls */
 .meditation-panel.coach-leap .meditation-stage::before{content:'';position:absolute;left:50%;top:48%;width:10px;height:10px;margin:-5px;border-radius:50%;z-index:6;pointer-events:none;background:#e9fbff;box-shadow:-60px -30px #bff3ff,60px -30px #e9fbff,-90px 10px #7fe3f5,90px 10px #bff3ff,-40px 50px #e9fbff,40px 50px #7fe3f5,0 -70px #bff3ff,-20px 80px #bff3ff,25px -55px #e9fbff,-75px -65px #7fe3f5,80px -60px #bff3ff;animation:coach-drops .7s ease-out forwards}
 @keyframes coach-drops{from{transform:scale(.2);opacity:1}to{transform:scale(3.2);opacity:0}}

@@ -59,7 +59,9 @@ test('seated overlay holds the clock until Accept, then fades out and is removed
  await page.screenshot({path:'.frames/r18-reveal-100.png'});
  const panel=()=>page.locator('.breathing-session').evaluate(el=>+getComputedStyle(el).opacity);
  assert.ok(await panel()<.2,'the top panel is near-invisible after Accept');
- await page.mouse.click(187,500);await page.waitForTimeout(900);assert.equal(await panel(),1,'a tap brings the panel back');
+ const pb=await page.locator('[data-breath-pause]').boundingBox();await page.mouse.click(pb.x+pb.width/2,pb.y+pb.height/2);await page.waitForTimeout(900); // first tap on the faded Pause only reveals the panel
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('breathing-paused')),false,'the revealing tap did not press Pause');
+assert.equal(await panel(),1,'a tap brings the panel back');await page.locator('[data-breath-pause]').click();assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('breathing-paused')),true,'once revealed, Pause works');
  await page.screenshot({path:'.frames/r18-panel-tap.png'});
  await context.close();
 });
