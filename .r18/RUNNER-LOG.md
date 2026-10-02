@@ -341,3 +341,20 @@ The "?" bug (showing for users with saved Gala looks) was investigated but not r
 - Radius must come from a counter that never resets: completed breaths over the TOTAL breaths of the session script (`breathsDone`/`totalBreaths` in breathing-modes.mjs), not the per-round `breathCount`. Keep the maths pure and unit-test it (`revealRadius` is `< maxR` for every done < total).
 - A2 was accepted without a screenshot, but its `background:url(waterfall)` lacked `!important` and lost to older `background:#000!important` rules, so the waterfall never showed. Cards that touch layered legacy CSS must require a real-browser screenshot, and must check the computed style, not just the rule text.
 - Each card should ship a Playwright check with a fake clock (`page.clock.install` then `runFor`) and look at the frames; unit-green plus syntax-OK is not evidence for visual work.
+
+---
+
+## R18 lane G2b / G5 / F1-F5 (Sonnet conductor; Kimi K3 + local gpt-oss; 2 Oct)
+
+| Step | Who wrote it | Notes |
+|---|---|---|
+| G2b free colours | Kimi K3 (array + test card, applied as-is); hex choice by a Lab nearest-census script (.r18/g2b-near.mjs, Sonnet); Sonnet fixed fallout (default colour ids to free hexes, colour pool lists all 8 simple colours, test updates) | Kimi reply took ~10 min |
+| G5 pack swatch | Sonnet (6 lines; pool items now carry `hex`) | too small for a card |
+| F1 camera + zoom | Kimi K3 (2nd try; 1st reply was empty). Sonnet fixed: it put `export const ZOOM_*` inside the class body, and tuned padding 1.04 / preview row 41% from a silhouette measurement (.r18/fill2.mjs) | Harness note: ask for "above the class" with an explicit SEARCH string, Kimi anchored on the wrong line |
+| F2 sliders/Motion logic | Kimi K3; Sonnet fixed a TDZ bug (`const zeroFinish` used before definition -> `function`) and added missing `FILE:` header lines | HTML deletions by Sonnet (mechanical) |
+| F3a Coach tab logic | gpt-oss-20b local (Kimi never replied within 25 min; local took 6 s) | applied as-is |
+| F3b Coach personality in Reminders | Kimi K3; Sonnet rewrote the wiring (COACHES is an array, SITUATIONS are tuples, recipe must be re-read at change time) | |
+| F4 Files icons | gpt-oss-20b local (1st reply missed the HTML block; 2nd right); Sonnet swapped three SVG paths for cleaner icons | |
+| F5 cage removal | Kimi K3, applied as-is | |
+
+Harness notes: Kimi often drops the `FILE:` header on follow-up blocks and indents SEARCH by one extra space; `.r18/apply_sr.py` now tolerates both leading whitespace and the missing header must be fixed by hand. Always check the excerpt's real data shapes before trusting a card reply.
