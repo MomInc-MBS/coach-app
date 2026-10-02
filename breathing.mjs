@@ -1,8 +1,9 @@
 import {authTransitions} from './auth-transition.mjs';
 import {createAccountSessionActions} from './account-session-actions.mjs';
 import {BreathingSession,BREATHING_MS} from './combat.mjs';
-import {BREATHING_MODES,MODE_IDS,SEATED_ONLY_NOTICE,NO_MEDICAL_CLAIM,GENTLE_DIALOGUE,GUIDED_ROUND_TIMING,GUIDED_ROUND_MS,buildScript,phaseAt} from './breathing-modes.mjs';
-export const revealRadius=(done,total,maxR)=>{if(!total)return'0px';const pct=Math.max(0,Math.min(1,done/total));const radius=Math.round(pct*maxR);return radius+'px'};
+import {BREATHING_MODES,MODE_IDS,SEATED_ONLY_NOTICE,NO_MEDICAL_CLAIM,GENTLE_DIALOGUE,GUIDED_ROUND_TIMING,GUIDED_ROUND_MS,buildScript,phaseAt,totalBreaths as countBreaths,breathsDone,revealRadius} from './breathing-modes.mjs';
+// R18 A5: a speech line fades in, stays ~4 s, fades out (CSS .bubble); re-adding the class restarts it.
+export const bubble=(el,text)=>{el.textContent=text;el.classList.remove('bubble');void el.offsetWidth;el.classList.add('bubble');};
 
 // Both modes use the existing account-owned breathing ticket and completion path. The guided
 // round's timing lives in breathing-modes.mjs so cadence review can tune phases without changing ownership.
@@ -23,17 +24,20 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  const actions=createAccountSessionActions({api,transitions});
  const controls=document.createElement('div');controls.className='breathing-session';
  controls.innerHTML='<div class="breath-modes" data-breath-modes>'+MODE_IDS.map(id=>{const m=BREATHING_MODES[id];return `<button type="button" class="breath-mode-card" data-mode="${id}"><strong>${m.title}</strong><small>${m.subtitle}</small>`+(m.seatedOnly?`<small class="breath-seated-notice">${SEATED_ONLY_NOTICE}</small>`:'')+'</button>';}).join('')+'</div>'
-  +'<div class="breath-run" data-breath-run hidden><p class="breath-seated-notice" data-seated hidden>'+SEATED_ONLY_NOTICE+'</p><p class="breath-phase" data-phase-label></p><progress max="'+BREATHING_MS+'" value="0" aria-label="Breathing session progress"></progress>'
+  +'<div class="breath-run" data-breath-run hidden><p class="breath-phase" data-phase-label></p><progress max="'+BREATHING_MS+'" value="0" aria-label="Breathing session progress"></progress>'
   +'<div class="breath-actions"><button type="button" data-retry hidden>Save breathing bonus</button><button type="button" data-skip-hold hidden>Skip · breathe normally</button></div>'
   +'<button type="button" class="breath-stance-link" data-stance-link hidden>Check this stance with the camera coach</button></div>'
   +'<p data-status role="status"></p><p class="breath-note">'+NO_MEDICAL_CLAIM+'</p>';
  scene.append(controls);
+ // R18 A4: the seated warning is a full-scene overlay; nothing ticks until Accept, then it fades out (600 ms) and is hidden.
+ const seated=document.createElement('div');seated.className='breath-seated-overlay';seated.dataset.seated='';seated.hidden=true;seated.innerHTML='<div role="alertdialog" aria-label="Before you begin"><p class="breath-seated-notice">'+SEATED_ONLY_NOTICE+'</p><button type="button" data-seated-accept>Accept</button></div>';dialog.append(seated);
+ seated.querySelector('button').onclick=()=>{held=false;seated.classList.add('fading');setTimeout(()=>{seated.hidden=true;seated.classList.remove('fading');},600);};
  controls.querySelector('.breath-actions').append(pause);
  const $=selector=>controls.querySelector(selector);
- const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),seated=$('[data-seated]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]');
+ const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]');
  // Both exercises and the decorative pose selector share a compact, reachable control strip.
  const speech=scene.querySelector?.('.meditation-speech'),reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
- let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS,totalBreaths=0,completedBreaths=0;
+ let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS,totalBreaths=0,shown=-1,held=false;
  function renderPhase(ms){
   const p=phaseAt(script,ms);runEl.dataset.phase=p.key;skipHold.hidden=!['optional-hold','recovery-hold'].includes(p.key);
   phaseEl.textContent=({settle:'Settle gently',breathe:p.breath==='in'?'Breathe in':'Breathe out',transition:'Easy exhale','optional-hold':'Optional pause',recovery:'Easy inhale','recovery-hold':'Optional recovery',rest:'Breathe normally'})[p.key]||p.label;
@@ -41,12 +45,19 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   // Only on change, so a character-tap line stays until the next phase and the live region is not re-announced.
   let next=p.dialogue||captionFor(p,reducedMotion?.matches);
   if(p.key==='breathe'&&p.pace){const elapsed=p.ms-p.remainingMs,cycle=p.pace.inhaleMs+p.pace.exhaleMs,index=Math.floor(elapsed/cycle);next=GENTLE_DIALOGUE[1+Math.floor(index/6)%6];}
-  if(speech&&next!==caption){caption=next;speech.textContent=next;}
-  if(countEl){let remaining=p.remainingMs||0,progress=.5,value='\u2014',direction=p.key==='settle'?'READY':'REST';if(['settle','rest'].includes(p.key)){const cycle=GUIDED_ROUND_TIMING.inhaleMs+GUIDED_ROUND_TIMING.exhaleMs,elapsed=Math.max(0,p.ms-p.remainingMs),offset=elapsed%cycle,inhale=offset<GUIDED_ROUND_TIMING.inhaleMs;progress=inhale?offset/GUIDED_ROUND_TIMING.inhaleMs:1-(offset-GUIDED_ROUND_TIMING.inhaleMs)/GUIDED_ROUND_TIMING.exhaleMs;direction=inhale?'IN':'OUT';}else if(p.pace&&p.breath){const into=p.ms-p.remainingMs,cycle=p.pace.inhaleMs+p.pace.exhaleMs,offset=into%cycle,segment=p.breath==='in'?offset:offset-p.pace.inhaleMs;remaining=p.breath==='in'?p.pace.inhaleMs-offset:cycle-offset;progress=p.breath==='in'?offset/p.pace.inhaleMs:1-segment/p.pace.exhaleMs;value=String(Math.min(BREATHING_MODES['wim-hof'].breathsPerRound,Math.floor(into/cycle)+1));direction=p.breath==='in'?'IN':'OUT';if(!totalBreaths&&script){totalBreaths=script.reduce((sum,ph)=>sum+(ph.pace?Math.floor(ph.ms/(ph.pace.inhaleMs+ph.pace.exhaleMs)):0),0)||BREATHING_MODES['wim-hof'].breathsPerRound;}const breathCount=parseInt(value);const stage=document.querySelector('.meditation-stage');if(stage){const char=dialog.querySelector('.meditation-character');const charRect=char?.getBoundingClientRect();const stageRect=stage.getBoundingClientRect();const cx=charRect?(charRect.left+charRect.width/2-stageRect.left)/stageRect.width*100:50;const cy=charRect?(charRect.top+charRect.height/2-stageRect.top)/stageRect.height*100:43;const corners=[[0,0],[100,0],[0,100],[100,100]];const maxR=Math.max(...corners.map(([x,y])=>Math.hypot(cx-x,cy-y)))*Math.max(stageRect.width,stageRect.height)/100;stage.style.setProperty('--reveal-radius',revealRadius(breathCount,totalBreaths||30,maxR));stage.style.setProperty('--char-center-x',cx+'%');stage.style.setProperty('--char-center-y',cy+'%');}}else if(p.key==='transition'){progress=1-(p.ms-p.remainingMs)/p.ms;direction='OUT';}else if(p.key==='optional-hold'){progress=0;value=String(Math.max(0,Math.ceil(remaining/1000)));direction='HOLD?';}else if(p.key==='recovery'){progress=(p.ms-p.remainingMs)/p.ms;direction='IN';}else if(p.key==='recovery-hold'){progress=1;value=String(Math.max(0,Math.ceil(remaining/1000)));direction='HOLD?';}else if(p.key==='complete'){value='30';direction='DONE';}countEl.textContent=value;countEl.dataset.breath=p.breath||'rest';countEl.parentElement?.style.setProperty('--breath-progress',String(Math.max(0,Math.min(1,progress))));countEl.parentElement?.style.setProperty('--breath-scale',String(.70+Math.max(0,Math.min(1,progress))*.42));if(directionEl)directionEl.textContent=direction;}
+  if(speech&&next!==caption){caption=next;bubble(speech,next);}
+  if(countEl){let remaining=p.remainingMs||0,progress=.5,value='\u2014',direction=p.key==='settle'?'READY':'REST';if(['settle','rest'].includes(p.key)){const cycle=GUIDED_ROUND_TIMING.inhaleMs+GUIDED_ROUND_TIMING.exhaleMs,elapsed=Math.max(0,p.ms-p.remainingMs),offset=elapsed%cycle,inhale=offset<GUIDED_ROUND_TIMING.inhaleMs;progress=inhale?offset/GUIDED_ROUND_TIMING.inhaleMs:1-(offset-GUIDED_ROUND_TIMING.inhaleMs)/GUIDED_ROUND_TIMING.exhaleMs;direction=inhale?'IN':'OUT';}else if(p.pace&&p.breath){const into=p.ms-p.remainingMs,cycle=p.pace.inhaleMs+p.pace.exhaleMs,offset=into%cycle,segment=p.breath==='in'?offset:offset-p.pace.inhaleMs;remaining=p.breath==='in'?p.pace.inhaleMs-offset:cycle-offset;progress=p.breath==='in'?offset/p.pace.inhaleMs:1-segment/p.pace.exhaleMs;value=String(Math.min(BREATHING_MODES['wim-hof'].breathsPerRound,Math.floor(into/cycle)+1));direction=p.breath==='in'?'IN':'OUT';}else if(p.key==='transition'){progress=1-(p.ms-p.remainingMs)/p.ms;direction='OUT';}else if(p.key==='optional-hold'){progress=0;value=String(Math.max(0,Math.ceil(remaining/1000)));direction='HOLD?';}else if(p.key==='recovery'){progress=(p.ms-p.remainingMs)/p.ms;direction='IN';}else if(p.key==='recovery-hold'){progress=1;value=String(Math.max(0,Math.ceil(remaining/1000)));direction='HOLD?';}else if(p.key==='complete'){value='30';direction='DONE';}countEl.textContent=value;countEl.dataset.breath=p.breath||'rest';countEl.parentElement?.style.setProperty('--breath-progress',String(Math.max(0,Math.min(1,progress))));countEl.parentElement?.style.setProperty('--breath-scale',String(.70+Math.max(0,Math.min(1,progress))*.42));if(directionEl)directionEl.textContent=direction;}
+ }
+ // R18 A3: grey veil over the whole stage with a hole centred on the character; hole radius = revealRadius(done,total,farthest corner).
+ function reveal(done){
+  shown=done;const stage=scene.querySelector('.meditation-stage'),veil=stage?.querySelector('.meditation-grey'),who=scene.querySelector('.meditation-character');if(!veil||!who)return;
+  const s=stage.getBoundingClientRect(),c=who.getBoundingClientRect(),x=c.left+c.width/2-s.left,y=c.top+c.height/2-s.top;
+  veil.style.setProperty('--cx',x+'px');veil.style.setProperty('--cy',y+'px');veil.style.setProperty('--reveal-r',revealRadius(done,totalBreaths,Math.hypot(Math.max(x,s.width-x),Math.max(y,s.height-y)))+'px');
+  dialog.classList.toggle('meditation-colour',totalBreaths>0&&done>=totalBreaths);
  }
  function reset({keepPose=false}={}){
   run++;clock=new BreathingSession();duration=BREATHING_MS;ticket=null;saving=false;finished=false;awaitingRetry=false;script=null;
-  if(caption&&speech)speech.textContent=IDLE_CAPTION;caption='';
+  if(caption&&speech)bubble(speech,IDLE_CAPTION);caption='';totalBreaths=0;shown=-1;held=false;
   bar.max=BREATHING_MS;bar.value=0;sessionClock&&(sessionClock.textContent='3:30');countEl&&(countEl.textContent='—');directionEl&&(directionEl.textContent='READY');pause.disabled=true;pause.hidden=true;pause.textContent='Pause';dialog.classList.remove('breathing-paused');
   modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;skipHold.hidden=true;stanceLink.hidden=true;runEl.dataset.phase='';
   if(stopCircle)stopCircle.hidden=true;phaseEl.textContent='';statusEl.textContent=DEFAULT_STATUS;dialog.classList.remove('meditation-colour');
@@ -64,12 +75,12 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   finally{if(current===run)saving=false;}
  }
  async function startSession(id){
-  reset({keepPose:true});duration=id==='wim-hof'?GUIDED_ROUND_MS:BREATHING_MS;bar.max=duration;script=buildScript(id);seated.hidden=!BREATHING_MODES[id]?.seatedOnly;modesEl.hidden=true;runEl.hidden=false;statusEl.textContent='Starting…';sessionClock&&(sessionClock.textContent=formatTime(duration));renderPhase(0);
+  reset({keepPose:true});duration=id==='wim-hof'?GUIDED_ROUND_MS:BREATHING_MS;bar.max=duration;script=buildScript(id);held=!!BREATHING_MODES[id]?.seatedOnly;seated.hidden=!held;seated.classList.remove('fading');totalBreaths=countBreaths(script);reveal(0);if(held)seated.querySelector('button').focus();modesEl.hidden=true;runEl.hidden=false;statusEl.textContent='Starting…';sessionClock&&(sessionClock.textContent=formatTime(duration));renderPhase(0);
   const current=run;
   try{
    const value=await actions.startBreathing(getAccount?.());
    if(current!==run||!transitions.isCurrent(value.transitionTicket))return;
-   ticket=value;clock=new BreathingSession(duration);pause.disabled=false;pause.hidden=false;if(stopCircle)stopCircle.hidden=false;statusEl.textContent=formatTime(duration)+' remaining';dialog.classList.add('meditation-colour');
+   ticket=value;clock=new BreathingSession(duration);pause.disabled=false;pause.hidden=false;if(stopCircle)stopCircle.hidden=false;statusEl.textContent=formatTime(duration)+' remaining';
   }catch(error){if(current===run){reset();statusEl.textContent=error.message;}}
  }
  for(const id of MODE_IDS)modesEl.querySelector(`[data-mode="${id}"]`).onclick=()=>startSession(id);
@@ -83,9 +94,9 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  // library's own camera hold for this stance instead of re-implementing pose detection here.
  stanceLink.onclick=()=>{const id=stanceLink.dataset.stance;dialog.close();document.getElementById('openLibrary')?.click();document.querySelector(`[data-movement="${id}"]`)?.click();};
  const timer=setInterval(()=>{
-  const active=!!ticket&&dialog.open&&!scene.hidden&&!document.hidden&&!dialog.classList.contains('breathing-paused')&&!dialog.classList.contains('snorting')&&!dialog.classList.contains('blacking-out');
+  const active=!!ticket&&dialog.open&&!scene.hidden&&!document.hidden&&!dialog.classList.contains('breathing-paused')&&!held&&!dialog.classList.contains('snorting')&&!dialog.classList.contains('blacking-out');
   clock.sample(performance.now(),active);bar.value=clock.elapsed;
-  if(ticket&&!finished&&!saving&&!clock.complete){const left=Math.ceil((duration-clock.elapsed)/1000);statusEl.textContent=formatTime(duration-clock.elapsed)+' remaining'+(active?'':' · Paused');sessionClock&&(sessionClock.textContent=formatTime(duration-clock.elapsed));renderPhase(clock.elapsed);}
+  if(ticket&&!finished&&!saving&&!clock.complete){const left=Math.ceil((duration-clock.elapsed)/1000);statusEl.textContent=formatTime(duration-clock.elapsed)+' remaining'+(active?'':' · Paused');sessionClock&&(sessionClock.textContent=formatTime(duration-clock.elapsed));renderPhase(clock.elapsed);const d=breathsDone(script,clock.elapsed);if(d!==shown)reveal(d);}
   if(clock.complete&&!finished&&!saving&&!awaitingRetry)void finish();
  },50);
  const unsubscribe=transitions.subscribe(reset);

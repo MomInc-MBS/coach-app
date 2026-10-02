@@ -89,3 +89,17 @@ export function phaseAt(script, elapsedMs) {
  }
  return {key: 'rest', label: 'Breathe normally until the timer ends', ms: 0, remainingMs: 0, breath: null};
 }
+
+// R18 A3: every completed breath counts toward the colour reveal, across the whole script (never per round).
+const cycleMs = p => p.pace.inhaleMs + p.pace.exhaleMs, breathsIn = p => Math.round(p.ms / cycleMs(p));
+export const totalBreaths = script => script.reduce((n, p) => n + (p.pace ? breathsIn(p) : 0), 0);
+export function breathsDone(script, ms) {
+ let n = 0;
+ for (const p of script) {
+  if (p.pace) n += Math.min(breathsIn(p), Math.floor((Math.max(0, Math.min(ms, p.ms)) + 1e-6) / cycleMs(p)));
+  if ((ms -= p.ms) < 0) break;
+ }
+ return n;
+}
+// Colour circle radius in px: strictly under maxR until the final breath, exactly maxR on it.
+export const revealRadius = (done, total, maxR) => total > 0 && done >= total ? maxR : maxR * Math.max(0, done) / Math.max(1, total);

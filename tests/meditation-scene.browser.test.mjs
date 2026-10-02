@@ -67,7 +67,7 @@ async function drag(page,dx){
  const seen=await layers(page);await page.mouse.up();return Object.fromEntries(seen.map(l=>[l.depth,l.x==='none'?0:parseFloat(l.x)]));
 }
 async function start(page,mode){
- await page.locator(`[data-mode="${mode}"]`).click();
+ await page.locator(`[data-mode="${mode}"]`).click();if(mode==='wim-hof')await page.locator('[data-seated-accept]').click();
  await page.waitForFunction(()=>/\d+:\d{2} remaining/.test(document.querySelector('[data-status]').textContent));
 }
 
@@ -90,7 +90,7 @@ test('open: three black-and-white peering layers, the big meditation coach borro
  assert.ok(layout.left.top>=0&&layout.left.bottom<=812&&layout.right.top>=0&&layout.right.bottom<=812,'both choices fit on screen');
  const open=await layers(page);
  assert.deepEqual(open.map(l=>l.depth),['far','mid','near']);
- for(const l of open)assert.match(l.filter,/^grayscale\(1\)/,l.depth+' starts black and white');
+ assert.match(await page.locator('.meditation-grey').evaluate(el=>getComputedStyle(el).backdropFilter),/^grayscale\(1\)/,'the room starts black and white (one veil over the stack, no inherited filter)');
  assert.equal(await page.locator('.meditation-coach .myr5-companion-card').count(),1,'the live coach card sits in the mid layer');
  assert.equal(await page.locator('.room-art').count(),1,'offline pixel landmarks are visible in the far layer');
  assert.equal(await page.locator('.coach-pixel').count(),1,'the four-legged pixel coach is present behind the character');
@@ -141,14 +141,14 @@ test('a full session: colour returns to every layer, then the coach wakes, turns
  await start(page,'tai-chi');await page.clock.runFor(181000);
  await page.waitForFunction(()=>/Breathing complete/.test(document.querySelector('[data-status]').textContent));
  assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('meditation-colour')));
- await page.waitForFunction(()=>[...document.querySelectorAll('[data-peer-depth]')].every(el=>getComputedStyle(el).filter==='grayscale(0)'),null,{timeout:6000});
+ await page.waitForFunction(()=>getComputedStyle(document.querySelector('.meditation-grey')).opacity==='0',null,{timeout:6000});
  await page.clock.runFor(2600);
  const log=await creature(page);
  for(const call of [['sleep',false],['face',Math.PI/2],['walk',true]])assert.ok(called(log,...call),JSON.stringify(call));
  assert.ok(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-wander')));
  await page.locator('[data-breath-exit]').click(); // "Done"
  assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'completed sessions close normally');
- assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('smacked')||d.classList.contains('coach-lunge')),false,'completion does not trigger the early-exit bounce');
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-leap')),false,'completion does not trigger the early-exit leap');
  await context.close();
 });
 
@@ -160,10 +160,10 @@ test('circle exit abandons immediately without saving, bounces briefly, then clo
  assert.equal(await page.locator('[data-breath-modes]').isVisible(),true);
  assert.equal(await page.locator('[data-breath-run]').isHidden(),true,'active clock is abandoned before animation finishes');
  assert.equal(await phase(page),'');
- assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('smacked')&&d.classList.contains('coach-lunge')),true,'the requested cartoon bounce starts immediately');
+ assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.classList.contains('coach-leap')),true,'the coach leap starts immediately');
  assert.equal(await page.evaluate(p=>window.__calls.filter(c=>c===p).length,'/api/breathing/complete'),0,'nothing saved');
- await page.clock.runFor(250);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),true,'bounce has a brief visible interval');
- await page.clock.runFor(350);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'room closes after the brief bounce');
+ await page.clock.runFor(250);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),true,'the leap has a brief visible interval');
+ await page.clock.runFor(500);assert.equal(await page.locator('.meditation-panel').evaluate(d=>d.open),false,'room closes after the leap');
  await page.clock.runFor(211000);assert.equal(await count(page,'/api/breathing/complete'),0,'abandoned session cannot complete later');
  await context.close();
 });

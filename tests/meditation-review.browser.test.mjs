@@ -37,7 +37,7 @@ async function room(viewport={width:375,height:812},{reducedMotion='no-preferenc
  if(integrated){await page.evaluate(()=>window.myr5Routes.go('meditate'));await page.locator('.meditation-panel[data-route="meditate"]').waitFor();}else await page.locator('.meditation-entry').click();
  return {context,page};
 }
-async function start(page,mode){await page.locator(`[data-mode="${mode}"]`).click();await page.waitForFunction(()=>/remaining/.test(document.querySelector('[data-status]').textContent));await page.clock.runFor(250);}
+async function start(page,mode){await page.locator(`[data-mode="${mode}"]`).click();if(mode==='wim-hof')await page.locator('[data-seated-accept]').click();await page.waitForFunction(()=>/remaining/.test(document.querySelector('[data-status]').textContent));await page.clock.runFor(250);}
 const calls=page=>page.evaluate(()=>window.__calls.filter(p=>p==='/api/breathing/complete').length);
 async function visibleAvatarBounds(page){return page.locator('.meditation-character canvas').evaluate(canvas=>{
  const {width,height}=canvas,rgba=canvas.getContext('2d').getImageData(0,0,width,height).data;let minX=width,minY=height,maxX=-1,maxY=-1;

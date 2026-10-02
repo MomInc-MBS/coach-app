@@ -59,7 +59,7 @@ async function openRoom(browser,{art=true,reducedMotion='no-preference'}={}){
  return {context,page};
 }
 async function start(page,mode){
- await page.locator(`[data-mode="${mode}"]`).click();
+ await page.locator(`[data-mode="${mode}"]`).click();if(mode==='wim-hof')await page.locator('[data-seated-accept]').click();
  await page.waitForFunction(expected=>document.querySelector('[data-status]').textContent===expected,mode==='wim-hof'?'3:30 remaining':'3:00 remaining');
  assert.equal(await page.locator('[data-breath-modes]').isHidden(),true);
 }
@@ -83,7 +83,7 @@ test('seated Wim Hof-style: seated-only notice before start, hold, exit mid-hold
  assert.match(await page.locator('.breath-note').textContent(),/not medical/);
  await shot(page,'01-wim-hof-choose');
  await start(page,'wim-hof');
- assert.equal(await page.locator('[data-seated]').isVisible(),true);assert.equal(await phase(page),'settle');
+ assert.match(await page.locator('[data-seated] .breath-seated-notice').textContent(),/seated or lying/);assert.equal(await phase(page),'settle');
  assert.match(await caption(page),/comfortable|shoulders/i,'original guidance starts with settling');
  await shot(page,'02-wim-hof-start');
  await page.clock.runFor(holdStart+1000); // scripted settling + breathing -> optional hold
