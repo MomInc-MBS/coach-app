@@ -96,6 +96,42 @@ The "?" bug (showing for users with saved Gala looks) was investigated but not r
 
 ---
 
+## Lane A2: Full-scene pixel layout with waterfall background
+
+| Aspect | Value |
+|--------|-------|
+| Model | openai/gpt-oss-20b |
+| Rounds | 3 |
+| Status | PASS |
+| Commit | 20720e0 |
+
+**Changes**: Redesigned meditation scene layout with waterfall pixel art:
+1. meditation.mjs line 11: Removed `<i class="breathing-ring">` from HTML template
+2. meditation.mjs line 19: Replaced orbit creation with breath-hud container; removed dead orbit variable and ring selector
+3. meditation.css APPEND: Added 11 new rules for waterfall background, character/coach positioning, breath-hud layout
+
+**Round progression**:
+- **Round 1**: Full design but two defects: (1) background missing !important, (2) dead orbit.append(ring) code with null ring
+- **Round 2**: Fixed dead code, added higher-specificity CSS selectors  
+- **Round 3** (final): Verified syntax, output streamed, all defects resolved
+
+**Implementation notes**:
+- Model correctly identified minified line structure and generated exact replacements
+- Higher-specificity selectors (.meditation-colour.has-wonder-art, .has-wonder-art variants) ensure waterfall background overrides earlier #000 rules
+- Breath-hud positioned absolutely at bottom 12%, grid-centered for responsive layout
+- Character reposition: left 25%, bottom 6%, height clamps 20vh for mobile viewport fit
+
+**Tests**: 31+ passes (meditation-modes, meditation-reference, account tests), exit code 0
+**Visual**: Waterfall asset copied to pod/worlds/meditation-waterfall.png with pixel rendering enabled
+
+**Harness lessons**:
+1. Defects in minified code require defect-specific fixes—don't apply buggy round until reviewed
+2. Higher-specificity CSS selectors needed to override earlier !important rules  
+3. Dead code removal (orbit variable) critical when A1 removed the source element it referenced
+4. Streaming model output in round 3 verified syntax before application
+
+---
+
 ## Lane A1: Remove standing pose (seated meditation only)
 
 | Aspect | Value |
@@ -169,3 +205,64 @@ The "?" bug (showing for users with saved Gala looks) was investigated but not r
 **Runner rule:** on timeout or empty reply, retry with streaming/trimmed card or switch model; **NEVER hand-code**; mark FAILED and report. Review every reply (syntax check on a temp copy, cascade/`!important`, dead code) and send numbered defects back as the next round; gpt-oss needs the exact declaration spelled out when it misses a subtle point twice.
 
 **For Ian:** LM Studio's per-model defaults still say ctx 131072 for gpt-oss and 8192 for qwen3.8-27b, and the GUI/other tools will reload both side by side. Set gpt-oss-20b's default context to 32768 (My Models > gear) and keep only one model loaded; or just let `local_job.py` fix it on every run. Do not run local lanes while Codex/StarNet holds a model (none did tonight: gpt-oss's last foreign request was 1 Oct 15:57).
+
+## Lane H1: Grimoire CRT settings screen
+
+| Aspect | Value |
+|--------|-------|
+| Model | openai/gpt-oss-20b |
+| Rounds | 1 |
+| Status | PASS |
+| Commit | f84eee5 |
+
+**Changes**: 
+- Line 363: Title changed from "Grimoire" to "GRIMOIRE SETTINGS"
+- CSS APPEND: Added .portal-menu CRT styling with orange (#ff8800) monospace text, dark background, scanlines, vignette, and glow effects. Reused animation from settings-crt.css.
+
+**Tests**: 
+- node --check: PASS
+- portal-menu-sheet.browser.test.mjs: PASS (browser test)
+
+---
+
+## Lane H2: War Room bay menu terminal styling
+
+| Aspect | Value |
+|--------|-------|
+| Model | openai/gpt-oss-20b |
+| Rounds | 1 |
+| Status | PASS |
+| Commit | 5aded90 |
+
+**Changes**:
+- LABELS object: Removed "overview" and "pedestal" entries, kept pets/weapons/mirror/clothing
+- flatBays loop (L125): Added `continue` filter for overview/pedestal; added `b.classList.add('bay-terminal-line')`
+- CSS: Added .bay-terminal-line styling (orange, monospace, glow)
+- war-room/gala-bay.js: Regenerated via `npm run build`
+
+**Tests**:
+- TypeScript build: PASS
+- npm run build: PASS (regenerated gala-bay.js with changes)
+
+**Harness lessons**: TypeScript compilation succeeded cleanly; minified build preserves all changes.
+
+---
+
+## Summary: Current Status After Lane H
+
+| Lane | Status | Commits |
+|------|--------|---------|
+| E | PASS | aa4c798 |
+| D | PASS | 56eb82f |
+| B | PASS | (no change needed) |
+| C | PASS | ae2d36c (Sonnet escalation) |
+| A1 | PASS | 6110bb3 |
+| A2 | PASS | 20720e0 |
+| H1 | PASS | f84eee5 |
+| H2 | PASS | 5aded90 |
+
+**Total commits in R18 session**: 8 (E, D, A1, A2, C, H1, H2, plus harness)
+
+**Plan order remaining**: G (G1-G4), F (F1-F5), A3-A6
+
+**Next card**: G1 - Free texture list and renames
