@@ -26,14 +26,14 @@ async function openPod(browser,base,{reducedMotion='no-preference',portal=true}=
  await context.addInitScript((()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};}));
  const seed=await context.newPage();await seed.goto(base+'/onboarding.html');
  await seed.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await seed.close();
- // No portal: its unbundled module files never arrive (the optional files aren't downloaded yet).
- if(!portal)await context.route(/\/modules\/portal\//,route=>route.abort());
  const page=await context.newPage();await page.goto(base+'/pose.html');
  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
  if(portal){await page.evaluate(()=>window.myr5Menus.portal());await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);}
  await page.evaluate(()=>{document.querySelector('.app-update-banner [data-later]')?.click();location.hash='pod';});
  await page.waitForFunction(()=>window.myr5Routes.current()==='pod'&&document.getElementById('portalHome')?.hidden!==false);
- if(!portal)assert.equal(await page.evaluate(()=>!!window.myr5Portal),false,'the portal was never mounted');
+ // No portal: the portal core now ships in the core install and mounts behind the pod route, so a missing portal is simulated by
+ // removing its handle (set-transition.mjs reads globalThis.myr5Portal at each trip).
+ if(!portal){await page.evaluate(()=>{delete window.myr5Portal;});assert.equal(await page.evaluate(()=>!!window.myr5Portal),false,'no portal handle');}
  // Every frame: is the wormhole / the cover up, what does the line say, which screen is under it.
  // The wormhole's own mount/unmount times (frames can be sparse under the software WebGL renderer).
  await page.evaluate(()=>{window.wormAt=[];window.fades=[];new MutationObserver(ms=>{for(const m of ms)for(const [nodes,up] of [[m.addedNodes,true],[m.removedNodes,false]])for(const n of nodes)for(const cls of ['portal-wormhole','set-transition'])if(n.classList?.contains(cls)){window.wormAt.push({t:performance.now(),up,cls});if(up&&cls==='set-transition'){const read=()=>{if(!n.isConnected)return;for(const a of n.getAnimations())if(!window.fades.includes(a)){window.fades.push(a);}requestAnimationFrame(read);};read();}}}).observe(document.body,{childList:true});new MutationObserver(()=>{if(document.body.dataset.screen==='rest'&&!window.restOpened)window.restOpened=document.getElementById('restTime')?.getAttribute('aria-label');}).observe(document.body,{attributes:true,attributeFilter:['data-screen']});});
