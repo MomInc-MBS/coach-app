@@ -286,7 +286,9 @@ const bar=page=>page.evaluate(()=>{
  const dock=document.getElementById('coachDock'),r=dock?.getBoundingClientRect(),style=dock&&getComputedStyle(dock);
  const food=dock?.querySelector('[data-route="food"]'),fr=food?.getBoundingClientRect();
  const face=dock?.closest('dialog.portal-framed.portal-fullscreen')?.getBoundingClientRect();
- return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>40&&Math.abs(r.bottom-(face?.bottom??innerHeight))<1&&(!face||(r.left>=face.left-1&&r.right<=face.right+1)),
+ // R20 (Ian 2 Oct): the dock is a fixed console below the metal frame on every page: bottom-anchored, full width,
+ // 88px (64px on landscape phones), and a full-screen page's face ends above it, never around it.
+ return {visible:!!r&&style.display!=='none'&&style.visibility!=='hidden'&&r.height>=60&&Math.abs(r.bottom-innerHeight)<1&&Math.abs(r.left)<1&&Math.abs(r.right-innerWidth)<1&&(!face||r.top>=face.bottom-1),
   tappable:!!fr&&food.contains(document.elementFromPoint(fr.left+fr.width/2,fr.top+fr.height/2)),
   lit:[...dock.querySelectorAll('[aria-current="page"]')].map(b=>b.dataset.route),live:dock.querySelector('.dock-live')?.textContent||''};
 });
@@ -585,7 +587,7 @@ test('9. the rest exit goes home to the quilt, a Settings link is a real route, 
   await page.locator('.terminal-links button',{hasText:'ACCOUNT'}).click();
   await page.waitForFunction(()=>location.hash==='#scoreboard'&&document.getElementById('settings')?.open!==true&&document.getElementById('accountPanel')?.open===true);
   assert.equal(await page.evaluate(()=>window.myr5Routes.current()),'scoreboard','the Settings link goes through the router, not a direct call');
-  assert.equal((await bar(page)).visible,true,'the bar stays up under the scoreboard route');
+  {const b=await bar(page),d=await page.evaluate(()=>{const dock=document.getElementById('coachDock'),r=dock.getBoundingClientRect(),c=getComputedStyle(dock),f=dock.closest('dialog')?.getBoundingClientRect();return {r:r.toJSON(),vw:innerWidth,vh:innerHeight,d:c.display,v:c.visibility,parent:dock.parentElement.id,face:f?.toJSON(),cls:dock.closest('dialog')?.className};});assert.equal(b.visible,true,'the bar stays up under the scoreboard route '+JSON.stringify(d));}
   await page.screenshot({path:resolve(FRAMES,'r5-9-settings-account-route.png')});
   await page.goBack();
   await page.waitForFunction(()=>!document.getElementById('accountPanel')?.open);

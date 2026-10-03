@@ -470,7 +470,10 @@ const menuFor=route=>Object.entries(MENUS).find(([,m])=>m.route===route)||[null,
 // Fullscreen destinations keep the energy and feather it inward along the inset face.
  const screenLook=(look,face=fullscreenFace())=>({...look,pts:rectPts(face),shaped:false,fullscreen:true,name:null});
  // R20 (Ian 2 Oct): the housing ends above the dock, a separate console fixed below it (0 while the dock is hidden).
- const dockHeight=()=>document.getElementById('coachDock')?.getBoundingClientRect().height||0;
+ // The console's height comes from --myr5-bar (the dock may be mid-move between dialogs, measuring 0, when a face is set);
+ // 0 when the app hides the dock (tracking, rest) or there is none.
+ let barProbe=null;
+ const dockHeight=()=>{const b=document.body;if(!document.getElementById('coachDock')||b.dataset.tracking==='true'||b.dataset.screen==='rest')return 0;if(!barProbe?.isConnected){barProbe=document.createElement('div');barProbe.setAttribute('aria-hidden','true');barProbe.style.cssText='position:fixed;left:-9px;top:0;width:1px;height:var(--myr5-bar,88px);visibility:hidden;pointer-events:none';b.append(barProbe);}return barProbe.getBoundingClientRect().height;};
  function fullscreenFace(){const rail=15;return {left:rail,top:rail,width:Math.max(1,innerWidth-rail*2),height:Math.max(1,innerHeight-rail*2-dockHeight())};}
 function frameOn(face,look){
  frameOff();
