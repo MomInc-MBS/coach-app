@@ -311,5 +311,5 @@
 @media(orientation:landscape){.meditation-panel .breath-settle,.meditation-panel .breath-cue{left:27%;top:30%}}
 .meditation-panel:has([data-breath-modes]:not([hidden])) .breath-hud{visibility:hidden} /* start screen: the idle 3:30 chip sat under the safety note */
 /* R20: the portal's "Tilt to look around" tab sits on the dock's top edge, left; lift the counter chip and Begin clear of it */
-.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breath-hud{translate:0 -36px}
-.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breathing-session .breath-modes{translate:0 -44px}
+/* R20 frame: portrait only; in landscape the HUD and Begin sit right of the tab (left:30%+) and the shorter room has no 36px to spare. */
+@media(orientation:portrait){.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breath-hud{translate:0 -36px}.meditation-panel:has(>.portal-peer-ui>.portal-tilt-chip) .breathing-session .breath-modes{translate:0 -44px}}
