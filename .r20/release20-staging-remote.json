@@ -1,0 +1,674 @@
+{
+  "url": "https://myr5-coach-staging.mominc-coach.workers.dev",
+  "build_id": "3e9a55ada9708984ac0d",
+  "checked": [
+    {
+      "path": "app-runtime.mjs",
+      "status": 200,
+      "bytes": 589755,
+      "sha256": "78f0058e6f97b14f7e0a7bcbf9f36f4797c7b70ba05e1cbd2cb0cc8cb980c1ba",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "app.css",
+      "status": 200,
+      "bytes": 184594,
+      "sha256": "5264f97cdab869251bedcec3b213b71fb992f5deca7971e9fad2e9f251ae3f58",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "auth-client.mjs",
+      "status": 200,
+      "bytes": 6648,
+      "sha256": "166980cd9d7217d187798596876ce9237c4de1d1877b562591df877d1a7d8a6e",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "breathing-modes.mjs",
+      "status": 200,
+      "bytes": 7552,
+      "sha256": "134b25ca8b578887d7e0fa131837cf2127669f65f6ad31fc0dcaa3647ff561f4",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "breathing.mjs",
+      "status": 200,
+      "bytes": 15189,
+      "sha256": "d0690f299b9294f147034d68a8b73c0c431380eb66ad910574afea5c8696cb22",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach-hit.mjs",
+      "status": 200,
+      "bytes": 14133,
+      "sha256": "696e203ad22595bc01fbc8365e510a7d5466852805aff8e8e5301cd47c98ef98",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach-overlay.mjs",
+      "status": 200,
+      "bytes": 8371,
+      "sha256": "43ff457a9ee4fcc4c7ee58e4f6f7818118d2a5ef649dfb77e20d21d00d59b00c",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach-profile.mjs",
+      "status": 200,
+      "bytes": 8826,
+      "sha256": "12c01d8b42466b11cfdb696de7616275291cb041b3ed97276f27030abe8d76bb",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "combat.mjs",
+      "status": 200,
+      "bytes": 1133,
+      "sha256": "07a7d685d7ecaf8dd4e3962ada55fd3295f1edef465edf8e5787d397295d82a9",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "creature/assets/editor.js",
+      "status": 200,
+      "bytes": 457899,
+      "sha256": "66dd809e0d9f3f970be208a6f2fe5bb2f2fae6d4122190e91302614265f0208c",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "creature/assets/phone.js",
+      "status": 200,
+      "bytes": 426892,
+      "sha256": "1ebee8b47a33e3b1305e7d7c43cf619edb612b3082c1147c2911fbd2a7e78c5d",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "launch-runtime.mjs",
+      "status": 200,
+      "bytes": 457238,
+      "sha256": "26218bbfc450146bdda2cde547f7690de8d153ec2d261f2ec90dbb914d04fd3a",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "launch.mjs",
+      "status": 200,
+      "bytes": 38109,
+      "sha256": "ed339ac2760ec163859c9837ae0f3b352aa5dc7b34329bccc79ff64bcc32ab5b",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "bytes": 549,
+      "sha256": "c4bf8625a8a6613b6920d4568e1730409cc1ba55dc23024fff75cab0d0c1fca4",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "meditation.css",
+      "status": 200,
+      "bytes": 45245,
+      "sha256": "4cc6c61adad608ac3ed11db08e5b25b2bfd3c98ab831d21ad981d61e2da4cf5b",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "meditation.mjs",
+      "status": 200,
+      "bytes": 16160,
+      "sha256": "3a6f4b7252cd03304beae743f2930dbfa43119ffadac67c7ec40cf8b5538f4fe",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/materials/post-download-ui.mjs",
+      "status": 200,
+      "bytes": 7423,
+      "sha256": "6f8e081d1a218c85d52996fe1a15c2ba2f836acdde15085ede466bd87c0c59a8",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/phone-orientation.mjs",
+      "status": 200,
+      "bytes": 6746,
+      "sha256": "5f812e2b18fe903a5716decec6a4e1f4e9a34f02ee547d83cbe2561e03b1caac",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board-cogs.mjs",
+      "status": 200,
+      "bytes": 42776,
+      "sha256": "4a010b145d329194a693f37f5f0eb628064e80f7a95a78218061816cdd31f6fc",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board-glb.mjs",
+      "status": 200,
+      "bytes": 22443,
+      "sha256": "1c9d0e784613f86637383dec8a6bb887f112d4013ded6cf33955efb5048402ae",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board-grass.mjs",
+      "status": 200,
+      "bytes": 18171,
+      "sha256": "aa608ce23f6f3a761ad61635a9f661a889087e025928f322c397c21b2ea244dd",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board-ice.mjs",
+      "status": 200,
+      "bytes": 12116,
+      "sha256": "b02fd1bb12c36e79efc34cf666db266a97ac95c69c0aa8ea2a6c7d7f4a527f85",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board-jelly.mjs",
+      "status": 200,
+      "bytes": 20810,
+      "sha256": "01de254c6dfc764dc8989789b2398d4ddb056f5502ef3ce62ca77242623cd851",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-board.mjs",
+      "status": 200,
+      "bytes": 27068,
+      "sha256": "e74e7c36d92b8f424363579662f69cf23dbe08c28b0fb563e0845a2c5b535b4d",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-look.mjs",
+      "status": 200,
+      "bytes": 2062,
+      "sha256": "729e23e2c21489efdcd3adc3651ce9f80476cdcd387475e91cd9dbb469e01ca4",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-cogs.mjs",
+      "status": 200,
+      "bytes": 967,
+      "sha256": "55fa2457030c9ccda8bfc02e5e4f0b5de455257a6b8332702ead7e279190f759",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-grass.mjs",
+      "status": 200,
+      "bytes": 993,
+      "sha256": "1c267753a72abd96de64fb6e36d1a0701d059fe898edca432aee7f61435c6aa4",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-ice.mjs",
+      "status": 200,
+      "bytes": 739,
+      "sha256": "d20d03c3bc80ca4d7e029ab2d9070b793192930aea62b1798f7c23ca9bc6a230",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-jelly.mjs",
+      "status": 200,
+      "bytes": 594,
+      "sha256": "472bcad2c4641445e8a2712c8ee7b458d8b7c6c771d5bed06b66dbe1d2574700",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-palettes.mjs",
+      "status": 200,
+      "bytes": 5949,
+      "sha256": "6e608d7a6620c3915155cc6fb5141d0b82ddbed6e833fd9dcf02507445ab025f",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-wood.mjs",
+      "status": 200,
+      "bytes": 849,
+      "sha256": "79294b9b88d6715e207185ef0da8f0d89f4e3a8659c650efaa366b0cb9964eef",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal.css",
+      "status": 200,
+      "bytes": 36166,
+      "sha256": "71a58de77cd6b3134663f119f7bc40f049f9a619df3f145aa89b0b7756819c2f",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal.mjs",
+      "status": 200,
+      "bytes": 152199,
+      "sha256": "42be19c27e19a1547a01ce63344f2f897bc4f3261842e486a0e4c9c187dbc9bc",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/rooms/reminders-computer.css",
+      "status": 200,
+      "bytes": 3443,
+      "sha256": "7aa41ac0fa4526c1f976af3319fd1b495ab78b7130570b674cd07a96ca363862",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/rooms/reminders-computer.mjs",
+      "status": 200,
+      "bytes": 17352,
+      "sha256": "832d74c166c1a9597653fba79f526c313b14d51bdcf742eec33a8587d900c452",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/routes.mjs",
+      "status": 200,
+      "bytes": 17251,
+      "sha256": "71d5ffa51532e99dc4b48af6d3f798f490aee3b413b25ec04e868b6c9f77dd25",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/ships/ship-view.mjs",
+      "status": 200,
+      "bytes": 18979,
+      "sha256": "a8e3e4243ab9ce784a06091321c4a355bed6aea934bf6cc5bb1b42997f80dae2",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "onboarding.mjs",
+      "status": 200,
+      "bytes": 9424,
+      "sha256": "1c1f93be7d642ac942c54bb913e1a4961f88200148909ec76759df42e61422ba",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/assets/nebula.png",
+      "status": 200,
+      "bytes": 1692574,
+      "sha256": "2e25a64dc6537b7b44177ef1d314c265d304472174e3863045ca7be914d89e99",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/assets/ship-interior-cutout.png",
+      "status": 200,
+      "bytes": 839235,
+      "sha256": "f62d778ce22adae426365a2323836431fb1ac7f3953785566c783f324f737040",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/gala-avatar.js",
+      "status": 200,
+      "bytes": 27123,
+      "sha256": "514d85f81776d0672c5f03baa397ebc5866a363d9a6fe376598e65407d05b585",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/pod.mjs",
+      "status": 200,
+      "bytes": 23268,
+      "sha256": "d09b67f5e5d805857ec983bf22a164f8d9ceb11ec1990a7229d908085cadb7d7",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/rooms/console.glb",
+      "status": 200,
+      "bytes": 9885132,
+      "sha256": "312379b3e746956398f08d430bdde4ccb3e00df8b24ad98ea80f84f2ba7c39d7",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/ship-backdrop.mjs",
+      "status": 200,
+      "bytes": 5977,
+      "sha256": "0f63d6ab19e3ef1aaffd18d37ad00aaf94180ce8f8c364a1e9cbebf6374bdc09",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/ship-interior.css",
+      "status": 200,
+      "bytes": 7280,
+      "sha256": "334f86ddaa86400fedfbbe98433af0e324c3c69ed21ee29ae10b0d56cda01dd6",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pose.html",
+      "status": 200,
+      "bytes": 19356,
+      "sha256": "1e10c1bd59658e3c201e6ce830d9c299a5afd551df2e8bc79788704b77742f1b",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "post-download.mjs",
+      "status": 200,
+      "bytes": 25322,
+      "sha256": "263c6378709251944658390f82c6dec86ec11d84e10b563002a253e62f0e5f6a",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "release-build.mjs",
+      "status": 200,
+      "bytes": 101,
+      "sha256": "6a0658d63f946c833ce82f23e5d27bbcc086d6c96fe3e35ee7b81f90a7ed4232",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "release-info.mjs",
+      "status": 200,
+      "bytes": 1772,
+      "sha256": "08114453d28398ee729893a969907e88061d77b6301da4e844925eae52a1ff4d",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "signin.mjs",
+      "status": 200,
+      "bytes": 3731,
+      "sha256": "517de1a352761048bb6e8ad4ac8a3cf9871a90c001603179248a9801dc9fa4b9",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "bytes": 85914,
+      "sha256": "c619711a5d7d9525041e9eaa8654e77f000b001f520b6f1f85f9575bef9da62f",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "war-room/index.html",
+      "status": 200,
+      "bytes": 6047,
+      "sha256": "9abfb1ac62814bab12fdc1b480e0bf5960648f55d83d4bd0daa90fa5458438eb",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "war-room/war-room.css",
+      "status": 200,
+      "bytes": 5438,
+      "sha256": "a770038f6f5b7cb82e6b57ce10a00bf72288f60b31b9d2a24d95fa896fad90fe",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "war-room/war-room.mjs",
+      "status": 200,
+      "bytes": 5360,
+      "sha256": "35d8e5933fb735ac31d1f66c24a7ccdd0b42843085c6674467233ef64f684e4b",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/worlds/meditation-waterfall.png",
+      "status": 200,
+      "bytes": 784601,
+      "sha256": "b21532fd501071f92b8e47d72ef5b26c2b67c9b88164910010861060c82fd32d",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "scoreboard.mjs",
+      "status": 200,
+      "bytes": 11919,
+      "sha256": "098cff21919bed6751eb36f1ec61b94938e3d797348f272b826f40d2d837594a",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "achievements-board.mjs",
+      "status": 200,
+      "bytes": 14452,
+      "sha256": "9d6dc1831fa5e6cd5c2bb525883e81fff908b6ca256d770f720aa085a726799f",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/standalone-housing.css",
+      "status": 200,
+      "bytes": 4284,
+      "sha256": "bd9878c7fd7d6d447301b5010068e38c0d3fb7717406a9c6d501894a46b2bf46",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "camera-workout.css",
+      "status": 200,
+      "bytes": 1650,
+      "sha256": "cd7fabf737b8f1e78b7018a334b5e0561a3177a1b5fd972c81f08b531cedb801",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "movement-rules.mjs",
+      "status": 200,
+      "bytes": 9741,
+      "sha256": "7db61b5d451f5ea6158b4bd0c5fb0e618a3f991afa4d92d9ad875eac471d86aa",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach-hub.mjs",
+      "status": 200,
+      "bytes": 18602,
+      "sha256": "fd142c55cc848261bc40ea077ee4eb7b5739634e9f1ed5a0319fb8c0b927eb88",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "battle-pass-rewards.mjs",
+      "status": 200,
+      "bytes": 17534,
+      "sha256": "827c7815a2e39111995f6ce5e0d047f373c0bbd34801255f59aab11489fcc21c",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "reward-packs.mjs",
+      "status": 200,
+      "bytes": 3787,
+      "sha256": "5fe030fe63bc79daff12afe82d40cdb98d0e7307b4587f37c2617f33f7775721",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "creature/index.html",
+      "status": 200,
+      "bytes": 11555,
+      "sha256": "c70b74fd9b7c65df0fdf3c4d9623c371604d003613bf6698a4620f924721c7a6",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "creature/creature.css",
+      "status": 200,
+      "bytes": 12686,
+      "sha256": "2b4d067a09960c296dce2389f9bdc2b189a3561078fa7caddd9cd5deb4eaae09",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "war-room/gala-bay.js",
+      "status": 200,
+      "bytes": 264488,
+      "sha256": "883a96e576a9afd3bf43b87a291c437971cb718ad6d26b92148533c645c0dee8",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach-net.mjs",
+      "status": 200,
+      "bytes": 1949,
+      "sha256": "470300b65021710b6135504505de721941d96388dd2bf8c23be4ea5427f24803",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/portal-peek.mjs",
+      "status": 200,
+      "bytes": 7760,
+      "sha256": "ae71f4fad165a8f692923b05718d740591bd14b7643fc85164558308317f6686",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "modules/portal/standalone-housing.mjs",
+      "status": 200,
+      "bytes": 6273,
+      "sha256": "2a05842dc1f406389f1d3757431841c15f08fea6c1343b4f64e1a0b938166e78",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "hologram.mjs",
+      "status": 200,
+      "bytes": 5513,
+      "sha256": "874849fe8817d0af08d49fe5f7a346e14c4b388fe0997f0ca9bf1374af61c56c",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "robot-audio.mjs",
+      "status": 200,
+      "bytes": 3246,
+      "sha256": "28b34922d5a35510568d5fd751eacb4310fc732e70611efee2981c9a85294882",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "coach.mjs",
+      "status": 200,
+      "bytes": 5759,
+      "sha256": "cd2e2721a307fea1f4599c72160055cdcc65b4b493702ac208dbbe12d487d7d5",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "camera-workout.mjs",
+      "status": 200,
+      "bytes": 3194,
+      "sha256": "ccfb2dd4ffcddbe92ac611cf98bfd39569fd3818bef0d6f3740af54dc4adffa6",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "app.mjs",
+      "status": 200,
+      "bytes": 29481,
+      "sha256": "1c4a9d97cff99b928b06256d9d1f541a50def94c078a2ebe0c99430b13129f32",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "achievements-board.css",
+      "status": 200,
+      "bytes": 7853,
+      "sha256": "5a6a771af242c74d973936d346ab9cf958b4385c2e3e1c4afdc1dbbcd308f63d",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "creature/assets/editor.js.map",
+      "status": 404,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "match": null,
+      "local": false
+    },
+    {
+      "path": "creature/assets/phone.js.map",
+      "status": 404,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "match": null,
+      "local": false
+    },
+    {
+      "path": "creature/source/editor-workbench.ts",
+      "status": 404,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "match": null,
+      "local": false
+    },
+    {
+      "path": "launch.css",
+      "status": 200,
+      "bytes": 16491,
+      "sha256": "500b3208d3f3bc1414184a3eb56a2e230e9dfaff89c390d585c291a7c18fad99",
+      "match": true,
+      "local": true
+    },
+    {
+      "path": "pod/mom-inc-engrave.png",
+      "status": 200,
+      "bytes": 11485,
+      "sha256": "390e24878ea4e7b747526dccd9d98d8654279339cda079ae8e687265539e3c35",
+      "match": true,
+      "local": true
+    }
+  ],
+  "api": {
+    "health": {
+      "status": 200,
+      "cache_control": "no-store",
+      "body": {
+        "ok": true,
+        "app": "MYR5 Coach",
+        "reminders": {
+          "mode": "worker-cron",
+          "lastTickAgeS": null,
+          "active": false
+        }
+      }
+    },
+    "api/auth/config": {
+      "status": 200,
+      "cache_control": "no-store",
+      "body": {
+        "enabled": false,
+        "publishableKey": null,
+        "frontend": null
+      }
+    }
+  },
+  "home": {
+    "status": 200,
+    "bytes": 19332
+  }
+}
