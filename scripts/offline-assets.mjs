@@ -20,13 +20,13 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // R9-OFFLINE: the pinned pose tracker (vendor/mediapipe, scripts/mediapipe.mjs) is Starter too, so camera workouts run offline.
 export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$|vendor\/mediapipe\/)/;
 export const BOARDS=/^\/pod\/worlds\/boards\//;
-const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood)\.mjs$/;
+const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood|pond)\.mjs$/;
 export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|modules\/rooms\/classroom\.(?:mjs|css))$/;
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.(?:glb|webp)|modules\/rooms\/reminders-computer\.css)$/;
 // W4-4E (D47): the customizer cage and the Draco decoder only it needs. Never core; the customizer stays 2D without it.
 export const CAGE_ROOM=/^\/pod\/rooms\/cage\//;
 // Each grimoire's art: its GLB board (cogs: its folder), its flat poster (portal.mjs's base layer) and its tunnel effect.
-const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+',jelly:'jelly\\.glb',wood:'wood\\.glb'};
+const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+',jelly:'jelly\\.glb',wood:'wood\\.glb',pond:'(?!)'}; // pond is procedural: just its poster and tunnel
 const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+id,new RegExp(`^/(?:pod/worlds/boards/(?:${art}|${id}-poster\\.webp)|modules/portal/portal-tunnel-${id}\\.mjs)$`)]);
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).

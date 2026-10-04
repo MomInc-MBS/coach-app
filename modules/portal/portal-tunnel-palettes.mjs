@@ -36,6 +36,12 @@ const RAW_PALETTE_DATA = {
     { id: 'neon', label: 'Neon', colors: ['#E040FB', '#D500F9', '#AA00FF', '#6200EA'], core: '#6200EA' },
     { id: 'cosmic', label: 'Cosmic', colors: ['#7E57C2', '#5E35B1', '#4527A0', '#311B92'], core: '#311B92' },
     { id: 'fruit', label: 'Fruit', colors: ['#FFAB91', '#FF8A65', '#FF7043', '#F4511E'], core: '#F4511E' }
+  ],
+  pond: [
+    { id: 'brackish', label: 'Brackish', colors: ['#0E3B3A', '#2E6B5C', '#7FB8A0', '#4F7A2E'], core: '#5FD3B8' },
+    { id: 'koi', label: 'Koi', colors: ['#0B2E33', '#1F5C66', '#FF8A3D', '#3F6F2A'], core: '#FFB067' },
+    { id: 'lotus', label: 'Lotus', colors: ['#12313A', '#3B6E73', '#FFC2D9', '#4D7B33'], core: '#FFD3E4' },
+    { id: 'moonlit', label: 'Moonlit', colors: ['#071A2B', '#1D4766', '#9CC9E0', '#2F5A4A'], core: '#CFE8F5' }
   ]
 };
 
