@@ -39,6 +39,16 @@ test('an old recipe (no materials field) parses, round-trips and resolves exactl
  }
 });
 
+test('eye layout migration maps removed keys (around, frontBack) to their replacements',()=>{
+ const base=fresh();
+ const withAround={...base,eyeLayout:'around'};
+ const withFrontBack={...base,eyeLayout:'frontBack'};
+ const parsedAround=parseRecipe(JSON.stringify(withAround));
+ const parsedFrontBack=parseRecipe(JSON.stringify(withFrontBack));
+ assert.equal(parsedAround.eyeLayout,'triangle','around migrates to triangle');
+ assert.equal(parsedFrontBack.eyeLayout,'horizontal','frontBack migrates to horizontal');
+});
+
 test('parseRecipe accepts a valid optional materials override and rejects malformed ones',()=>{
  const base=fresh();
  const withMaterial={...base,materials:{head:{textureId:'clay',colorId:'default-gold',sparkle:.5,metallic:.2}}};
