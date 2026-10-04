@@ -23,7 +23,7 @@ Recovered Claude's GPU preference/CPU fallback and inference-rate display. Added
 
 - Final focused tests: 169 passed, zero failed. Final camera/counting/coach browser tests: 4 passed, zero failed. Build/offline packaging passed.
 - Mocked browser probes verify GPU-to-CPU fallback and cancellation while initialization is pending. They do not measure actual phone inference speed.
-- Broad suite has app-test failures and is not a release gate pass. A targeted untouched counting-baseline run reproduced 7 failures among 11 selected checks; other failures need the integration owner's solo reruns and comparison. Evidence logs are in `docs/evidence/` (ignored local logs).
+- Broad suite has app-test failures and is not a release gate pass. Its run was stopped after a download test timed out and output stopped advancing for ten minutes, to release resources for concurrent app work. A targeted untouched counting-baseline run reproduced 7 failures among 11 selected checks; other failures need the integration owner's solo reruns and comparison. Evidence logs are in `docs/evidence/` (ignored local logs).
 - Actual phone testing remains required. Very low sampling rates miss unobserved rep endpoints. Cropped upper-body plank can be ambiguous; lower-body holds still need visible knees. Hold credit/grace policies remain inconsistent and documented, rather than silently changed.
 
 Please acknowledge this handoff in a shared coordination file/channel before simultaneous edits to any workout source. Until then, this lane leaves R21 integration files and its active worktree untouched.
