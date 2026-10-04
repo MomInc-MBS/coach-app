@@ -7,7 +7,7 @@ import {PRODUCTION_PORTALS} from '../modules/portal/portal.mjs';
 import {offlineInventory} from '../scripts/offline-assets.mjs';
 
 test('Quilt remains the built-in fallback while physics boards are selectable',async()=>{
- assert.deepEqual(PRODUCTION_PORTALS,['quilt','ice','grass','cogs','jelly','wood']);
+ assert.deepEqual(PRODUCTION_PORTALS,['quilt','ice','grass','cogs','jelly','wood','pond']);
  const portal=await readFile(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
  assert.match(portal,/return 'quilt'/);
  assert.match(portal,/const BOARDS=\{quilt:/);
@@ -30,7 +30,7 @@ test('production build keeps physics board art in an opt-in group',async t=>{
  const forbidden=['cog-kit.glb','cogs.glb'];
  async function files(dir){let out=[];for(const e of await readdir(dir,{withFileTypes:true})){const path=join(dir,e.name);out=e.isDirectory()?out.concat(await files(path)):[...out,path];}return out;}
  const paths=await files(client),portable=paths.map(path=>path.replaceAll('\\','/')),names=portable.map(path=>decodeURIComponent(path.split('/').at(-1)));
- for(const name of ['portal-board-glb.mjs','portal-board-ice.mjs','portal-board-grass.mjs','portal-board-cogs.mjs','portal-board-jelly.mjs','portal-board-wood.mjs'])assert(names.includes(name),`${name} ships`);
+ for(const name of ['portal-board-glb.mjs','portal-board-ice.mjs','portal-board-grass.mjs','portal-board-cogs.mjs','portal-board-jelly.mjs','portal-board-wood.mjs','portal-board-pond.mjs'])assert(names.includes(name),`${name} ships`);
  assert(!portable.some(path=>path.includes('/plan/')),'authoring prototypes must not be deployed');
  assert(portable.some(path=>path.endsWith('/pod/worlds/quilt.webp')),'quilt texture ships');
  for(const name of forbidden)assert(!names.includes(name),`${name} must not ship`);
@@ -38,7 +38,7 @@ test('production build keeps physics board art in an opt-in group',async t=>{
  const {core,optional}=await offlineInventory(client);
  assert(optional.some(asset=>asset.url==='/pod/worlds/quilt.webp'&&asset.group==='starter'),'the quilt art is the Starter download (W2-2O), not core');
  assert(core.some(asset=>asset.url==='/vendor/three/three.module.js'),'offline core includes the starter portal renderer');
- for(const [id,names] of Object.entries({ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['door.glb','parts-kit.glb','door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb']})){
+ for(const [id,names] of Object.entries({ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['door.glb','parts-kit.glb','door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb'],pond:['pond-poster.webp']})){
   for(const name of names)assert(optional.some(asset=>asset.url.endsWith('/'+name)&&asset.group===`grimoire-${id}`),`${name} belongs to ${id} grimoire`);
   assert(optional.some(asset=>asset.url===`/modules/portal/portal-tunnel-${id}.mjs`&&asset.group===`grimoire-${id}`),`${id} tunnel belongs to its device packet`);
  }

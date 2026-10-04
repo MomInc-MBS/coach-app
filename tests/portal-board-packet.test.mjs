@@ -12,7 +12,7 @@ const glb=async path=>{
 };
 
 test('each grimoire device bundles its art and tunnel; quilt art stays Starter',async()=>{
- const paths={ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['cogs/door.glb','cogs/parts-kit.glb','cogs/door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb']};
+ const paths={ice:['ice.glb'],grass:['grass.glb','flower.glb'],cogs:['cogs/door.glb','cogs/parts-kit.glb','cogs/door-layout.json'],jelly:['jelly.glb'],wood:['wood.glb'],pond:['pond-poster.webp']}; // pond: procedural, no GLB
  for(const [id,files] of Object.entries(paths)){
   for(const path of files)assert.equal(groupOf(`/pod/worlds/boards/${path}`,new Map()),`grimoire-${id}`);
   assert.equal(groupOf(`/modules/portal/portal-tunnel-${id}.mjs`,new Map()),`grimoire-${id}`);

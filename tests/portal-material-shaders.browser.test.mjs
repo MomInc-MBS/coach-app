@@ -10,7 +10,7 @@ test('every material compiles and links against the production tunnel shader',as
  assert.ok(start>=0&&end>start,'production shader has an extractable boundary');
  const fragment=vm.runInNewContext(source.slice(start,end)+'\ntunnelFragment');
  const variants=[{id:'quilt',material:''}];
- for(const id of ['ice','jelly','cogs','wood','grass']){
+ for(const id of ['ice','jelly','cogs','wood','grass','pond']){
   const {material}=await import('../modules/portal/portal-tunnel-'+id+'.mjs');
   variants.push({id,material});
  }

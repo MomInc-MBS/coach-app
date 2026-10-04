@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {PALETTES,paletteFor,paletteOptions} from '../modules/portal/portal-tunnel-palettes.mjs';
 
 test('material presets expose valid distinct palettes and usable labels',()=>{
- for(const board of ['wood','ice','cogs','grass','jelly']){
+ for(const board of ['wood','ice','cogs','grass','jelly','pond']){
   const rows=paletteOptions(board);assert(rows.length>=3,board);
   assert.equal(new Set(rows.map(row=>row.id)).size,rows.length);
   for(const row of rows){assert(row.id&&row.label);assert(row.colors.length>=3&&row.colors.length<=6);assert(row.colors.every(color=>/^#[0-9a-f]{6}$/i.test(color)));assert.match(row.core,/^#[0-9a-f]{6}$/i);}
