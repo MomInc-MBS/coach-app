@@ -768,22 +768,22 @@ export function namePath(face,gap=7){const y=d2(face.top-gap);return `M${d2(face
 // is gone within ~20 px (inside the menus' own padding); nothing in it takes a pointer, and the name (#132) rides outside
 // the window. Built from masks drawn once; the flow is a conic gradient turning inside them by transform, so running it
 // costs the compositor, not a repaint. Static under reduced motion.
-const AURA={spinMs:16000,flickerMs:1300,sparks:18,sparkMs:800,specPx:40,maskScale:.5};
+const AURA={spinMs:16000,flickerMs:1300,sparks:18,sparkMs:800,specPx:40,maskScale:.5,
+ // R21 L2: the inward feather fades over featherFrac of the face's short side (was ~36px) at featherAlpha peak (was .9 stacked), shadeK scales the dark depth strokes, fullFrac/fullAlpha are the same for full-screen faces.
+ edgeAlpha:.85,featherFrac:.3,featherAlpha:.3,fullFrac:.18,fullAlpha:.16,shadeK:.4,outK:.5}; // outK scales the outward glow bands past the first (rail-side rim)
 let aura=null;
 // White-on-clear mask of the rim band: an inward vignette (clipped inside the outline), an outward glow (outside it) with
 // round fire tongues (a seeded dash rhythm on a wide round-capped stroke). A soft glow needs no detail, so it's drawn once
 // on a canvas at AURA.maskScale and handed over as a PNG: an SVG mask re-rasterised at the screen's full density cost
 // hundreds of ms on the first frame. The hot rim line is a crisp stroke in the aura's own svg instead.
-function rimMask(pts,w,h,seed,shaped,fullscreen=false){
+function rimMask(pts,w,h,seed,shaped,fullscreen=false,face=null){
  const k=AURA.maskScale,c=document.createElement('canvas');c.width=Math.ceil(w*k);c.height=Math.ceil(h*k);
  const g=c.getContext('2d',{willReadFrequently:true}),path=new Path2D(pathD(pts)),outside=new Path2D(`M0 0H${w}V${h}H0Z${pathD(pts)}`);
  let s=seed;const r=()=>(s=(s*16807)%2147483647)/2147483647,dash=(a,b)=>Array.from({length:12},()=>[a*(.3+r()),b*(.6+r())]).flat();
  g.scale(k,k);g.strokeStyle='#fff';g.lineJoin='round';
  const band=(width,alpha,dashes=null,cap='butt')=>{g.lineWidth=width;g.globalAlpha=alpha;g.lineCap=cap;g.setLineDash(dashes||[]);g.stroke(path);};
- g.save();g.clip(path);
- if(!fullscreen)for(const [a,b] of [[5,.9],[12,.4],[22,.16],[36,.06]])band(a,b);
- g.restore();
- g.save();g.clip(outside,'evenodd');
+ g.save();if(face)g.clip(new Path2D(`M${face.left} ${face.top}h${face.width}v${face.height}h${-face.width}Z`)); // never over the rail, bolts or corners
+ g.clip(outside,'evenodd');
  if(fullscreen){
    const image=g.createImageData(c.width,c.height),smooth=t=>t*t*(3-2*t),xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),bx=Math.min(...xs),by=Math.min(...ys),bx2=Math.max(...xs),by2=Math.max(...ys),rail=Math.max(1,Math.min(bx,by,w-bx2,h-by2));
    for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
@@ -792,8 +792,15 @@ function rimMask(pts,w,h,seed,shaped,fullscreen=false){
    }
    g.putImageData(image,0,0);
   }
-  else if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,b);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
- else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,b);band(11,.32,dash(3,26),'round');}
+  else if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,a===5?b:b*AURA.outK);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
+ else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,a===5?b:b*AURA.outK);band(11,.32,dash(3,26),'round');}
+ g.restore();
+ // Last: the full-screen glow is a putImageData, which overwrites every pixel it covers, so the inward feather goes on top of it.
+ g.save();g.clip(path);
+ {const px=pts.map(p=>p[0]),py=pts.map(p=>p[1]),short=Math.min(Math.max(...px)-Math.min(...px),Math.max(...py)-Math.min(...py)),
+   D=short*(fullscreen?AURA.fullFrac:AURA.featherFrac),peak=fullscreen?AURA.fullAlpha:AURA.featherAlpha,n=10;
+  for(let i=0;i<n;i++)band(2*D*(1-i/n),peak/n); // stacked strokes: opacity falls off linearly from the rim to D inside
+  if(!fullscreen)band(4,AURA.edgeAlpha);} // the thin bright neon edge that still reads as a portal
  g.restore();
  return `url("${c.toDataURL()}")`;
 }
@@ -814,11 +821,13 @@ function showAura(look,why='open'){
  const label=look.id==='down'?'':String(look.label||'').toUpperCase().replace(/[<&>]/g,''); // Achievements already titles the scene inside the cut.
  // One static svg (the aperture's depth inside the outline, the name outside it) and one masked layer holding the
  // flow: two neon wheels turning against each other (the second flickering, for the fire) and the specular blob.
- el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".2" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity=".28" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="var(--aura-edge)" stroke-width="2.5" stroke-linejoin="round"/>`
+ el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><path id="portalAuraP" d="${d}"/><clipPath id="portalAuraIn"><use href="#portalAuraP"/></clipPath>${look.name?`<path id="portalAuraName" d="${look.name}"/>`:''}</defs><g clip-path="url(#portalAuraIn)" fill="none" stroke-linejoin="round"><use href="#portalAuraP" stroke="#07040b" stroke-opacity="${d2(.2*AURA.shadeK)}" stroke-width="34"/><use href="#portalAuraP" stroke="#07040b" stroke-opacity="${d2(.28*AURA.shadeK)}" stroke-width="15"/><use href="#portalAuraP" stroke="#fff" stroke-opacity=".6" stroke-width="2.4"/></g><use href="#portalAuraP" fill="none" stroke="var(--aura-edge)" stroke-width="2.5" stroke-linejoin="round"/>`
   +(label&&look.name?`<text class="portal-aura-name"><textPath href="#portalAuraName" startOffset="50%" text-anchor="middle">${label}</textPath></text>`:'')+'</svg>'
   +'<i class="portal-aura-fire"><i></i><i class="b"></i><i class="portal-aura-spec"></i></i>';
  const fire=el.querySelector('.portal-aura-fire'),[wa,wb,blob]=fire.children;
- setMask(fire,rimMask(look.pts,w,h,7,look.shaped,look.fullscreen));
+ const fl=parseFloat(chrome.style.getPropertyValue('--face-left')),ft=parseFloat(chrome.style.getPropertyValue('--face-top')),fw=parseFloat(chrome.style.getPropertyValue('--face-width')),fh=parseFloat(chrome.style.getPropertyValue('--face-height')),
+  face=[fl,ft,fw,fh].every(Number.isFinite)?{left:fl,top:ft,width:fw,height:fh}:null;
+ setMask(fire,rimMask(look.pts,w,h,7,look.shaped,look.fullscreen,look.fullscreen?null:face)); // full-screen faces keep their deliberate rail glow (R19)
  const R=Math.max(bw,bh)*.45,far=Math.ceil(Math.max(...[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>Math.hypot(x-cx,y-cy))));
  blob.style.cssText=`left:${d2(bx+bw*.2-R/2)}px;top:${d2(by+bh*.14-R/2)}px;width:${d2(R)}px;height:${d2(R)}px`;
  for(const wheel of [wa,wb])wheel.style.cssText=`left:${d2(cx-far)}px;top:${d2(cy-far)}px;width:${2*far}px;height:${2*far}px`;
