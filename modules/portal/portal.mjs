@@ -23,7 +23,7 @@ import {paletteFor,paletteOptions} from './portal-tunnel-palettes.mjs';
 // the glass. tunnelFrom/To: wormhole speed (rings per second) at the cut, ramping up to tunnelTo by the dive, which adds
 // up to tunnelDive more. short (#124): the lines' and the X's wormhole runs the same cut, glass and dive at this share of
 // the closed shapes' cut/loading/dive timings.
-export const PORTAL={cutMs:1300,loadMinMs:3500,revealMs:1100,healMs:400,rippleMs:900,tunnelFrom:.35,tunnelTo:1.5,tunnelDive:6,short:.58};
+export const PORTAL={cutMs:867,loadMinMs:2333,revealMs:733,healMs:267,rippleMs:600,tunnelFrom:.35,tunnelTo:1.5,tunnelDive:6,short:.58};
 // Liquid-glass slab over the wormhole (CSS px): lens-map texel, bevel depth, max refraction at the rim,
 // rim inset inside the cut (the cloth hole's edge is ragged by about half a grid cell). #125 (Ian: "stronger"): thicker
 // bevel and deeper bend; fringe: the red/blue sample spread at the rim (blue bends furthest); magnify: centre lens.

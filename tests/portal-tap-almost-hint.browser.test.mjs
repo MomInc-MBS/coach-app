@@ -177,9 +177,9 @@ test('#24 reduced motion drops the wait: the glass phase (loadMinMs) and the fal
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
 
  // 'up' (Food, kind:'dialog') runs the default branch's full cut/glass/loadMinMs/dive/open sequence. If
- // loadMinMs (3500ms) were not skipped under reduced motion, this would take at least that long.
+ // loadMinMs (2333ms) were not skipped under reduced motion, this would take at least that long.
  const upMs=await page.evaluate(async()=>{const t0=performance.now();await window.portal.open('up');return performance.now()-t0;});
- assert(upMs<1500,`loadMinMs must be skipped under reduced motion: Food took ${upMs}ms (loadMinMs is 3500ms)`);
+ assert(upMs<1500,`loadMinMs must be skipped under reduced motion: Food took ${upMs}ms (loadMinMs is 2333ms)`);
  assert.equal(await page.evaluate(()=>document.getElementById('mealsPanel').open),true);
 
  // R7 (Ian 29 Sept): a peered menu hides its own Close (Escape/back/bar leave it), so close the dialog as that button does.
