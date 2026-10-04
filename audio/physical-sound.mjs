@@ -98,8 +98,11 @@ export class PhysicalSound{
  play(kind){
   if(!RATE[kind]||this.muted||!this.volume||this.document?.hidden)return;
   const now=performance.now(),previous=this.last.get(kind)||-Infinity;if(now-previous<RATE[kind])return;this.last.set(kind,now);
-  if(!this.context||this.context.state!=='running')return;
-  const variants=this.samples.get(kind);if(variants?.length)this.playSample(kind,variants[Math.floor(Math.random()*variants.length)]);else this.synth(kind);
+  const context=this.context;if(!context)return;
+  const start=()=>{if(this.context!==context||context.state!=='running'||this.document?.hidden||this.muted)return;
+   const variants=this.samples.get(kind);if(variants?.length)this.playSample(kind,variants[Math.floor(Math.random()*variants.length)]);else this.synth(kind);
+  };
+  if(context.state==='running')start();else void context.resume().then(()=>{this.syncAmbience();start();}).catch(()=>{});
   if(this.manifest&&SAMPLE[kind]&&this.sampleStatus.get(kind)!=='loading'&&this.sampleStatus.get(kind)!=='ready'&&Date.now()>=(this.sampleRetry.get(kind)||0))void this.loadSample(kind);
  }
  playSample(kind,buffer){
