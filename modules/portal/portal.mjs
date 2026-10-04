@@ -154,6 +154,14 @@ function shapeOutlinePts(id){
  return pts.filter((_,i)=>i%step===0);
 }
 const shapeClipPts=(id,rect)=>closeLoop(toClientPts(shapeOutlinePts(id),rect));
+// R21 L2: the opened window sits AURA.inset px inside the board face on every side, so the rim and its glow leave a strip of board
+// round them instead of touching the metal rail. Scales per axis about the box centre; the rect (the whole face) is left alone.
+function insetPts(pts,id){
+ if(id==='rect'||!AURA.inset)return pts;
+ const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),
+  kx=Math.max(.5,1-2*AURA.inset/(x1-x0||1)),ky=Math.max(.5,1-2*AURA.inset/(y1-y0||1)),cx=(x0+x1)/2,cy=(y0+y1)/2;
+ return pts.map(([x,y])=>[cx+(x-cx)*kx,cy+(y-cy)*ky]);
+}
 // The glass clip bleeds GLASS_BLEED px past the shape (clamped to the board face): triangles are cut by centroid, so the
 // hole's edge is jagged and would otherwise show bare background in the notches beyond the exact outline.
 const GLASS_BLEED=18;
@@ -558,7 +566,7 @@ function handOver(dialog){
  const run=++sequence;
  dialog.addEventListener('close',()=>closed(dialog,{pts:backPts(id),color:menu?.color||'#b026ff'},()=>run===sequence&&!lifecycle.signal.aborted),{once:true});
 }
-function backPts(id){const {pattern}=restFace();return pattern&&shapeClipPts(id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect',pattern);}
+function backPts(id){const {pattern}=restFace();if(!pattern)return pattern;const sid=id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect';return insetPts(shapeClipPts(sid,pattern),sid);}
 function stowBoard(){visibilityRun++;portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();}
 // A destination from the portal closed: back out to the quilt (the reverse dive, or #131's fizzle for a hole), unless the
 // frame already moved on (handOver) or the bar went to another route (it is the active route now).
@@ -770,7 +778,7 @@ export function namePath(face,gap=7){const y=d2(face.top-gap);return `M${d2(face
 // costs the compositor, not a repaint. Static under reduced motion.
 const AURA={spinMs:16000,flickerMs:1300,sparks:18,sparkMs:800,specPx:40,maskScale:.5,
  // R21 L2: the inward feather fades over featherFrac of the face's short side (was ~36px) at featherAlpha peak (was .9 stacked), shadeK scales the dark depth strokes, fullFrac/fullAlpha are the same for full-screen faces.
- edgeAlpha:.85,featherFrac:.3,featherAlpha:.3,fullFrac:.18,fullAlpha:.16,shadeK:.4,outK:.5}; // outK scales the outward glow bands past the first (rail-side rim)
+ edgeAlpha:.5,featherFrac:.3,featherAlpha:.3,fullFrac:.18,fullAlpha:.16,shadeK:.4,outK:.5,ringAlpha:.5,inset:12}; // outK scales the outward glow bands past the first; ringAlpha is the rim's own peak opacity (was .9); inset pulls shaped windows in from the face edge (px)
 let aura=null;
 // White-on-clear mask of the rim band: an inward vignette (clipped inside the outline), an outward glow (outside it) with
 // round fire tongues (a seeded dash rhythm on a wide round-capped stroke). A soft glow needs no detail, so it's drawn once
@@ -792,8 +800,8 @@ function rimMask(pts,w,h,seed,shaped,fullscreen=false,face=null){
    }
    g.putImageData(image,0,0);
   }
-  else if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,a===5?b:b*AURA.outK);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
- else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,a===5?b:b*AURA.outK);band(11,.32,dash(3,26),'round');}
+  else if(shaped){for(const [a,b] of [[5,.9],[12,.5],[24,.26],[42,.11],[66,.04]])band(a,a===5?AURA.ringAlpha:b*AURA.outK);band(24,.3,dash(5,44),'round');g.lineDashOffset=r()*60;band(14,.5,dash(3,30),'round');}
+ else{for(const [a,b] of [[5,.85],[11,.4],[18,.16]])band(a,a===5?AURA.ringAlpha:b*AURA.outK);band(11,.32,dash(3,26),'round');}
  g.restore();
  // Last: the full-screen glow is a putImageData, which overwrites every pixel it covers, so the inward feather goes on top of it.
  g.save();g.clip(path);
@@ -1739,7 +1747,7 @@ export function lensPts([ax,ay],[bx,by],half,n=24){
 export function portalWindow(id,rect){
  if(LINE_IDS.has(id)){const [a,b]=toClientPts(lineTemplatePts(id),rect),len=Math.hypot(b[0]-a[0],b[1]-a[1]);return {pts:lensPts(a,b,Math.min(.17*len,.3*rect.width)),axis:[a,b]};}
  if(id==='x'){const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=.3*Math.min(rect.width,rect.height);return {pts:closeLoop([[cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]])};}
- return {pts:shapeClipPts(id,rect)};
+ return {pts:insetPts(shapeClipPts(id,rect),id)};
 }
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
