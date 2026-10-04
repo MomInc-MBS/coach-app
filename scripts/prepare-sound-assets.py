@@ -3,6 +3,7 @@
 Requires Python 3 and ffmpeg/ffprobe. The two original generated waveforms are CC0.
 All paths and edit recipes are retained in audio/sfx/manifest.json for reproducibility.
 """
+import array
 import hashlib
 import html
 import json
@@ -93,18 +94,32 @@ for cue, name, master, provenance, duration, filter_prefix, seek in EDITS:
     target = OUT / (name + '.mp3')
     # Normalize masters once; category/interaction gains are controlled by the mixer.
     filters = filter_prefix + 'loudnorm=I=-22:TP=-3:LRA=7'
-    if duration >= 5:
-        filters += f',afade=t=in:st=0:d=0.5,afade=t=out:st={duration-.5}:d=0.5'
-    else:
+    if duration < 5:
         filters += ',afade=t=in:st=0:d=0.004'
         filters += f',afade=t=out:st={max(0,duration-.035)}:d=0.035'
-    subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-ss', str(seek),
-                    '-i', str(source), '-t', str(duration), '-af', filters, '-ar', '24000',
-                    '-ac', '1', '-codec:a', 'libmp3lame', '-b:a', '64k', str(target)], check=True)
+    decode = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-ss', str(seek),
+              '-i', str(source), '-t', str(duration), '-af', filters, '-ar', '24000', '-ac', '1']
+    if duration >= 5:
+        # Make a cyclic overlap: the output starts after the head, then its tail
+        # blends into that head. The next loop continues at the adjacent sample,
+        # without a recurring fade-to-silence or a discontinuous hard cut.
+        samples = array.array('f')
+        samples.frombytes(subprocess.check_output(decode + ['-f', 'f32le', '-']))
+        overlap = 12000
+        blend = array.array('f', (samples[-overlap+i] * (1-i/overlap)
+                                 + samples[i] * (i/overlap) for i in range(overlap)))
+        cyclic = samples[overlap:-overlap] + blend
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
+                        '-f', 'f32le', '-ar', '24000', '-ac', '1', '-i', 'pipe:0',
+                        '-codec:a', 'libmp3lame', '-b:a', '64k', str(target)],
+                       input=cyclic.tobytes(), check=True)
+    else:
+        subprocess.run(decode + ['-y', '-codec:a', 'libmp3lame', '-b:a', '64k', str(target)], check=True)
     url = '/audio/sfx/' + target.name
     manifest['cues'].setdefault(cue, []).append(url)
     manifest['assets'].append({'url': url, 'source': provenance, 'master': master,
                               'seek': seek, 'maxSeconds': duration, 'filters': filters,
+                              'loopCrossfadeSeconds': .5 if duration >= 5 else None,
                               'sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
                               'masterSha256': hashlib.sha256(source.read_bytes()).hexdigest(),
                               'bytes': target.stat().st_size})

@@ -145,14 +145,16 @@
   },
   {
     "file": "pod-hum.mp3",
-    "seconds": 10.437,
-    "peak": 0.2969,
-    "rms": 0.0836
+    "seconds": 9.938,
+    "peak": 0.2968,
+    "rms": 0.0841,
+    "cyclicCrossfadeSeconds": 0.5
   },
   {
     "file": "gentle-breeze.mp3",
-    "seconds": 12.0,
-    "peak": 0.5208,
-    "rms": 0.0739
+    "seconds": 11.5,
+    "peak": 0.5231,
+    "rms": 0.0755,
+    "cyclicCrossfadeSeconds": 0.5
   }
 ]

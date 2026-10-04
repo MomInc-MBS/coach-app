@@ -2,6 +2,7 @@ import {mountCameraWorkout} from './camera-workout.mjs';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
+import {mountCoachVoiceSettings} from './coach-voice-settings.mjs';
 import {initPod} from './pod/pod.mjs';
 import {openAchievements} from './achievements-board.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
@@ -28,6 +29,7 @@ window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=nu
 window.addEventListener('pageshow',event=>{if(event.persisted&&!phoneOrientation)phoneOrientation=mountPhoneOrientation();});
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
+mountCoachVoiceSettings({voice,settings:$('settings'),testButton:$('testVoice')});
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
 document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
 if(!voice.available){$('voiceType').textContent='Speech unavailable in this browser';$('toggleVoice').disabled=true;}

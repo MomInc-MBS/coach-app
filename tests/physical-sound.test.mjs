@@ -53,9 +53,10 @@ test('rapid gestures have bounded voices and hiding or muting stops playback',()
 
 test('the first cue plays when a gesture resumes a suspended audio context',async()=>{
  const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef:{hidden:false},windowRef:null});
+ sound.now=()=>100;
  sound.context=new Context();sound.context.state='suspended';sound.master=sound.context.createGain();sound.duck=sound.context.createGain();
  sound.play('mechanical');
- await new Promise(resolve=>setTimeout(resolve,0));
+ await Promise.resolve();
  assert.equal(sound.voices.size,1);
  sound.dispose();
 });

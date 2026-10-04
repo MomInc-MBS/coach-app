@@ -2,7 +2,7 @@
 
 User-authorized scope: implement the sound design and coach voice choices, coordinate with the existing workers, test, and publish to the existing live app.
 
-Base: Release 20 live, build `3e9a55ada9708984ac0d`, plus Release 21's plan-only commit `be4d18a`. Audio work is isolated on `codex/audio-release`; the `w/release-21` checkout and other workers' changes are untouched. Release 21 can merge the audio branch before its final build. Do not publish an older branch over a newer release: check the live build and latest deployment immediately before publishing.
+Base: Release 20 live, build `3e9a55ada9708984ac0d`, plus Release 21's plan-only commit `be4d18a`. The final candidate is isolated on `codex/audio-live` at `D:/myr5-work/audio-live`; `codex/audio-release` retains the asset/voice baseline for comparison. The `w/release-21` checkout and other workers' changes are untouched. Release 21 can merge `codex/audio-live` before its final build. Do not publish an older branch over a newer release: check the live build and latest deployment immediately before publishing.
 
 ## Sound map
 
