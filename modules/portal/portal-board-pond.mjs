@@ -26,7 +26,7 @@ export const POND={
  wanderSpeed:.06,attractSpeed:.11,schoolSpeed:.5,scatterSpeed:.4,maxForce:.7,arriveR:.14,
  jitter:2.4,margin:.12,sepR:.07,sepK:.6,
  joinR:.15,gap:.075,trailStep:.012,trailCap:160, // a fish joins the school this close to the finger; school spacing
- idleMs:15000,scatterMs:4000,bigMs:16000,bigLen:1.3,bigAlpha:.42, // the idle show
+ idleMs:15000,scatterMs:4000,bigMs:16000,bigLen:1.3,bigAlpha:.62, // the idle show
  wave:{cols:64,damping:.982,press:.9,drag:.35,hold:.05,holdHz:1.6,gain:90}, // ripple height-field
  glass:{bend:.12,fringe:.3,rim:.55},     // refraction (face widths at full slope), dispersion, finger-lit rim glint
  lily:'#ffd3e4',lilyCore:'#ffcc33',shadow:[.01,.035,.03],
@@ -280,7 +280,7 @@ function init({THREE,scene,mesh,uniforms,toWorld,wake}){
  const fishS={fish:makeFish(n,A,rng(5)),A,rand:rng(9),touch:null,lastTouch:performance.now(),trail:makeTrail(K.trailCap),members:0,phase:'wander'};
  S={THREE,K,A,toWorld,wake,uniforms,reduced,waves,waveTex,data,pads,lilies,padMesh,lilyMesh,coreMesh,fishMesh,fishMat,aFish,koi,fishS,
   pointers:new Map(),lilyColor:new THREE.Color(K.lily),m:new THREE.Matrix4(),q:new THREE.Quaternion(),e:new THREE.Euler(),v:new THREE.Vector3(),sc:new THREE.Vector3(),
-  lead:null,slope:[0,0],big:{x:0,y:0,a:0},bigSeed:Math.floor(Math.random()*1e6),fade:1,fadeTo:1,cutPoly:null,lastNow:performance.now(),dirty:true};
+  born:performance.now(),lead:null,slope:[0,0],big:{x:0,y:0,a:0},bigSeed:Math.floor(Math.random()*1e6),fade:1,fadeTo:1,cutPoly:null,lastNow:performance.now(),dirty:true};
  setLilyColor(K.lily);
  place(0,performance.now());
 }
@@ -378,12 +378,12 @@ function dispose(){
 
 export const pond={
  id:'pond',build,background:'#06110f',ink:true,
- guide:{color:'#bff8ee',alpha:.12,width:4}, // the hint shapes glow faintly on the water
+ guide:{color:'#bff8ee',alpha:.08,width:4}, // the hint shapes glow faintly on the water
  frame:POND.frame,keepColors:true,tintTarget:'trace',
  uniforms:{uWave:{value:null},uFinger:{value:null}},
  fragmentDecls:WATER_DECLS,
  vertexDisplace:'/* pond: flat water; the ripples live in the fragment */',
  fragment:WATER_FRAGMENT,
  init,step,press,move,release,cut,heal,dispose,setTint,
- debug:()=>S&&{phase:S.fishS.phase,members:S.fishS.members,fish:S.fishS.fish.map(f=>[f.x,f.y,f.a]),pads:S.pads.length,lilies:S.lilies.length,anchors:S.pads.filter(p=>p.anchor).length},
+ debug:()=>S&&{phase:S.fishS.phase,since:performance.now()-S.fishS.lastTouch,born:S.born,members:S.fishS.members,fish:S.fishS.fish.map(f=>[f.x,f.y,f.a]),pads:S.pads.length,lilies:S.lilies.length,anchors:S.pads.filter(p=>p.anchor).length},
 };
