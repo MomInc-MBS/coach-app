@@ -187,3 +187,13 @@ test('metallic and sparkle are continuous and pass straight through',()=>{
  const resolved=resolveRegionMaterial(0,{textureId:'flat',colorId:'#7f7d78',sparkle:.73,metallic:.4});
  assert.equal(resolved.sparkle,.73);assert.equal(resolved.metalness,.4);
 });
+
+test('R21 ship fields: an old recipe defaults shipId to its personality and shipColor to null; a saved choice round-trips',()=>{
+ const old=fresh();delete old.shipId;delete old.shipColor;old.coach='calm';
+ const parsed=parseRecipe(JSON.stringify(old));
+ assert.equal(parsed.shipId,'calm');assert.equal(parsed.shipColor,null);
+ const chosen=parseRecipe(JSON.stringify({...old,shipId:'mom',shipColor:'#aa33cc'}));
+ assert.equal(chosen.shipId,'mom');assert.equal(chosen.shipColor,'#aa33cc');
+ assert.throws(()=>parseRecipe(JSON.stringify({...old,shipId:'nope'})));
+ assert.throws(()=>parseRecipe(JSON.stringify({...old,shipColor:'red'})));
+});

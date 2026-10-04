@@ -7,12 +7,13 @@ import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './cre
 import {TEXTURES,COLORS,PALETTES,isLocked as idLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
 import {isGranted} from './creator/unlock-store';
+import {COACHES} from './creator/coaching';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
 import {saveRecipe,BODY_KEYS} from './save-look';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
-import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection} from '../../modules/ships/ship-access.mjs';
+import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection,ownedShipIds} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
@@ -115,6 +116,7 @@ function sync(){
  for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
 
  syncMomOnly();
+ syncShipRow();
  syncMaterials();
  syncSkinChoice();
  // R18: no unlock hints. The strip says only "Preview" (and flags a catalogue entry with no pattern yet).
@@ -195,7 +197,25 @@ for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({
 });b.dataset.kind='palette';palettes.append(b);}
 colorRoot.append(toggle,grid,label,palettes);}
 fillColours();
-function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
+// R21: the coach's ship, picked and tinted here in Species. Saved in the recipe (shipId, shipColor); owned ships also mirror to the
+// Ship tab's per-account key so the arrival scene's recolour event keeps working.
+const shipRow=$('shipColourRow'),shipPick=$('shipPick') as HTMLSelectElement;
+const shipLocked=(id:string)=>id!=='supportive'&&!ownedShipIds().includes(id);
+function saveShip(patch:{shipId?:Design['coach'];shipColor?:string|null}){
+ const next={...shown(),...patch},owner=editorOwner();commit(next);
+ if(owner&&next.shipId&&ownedShipIds().includes(next.shipId))try{const choice={ownerId:owner,ship:next.shipId,tint:next.shipColor??'#ffffff',colorId:rowColours.find(c=>c.hex===next.shipColor)?.id};localStorage.setItem(`${SHIP_SETTINGS_KEY}/${owner}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}catch{}
+}
+function fillShipRow(){
+ shipPick.replaceChildren(...COACHES.map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=(shipLocked(c.id)?'🔒 ':'')+c.name+' ship';o.disabled=shipLocked(c.id);return o;}));
+ shipRow.replaceChildren();const grid=document.createElement('div');grid.className='material-grid';grid.id='shipColourGrid';
+ const original=document.createElement('button');original.type='button';original.dataset.ship='original';original.textContent='Orig.';original.title='Original ship colours';original.setAttribute('aria-label','Original ship colours');original.onclick=()=>saveShip({shipColor:null});grid.append(original);
+ for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(idLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}
+ shipRow.append(grid);syncShipRow();
+}
+function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach;const color=look.shipColor??null;for(const b of shipRow.querySelectorAll<HTMLButtonElement>('button')){b.setAttribute('aria-pressed',String(b.dataset.ship==='original'?color===null:b.dataset.hex===color));}}
+shipPick.onchange=()=>{if(shipLocked(shipPick.value)){tell('That ship is locked');syncShipRow();return;}saveShip({shipId:shipPick.value as Design['coach']});};
+fillShipRow();
+function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
 
 for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
@@ -233,7 +253,7 @@ function shipSettings(){try{const owner=editorOwner();if(!owner)return{};const v
 
 function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=id[0].toUpperCase()+id.slice(1);sparkleOption(option,'ship','ship-'+id);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;for(const b of document.querySelectorAll<HTMLButtonElement>('#shipSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===current.colorId));void previewShip();}
 // #147: the ship takes one of the coach's unlocked colours/palettes; `tint` stays its primary hex, so the ship scene reads it unchanged.
-function persistShipEditor(colorId?:string){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,current=shipSettings();colorId??=current.colorId;const tint=colorId?colorTriad(colorId)?.primary:/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';if(!ownerId||shipTab.hidden||!owned.includes(ship)||!tint||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint,colorId};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
+function persistShipEditor(colorId?:string){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,current=shipSettings();colorId??=current.colorId;const tint=colorId?colorTriad(colorId)?.primary:/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';if(!ownerId||shipTab.hidden||!owned.includes(ship)||!tint||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint,colorId};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));commit({...shown(),shipId:ship as Design['coach'],shipColor:tint==='#ffffff'?null:tint});}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
 // The Ship tab's preview: only while that tab is open, only from this account's verified local ship bytes (never a
 // download). The choice itself is saved either way; the preview just shows it.
 let shipPreview:ReturnType<typeof mountShipPreview>|null=null,shipPreviewOwner:string|null=null,shipPreviewEpoch=0;
