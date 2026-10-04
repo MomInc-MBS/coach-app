@@ -108,7 +108,7 @@ async function start(){
   if($('camera').value==='manual')return startManual();
   const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
   $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
-  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Get into position.',{interrupt:true});$('detail').textContent='Waiting for video';
+  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say(MOVEMENTS[session.mode].name+'. Get into position.',{interrupt:true});$('detail').textContent='Waiting for video';
   let settleCameraStart;
   cameraStartTransition=new Promise(resolve=>{settleCameraStart=resolve;});
   try{
@@ -174,9 +174,9 @@ async function loop(run){
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
 $('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
-$('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
-$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
-$('duration').addEventListener('change',()=>{resetMovement();voice.say(Number($('duration').value)?$('duration').value+' second round.':'Open timer.',{interrupt:true});});
+$('goal').addEventListener('change',()=>resetMovement());
+$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();if(active)library.introduce();});
+$('duration').addEventListener('change',()=>resetMovement());
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
 $('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
@@ -296,7 +296,7 @@ async function manualTick(run){
 }
 function startManual(){
  const run=++generation;release();state.phase='manual-starting';controls(true);state.error=null;resetMovement();status('Starting manual workout…');$('detail').textContent='No camera · manual counter';
- return manualStartGate.run(async()=>{let ticket=null;try{ticket=await pod.beginSet(session.mode,{manual:true});if(run!==generation)return;const progress=ticket.progress||{},clock=new ManualActiveClock({now:()=>performance.now(),visible:()=>!document.hidden});clock.start(progress.elapsedSeconds);manual={value:Number(progress.value)||0,clock,savedAt:performance.now()};state.phase='manual';$('previewLabel').textContent='MANUAL';$('primary').tabIndex=0;$('primary').setAttribute('role',['hold','pace'].includes(state.motion.kind)?'timer':'button');$('primary').setAttribute('aria-label',['hold','pace'].includes(state.motion.kind)?'Manual workout timer':'Add one '+(state.motion.kind==='steps'?'step':state.motion.kind==='jumps'?'jump':'rep'));status(['hold','pace'].includes(state.motion.kind)?'Timer running. Stop to pause.':'Tap the counter or press Enter to add each movement.');manualTick(run);}
+ return manualStartGate.run(async()=>{let ticket=null;try{ticket=await pod.beginSet(session.mode,{manual:true});if(run!==generation)return;const progress=ticket.progress||{},clock=new ManualActiveClock({now:()=>performance.now(),visible:()=>!document.hidden});clock.start(progress.elapsedSeconds);manual={value:Number(progress.value)||0,clock,savedAt:performance.now()};state.phase='manual';voice.say(MOVEMENTS[session.mode].name+'. Manual workout started.',{interrupt:true});$('previewLabel').textContent='MANUAL';$('primary').tabIndex=0;$('primary').setAttribute('role',['hold','pace'].includes(state.motion.kind)?'timer':'button');$('primary').setAttribute('aria-label',['hold','pace'].includes(state.motion.kind)?'Manual workout timer':'Add one '+(state.motion.kind==='steps'?'step':state.motion.kind==='jumps'?'jump':'rep'));status(['hold','pace'].includes(state.motion.kind)?'Timer running. Stop to pause.':'Tap the counter or press Enter to add each movement.');manualTick(run);}
  catch(error){if(run!==generation)return;generation++;release();controls(false);if(ticket)await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}});
 }
 async function activateManual(){
