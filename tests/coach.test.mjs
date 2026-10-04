@@ -16,6 +16,12 @@ test('speech replaces stale pending counts and cancelling resolves every cue',as
 });
 test('hold ready waits for an actual pose match and setup reminders recur slowly',()=>{const c=new CueEvents(),m=snapshot({mode:'tree',kind:'hold',progress:0,message:'Show your knees.'});assert.equal(c.update(m,0).length,0);assert.equal(c.update(m,6000)[0].text,'Show your knees.');assert.equal(c.update(m,6200).length,0);assert.equal(c.update({...m,progress:1},6500)[0].key,'ready');});
 
+test('recipe rep readiness waits for calibration just like legacy squats',()=>{
+ const c=new CueEvents(),m=snapshot({mode:'diamond-pushup',calibrated:false});
+ assert.equal(c.update(m,0).length,0);
+ assert.equal(c.update({...m,calibrated:true},1000)[0].key,'ready');
+});
+
 test('timed holds announce remaining time without also announcing elapsed hold time',()=>{
  const c=new CueEvents(),m=snapshot({mode:'tree',kind:'hold',progress:1,hold:29,totalHold:29,remaining:31});
  c.update(m,0);const events=c.update({...m,hold:30,totalHold:30,remaining:30},1000);

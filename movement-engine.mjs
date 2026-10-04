@@ -114,10 +114,13 @@ export class MovementSession {
       if(up){this.phase='top';this.phaseSince=null;}return;
     }
     const seen=t-this.dt/2;
+    // At <=10 Hz a terminal zone may occupy exactly one sample. Keep multi-sample
+    // debounce at higher rates, and retain explicit long holds for pause exercises.
+    const dwellFor=seconds=>this.dt>=.1-1e-9&&seconds<=.1?Math.min(seconds,this.dt/2):seconds;
     if(this.phase==='top'){
-      if(down){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince>=dwell){this.phase='bottom';this.phaseSince=null;this.downAt=t;}}else this.phaseSince=null;
+      if(down){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince+1e-9>=dwellFor(dwell)){this.phase='bottom';this.phaseSince=null;this.downAt=t;}}else this.phaseSince=null;
     }else if(this.phase==='bottom'){
-      if(up){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince>=.10&&t-this.downAt>=minDuration&&t-this.lastRep>=.45){this.count++;this.lastRep=t;this.eventTimes.push(t);this.phase='top';this.phaseSince=null;}}else this.phaseSince=null;
+      if(up){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince+1e-9>=dwellFor(.10)&&t-this.downAt>=minDuration&&t-this.lastRep>=.45){this.count++;this.lastRep=t;this.eventTimes.push(t);this.phase='top';this.phaseSince=null;}}else this.phaseSince=null;
     }
   }
   recipeUpdate(f,t,dt){
@@ -138,7 +141,7 @@ export class MovementSession {
         if(t-this.candidate>=.45&&this.previousMatch){const d=t-this.lastMatch;this.hold+=d;this.totalHold+=d;this.bestHold=Math.max(this.bestHold,this.hold);}
         this.previousMatch=true;this.missAt=null;this.lastMatch=t;
       }else{this.previousMatch=false;this.candidate=null;this.hold=0;}
-      this.progress=Number(rule.match);this.message=rule.match?'Position detected. Hold comfortably.':'Hold paused. '+rule.message;
+      this.progress=Number(rule.match);this.message=rule.match?(rule.estimated?'Hold estimated from your upper body. Keep this position.':'Position detected. Hold comfortably.'):'Hold paused. '+rule.message;
     }else{
       let up=rule.up,down=rule.down;
       if(rule.travel){

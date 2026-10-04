@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {COACH,userAnchor,project,CoachMotion} from '../coach-hit.mjs';
+import {COACH,userAnchor,project,CoachMotion,sweptHit} from '../coach-hit.mjs';
 
 // 33 normalised screen points (x right, y down) for a person standing at userX.
 function person(userX=.3,{scale=1,wrist=null,knee=null,ankle=null,hide=[]}={}){
@@ -69,18 +69,18 @@ test('crosses to the roomier side only in front of the user',()=>{
  assert.ok(behind.every(s=>s.phase==='walking'),'never stops behind the user');assert.ok(behind.length<=15,`overlaps from behind for at most half a second (${behind.length} frames)`);
 });
 
-test('a kick (fast ankle or knee) inside the coach box knocks it away; slow, outside, arms or unseen do not',()=>{
+test('a kick (fast ankle or knee) inside the coach box knocks it away; slow, outside or unseen do not; wrist swats also launch',()=>{
  {const {m,s,t}=standing(),[cx,cy]=center(s.box),hidden=person(.3,{ankle:[cx-.008,cy]});hidden[28].visibility=.1;m.update(hidden,t+33);m.update(person(.3,{ankle:[cx-.004,cy]}),t+66);assert.equal(m.update(person(.3,{ankle:[cx,cy]}),t+99).phase,'pausing','slow foot in box');}
  {const {m,t}=standing();m.update(person(.3,{ankle:[.05,.8]}),t+33);assert.equal(m.update(person(.3,{ankle:[.05,.95]}),t+66).phase,'pausing','fast foot outside box');}
  {const {m,s,t}=standing(),[cx,cy]=center(s.box);m.update(person(.3,{ankle:[.38,.9]}),t+33);assert.equal(m.update(person(.3,{ankle:[cx,cy]}),t+66).phase,'spun','kick into the box');}
  {const {m,s,t}=standing(),[cx,cy]=center(s.box);m.update(person(.3,{knee:[cx,cy+.12]}),t+33);assert.equal(m.update(person(.3,{knee:[cx,cy]}),t+66).phase,'spun','fast knee in box');}
- {const {m,s,t}=standing(),[cx,cy]=center(s.box);m.update(person(.3,{wrist:[cx-.2,cy]}),t+33);assert.equal(m.update(person(.3,{wrist:[cx,cy]}),t+66).phase,'pausing','arm swings leave it alone');}
+ {const {m,s,t}=standing(),[cx,cy]=center(s.box);m.update(person(.3,{wrist:[cx-.2,cy]}),t+33);assert.equal(m.update(person(.3,{wrist:[cx,cy]}),t+66).phase,'spun','a wrist swat launches');}
  {const {m,s,t}=standing(),[cx,cy]=center(s.box),hidden=person(.3,{ankle:[cx,cy]});hidden[28].visibility=.1;m.update(person(.3,{ankle:[.38,.9]}),t+33);assert.equal(m.update(hidden,t+66).phase,'pausing','unseen foot ignored');}
  {const {m,s,t}=standing();const b=s.box;m.update(person(.3,{ankle:[.35,.9]}),t+33);assert.equal(m.update(person(.3,{ankle:[b.left+.02,.9]}),t+66).phase,'pausing','feet sliding out along the floor stay under the box');}
 });
 
 test('spins off screen, waits about two seconds, then walks back in',()=>{
- let {m,s,t}=standing();const [cx,cy]=center(s.box);
+ let {m,s,t}=standing();const [cx,cy]=center(s.box);m.prevPoints=null;
  m.update(person(.3,{ankle:[s.box.right+.03,cy]}),t+=33);s=m.update(person(.3,{ankle:[cx,cy]}),t+=33);assert.equal(s.phase,'spun');
  const hit=t,spun=[];while(s.phase==='spun'){s=m.update(person(.3),t+=33);spun.push(s);}
  assert.ok(t-hit<=COACH.spinMs+100,'spin ends on time');assert.ok(spun.some(x=>Math.abs(x.rotation)>1),'it spins');
@@ -97,10 +97,10 @@ test('keeps its last spot when the user leaves the frame',()=>{
  assert.equal(lost.phase,'pausing');assert.ok(Math.abs(lost.x-s.x)<.01&&Math.abs(lost.feetY-s.feetY)<.01);
 });
 
-test('a hand held over the coach for one second grabs it by the head; a flick drops it', () => {
+test('a hand held over the coach for one second grabs it by the head; a flick throws it', () => {
   const { m, s: initialState, t } = standing(.3);
   const cxcy = center(initialState.box);
-  let time = t;
+  let time = t;m.prevPoints=null;
   // Hover through 0.99 s: no grab yet (grabSince is the first hovering frame, t+33)
   while (time < t + 1000) {
     const p = person(.3, { wrist: cxcy });
@@ -119,16 +119,16 @@ test('a hand held over the coach for one second grabs it by the head; a flick dr
   r = m.update(person(.3, { wrist: cxcy }), time += 33); // one seen frame re-arms the speed check
   assert.ok(Math.abs(r.box.top - cxcy[1]) < .02);
   // Flick the hand
-  const flickP = person(.3, { wrist: [cxcy[0] + .3, cxcy[1]] });
+  const flickP = person(.3, { wrist: [cxcy[0] - .3, cxcy[1]] });
   r = m.update(flickP, time += 33);
-  assert.equal(r.phase, 'dropped');
+  assert.equal(r.phase, 'spun');
   // dropMs + 100 ms of plain frames after the flick: back on the floor and walking.
   const dropT = time;
-  while (time < dropT + COACH.dropMs + 100) {
+  while (time < dropT + COACH.spinMs + COACH.awayMs + 100) {
     const pPlain = person(.3, {});
     r = m.update(pPlain, time += 33);
   }
-  assert.ok(r.phase === 'walking' || r.phase === 'pausing', 'back on its feet (' + r.phase + ')');
+  assert.ok(r.phase === 'walking' || r.phase === 'pausing', 'returns after the throw (' + r.phase + ')');
   assert.equal(r.dy, 0);
   assert.equal(COACH.grabMs, 1000);
 });
@@ -209,4 +209,58 @@ test('with play off (four-legged coaches) a hover never grabs and he never charg
  let time=33,cxcy=null;const phases=new Set();
  while(time<30000){const s=m.update(person(.3,cxcy?{wrist:cxcy}:{}),time+=33);phases.add(s.phase);if(!cxcy&&s.phase==='pausing')cxcy=center(s.box);}
  assert.ok(cxcy,'stood beside the user');assert.ok(phases.has('pausing'));assert.ok(!phases.has('held'),'no grab');assert.ok(!phases.has('charge'),'no charge');
+});
+
+test('a limb segment crosses the hit box even with endpoints outside; a parallel miss does not',()=>{
+ const box={left:.4,right:.6,top:.4,bottom:.6};
+ assert(sweptHit({x:.2,y:.5},{x:.8,y:.5},box));
+ assert(!sweptHit({x:.2,y:.7},{x:.8,y:.7},box));
+ assert(!sweptHit({x:.1,y:.1},{x:.1,y:.8},box));
+});
+for(const hz of [2,6,15,30])for(const limb of ['ankle','wrist'])test(`${limb} sweep at ${hz} updates/s launches along its direction`,()=>{
+ const {m,s,t}=standing(),[cx,cy]=center(s.box);m.prevPoints=null;
+ const left=[Math.max(.01,s.box.left-.15),cy],right=[Math.min(.99,s.box.right+.15),cy];
+ m.update(person(.3,{[limb]:left}),t+10);
+ const hit=m.update(person(.3,{[limb]:right}),t+10+1000/hz);assert.equal(hit.phase,'spun');
+ const end=m.tick(t+10+1000/hz+COACH.spinMs+1);assert.equal(end.phase,'away');assert(end.box.left>=1,'rightward sweep exits the right edge');
+});
+function heldCoach(){const {m,s,t}=standing(),hand=center(s.box);m.prevPoints=null;let now=t;
+ while(m.phase!=='held'&&now<t+2000)m.update(person(.3,{wrist:hand}),now+=33);
+ m.update(person(.3,{wrist:hand}),now+=33);return {m,hand,now};
+}
+test('one unclear hand sample and a short tracker blink preserve the grip; a long loss drops',()=>{
+ const {m,hand,now}=heldCoach();let time=now;
+ assert.equal(m.update(person(.3,{wrist:hand,hide:[16]}),time+=33).phase,'held');
+ assert.equal(m.update(null,time+=300).phase,'held');
+ assert.equal(m.update(person(.3,{wrist:hand}),time+=33).phase,'held');
+ assert.equal(m.update(null,time+=COACH.grabGraceMs+1).phase,'dropped');
+});
+test('small hand jitter never turns a grip into a throw',()=>{
+ const {m,hand,now}=heldCoach();let time=now;
+ for(let i=0;i<100;i++)assert.equal(m.update(person(.3,{wrist:[hand[0]+Math.sin(i)*.01,hand[1]+Math.cos(i)*.01]}),time+=33).phase,'held');
+});
+test('the other hand can swat a held coach away',()=>{
+ const {m,hand,now}=heldCoach();let time=now;
+ const a=person(.3,{wrist:hand});a[15]={x:hand[0]-.3,y:hand[1]+.15,visibility:1};m.update(a,time+=33);
+ const b=person(.3,{wrist:hand});b[15]={x:Math.min(.99,hand[0]+.15),y:hand[1]+.15,visibility:1};
+ assert.equal(m.update(b,time+=100).phase,'spun');
+});
+test('a moderate moving hand releases into a throw, while a still missing hand stays held',()=>{
+ const {m,hand,now}=heldCoach();let time=now;
+ // Enough travel for a throw but below the speed-weighted swat threshold.
+ const p=person(.3,{wrist:[hand[0]-.2,hand[1]]});assert.equal(m.update(p,time+=300).phase,'held');
+ assert.equal(m.update(person(.3,{hide:[16]}),time+=33).phase,'spun');
+});
+test('animation ticks do not shorten the pose interval or manufacture limb velocity',()=>{
+ const {m,s,t}=standing(),[cx,cy]=center(s.box);m.prevPoints=null;
+ m.update(person(.3,{wrist:[cx-.2,cy]}),t+10);
+ for(let i=1;i<20;i++)m.tick(t+10+i*20);
+ assert.equal(m.prevPoseNow,t+10);
+ assert.equal(m.update(person(.3,{wrist:[cx,cy]}),t+510).phase,'pausing','slow movement stays below launch speed');
+});
+test('stale samples and invalid coordinates cannot trigger launches',()=>{
+ const {m,s,t}=standing(),[cx,cy]=center(s.box);m.prevPoints=null;
+ m.update(person(.3,{ankle:[.1,cy]}),t+10);
+ assert.notEqual(m.update(person(.3,{ankle:[cx,cy]}),t+1000).phase,'spun');
+ const invalid=person(.3);invalid[11].x=NaN;assert.equal(userAnchor(invalid,.46),null);
 });

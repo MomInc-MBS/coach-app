@@ -9,7 +9,7 @@ export function mountPoseRecorder(stage){
  const button=(text,onClick)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='min-width:64px;min-height:48px;border:0;border-radius:12px;background:#fff;color:#000;font:inherit';b.addEventListener('click',onClick);bar.append(b);};
  const show=()=>{
   if(!recording)return;const now=performance.now(),last=recording.labels.at(-1);
-  status.textContent=last&&now<last.from?`${last.label.toUpperCase()} in ${Math.ceil((last.from-now)/1000)}…`:last&&now<=last.to?`Hold ${last.label}…`:`${recording.exercise} · ${recording.frames.length} frames · ${recording.labels.length} labels`;
+  status.textContent=last&&now<last.from?`${last.label.toUpperCase()} in ${Math.ceil((last.from-now)/1000)}…`:last&&now<=last.to?`Hold ${last.label}…`:`${recording.exercise} · ${recording.frames.length} frames · ${recording.labels.length} labels · ${(window.myr5TestState?.rate??0).toFixed(1)}/s ${window.myr5TestState?.delegate||''}`;
  };
  const label=name=>{if(!recording)return;const from=Math.round(performance.now()+3000);recording.labels.push({label:name,from,to:from+1500});show();};
  bar.append(status);button('Down',()=>label('down'));button('Up',()=>label('up'));

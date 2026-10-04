@@ -1,3 +1,4 @@
+import {PoseFrameScheduler} from './pose-frame.mjs';
 import {mountCameraWorkout} from './camera-workout.mjs';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
@@ -25,6 +26,8 @@ let phoneOrientation=mountPhoneOrientation();
 window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=null;});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!phoneOrientation)phoneOrientation=mountPhoneOrientation();});
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
+const poseFrames=new PoseFrameScheduler(v);
+const schedulePose=run=>poseFrames.schedule(()=>{if(run===generation)void loop(run);});
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
 document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
@@ -33,6 +36,35 @@ let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,gene
 // R9-OFFLINE: the pinned pose tracker, same-origin (scripts/mediapipe.mjs) and in the Starter download, so a set runs offline.
 const MEDIAPIPE='/vendor/mediapipe/0.10.14';
 let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
+// Tracker delegate: GPU first, CPU fallback. CPU was the baseline because a Pixel's GPU path once lost its WebGL
+// context, so any GPU failure (load error, detect throw, context loss, NaN landmarks, or blind while a CPU probe
+// sees a person) drops this set to CPU and is remembered on the device. ?poseDelegate=CPU|GPU forces one for A/B.
+const DELEGATE_KEY='myr5-pose-delegate',BLIND_PROBE_MS=3000;
+let gpuSeen=false,blindSince=0,probe=null;
+function preferredDelegate(){
+  const forced=new URLSearchParams(location.search).get('poseDelegate')?.toUpperCase();
+  if(forced==='CPU'||forced==='GPU')return forced;
+  try{return localStorage.getItem(DELEGATE_KEY)==='CPU'?'CPU':'GPU';}catch{return 'GPU';}
+}
+function rememberCpu(reason){state.delegateNote=reason;console.warn('Pose tracker on CPU: '+reason);try{localStorage.setItem(DELEGATE_KEY,'CPU');}catch{}}
+async function loadTracker(delegate,run){
+  // Our own canvas on GPU so a lost WebGL context is seen (MediaPipe runs its GL on options.canvas).
+  const canvas=delegate==='GPU'?(typeof OffscreenCanvas==='function'?new OffscreenCanvas(1,1):document.createElement('canvas')):undefined;
+  let expired=false;
+  const loading=api.PoseLandmarker.createFromOptions(files,{...(canvas?{canvas}:{}),baseOptions:{modelAssetPath:MEDIAPIPE+'/pose_landmarker_lite.task',delegate},runningMode:'VIDEO',numPoses:1});
+  loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
+  let created;
+  try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
+  canvas?.addEventListener('webglcontextlost',()=>{created.myr5Lost=true;});
+  return created;
+}
+async function toCpu(run,reason){
+  rememberCpu(reason);try{tracker?.close();}catch{}tracker=null;
+  const cpu=probe?.tracker||await loadTracker('CPU',run);probe=null;
+  if(run!==generation){try{cpu.close();}catch{}return;}
+  tracker=cpu;state.delegate='CPU';
+}
+function closeProbe(){try{probe?.tracker?.close();}catch{}probe=null;}
 let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
 const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
@@ -63,7 +95,7 @@ async function showLensInfo(track){
   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
-  cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}draw=null;
+  poseFrames.stop();cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}closeProbe();draw=null;
   stream?.getTracks().forEach(t=>t.stop());stream=null;v.pause();v.srcObject=null;g.clearRect(0,0,c.width,c.height);
   state.camera=null;state.delegate=null;state.rate=0;
 }
@@ -129,14 +161,15 @@ async function start(){
     if(run!==generation)return;
     files=files||await timeout(api.FilesetResolver.forVisionTasks(MEDIAPIPE+'/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
     if(run!==generation)return;
-    // This Pixel's GPU path lost its WebGL context. CPU is the measured baseline.
-    let expired=false;
-    const loading=api.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:MEDIAPIPE+'/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});
-    loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
-    let created;
-    try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
+    let delegate=preferredDelegate(),created=null;
+    // One warm-up detect while "Loading tracker…" shows: the GPU's first run compiles its shaders (~5 s cold on a
+    // desktop) and a throw here means a broken GPU path, so it falls back before the set starts.
+    if(delegate==='GPU'){try{created=await loadTracker('GPU',run);if(run===generation)created.detectForVideo(v,performance.now());}catch(error){try{created?.close();}catch{}created=null;if(run!==generation)return;rememberCpu('GPU failed to start: '+error.message);delegate='CPU';}}
     if(run!==generation)return;
-    tracker=created;draw=new api.DrawingUtils(g);state.delegate='CPU';state.phase='tracking';
+    created??=await loadTracker('CPU',run);
+    if(run!==generation)return;
+    tracker=created;draw=new api.DrawingUtils(g);state.delegate=delegate;state.phase='tracking';
+    gpuSeen=false;blindSince=performance.now();
     controls(true);
     lastTime=-1;frames=0;timing=0;windowStart=performance.now();lastUi=0;
     status(MOVEMENTS[session.mode].hint);voice.say(MOVEMENTS[session.mode].hint,{interrupt:true});loop(run);
@@ -153,7 +186,21 @@ async function loop(run){
     if(v.readyState>=2&&v.currentTime!==lastTime){
       lastTime=v.currentTime;if(c.width!==v.videoWidth||c.height!==v.videoHeight){c.width=v.videoWidth;c.height=v.videoHeight;}
       g.clearRect(0,0,c.width,c.height);
-      const before=performance.now(),result=tracker.detectForVideo(v,now),elapsed=performance.now()-before;
+      const before=performance.now();let result=null;
+      try{result=tracker.detectForVideo(v,now);}catch(error){if(state.delegate!=='GPU')throw error;}
+      const elapsed=performance.now()-before;
+      if(state.delegate==='GPU'&&(!result||tracker.myr5Lost||result.landmarks[0]?.some(q=>!Number.isFinite(q.x+q.y)))){
+        await toCpu(run,!result?'GPU detect threw':tracker?.myr5Lost?'GPU WebGL context lost':'GPU returned invalid landmarks');
+        if(run===generation)schedulePose(run);return;
+      }
+      // A GPU that never sees anyone may be silently broken: every few blind seconds, ask a CPU probe the same frame.
+      if(state.delegate==='GPU'&&!gpuSeen){
+        if(result.landmarks.length){gpuSeen=true;closeProbe();}
+        else if(now-blindSince>=BLIND_PROBE_MS){
+          if(!probe){const p=probe={tracker:null};loadTracker('CPU',run).then(t=>{if(probe===p)p.tracker=t;else try{t.close();}catch{}},()=>{});}
+          else if(probe.tracker){blindSince=now;let detected=false;try{detected=probe.tracker.detectForVideo(v,now).landmarks.length>0;}catch{closeProbe();}if(detected){await toCpu(run,'GPU blind while CPU sees a pose');if(run===generation)schedulePose(run);return;}}
+        }
+      }
       state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;
       const p=result.landmarks[0]?.slice(0,27);
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
@@ -165,11 +212,11 @@ async function loop(run){
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
       if(await pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
-      if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
+      if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s (${state.delegate}) · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
       if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
     }
-    frame=requestAnimationFrame(()=>loop(run));
-  }catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
+    schedulePose(run);
+  }catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
 }
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
 $('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
@@ -301,7 +348,7 @@ function startManual(){
 }
 async function activateManual(){
  if(state.phase!=='manual'||!manual||['hold','pace'].includes(state.motion.kind))return;
- manual.value++;try{const motion=manualSnapshot();await pod.saveManual(motion);renderMotion(motion);await pod.consume(motion,Date.now());}catch(error){generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
+ manual.value++;try{const motion=manualSnapshot();await pod.saveManual(motion);renderMotion(motion);await pod.consume(motion,Date.now());}catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
 }
 async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await pod.pauseManual(state.motion);generation++;release();controls(false);state.phase='idle';manual=null;status('Paused. Tap Begin to resume this workout.');$('detail').textContent='Manual workout paused on this device';window.myr5Routes?.home?.();}catch(error){status(error.message);}}
 function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}

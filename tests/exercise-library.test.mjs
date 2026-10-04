@@ -43,7 +43,7 @@ test('side-view holds need only the near side; wall sit holds, standing does not
  assert.equal(evaluateMovement(features(standing()),EXERCISES['wall-sit']).match,false);
  assert.equal(EXERCISES['wall-sit'].kind,'hold');
 });
-test('a plank with the knees cropped holds on the shoulder–hip line and support arm',()=>{const p=floor();for(const i of [25,26])Object.assign(p[i],{y:1.08,visibility:.1});const r=runner('high-plank');r.feed(p,2);assert(r.session.totalHold>1,r.session.message);});
+test('a plank with the knees cropped holds on the shoulder–hip line and support arm',()=>{const p=floor();for(const i of [25,26])Object.assign(p[i],{y:1.08,visibility:.1});const r=runner('high-plank');r.feed(p,2);assert(r.session.totalHold>1,r.session.message);assert.match(r.session.message,/estimated from your upper body/);});
 test('a hold survives a brief unseen gap or form flicker; the pause names the joint',()=>{
  const r=runner('high-plank');r.feed(floor(),2);const before=r.session.totalHold,hidden=floor();for(const i of [11,12])hidden[i].visibility=.1;
  r.feed(hidden,.5);assert.equal(r.session.totalHold,before);assert.match(r.session.message,/Can't see your (left|right) shoulder/);

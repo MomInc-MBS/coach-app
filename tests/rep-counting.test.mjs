@@ -51,6 +51,22 @@ for(const [mode,top,bottom] of REP_CYCLES){
 }
 
 const example=syntheticRecording();
+
+test('continuous one-second squats count across every sampling phase at 4, 8 and 10 Hz',()=>{
+ for(const fps of [4,8,10])for(let offset=0;offset<40;offset++){
+  const session=new MovementSession('squat',{samples:null}),top=ENGINE.standing(),bottom=ENGINE.squat();
+  for(let t=offset/40/fps;t<15;t+=1/fps){const k=t<3||t>=13?0:(1-Math.cos(2*Math.PI*(t-3)))/2;
+   session.update(top.map((v,i)=>({...v,x:v.x+(bottom[i].x-v.x)*k,y:v.y+(bottom[i].y-v.y)*k})),t*1000);
+  }
+  assert.equal(session.count,10,`${fps} Hz, offset ${offset}/40`);
+ }
+});
+
+test('a single noisy terminal sample at 30 Hz does not satisfy dwell',()=>{
+ const session=new MovementSession('squat',{samples:null});session.phase='top';session.dt=1/30;
+ session.repetition(true,false,1,.18);assert.equal(session.phase,'top');
+ session.repetition(false,true,1+1/30,.18);assert.equal(session.count,0);
+});
 test('the samples script turns a recording into a samples file under 50 KB and a replay fixture',()=>{
  const {samples,fixture}=convert(example,{reps:6});
  assert.ok(JSON.stringify(samples).length<50*1024);

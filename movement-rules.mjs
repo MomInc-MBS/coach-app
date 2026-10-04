@@ -115,10 +115,10 @@ Object.values(RULES).forEach(ruleFor);
 export function evaluateMovement(f,m,previousSide=null,smooth=null){
  let rule=ruleFor(RULES[m.id]??RULES[m.detector]);
  const fixed=rule?.anySide?null:m.side,usable=r=>Object.entries(f.sides).filter(([name,s])=>(!fixed||fixed===name)&&s.torso>.035&&(!r.need||f.visible(r.need.map(k=>s.id[k]))));
- let candidates=rule?usable(rule):[];
- if(!candidates.length&&rule?.fallback){rule=rule.fallback;candidates=usable(rule);}
+ let candidates=rule?usable(rule):[],estimated=false;
+ if(!candidates.length&&rule?.fallback){rule=rule.fallback;candidates=usable(rule);estimated=true;}
  const need=rule?.need,picked=candidates.find(([name])=>name===previousSide)??candidates.sort((a,b)=>b[1].coreQuality-a[1].coreQuality)[0];
- const out={valid:false,up:false,down:false,match:false,metric:0,side:picked?.[0]??null,message:m.hint};
+ const out={valid:false,up:false,down:false,match:false,metric:0,side:picked?.[0]??null,message:m.hint,estimated};
  if(!rule)return out;
  if(need&&!picked){
   // Name the joints the nearest side is missing.
