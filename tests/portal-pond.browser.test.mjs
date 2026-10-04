@@ -29,6 +29,7 @@ test('pond grimoire: koi gather, school, idle show and a portal cut',{timeout:30
  try{
   const context=await browser.newContext({viewport:{width:375,height:812},userAgent:UA,serviceWorkers:'block'});
   await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));
+  await context.addInitScript(()=>localStorage.setItem('myr5.portalBoard','cogs'));
   await context.addInitScript(()=>{try{Object.defineProperty(screen.orientation,'type',{configurable:true,get:()=>'portrait-primary'});}catch{}});
   await context.addInitScript((()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};}));
   const seed=await context.newPage();await seed.goto(base+'/onboarding.html');
@@ -37,6 +38,10 @@ test('pond grimoire: koi gather, school, idle show and a portal cut',{timeout:30
   await page.goto(base+'/pose.html');
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&!!document.querySelector('.coach-dock'),null,{timeout:30000});
   assert.equal(await page.evaluate(()=>window.myr5Menus.portal()),true);await portalUp(page);
+  await page.waitForFunction(()=>document.getElementById('portalHome').dataset.board==='pond',null,{timeout:30000});
+  await page.locator('#portalSettingsButton').click();
+  assert.equal(await page.locator('dialog[open] [data-board="cogs"]').count(),0,'Cogs is absent from the board picker');
+  await page.getByRole('button',{name:'Back to portal'}).click();await portalUp(page);
   await page.evaluate(()=>window.myr5Portal.board('pond'));
   await page.waitForFunction(()=>document.getElementById('portalHome').dataset.board==='pond'&&document.getElementById('portalHome').dataset.art==='3d',null,{timeout:30000});
   await page.locator('button:has-text("Got it")').click({timeout:10000}).catch(()=>{}); // the what's-new toast

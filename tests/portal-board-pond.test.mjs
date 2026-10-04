@@ -1,10 +1,24 @@
 // R21 L4 Pond grimoire: the pure logic (koi steering, the idle show's clock, anchor lilies on every template vertex).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {POND,anchorLilies,templateVertices,freePads,idlePhase,bigFishPose,steer,stepFish,makeFish,makeTrail,fishTouch,fishRelease,trailPush,trailAt,makeWaves,disturb,stepWaves,rng,pond} from '../modules/portal/portal-board-pond.mjs';
+import {POND,anchorLilies,templateVertices,freePads,idlePhase,bigFishPose,steer,stepFish,stepPads,makeFish,makeTrail,fishTouch,fishRelease,trailPush,trailAt,makeWaves,disturb,stepWaves,rng,pond} from '../modules/portal/portal-board-pond.mjs';
 import {fromFrame} from '../modules/portal/portal-shapes.mjs';
 
 const A=POND.aspect;
+test('all lily pads move aside at the fingertip and shape anchors return after release',()=>{
+ const pad=(x,anchor)=>({x,y:.8,hx:x,hy:.8,vx:0,vy:0,seed:0,rot:0,anchor,hidden:false});
+ const pads=[pad(.5,true),pad(.53,false),pad(.95,true),{...pad(.52,true),hidden:true}];
+ const state={K:POND,A,pads,pointers:new Map([[1,{x:.5,y:.8}]]),waves:makeWaves(32,56),slope:[0,0]};
+ for(let i=0;i<90;i++)stepPads(state,1/60,i/60);
+ assert.ok(pads[0].x>.57,'anchor directly under the finger moves aside');
+ assert.ok(pads[1].x>.57,'free pad moves aside');
+ assert.equal(pads[2].x,.95,'distant anchor stays on its shape');
+ assert.equal(pads[3].x,.52,'cut pad stays hidden');
+ state.pointers.clear();
+ for(let i=0;i<600;i++)stepPads(state,1/60,2+i/60);
+ assert.ok(Math.abs(pads[0].x-pads[0].hx)<.001,'shape anchor settles home');
+ assert.ok(pads.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));
+});
 test('an anchor lily sits on every vertex, base, apex and line end of every template',()=>{
  const anchors=anchorLilies();
  for(const [tx,ty] of templateVertices()){

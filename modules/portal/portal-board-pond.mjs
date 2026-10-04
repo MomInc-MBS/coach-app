@@ -2,9 +2,9 @@
 // procedural plane (effect.build, no GLB) whose surface runs a CPU ripple height-field (the physics): it bends
 // the bed and the koi like the portal's liquid glass (GLASS bend + fringe + finger-lit rim, portal.mjs lensMap/
 // tunnelFragment), tilts the pads, and pushes the free ones. Small instanced low-poly 3D lily pads (with their
-// notch) and lily flowers float on top: anchor lilies sit still on every vertex/base/apex/line end of every traceable
-// template (and along each template so the shapes read), free ones drift and get pushed aside by the finger and the
-// ripples, then ease home. Under the surface, blurred dark koi shadows wander (boids); a held finger slowly draws them
+// notch) and lily flowers float on top: anchor lilies rest on every vertex/base/apex/line end of every traceable
+// template (and along each template so the shapes read). All pads move aside around the finger and ripples, then
+// ease home; free ones also drift. Under the surface, blurred dark koi shadows wander (boids); a held finger slowly draws them
 // in, arriving face first under it; drawing leads them as a snaking school that grows as more join. 15 s with no
 // touch: the fish scatter off the pond, one huge koi shadow drifts slowly across in a random direction, then they
 // come back. Reduced motion: still water, still fish. AGPL-3.0-or-later.
@@ -257,7 +257,7 @@ function init({THREE,scene,mesh,uniforms,toWorld,wake}){
  uniforms.uWave.value=waveTex;uniforms.uFinger.value=new THREE.Vector4(.5,.3,0,0);
  mesh.material&&(mesh.material.roughness=.2);
 
- // Pads and lilies: anchors (still) first, then the free ones.
+ // Pads and lilies: shape anchors first, then the freely drifting ones.
  const anchors=anchorLilies(K.frame,A),free=freePads(anchors,A,rng(7),K),pads=[...anchors.map(p=>({...p,anchor:true})),...free.map(p=>({...p,anchor:false,vertex:false}))];
  const lr=rng(11);
  for(const p of pads){p.hx=p.x;p.hy=p.y;p.vx=p.vy=0;p.rot=lr()*TAU;p.s=(p.anchor&&!p.vertex?K.anchorScale:.85+lr()*.3);p.seed=lr()*TAU;p.lily=p.vertex||(!p.anchor&&lr()<K.lilyShare);p.hidden=false;}
@@ -311,13 +311,22 @@ function place(dt,now){
  S.fishMat.uniforms.uFace.value.set(ox,-oy,px,px*A);S.fishMat.uniforms.uRefract.value=K.glass.bend*px*2;
 }
 
-function stepPads(dt,t){
- const {K,A,pads,pointers,waves,slope}=S;
+export function stepPads(state,dt,t){
+ const {K,A,pads,pointers,waves,slope}=state;
  for(const p of pads){
-  if(p.anchor||p.hidden)continue;
-  const hx=p.hx+Math.sin(t*K.driftHz*TAU+p.seed)*K.drift,hy=p.hy+Math.cos(t*K.driftHz*TAU*.8+p.seed*1.7)*K.drift;
+  if(p.hidden)continue;
+  const drift=p.anchor?0:K.drift;
+  const hx=p.hx+Math.sin(t*K.driftHz*TAU+p.seed)*drift,hy=p.hy+Math.cos(t*K.driftHz*TAU*.8+p.seed*1.7)*drift;
   let fx=(hx-p.x)*K.spring-p.vx*K.damping,fy=(hy-p.y)*K.spring-p.vy*K.damping;
-  for(const f of pointers.values()){const dx=p.x-f.x,dy=p.y-f.y,d=Math.hypot(dx,dy);if(d<K.pushR&&d>1e-5){const k=K.pushK*(1-d/K.pushR)**2;fx+=dx/d*k;fy+=dy/d*k;}}
+  for(const f of pointers.values()){
+   let dx=p.x-f.x,dy=p.y-f.y,d=Math.hypot(dx,dy);
+   if(d<K.pushR){
+    // Even a pad directly under the fingertip needs a direction to move aside.
+    if(d<1e-5){dx=Math.cos(p.seed);dy=Math.sin(p.seed);d=1;}
+    const distance=Math.hypot(p.x-f.x,p.y-f.y),k=K.pushK*(1-distance/K.pushR)**2;
+    fx+=dx/d*k;fy+=dy/d*k;
+   }
+  }
   slopeAt(waves,p.x,p.y/A,slope);fx-=slope[0]*K.waveK;fy-=slope[1]*K.waveK;
   p.vx+=fx*dt;p.vy+=fy*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.rot+=(p.vx-p.vy)*dt*2;
  }
@@ -344,7 +353,7 @@ function step(dt,now){
  S.fade+=(S.fadeTo-S.fade)*Math.min(1,dt*4);S.fishMat.uniforms.uFade.value=S.fade;
  if(fin)S.uniforms.uFinger.value.set(fin.x,fin.y/S.A,1,0);else S.uniforms.uFinger.value.z=Math.max(0,S.uniforms.uFinger.value.z-dt*2);
  if(S.reduced){place(dt,now);return Math.abs(S.fade-S.fadeTo)>.01;}
- stepWater(t);stepPads(dt,t);stepFish(S.fishS,dt,now,S.K);place(dt,now);
+ stepWater(t);stepPads(S,dt,t);stepFish(S.fishS,dt,now,S.K);place(dt,now);
  return true; // the koi never stop swimming
 }
 

@@ -58,7 +58,7 @@ const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes
 // it once it has rendered. A grimoire's flat picture is its poster, laid out at its GLB face's width/height (FACE, measured)
 // with its guides drawn in its shape frame. WAIT (ms): how long a poster, then a 3D board, may take before it counts as failed,
 // and how long the first mount waits for 3D before the portal comes up flat (3D then takes over when it has drawn).
-export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood','pond']);
+export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','jelly','wood','pond']);
 const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847,pond:.5625},WAIT={poster:6000,threeD:20000,mount:4000};
 // trace (R7): the flat poster keeps the board's own touch effect in 2D (ice cracks, flowers, weld, jelly gash, embers).
 const grimoire=(label,effect)=>({label,flat:async host=>{const flat=await createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d,tint:effect.keepColors?null:boardTint(effect.id),tintSelected:hasBoardTint(effect.id),tintTarget:effect.id==='grass'||effect.keepColors?'trace':effect.id==='cogs'?'cogs':'poster',...(effect.id==='cogs'?{backplateTint:cogsBackplateTint(),backplateTintSelected:hasCogsBackplateTint()}: {})});if(effect.id==='cogs')flat.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return flat;},create:host=>{if(effect.id==='cogs')effect.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return createGlbBoard(host,{effect});}});
@@ -89,8 +89,8 @@ const materialLoads=new Map();
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
 const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 function initialBoardId(){
- const p=new URLSearchParams(location.search).get('board');if(p&&BOARDS[p])return p;
- const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored])return stored;
+ const p=new URLSearchParams(location.search).get('board');if(p==='cogs')return 'pond';if(p&&BOARDS[p])return p;
+ const stored=store.get(BOARD_KEY);if(stored==='cogs')return 'pond';if(stored&&BOARDS[stored])return stored;
  return 'quilt';
 }
 
@@ -343,7 +343,7 @@ function syncEnergy(){const on=boardShown||!!framed;energyAnims.forEach(a=>on?a.
 // load, return to the portal and cross-tab/bfcache changes; a board pick made elsewhere loads once (an uncached one falls back).
 const restSeq=()=>stripSeq(readLook().strip);
  function applyLook(){const look=readLook();applyLookVars(document.documentElement,look);document.documentElement.style.setProperty('--portal-strip-glow',`${look.strip}40`);menuSheet?.querySelectorAll('[data-look]').forEach(input=>{input.value=look[input.dataset.look];});if(aura?.el){const seq=stripSeq(look.strip);aura.el.style.setProperty('--aura',look.strip);aura.el.style.setProperty('--aura-edge',`color-mix(in srgb,${look.strip} 45%,#fff)`);aura.el.style.setProperty('--aura-seq',[...seq,seq[0]].join(','));}if(!phase)energize(restSeq());}
-function syncLook(){applyLook();const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored]&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
+function syncLook(){applyLook();const saved=store.get(BOARD_KEY),stored=saved==='cogs'?'pond':saved;if(stored&&BOARDS[stored]&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
  portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
