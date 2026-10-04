@@ -23,19 +23,30 @@ test('adding a row is enough to count a new joint-triplet movement',()=>{
  delete RULES['test-curl'];
 });
 
-// Replays the existing synthetic cycles: 2 s start, then 3 reps. Phone-like 1.6/s holds each phase 1.5 s.
-function cycles(mode,top,bottom,{fps=20,jitter=0,drop=0,seed=1}={}){
- const rnd=random(seed),session=new MovementSession(mode,{samples:null});let t=0;
- const feed=(pose,seconds)=>{for(let i=0;i<Math.ceil(seconds*fps);i++){t+=1000/fps;if(rnd()<drop)continue;
-  session.update(pose().map(v=>({...v,x:v.x+(rnd()-.5)*2*jitter,y:v.y+(rnd()-.5)*2*jitter})),t);}};
- const phase=fps<3?1.5:.7;
- feed(top,2);for(let i=0;i<3;i++){feed(bottom,phase);feed(top,phase);}feed(top,2);
+// Realistic reps: smooth cosine between the start and end fixtures with no pause at either end, each rep's length
+// varied ±10%, sampled at phone tracker rates (1.4–2.5/s measured on Ian's phone) and at 30/s.
+function reps(mode,top,bottom,{fps,period,n=5,depth=1,jitter=.003,drop=0,seed=1}){
+ const rnd=random(seed),session=new MovementSession(mode,{samples:null}),T=top(),B=bottom();
+ const starts=[3];for(let i=0;i<n;i++)starts.push(starts[i]+period*(.9+.2*rnd()));const end=starts[n];
+ const at=t=>{if(t<3||t>=end)return 0;const i=starts.findIndex(s=>s>t)-1;return depth*(1-Math.cos(2*Math.PI*(t-starts[i])/(starts[i+1]-starts[i])))/2;};
+ for(let t=rnd()/fps;t<end+2;t+=1/fps){if(rnd()<drop)continue;const k=at(t);
+  session.update(T.map((v,i)=>({...v,x:v.x+(B[i].x-v.x)*k+(rnd()-.5)*2*jitter,y:v.y+(B[i].y-v.y)*k+(rnd()-.5)*2*jitter})),t*1000);}
  return session.count;
 }
 for(const [mode,top,bottom] of REP_CYCLES){
- test(`${mode}: the same 3 reps with jitter, dropped frames and at 1.6 updates/s`,()=>{
-  for(const [name,options] of [['clean',{}],['jitter ±0.004',{jitter:.004}],['30% dropped frames',{drop:.3}],['1.6 updates/s',{fps:1.6}],['1.6 updates/s with jitter',{fps:1.6,jitter:.004}],['30 updates/s with jitter',{fps:30,jitter:.004}]])
-   for(const seed of [1,2,3])assert.equal(cycles(mode,top,bottom,{...options,seed}),3,`${mode} ${name} seed ${seed}`);
+ test(`${mode}: 5 reps at 2 s and 3 s per rep count at 1.5, 2, 4 and 30 updates/s`,()=>{
+  for(const period of [2,3])for(const fps of [1.5,2,4,30])for(const seed of [1,2,3]){
+   const count=reps(mode,top,bottom,{fps,period,seed}),label=`${mode} ${period} s/rep at ${fps}/s seed ${seed}`;
+   // 2 s reps at 1.5/s give 3 samples per rep: one may fall between the zones. Never more than performed.
+   if(period===2&&fps===1.5)assert.ok(count>=4&&count<=5,`${label}: ${count}`);else assert.equal(count,5,label);
+  }
+  for(const seed of [1,2,3])assert.equal(reps(mode,top,bottom,{fps:30,period:2,drop:.3,seed}),5,`${mode} 30% dropped frames seed ${seed}`);
+ });
+ test(`${mode}: stillness with jitter and shallow bobbing never count`,()=>{
+  for(const fps of [1.5,30])for(const seed of [1,2,3]){
+   assert.equal(reps(mode,top,bottom,{fps,period:2,n:8,depth:0,jitter:.006,seed}),0,`${mode} still at ${fps}/s`);
+   assert.equal(reps(mode,top,bottom,{fps,period:1,n:12,depth:.2,jitter:.004,seed}),0,`${mode} bobbing at ${fps}/s`);
+  }
  });
 }
 

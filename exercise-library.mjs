@@ -36,7 +36,8 @@ for(const [id,name,extra] of [
 for(const [id,name,extra] of [
  ['shallow-squat','Shallow squat',{travel:.18}],['squat','Bodyweight squat',{}],['wide-squat','Wide squat',{wide:true}],
  ['pause-squat','Pause squat',{dwell:.8}],['slow-squat','Slow squat',{minCycle:1.2}],
- ['split-left','Split squat · left',{detector:'split',side:'left'}],['split-right','Split squat · right',{detector:'split',side:'right'}]
+ ['split-left','Split squat · left',{detector:'split',side:'left'}],['split-right','Split squat · right',{detector:'split',side:'right'}],
+ ['wall-sit','Wall sit',{detector:'yoga',pose:'wall-sit',kind:'hold',view:'side',cue:'Back on a wall, thighs level. Show shoulder, hip and knee.',limits:'Times the hip angle and thigh level. Wall contact and knee position are not tracked.'}]
 ])add('legs',id,name,extra.detector??'squat',{cue:extra.side?'Show the front leg from hip to knee. Start tall.':'Show shoulders and hips. Start standing tall.',...extra});
 for(const [id,name,detector,extra] of [
  ['small-hinge','Small hip hinge','hinge',{bend:25}],['hip-hinge','Hip hinge','hinge',{}],['good-morning','Bodyweight good morning','hinge',{arms:'chest'}],

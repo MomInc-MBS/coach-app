@@ -38,7 +38,9 @@ const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
-const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{void stop();voice.say('Stopped.',{interrupt:true});}});
+const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{void stop();voice.say('Stopped.',{interrupt:true});},
+  // Manual correction: the same session count the counter, cues and pod.consume read on the next frame.
+  onAdjust:delta=>{if(state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
 function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
@@ -87,6 +89,8 @@ function renderMotion(m){
   $('jointReadings').textContent=m.jointReadings||'';
   $('countState').textContent=!m.tracking?'Waiting for joints':(['squat','pushup','jumping'].includes(m.mode)&&!m.calibrated)?'Setting start':m.phase==='bottom'?'Return to start to count':m.kind==='hold'?'Hold timer':m.kind==='pace'?'Round timer':'Counter ready';
   $('paceNote').hidden=m.kind!=='pace';
+  const paused=!m.tracking||(m.kind==='hold'&&!m.progress)||(m.kind==='reps'&&!m.calibrated);
+  cameraWorkout.show({status:paused?m.message:'',reps:m.kind==='reps'&&state.phase==='tracking'});
   pod?.render(m);
 }
 function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true}={}){

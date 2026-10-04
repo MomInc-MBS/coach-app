@@ -19,7 +19,7 @@ function jack(open){const p=arms(open?165:0);if(open){p[25].x=.22;p[26].x=.78;}r
 function tree(overhead=false){const p=overhead?arms(170):standing();set(p,[[25,.27,.52],[27,.53,.62]]);return p;}
 function horse(){return set(standing(),[[11,.42,.28],[12,.58,.28],[23,.42,.48],[24,.58,.48],[25,.23,.58],[26,.77,.58],[27,.23,.83],[28,.77,.83]]);}
 function runner(mode){let now=0;const session=new MovementSession(mode);return {session,feed(p,sec=1){for(let i=0;i<sec*20;i++){now+=50;session.update(typeof p==='function'?p(now):p,now);}return session.snapshot();},gap(p){now+=3000;return session.update(p,now);}};}
-test('all focus groups offer ordered, reachable recipes and backend goals',()=>{assert.equal(FOCUS_GROUPS.length,10);assert.equal(EXERCISE_COUNT,56);const seen=new Set();for(const group of FOCUS_GROUPS){const choices=GROUP_EXERCISES[group.id];assert(choices.length>=4);choices.forEach((m,i)=>{assert.equal(m.difficulty,i+1);assert.equal(exerciseAt(group.id,i).id,m.id);assert(MODES[m.id]);assert(DEFAULT_GOALS[m.id]>0);assert(m.hint&&m.limits);assert(!seen.has(m.id));seen.add(m.id);});assert.equal(exerciseAt(group.id,999).id,choices.at(-1).id);}assert.equal(seen.size,EXERCISE_COUNT);});
+test('all focus groups offer ordered, reachable recipes and backend goals',()=>{assert.equal(FOCUS_GROUPS.length,10);assert.equal(EXERCISE_COUNT,57);const seen=new Set();for(const group of FOCUS_GROUPS){const choices=GROUP_EXERCISES[group.id];assert(choices.length>=4);choices.forEach((m,i)=>{assert.equal(m.difficulty,i+1);assert.equal(exerciseAt(group.id,i).id,m.id);assert(MODES[m.id]);assert(DEFAULT_GOALS[m.id]>0);assert(m.hint&&m.limits);assert(!seen.has(m.id));seen.add(m.id);});assert.equal(exerciseAt(group.id,999).id,choices.at(-1).id);}assert.equal(seen.size,EXERCISE_COUNT);});
 for(const [mode,start,end] of [
  ['knee-pushup',()=>floor(),()=>floor(true)],['diamond-pushup',()=>floor(),()=>floor(true)],['high-incline-pushup',()=>floor(),()=>floor(true)],
  ['shallow-squat',standing,squatting],['wide-squat',standing,squatting],['split-left',()=>split('left',false),()=>split()],['split-right',()=>split('right',false),()=>split('right')],
@@ -33,6 +33,24 @@ test('slow push-ups require extra time before a completed return',()=>{const r=r
 for(const [mode,pose] of [['high-plank',floor],['low-tree',tree],['overhead-tree',()=>tree(true)],['mountain',standing],['salute',()=>arms(170)],['high-horse',horse]]){
  test(`${mode}: held shape accrues time; a missing required joint pauses`,()=>{const r=runner(mode);r.feed(pose(),2);assert(r.session.totalHold>1,JSON.stringify(r.session.snapshot()));const before=r.session.totalHold;const lost=clone(pose());for(const i of [11,12])lost[i].visibility=.1;r.feed(lost,1);assert.equal(r.session.totalHold,before);assert.equal(r.session.hold,0);r.gap(pose());assert.equal(r.session.totalHold,before);});
 }
+// Side view, facing right: the near (left) side is clear, the far side hidden at 20%.
+function side(points){const p=standing();for(const [i,x,y] of points){set(p,[[i,x,y],[i+1,x+.01,y]]);p[i+1].visibility=.2;}return p;}
+const chairSide=()=>side([[11,.52,.30],[13,.56,.18],[15,.6,.06],[23,.42,.52],[25,.6,.58]]);
+const wallSit=()=>side([[11,.45,.25],[13,.45,.37],[15,.47,.45],[23,.45,.5],[25,.65,.52]]);
+const stanceSide=()=>side([[11,.5,.2],[13,.5,.3],[15,.5,.4],[23,.5,.42],[25,.65,.5]]);
+test('side-view holds need only the near side; wall sit holds, standing does not',()=>{
+ for(const [mode,pose] of [['chair',chairSide],['wall-sit',wallSit],['front-stance-left',stanceSide],['front-stance-right',stanceSide]]){const r=runner(mode);r.feed(pose(),2);assert(r.session.totalHold>1,mode+' '+r.session.message);}
+ assert.equal(evaluateMovement(features(standing()),EXERCISES['wall-sit']).match,false);
+ assert.equal(EXERCISES['wall-sit'].kind,'hold');
+});
+test('a plank with the knees cropped holds on the shoulder–hip line and support arm',()=>{const p=floor();for(const i of [25,26])Object.assign(p[i],{y:1.08,visibility:.1});const r=runner('high-plank');r.feed(p,2);assert(r.session.totalHold>1,r.session.message);});
+test('a hold survives a brief unseen gap or form flicker; the pause names the joint',()=>{
+ const r=runner('high-plank');r.feed(floor(),2);const before=r.session.totalHold,hidden=floor();for(const i of [11,12])hidden[i].visibility=.1;
+ r.feed(hidden,.5);assert.equal(r.session.totalHold,before);assert.match(r.session.message,/Can't see your (left|right) shoulder/);
+ r.feed(floor(),.1);assert(Math.abs(r.session.totalHold-(before+.6))<1e-6,'unseen time is credited when the shape returns');assert(r.session.hold>2);
+ const sag=floor();for(const i of [23,24])sag[i].y+=.12;const at=r.session.totalHold;r.feed(sag,.5);assert.match(r.session.message,/Straighten your back/);r.feed(floor(),.1);
+ assert(r.session.hold>2,'a brief off-shape flicker does not restart the hold');assert(r.session.totalHold-at<.2,'off-shape time is not credited');
+});
 test('forearm and straight-arm plank holds use different elbow geometry',()=>{const p=floor(),bent=clone(p);set(bent,[[13,.23,.68],[15,.40,.68],[14,.23,.68],[16,.40,.68]]);assert.equal(evaluateMovement(features(p),EXERCISES['forearm-plank']).match,false);assert.equal(evaluateMovement(features(bent),EXERCISES['forearm-plank']).match,true);assert.equal(evaluateMovement(features(bent),EXERCISES['high-plank']).match,false);});
 test('upright curls are never new push-up reps',()=>{const r=runner('diamond-pushup');r.feed(standing(),2);r.feed(arms(80),2);r.feed(standing(),2);assert.equal(r.session.count,0);assert.equal(r.session.base,null);});
 test('world coordinates can measure an arm raising toward the camera',()=>{const image=standing(),world=standing();for(const [s,e,w] of [[11,13,15],[12,14,16]]){world[e].y=world[s].y;world[e].z=.14;world[w].y=world[s].y;world[w].z=.27;}assert.equal(evaluateMovement(features(image,1,world),EXERCISES['front-raise']).down,true);assert.equal(evaluateMovement(features(image),EXERCISES['front-raise']).down,false);});
