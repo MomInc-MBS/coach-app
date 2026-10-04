@@ -777,8 +777,8 @@ export function namePath(face,gap=7){const y=d2(face.top-gap);return `M${d2(face
 // the window. Built from masks drawn once; the flow is a conic gradient turning inside them by transform, so running it
 // costs the compositor, not a repaint. Static under reduced motion.
 const AURA={spinMs:16000,flickerMs:1300,sparks:18,sparkMs:800,specPx:40,maskScale:.5,
- // R21 L2: the inward feather fades over featherFrac of the face's short side (was ~36px) at featherAlpha peak (was .9 stacked), shadeK scales the dark depth strokes, fullFrac/fullAlpha are the same for full-screen faces, railAlpha the faint glow left on their rail (was solid).
- edgeAlpha:.5,featherFrac:.3,featherAlpha:.3,fullFrac:.25,fullAlpha:.4,railAlpha:.15,shadeK:.4,outK:.5,ringAlpha:.5,inset:12}; // outK scales the outward glow bands past the first; ringAlpha is the rim's own peak opacity (was .9); inset pulls shaped windows in from the face edge (px)
+ // R21 L2: the inward feather fades over featherFrac of the face's short side (was ~36px) at featherAlpha peak (was .9 stacked), shadeK scales the dark depth strokes, fullFrac/fullAlpha are the same for full-screen faces, fullCurve the falloff exponent (2 = ease-out, most of it near the edge), railAlpha the faint glow left on their rail (was solid).
+ edgeAlpha:.5,featherFrac:.3,featherAlpha:.3,fullFrac:.2,fullAlpha:.2,fullCurve:2,railAlpha:.15,shadeK:.4,outK:.5,ringAlpha:.5,inset:12}; // outK scales the outward glow bands past the first; ringAlpha is the rim's own peak opacity (was .9); inset pulls shaped windows in from the face edge (px)
 let aura=null;
 // White-on-clear mask of the rim band: an inward vignette (clipped inside the outline), an outward glow (outside it) with
 // round fire tongues (a seeded dash rhythm on a wide round-capped stroke). A soft glow needs no detail, so it's drawn once
@@ -807,7 +807,7 @@ function rimMask(pts,w,h,seed,shaped,fullscreen=false,face=null){
  g.save();g.clip(path);
  {const px=pts.map(p=>p[0]),py=pts.map(p=>p[1]),short=Math.min(Math.max(...px)-Math.min(...px),Math.max(...py)-Math.min(...py)),
    D=short*(fullscreen?AURA.fullFrac:AURA.featherFrac),peak=fullscreen?AURA.fullAlpha:AURA.featherAlpha,n=10;
-  for(let i=0;i<n;i++)band(2*D*(1-i/n),peak/n); // stacked strokes: opacity falls off linearly from the rim to D inside
+  for(let i=0;i<n;i++)band(2*D*(1-i/n)**(fullscreen?AURA.fullCurve:1),peak/n); // stacked strokes: opacity falls off linearly from the rim to D inside
   band(4,AURA.edgeAlpha);} // the thin bright neon edge that still reads as a portal
  g.restore();
  return `url("${c.toDataURL()}")`;

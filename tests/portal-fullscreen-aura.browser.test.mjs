@@ -11,7 +11,7 @@ test('fullscreen aura feathers inward widely and faintly (R21) and shaped masks 
  try{
   const page=await browser.newPage();
   const pixels=await page.evaluate(async helper=>{
-   const rimMask=new Function('document','Path2D','pathD','AURA',`${helper};return rimMask`)(document,Path2D,()=> 'M15 15H135V135H15Z',{maskScale:.5,edgeAlpha:.85,featherFrac:.3,featherAlpha:.3,fullFrac:.25,fullAlpha:.4,shadeK:.4,outK:.5,ringAlpha:.5,inset:12,railAlpha:.15});
+   const rimMask=new Function('document','Path2D','pathD','AURA',`${helper};return rimMask`)(document,Path2D,()=> 'M15 15H135V135H15Z',{maskScale:.5,edgeAlpha:.85,featherFrac:.3,featherAlpha:.3,fullFrac:.2,fullAlpha:.2,fullCurve:2,shadeK:.4,outK:.5,ringAlpha:.5,inset:12,railAlpha:.15});
    const decode=async(url)=>{const image=new Image();image.src=url.slice(5,-2);await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const g=c.getContext('2d');g.drawImage(image,0,0);return g.getImageData(0,0,c.width,c.height);};
    const full=await decode(rimMask([[15,15],[135,15],[135,135],[15,135],[15,15]],150,150,7,false,true));
    const shaped=await decode(rimMask([[0,0],[120,0],[120,120],[0,120],[0,0]],120,120,7,true,false));
