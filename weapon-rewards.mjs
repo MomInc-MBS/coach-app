@@ -6,7 +6,7 @@ export function mountWeaponRewards(host,getGroup){
  function paint(){
   const group=getGroup(),track=TRAINING_TRACKS[group],W=window.GalaWeapons;if(!track||!W)return;
   const p=trackProgress(progress,group);strip.replaceChildren();
-  const heading=document.createElement('p');heading.textContent=`${track.name} · ${p.totalXp.toLocaleString()} XP`;strip.append(heading);
+  const heading=document.createElement('p');const lv=W.level(progress);heading.textContent=`${track.name} · Level ${lv.level}`;strip.append(heading);
   const row=document.createElement('div');row.className='training-reward-weapons';
   for(const type of track.weapons){
    let tier=0;for(let i=1;i<W.tiers.length;i++)if(W.unlocked({type,tier:i},progress))tier=i;
@@ -14,7 +14,7 @@ export function mountWeaponRewards(host,getGroup){
   }
   strip.append(row);
   const next=W.tiers.findIndex((_,tier)=>!W.unlocked({type:track.weapons[0],tier},progress)),status=document.createElement('small');
-  status.textContent=next<0?'Fully evolved':`+100 XP per completed ${track.name} day · Next: ${W.requirements({type:track.weapons[0],tier:next}).xp} XP`;
+  status.textContent=next<0?'Fully evolved':`+100 XP per active day, +10 per set · Next: Level ${next+1} at ${W.requirements({type:track.weapons[0],tier:next}).xp} XP`;
   strip.append(status);
  }
  window.addEventListener('myr5:account-progress',event=>{progress=event.detail;paint();});

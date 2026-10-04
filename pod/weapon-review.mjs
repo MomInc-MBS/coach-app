@@ -28,7 +28,7 @@ function update() {
   $('tierOutput').value = selected.tier;
   $('previousLabel').textContent = `${weapons.tiers[Math.max(0, selected.tier - 1)]} · tier ${Math.max(0, selected.tier - 1)}`;
   $('currentLabel').textContent = `${weapons.tiers[selected.tier]} · tier ${selected.tier}`;
-  $('unlock').textContent = selected.tier ? `${required.xp} ${required.label} XP · ${required.days} completed days` : 'Available from the start';
+  $('unlock').textContent = selected.tier ? `${required.label} · ${required.xp} XP` : 'Available from the start';
   $('abilityInfo').textContent = ability ? `Rank ${ability.rank} · ${ability.cooldownMs / 1000}s cooldown` : 'Special unlocks at tier 4';
   for (const button of $('families').children) button.setAttribute('aria-pressed', String(button.dataset.type === selected.type));
   updateCooldown();
