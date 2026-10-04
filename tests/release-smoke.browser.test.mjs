@@ -497,7 +497,7 @@ test('8. traced destinations open in the frame with the bar lit below it, Food a
   assert.deepEqual((await bar(page)).lit,['reminders']);
   await page.locator(PORTAL_BUTTON).click();
   await page.waitForFunction(()=>window.__backs.length===1,null,{timeout:20000});
-  await page.evaluate(()=>window.__backs[0].play());
+  await page.evaluate(()=>{window.__backs[0].play();return window.__backs[0].finished;});
   await page.waitForFunction(()=>!document.querySelector('.portal-glass')&&document.getElementById('portalHome').hidden===false&&!document.getElementById('remindersPanel').open&&location.hash===''&&!document.getElementById('portalChrome').matches(':popover-open'),null,{timeout:20000});
   assert.deepEqual((await bar(page)).lit,['portal']);
 

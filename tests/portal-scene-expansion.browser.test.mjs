@@ -81,11 +81,13 @@ test('classroom peers through the diamond; tapping the real whiteboard fills the
  await page.screenshot({path:resolve('.frames','classroom-diamond.png')});
  await page.locator('[data-room-board]').click();
  await page.waitForFunction(()=>document.querySelector('#accountPanel.portal-fullscreen[data-room-view=board]'));
- assert.deepEqual(await box(page,'#accountPanel'),{left:15,top:15,right:360,bottom:797,width:345,height:782});
+ // R20 keeps the 88px console below the 15px housing, rather than inside the scene.
+ assert.deepEqual(await box(page,'#accountPanel'),{left:15,top:15,right:360,bottom:709,width:345,height:694});
+ assert.deepEqual(await box(page,'#coachDock'),{left:0,top:724,right:375,bottom:812,width:375,height:88});
  assert.equal(await page.locator('#accountPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
  // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; R16/R17: the frame stays as the 15px rail (portal-housing-fullscreen).
  assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-housing-fullscreen')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
- assert.equal(await page.locator('#coachDock').isVisible(),true,'R16/R17: the dock stays up inside the rail on the whiteboard');
+ assert.equal(await page.locator('#coachDock').isVisible(),true,'R20: the dock stays below the whiteboard housing');
  await page.screenshot({path:resolve('.frames','classroom-whiteboard-fullscreen.png')});
  await page.locator('#accountPanel [data-close]').click();
  await page.waitForFunction(()=>!document.getElementById('portalHome').hidden&&!document.querySelector('.portal-glass'),null,{timeout:10000});

@@ -130,3 +130,18 @@ After the merge: `npm run build`, run the gate with concurrency 4 and solo re-ru
 
 ## Open questions for Ian
 - **L7:** should coach shapes unlock in the War Room when that coach body is unlocked in the customizer (the default), or on their own schedule?
+
+
+## Codex integration checkpoint (2026-10-04)
+
+Candidate owner: `codex/r21-takeover-integration` in `D:/myr5-work/r21-codex-integration`. Original lane worktrees remain separate.
+
+- L2 approval retained at `4325c4e`; War Room and Menu were recaptured at 375x812 after the final glow change.
+- All nine R21 lanes are integrated. L1 source and all-71-body seam coverage were recovered in `49bf69b`; functional War Room coach/pet sprites and the manufactured Cogs return seam fix landed in `f244e36`.
+- Ian's expanded mechanical brief supersedes the earlier derived-tone L3 scope: reuse existing gear models, one interconnected drive along every shared shape, sectioned metal apertures, a weld cooling in half the prior time, and independently selectable mechanism and back wall colors. Mechanical source: `5bf9ac0`.
+- War Room coach and pet choices follow existing coach-body ownership; accepted atlas contents are 58 bodies and nine pets. Four rejected sprites stay unavailable.
+- Workout branch merged once as `8d35a5c`, including counting dependency `310ccac`, implementation `3a092ab`, and documentation follow-ups through `70697b1`. No generated workout outputs were copied. Shared acknowledgement: `D:/myr5-work/R21-WORKOUT-COORDINATION.md`.
+- Post-merge focused workout checks: 124/124 passed. Combined gate: 1,564 passed, 17 failed, two skipped. All 17 failures subsequently passed in focused reruns after test-fixture/expectation repairs; this is not a fresh zero-failure concurrent run. Repairs cover approved console geometry, completed transitions, verified account state, deterministic partial download, current mechanical materials/bearings, and thin glow sampling.
+- Clean production rebuild passed: 191 core files, 7,369,472 bytes within the 8 MiB budget; 1,775 static files within Workers limits. Build ID: `cc149ce6c316b8dbced0`.
+- Actual phone inference throughput, low-sampling accuracy and ambiguous cropped holds still require device testing. Preserve the workout research limitations and hold-policy questions.
+- Staging review follows this checkpoint. Production deployment still requires Ian's go.

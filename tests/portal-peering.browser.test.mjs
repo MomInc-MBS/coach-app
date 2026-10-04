@@ -20,6 +20,7 @@ function serve(){
  const root=resolve('dist/client');
  return createServer(async(req,res)=>{
   const path=new URL(req.url,'http://local').pathname;
+  if(path==='/__cogs_return__'){res.setHeader('Content-Type','text/html');res.end(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}dialog{background:#17111e;color:white}</style><nav id="coachDock" class="coach-dock"><button data-route="portal">Portal</button><button data-route="achievements" onclick="myr5Routes.go('achievements')">Achievements</button></nav><dialog id="mealsPanel" data-route="food">Food</dialog><dialog class="ach-board" data-route="achievements">Achievements<button class="ach-close" onclick="this.closest('dialog').close()">Close</button></dialog><script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script><script>let active='';window.myr5Routes={current:()=>active,go:route=>{active=route;const next=document.querySelector('[data-route="'+route+'"][open]')||document.querySelector('dialog[data-route="'+route+'"]');next.append(document.querySelector('#coachDock'));next.showModal();for(const old of document.querySelectorAll('dialog[open]'))if(old!==next)old.close();return next;}};</script>`);return;}
   if(path.startsWith('/api/')){res.writeHead(path==='/api/auth/config'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/auth/config'?{enabled:false}:{error:'Sign in'}));return;}
   try{const file=resolve(root,'.'+(path==='/'?'/pose.html':path));if(!file.startsWith(root+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
  });
@@ -149,8 +150,8 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    await page.waitForFunction(sel=>document.querySelector(sel).classList.contains('portal-fullscreen'),sel,{timeout:5000}); // R16/R17: stepped in, the frame stays as the rail (no garage-door exit)
    const f=await page.evaluate(sel=>{const d=document.querySelector(sel),r=d.getBoundingClientRect();return {open:d.open,clip:d.style.clipPath,box:[r.width,r.height],quilt:!document.getElementById('portalHome').hidden,
     shaped:document.querySelector('#portalChrome .portal-aura')?.classList.contains('shaped'),frameStays:document.querySelector('#portalChrome .portal-frame').getBoundingClientRect().bottom>0};},sel);
-   assert.deepEqual(f,{open:true,clip:'',box:[345,782],quilt:false,shaped:false,frameStays:true},`${id}: full screen`);
-   assert.equal(await auraPath(page),'M15.0 15.0L360.0 15.0L360.0 797.0L15.0 797.0Z',`${id}: the energy runs round the screen's edge`);
+   assert.deepEqual(f,{open:true,clip:'',box:[345,694],quilt:false,shaped:false,frameStays:true},`${id}: full screen`);
+   assert.equal(await auraPath(page),'M15.0 15.0L360.0 15.0L360.0 709.0L15.0 709.0Z',`${id}: the energy runs round the screen's edge`);
    assert.equal(await flowing(page),true,`${id}: the energy still flows in full screen`);
    assert.equal(await shown(page,title),true,`${id}: full screen shows its own title`);
    assert.equal(await fullyVisible(page,close),true,`${id}: full screen shows its own Close`);
@@ -216,15 +217,16 @@ test('release 5: switching routes from the bar while a destination is framed mov
  }finally{await context.close();}
 });
 
-test('R21 Cogs route handover returns through manufactured seams and heals the board',{timeout:180000},async()=>{
- const {context,page}=await openApp(browser,base);
+test('R21 Cogs frame handover returns through manufactured seams and heals the board',{timeout:180000},async()=>{
+ const context=await browser.newContext({viewport:{width:375,height:812},serviceWorkers:'block'}),page=await context.newPage();
  try{
-  await page.evaluate(async()=>{await window.myr5Portal.board('cogs');const board=window.myr5Portal.current();window.__cogsCuts=[];const cut=board.cut;board.cut=function(points,...args){window.__cogsCuts.push(points);return cut.call(this,points,...args);};window.__cogsExpected=(await import('/modules/portal/portal-shapes.mjs')).SHAPES.down[0].points.map(([u,v])=>{const p=board.patternRect(),f=board.faceRect();return [(p.left+p.width*u-f.left)/f.width,(p.top+p.height*v-f.top)/f.height];});window.run=window.myr5Portal.open('up');});
+  await page.goto(base+'/__cogs_return__');await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.myr5Portal=await openQuiltPortal();});
+  await page.evaluate(async()=>{await window.myr5Portal.board('cogs');if(document.querySelector('#portalHome').dataset.art!=='3d')throw Error('Mechanical board must render in 3D');const board=window.myr5Portal.current();window.__cogsCuts=[];const cut=board.cut;board.cut=function(points,...args){window.__cogsCuts.push(points);return cut.call(this,points,...args);};window.__cogsExpected=(await import('/modules/portal/portal-shapes.mjs')).SHAPES.down[0].points.map(([u,v])=>{const p=board.patternRect(),f=board.faceRect();return [(p.left+p.width*u-f.left)/f.width,(p.top+p.height*v-f.top)/f.height];});window.run=window.myr5Portal.open('up');});
   await page.evaluate(()=>window.run);
   await page.locator('#coachDock [data-route="achievements"]').click();
   await page.waitForSelector('.ach-board[open]');
-  await page.locator('.ach-close').click();
-  await quiltHome(page);
+  await page.locator('.ach-close').focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden&&!document.querySelector('.portal-glass')&&!document.querySelector('#portalChrome').matches(':popover-open'),null,{timeout:20000});
   const result=await page.evaluate(()=>({cuts:window.__cogsCuts,expected:window.__cogsExpected,board:document.querySelector('#portalHome').dataset.board}));
   assert.equal(result.board,'cogs');assert.ok(result.cuts.length>=2,'entry and handover return both cut the actual board');
   const actual=result.cuts.at(-1),expected=result.expected;
@@ -322,7 +324,7 @@ test('#124 a line\'s glowing slit opens into a lens and the X opens its diamond,
   // Landed (not mid-arrival): meditation occupies the phone in black and white.
   await page.waitForFunction(()=>{const d=document.querySelector('.meditation-panel'),c=getComputedStyle(d);return !d.classList.contains('portal-arriving')&&c.transform==='none'&&c.opacity==='1';},null,{timeout:30000});
   const med=await page.evaluate(()=>{const d=document.querySelector('.meditation-panel'),r=d.getBoundingClientRect();return {w:r.width,h:r.height,vw:innerWidth,vh:innerHeight,bg:getComputedStyle(d).backgroundColor};});
-  assert.ok(Math.abs(med.w-(med.vw-30))<1&&Math.abs(med.h-(med.vh-30))<1&&med.bg==='rgb(0, 0, 0)',`Meditation fills the black face inside the 15px rail (${JSON.stringify(med)})`);
+  assert.ok(Math.abs(med.w-(med.vw-30))<1&&Math.abs(med.h-(med.vh-30-88))<1&&med.bg==='rgb(0, 0, 0)',`Meditation fills the black face inside the 15px rail (${JSON.stringify(med)})`);
   await page.waitForTimeout(600);
   await page.screenshot({path:resolve(FRAMES,'127-meditation.png')});
   await page.locator('.meditation-panel [data-meditation-close]').click();

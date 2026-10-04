@@ -63,8 +63,9 @@ test('phone device keeps artwork proportional and renders every downloaded tunne
   await page.evaluate(()=>portal.playWormhole({direction:'out',minMs:50}));
  }
  assert.deepEqual(errors,[]);
- await page.evaluate(()=>{portal.show();const home=document.createElement('main');home.id='homeScreen';home.innerHTML='<button id="start">BEGIN</button>';document.body.append(home);portal.open('rect');});
- await page.waitForFunction(()=>document.querySelector('#portalWorkoutHome.portal-fullscreen')?.open,{},{timeout:20000});
+ await page.evaluate(()=>{portal.show();const home=document.createElement('main');home.id='homeScreen';home.innerHTML='<button id="start">BEGIN</button>';document.body.append(home);window.__workoutOpening=portal.open('rect');});
+ await page.evaluate(()=>window.__workoutOpening);
+ await page.waitForFunction(()=>{const dialog=document.querySelector('#portalWorkoutHome.portal-fullscreen[open]:not(.portal-ghost)');return dialog&&!dialog.classList.contains('portal-arriving')&&getComputedStyle(dialog).transform==='none'&&!document.querySelector('.portal-glass');},null,{timeout:20000});
  const rect=await page.locator('#portalWorkoutHome').boundingBox();assert.deepEqual(rect,{x:15,y:15,width:345,height:782});
  assert.equal(await page.locator('#portalChrome').getAttribute('data-destination'),'workout');
  await page.waitForTimeout(850);
@@ -73,23 +74,29 @@ test('phone device keeps artwork proportional and renders every downloaded tunne
  assert.equal(await page.locator('#start').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el;}),true,'the frame must not cover the workout start page');
  await page.screenshot({path:resolve(FRAMES_DIR,'redesign-workout.png')});
  await page.evaluate(()=>document.getElementById('portalWorkoutHome').close());
- await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden,{},{timeout:10000});
+ await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden&&!document.querySelector('.portal-glass')&&!document.querySelector('.portal-ghost'),null,{timeout:10000});
  await page.close();
 }));
 
 test('meditation tunnel loses colour throughout its duration and lands fullscreen',async()=>withPortal(async(browser,url)=>{
  const page=await openPage(browser,url);
- await page.evaluate(()=>{
+ const fade=await page.evaluate(async()=>{
+  const {PORTAL}=await import('/modules/portal/portal.mjs');
   const entry=document.createElement('button');entry.className='meditation-entry';document.body.append(entry);
   const room=document.createElement('dialog');room.className='meditation-panel';document.body.append(room);entry.onclick=()=>room.showModal();
-  portal.open('line-lr');
+  window.__meditationOpening=portal.open('line-lr');
+  const glass=document.querySelector('.portal-glass'),animation=glass.getAnimations().find(a=>a.effect.getKeyframes().some(f=>f.filter));
+  // Sample the actual CSS interpolation in one browser task. Slow software GL
+  // cannot advance past the fade between separate automation round trips.
+  const duration=animation.effect.getTiming().duration;animation.pause();
+  const samples=[0,.25,.5,.75,1].map(f=>{animation.currentTime=duration*f;return parseFloat(getComputedStyle(glass).filter.match(/grayscale\(([^)]+)/)[1]);});
+  animation.currentTime=0;animation.play();
+  return {duration,expected:(PORTAL.cutMs+PORTAL.loadMinMs+PORTAL.revealMs)*PORTAL.short,samples};
  });
- await page.waitForSelector('.portal-glass');
- const start=await page.locator('.portal-glass').evaluate(el=>({filter:getComputedStyle(el).filter,duration:el.getAnimations().find(a=>a.effect.getKeyframes().some(f=>f.filter))?.effect.getTiming().duration}));
- assert.ok(start.duration>3000,'fade spans cut, load and arrival, not an instant switch');
- await page.waitForTimeout(600);
- const partial=await page.locator('.portal-glass').evaluate(el=>parseFloat(getComputedStyle(el).filter.match(/grayscale\(([^)]+)/)[1]));assert.ok(partial>0&&partial<1);
- await page.waitForFunction(()=>document.querySelector('.meditation-panel.portal-fullscreen')?.open,null,{timeout:10000});
+ assert.ok(Math.abs(fade.duration-fade.expected)<.001,'short-route fade spans the configured cut, load and arrival');
+ for(const [i,f] of [0,.25,.5,.75,1].entries())assert.ok(Math.abs(fade.samples[i]-f)<.005,'browser interpolates grayscale throughout the fade: '+JSON.stringify(fade.samples));
+ await page.evaluate(()=>window.__meditationOpening);
+ await page.waitForFunction(()=>{const dialog=document.querySelector('.meditation-panel.portal-fullscreen[open]:not(.portal-ghost)');return dialog&&!dialog.classList.contains('portal-arriving')&&getComputedStyle(dialog).transform==='none'&&!document.querySelector('.portal-glass')&&document.querySelector('#portalChrome')?.matches(':popover-open');},null,{timeout:10000});
  const box=await page.locator('.meditation-panel').boundingBox();assert.deepEqual(box,{x:15,y:15,width:345,height:782});
  // R16/R17: the frame stays as the 15px rail round the room, with the energy running round the screen's edge.
  assert.equal(await page.locator('#portalChrome .portal-frame').evaluate(el=>getComputedStyle(el).visibility),'visible');

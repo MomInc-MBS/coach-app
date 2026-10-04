@@ -45,7 +45,7 @@ test('3D Grass flowers keep their face-relative position and size across rotatio
    await page.waitForFunction(()=>window.__grassPixels?.pink>0,null,{timeout:20000});
    return page.evaluate(()=>{
     window.__captureGrass=false;const T=window.__three,canvas=document.querySelector('#portalBoardHost canvas.portal-board-canvas'),rect=portal.current().faceRect(),camera=window.__grassCamera;
-    const flowers=window.__flowers.filter(o=>o.parent&&o.visible).map(o=>{const w=o.getWorldPosition(new T.Vector3()).project(camera),x=(w.x+1)*.5*canvas.clientWidth,y=(1-w.y)*.5*canvas.clientHeight;let color; o.traverse(n=>{if(color===undefined&&n.isMesh&&n.material?.userData.__portalPetal)color=n.material.color.getHex();});return{u:(x-rect.left)/rect.width,v:(y-rect.top)/rect.height,size:o.scale.x/rect.width,id:window.__flowers.indexOf(o),color};});
+    const flowers=window.__flowers.filter(o=>o.parent&&o.visible).map(o=>{const w=o.getWorldPosition(new T.Vector3()).project(camera),x=canvas.getBoundingClientRect().left+(w.x+1)*.5*canvas.clientWidth,y=canvas.getBoundingClientRect().top+(1-w.y)*.5*canvas.clientHeight;let color; o.traverse(n=>{if(color===undefined&&n.isMesh&&n.material?.userData.__portalPetal)color=n.material.color.getHex();});return{u:(x-rect.left)/rect.width,v:(y-rect.top)/rect.height,size:o.scale.x/rect.width,id:window.__flowers.indexOf(o),color};});
     return{flowers,pixels:window.__grassPixels,rect:{width:rect.width,height:rect.height}};
    });
   }
@@ -60,7 +60,7 @@ test('3D Grass flowers keep their face-relative position and size across rotatio
   await page.waitForFunction(()=>window.__grassPixels?.height>window.__grassPixels?.width&&window.__grassPixels?.pink>0,null,{timeout:20000});
   const portrait=await page.evaluate(()=>{
    window.__captureGrass=false;const T=window.__three,canvas=document.querySelector('#portalBoardHost canvas.portal-board-canvas'),rect=portal.current().faceRect(),camera=window.__grassCamera;
-   const flowers=window.__flowers.filter(o=>o.parent&&o.visible).map(o=>{const w=o.getWorldPosition(new T.Vector3()).project(camera),x=(w.x+1)*.5*canvas.clientWidth,y=(1-w.y)*.5*canvas.clientHeight;let color;o.traverse(n=>{if(color===undefined&&n.isMesh&&n.material?.userData.__portalPetal)color=n.material.color.getHex();});return{u:(x-rect.left)/rect.width,v:(y-rect.top)/rect.height,size:o.scale.x/rect.width,id:window.__flowers.indexOf(o),color};});return{flowers,pixels:window.__grassPixels};
+   const flowers=window.__flowers.filter(o=>o.parent&&o.visible).map(o=>{const w=o.getWorldPosition(new T.Vector3()).project(camera),x=canvas.getBoundingClientRect().left+(w.x+1)*.5*canvas.clientWidth,y=canvas.getBoundingClientRect().top+(1-w.y)*.5*canvas.clientHeight;let color;o.traverse(n=>{if(color===undefined&&n.isMesh&&n.material?.userData.__portalPetal)color=n.material.color.getHex();});return{u:(x-rect.left)/rect.width,v:(y-rect.top)/rect.height,size:o.scale.x/rect.width,id:window.__flowers.indexOf(o),color};});return{flowers,pixels:window.__grassPixels};
   });
   const survivors=before.map((prior,i)=>({prior,after:portrait.flowers.find(f=>f.id===identity[i])})).filter(pair=>pair.after);
   assert.ok(survivors.length>0,`at least one same-instance flower survives rotation (${landscape.flowers.length} before, ${portrait.flowers.length} after)`);

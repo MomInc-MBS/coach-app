@@ -285,7 +285,11 @@ test('an interrupted download resumes where it stopped, after a reload and after
  try{
   browser=await launch();const context=await installed(browser,server.base);
   let page=await home(context,server.base,'/pose.html#pod');
+  // An explicit pod deep link keeps its page; open Downloads through Settings.
+  await page.evaluate(()=>document.getElementById('openSettings').click());
+  await page.locator('#settings .downloads-entry button').click();
   await everything(page);
+  await page.locator('#closeSettings').click();
   await page.waitForFunction(()=>document.querySelector('.full-download-bar progress')?.value>0.1,null,{timeout:60000});
   // Reload mid-download: the tap was the consent, so it resumes by itself.
   const before=server.seen.filter(r=>r.pkg).length;

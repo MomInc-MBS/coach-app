@@ -76,14 +76,14 @@ test('cold direct destination links establish their own housing without a previo
 test('each direct menu tilts while open without a fall-through entrance or moving its frame and dock',{timeout:120000},async()=>{
  const {context,page}=await openApp(browser,base,'no-preference',{width:375,height:812});try{
   await page.evaluate(async()=>{const T=await import('/vendor/three/three.module.js');window.__menuCameras=new Map();T.Scene.prototype.onBeforeRender=function(renderer,scene,camera){const dialog=renderer.domElement.closest('dialog');if(dialog)window.__menuCameras.set(dialog,camera);};});
-  for(const [route,selector]of [['food','#mealsPanel'],['achievements','.ach-board'],['reminders','#remindersPanel'],['scoreboard','#accountPanel'],['settings','#settings']]){
-   if(route==='settings'){await page.evaluate(()=>window.myr5Routes.go('pod'));await page.locator('#openSettings').click();}else await page.evaluate(route=>window.myr5Routes.go(route),route);await page.waitForFunction(({selector,route})=>document.querySelector(selector)?.open&&(route==='settings'||document.querySelector(selector)?.classList.contains('portal-fullscreen')),{selector,route});if(route==='reminders')await page.waitForFunction(()=>document.querySelector('#remindersPanel').dataset.reminderRoom==='ready');await page.waitForTimeout(300);
+  for(const [route,selector]of [['food','dialog#mealsPanel[open]:not(.portal-ghost)'],['achievements','dialog.ach-board[open]:not(.portal-ghost)'],['reminders','dialog#remindersPanel[open]:not(.portal-ghost)'],['scoreboard','dialog#accountPanel[open]:not(.portal-ghost)'],['settings','dialog#settings[open]:not(.portal-ghost)']]){
+   if(route==='settings'){await page.evaluate(()=>window.myr5Routes.go('pod'));await page.locator('#openSettings').click();}else await page.evaluate(route=>window.myr5Routes.go(route),route);await page.waitForFunction(({selector,route})=>document.querySelector(selector)?.open&&(route==='settings'||document.querySelector(selector)?.classList.contains('portal-fullscreen')),{selector,route});if(route==='reminders')await page.waitForFunction(()=>document.querySelector('#remindersPanel').dataset.reminderRoom==='ready');await page.waitForFunction(()=>document.querySelector('#portalChrome')?.matches(':popover-open')&&!document.querySelector('.portal-arriving'));
    assert.equal(await page.locator('.portal-glass').count(),0,'direct '+route+' does not play fall-through');
    const sample=()=>page.locator(selector).evaluate(el=>{const camera=window.__menuCameras.get(el),r=n=>n.getBoundingClientRect().toJSON();return{visual:JSON.stringify({camera:camera?.projectionMatrix.elements,layers:[...el.querySelectorAll('*')].filter(n=>!n.closest('#coachDock')).map(n=>[getComputedStyle(n).translate,getComputedStyle(n).rotate])}),frame:r(document.querySelector('#portalChrome .portal-frame')),dock:r(document.querySelector('#coachDock'))};});
    await page.mouse.move(30,250);await page.waitForTimeout(350);const left=await sample();await page.mouse.move(340,320);await page.waitForTimeout(450);const right=await sample();assert.notEqual(right.visual,left.visual,route+' changes actual scene projection or content layer transforms');assert.deepEqual(right.frame,left.frame,route+' frame stays fixed');assert.deepEqual(right.dock,left.dock,route+' dock stays fixed');
    if(route==='settings'){const xs=state=>JSON.parse(state.visual).layers.map(([translate])=>parseFloat(translate)).filter(Number.isFinite);assert.ok(xs(left).some(x=>x<-.1)&&xs(right).some(x=>x>.1),'flat Settings moves in both pointer directions');}
    await page.screenshot({path:resolve(FRAMES_DIR,`direct-tilt-${route}.png`)});
-   await page.locator('#coachDock [data-route="portal"]').click();await page.waitForFunction(()=>!document.querySelector('dialog.portal-framed[open]')&&!document.querySelector('#portalHome').hidden);
+   await page.locator('#coachDock [data-route="portal"]').click();await page.waitForFunction(()=>!document.querySelector('dialog.portal-framed[open]')&&!document.querySelector('#portalHome').hidden&&!document.querySelector('.portal-glass')&&!document.querySelector('.portal-ghost')&&!document.querySelector('#portalChrome')?.matches(':popover-open'));
   }
  }finally{await context.close();}
 });
@@ -124,6 +124,9 @@ for(const viewport of [{width:375,height:812},{width:375,height:667},{width:812,
  try{
   const checkFrame=async()=>{
    const currentViewport=page.viewportSize();
+   // frameDialog promotes its popover on the next rendered frame, after the
+   // dialog opens. Sample persistent housing after that actual lifecycle event.
+   await page.waitForFunction(()=>document.querySelector('#portalChrome')?.matches(':popover-open'),null,{timeout:10000});
    const frame=await page.locator('#portalChrome .portal-frame').evaluate(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el),chrome=el.closest('#portalChrome');return{x:r.x,y:r.y,width:r.width,height:r.height,display:s.display,opacity:Number(s.opacity),transform:s.transform,open:chrome.matches(':popover-open'),garage:chrome.classList.contains('portal-garage')};});
    assert.equal(frame.open,true);assert.equal(frame.garage,false,'housing never uses the garage-away state');assert.notEqual(frame.display,'none');assert.ok(frame.opacity>.9);assert.equal(frame.transform,'none');
    assert.ok(frame.x>=14&&frame.y>=14&&frame.x+frame.width<=currentViewport.width-14&&frame.y+frame.height<=currentViewport.height-14,'15px metal rails remain around the full scene: '+JSON.stringify({frame,currentViewport}));return frame;
