@@ -44,6 +44,7 @@ export function applyExerciseDemo(p,m,t){
   const pose=m.pose??'horse';
   if(pose==='salute')armsUp();
   if(pose==='chair'){for(const key of ['head','neck','ls','rs','le','re','lw','rw','lh','rh'])p[key][1]-=.28;p.lk=[-.17,-.55,.3];p.rk=[.17,-.55,.3];armsUp();for(const key of ['le','re','lw','rw'])p[key][1]-=.28;}
+  if(pose==='wall-sit'){for(const key of ['head','neck','ls','rs','le','re','lw','rw','lh','rh'])p[key][1]-=.45;p.lk=[-.17,-.55,.45];p.rk=[.17,-.55,.45];}
   if(['warrior','warrior-one'].includes(pose)||m.side){const lead=m.side==='right'?'r':'l',back=lead==='l'?'r':'l',sign=lead==='l'?-1:1;p[lead+'k']=[sign*.66,-.33,0];p[lead+'a']=[sign*.66,-.85,0];p[back+'k']=[-sign*.46,-.43,0];p[back+'a']=[-sign*.82,-.88,0];if(pose==='warrior'){p.le=[-.6,.57,0];p.re=[.6,.57,0];p.lw=[-.98,.57,0];p.rw=[.98,.57,0];}else if(pose==='warrior-one')armsUp();}
   else if(pose==='horse'||pose==='goddess'){
    const deep=m.high?.06:m.low?.35:.23;p.lk=[-.56,-.44+deep,0];p.rk=[.56,-.44+deep,0];p.la=[-.56,-.94+deep,0];p.ra=[.56,-.94+deep,0];

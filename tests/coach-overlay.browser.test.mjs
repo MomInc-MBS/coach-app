@@ -84,6 +84,7 @@ test('AR coach stays hidden until counting, walks in, wanders, and a kick spins 
    housing:[...document.querySelectorAll('#cameraWorkout>.camera-workout-housing')].map(n=>n.getAttribute('aria-hidden')+' '+getComputedStyle(n).pointerEvents)
   }));
   assert.deepEqual(shell.others,[]);assert.equal(shell.canvasVisible,false);assert.equal(shell.liveStop,null);
-  assert.deepEqual(shell.stageChildren,['VIDEO#v','BUTTON','DIV#coachOverlay']);assert(shell.housing.every(h=>h==='true none'),JSON.stringify(shell.housing));
+  // Plus the pause-reason line (P) and the ±1 rep buttons (DIV), both hidden unless needed.
+  assert.deepEqual(shell.stageChildren,['VIDEO#v','BUTTON','P','DIV','DIV#coachOverlay']);assert(shell.housing.every(h=>h==='true none'),JSON.stringify(shell.housing));
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });

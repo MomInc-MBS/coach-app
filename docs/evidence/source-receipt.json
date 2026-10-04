@@ -1,0 +1,20 @@
+{
+  "base": "310ccacf76d10fdbf642a73c874f41bb72b32521",
+  "files": {
+    "app.mjs": "34bb1dba9a67b47841335ce4679becc62199fc2c3569b0dff6f7f2168c0633ac",
+    "coach-overlay.mjs": "42010b272ead0338238944bba2e47109662b80ac781e9ab31786b08d525da9a0",
+    "coach-hit.mjs": "e71d51197395329523229d3e1ddef7475fb829cf91e87816ca05590178342eab",
+    "coach.mjs": "18ed64637608f62f5489f3fcdb287372593f6ecec7d8d5f9587e3d3ccf1eb40b",
+    "movement-engine.mjs": "a8758a0cc57e331bc1f001989f69d44ffb40739be4258d7aa31eda6a5a5beed8",
+    "movement-rules.mjs": "9fbf3949b07115085a9f2d7f1759714605433340f30bb0e717aad1c41627c464",
+    "pose-recorder.mjs": "c59a9e54672becd35030048282dc606237b70accb654fbafa52bed099644c55b",
+    "pose-frame.mjs": "3f75aa34bba9ea04a38903e66580738fc40c22b316f48c6adba0b44f02d733eb",
+    "tests/coach-cap.browser.test.mjs": "e7ea662e3022843a5e7180bc730e727bfb9a9728c7cabe00676d84663db24d06",
+    "tests/coach-hit.test.mjs": "cc143fabf0a699bdf5b5f566852dd2cba8cb918723aaa3424b5f47162064b76d",
+    "tests/coach.test.mjs": "8e0c3e941000bd4dfa89cf770bf3efdf11d70b153a00acab932529b2f68c47f6",
+    "tests/exercise-library.test.mjs": "edc30ea51e3e15be17e290a50953d9e39d5ae91aa4d3ade825174b5e68855022",
+    "tests/rep-counting.test.mjs": "130ae3fc38c80f570b0c72450c538c442eecbfc862e9c035992e025fea161097",
+    "tests/pose-frame.test.mjs": "f816f47bf3fffd72f4460d0539d7b24249cbaa8ab704536f413f67f7ceaaecb6",
+    "scripts/workout-tracking-research.mjs": "e60b5810b7758f3e359c55965dea071f384d5f6acc6ff5da490ec4715b8d1381"
+  }
+}

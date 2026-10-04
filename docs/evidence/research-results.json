@@ -1,0 +1,105 @@
+{
+  "source": "310ccacf76d10fdbf642a73c874f41bb72b32521",
+  "syntheticOnly": true,
+  "hold": [
+    {"mode": "tree", "scenario": "continuous", "seconds": 4.6, "continuous": 4.6, "message": "Pose detected. Hold at your own comfort level."},
+    {"mode": "tree", "scenario": "missing-joints", "seconds": 3.75, "continuous": 2.2, "message": "Pose detected. Hold at your own comfort level."},
+    {"mode": "tree", "scenario": "no-pose", "seconds": 3.75, "continuous": 2.2, "message": "Pose detected. Hold at your own comfort level."},
+    {"mode": "high-plank", "scenario": "continuous", "seconds": 4.6, "continuous": 4.6, "message": "Position detected. Hold comfortably."},
+    {"mode": "high-plank", "scenario": "missing-joints", "seconds": 4.6, "continuous": 4.6, "message": "Position detected. Hold comfortably."},
+    {"mode": "high-plank", "scenario": "no-pose", "seconds": 3.75, "continuous": 2.2, "message": "Position detected. Hold comfortably."}
+  ],
+  "cadence": [
+    {"fps": 1.4, "secondsPerRep": 1, "expected": 10, "min": 2, "max": 5, "mean": 4.275, "exact": 0, "phases": 40},
+    {"fps": 1.4, "secondsPerRep": 1.5, "expected": 10, "min": 5, "max": 7, "mean": 6.175, "exact": 0, "phases": 40},
+    {"fps": 1.4, "secondsPerRep": 2, "expected": 10, "min": 6, "max": 9, "mean": 7.975, "exact": 0, "phases": 40},
+    {"fps": 1.4, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 1.4, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 1.5, "secondsPerRep": 1, "expected": 10, "min": 1, "max": 6, "mean": 4.825, "exact": 0, "phases": 40},
+    {"fps": 1.5, "secondsPerRep": 1.5, "expected": 10, "min": 5, "max": 8, "mean": 6.625, "exact": 0, "phases": 40},
+    {"fps": 1.5, "secondsPerRep": 2, "expected": 10, "min": 1, "max": 10, "mean": 8.425, "exact": 33, "phases": 40},
+    {"fps": 1.5, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 1.5, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 1.6, "secondsPerRep": 1, "expected": 10, "min": 4, "max": 7, "mean": 4.825, "exact": 0, "phases": 40},
+    {"fps": 1.6, "secondsPerRep": 1.5, "expected": 10, "min": 6, "max": 9, "mean": 7.075, "exact": 0, "phases": 40},
+    {"fps": 1.6, "secondsPerRep": 2, "expected": 10, "min": 8, "max": 10, "mean": 8.875, "exact": 15, "phases": 40},
+    {"fps": 1.6, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 1.6, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2, "secondsPerRep": 1, "expected": 10, "min": 1, "max": 10, "mean": 5.725, "exact": 21, "phases": 40},
+    {"fps": 2, "secondsPerRep": 1.5, "expected": 10, "min": 1, "max": 10, "mean": 8.425, "exact": 33, "phases": 40},
+    {"fps": 2, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2.5, "secondsPerRep": 1, "expected": 10, "min": 5, "max": 10, "mean": 7.075, "exact": 14, "phases": 40},
+    {"fps": 2.5, "secondsPerRep": 1.5, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2.5, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2.5, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 2.5, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 4, "secondsPerRep": 1, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 4, "secondsPerRep": 1.5, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 4, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 4, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 4, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 8, "secondsPerRep": 1, "expected": 10, "min": 1, "max": 10, "mean": 9.775, "exact": 39, "phases": 40},
+    {"fps": 8, "secondsPerRep": 1.5, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 8, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 8, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 8, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 15, "secondsPerRep": 1, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 15, "secondsPerRep": 1.5, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 15, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 15, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 15, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 30, "secondsPerRep": 1, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 30, "secondsPerRep": 1.5, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 30, "secondsPerRep": 2, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 30, "secondsPerRep": 3, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40},
+    {"fps": 30, "secondsPerRep": 4, "expected": 10, "min": 10, "max": 10, "mean": 10, "exact": 40, "phases": 40}
+  ],
+  "plankAmbiguity": {
+  "visible": {
+    "valid": true,
+    "up": false,
+    "down": false,
+    "match": false,
+    "metric": 0,
+    "side": "left",
+    "message": "Straighten your back"
+  },
+  "cropped": {
+    "valid": true,
+    "up": false,
+    "down": false,
+    "match": true,
+    "metric": 1,
+    "side": "left",
+    "message": "Camera beside you. Show shoulder, elbow, wrist, hip and supporting knee."
+  }
+},
+  "knn": {
+  "required": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    23,
+    24,
+    25,
+    26
+  ],
+  "standing": {
+    "gate": true,
+    "votes": {
+      "up": 0.9999999999999999
+    }
+  },
+  "kneesCropped": {
+    "gate": false,
+    "votes": {
+      "up": 0.9999999999999999
+    }
+  }
+}
+}

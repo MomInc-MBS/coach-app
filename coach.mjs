@@ -18,7 +18,7 @@ export class CueEvents {
  update(m,now){
   const cues=[],p=this.previous;
   const add=(text,key='guide')=>cues.push({text,key});
-  const ready=m.tracking&&(m.kind==='hold'?m.progress===1:!['squat','pushup','jumping'].includes(m.mode)||m.calibrated);
+  const ready=m.tracking&&(m.kind==='hold'?m.progress===1:['reps','jumps'].includes(m.kind)?m.calibrated:true);
   if(m.complete){if(!p?.complete)add('Round complete. Well done.','complete');}
   else {
    if(ready&&!this.ready){add('Ready. Begin.','ready');this.ready=true;}

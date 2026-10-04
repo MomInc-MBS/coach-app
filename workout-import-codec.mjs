@@ -3,7 +3,7 @@
 export const IMPORT_DIGEST_VERSION = 1;
 export const IMPORT_SNAPSHOT_KEYS = Object.freeze(['schemaVersion','clientWorkoutId','mode','goal','restSeconds','startedAt','completedAt','value','activeSeconds','elapsedSeconds']);
 // Pinned from exercise-library.mjs and server/domain.mjs on 2026-09-21.
-const timedModes = 'knee-plank high-plank forearm-plank side-knee-left side-knee-right side-plank-left side-plank-right knee-balance low-tree tree overhead-tree mountain salute chair warrior-one warrior goddess high-horse horse low-horse front-stance-left front-stance-right jab-left jab-right boxing double-jab'.split(' ');
+const timedModes = 'knee-plank high-plank forearm-plank side-knee-left side-knee-right side-plank-left side-plank-right knee-balance low-tree tree overhead-tree mountain salute chair warrior-one warrior goddess high-horse horse low-horse front-stance-left front-stance-right wall-sit jab-left jab-right boxing double-jab'.split(' ');
 const countModes = 'knee-pushup high-incline-pushup low-incline-pushup pushup wide-pushup slow-pushup diamond-pushup decline-pushup shallow-squat squat wide-squat pause-squat slow-squat split-left split-right small-hinge hip-hinge good-morning glute-bridge pause-bridge front-raise lateral-raise overhead-reach standing-press slow-press march high-march jogging step-jack jumping-jack jumping'.split(' ');
 export const IMPORT_MODE_LIMITS = Object.freeze(Object.fromEntries([...timedModes.map(mode=>[mode,Object.freeze({goal:7200,value:7200})]),...countModes.map(mode=>[mode,Object.freeze({goal:100000,value:100000})])]));
 export class WorkoutImportCodecError extends Error {

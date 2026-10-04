@@ -1,0 +1,283 @@
+diff --git a/app.mjs b/app.mjs
+index db1fc3e..9b1cb72 100644
+--- a/app.mjs
++++ b/app.mjs
+@@ -33,6 +33,35 @@ let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,gene
+ // R9-OFFLINE: the pinned pose tracker, same-origin (scripts/mediapipe.mjs) and in the Starter download, so a set runs offline.
+ const MEDIAPIPE='/vendor/mediapipe/0.10.14';
+ let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
++// Tracker delegate: GPU first, CPU fallback. CPU was the baseline because a Pixel's GPU path once lost its WebGL
++// context, so any GPU failure (load error, detect throw, context loss, NaN landmarks, or blind while a CPU probe
++// sees a person) drops this set to CPU and is remembered on the device. ?poseDelegate=CPU|GPU forces one for A/B.
++const DELEGATE_KEY='myr5-pose-delegate',BLIND_PROBE_MS=3000;
++let gpuSeen=false,blindSince=0,probe=null;
++function preferredDelegate(){
++  const forced=new URLSearchParams(location.search).get('poseDelegate')?.toUpperCase();
++  if(forced==='CPU'||forced==='GPU')return forced;
++  try{return localStorage.getItem(DELEGATE_KEY)==='CPU'?'CPU':'GPU';}catch{return 'GPU';}
++}
++function rememberCpu(reason){state.delegateNote=reason;console.warn('Pose tracker on CPU: '+reason);try{localStorage.setItem(DELEGATE_KEY,'CPU');}catch{}}
++async function loadTracker(delegate,run){
++  // Our own canvas on GPU so a lost WebGL context is seen (MediaPipe runs its GL on options.canvas).
++  const canvas=delegate==='GPU'?(typeof OffscreenCanvas==='function'?new OffscreenCanvas(1,1):document.createElement('canvas')):undefined;
++  let expired=false;
++  const loading=api.PoseLandmarker.createFromOptions(files,{...(canvas?{canvas}:{}),baseOptions:{modelAssetPath:MEDIAPIPE+'/pose_landmarker_lite.task',delegate},runningMode:'VIDEO',numPoses:1});
++  loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
++  let created;
++  try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
++  canvas?.addEventListener('webglcontextlost',()=>{created.myr5Lost=true;});
++  return created;
++}
++async function toCpu(run,reason){
++  rememberCpu(reason);try{tracker?.close();}catch{}tracker=null;
++  const cpu=probe?.tracker||await loadTracker('CPU',run);probe=null;
++  if(run!==generation){try{cpu.close();}catch{}return;}
++  tracker=cpu;state.delegate='CPU';
++}
++function closeProbe(){try{probe?.tracker?.close();}catch{}probe=null;}
+ let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
+ const manualStartGate=new ManualStartGate();
+ let session=new MovementSession('squat');
+@@ -61,7 +90,7 @@ async function showLensInfo(track){
+   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
+ }
+ function release(){
+-  cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}draw=null;
++  cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}closeProbe();draw=null;
+   stream?.getTracks().forEach(t=>t.stop());stream=null;v.pause();v.srcObject=null;g.clearRect(0,0,c.width,c.height);
+   state.camera=null;state.delegate=null;state.rate=0;
+ }
+@@ -125,14 +154,15 @@ async function start(){
+     if(run!==generation)return;
+     files=files||await timeout(api.FilesetResolver.forVisionTasks(MEDIAPIPE+'/wasm'),20000,'Tracker runtime did not download. Check the phone’s internet connection.');
+     if(run!==generation)return;
+-    // This Pixel's GPU path lost its WebGL context. CPU is the measured baseline.
+-    let expired=false;
+-    const loading=api.PoseLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:MEDIAPIPE+'/pose_landmarker_lite.task',delegate:'CPU'},runningMode:'VIDEO',numPoses:1});
+-    loading.then(created=>{if(run!==generation||expired)created.close();},()=>{});
+-    let created;
+-    try{created=await timeout(loading,60000,'Tracker loading took too long. Tap Start to retry.');}catch(error){expired=true;throw error;}
++    let delegate=preferredDelegate(),created=null;
++    // One warm-up detect while "Loading tracker…" shows: the GPU's first run compiles its shaders (~5 s cold on a
++    // desktop) and a throw here means a broken GPU path, so it falls back before the set starts.
++    if(delegate==='GPU'){try{created=await loadTracker('GPU',run);if(run===generation)created.detectForVideo(v,performance.now());}catch(error){try{created?.close();}catch{}created=null;if(run!==generation)return;rememberCpu('GPU failed to start: '+error.message);delegate='CPU';}}
++    if(run!==generation)return;
++    created??=await loadTracker('CPU',run);
+     if(run!==generation)return;
+-    tracker=created;draw=new api.DrawingUtils(g);state.delegate='CPU';state.phase='tracking';
++    tracker=created;draw=new api.DrawingUtils(g);state.delegate=delegate;state.phase='tracking';
++    gpuSeen=false;blindSince=performance.now();
+     controls(true);
+     lastTime=-1;frames=0;timing=0;windowStart=performance.now();lastUi=0;
+     status(MOVEMENTS[session.mode].hint);voice.say(MOVEMENTS[session.mode].hint,{interrupt:true});loop(run);
+@@ -149,7 +179,21 @@ async function loop(run){
+     if(v.readyState>=2&&v.currentTime!==lastTime){
+       lastTime=v.currentTime;if(c.width!==v.videoWidth||c.height!==v.videoHeight){c.width=v.videoWidth;c.height=v.videoHeight;}
+       g.clearRect(0,0,c.width,c.height);
+-      const before=performance.now(),result=tracker.detectForVideo(v,now),elapsed=performance.now()-before;
++      const before=performance.now();let result=null;
++      try{result=tracker.detectForVideo(v,now);}catch(error){if(state.delegate!=='GPU')throw error;}
++      const elapsed=performance.now()-before;
++      if(state.delegate==='GPU'&&(!result||tracker.myr5Lost||result.landmarks[0]?.some(q=>!Number.isFinite(q.x+q.y)))){
++        await toCpu(run,!result?'GPU detect threw':tracker?.myr5Lost?'GPU WebGL context lost':'GPU returned invalid landmarks');
++        frame=requestAnimationFrame(()=>loop(run));return;
++      }
++      // A GPU that never sees anyone may be silently broken: every few blind seconds, ask a CPU probe the same frame.
++      if(state.delegate==='GPU'&&!gpuSeen){
++        if(result.landmarks.length){gpuSeen=true;closeProbe();}
++        else if(now-blindSince>=BLIND_PROBE_MS){
++          if(!probe){const p=probe={tracker:null};loadTracker('CPU',run).then(t=>{if(probe===p)p.tracker=t;else try{t.close();}catch{}},()=>{});}
++          else if(probe.tracker){blindSince=now;if(probe.tracker.detectForVideo(v,now).landmarks.length){await toCpu(run,'GPU blind while CPU sees a pose');frame=requestAnimationFrame(()=>loop(run));return;}}
++        }
++      }
+       state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;
+       const p=result.landmarks[0]?.slice(0,27);
+       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
+@@ -161,7 +205,7 @@ async function loop(run){
+       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
+       if(await pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
+       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
+-      if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
++      if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s (${state.delegate}) · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
+       if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
+     }
+     frame=requestAnimationFrame(()=>loop(run));
+diff --git a/coach-overlay.mjs b/coach-overlay.mjs
+index e0f7e58..008262f 100644
+--- a/coach-overlay.mjs
++++ b/coach-overlay.mjs
+@@ -4,13 +4,13 @@ import {CoachMotion,COACH} from './coach-hit.mjs';
+ const $=id=>document.getElementById(id);
+ 
+ // D43.5: while a set is counting, the coach gives up frames before the counter does. window.myr5TestState.rate
+-// is the tracking loop's own pose-update measurement (app.mjs) — reused here, not remeasured, so this is the
+-// same "updates/s" the counter and the calibration floor (9919c65) already see. When capped, this both caps
+-// the creature viewer's own WebGL render loop (window.myr5Creature.setMaxFps, creature/source/viewer.ts —
+-// the actual cost that competes with MediaPipe) and throttles coach-overlay's own per-pose work below (DOM
+-// writes and the coach-hit wander/hit-test math, which run inline in the tracking loop's call stack).
+-// Release 5 review: 1.6/s only engaged below the engine's own 1.33/s floor; phones stall in the 2-8/s band, so cap under 4/s.
+-const COACH_CAP={minPoseHz:4,fps:10,recoverMs:2000};
++// is the tracking loop's own pose-update measurement (app.mjs) — reused here, not remeasured.
++// Speed fix (3 Oct): below minPoseHz the coach is OFF, not 10 fps: the box leaves layout (display:none) so the
++// creature viewer's IntersectionObserver stops its WebGL loop, and no coach-hit math or DOM writes run. Phones
++// measured 1.4–1.9 updates/s with the coach on; reps need ~4+/s. It comes back after recoverMs of fast tracking,
++// doubling each time it is cut again in the same set so a phone near the line doesn't flicker it on and off.
++// Its per-pose work runs in the next animation frame (latest pose only), never inside the tracker's detect call.
++const COACH_CAP={minPoseHz:4,recoverMs:2000};
+ const COACH_GESTURE={spun:'laugh',held:'wiggle',swiping:'swipe',impressed:'agree',laughing:'laugh'};
+ 
+ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
+@@ -22,7 +22,7 @@ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
+ 
+ export function mountCoachOverlay(){
+  let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,gesturePhase=null,walking=false,begun=false,loading=null,lastState=null;
+- let capped=false,aboveSince=null,lastRenderAt=-Infinity;
++ let capped=false,aboveSince=null,caps=0,pending=null,scheduled=0;
+  async function ensureCard(){
+   card=document.querySelector('.myr5-companion-card');if(card)return;
+   loading??=(async()=>{
+@@ -45,7 +45,7 @@ export function mountCoachOverlay(){
+  async function enter(){
+   await ensureCard();if(!card||!tracking)return;
+   ensureOverlay();if(!box)return;if(card.parentElement!==box)box.append(card);
+-  boxH=0;gesturePhase=null;lastState=null;capped=false;aboveSince=null;lastRenderAt=-Infinity;window.myr5Creature?.setMaxFps?.(null);shown(false);
++  boxH=0;gesturePhase=null;lastState=null;capped=false;aboveSince=null;caps=0;window.myr5Creature?.setMaxFps?.(null);shown(false);
+   motion=new CoachMotion({aspect:innerWidth/innerHeight,now:performance.now(),play:!String(window.myr5Creature?.stats?.()?.recipe?.body||'').startsWith('roster/18-quad')});if(begun)motion.begin();
+   window.myr5Creature?.stage('overlay');
+  }
+@@ -81,35 +81,25 @@ export function mountCoachOverlay(){
+   box.style.transform=`translate(${state.x*w-boxH*COACH.boxWidth/2}px,${state.feetY*h-(k+1)*boxH/2}px) scale(${k}) ${pivot}rotate(${tilt}rad)${unpivot}`;
+  }
+  function apply(state){lastState=state;place(state);}
+- // Hysteresis: drop to capped the moment tracking is slow; only climb back out after minPoseHz has held
+- // for recoverMs straight, so a set hovering near the threshold doesn't flip the cap on and off. Flips the
+- // creature viewer's own render cap on transitions only (not every pose event).
++ // Hysteresis: off the moment tracking is slow; back only after minPoseHz has held for recoverMs (doubled per cut).
+  function updateCap(counting,now){
+-  const was=capped;
+-  if(!counting){capped=false;aboveSince=null;}
+-  else{
+-   const rate=window.myr5TestState?.rate;
+-   if(Number.isFinite(rate)&&rate<COACH_CAP.minPoseHz){capped=true;aboveSince=null;}
+-   else{
+-    if(aboveSince===null)aboveSince=now;
+-    if(capped&&now-aboveSince>=COACH_CAP.recoverMs)capped=false;
+-   }
+-  }
+-  if(capped!==was)window.myr5Creature?.setMaxFps?.(capped?COACH_CAP.fps:null);
++  if(!counting){capped=false;aboveSince=null;return;}
++  const rate=window.myr5TestState?.rate;
++  if(Number.isFinite(rate)&&rate<COACH_CAP.minPoseHz){if(!capped)caps++;capped=true;aboveSince=null;}
++  else{aboveSince??=now;if(capped&&now-aboveSince>=COACH_CAP.recoverMs*2**(caps-1))capped=false;}
+  }
+- function onPose(event){
+-  if(!tracking||!motion||!box)return;
+-  const {points,width,height,mirrored,now,counting}=event.detail;
++ function flush(){
++  cancelAnimationFrame(scheduled);scheduled=0;
++  const detail=pending;pending=null;
++  if(!detail||!tracking||!motion||!box)return;
++  const {points,width,height,mirrored,now,counting}=detail;
+   if(counting&&!begun){begun=true;motion.begin();}
+   updateCap(counting,now);
+-  // The WebGL cap above covers the render cost; this also skips this pose sample's own DOM writes and
+-  // coach-hit math (still real-time, not frame-count, so a capped coach covers the same ground in fewer,
+-  // bigger steps) since that work runs inline in the tracking loop's call stack too.
+-  if(capped&&now-lastRenderAt<1000/COACH_CAP.fps)return;
+-  lastRenderAt=now;
++  if(capped){shown(false);walk(false);return;}
+   const screenPoints=points?points.map(p=>videoToScreen(p,{videoW:width,videoH:height,screenW:innerWidth,screenH:innerHeight,mirrored})):null;
+   apply(motion.update(screenPoints,now));
+  }
++ function onPose(event){pending=event.detail;scheduled||=requestAnimationFrame(flush);}
+  window.addEventListener('myr5:pose',onPose);
+  function setTracking(busy){if(busy===tracking)return;tracking=busy;if(busy){begun=false;void enter();}else leave();}
+  new MutationObserver(()=>setTracking(document.body.dataset.tracking==='true')).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+@@ -118,6 +108,7 @@ export function mountCoachOverlay(){
+   begin(){begun=true;motion?.begin();},
+   pose(screenPoints){if(!motion||!box)return;apply(motion.update(screenPoints,performance.now()));},
+   stop(){document.body.dataset.tracking='false';setTracking(false);},
++  flush,
+   state:()=>lastState
+  };
+ }
+diff --git a/pose-recorder.mjs b/pose-recorder.mjs
+index 8794650..b88feb4 100644
+--- a/pose-recorder.mjs
++++ b/pose-recorder.mjs
+@@ -9,7 +9,7 @@ export function mountPoseRecorder(stage){
+  const button=(text,onClick)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='min-width:64px;min-height:48px;border:0;border-radius:12px;background:#fff;color:#000;font:inherit';b.addEventListener('click',onClick);bar.append(b);};
+  const show=()=>{
+   if(!recording)return;const now=performance.now(),last=recording.labels.at(-1);
+-  status.textContent=last&&now<last.from?`${last.label.toUpperCase()} in ${Math.ceil((last.from-now)/1000)}…`:last&&now<=last.to?`Hold ${last.label}…`:`${recording.exercise} · ${recording.frames.length} frames · ${recording.labels.length} labels`;
++  status.textContent=last&&now<last.from?`${last.label.toUpperCase()} in ${Math.ceil((last.from-now)/1000)}…`:last&&now<=last.to?`Hold ${last.label}…`:`${recording.exercise} · ${recording.frames.length} frames · ${recording.labels.length} labels · ${(window.myr5TestState?.rate??0).toFixed(1)}/s ${window.myr5TestState?.delegate||''}`;
+  };
+  const label=name=>{if(!recording)return;const from=Math.round(performance.now()+3000);recording.labels.push({label:name,from,to:from+1500});show();};
+  bar.append(status);button('Down',()=>label('down'));button('Up',()=>label('up'));
+diff --git a/tests/coach-cap.browser.test.mjs b/tests/coach-cap.browser.test.mjs
+index 47d8777..31f6284 100644
+--- a/tests/coach-cap.browser.test.mjs
++++ b/tests/coach-cap.browser.test.mjs
+@@ -16,7 +16,7 @@ import {completeCoach} from './onboarding-fixture.mjs';
+ // loop dispatches meanwhile can interleave with it. The second part samples the creature viewer's actual
+ // WebGL render rate (creature/source/viewer.ts), which does run off real time (its own rAF), so it waits for
+ // real wall-clock windows and filters out the real background loop's own (uncounted) pose events meanwhile.
+-test('the AR coach caps its render rate when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window',async()=>{
++test('the AR coach goes off when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window',async()=>{
+  const root=resolve('dist/client');
+  const server=createServer(async(req,res)=>{
+   const path=new URL(req.url,'http://local').pathname;
+@@ -50,19 +50,19 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
+    // (what coach-overlay reads from window.myr5TestState) says whether tracking is currently slow.
+    const feed=(rate,ms)=>{
+     window.myr5TestState.rate=rate;const step=1000/60,before=renders;
+-    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:person,width:640,height:480,mirrored:false,now,counting:true}}));}
++    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:person,width:640,height:480,mirrored:false,now,counting:true}}));window.myr5CoachOverlay.flush();}
+     return renders-before;
+    };
+    const fast=feed(30,2000); // starts uncapped: never drops below minPoseHz, so no change
+-   const slow=feed(3,2000); // 3/s is under minPoseHz (4, the band where phone sets stall): capped for the whole phase
++   const slow=feed(3,2000); // 3/s is under minPoseHz (4, the band where phone sets stall): the coach is off for the whole phase
+    const recovered=feed(30,3000); // still capped entering this phase; only opens back up after ~2s sustained fast
+    window.myr5Creature.face=origFace;
+    return {fast,slow,recovered};
+   });
+ 
+   assert.ok(result.fast>=110,`uncapped (fast) coach should render close to every dispatched frame (saw ${result.fast}/120)`);
+-  assert.ok(result.slow<=22,`capped coach should skip DOM writes down to ~10/s while tracking is slow (saw ${result.slow} over 2s)`);
+-  assert.ok(result.recovered>=75,`coach should recover to native rate ~2s after tracking speeds back up (saw ${result.recovered} over 3s)`);
++  assert.equal(result.slow,0,`the coach should be off (no DOM writes or coach-hit math) while tracking is slow (saw ${result.slow} over 2s)`);
++  assert.ok(result.recovered>=55,`coach should stay off ~2s after tracking speeds back up, then return to native rate (saw ${result.recovered} over 3s; ~60 expected)`);
+ 
+   // The conductor's follow-up: it's the creature viewer's own WebGL render loop (creature/source/viewer.ts)
+   // that actually competes with MediaPipe, not just coach-overlay's DOM writes above. window.myr5Creature.
+@@ -79,11 +79,11 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
+    window.__coachCapRestoreDispatch=()=>{window.dispatchEvent=original;};
+    window.dispatchEvent=event=>{if(event.type==='myr5:pose'&&event.detail&&event.detail.counting===false)return true;return original(event);};
+   });
+-  const sample=async(rate,seconds)=>{
+-   await page.evaluate(rate=>{
++  const sample=async(rate,seconds,ms=3000)=>{
++   await page.evaluate(([rate,ms])=>{
+     window.myr5TestState.rate=rate;const step=1000/60;let now=performance.now();
+-    for(let sent=0;sent<3000;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:window.__coachCapPerson,width:640,height:480,mirrored:false,now,counting:true}}));}
+-   },rate);
++    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:window.__coachCapPerson,width:640,height:480,mirrored:false,now,counting:true}}));window.myr5CoachOverlay.flush();}
++   },[rate,ms]);
+    const before=await page.evaluate(()=>window.myr5Creature.stats().renders);
+    await page.evaluate(ms=>new Promise(r=>setTimeout(r,ms)),seconds*1000);
+    const after=await page.evaluate(()=>window.myr5Creature.stats().renders);
+@@ -91,10 +91,10 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
+   };
+   let cappedRate,uncappedRate;
+   try{
+-   cappedRate=await sample(3,1.2); // 3s of synthetic slow tracking first: setMaxFps(10) is engaged throughout
+-   uncappedRate=await sample(30,1.2); // 3s of synthetic fast tracking: past the 2s hysteresis, setMaxFps(null)
++   cappedRate=await sample(3,1.2); // 3s of synthetic slow tracking first: the coach box is display:none, so the viewer stops rendering
++   uncappedRate=await sample(30,1.2,5000); // 5s of synthetic fast tracking: past the doubled (2nd cut) 4s hysteresis
+   }finally{await page.evaluate(()=>window.__coachCapRestoreDispatch());}
+-  assert.ok(cappedRate<=12,`WebGL renderer.render() should run at most ~10/s while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
++  assert.ok(cappedRate<=1,`WebGL renderer.render() should stop while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
+   assert.ok(uncappedRate>=cappedRate+8,`WebGL renderer.render() should return to its native rate once tracking is fast again (capped ${cappedRate.toFixed(1)}/s vs uncapped ${uncappedRate.toFixed(1)}/s)`);
+  }finally{await browser?.close();await new Promise(r=>server.close(r));}
+ });

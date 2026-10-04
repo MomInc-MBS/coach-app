@@ -16,7 +16,7 @@ import {completeCoach} from './onboarding-fixture.mjs';
 // loop dispatches meanwhile can interleave with it. The second part samples the creature viewer's actual
 // WebGL render rate (creature/source/viewer.ts), which does run off real time (its own rAF), so it waits for
 // real wall-clock windows and filters out the real background loop's own (uncounted) pose events meanwhile.
-test('the AR coach caps its render rate when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window',async()=>{
+test('the AR coach goes off when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window',async()=>{
  const root=resolve('dist/client');
  const server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://local').pathname;
@@ -50,19 +50,19 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
    // (what coach-overlay reads from window.myr5TestState) says whether tracking is currently slow.
    const feed=(rate,ms)=>{
     window.myr5TestState.rate=rate;const step=1000/60,before=renders;
-    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:person,width:640,height:480,mirrored:false,now,counting:true}}));}
+    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:person,width:640,height:480,mirrored:false,now,counting:true}}));window.myr5CoachOverlay.flush();}
     return renders-before;
    };
    const fast=feed(30,2000); // starts uncapped: never drops below minPoseHz, so no change
-   const slow=feed(3,2000); // 3/s is under minPoseHz (4, the band where phone sets stall): capped for the whole phase
+   const slow=feed(3,2000); // 3/s is under minPoseHz (4, the band where phone sets stall): the coach is off for the whole phase
    const recovered=feed(30,3000); // still capped entering this phase; only opens back up after ~2s sustained fast
    window.myr5Creature.face=origFace;
    return {fast,slow,recovered};
   });
 
   assert.ok(result.fast>=110,`uncapped (fast) coach should render close to every dispatched frame (saw ${result.fast}/120)`);
-  assert.ok(result.slow<=22,`capped coach should skip DOM writes down to ~10/s while tracking is slow (saw ${result.slow} over 2s)`);
-  assert.ok(result.recovered>=75,`coach should recover to native rate ~2s after tracking speeds back up (saw ${result.recovered} over 3s)`);
+  assert.equal(result.slow,0,`the coach should be off (no DOM writes or coach-hit math) while tracking is slow (saw ${result.slow} over 2s)`);
+  assert.ok(result.recovered>=55,`coach should stay off ~2s after tracking speeds back up, then return to native rate (saw ${result.recovered} over 3s; ~60 expected)`);
 
   // The conductor's follow-up: it's the creature viewer's own WebGL render loop (creature/source/viewer.ts)
   // that actually competes with MediaPipe, not just coach-overlay's DOM writes above. window.myr5Creature.
@@ -79,11 +79,11 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
    window.__coachCapRestoreDispatch=()=>{window.dispatchEvent=original;};
    window.dispatchEvent=event=>{if(event.type==='myr5:pose'&&event.detail&&event.detail.counting===false)return true;return original(event);};
   });
-  const sample=async(rate,seconds)=>{
-   await page.evaluate(rate=>{
+  const sample=async(rate,seconds,ms=3000)=>{
+   await page.evaluate(([rate,ms])=>{
     window.myr5TestState.rate=rate;const step=1000/60;let now=performance.now();
-    for(let sent=0;sent<3000;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:window.__coachCapPerson,width:640,height:480,mirrored:false,now,counting:true}}));}
-   },rate);
+    for(let sent=0;sent<ms;sent+=step){now+=step;window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:window.__coachCapPerson,width:640,height:480,mirrored:false,now,counting:true}}));window.myr5CoachOverlay.flush();}
+   },[rate,ms]);
    const before=await page.evaluate(()=>window.myr5Creature.stats().renders);
    await page.evaluate(ms=>new Promise(r=>setTimeout(r,ms)),seconds*1000);
    const after=await page.evaluate(()=>window.myr5Creature.stats().renders);
@@ -91,10 +91,10 @@ test('the AR coach caps its render rate when tracking is slow during a counted s
   };
   let cappedRate,uncappedRate;
   try{
-   cappedRate=await sample(3,1.2); // 3s of synthetic slow tracking first: setMaxFps(10) is engaged throughout
-   uncappedRate=await sample(30,1.2); // 3s of synthetic fast tracking: past the 2s hysteresis, setMaxFps(null)
+   cappedRate=await sample(3,1.2); // 3s of synthetic slow tracking first: the coach box is display:none, so the viewer stops rendering
+   uncappedRate=await sample(30,1.2,5000); // 5s of synthetic fast tracking: past the doubled (2nd cut) 4s hysteresis
   }finally{await page.evaluate(()=>window.__coachCapRestoreDispatch());}
-  assert.ok(cappedRate<=12,`WebGL renderer.render() should run at most ~10/s while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
+  assert.ok(cappedRate<=1,`WebGL renderer.render() should stop while tracking is slow (saw ${cappedRate.toFixed(1)}/s)`);
   assert.ok(uncappedRate>=cappedRate+8,`WebGL renderer.render() should return to its native rate once tracking is fast again (capped ${cappedRate.toFixed(1)}/s vs uncapped ${uncappedRate.toFixed(1)}/s)`);
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 });

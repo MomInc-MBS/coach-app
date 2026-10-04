@@ -1,7 +1,7 @@
 // MYR5 movement rules. AGPL-3.0-or-later, like the accompanying test app.
 // These are counting/shape heuristics, not assessments of exercise technique.
 import {EXERCISES} from './exercise-library.mjs';
-import {evaluateMovement} from './movement-rules.mjs';
+import {evaluateMovement,JOINTS} from './movement-rules.mjs';
 import {PoseClassifier} from './pose-classifier.mjs';
 import POSE_SAMPLES from './pose-samples.mjs';
 const LEGACY_MOVEMENTS = {
@@ -19,7 +19,6 @@ const SIDES = { left: { s:11,e:13,w:15,h:23,k:25 }, right: { s:12,e:14,w:16,h:24
 // CPU tracking can run below 6 Hz. Treat a genuine interruption differently
 // from a slower, continuous stream; never require seven frames in 1.1 seconds.
 const MAX_FRAME_GAP=.75;
-const JOINTS={11:'left shoulder',12:'right shoulder',13:'left elbow',14:'right elbow',15:'left hand',16:'right hand',23:'left hip',24:'right hip',25:'left knee',26:'right knee'};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z??0)-(b.z??0));
 const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:((a.z??0)+(b.z??0))/2});
@@ -66,7 +65,7 @@ export class MovementSession {
   reset(mode=this.mode,options={}){
     if(!MOVEMENTS[mode])throw new Error('Unknown movement');
     this.mode=mode;this.duration=Number(options.duration)||0;this.count=0;this.elapsed=0;this.hold=0;this.totalHold=0;this.bestHold=0;this.active=0;this.speed=0;this.bestSpeed=0;
-    this.started=null;this.last=null;this.complete=false;this.eventTimes=[];this.side=null;this.calibration=[];this.base=null;this.filtered={};this.phase='ready';this.phaseSince=null;this.lastRep=-Infinity;
+    this.started=null;this.last=null;this.complete=false;this.eventTimes=[];this.side=null;this.calibration=[];this.base=null;this.filtered={};this.phase='ready';this.phaseSince=null;this.lastRep=-Infinity;this.dt=0;this.lastMatch=null;
     this.candidate=null;this.missAt=null;this.previousMatch=false;this.hands={};this.kneeArmed={left:false,right:false};this.lastStep=-Infinity;
     this.message=MOVEMENTS[mode].hint;this.measurement='';this.tracking=false;this.progress=0;this.setupProgress=0;this.setupReason='';this.jointReadings='';
     // A recorded samples file switches this exercise's reps to the k-NN classifier; {samples:null} forces the rules.
@@ -106,33 +105,47 @@ export class MovementSession {
     this.base=Object.fromEntries(Object.keys(sample).map(k=>[k,median(this.calibration.map(v=>v[k]))]));
     this.calibration=[];this.setupProgress=1;this.setupReason='Ready';this.phase='top';this.phaseSince=null;return true;
   }
+  // Dwell is time-based: a phase first seen is credited half the gap since the previous sample (on average the body
+  // entered the zone midway). At phone rates (1.4–2.5 updates/s) one sample in the zone satisfies the default 0.1 s
+  // dwell instead of needing two; pause reps (0.8 s) still need the time. The up/down gap, a full down→up cycle,
+  // minDuration and the 0.45 s refractory still block double counts at 30 updates/s.
   repetition(down,up,t,minDuration,dwell=.10){
     if(this.phase==='ready'){
       if(up){this.phase='top';this.phaseSince=null;}return;
     }
+    const seen=t-this.dt/2;
+    // At <=10 Hz a terminal zone may occupy exactly one sample. Keep multi-sample
+    // debounce at higher rates, and retain explicit long holds for pause exercises.
+    const dwellFor=seconds=>this.dt>=.1-1e-9&&seconds<=.1?Math.min(seconds,this.dt/2):seconds;
     if(this.phase==='top'){
-      if(down){if(this.phaseSince===null)this.phaseSince=t;if(t-this.phaseSince>=dwell){this.phase='bottom';this.phaseSince=null;this.downAt=t;}}else this.phaseSince=null;
+      if(down){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince+1e-9>=dwellFor(dwell)){this.phase='bottom';this.phaseSince=null;this.downAt=t;}}else this.phaseSince=null;
     }else if(this.phase==='bottom'){
-      if(up){if(this.phaseSince===null)this.phaseSince=t;if(t-this.phaseSince>=.10&&t-this.downAt>=minDuration&&t-this.lastRep>=.45){this.count++;this.lastRep=t;this.eventTimes.push(t);this.phase='top';this.phaseSince=null;}}else this.phaseSince=null;
+      if(up){if(this.phaseSince===null)this.phaseSince=seen;if(t-this.phaseSince+1e-9>=dwellFor(.10)&&t-this.downAt>=minDuration&&t-this.lastRep>=.45){this.count++;this.lastRep=t;this.eventTimes.push(t);this.phase='top';this.phaseSince=null;}}else this.phaseSince=null;
     }
   }
   recipeUpdate(f,t,dt){
     // Rule angles get the same EMA as the legacy paths (near-raw at phone rates, calmer at 30 updates/s).
     const m=MOVEMENTS[this.mode],rule=evaluateMovement(f,m,this.side,(key,value)=>this.smooth(key,value,dt));
+    // Hold grace: under MAX_FRAME_GAP of unseen or off-shape frames keeps the hold. Unseen time is credited when the
+    // shape returns (the user most likely held it); off-shape time is not, but a flicker no longer restarts the hold.
+    if(m.kind==='hold'&&!rule.match&&this.candidate!==null){
+      this.missAt??=t;
+      if(t-this.missAt<MAX_FRAME_GAP){if(rule.valid)this.previousMatch=false;this.tracking=rule.valid;this.progress=0;this.message='Hold paused. '+rule.message;return;}
+    }
     if(!rule.valid){this.lose(t,rule.message);return;}
     if(rule.side&&this.side!==rule.side){this.side=rule.side;this.base=null;this.calibration=[];this.phase='ready';this.phaseSince=null;this.filtered={};}
     this.tracking=true;
     if(m.kind==='hold'){
       if(rule.match){
         if(this.candidate===null)this.candidate=t;
-        if(t-this.candidate>=.45&&this.previousMatch){this.hold+=dt;this.totalHold+=dt;this.bestHold=Math.max(this.bestHold,this.hold);}
-        this.previousMatch=true;this.missAt=null;
+        if(t-this.candidate>=.45&&this.previousMatch){const d=t-this.lastMatch;this.hold+=d;this.totalHold+=d;this.bestHold=Math.max(this.bestHold,this.hold);}
+        this.previousMatch=true;this.missAt=null;this.lastMatch=t;
       }else{this.previousMatch=false;this.candidate=null;this.hold=0;}
-      this.progress=Number(rule.match);this.message=rule.match?'Position detected. Hold comfortably.':'Hold paused. '+m.hint;
+      this.progress=Number(rule.match);this.message=rule.match?(rule.estimated?'Hold estimated from your upper body. Keep this position.':'Position detected. Hold comfortably.'):'Hold paused. '+rule.message;
     }else{
       let up=rule.up,down=rule.down;
       if(rule.travel){
-        if(this.base){const travel=this.smooth('recipeMetric',(rule.sample.hipY-this.base.hipY)/this.base.torso,dt);down=travel>=rule.travel;up=travel<=.09;this.progress=clamp(travel/.5,0,1);}else up=true;
+        if(this.base){const travel=this.smooth('recipeMetric',(rule.sample.hipY-this.base.hipY)/this.base.torso,dt);down=travel>=rule.travel;up=travel<=rule.travel*.6;this.progress=clamp(travel/.5,0,1);}else up=true;
       }else this.progress=clamp(rule.metric,0,1);
       if(!this.base){this.calibrate(rule.sample??{angle:0},up,t);this.message=this.base?'Ready. Begin when you are ready.':m.hint+' Hold the starting position briefly.';this.progress=this.setupProgress;}
       else{this.repetition(down,up,t,m.minCycle??.18,m.dwell??.10);this.message=this.phase==='bottom'?'Return to your starting position.':'Move with control. Complete the full return to count.';}
@@ -170,7 +183,7 @@ export class MovementSession {
     // Hip travel relative to the starting torso supports cropped frontal views.
     // Counts use only torso movement; lower-leg landmarks are discarded.
     const down=squat?drop>=.25:bend>=35;
-    const up=squat?drop<=.10:bend<=14;
+    const up=squat?drop<=.15:bend<=14;
     this.repetition(down,up,t,.18);
     this.message=this.phase==='bottom'?'Movement registered. Return to your starting position.':this.phase==='ready'?'Return to your starting position to resume.':'Ready for the next repetition.';
     this.progress=clamp(squat?Math.max(bend/40,drop/.5):bend/50,0,1);
@@ -250,7 +263,7 @@ export class MovementSession {
   update(raw,timestamp,aspect=1,world=null){
     const t=timestamp/1000;if(!Number.isFinite(t))return this.snapshot();
     if(this.last!==null&&t<=this.last)return this.snapshot();
-    const gap=this.last===null?0:t-this.last;const dt=gap>MAX_FRAME_GAP?0:gap;this.last=t;
+    const gap=this.last===null?0:t-this.last;const dt=gap>MAX_FRAME_GAP?0:gap;this.last=t;this.dt=dt;
     if(this.complete)return this.snapshot();
     const f=features(raw,aspect,world);
     this.jointReadings=f?Object.entries(f.sides).map(([side,s])=>`${side}: `+[s.id.s,s.id.h,s.id.k].map(i=>`${JOINTS[i].split(' ')[1]} ${Math.round(f.p[i].visibility*100)}%${f.visible([i])?'':' ×'}`).join(', ')).join(' | '):'No body landmarks';

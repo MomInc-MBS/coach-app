@@ -1,0 +1,20 @@
+{
+  "scenario": "Stop while CPU creation is pending after a GPU detect failure; resolve CPU afterwards",
+  "kind": "Controlled browser probe with fake camera and mocked inference",
+  "toolIcon": {
+    "_tag": "website",
+    "pageUrl": "http://127.0.0.1:8828/pose.html?poseDelegate=GPU"
+  },
+  "value": {
+    "closes": [
+      "GPU",
+      "CPU"
+    ],
+    "delegate": null,
+    "loads": [
+      "GPU",
+      "CPU"
+    ],
+    "phase": "idle"
+  }
+}

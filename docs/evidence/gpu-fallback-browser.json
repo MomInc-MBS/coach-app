@@ -1,0 +1,58 @@
+{
+  "kind": "controlled browser probe; fake canvas camera and mocked pose inference",
+  "toolIcon": {
+    "_tag": "website",
+    "pageUrl": "http://127.0.0.1:8828/pose.html?poseDelegate=GPU"
+  },
+  "value": {
+    "cameraWorkout": "true",
+    "research": {
+      "closes": [
+        "GPU"
+      ],
+      "detectCount": 2,
+      "loads": [
+        "GPU",
+        "CPU"
+      ]
+    },
+    "state": {
+      "camera": "user",
+      "delegate": "CPU",
+      "delegateNote": "GPU failed to start: Injected GPU warmup failure",
+      "error": null,
+      "frames": 1,
+      "inferenceMs": 0,
+      "motion": {
+        "active": 0,
+        "bestHold": 0,
+        "bestSpeed": 0,
+        "cadence": 0,
+        "calibrated": false,
+        "complete": false,
+        "count": 0,
+        "elapsed": 0,
+        "hold": 0,
+        "jointReadings": "left: shoulder 100%, hip 100%, knee 100% | right: shoulder 100%, hip 100%, knee 100%",
+        "kind": "reps",
+        "measurement": "left side · 180°",
+        "message": "Setting start: 0%. Hold still briefly.",
+        "mode": "squat",
+        "name": "Bodyweight squat",
+        "phase": "ready",
+        "progress": 0,
+        "remaining": null,
+        "setupProgress": 0,
+        "side": "left",
+        "speed": 0,
+        "totalHold": 0,
+        "tracking": true
+      },
+      "phase": "tracking",
+      "poses": 1,
+      "rate": 0,
+      "version": "pod-1"
+    },
+    "status": "Setting start: 0%. Hold still briefly."
+  }
+}
