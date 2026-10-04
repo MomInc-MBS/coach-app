@@ -1,6 +1,6 @@
 import {physicalSound} from './physical-sound.mjs';
 
-const BOARD_CUES={quilt:['quilt','quilt'],ice:['ice','ice'],jelly:['jelly','jelly'],water:['water','water-slosh'],pond:['water','water-slosh'],grass:['grass','grass'],cogs:['cogs','cogs'],wood:['wood','wood-scrape']};
+const BOARD_CUES={quilt:['quilt','quilt'],ice:['ice','ice'],jelly:['jelly','jelly'],water:['water','water-slosh'],pond:['water','pond-slosh'],grass:['grass','grass'],cogs:['cogs','cogs'],wood:['wood','wood-scrape']};
 const ELECTRIC='#settings,#portalMenu,#remindersPanel,.reminders-computer-panel,.reminders-computer-screen';
 const INTERNAL='dialog:not(#settings):not(#portalMenu):not(#portalWorkoutHome),.creature-editor,.handborne-app';
 export function surfaceCue(el){

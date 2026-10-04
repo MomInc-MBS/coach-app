@@ -59,6 +59,34 @@ const starterState=()=>({
 const STARTER_BG=/^url\("\/pod\/worlds\/starter\/(great-wall-of-china-a|great-pyramid-of-giza-a|machu-picchu-a|taj-mahal-a|colosseum-a|mount-fuji-a)\.webp"\)$/;
 const UPGRADE='Earn ships on your tracks · Download Ships & worlds for all of them';
 
+test('an explicit owned ship choice loads that GLB instead of revealing a different reward',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await primeFixture(page);
+ const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));
+ await page.evaluate(async()=>{
+  window.myr5AuthenticatedAccount={user:{id:'ship-choice-test'}};
+  localStorage.setItem('myr5-ship-customization-v1/ship-choice-test',JSON.stringify({ship:'mom',tint:'#ffffff'}));
+  const {openShipView}=await import('/ship-view.js');
+  await openShipView({loadCoachViewer:fakeLoadCoachViewer,getBridge:async()=>({ownedShipIds:()=>['direct','mom'],getShipUrl:id=>'/plan/assets-inbox/ships/'+id+'.glb',getBackgroundUrl:()=>'/pod/worlds/starter/mount-fuji-a.webp',dispose(){}}),mountArrival:()=>{throw Error('must not replace an explicit ship choice')}});
+ });
+ await page.locator('.ship-view-canvas').waitFor();
+ assert.ok(requests.includes('/plan/assets-inbox/ships/mom.glb'));
+ assert.ok(!requests.includes('/plan/assets-inbox/ships/direct.glb'));
+}));
+
+test('choosing the starter hull overrides a previously downloaded owned ship',async()=>withPage(async page=>{
+ await page.emulateMedia({reducedMotion:'reduce'});await primeFixture(page);
+ const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));
+ await page.evaluate(async()=>{
+  window.myr5AuthenticatedAccount={user:{id:'starter-choice-test'}};
+  localStorage.setItem('myr5-ship-customization-v1/starter-choice-test',JSON.stringify({ship:'supportive',tint:'#ffffff'}));
+  const {openShipView}=await import('/ship-view.js');
+  await openShipView({loadCoachViewer:fakeLoadCoachViewer,ownedShipIds:()=>['mom'],getBridge:async()=>{throw Error('must use chosen starter hull')}});
+ });
+ await page.locator('.ship-view-canvas').waitFor();
+ assert.ok(requests.includes('/pod/worlds/starter/supportive.glb'));
+ assert.ok(!requests.includes('/plan/assets-inbox/ships/mom.glb'));
+}));
+
 test('signed out: the starter ship makes its entrance over a starter wonder once per session, then idles; no upgrade line, no reveal marked',async()=>withPage(async page=>{
  await primeFixture(page);
  const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));

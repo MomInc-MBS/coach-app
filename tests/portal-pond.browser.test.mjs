@@ -1,5 +1,5 @@
 // R21 L4: the Pond grimoire in the real app at 375x812 (Android UA), served from a real `npm run build` (dist/client).
-// It draws in 3D, koi gather under a held finger, a drawn stroke leads a growing school, 15 s untouched sends the fish
+// It draws in 3D, nearby koi follow a held finger and a stroke, 15 s untouched sends the fish
 // off and the huge koi across, and a traced square still cuts the portal. Screenshots go to .frames/r21-pond/.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,7 +22,7 @@ function serve(){
 const portalUp=page=>page.waitForFunction(()=>{const home=document.getElementById('portalHome');return home?.hidden===false&&!document.querySelector('.portal-glass');},null,{timeout:15000});
 const pondState=page=>page.evaluate(async()=>{const {pond}=await import('/modules/portal/portal-board-pond.mjs');return pond.debug();});
 
-test('pond grimoire: koi gather, school, idle show and a portal cut',{timeout:300000},async()=>{
+test('pond grimoire: nearby koi follow, disperse, idle show and a portal cut',{timeout:300000},async()=>{
  const out=resolve('.frames/r21-pond');await mkdir(out,{recursive:true});
  const server=serve();await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
@@ -54,14 +54,15 @@ test('pond grimoire: koi gather, school, idle show and a portal cut',{timeout:30
   for(let i=0;i<70;i++){await page.mouse.move(cx+(i%2),cy);await page.waitForTimeout(100);} // held, a hair of jitter
   const held=await pondState(page);
   await page.screenshot({path:resolve(out,'pond-finger-held-375x812.png')});
-  assert.equal(held.phase,'touch');assert.ok(held.members>=3,'koi gathered under the finger: '+held.members);
+  assert.equal(held.phase,'touch');assert.ok(held.members<held.fish.length/2,'the whole pond does not gather: '+held.members);
   for(let i=0;i<140;i++){const t=i/140;await page.mouse.move(cx+120*Math.sin(t*Math.PI*5),cy-200+330*t+25*Math.sin(t*31));await page.waitForTimeout(25);} // a snaking scribble, no template shape
-  const drawn=await pondState(page);assert.ok(drawn.members>=held.members,'the school grew while drawing: '+drawn.members);
+  const drawn=await pondState(page);assert.ok(drawn.members<drawn.fish.length/2,'only nearby fish follow the stroke: '+drawn.members);
   await page.screenshot({path:resolve(out,'pond-drawing-school-375x812.png')});
+  await page.evaluate(async()=>{window.__pond=(await import('/modules/portal/portal-board-pond.mjs')).pond;});
   await page.mouse.up();
   await portalUp(page);
+  await page.waitForFunction(()=>window.__pond.debug().phase==='release',null,{timeout:1500});
 
-  await page.evaluate(async()=>{window.__pond=(await import('/modules/portal/portal-board-pond.mjs')).pond;});
   await page.waitForFunction(()=>window.__pond.debug().phase==='big',null,{timeout:30000,polling:500});
   await page.waitForTimeout(6000);
   assert.equal((await pondState(page)).phase,'big');

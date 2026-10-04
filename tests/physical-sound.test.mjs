@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {PhysicalSound,readSoundPrefs,SOUND_PREF_KEY} from '../audio/physical-sound.mjs';
 
 class Param{
- value=1;
- setTargetAtTime(value){this.value=value;}
- setValueAtTime(value){this.value=value;}
- linearRampToValueAtTime(value){this.value=value;}
+ value=1;events=[];
+ setTargetAtTime(value){this.value=value;this.events.push(value);}
+ setValueAtTime(value){this.value=value;this.events.push(value);}
+ linearRampToValueAtTime(value){this.value=value;this.events.push(value);}
  exponentialRampToValueAtTime(value){this.value=value;}
  cancelScheduledValues(){}
 }
@@ -118,6 +118,19 @@ test('repeated water drags stay within two voices even when gestures arrive ever
  for(let i=0;i<18;i++){sound.play('water-slosh');assert.ok(sound.voices.size<=2);time+=170;}
  assert.ok(sound.context.nodes.filter(node=>node.kind==='buffer-source'&&node.buffer?.duration===2.5).length<=4,'cooldown bounds sample starts');
  sound.stopAll();assert.equal(sound.voices.size,0);assert.equal(sound.tails.size,0);sound.dispose();
+});
+
+test('pond drags reuse the water sample at a shorter, much quieter level than the first splash',()=>{
+ let time=0;const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef:{hidden:false},windowRef:null,now:()=>time});
+ sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
+ const splash={duration:.7},slosh={duration:2.5};sound.samples.set('water',[splash]);sound.samples.set('pond-slosh',[slosh]);
+ sound.play('water');const first=sound.context.nodes.find(n=>n.kind==='buffer-source'&&n.buffer===splash);
+ time=1200;sound.play('pond-slosh');const drag=sound.context.nodes.find(n=>n.kind==='buffer-source'&&n.buffer===slosh);
+ assert.ok(first&&drag,'both gestures play');
+ const firstGain=first.outputs[0],dragGain=drag.outputs[0];
+ assert.ok(Math.max(...dragGain.gain.events)<Math.max(...firstGain.gain.events)*.3,'drag sample has a much lower peak');
+ assert.ok(sound.voices.size<=2,'the splash and drag share the bounded water group');
+ sound.dispose();
 });
 
 test('ambient bed stops under dialogs and tracking; grass portal uses breeze without ship hum',()=>{

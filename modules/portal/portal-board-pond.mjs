@@ -25,7 +25,8 @@ export const POND={
  fish:14,koiLen:.24,koiAlpha:.72,swimHz:1.1,bend:.5, // koi shadows: count, length, darkness, tail beat, body undulation
  wanderSpeed:.06,attractSpeed:.11,schoolSpeed:.5,scatterSpeed:.4,maxForce:.7,arriveR:.14,
  jitter:2.4,margin:.12,sepR:.07,sepK:.6,
- joinR:.15,gap:.075,trailStep:.012,trailCap:160, // a fish joins the school this close to the finger; school spacing
+ attractR:.10,joinR:.065,leaveR:.18,gap:.075,trailStep:.012,trailCap:160, // only nearby fish notice the finger; stragglers leave the trail
+ releaseMs:850,releaseSpeed:.52, // a short outward swim when the finger lifts
  idleMs:15000,scatterMs:4000,bigMs:16000,bigLen:1.3,bigAlpha:.62, // the idle show
  wave:{cols:64,damping:.982,press:.9,drag:.35,hold:.05,holdHz:1.6,gain:90}, // ripple height-field
  glass:{bend:.12,fringe:.3,rim:.55},     // refraction (face widths at full slope), dispersion, finger-lit rim glint
@@ -112,18 +113,24 @@ export function makeFish(n=POND.fish,A=POND.aspect,rand=Math.random){
 const P0={x:0,y:0};
 // One step of every fish. S={fish,A,rand,touch:{x,y}|null,lastTouch(ms),trail,members}. Sets S.phase.
 export function stepFish(S,dt,now,K=POND){
- const {fish,A,touch}=S,idle=touch?null:idlePhase(now-S.lastTouch,K),away=idle&&idle.phase!=='wander';
- S.phase=touch?'touch':idle.phase;
+ const {fish,A,touch}=S,idle=touch?null:idlePhase(now-S.lastTouch,K),away=idle&&idle.phase!=='wander',releasing=!touch&&now<(S.releaseUntil||0);
+ S.phase=touch?'touch':releasing?'release':idle.phase;
  for(const f of fish){
   let tx,ty,max,arrive=K.arriveR,face=false;
   if(touch){
-   if(f.member<0&&Math.hypot(f.x-touch.x,f.y-touch.y)<K.joinR)f.member=S.members++;
+   if(f.member>=0){trailAt(S.trail,f.member*K.gap,P0);if(Math.hypot(f.x-P0.x,f.y-P0.y)>K.leaveR)f.member=-1;}
+   const fingerDist=Math.hypot(f.x-touch.x,f.y-touch.y);
+   if(f.member<0&&fingerDist<K.joinR)f.member=S.members++;
    if(f.member>=0){trailAt(S.trail,f.member*K.gap,P0);tx=P0.x;ty=P0.y;max=K.schoolSpeed;arrive=K.arriveR*.6;}
-   else{tx=touch.x;ty=touch.y;max=K.attractSpeed;}
-   face=Math.hypot(tx-f.x,ty-f.y)<arrive;
+   else if(fingerDist<K.attractR){tx=touch.x;ty=touch.y;max=K.attractSpeed;}
+   if(tx!==undefined)face=Math.hypot(tx-f.x,ty-f.y)<arrive;
+  }else if(releasing&&f.release){ // only fish that noticed the finger fan out
+   const dx=f.x-S.releaseX,dy=f.y-S.releaseY,d=Math.hypot(dx,dy)||1;
+   tx=f.x+(dx||Math.cos(f.a)*.01)/d;ty=f.y+(dy||Math.sin(f.a)*.01)/d;max=K.releaseSpeed;arrive=.01;
   }else if(away){ // swim straight out, away from the middle
    let ox=f.x-.5,oy=f.y-A/2;const o=Math.hypot(ox,oy)||1,R=Math.hypot(.5,A/2)+.25;ox/=o;oy/=o;tx=.5+ox*R;ty=A/2+oy*R;max=K.scatterSpeed;arrive=.01;
-  }else{ // wander: a jittered heading, turned back toward the pond when near or past its edge
+  }
+  if(tx===undefined){ // wander: a jittered heading, turned back toward the pond when near or past its edge
    f.w+=(S.rand()-.5)*K.jitter*dt*4;
    const m=K.margin,out=f.x<m||f.x>1-m||f.y<m||f.y>A-m;
    if(out){tx=.5+(f.x<.5?-.1:.1);ty=A/2;max=K.wanderSpeed*(f.x<-.05||f.x>1.05||f.y<-.05||f.y>A+.05?2.5:1.2);}
@@ -138,10 +145,11 @@ export function stepFish(S,dt,now,K=POND){
   let da=want-f.a;da-=TAU*Math.round(da/TAU);f.a+=da*Math.min(1,dt*(face?2.5:4));
   f.phase+=dt*TAU*K.swimHz*(.5+Math.min(2,sp/K.wanderSpeed)*.5);
  }
+ if(touch){let n=0;for(const f of fish.filter(f=>f.member>=0).sort((a,b)=>a.member-b.member))f.member=n++;S.members=n;}
 }
 // Pointer state for stepFish: the newest finger leads.
-export function fishTouch(S,x,y,now){if(!S.touch){S.trail.n=0;S.trail.head=-1;S.members=0;for(const f of S.fish)f.member=-1;}S.touch=S.touch||{x,y};S.touch.x=x;S.touch.y=y;trailPush(S.trail,x,y);S.lastTouch=now;}
-export function fishRelease(S,now){S.touch=null;S.members=0;for(const f of S.fish)f.member=-1;S.lastTouch=now;}
+export function fishTouch(S,x,y,now){if(!S.touch){S.trail.n=0;S.trail.head=-1;S.members=0;for(const f of S.fish){f.member=-1;f.release=false;}}S.releaseUntil=0;S.touch=S.touch||{x,y};S.touch.x=x;S.touch.y=y;trailPush(S.trail,x,y);S.lastTouch=now;}
+export function fishRelease(S,now){if(S.touch){S.releaseX=S.touch.x;S.releaseY=S.touch.y;S.releaseUntil=now+POND.releaseMs;}S.touch=null;S.members=0;for(const f of S.fish){f.release=f.member>=0||Math.hypot(f.x-S.releaseX,f.y-S.releaseY)<POND.attractR;f.member=-1;}S.lastTouch=now;}
 
 // --- Ripple height-field (classic two-buffer wave), pure typed arrays ---------------------------------------
 export function makeWaves(cols,rows){return {cols,rows,cur:new Float32Array(cols*rows),prev:new Float32Array(cols*rows),energy:0};}

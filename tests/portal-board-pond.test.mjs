@@ -33,29 +33,45 @@ test('an anchor lily sits on every vertex, base, apex and line end of every temp
  const free=freePads(anchors);assert.ok(free.length>=POND.freePads*.6,'free pads fit between the anchors');
 });
 
-test('steering arrives at the point and the koi turns to face the finger',()=>{
+test('steering arrives at the point and only nearby koi turn toward the finger',()=>{
  const f={x:.2,y:.2,vx:0,vy:0};let d=1;
  for(let i=0;i<600;i++)d=steer(f,.7,1.1,.2,.7,.14,1/60);
  assert.ok(d<.02,'arrived: '+d);
- const S={fish:makeFish(6,A,rng(1)),A,rand:rng(2),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
+ const S={fish:makeFish(3,A,rng(1)),A,rand:rng(2),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
  const finger={x:.5,y:.9};fishTouch(S,finger.x,finger.y,0);
- for(let i=0;i<60*40;i++)stepFish(S,1/60,i*16,POND);
+ S.fish[0].x=.53;S.fish[0].y=.9;
+ S.fish[1].x=.59;S.fish[1].y=.9;
+ S.fish[2].x=.1;S.fish[2].y=.1;
+ for(let i=0;i<120;i++)stepFish(S,1/60,i*16,POND);
  assert.equal(S.phase,'touch');
- for(const f of S.fish){
+ for(const f of S.fish.slice(0,2)){
   const d=Math.hypot(f.x-finger.x,f.y-finger.y);assert.ok(d<.2,'gathered under the finger: '+d.toFixed(3));
   const toward=Math.atan2(finger.y-f.y,finger.x-f.x);let da=Math.abs(f.a-toward)%(2*Math.PI);da=Math.min(da,2*Math.PI-da);
   if(d>.02)assert.ok(da<.6,'face first: '+da.toFixed(2));
  }
- assert.ok(S.members>0,'fish joined the school');
+ assert.ok(S.members>0&&S.members<=2,'only the nearby fish joined');
+ assert.equal(S.fish[2].member,-1,'distant fish keeps wandering');
+ assert.ok(Math.hypot(S.fish[2].x-finger.x,S.fish[2].y-finger.y)>.3,'distant fish was not pulled in');
 });
 
-test('drawing leads the school along the trail; release frees it',()=>{
- const S={fish:makeFish(8,A,rng(3)),A,rand:rng(4),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
- let t=0;for(let i=0;i<60*30;i++){const a=i/600*Math.PI*2,x=.5+.25*Math.cos(a),y=A/2+.25*Math.sin(a);fishTouch(S,x,y,t);stepFish(S,1/60,t,POND);t+=16;}
- assert.ok(S.members>=4,'the school grew: '+S.members);
+test('drawing keeps only close trail followers; release fans them out quickly',()=>{
+ const S={fish:makeFish(3,A,rng(3)),A,rand:rng(4),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
+ S.fish[0].x=.5;S.fish[0].y=.8;S.fish[1].x=.75;S.fish[1].y=.8;S.fish[2].x=.1;S.fish[2].y=.1;
+ let t=0;fishTouch(S,.5,.8,t);stepFish(S,1/60,t,POND);
+ assert.equal(S.members,1,'only the fish under the finger joined');
+ for(let i=0;i<90;i++){t+=16;fishTouch(S,.5+i*.001,.8,t);stepFish(S,1/60,t,POND);}
+ assert.equal(S.fish[2].member,-1,'distant fish ignores the stroke');
+ fishTouch(S,.92,1.25,t+=16);stepFish(S,1/60,t,POND);
+ assert.equal(S.fish[0].member,-1,'a fish left far behind drops from the trail');
  const T=makeTrail();trailPush(T,0,0);trailPush(T,.1,0);trailPush(T,.2,0);const o={x:0,y:0};trailAt(T,.15,o);
  assert.ok(Math.abs(o.x-.05)<1e-6&&o.y===0,'trailAt walks back along the trail');
+ const close=S.fish[0];close.x=.90;close.y=1.25;close.vx=0;close.vy=0;
  fishRelease(S,t);assert.equal(S.touch,null);assert.ok(S.fish.every(f=>f.member===-1));
+ assert.equal(S.fish[2].release,false,'a distant koi is not swept into the release motion');
+ for(let i=1;i<=35;i++)stepFish(S,1/60,t+i*16,POND);
+ assert.equal(S.phase,'release');
+ assert.ok(Math.hypot(close.x-.92,close.y-1.25)>.08,'released fish swims away within half a second');
+ stepFish(S,1/60,t+POND.releaseMs+1,POND);assert.equal(S.phase,'wander','the 15-second idle clock continues');
 });
 
 test('15 s idle: the fish scatter off the pond, then the huge koi crosses, then they come back',()=>{

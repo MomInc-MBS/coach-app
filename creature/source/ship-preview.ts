@@ -4,6 +4,7 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {SHIP_FACING,applyShipTint} from '../../modules/ships/ship-scene-domain.mjs';
+import {shipDetails} from '../../modules/ships/ship-catalog.mjs';
 
 export type ShipBridge={ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void};
 
@@ -42,7 +43,7 @@ export function mountShipPreview(host:HTMLElement,bridge:ShipBridge){
   /** Resolves true once `id` is on screen; false if a later show() or dispose() overtook it. Throws if its bytes fail. */
   async show(id:string,color='#ffffff'){
    const run=++epoch,model=await load(id);if(disposed||run!==epoch)return false;
-   if(shown)turn.remove(shown);shown=model;turn.add(model);tint(/^#[0-9a-f]{6}$/i.test(color)?color:'#ffffff');canvas.setAttribute('aria-label',`${id[0].toUpperCase()+id.slice(1)} ship preview`);return true;
+   if(shown)turn.remove(shown);shown=model;turn.add(model);tint(/^#[0-9a-f]{6}$/i.test(color)?color:'#ffffff');canvas.dataset.ship=id;canvas.setAttribute('aria-label',`${shipDetails(id).name}: ${shipDetails(id).description}`);return true;
   },
   tint:(color:string)=>tint(/^#[0-9a-f]{6}$/i.test(color)?color:'#ffffff'),
   ids:()=>bridge.ownedShipIds(),

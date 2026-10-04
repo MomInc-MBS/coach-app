@@ -205,6 +205,8 @@ export async function openShipView({ loadCoachViewer, getBridge = async () => nu
 
 async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner, isCurrent }) {
  const signedIn = !!globalThis.myr5AuthenticatedAccount?.user?.id;
+ const custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
+ if(custom.ship===STARTER_SHIP){await showStarter({signedIn,owned:signedIn?ownedShipIds():[],isCurrent,always:entrance==='always'});return;}
  let bridge = null;
  try { bridge = await getBridge(); } catch { bridge = null; }
  if (!isCurrent()) { bridge?.dispose?.(); return; }
@@ -212,7 +214,8 @@ async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner
  if (!bridge) { if (!await showStarter({ signedIn, owned: signedIn ? ownedShipIds() : [], isCurrent, always }) && isCurrent()) offerRetry('The ship could not load.'); return; }
  try {
   const owned = bridge.ownedShipIds();
-  const arrival = await mountArrival({host:stage,assetBridge:bridge,isCurrent});
+  // An explicit selection takes priority over an unrelated newly earned ship's reveal.
+  const arrival = owned.includes(custom.ship)?null:await mountArrival({host:stage,assetBridge:bridge,isCurrent});
   if (!isCurrent()) { if (arrival) arrival.dispose(); else bridge.dispose?.(); return; }
   if (arrival) {
    realShip = arrival;
@@ -221,7 +224,7 @@ async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner
    if (!completed) throw new Error('Ship arrival did not complete');
    fallback.hidden = true; return;
   }
-  const scene = initialScene(readJSON(RECIPE_KEY)), custom = readJSON(`${SHIP_SETTINGS_KEY}/${owner}`);
+  const scene = initialScene(readJSON(RECIPE_KEY));
   const shipId = owned.includes(custom.ship) ? custom.ship : owned.includes(scene.ship) ? scene.ship : owned[0];
   if (always && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');

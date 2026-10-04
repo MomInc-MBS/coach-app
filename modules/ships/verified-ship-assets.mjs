@@ -1,11 +1,12 @@
 import { unpackVerifiedBundle } from '../materials/verified-bundle.mjs';
 import { SHIP_STYLES, BIOMES } from './ship-scene-domain.mjs';
 import { ownedShipIds } from './ship-access.mjs';
+import { SHIP_CATALOG } from './ship-catalog.mjs';
 import { productionMaterialTrust } from '../materials/material-config.mjs';
 import { resolvePostDownloadSection } from '../materials/post-download-sections.mjs';
 import { ChunkDownloader, indexedDbChunkStore, DEFAULT_LOCAL_RESOURCE_POLICY } from '../materials/chunk-delivery.mjs';
 
-const SHIP_PATHS=Object.freeze(Object.fromEntries(SHIP_STYLES.map(id=>[id,`assets/ships/${id}.glb`])));
+const SHIP_PATHS=Object.freeze(Object.fromEntries(SHIP_CATALOG.map(ship=>[ship.id,ship.assetPath])));
 const BIOME_BUNDLE='assets/biomes.m5bundle';
 
 /** Make scene URLs only from individually reconstructed, signed, owner-checked assets. */

@@ -1,3 +1,4 @@
+import {shipDetails} from './modules/ships/ship-catalog.mjs';
 // Battle-pass reward table (rank 6b) — pure data + one lookup, no storage, no DOM.
 // Board rows are D30 (the owner's achievements board, plan/handoff/achievements-board);
 // item content is plan/muse/item-catalog.json, copied row-for-row below because this worktree
@@ -67,7 +68,7 @@ export const CREATURE_SKIN_REWARDS=Object.freeze(SKIN_CATALOG.skins.map(skin=>Ob
 // Duplicate grants are idempotent; family/grouping does not affect placement.
 const SHIPS=['supportive','direct','analytical','playful','calm','mom'];
 export const SHIP_DEFINITIONS=Object.freeze(Object.values(TRACKS).flatMap(({catalog:track},index)=>
- [3,5].map((level,slot)=>{const ship=SHIPS[(index*2+slot)%SHIPS.length];return Object.freeze({id:`ship-${ship}`,ship,name:`${ship==='mom'?'MOM':ship[0].toUpperCase()+ship.slice(1)} Ship`,track,level});})
+ [3,5].map((level,slot)=>{const ship=SHIPS[(index*2+slot)%SHIPS.length];return Object.freeze({id:`ship-${ship}`,ship,name:shipDetails(ship).name,track,level});})
 ));
 
 // --- item-catalog.json `weapons` (D21: 2 per style) ---
@@ -201,7 +202,7 @@ export function bossRewards(bossId){
  levels[4].unshift({kind:'aura',id:`${c}-aura`,name:`${meta.name} Aura`,line:'Your first aura look.'});
  levels[4].push(item('texture',tex[2]));
  for(const skin of CREATURE_SKIN_REWARDS.filter(row=>row.track===c))levels[skin.level-1].push(skin);
- for(const ship of SHIP_DEFINITIONS.filter(row=>row.track===c))levels[ship.level-1].push({kind:'ship',id:ship.id,name:ship.name,line:`Reveals the ${ship.ship} ship.`,ship:ship.ship,pack:'coach-ships-biomes'});
+ for(const ship of SHIP_DEFINITIONS.filter(row=>row.track===c))levels[ship.level-1].push({kind:'ship',id:ship.id,name:ship.name,line:shipDetails(ship.ship).description,ship:ship.ship,pack:'coach-ships-biomes'});
  return packCosmetics(levels,boss.id);
 }
 

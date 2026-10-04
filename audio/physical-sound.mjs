@@ -2,9 +2,9 @@
 // Samples are optional: every cue has a local Web Audio fallback for offline play.
 export const SOUND_PREF_KEY='myr5.physicalSound.v1';
 const clamp=(n,a=0,b=1)=>Math.min(b,Math.max(a,n));
-const RATE={'main-control':38,mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800,'electric':110,bloop:160,'signal':250,'whiteboard':450};
-const GROUP={'main-control':'mechanical',water:'water','water-slosh':'water',wood:'wood','wood-scrape':'wood',grass:'grass','grass-tinkle':'tinkle'};
-const SAMPLE={'main-control':'mechanical',mechanical:'mechanical-click',switch:'metal-switch',dial:'mechanical',lever:'switch',ice:'ice-crack',jelly:'jelly-squish',water:'water-splash','water-slosh':'water-slosh',grass:'grass-rustle','grass-tinkle':'grass-tinkle',cogs:'cogs-ratchet',wood:'wood-tap','wood-scrape':'wood-scrape',quilt:'cloth-rustle',transit:'portal-transit',dialup:'dialup',crt:'crt-tap','pod-hum':'pod-hum',breeze:'breeze',waterfall:'waterfall',electric:'electric',bloop:'bloop',signal:'signal',whiteboard:'whiteboard'};
+const RATE={'main-control':38,mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,'pond-slosh':1100,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800,'electric':110,bloop:160,'signal':250,'whiteboard':450};
+const GROUP={'main-control':'mechanical',water:'water','water-slosh':'water','pond-slosh':'water',wood:'wood','wood-scrape':'wood',grass:'grass','grass-tinkle':'tinkle'};
+const SAMPLE={'main-control':'mechanical',mechanical:'mechanical-click',switch:'metal-switch',dial:'mechanical',lever:'switch',ice:'ice-crack',jelly:'jelly-squish',water:'water-splash','water-slosh':'water-slosh','pond-slosh':'water-slosh',grass:'grass-rustle','grass-tinkle':'grass-tinkle',cogs:'cogs-ratchet',wood:'wood-tap','wood-scrape':'wood-scrape',quilt:'cloth-rustle',transit:'portal-transit',dialup:'dialup',crt:'crt-tap','pod-hum':'pod-hum',breeze:'breeze',waterfall:'waterfall',electric:'electric',bloop:'bloop',signal:'signal',whiteboard:'whiteboard'};
 const safeStorage=()=>{try{return globalThis.localStorage;}catch{return null;}};
 
 export function readSoundPrefs(storage=safeStorage()){
@@ -96,6 +96,7 @@ export class PhysicalSound{
    case 'jelly':return v(.46,x=>{this.noiseBurst(x,.28,.16,350,130);this.tone(x,180*pitch(),.32,.16,'sine',65);this.tone(x,95,.16,.075,'sine',45,.1);});
    case 'water':return v(.65,x=>{this.noiseBurst(x,.44,.23,1900,250);this.tone(x,410,.23,.08,'sine',110,.04);this.noiseBurst(x,.22,.09,900,160,.2);});
    case 'water-slosh':return v(.8,x=>{this.noiseBurst(x,.5,.13,320,105);this.noiseBurst(x,.4,.11,500,190,.2);this.tone(x,120,.55,.065,'sine',75,.08);});
+   case 'pond-slosh':return v(.34,x=>{this.noiseBurst(x,.27,.038,320,105);this.tone(x,120,.27,.018,'sine',75,.04);});
    case 'grass':return v(.32,x=>{this.noiseBurst(x,.24,.065,2000,520);this.tone(x,1400*pitch(),.18,.025,'sine',1100,.06);});
    case 'grass-tinkle':return v(.55,x=>{this.tone(x,1650*pitch(),.4,.028,'sine',1350);this.tone(x,2180*pitch(),.27,.018,'sine',1770,.07);});
    case 'cogs':return v(.32,x=>{for(let i=0;i<3;i++){this.tone(x,350-i*65,.085,.12,'square',160-i*20,i*.085);this.noiseBurst(x,.055,.07,1500,480,i*.085);}});
@@ -118,10 +119,10 @@ export class PhysicalSound{
   if(this.manifest&&SAMPLE[kind]&&this.sampleStatus.get(kind)!=='loading'&&this.sampleStatus.get(kind)!=='ready'&&Date.now()>=(this.sampleRetry.get(kind)||0))void this.loadSample(kind);
  }
  playSample(kind,buffer){
-  const duration=Math.min(buffer.duration,3)/(kind==='main-control'?.76:1);
+  const duration=Math.min(buffer.duration,kind==='pond-slosh'?.38:3)/(kind==='main-control'?.76:1);
   this.voice(kind,duration,({c,t,output,nodes})=>{
    const source=c.createBufferSource(),gain=c.createGain();source.buffer=buffer;source.playbackRate.value=(kind==='main-control'?.76:1)*(.97+Math.random()*.06);
-   const level=kind==='dialup'?.13:kind==='signal'?.09:kind==='electric'?.12:kind==='bloop'?.16:kind==='whiteboard'?.4:kind==='grass-tinkle'?.04:kind==='grass'?.4:kind==='transit'?.72:.68;
+   const level=kind==='pond-slosh'?.16:kind==='dialup'?.13:kind==='signal'?.09:kind==='electric'?.12:kind==='bloop'?.16:kind==='whiteboard'?.4:kind==='grass-tinkle'?.04:kind==='grass'?.4:kind==='transit'?.72:.68;
    gain.gain.setValueAtTime(.0001,t);gain.gain.linearRampToValueAtTime(level,t+.008);gain.gain.setValueAtTime(level,t+Math.max(.009,duration-.05));gain.gain.linearRampToValueAtTime(.0001,t+duration);
    source.connect(gain).connect(output);source.start(t);source.stop(t+duration+.01);nodes.push(source,gain);
   });
