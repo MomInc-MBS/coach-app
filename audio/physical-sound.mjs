@@ -2,7 +2,8 @@
 // Samples are optional: every cue has a local Web Audio fallback for offline play.
 export const SOUND_PREF_KEY='myr5.physicalSound.v1';
 const clamp=(n,a=0,b=1)=>Math.min(b,Math.max(a,n));
-const RATE={mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:95,jelly:90,water:115,'water-slosh':170,grass:130,'grass-tinkle':1200,cogs:75,wood:90,'wood-scrape':130,quilt:100,drag:120,transit:450,dialup:1500};
+const RATE={mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800};
+const GROUP={water:'water','water-slosh':'water',wood:'wood','wood-scrape':'wood',grass:'grass','grass-tinkle':'tinkle'};
 const SAMPLE={mechanical:'mechanical-click',switch:'metal-switch',dial:'mechanical',lever:'switch',ice:'ice-crack',jelly:'jelly-squish',water:'water-splash','water-slosh':'water-slosh',grass:'grass-rustle','grass-tinkle':'grass-tinkle',cogs:'cogs-ratchet',wood:'wood-tap','wood-scrape':'wood-scrape',quilt:'cloth-rustle',transit:'portal-transit',dialup:'dialup',crt:'crt-tap','pod-hum':'pod-hum',breeze:'breeze'};
 const safeStorage=()=>{try{return globalThis.localStorage;}catch{return null;}};
 
@@ -11,9 +12,10 @@ export function readSoundPrefs(storage=safeStorage()){
 }
 
 export class PhysicalSound{
- constructor({AudioContextClass=globalThis.AudioContext||globalThis.webkitAudioContext,storage=safeStorage(),documentRef=globalThis.document,windowRef=globalThis.window}={}){
+ constructor({AudioContextClass=globalThis.AudioContext||globalThis.webkitAudioContext,storage=safeStorage(),documentRef=globalThis.document,windowRef=globalThis.window,now=()=>performance.now()}={}){
   this.AudioContextClass=AudioContextClass;this.storage=storage;this.document=documentRef;this.window=windowRef;
-  this.prefs=readSoundPrefs(storage);this.context=null;this.voices=new Set();this.last=new Map();this.scene='pod';this.board='quilt';this.ducked=false;this.ambience=null;
+  this.now=now;
+  this.prefs=readSoundPrefs(storage);this.context=null;this.voices=new Set();this.tails=new Set();this.last=new Map();this.scene='pod';this.board='quilt';this.ducked=false;this.ambience=null;this.epoch=0;
   this.samples=new Map();this.sampleStatus=new Map();this.sampleRetry=new Map();this.manifest=null;this.manifestPending=null;this.manifestRetryAt=0;this.noise=null;this.started=false;
  }
  mount(){
@@ -24,14 +26,15 @@ export class PhysicalSound{
   this.window?.addEventListener('pagehide',()=>this.stopAll(),{signal});
   this.window?.addEventListener('pageshow',()=>this.syncAmbience(),{signal});
   this.window?.addEventListener('myr5:response',event=>{this.ducked=event.detail?.state==='speaking';this.syncLevel();},{signal});
-  this.window?.addEventListener('storage',event=>{if(event.key===SOUND_PREF_KEY){this.prefs=readSoundPrefs(this.storage);this.syncLevel();this.syncAmbience();this.emit();}},{signal});
+  this.window?.addEventListener('storage',event=>{if(event.key===SOUND_PREF_KEY){this.prefs=readSoundPrefs(this.storage);if(this.muted||!this.volume)this.stopAll();this.syncLevel();this.syncAmbience();this.emit();}},{signal});
+  if(globalThis.MutationObserver&&this.document?.documentElement){this.observer=new MutationObserver(()=>this.syncAmbience());this.observer.observe(this.document.documentElement,{subtree:true,attributes:true,attributeFilter:['open','hidden','data-screen','data-tracking','data-camera-workout','data-ship-view']});signal.addEventListener('abort',()=>this.observer.disconnect(),{once:true});}
   return this;
  }
  get muted(){return this.prefs.muted;}
  get volume(){return this.prefs.volume;}
  setVolume(volume){this.prefs.volume=clamp(Number(volume)||0);this.save();}
  setMuted(muted){this.prefs.muted=!!muted;this.save();}
- save(){try{this.storage?.setItem(SOUND_PREF_KEY,JSON.stringify(this.prefs));}catch{}this.syncLevel();this.syncAmbience();this.emit();}
+ save(){try{this.storage?.setItem(SOUND_PREF_KEY,JSON.stringify(this.prefs));}catch{}if(this.muted||!this.volume)this.stopAll();this.syncLevel();this.syncAmbience();this.emit();}
  emit(){this.window?.dispatchEvent(new CustomEvent('myr5:sound-settings',{detail:{...this.prefs}}));}
  unlock(){
   if(!this.AudioContextClass)return false;
@@ -45,8 +48,8 @@ export class PhysicalSound{
   return true;
  }
  syncLevel(){if(!this.context)return;const t=this.context.currentTime;this.master.gain.setTargetAtTime(this.muted?0:this.volume,t,.025);this.duck.gain.setTargetAtTime(this.ducked?.23:1,t,.08);}
- setScene(scene,board=this.board){this.scene=scene;this.board=board;this.syncAmbience();}
- setBoard(board){this.board=board;this.syncAmbience();}
+ setScene(scene,board=this.board){if(scene!==this.scene||board!==this.board)this.epoch++;this.scene=scene;this.board=board;this.syncAmbience();}
+ setBoard(board){if(board!==this.board)this.epoch++;this.board=board;this.syncAmbience();}
  noiseBuffer(){
   if(this.noise)return this.noise;const c=this.context,b=this.noise=c.createBuffer(1,c.sampleRate*2,c.sampleRate),data=b.getChannelData(0);
   let seed=0x51f15e;for(let i=0;i<data.length;i++){seed=(1664525*seed+1013904223)>>>0;data[i]=(seed/2147483648)-1;}
@@ -55,9 +58,13 @@ export class PhysicalSound{
  sourceNoise(){const s=this.context.createBufferSource();s.buffer=this.noiseBuffer();return s;}
  voice(kind,seconds,build){
   const c=this.context;if(!c||c.state!=='running'||this.document?.hidden||this.muted||!this.volume)return;
+  const group=GROUP[kind]||kind,limit=['mechanical','dial','lever','switch'].includes(group)?4:group==='tinkle'||group==='transit'||group==='dialup'?1:2;
+  while([...this.voices].filter(v=>v.group===group).length>=limit)[...this.voices].find(v=>v.group===group).stop(.06);
   while(this.voices.size>=12)this.voices.values().next().value.stop();
   const output=c.createGain(),nodes=[];output.connect(this.duck);let stopped=false;
-  const voice={stop:()=>{if(stopped)return;stopped=true;for(const n of nodes)try{n.stop?.();}catch{}for(const n of nodes)try{n.disconnect();}catch{}output.disconnect();this.voices.delete(voice);}};
+  const voice={group,stop:(fade=0)=>{if(stopped)return;stopped=true;this.voices.delete(voice);let timer;
+   const clean=()=>{clearTimeout(timer);this.tails.delete(clean);for(const n of nodes)try{n.stop?.();}catch{}for(const n of nodes)try{n.disconnect();}catch{}output.disconnect();};
+   if(fade){const now=c.currentTime;output.gain.setValueAtTime(output.gain.value,now);output.gain.linearRampToValueAtTime(0,now+fade);this.tails.add(clean);timer=setTimeout(clean,Math.ceil(fade*1000)+5);}else clean();}};
   this.voices.add(voice);const t=c.currentTime;
   try{build({c,t,output,nodes});}catch{voice.stop();return;}
   setTimeout(()=>voice.stop(),Math.ceil((seconds+.06)*1000));return voice;
@@ -97,9 +104,9 @@ export class PhysicalSound{
  }
  play(kind){
   if(!RATE[kind]||this.muted||!this.volume||this.document?.hidden)return;
-  const now=performance.now(),previous=this.last.get(kind)||-Infinity;if(now-previous<RATE[kind])return;this.last.set(kind,now);
-  const context=this.context;if(!context)return;
-  const start=()=>{if(this.context!==context||context.state!=='running'||this.document?.hidden||this.muted)return;
+  const now=this.now(),previous=this.last.get(kind)??-Infinity;if(now-previous<RATE[kind])return;this.last.set(kind,now);
+  const context=this.context,epoch=this.epoch;if(!context)return;
+  const start=()=>{if(this.context!==context||this.epoch!==epoch||this.now()-now>250||context.state!=='running'||this.document?.hidden||this.muted)return;
    const variants=this.samples.get(kind);if(variants?.length)this.playSample(kind,variants[Math.floor(Math.random()*variants.length)]);else this.synth(kind);
   };
   if(context.state==='running')start();else void context.resume().then(()=>{this.syncAmbience();start();}).catch(()=>{});
@@ -115,7 +122,7 @@ export class PhysicalSound{
   });
  }
  async loadManifest(){
-  this.manifestPending=(async()=>{try{const response=await fetch('/audio/sfx/manifest.json');if(response.ok)this.manifest=await response.json();}catch{}
+  this.manifestPending=(async()=>{try{const response=await fetch('/audio/sfx/manifest.json');if(response.ok){const candidate=await response.json();if(candidate?.version===1&&candidate.cues&&typeof candidate.cues==='object'&&Object.values(candidate.cues).some(paths=>Array.isArray(paths)&&paths.some(path=>typeof path==='string'&&/^\/audio\/sfx\/[a-z0-9-]+\.mp3$/i.test(path))))this.manifest=candidate;}}catch{}
    if(this.manifest&&this.context){for(const kind of Object.keys(SAMPLE))void this.loadSample(kind);}
    else{this.manifestRetryAt=Date.now()+15_000;this.manifestPending=null;}
    return this.manifest;})();
@@ -128,7 +135,7 @@ export class PhysicalSound{
    if(!decoded.length)throw Error('Unavailable');this.samples.set(kind,decoded);this.sampleStatus.set(kind,'ready');if(kind==='pod-hum'||kind==='breeze')this.syncAmbience(true);
   }catch{this.sampleStatus.set(kind,'unavailable');this.sampleRetry.set(kind,Date.now()+15_000);}
  }
- stopAll(){for(const voice of [...this.voices])voice.stop();this.stopAmbience(true);}
+ stopAll(){this.epoch++;for(const voice of [...this.voices])voice.stop();for(const clean of [...this.tails])clean();this.stopAmbience(true);}
  stopAmbience(immediate=false){
   const active=this.ambience;if(!active)return;this.ambience=null;
   const {gain,sources,nodes}=active,t=this.context.currentTime,delay=immediate?0:.12;
@@ -137,16 +144,17 @@ export class PhysicalSound{
  }
  syncAmbience(force=false){
   if(!this.context||this.context.state!=='running')return;
-  const scene=this.document?.hidden||this.muted||!this.volume?'off':this.scene;
+  const body=this.document?.body,blocked=this.document?.querySelector?.('dialog[open]')||body?.dataset?.tracking==='true'||body?.dataset?.cameraWorkout==='true'||body?.dataset?.shipView==='true'||body?.dataset?.screen==='rest';
+  const scene=this.document?.hidden||this.muted||!this.volume||blocked?'off':this.scene;
   const key=scene==='portal'?`portal:${this.board}`:scene;
   if(!force&&key===this.ambienceKey&&this.ambience)return;
   this.stopAmbience();this.ambienceKey=key;if(scene==='off')return;
   const c=this.context,t=c.currentTime,gain=c.createGain(),sources=[],nodes=[gain];gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(1,t+.18);gain.connect(this.duck);
   const bed=c.createGain();bed.gain.value=.12;bed.connect(gain);nodes.push(bed);
-  const humBuffer=this.samples.get('pod-hum')?.[0];
-  if(humBuffer){const hum=c.createBufferSource();hum.buffer=humBuffer;hum.loop=true;hum.connect(bed);hum.start();sources.push(hum);nodes.push(hum);}
-  else{const hum=c.createOscillator();hum.type='sine';hum.frequency.value=scene==='portal'?61:54;hum.connect(bed);hum.start();sources.push(hum);nodes.push(hum);}
   const grass=scene==='portal'&&this.board==='grass',water=scene==='portal'&&['water','pond'].includes(this.board),breeze=this.samples.get('breeze')?.[0];
+  if(!grass&&!water){const humBuffer=this.samples.get('pod-hum')?.[0];
+   if(humBuffer){const hum=c.createBufferSource();hum.buffer=humBuffer;hum.loop=true;hum.connect(bed);hum.start();sources.push(hum);nodes.push(hum);}
+   else{const hum=c.createOscillator();hum.type='sine';hum.frequency.value=scene==='portal'?61:54;hum.connect(bed);hum.start();sources.push(hum);nodes.push(hum);}}
   if(grass&&breeze){const wind=c.createBufferSource(),windGain=c.createGain();wind.buffer=breeze;wind.loop=true;windGain.gain.value=.18;wind.connect(windGain).connect(gain);wind.start();sources.push(wind);nodes.push(wind,windGain);}
   else{const airflow=this.sourceNoise(),filter=c.createBiquadFilter(),airGain=c.createGain();airflow.loop=true;filter.type='lowpass';filter.frequency.value=grass?350:water?580:190;airGain.gain.value=grass?.09:water?.12:.018;airflow.connect(filter).connect(airGain).connect(gain);airflow.start();sources.push(airflow);nodes.push(airflow,filter,airGain);}
   this.ambience={gain,sources,nodes};

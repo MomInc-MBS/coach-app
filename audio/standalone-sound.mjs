@@ -3,5 +3,5 @@ import {physicalSound} from './physical-sound.mjs';
 mountPhysicalSoundUI();
 if(window.parent!==window){
  physicalSound.setScene('off');
- try{window.parent.addEventListener('myr5:response',event=>window.dispatchEvent(new CustomEvent('myr5:response',{detail:event.detail})));}catch{}
+ try{const parent=window.parent,forward=event=>window.dispatchEvent(new CustomEvent('myr5:response',{detail:event.detail}));parent.addEventListener('myr5:response',forward);window.addEventListener('pagehide',()=>parent.removeEventListener('myr5:response',forward),{once:true});}catch{}
 }
