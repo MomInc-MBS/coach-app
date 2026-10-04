@@ -9,7 +9,7 @@ SS = 8
 jobs = json.load(open(sys.argv[sys.argv.index('--') + 1]))
 out = sys.argv[sys.argv.index('--') + 2]
 # kind -> frame w,h, fit-box w,h, baseline y (px from top)
-FRAME = {'body': (64, 96, 60, 88, 92), 'pet': (32, 24, 30, 20, 22)}
+FRAME = {'body': (64, 96, 60, 88, 92), 'pet': (48, 36, 44, 30, 33)}
 
 
 def region(o):
@@ -64,20 +64,13 @@ for job in jobs:
     flip = False
     cam.rotation_euler = (1.5708, 0, 0)
     if job['kind'] == 'pet':
-        # Side-on: look across the longer horizontal axis, pick the side that puts the head screen-right.
-        ex = max(p.x for p in pts) - min(p.x for p in pts)
-        ey = max(p.y for p in pts) - min(p.y for p in pts)
-        spins = (-1.5708, 1.5708) if ey >= ex else (0, 3.14159)
-        hs = [o for o in meshes if region(o) == 'head']
-        bs = [o for o in meshes if region(o) == 'body']
-        cam.rotation_euler = (1.5708, 0, spins[0])
-        if hs and bs:
-            bpy.context.view_layer.update()
-            rt = cam.matrix_world.to_3x3() @ Vector((1, 0, 0))
-            hc, bc = corners(hs), corners(bs)
-            if sum(p.dot(rt) for p in hc) / len(hc) < sum(p.dot(rt) for p in bc) / len(bc):
-                flip = True
-                cam.rotation_euler = (1.5708, 0, spins[1])
+        # All roster quadrupeds face -Y (eye_anchor sits at -Y). 3/4 view: camera on the -X side
+        # (head ends up screen-right), yawed 30 deg toward the face and tilted 20 deg down.
+        import math
+        yaw, tilt = math.radians(30), math.radians(20)
+        d = Vector((-math.cos(yaw) * math.cos(tilt), -math.sin(yaw) * math.cos(tilt), math.sin(tilt)))
+        cam.location = d * 50
+        cam.rotation_euler = (-d).to_track_quat('-Z', 'Y').to_euler()
     bpy.context.view_layer.update()
     R = cam.matrix_world.to_3x3()
     right, up, fwd = R @ Vector((1, 0, 0)), R @ Vector((0, 1, 0)), R @ Vector((0, 0, -1))

@@ -3,7 +3,7 @@ Usage: python tools/pixel_coaches.py [--skip-render]
 Blender (headless) renders each coach into tmp/pixel-coaches; this script downsamples, quantises to a
 grey ramp, adds a 1px outline + eyes, and packs pod/gala-coaches/{bodies,pets}.png (grey + alpha),
 {bodies,pets}-mask.png (region id in grey: 0 outline, 64 body, 128 head, 192 eyes) and manifest.json.
-Optional tools/pixel_coaches_tune.json: {slug: {"gamma": 1.0, "eyes": true}} per-sprite tuning.
+Optional tools/pixel_coaches_tune.json: {slug: {"gamma": 1.0, "eyes": true, "headRect": [x0, y0, x1, y1]}} per-sprite tuning.
 Needs Pillow + numpy."""
 import json, os, re, subprocess, sys
 import numpy as np
@@ -14,7 +14,7 @@ BLENDER = os.environ.get('BLENDER', r'C:\Program Files\Blender Foundation\Blende
 WORK = os.path.join(ROOT, 'tmp', 'pixel-coaches')
 OUT = os.path.join(ROOT, 'pod', 'gala-coaches')
 SS = 8
-SIZE = {'body': (64, 96), 'pet': (32, 24)}
+SIZE = {'body': (64, 96), 'pet': (48, 36)}
 SHEET = {'body': 'bodies', 'pet': 'pets'}
 COLS = {'body': 8, 'pet': 5}
 RAMP = [78, 128, 184, 238]  # grey levels; the app multiplies these into the region colour
@@ -63,6 +63,10 @@ def sprite(it):
     t = np.clip((lum - lo) / max(hi - lo, 1), 0, .999) ** tn.get('gamma', 1.0)
     grey = np.where(a, np.array(RAMP)[(t * 4).astype(int)], 0)
     reg = np.where(a, np.where(mk[..., 1] > mk[..., 0], 128, 64), 0)
+    if 'headRect' in tn:  # head tag only inside this px rect (e.g. Flyer wings live in the head mesh)
+        x0, y0, x1, y1 = tn['headRect']
+        yy, xx = np.mgrid[0:h, 0:w]
+        reg = np.where((reg == 128) & ~((xx >= x0) & (xx <= x1) & (yy >= y0) & (yy <= y1)), 64, reg)
     pet = it['kind'] == 'pet'
     if meta['uv'] and tn.get('eyes', True):
         ex, ey = int(meta['uv'][0] * w), int(meta['uv'][1] * h)
