@@ -99,7 +99,8 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  const sun=new THREE.DirectionalLight(0xfff0dc,2.4);sun.position.set(-.7,.55,.45);scene.add(sun);
 
  // Load, orient (thin axis -> +Z, long axis -> +Y), centre, and bake it all into the geometry.
- const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(effect.asset);
+ // effect.build (Pond, R21): a procedural board instead of a GLB, same orient/fit/cut path.
+ const gltf=effect.build?{scene:effect.build(THREE)}:await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(effect.asset);
  gltf.scene.updateMatrixWorld(true);
  const meshes=[];gltf.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});
  if(!meshes.length)throw new Error('portal-board-glb: no mesh in '+effect.asset);

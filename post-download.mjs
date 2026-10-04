@@ -23,6 +23,7 @@ const GROUPS=[
  ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],
  ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
  ['grimoire-wood','Wood grimoire portal','Wood board art and its ember, bark and charcoal wormhole.'],
+ ['grimoire-pond','Pond grimoire portal','Pond poster art and its murky water, lily and koi wormhole.'],
  ['room-scoreboard','Scoreboard classroom','The 3D classroom wall and desks, with friends at their seats and a whiteboard you can enter.'],
  ['room-reminders','Reminders computer','The purple space computer around your reminder controls.'],
  ['room-cage','3D customizer cage','Your coach on a pedestal, with pet cages, a weapon wall and a mirror you tap to open each part of the customizer.'],

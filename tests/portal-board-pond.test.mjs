@@ -1,0 +1,68 @@
+// R21 L4 Pond grimoire: the pure logic (koi steering, the idle show's clock, anchor lilies on every template vertex).
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {POND,anchorLilies,templateVertices,freePads,idlePhase,bigFishPose,steer,stepFish,makeFish,makeTrail,fishTouch,fishRelease,trailPush,trailAt,makeWaves,disturb,stepWaves,rng,pond} from '../modules/portal/portal-board-pond.mjs';
+import {fromFrame} from '../modules/portal/portal-shapes.mjs';
+
+const A=POND.aspect;
+test('an anchor lily sits on every vertex, base, apex and line end of every template',()=>{
+ const anchors=anchorLilies();
+ for(const [tx,ty] of templateVertices()){
+  const [u,v]=fromFrame(tx,ty,POND.frame),x=u,y=v*A,d=Math.min(...anchors.map(p=>Math.hypot(p.x-x,p.y-y)));
+  assert.ok(d<POND.anchorMerge,`template point ${tx},${ty} has a lily (${d.toFixed(3)})`);
+ }
+ // no two anchors on top of each other, and the lines are lined with them (no gap wider than ~2 spacings)
+ for(const a of anchors)for(const b of anchors)if(a!==b)assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>=POND.anchorMerge-1e-9);
+ const [ax,ay]=fromFrame(0,0,POND.frame),[bx,by]=fromFrame(1,0,POND.frame); // rect top side
+ for(let k=0;k<=20;k++){const x=ax+(bx-ax)*k/20,y=ay*A,d=Math.min(...anchors.map(p=>Math.hypot(p.x-x,p.y-y)));assert.ok(d<POND.anchorSpacing,'rect top edge is lined');}
+ assert.ok(anchors.length>=40&&anchors.length<=140,`anchor count ${anchors.length}`);
+ const free=freePads(anchors);assert.ok(free.length>=POND.freePads*.6,'free pads fit between the anchors');
+});
+
+test('steering arrives at the point and the koi turns to face the finger',()=>{
+ const f={x:.2,y:.2,vx:0,vy:0};let d=1;
+ for(let i=0;i<600;i++)d=steer(f,.7,1.1,.2,.7,.14,1/60);
+ assert.ok(d<.02,'arrived: '+d);
+ const S={fish:makeFish(6,A,rng(1)),A,rand:rng(2),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
+ const finger={x:.5,y:.9};fishTouch(S,finger.x,finger.y,0);
+ for(let i=0;i<60*40;i++)stepFish(S,1/60,i*16,POND);
+ assert.equal(S.phase,'touch');
+ for(const f of S.fish){
+  const d=Math.hypot(f.x-finger.x,f.y-finger.y);assert.ok(d<.2,'gathered under the finger: '+d.toFixed(3));
+  const toward=Math.atan2(finger.y-f.y,finger.x-f.x);let da=Math.abs(f.a-toward)%(2*Math.PI);da=Math.min(da,2*Math.PI-da);
+  if(d>.02)assert.ok(da<.6,'face first: '+da.toFixed(2));
+ }
+ assert.ok(S.members>0,'fish joined the school');
+});
+
+test('drawing leads the school along the trail; release frees it',()=>{
+ const S={fish:makeFish(8,A,rng(3)),A,rand:rng(4),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
+ let t=0;for(let i=0;i<60*30;i++){const a=i/600*Math.PI*2,x=.5+.25*Math.cos(a),y=A/2+.25*Math.sin(a);fishTouch(S,x,y,t);stepFish(S,1/60,t,POND);t+=16;}
+ assert.ok(S.members>=4,'the school grew: '+S.members);
+ const T=makeTrail();trailPush(T,0,0);trailPush(T,.1,0);trailPush(T,.2,0);const o={x:0,y:0};trailAt(T,.15,o);
+ assert.ok(Math.abs(o.x-.05)<1e-6&&o.y===0,'trailAt walks back along the trail');
+ fishRelease(S,t);assert.equal(S.touch,null);assert.ok(S.fish.every(f=>f.member===-1));
+});
+
+test('15 s idle: the fish scatter off the pond, then the huge koi crosses, then they come back',()=>{
+ assert.equal(idlePhase(0).phase,'wander');assert.equal(idlePhase(14999).phase,'wander');
+ assert.equal(idlePhase(15000).phase,'scatter');assert.equal(idlePhase(15000+POND.scatterMs).phase,'big');
+ const P=POND.idleMs+POND.scatterMs+POND.bigMs;assert.deepEqual(idlePhase(P+5),{phase:'wander',t:5,cycle:1});
+ const S={fish:makeFish(10,A,rng(5)),A,rand:rng(6),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
+ for(let now=0;now<15000+POND.scatterMs+2000;now+=16)stepFish(S,.016,now,POND);
+ assert.equal(S.phase,'big');
+ for(const f of S.fish)assert.ok(f.x<-.03||f.x>1.03||f.y<-.03||f.y>A+.03,`fish off the pond: ${f.x.toFixed(2)},${f.y.toFixed(2)}`);
+ const a=bigFishPose(9,0),b=bigFishPose(9,1),off=p=>p.x<-.3||p.x>1.3||p.y<-.3||p.y>A+.3;
+ assert.ok(off(a)&&off(b),'the huge koi starts and ends off the pond');
+ assert.notDeepEqual(bigFishPose(1,0),bigFishPose(2,0),'a new direction each show');
+ for(let now=15000+POND.scatterMs+POND.bigMs;now<P+12000;now+=16)stepFish(S,.016,now,POND);
+ assert.equal(S.phase,'wander');
+ assert.ok(S.fish.filter(f=>f.x>0&&f.x<1&&f.y>0&&f.y<A).length>=8,'the fish came back');
+});
+
+test('ripples spread and die away; the board is registered as a procedural grimoire',()=>{
+ const W=makeWaves(32,56);disturb(W,.5,.5,1);let e=1;for(let i=0;i<20;i++)e=stepWaves(W,POND.wave.damping);
+ assert.ok(e>0,'ripple travels');for(let i=0;i<4000;i++)e=stepWaves(W,POND.wave.damping);assert.ok(e<1e-3,'and dies');
+ assert.equal(pond.id,'pond');assert.equal(typeof pond.build,'function');assert.equal(pond.asset,undefined);
+ for(const k of ['init','step','press','move','release','cut','heal','dispose','setTint'])assert.equal(typeof pond[k],'function',k);
+});

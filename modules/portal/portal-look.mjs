@@ -2,7 +2,7 @@
 export const LOOK_KEYS={portal:'myr5.portalMetal',strip:'myr5.portalStrip'};
 export const LOOK_DEFAULTS={portal:'#4d3d4f',strip:'#b026ff'};
 const LEGACY_FRAME_KEY='myr5.portalFrameMetal';
-export const BOARD_CHOICES=[['quilt','Quilt'],['ice','Crystal'],['grass','Grass'],['cogs','Cogs'],['jelly','Jelly'],['wood','Wood']];
+export const BOARD_CHOICES=[['quilt','Quilt'],['ice','Crystal'],['grass','Grass'],['cogs','Cogs'],['jelly','Jelly'],['wood','Wood'],['pond','Pond']];
 export const cleanColor=(v,fallback)=>/^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():fallback;
 const get=k=>{try{return localStorage.getItem(k)}catch{return null}};
 export const readLook=()=>({portal:cleanColor(get(LOOK_KEYS.portal),cleanColor(get(LEGACY_FRAME_KEY),LOOK_DEFAULTS.portal)),strip:cleanColor(get(LOOK_KEYS.strip),LOOK_DEFAULTS.strip)});
