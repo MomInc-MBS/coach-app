@@ -260,7 +260,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   setTint(hex,selected=true){
    if(!/^#[0-9a-f]{6}$/i.test(hex))return;
    if(effect.id==='grass')effect.setTint?.(hex,selected);
-   else{uBoardTint.value.set(hex);effect.setTint?.(hex,selected);}
+   else{uBoardTint.value.set(effect.doorTone?effect.doorTone(hex):hex);effect.setTint?.(hex,selected);}
 
    wake();
   },

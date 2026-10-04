@@ -53,6 +53,14 @@ const MAX_OMEGA=12;
 // spin opposite and it reads wrong.
 const VALVE_IDLE=.25,VALVE_RATIO=.15,LIGHT_COLOR='#b026ff';
 let selectedTint=null,weldTrace=null;
+// Door/background tone for a picked part colour: its complement, darker and half as saturated, so the parts read against it.
+export function doorTone(hex){
+ const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;
+ let h=0;if(d){h=mx===r?((g-b)/d+6)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h/=6;}
+ const s=d?d/(1-Math.abs(2*l-1)):0,H=(h+.5)%1,S=s*.5,L=Math.min(l,.5)*.75,a=S*Math.min(L,1-L);
+ const f=k=>{const t=(k+H*12)%12;return Math.round(255*(L-a*Math.max(-1,Math.min(t-3,9-t,1))));};
+ return '#'+[f(0),f(8),f(4)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
 const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
 
 // All touch-reactive tuning in one place. Pipes wiggle as a damped torsion spring, angle'' =
@@ -154,6 +162,13 @@ export function stepTrain(gears,dt){
   g.angle+=g.omega*dt;
  }
  return gears.some(g=>Math.abs(g.omega)>REST);
+}
+// Hub idle motor: every gear with an idleDir is pushed along it. Pure (tested): the board calls it each frame
+// unless prefers-reduced-motion is on. Returns true when it is pushing, so the render loop stays awake.
+export function idleSpin(gears,dt,accel,reduced){
+ if(reduced)return false;let on=false;
+ for(const g of gears)if(g.idleDir){g.omega+=g.idleDir*accel*dt;on=true;}
+ return on;
 }
 // Layout parts -> a physics gears array indexed 0..n over just the kind:'gear' entries, with each
 // one's `drives` (a parts-array index) remapped to a gear-array index (absent/non-gear -> its own
@@ -367,8 +382,8 @@ async function init({mesh,face,wake,paint,glow}){
  for(const m of mats)metalFinish(m);applyMetal(mats);
  const top=parts.reduce((z,p)=>Math.max(z,p.top),front)+KNOBS.wiggleBob*fw+.01*fw,tw=paint.canvas.width,th=paint.canvas.height;
  const beadLayer=weldLayer(mesh.parent,tw,th,fw,fh,top,false),glowLayer=weldLayer(mesh.parent,tw,th,fw,fh,top+.002*fw,true);
- const reducedMotion=matchMedia?.('(prefers-reduced-motion: reduce)').matches;
- S={gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,
+ const motion=matchMedia?.('(prefers-reduced-motion: reduce)'),reducedMotion=!!motion?.matches;
+ S={motion,gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,
     paint:beadLayer,glow:glowLayer,layers:[beadLayer,glowLayer],texW:tw,texH:th,
     sparks:[],weld:[],weldHeads:new Map(),weldActive:false,tint:selectedTint};
 }
@@ -553,7 +568,10 @@ function release(id){
  S.drag.delete(id);
 }
 function step(dt,now){
- const moving=stepTrain(S.gears,dt);
+ // Live media query (not just at init) and the motor runs before the rest check, so a sleeping loop can never
+ // be left with the hubs "at rest" while the motor is on.
+ const idling=idleSpin(S.gears,dt,KNOBS.hubIdleAccel,S.motion?S.motion.matches:S.reducedMotion);
+ const moving=stepTrain(S.gears,dt)||idling;
  S.gears.forEach((g,gi)=>{if(S.gearPivots[gi])S.gearPivots[gi].rotation.z=g.angle%TAU;});
  let rootOmega=0;
  for(const g of S.gears)if(g.drives==null&&Math.abs(g.omega)>Math.abs(rootOmega))rootOmega=g.omega;
@@ -593,7 +611,6 @@ function step(dt,now){
  }
  const f=S.fall,t=f?Math.min(1,(now-f.t0)/Math.max(1,f.ms)):1,e=t*t;
  if(f)for(const [p,z0] of f.pivots){p.position.z=z0-f.dist*e;p.rotation.x=FALL_TILT*e;p.scale.setScalar(1-e);p.visible=t<1;}
- if(!S.reducedMotion)for(const g of S.gears)if(g.idleDir)g.omega+=g.idleDir*KNOBS.hubIdleAccel*dt;
  const weldActive=stepWeld(S,dt,now);
  // Sleeps (returns false) once no gear is moving, no pipe is wobbling, no light is lit, no weld spark/
  // trail is live and no cut animation is running — the board (portal-board-glb.mjs) stops driving rAF
@@ -640,5 +657,5 @@ cogsWeld.metal=true; // the flat poster tints as anodized metal, not a flat wash
 export const cogs={
  id:'cogs',asset:'/pod/worlds/boards/cogs/door.glb',flip:false,background:'#161310',
  guide:null,frame:DEFAULT_FRAME,ink:false, // the weld trail replaces the shared ink line
- init,press,move,release,step,cut,heal,dispose,setTint:setCogsTint,tintTarget:'trace',trace2d:cogsWeld,
+ init,press,move,release,step,cut,heal,dispose,setTint:setCogsTint,doorTone,tintTarget:'trace',trace2d:cogsWeld,
 };

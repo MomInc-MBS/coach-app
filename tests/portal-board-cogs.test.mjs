@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,beadAlpha,stepSpark,KNOBS,METAL,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
+import {idleSpin,doorTone,stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,beadAlpha,stepSpark,KNOBS,METAL,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
 
 const TAU=Math.PI*2;
 
@@ -211,4 +211,23 @@ test('torch knobs: sparks stay capped and the metal finish is in the metal range
  assert.ok(METAL.metalness>=.8&&METAL.metalness<=1);
  assert.ok(METAL.roughness>=.3&&METAL.roughness<=.45);
  assert.ok(KNOBS.tintHaloMix<=.3,'the tint only leans the halo; the sparks stay incandescent');
+});
+
+test('hub gears advance on their own with no touch, and stay still under reduced motion',()=>{
+ const make=()=>[0,1,2].map(i=>({r:.1,omega:0,angle:0,drives:null,idleDir:i%2?1:-1}));
+ const run=reduced=>{const g=make();let awake=true;for(let i=0;i<120;i++){const idle=idleSpin(g,1/60,KNOBS.hubIdleAccel,reduced);awake=stepTrain(g,1/60)||idle;}return {g,awake};};
+ const {g,awake}=run(false);
+ assert.ok(awake,'loop stays awake while idling');
+ g.forEach(x=>assert.ok(Math.abs(x.angle)>.3,'angle advanced: '+x.angle));
+ assert.ok(g[0].angle*g[1].angle<0,'alternating directions');
+ run(true).g.forEach(x=>assert.equal(x.angle,0));
+});
+
+test('doorTone: the door gets a darker, desaturated complement, never the part tint',()=>{
+ const hsl=hex=>{const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;return {l,s:d?d/(1-Math.abs(2*l-1)):0,r,g,b};};
+ for(const part of ['#ff2020','#00ffff','#b026ff']){
+  const door=doorTone(part),p=hsl(part),d=hsl(door);
+  assert.notEqual(door,part);assert.ok(d.l<p.l&&d.s<p.s,door+' darker and less saturated than '+part);
+ }
+ const red=hsl(doorTone('#ff2020'));assert.ok(red.b>red.r&&red.g>red.r,'red parts -> cyan-ish door');
 });
