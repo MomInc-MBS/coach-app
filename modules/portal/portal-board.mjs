@@ -81,10 +81,10 @@ function patternRectOf(host){const q=quiltRectOf(host);return {left:q.left+q.wid
 // draw: a factory for an effect with portal-board-glb's interface, given 2D paint/glow layers over the face (glow adds
 // light, as the 3D emissive does). The canvas redraws only while that effect animates.
 // ponytail: no cloth ripple, dent or falling piece; the cut just opens a hole.
-export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0,trace=null,tint=null,tintSelected=true,tintTarget='poster'}={}){
+export async function createQuiltBoard2D(host,{src=IMAGE,ratio=IMAGE_W/IMAGE_H,frame={x0:PATTERN.left,y0:PATTERN.top,x1:PATTERN.right,y1:PATTERN.bottom},background=BACKGROUND,guide=null,fallback=src===IMAGE?plainQuilt:null,waitMs=0,trace=null,tint=null,tintSelected=true,tintTarget='poster',backplateTint='#263943',backplateTintSelected=true}={}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const art=new Promise((ok,fail)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>fail(new Error('Board art unavailable: '+src));img.src=src;if(waitMs)setTimeout(()=>fail(new Error('Board art timed out: '+src)),waitMs);});
- let image=fallback?.(),width=1,height=1,holes=[],disposed=false,_tint=(typeof tint==='string'&&/^#[0-9A-Fa-f]{6}$/.test(tint))?tint:null,_traceTint=_tint,_traceSelected=!!tintSelected;
+ let image=fallback?.(),width=1,height=1,holes=[],disposed=false,_tint=(typeof tint==='string'&&/^#[0-9A-Fa-f]{6}$/.test(tint))?tint:null,_traceTint=_tint,_traceSelected=!!tintSelected,_backplateTint=(typeof backplateTint==='string'&&/^#[0-9A-Fa-f]{6}$/.test(backplateTint))?backplateTint:'#263943',_backplateSelected=!!backplateTintSelected;
  if(image)art.then(img=>{image=img;draw();},()=>{});else image=await art;
  const canvas=document.createElement('canvas'),g=canvas.getContext('2d'); // no 2D context: a bare face, but the frame, layout and cuts still work
  canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='position:absolute;inset:0;display:block;width:100%;height:100%';host.append(canvas);
@@ -97,7 +97,7 @@ const tintCache=new Map();
  function paintStill(c,face){
   if(_tint){
     const tw=Math.max(1,Math.round(face.width)),th=Math.max(1,Math.round(face.height));
-    const metal=!!trace?.metal&&_traceSelected,key=`${image.src}-${tw}x${th}-${_tint}-${metal}`;
+    const metal=!!trace?.metal&&_traceSelected,cogs=tintTarget==='cogs',key=`${image.src}-${tw}x${th}-${_tint}-${metal}-${cogs}-${_backplateTint}-${_backplateSelected}`;
     let off;
     if(tintCache.has(key)){
       off=tintCache.get(key);
@@ -114,6 +114,17 @@ const tintCache=new Map();
         const a=data[i+3];
         if(a===0)continue;
         const lum=data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722;
+        if(cogs){
+         const hi=Math.max(data[i],data[i+1],data[i+2]),lo=Math.min(data[i],data[i+1],data[i+2]),chroma=hi-lo,l=lum/255;
+         if(chroma<42&&l>.055&&l<.49){ // muted dark panels in the poster stand in for the separate backplate
+          const rgb=parseInt(_backplateTint.slice(1),16),k=.28+.78*l;
+          data[i]=Math.min(255,((rgb>>16)&255)*k);data[i+1]=Math.min(255,((rgb>>8)&255)*k);data[i+2]=Math.min(255,(rgb&255)*k);
+         }else if(chroma>=42){ // colored gear teeth, pipes and lamps share the mechanism tint, including its default
+          const l0=lum/255,k=.12+1.35*l0,s=l0>.55?((l0-.55)/.45)**2*.7:0;
+          data[i]=Math.min(255,tr*k)*(1-s)+255*s;data[i+1]=Math.min(255,tg*k)*(1-s)+255*s;data[i+2]=Math.min(255,tb*k)*(1-s)+255*s;
+         }
+         continue;
+        }
         if(metal){ // anodized metal (Cogs): deeper shadows, tint through the mids, a white-hot specular top
          const l=lum/255,k=.12+1.35*l,s=l>.55?((l-.55)/.45)**2*.7:0;
          data[i]=Math.min(255,tr*k)*(1-s)+255*s;data[i+1]=Math.min(255,tg*k)*(1-s)+255*s;data[i+2]=Math.min(255,tb*k)*(1-s)+255*s;
@@ -183,6 +194,11 @@ tintCache.set(key,tmp);
    _tint=hex;
    still=null;
    draw();
+  },
+  setBackplateTint(hex,selected=true){
+   if(!/^#[0-9a-f]{6}$/i.test(hex))return;
+   _backplateTint=selected?hex:'#263943';_backplateSelected=selected;
+   still=null;draw();
   },
   press(id,x,y){
    if(!fx)return;const r=rectOf(),u=Math.min(1,Math.max(0,(x-r.left)/r.width)),v=Math.min(1,Math.max(0,(y-r.top)/r.height)),p=pointers.get(id);

@@ -1,49 +1,16 @@
-// cogs board effect for portal-board-glb.mjs — Ian's own painted door (door.glb): a flat slab whose
-// neon portal lines are painted into the texture, so the shared guide overlay is off (guide:null) and
-// `frame` tells the recogniser/cut where that painted art sits on the taller image (below it is a
-// plain panel strip). Every other part of the door — gears, valves, lights, pipes, screws, plates —
-// comes from one shared kit (parts-kit.glb) and is placed by door-layout.json (fetched once here):
-// one Mesh per entry sharing the node's geometry/material (no clones, except a light's own emissive
-// clone), positioned by u/v/r/rot and stacked by `layer`. Gears whose `drives` link them form a train
-// (the same rootRatio/applyTorque/stepTrain math as before, minus the old procedural-tooth phasing —
-// real kit models don't need it); valves idle-follow the train while it (or a finger) is active;
-// lights sit dark and switch on when a finger draws near, holding then fading back off after; pipes
-// wiggle as a damped spring when a finger passes near or taps them (screws/plates still sit still).
-// Five more kit gears (HUBS), bigger than anything the packer placed, sit above every other part over
-// the door art's own painted hub gears, hiding them and idle-spinning as their own one-gear trains.
-// A finger leaves a welding trail instead of the shared ink line (ink:false): sparks and a cooling hot
-// streak on the free `glow` canvas, a "stack of dimes" weld bead on the free `paint` canvas (this
-// board's guide is null, so drawGuides never touches either) — gone well within Ian's 7 s rule.
-// All the touch-reactive tuning lives in KNOBS below. step() reports whether anything's still moving
-// so the board can go quiet at rest (except the hub gears' idle spin — see the ponytail comment on
-// valveActive in step()). A portal cut takes every part whose centre is inside the traced shape down
-// with the piece; heal brings them back. AGPL-3.0-or-later.
+// Pre-sectioned mechanical metal grimoire. Existing kit gears, shared portal shapes.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {orientMatrix,pointInPolygon,GLB} from './portal-board-glb.mjs';
+import {MECHANICAL_FRAME,mechanicalPaths,releasePaths,sectionPanels,mechanicalLayout,pointOnPath,signedRailImpulse} from './portal-mechanical-layout.mjs';
 
 export const LAYOUT='/pod/worlds/boards/cogs/door-layout.json';
 const PARTS='/pod/worlds/boards/cogs/parts-kit.glb';
-// Ian's door art (1024x1792) has a blank panel strip below ~80% height; the layout carries its own
-// measured frame once it loads — this is only the bootstrap value (and the "or the same constant"
-// fallback if the fetch ever fails).
-export const DEFAULT_FRAME={x0:.0244,y0:.0268,x1:.9756,y1:.8008};
-// The five big painted gears on the door art itself (measured from the 1024x1792 source, D:/MYR5
-// Roster/boards/src/cogs-door.webp — pixel centre/radius over image size, same u/v/r units as
-// door-layout.json): top, bottom, left, right, and the smaller centre hub. These belong to the painted
-// art, not the packer's layout, so they live here rather than in door-layout.json. A real kit gear
-// (HUB_NODE, HUB_SCALE bigger so the paint is fully hidden) sits over each — see the hub gears built
-// in init().
-const HUBS=[
- {u:.499,v:.031,r:.052}, // top
- {u:.499,v:.801,r:.052}, // bottom
- {u:.088,v:.419,r:.070}, // left
- {u:.911,v:.419,r:.070}, // right
- {u:.5,  v:.417,r:.043}, // centre
-];
-const HUB_SCALE=1.2,HUB_NODE='m19'; // m19 is also the largest-r gear door-layout.json itself places
-const TAU=Math.PI*2,FRICTION=1.6,REST=.02,TAP_IMPULSE=4,DRAG_GAIN=1,MOVE_EPS=.006;
+// The same inset shape frame is shared by the metal assemblies and 2D fallback.
+export const DEFAULT_FRAME=MECHANICAL_FRAME;
+const HUB_NODE='m19';
+const TAU=Math.PI*2,FRICTION=1.6,REST=.02,TAP_IMPULSE=4,MOVE_EPS=.006;
 // ponytail: hard speed cap, not a torque/inertia model — keeps a wild flick from strobing the spokes.
 const MAX_OMEGA=12;
 // Valves idle at VALVE_IDLE rad/s in the (single, shared) train direction plus VALVE_RATIO of its
@@ -51,9 +18,9 @@ const MAX_OMEGA=12;
 // ponytail: every valve and every gear tree shares one idle direction/rate rather than each valve
 // following its own nearest tree — give valves a `drives`-like link to their tree if two trains ever
 // spin opposite and it reads wrong.
-const VALVE_IDLE=.25,VALVE_RATIO=.15,LIGHT_COLOR='#b026ff';
-let selectedTint=null,weldTrace=null;
-// Door/background tone for a picked part colour: its complement, darker and half as saturated, so the parts read against it.
+const VALVE_IDLE=.25,VALVE_RATIO=.15,LIGHT_COLOR='#c59a56';
+let selectedTint='#c59a56',selectedBackplateTint='#263943',weldTrace=null;
+// Retained for existing callers; rebuilt metal uses its independent backplate tint.
 export function doorTone(hex){
  const n=parseInt(hex.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn;
  let h=0;if(d){h=mx===r?((g-b)/d+6)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h/=6;}
@@ -92,12 +59,9 @@ export const KNOBS={
  // canvas px each draw via pxScale() — the live canvas-to-screen scale (measured off the rendered
  // <canvas> + the same fit math portal-board-glb.mjs's computeFit() uses) — rather than baked to a
  // fixed texture-px size. Sparks fly at "screen px/s" so a frame's streak (speed*dt) reads as roughly
- // sparkSpeedMinPx..MaxPx/60 wide at 60fps. Timeline: hot trail ~1s (weldHotMs, held near-full for
+ // sparkSpeedMinPx..MaxPx/60 wide at 60fps. Timeline: hot trail .5s (weldHotMs, held near-full for
  // weldHotHold of that then cooling), then the bead holds (weldBeadHold of weldBeadMs) and fades —
- // total ~5s end to end, inside Ian's 7s rule. ponytail: the bead is painted on the door's own texture,
- // so tall kit parts (gears etc, proud of the door surface) occlude it same as they'd occlude any
- // door-texture art; a separate transparent overlay mesh above the door would fix that if it matters
- // later, but the open panelling has plenty of clear room for it today.
+ // total 2.5s end to end. The seam sits on the plate face, with raised gears occluding it.
  sparkSpeedMinPx:300,sparkSpeedMaxPx:1100, // screen px/s, radial spray (slow ones dribble, fast ones fly)
  sparkGravityPx:1500,                       // screen px/s^2, downward: sparks arc over and fall
  sparkLifeMin:.35,sparkLifeMax:.9,          // s — the wider range reads as "some fly further"
@@ -109,33 +73,26 @@ export const KNOBS={
  sparkPressCount:24,sparkReleaseCount:6,sparkIdleCount:4,sparkIdleMs:45, // press flare spray; trickle while held
  sparkPerFrac:.004,sparkMoveMax:12,         // sparks per face-width-fraction of travel per move event
  sparkMax:200,                              // ponytail: hard cap on live sparks
- torchCorePx:9,            // screen px, white-hot core radius at the contact point while a finger is down
- torchBloomPx:40,          // screen px, blue-white -> warm bloom around the core
+ torchCorePx:4.5,            // screen px, white-hot core radius at the contact point while a finger is down
+ torchBloomPx:20,          // screen px, blue-white -> warm bloom around the core
  torchFlareMs:220,         // the press flare: core+bloom swell this long after touch-down
  torchFlareScale:2.2,      // how much bigger the bloom is at the instant of the press
  tintHaloMix:.22,          // the selected tint only tints the outer halo of the hot trail, this much
  weldStep:.016,            // face-width fraction: trail-point spacing
- weldHotMs:1000,            // hot-glow portion of the trail
+ weldHotMs:500,            // hot-glow portion of the trail
  weldHotHold:.35,           // fraction of weldHotMs held near-full brightness before it starts cooling
- weldBeadMs:4000,           // bead hold (weldBeadHold) + fade after the trail cools
- weldBeadHold:.625,         // 2.5s hold / 4s = .625, fading over the remaining 1.5s
- weldTrailWidthPx:6,        // screen px, hot-trail core stroke width
- weldTrailHaloPx:18,        // screen px, hot-trail bloom halo width
- weldBeadRadiusPx:5,        // screen px, bead half-width (~10px seam)
+ weldBeadMs:2000,           // bead hold (weldBeadHold) + fade after the trail cools
+ weldBeadHold:.625,         // 1.25s hold followed by .75s fade
+ weldTrailWidthPx:3,        // screen px, hot-trail core stroke width
+ weldTrailHaloPx:9,        // screen px, hot-trail bloom halo width
+ weldBeadRadiusPx:2.5,      // screen px, bead half-width (~5px seam)
  weldRipplePx:3.8,          // screen px between "stack of dimes" ripples along the bead
- weldHaloRadiusPx:11,       // screen px, heat-tint band (straw next to the bead -> blue outside) half-width
+ weldHaloRadiusPx:5.5,       // screen px, heat-tint band (straw next to the bead -> blue outside) half-width
  weldCap:260,               // ponytail: hard cap on stored trail points
 };
 // The tint picker recolours the kit parts (cogs, lamps, pipes...) as anodized metal (see metalFinish).
 export const METAL={metalness:.92,roughness:.36,envIntensity:1.15};
-// z step between stacked layers, as a fraction of face width. `layer` is a unique index across every
-// part (0..N, no repeats) rather than a small per-spot count, so this only needs to clear ordinary
-// z-fighting, not carry any real depth — kept tiny (250 parts * this ~= 1% of face width) so a part
-// with a high layer doesn't visibly float off the door. Parts rest on the door's own front face plus
-// their own half-depth on top of that.
-const LAYER_STEP=.00005;
-// Portal cut: parts whose centre is inside the traced shape sink/tilt/shrink away with the board's
-// falling piece (same ease-in, drop and tilt as its fallPieces), and come back on heal.
+// Portal release moves whole prebuilt plate assemblies with the existing timing and tilt.
 const FALL_MS=1100,FALL_TILT=35*Math.PI/180;
 
 // --- Pure train kinematics (unit-tested; no THREE/DOM) --------------------------------------
@@ -143,7 +100,7 @@ const FALL_MS=1100,FALL_TILT=35*Math.PI/180;
 // settled, gears[i].omega === ratio*gears[root].omega (each mesh flips sign: ratio *= -r[parent]/r[self]).
 function rootRatio(gears,i){
  let idx=i,ratio=1;
- while(gears[idx].drives!=null){const p=gears[idx].drives;ratio*=-gears[p].r/gears[idx].r;idx=p;}
+ while(gears[idx].drives!=null){const p=gears[idx].drives;ratio*=gears[idx].driveRatio??(-gears[p].r/gears[idx].r);idx=p;}
  return {root:idx,ratio};
 }
 // Adds torque/impulse `omega` at gear i, converted to the equivalent change at the train's root —
@@ -158,7 +115,7 @@ export function applyTorque(gears,i,omega){
 export function stepTrain(gears,dt){
  for(const g of gears)if(g.drives==null)g.omega*=Math.exp(-dt*FRICTION);
  for(const g of gears){
-  if(g.drives!=null){const p=gears[g.drives];g.omega=-p.omega*p.r/g.r;}
+  if(g.drives!=null){const p=gears[g.drives];g.omega=p.omega*(g.driveRatio??(-p.r/g.r));}
   g.angle+=g.omega*dt;
  }
  return gears.some(g=>Math.abs(g.omega)>REST);
@@ -179,7 +136,7 @@ export function gearsFromLayout(parts){
  const at=new Map(idx.map((partI,gi)=>[partI,gi]));
  return idx.map(partI=>{
   const p=parts[partI];
-  return {u:p.u,v:p.v,r:p.r,drives:p.drives!=null?(at.get(p.drives)??null):null,angle:(p.rot||0)*Math.PI/180,omega:0};
+  return {u:p.u,v:p.v,r:p.r,drives:p.drives!=null?(at.get(p.drives)??null):null,angle:(p.rot||0)*Math.PI/180,omega:0,driveRatio:p.driveRatio};
  });
 }
 // Nearest gear (layout circle: centre u,v, radius r*face.w) to (u,v), skipping any index in `skip`
@@ -292,9 +249,9 @@ function applyMetal(mats){
 
 // --- Effect glue -------------------------------------------------------------------------------
 let S=null; // per-instance state; one portal board is ever active at once
-function setCogsTint(hex,selected=true){
- if(selected&&!validTint(hex))return;
- selectedTint=selected?hex:null;
+export function setCogsTint(hex,selected=true){
+ if(!validTint(hex))return;
+ selectedTint=hex;
  if(S){for(const part of S.parts)if(part.kind==='light')part.mat.emissive.set(selectedTint||LIGHT_COLOR);applyMetal(S.mats);S.tint=selectedTint;S.wake?.();}
  if(weldTrace){weldTrace.tint=selectedTint;weldTrace.wake?.();}
 }
@@ -302,6 +259,10 @@ function setCogsTint(hex,selected=true){
 // One GLTFLoader promise per file, so every slot using a kit shares a single load.
 const models=new Map();
 const loadModel=url=>{let pending=models.get(url);if(!pending){pending=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url).catch(error=>{models.delete(url);throw error;});models.set(url,pending);}return pending;};
+export function setCogsBackplateTint(hex,selected=true){
+ if(selected&&!validTint(hex))return;selectedBackplateTint=selected?hex:'#263943';
+ if(S){S.backplateMaterial?.color.set(selectedBackplateTint);S.wake?.();}
+}
 function kitMesh(gltf,name){
  gltf.scene.updateMatrixWorld(true);
  let src=null;(name?gltf.scene.getObjectByName(name):gltf.scene)?.traverse(o=>{if(o.isMesh&&!src)src=o;});
@@ -326,25 +287,40 @@ function fitModel(src,radius,orient){
 // the pane ever shows frame drops, switch the static kinds (pipe/screw/plate/valve/light) to one
 // InstancedMesh per shared node — gears alone would still need their own objects to spin independently.
 function buildParts(parent,gltf,list,front,fw,fh,mats){
- const parts=[],gearPivots=[];let gi=0;
+ const parts=[],gearPivots=[],batches=new Map();let gi=0;
  list.forEach((p,i)=>{
   const isGear=p.kind==='gear';
   let src;
   try{src=kitMesh(gltf,p.node);}
   catch(e){console.warn('portal-board-cogs: missing node',p.node,e);if(isGear)gi++;return;}
-  const x=(p.u-.5)*fw,y=(.5-p.v)*fh,{m,depth}=fitModel(src,p.r*fw,false),pivot=new THREE.Group();
+  const x=(p.u-.5)*fw,y=(.5-p.v)*fh,{m,depth}=fitModel(src,p.r*fw,true),pivot=new THREE.Group();
   const rot=(p.rot||0)*Math.PI/180,part={...p,pivot,rot,angle:0,omega:0};
-  pivot.position.set(x,y,front+(p.layer||0)*LAYER_STEP*fw+depth/2);
+  pivot.position.set(x,y,front+(p.layer||0)*.006*fw+depth/2);
   part.z0=pivot.position.z;part.top=part.z0+depth/2; // rest z; pipes bob off this and back
   if(p.kind==='light'){
    // A previous board may have left the shared kit material in its metal state: start the clone from the stock values.
    const mat=src.material.clone(),stock=src.material.userData.cogsMetal;mat.userData={};if(stock)Object.assign(mat,stock);mat.emissive.set(selectedTint||LIGHT_COLOR);mat.emissiveMap=mat.map;mat.emissiveIntensity=KNOBS.lightOff;m.material=mat;
    mats.push(mat);Object.assign(part,{mat,phase:i*2.3,level:0,nearUntil:-Infinity});
   }else if(p.kind==='valve')part.dir=i%2?1:-1;
-  pivot.rotation.z=rot;pivot.add(m);parent.add(pivot);parts.push(part);
+  pivot.rotation.z=rot;
+  if(isGear){
+   let batch=batches.get(p.node);if(!batch){const mat=src.material.clone();mat.userData={};mats.push(mat);const mesh=new THREE.InstancedMesh(src.geometry,mat,list.filter(q=>q.kind==='gear'&&q.node===p.node).length);mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);parent.add(mesh);batch={mesh,next:0};batches.set(p.node,batch);}
+   part.instance={mesh:batch.mesh,index:batch.next++,matrix:m.matrix.clone()};part.mat=batch.mesh.material;
+  }else{pivot.add(m);part.mat=m.material;}
+  parent.add(pivot);parts.push(part);
   if(isGear){gearPivots[gi]=pivot;gi++;}
  });
- return {parts,gearPivots};
+ return {parts,gearPivots,batches:[...batches.values()].map(b=>b.mesh)};
+}
+const instanceTransform=new THREE.Matrix4(),instanceZero=new THREE.Matrix4().makeScale(0,0,0);
+function updateGearInstances(state){
+ for(const panel of state.panels){panel.group.updateMatrix();state.panelBatch.setMatrixAt(panel.batchId,panel.group.matrix);state.panelBatch.setVisibleAt(panel.batchId,panel.group.visible);}
+ for(const part of state.parts)if(part.instance){
+  const {mesh,index,matrix}=part.instance;part.pivot.updateMatrix();
+  if(!part.pivot.parent.visible)mesh.setMatrixAt(index,instanceZero);
+  else{instanceTransform.multiplyMatrices(part.pivot.parent.matrix,part.pivot.matrix).multiply(matrix);mesh.setMatrixAt(index,instanceTransform);}
+ }
+ for(const batch of state.batches)batch.instanceMatrix.needsUpdate=true;
 }
 
 // The weld trail's own two layers in 3D, floating just above the tallest kit part so gears and pipes
@@ -353,39 +329,106 @@ function buildParts(parent,gltf,list,front,fw,fh,mats){
 function weldLayer(parent,w,h,fw,fh,z,additive){
  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace; // flipY default: canvas row 0 = plane top
- const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,toneMapped:false,...(additive?{blending:THREE.AdditiveBlending}:{})});
+ const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,toneMapped:false,...(additive?{blending:THREE.AdditiveBlending}:{})});
  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(fw,fh),material);mesh.position.z=z;mesh.renderOrder=additive?11:10;mesh.frustumCulled=false;parent.add(mesh);
  return {canvas,ctx:canvas.getContext('2d'),texture,mesh};
 }
 
 async function init({mesh,face,wake,paint,glow}){
- const fw=face.w,fh=face.h;
- mesh.geometry.computeBoundingBox();
- const front=mesh.geometry.boundingBox.max.z; // door.glb is a flat slab; parts sit proud of this face
+ const fw=face.w,fh=face.h,parent=mesh.isMesh?mesh.parent:mesh;
+ const originals=[];mesh.traverse(n=>{if(n.isMesh){originals.push(n);n.visible=false;}});
  const [layout,gltf]=await Promise.all([
   fetch(cogs.layoutAsset||LAYOUT).then(r=>{if(!r.ok)throw new Error(String(r.status));return r.json();}),
   loadModel(cogs.partsAsset||PARTS),
  ]);
- cogs.frame=layout?.frame||DEFAULT_FRAME;
- const list=layout?.parts||[];
+ cogs.frame=DEFAULT_FRAME;
+ const paths=mechanicalPaths(),panels=sectionPanels([...paths,...releasePaths(face)]),owned=new THREE.Group();parent.add(owned);
+ const railCanvas=document.createElement('canvas');railCanvas.width=paint.canvas.width;railCanvas.height=paint.canvas.height;
+ const ctx=railCanvas.getContext('2d');ctx.strokeStyle='#fff';ctx.lineWidth=railCanvas.width*.006;ctx.lineJoin='round';ctx.lineCap='round';
+ for(const path of paths){ctx.beginPath();path.points.forEach(([u,v],i)=>i?ctx.lineTo(u*railCanvas.width,v*railCanvas.height):ctx.moveTo(u*railCanvas.width,v*railCanvas.height));ctx.stroke();}
+ const railTexture=new THREE.CanvasTexture(railCanvas);railTexture.flipY=false;
+ const backplateMaterial=new THREE.MeshStandardMaterial({color:selectedBackplateTint,metalness:.84,roughness:.42,envMap:studioEnv(),envMapIntensity:1.1});
+ backplateMaterial.onBeforeCompile=shader=>{
+  shader.uniforms.uRailTint=uMetalTint;shader.uniforms.uRails={value:railTexture};
+  shader.fragmentShader='uniform vec3 uRailTint;uniform sampler2D uRails;varying vec2 vMetalUv;\n'+shader.fragmentShader;
+  shader.vertexShader='varying vec2 vMetalUv;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvMetalUv=vec2(position.x/'+fw+'+.5,.5-position.y/'+fh+');');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat rail=texture2D(uRails,vMetalUv).r;diffuseColor.rgb=mix(diffuseColor.rgb,uRailTint*.7,rail);');
+  // Directional polishing and fine abrasion remain part of the steel material,
+  // so they keep the selected back-wall hue and respond to its studio reflection.
+  shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nfloat brush=sin(vMetalUv.y*2350.0+sin(vMetalUv.x*80.0)*.65);roughnessFactor=clamp(roughnessFactor+brush*.055,.28,.62);')
+   .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nnormal=normalize(normal+vec3(0.,brush*.045,0.));');
+ };
+ backplateMaterial.customProgramCacheKey=()=>`mechanical-backplate-${fw}-${fh}`;
+ const front=.025*fw,depth=.026*fw;
+ for(const panel of panels){
+  const shape=new THREE.Shape();panel.points.forEach(([u,v],i)=>{
+   // Inset toward each vertex's interior bisector. Bevel width is less than the
+   // inset, so the real joint remains open instead of bevels growing together.
+   const prev=panel.points[(i+panel.points.length-1)%panel.points.length],next=panel.points[(i+1)%panel.points.length],ax=(u-prev[0])*fw,ay=(v-prev[1])*fh,bx=(next[0]-u)*fw,by=(next[1]-v)*fh,al=Math.hypot(ax,ay),bl=Math.hypot(bx,by),nx=-ay/al-by/bl,ny=ax/al+bx/bl,nl=Math.hypot(nx,ny)||1,inset=Math.min(.0012*fw,al*.08,bl*.08),x=(u-.5)*fw+nx/nl*inset,y=(.5-v)*fh-ny/nl*inset;
+   i?shape.lineTo(x,y):shape.moveTo(x,y);
+  });shape.closePath();
+  const geometry=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:.0012*fw,bevelSize:.00065*fw,bevelSegments:1,steps:1,curveSegments:1});
+  // Each cell is an opaque, thick manufactured plate. A small normal inset makes
+  // the pre-existing joints visible without eroding the small oval-edge facets.
+  const positions=geometry.attributes.position;for(let i=0;i<positions.count;i++)positions.setZ(i,positions.getZ(i)+front-depth);
+  const group=new THREE.Group();owned.add(group);panel.group=group;panel.geometry=geometry;panel.gearIndices=[];
+ }
+ // BatchedMesh keeps every manufactured plate distinct while sharing its one
+ // material and draw call. Release changes whole plate transforms only.
+ const vertexCount=panels.reduce((n,p)=>n+p.geometry.attributes.position.count,0),panelBatch=new THREE.BatchedMesh(panels.length,vertexCount,0,backplateMaterial);panelBatch.frustumCulled=false;panelBatch.perObjectFrustumCulled=false;owned.add(panelBatch);
+ for(const panel of panels){const geometryId=panelBatch.addGeometry(panel.geometry);panel.batchId=panelBatch.addInstance(geometryId);}
+ const nodes=[HUB_NODE]; // the kit's thin, face-on twenty-spoke cog: no bulky ornamental substitutes
+ const built=mechanicalLayout(face,paths,nodes.length?nodes:[HUB_NODE]),list=built.parts;
+ // Coaxial/belt couplers share the developed damped momentum across all rails;
+ // individual meshes still counter-rotate at equal rim speeds along a rail.
+ const first=built.trains[0]?.[0];for(const train of built.trains.slice(1)){const i=train[0];list[i].drives=first;list[i].driveRatio=list[first].r/list[i].r;}
  const gears=gearsFromLayout(list),mats=[];
- const {parts,gearPivots}=gltf?buildParts(mesh.parent,gltf,list,front,fw,fh,mats):{parts:[],gearPivots:[]};
- // Big hub gears over the door's own painted ones (HUBS): plain kit gears, each its own train root,
- // built the same way as the layout's own parts (just from a synthetic 5-entry list) and stacked above
- // every one of them so they fully cover the paint underneath.
- const hubList=HUBS.map((h,i)=>({node:HUB_NODE,kind:'gear',u:h.u,v:h.v,r:h.r*HUB_SCALE,rot:0,layer:list.length+i}));
- const hubGears=gearsFromLayout(hubList);
- hubGears.forEach((g,i)=>g.idleDir=i%2?1:-1); // alternate idle direction hub to hub
- const hubBuild=gltf?buildParts(mesh.parent,gltf,hubList,front,fw,fh,mats):{parts:[],gearPivots:[]};
- gears.push(...hubGears);gearPivots.push(...hubBuild.gearPivots);parts.push(...hubBuild.parts);
- mats.push(...new Set(parts.map(p=>p.pivot.children[0].material)));
+ if(gears[0])gears[0].idleDir=1;
+ const {parts,gearPivots,batches}=gltf?buildParts(owned,gltf,list,front,fw,fh,mats):{parts:[],gearPivots:[],batches:[]};
+ for(let gi=0;gi<gearPivots.length;gi++){
+  const g=gears[gi],u=g.u+(list[gi].hub?(g.u<.5?-.015:.015):0),v=g.v+(list[gi].hub?(g.v<.5?-.01:.01):0),panel=panels.find(p=>pointInPolygon(u,v,p.points))||panels.reduce((a,b)=>Math.hypot((a.center[0]-u)*fw,(a.center[1]-v)*fh)<Math.hypot((b.center[0]-u)*fw,(b.center[1]-v)*fh)?a:b);
+  if(gearPivots[gi])panel.group.add(gearPivots[gi]);panel.gearIndices.push(gi);
+ }
+ // The gold channels are real raised metal mounted on each pre-existing cell,
+ // not a floating drawing. Each half-channel belongs to one side of its joint,
+ // so the released plate carries its physical channel away with it.
+ const railSegments=[];
+ for(const panel of panels)for(let i=0;i<panel.points.length;i++){
+  const a=panel.points[i],b=panel.points[(i+1)%panel.points.length],hit=pointOnPath(paths,face,(a[0]+b[0])/2,(a[1]+b[1])/2),dx=(b[0]-a[0])*fw,dy=-(b[1]-a[1])*fh,length=Math.hypot(dx,dy);
+  if(!hit||hit.distance>1e-5*fw||length<.005*fw)continue;
+  railSegments.push({panel,a,b,dx,dy,length});
+ }
+ const railGeometry=new THREE.BoxGeometry(1,1,1),railMaterial=new THREE.MeshStandardMaterial({color:'#ffffff',metalness:.92,roughness:.36}),railBatch=new THREE.InstancedMesh(railGeometry,railMaterial,railSegments.length);railBatch.frustumCulled=false;railBatch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);owned.add(railBatch);batches.push(railBatch);mats.push(railMaterial);
+ railSegments.forEach(({panel,a,b,dx,dy,length},index)=>{
+  const pivot=new THREE.Group(),width=.0028*fw;
+  // Clockwise face contour: right normal points inside the panel.
+  pivot.position.set(((a[0]+b[0])/2-.5)*fw+dy/length*.0024*fw,(.5-(a[1]+b[1])/2)*fh-dx/length*.0024*fw,front+.0035*fw);pivot.rotation.z=Math.atan2(dy,dx);panel.group.add(pivot);
+  parts.push({kind:'rail',pivot,mat:railMaterial,instance:{mesh:railBatch,index,matrix:new THREE.Matrix4().makeScale(Math.max(.001*fw,length-.0012*fw),width,.007*fw)}});
+ });
+ const shaftGeometry=new THREE.CylinderGeometry(1,1,1,10);shaftGeometry.rotateX(Math.PI/2);
+ const shaftBatch=new THREE.InstancedMesh(shaftGeometry,railMaterial,gears.length);shaftBatch.frustumCulled=false;shaftBatch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);owned.add(shaftBatch);batches.push(shaftBatch);
+ for(let gi=0;gi<gears.length;gi++){
+  const gear=gears[gi],gearPart=parts.find(p=>p.kind==='gear'&&p.pivot===gearPivots[gi]);if(!gearPart)continue;
+  const bottom=2*gearPart.z0-gearPart.top,height=Math.max(.004*fw,bottom-front),pivot=new THREE.Group();pivot.position.set((gear.u-.5)*fw,(.5-gear.v)*fh,front+height/2);gearPivots[gi].parent.add(pivot);
+  parts.push({kind:'shaft',pivot,mat:railMaterial,instance:{mesh:shaftBatch,index:gi,matrix:new THREE.Matrix4().makeScale(gear.r*.2*fw,gear.r*.2*fw,height)}});
+ }
+ const bearingGeometry=new THREE.TorusGeometry(.009*fw,.0025*fw,5,20);
+ built.trains.forEach((train,i)=>{
+  const g=gears[train[0]],panel=panels.find(p=>p.gearIndices.includes(train[0])),mat=new THREE.MeshStandardMaterial({color:selectedTint,metalness:.72,roughness:.32,emissive:selectedTint,emissiveIntensity:0}),pivot=new THREE.Group();
+  pivot.position.set((g.u-.5)*fw,(.5-g.v)*fh,(parts.find(p=>p.pathIndex===i)?.top||front+.02*fw)+.001*fw);pivot.add(new THREE.Mesh(bearingGeometry,mat));panel.group.add(pivot);mats.push(mat);
+  parts.push({kind:'light',u:g.u,v:g.v,r:.02,pivot,mat,phase:i*2.3,level:0,nearUntil:-Infinity});
+ });
+ mats.push(...new Set(parts.map(p=>p.mat)));
  for(const m of mats)metalFinish(m);applyMetal(mats);
- const top=parts.reduce((z,p)=>Math.max(z,p.top),front)+KNOBS.wiggleBob*fw+.01*fw,tw=paint.canvas.width,th=paint.canvas.height;
- const beadLayer=weldLayer(mesh.parent,tw,th,fw,fh,top,false),glowLayer=weldLayer(mesh.parent,tw,th,fw,fh,top+.002*fw,true);
+ const tw=paint.canvas.width,th=paint.canvas.height;
+ // Weld lies on the plate face; proud gears correctly occlude it. No elevated
+ // full-board decal can hang over an opening left by a released assembly.
+ const beadLayer=weldLayer(owned,tw,th,fw,fh,front+.0018*fw,false),glowLayer=weldLayer(owned,tw,th,fw,fh,front+.002*fw,true);
  const motion=matchMedia?.('(prefers-reduced-motion: reduce)'),reducedMotion=!!motion?.matches;
- S={motion,gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,
+ S={motion,gears,gearPivots,parts,face,aspect:fh/fw,valveDir:1,mats,drag:new Map(),fall:null,wake,reducedMotion,paths,trains:built.trains,panels,owned,originals,backplateMaterial,railTexture,batches,bearingGeometry,railGeometry,shaftGeometry,panelBatch,
     paint:beadLayer,glow:glowLayer,layers:[beadLayer,glowLayer],texW:tw,texH:th,
     sparks:[],weld:[],weldHeads:new Map(),weldActive:false,tint:selectedTint};
+ updateGearInstances(S);
 }
 // --- Welding trail: torch core + sparks + hot streak (glow layer) + cooling weld bead (paint layer) ---
 // A spark: {x,y (canvas px),vx,vy (px/s),born (ms),life (s),floor (canvas y it bounces off once, or
@@ -410,6 +453,7 @@ export function stepSpark(s,dt,grav,keep){
 // weldHeads) so two simultaneous strokes never draw a segment joining them; d is the running seam
 // length (face widths) so the bead's ripples sit at fixed spacing however the points fall.
 function weldPushPoint(S,id,u,v){
+ if(S.fall&&pointInPolygon(u,v,S.fall.poly)){S.weldHeads.delete(id);return;}
  const prev=S.weldHeads.get(id)||null,len=prev?Math.hypot(u-prev.u,(v-prev.v)*S.aspect):0;
  if(prev&&len<KNOBS.weldStep)return;
  const p={u,v,t:performance.now(),prev,d:prev?prev.d+len:0};S.weld.push(p);S.weldHeads.set(id,p);
@@ -433,6 +477,10 @@ function pxScale(S){
 // then fades, all within weldHotMs+weldBeadMs.
 export const beadAlpha=age=>{const K=KNOBS,total=K.weldHotMs+K.weldBeadMs;return weldBeadAlpha(age,0,total,(K.weldHotMs+K.weldBeadHold*K.weldBeadMs)/total);};
 const HOT_BUCKETS=8,BEAD_BUCKETS=8;
+function clipMetalSurface(S,ctx){
+ if(!S.fall)return;ctx.beginPath();ctx.rect(0,0,S.texW,S.texH);
+ S.fall.poly.forEach(([u,v],i)=>i?ctx.lineTo(u*S.texW,v*S.texH):ctx.moveTo(u*S.texW,v*S.texH));ctx.closePath();ctx.clip('evenodd');
+}
 // Hot trail, bucketed by age: each bucket is ONE path, so overlapping segment caps don't stack into a
 // row of brighter dots (the old per-segment strokes did). Blurred halo pass, then a crisp core pass:
 // white-hot, cooling yellow->orange->red. The selected tint only leans the outer halo a little.
@@ -440,7 +488,7 @@ function weldRenderGlow(S,now,scale){
  const {ctx}=S.glow,w=S.texW,h=S.texH,K=KNOBS;
  const coreW=K.weldTrailWidthPx*scale,haloW=K.weldTrailHaloPx*scale,sparkW=K.sparkWidthPx*scale;
  ctx.clearRect(0,0,w,h);
- ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.save();clipMetalSurface(S,ctx);ctx.globalCompositeOperation='lighter';ctx.lineCap='round';ctx.lineJoin='round';
  for(let pass=0;pass<2;pass++){
   ctx.filter=pass?'none':`blur(${(haloW*.35).toFixed(1)}px)`;ctx.lineWidth=pass?coreW:haloW;
   for(let b=0;b<HOT_BUCKETS;b++){
@@ -465,6 +513,7 @@ function weldRenderGlow(S,now,scale){
  // The torch itself at each finger: a white-hot core in a blue-white bloom that fades to a warm edge,
  // flickering, and swollen for a moment right after touch-down (the press flare).
  for(const d of S.drag.values()){
+  if(S.fall&&pointInPolygon(d.u,d.v,S.fall.poly))continue;
   const k=Math.max(0,1-(now-(d.t0||0))/K.torchFlareMs),fl=.88+Math.random()*.24,cx=d.u*w,cy=d.v*h;
   const R=K.torchBloomPx*scale*(1+(K.torchFlareScale-1)*k)*fl,core=K.torchCorePx*scale*(1+.6*k)*fl;
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
@@ -488,7 +537,7 @@ function weldRenderPaint(S,now,scale){
  const {ctx}=S.paint,w=S.texW,h=S.texH,K=KNOBS,R=K.weldBeadRadiusPx*scale,halo=K.weldHaloRadiusPx*scale;
  const sp=K.weldRipplePx*scale/w,rr=R*.82; // ripple spacing in face widths, ripple radius in canvas px
  ctx.clearRect(0,0,w,h);
- ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.save();clipMetalSurface(S,ctx);ctx.lineCap='round';ctx.lineJoin='round';
  for(let b=1;b<=BEAD_BUCKETS;b++){
   let any=false;ctx.beginPath();
   for(const p of S.weld){if(Math.ceil(beadAlpha(now-p.t)*BEAD_BUCKETS)!==b)continue;const q=p.prev||p;ctx.moveTo(q.u*w,q.v*h);ctx.lineTo(p.u*w,p.v*h);any=true;}
@@ -531,17 +580,23 @@ function stepWeld(S,dt,now){
 }
 
 function press(id,u,v){
- const skip=S.fall&&new Set(S.gears.map((_,gi)=>gi).filter(gi=>S.fall.pivots.has(S.gearPivots[gi])));
+ if(!S||S.fall&&pointInPolygon(u,v,S.fall.poly))return;
+ const skip=S.fall?.gearIndices;
  S.drag.set(id,{gi:hitGear(S.gears,S.face,u,v,skip),moved:false,u,v,t0:performance.now()});
  weldPushPoint(S,id,u,v);spawnSparks(S,u,v,KNOBS.sparkPressCount);
 }
 function move(id,u,v,pu,pv){
+ if(!S)return;
  const d=S.drag.get(id);if(!d)return;
  if(Math.hypot(u-pu,v-pv)>MOVE_EPS)d.moved=true;
  d.u=u;d.v=v;
- if(d.gi>=0){
-  const g=S.gears[d.gi],rx=(u-g.u)*S.face.w,ry=-(v-g.v)*S.face.h,dx=(u-pu)*S.face.w,dy=-(v-pv)*S.face.h,rw=g.r*S.face.w;
-  applyTorque(S.gears,d.gi,(rx*dy-ry*dx)/(rw*rw)*DRAG_GAIN);
+ if(S.fall&&pointInPolygon(u,v,S.fall.poly)){S.weldHeads.delete(id);return;}
+ // Acquire the rail on every move: starting between gears still turns the
+ // entire train. Projection onto its tangent preserves forward/reverse swipes.
+ const rail=pointOnPath(S.paths,S.face,u,v);
+ if(rail&&rail.distance<.075*S.face.w){
+  const train=S.trains[rail.pathIndex],gi=train.reduce((a,b)=>Math.hypot(S.gears[a].u-u,(S.gears[a].v-v)*S.aspect)<Math.hypot(S.gears[b].u-u,(S.gears[b].v-v)*S.aspect)?a:b);
+  if(!S.fall?.gearIndices.has(gi)){d.gi=gi;applyTorque(S.gears,train[0],signedRailImpulse(rail,u-pu,v-pv,S.face,S.gears[gi].r,.8));}
  }
  // Pipes don't need a drag origin to react — any pipe the finger passes near this event gets a kick,
  // not only the one (if any) under the initial press.
@@ -555,6 +610,7 @@ function move(id,u,v,pu,pv){
  spawnSparks(S,u,v,Math.min(KNOBS.sparkMoveMax,Math.round(Math.hypot(u-pu,v-pv)/KNOBS.sparkPerFrac)));
 }
 function release(id){
+ if(!S)return;
  const d=S.drag.get(id);if(!d)return;
  if(!d.moved){
   if(d.gi>=0)applyTorque(S.gears,d.gi,TAP_IMPULSE);
@@ -568,6 +624,7 @@ function release(id){
  S.drag.delete(id);
 }
 function step(dt,now){
+ if(!S)return false;
  // Live media query (not just at init) and the motor runs before the rest check, so a sleeping loop can never
  // be left with the hubs "at rest" while the motor is on.
  const idling=idleSpin(S.gears,dt,KNOBS.hubIdleAccel,S.motion?S.motion.matches:S.reducedMotion);
@@ -585,7 +642,7 @@ function step(dt,now){
  const valveActive=Math.abs(rootOmega)>REST||S.drag.size>0;
  let wobbling=false,lit=false;
  for(const part of S.parts){
-  const falling=S.fall?.pivots.has(part.pivot);
+  const falling=S.fall?.pivots.has(part.pivot.parent);
   if(part.kind==='valve'){
    if(valveActive){part.angle=valveAngle(part.angle,dt,part.dir,S.valveDir,rootOmega);part.pivot.rotation.z=part.rot+part.angle;}
   }else if(part.kind==='pipe'&&!falling){
@@ -610,7 +667,8 @@ function step(dt,now){
   }
  }
  const f=S.fall,t=f?Math.min(1,(now-f.t0)/Math.max(1,f.ms)):1,e=t*t;
- if(f)for(const [p,z0] of f.pivots){p.position.z=z0-f.dist*e;p.rotation.x=FALL_TILT*e;p.scale.setScalar(1-e);p.visible=t<1;}
+ if(f)for(const [p,z0] of f.pivots){p.position.z=z0-f.dist*e;p.position.y=p.userData.restY-f.dist*.3*e;p.rotation.x=FALL_TILT*e;p.visible=t<1;}
+ updateGearInstances(S);
  const weldActive=stepWeld(S,dt,now);
  // Sleeps (returns false) once no gear is moving, no pipe is wobbling, no light is lit, no weld spark/
  // trail is live and no cut animation is running — the board (portal-board-glb.mjs) stops driving rAF
@@ -618,22 +676,40 @@ function step(dt,now){
  // above keeps `moving` true forever.
  return moving||wobbling||lit||weldActive||t<1;
 }
-// Scale to 0 rather than fade: no transparent material twins to compile, swap or restore.
-function cut(poly){
- heal();S.weld.length=0;S.weldHeads.clear(); // the weld layer floats above the parts: don't leave a bead hanging over the hole
- const pivots=new Map();
- for(const part of S.parts)if(pointInPolygon(part.u,part.v,poly))pivots.set(part.pivot,part.pivot.position.z);
- const ms=matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:FALL_MS;
- S.fall={pivots,t0:performance.now(),ms,dist:Math.max(S.face.w,S.face.h)*.35};S.wake?.();
+// Release existing opaque assemblies at their manufactured scale.
+function cut(poly,color,ms=FALL_MS){
+ if(!S)return Promise.resolve();heal();S.weld.length=0;S.weldHeads.clear();S.sparks.length=0;S.drag.clear();
+ // Erase both surface layers immediately, including the torch, before a plate
+ // departs. Future points in the aperture are rejected by weldPushPoint.
+ for(const l of S.layers){l.ctx.clearRect(0,0,S.texW,S.texH);l.texture.needsUpdate=true;}
+ const pivots=new Map(),gearIndices=new Set();
+ for(const panel of S.panels)if(pointInPolygon(...panel.center,poly)){
+  panel.group.userData.restY=panel.group.position.y;pivots.set(panel.group,panel.group.position.z);panel.gearIndices.forEach(i=>gearIndices.add(i));
+ }
+ if(S.motion?.matches)ms=0;
+ let resolve;const done=new Promise(r=>{resolve=r;}),fall={pivots,gearIndices,poly,t0:performance.now(),ms,dist:Math.max(S.face.w,S.face.h)*.35,resolve,timer:null};
+ fall.connections=S.gears.map(g=>({drives:g.drives,driveRatio:g.driveRatio,idleDir:g.idleDir}));
+ S.gears.forEach((g,i)=>{if(g.drives!=null&&gearIndices.has(i)!==gearIndices.has(g.drives)){g.drives=null;delete g.driveRatio;}if(gearIndices.has(i))g.idleDir=0;});
+ S.fall=fall;fall.timer=setTimeout(()=>{for(const p of pivots.keys())p.visible=false;if(S?.fall===fall)updateGearInstances(S);fall.resolve?.();fall.resolve=null;S?.wake?.();},Math.max(0,ms));S.wake?.();return done;
 }
 function heal(){
- if(!S?.fall)return;
- for(const [p,z0] of S.fall.pivots){p.position.z=z0;p.rotation.x=0;p.scale.setScalar(1);p.visible=true;}
+ if(!S)return;
+ S.drag.clear();S.weld.length=0;S.weldHeads.clear();S.sparks.length=0;S.weldActive=false;
+ for(const l of S.layers){l.ctx.clearRect(0,0,S.texW,S.texH);l.texture.needsUpdate=true;}
+ if(!S.fall){S.wake?.();return;}
+ clearTimeout(S.fall.timer);S.fall.resolve?.();
+ for(const [p,z0] of S.fall.pivots){p.position.z=z0;p.position.y=p.userData.restY;p.rotation.x=0;p.visible=true;}
+ S.gears.forEach((g,i)=>{Object.assign(g,S.fall.connections[i]);g.omega=0;});
  S.fall=null;
+ updateGearInstances(S);
+ S.wake?.();
 }
 function dispose(){
+ if(!S)return;heal();
  for(const l of S.layers){l.mesh.removeFromParent();l.mesh.geometry.dispose();l.mesh.material.dispose();l.texture.dispose();}
- for(const part of S.parts){part.pivot.removeFromParent();part.pivot.traverse(n=>n.geometry?.dispose());}
+ for(const part of S.parts)part.pivot.removeFromParent();
+ for(const panel of S.panels)panel.geometry.dispose();S.panelBatch.dispose();
+ S.owned.removeFromParent();S.railTexture.dispose();S.backplateMaterial.dispose();S.bearingGeometry.dispose();S.railGeometry.dispose();S.shaftGeometry.dispose();
  for(const m of new Set(S.mats))m.dispose();
  S=null;
 }
@@ -657,5 +733,5 @@ cogsWeld.metal=true; // the flat poster tints as anodized metal, not a flat wash
 export const cogs={
  id:'cogs',asset:'/pod/worlds/boards/cogs/door.glb',flip:false,background:'#161310',
  guide:null,frame:DEFAULT_FRAME,ink:false, // the weld trail replaces the shared ink line
- init,press,move,release,step,cut,heal,dispose,setTint:setCogsTint,doorTone,tintTarget:'trace',trace2d:cogsWeld,
+ presectioned:true,init,press,move,release,step,cut,heal,dispose,setTint:setCogsTint,setBackplateTint:setCogsBackplateTint,doorTone,tintTarget:'trace',trace2d:cogsWeld,
 };

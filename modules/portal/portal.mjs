@@ -1,3 +1,5 @@
+import {portalWindow,lensPts,shapeOutlinePts} from './portal-apertures.mjs';
+export {portalWindow,lensPts} from './portal-apertures.mjs';
 // Portal home board: the quilt cloth board replaces the app home menu. Tracing one of the eight
 // stitched shapes cuts that shape out of the 3D board — the piece falls in, neon liquid glass glows
 // through the hole behind it for a short interactive loading phase — then opens the shape's menu.
@@ -58,7 +60,7 @@ const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes
 export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood']);
 const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847},WAIT={poster:6000,threeD:20000,mount:4000};
 // trace (R7): the flat poster keeps the board's own touch effect in 2D (ice cracks, flowers, weld, jelly gash, embers).
-const grimoire=(label,effect)=>({label,flat:host=>createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d,tint:boardTint(effect.id),tintSelected:hasBoardTint(effect.id),tintTarget:effect.id==='grass'?'trace':'poster'}),create:host=>createGlbBoard(host,{effect})});
+const grimoire=(label,effect)=>({label,flat:async host=>{const flat=await createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d,tint:boardTint(effect.id),tintSelected:hasBoardTint(effect.id),tintTarget:effect.id==='grass'?'trace':effect.id==='cogs'?'cogs':'poster',...(effect.id==='cogs'?{backplateTint:cogsBackplateTint(),backplateTintSelected:hasCogsBackplateTint()}: {})});if(effect.id==='cogs')flat.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return flat;},create:host=>{if(effect.id==='cogs')effect.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return createGlbBoard(host,{effect});}});
 const BOARDS={quilt:{label:'Quilt',flat:host=>createQuiltBoard2D(host),create:host=>createQuiltBoardGL(host)},ice:grimoire('Crystal',ice),grass:grimoire('Grass',grass),cogs:grimoire('Cogs',cogs),jelly:grimoire('Jelly',jelly),wood:grimoire('Wood',wood)};
 // Test-only stub board — never in PRODUCTION_PORTALS, so it's invisible to real users — letting tests drive
 // a non-quilt boardId (via ?board=__stub__) without a second real board existing yet. Set before this module
@@ -73,9 +75,13 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
  })};
 const BOARD_KEY='myr5.portalBoard';
 const tintKey=id=>'myr5.grimoireColor.'+id;
-const boardTint=(id=boardId)=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(id))||'')?store.get(tintKey(id)):'#b026ff';
+const validHex=value=>/^#[0-9a-f]{6}$/i.test(value||'');
+const boardTint=(id=boardId)=>validHex(store.get(tintKey(id)))?store.get(tintKey(id)):(id==='cogs'?'#c59a56':'#b026ff');
 const hasBoardTint=(id=boardId)=>/^#[0-9a-f]{6}$/i.test(store.get(tintKey(id))||'');
-const boardTintLabel=()=>boardId==='grass'?'Flower colour':'Grimoire colour';
+const COGS_BACKPLATE_KEY='myr5.grimoireBackplateColor.cogs';
+const cogsBackplateTint=()=>validHex(store.get(COGS_BACKPLATE_KEY))?store.get(COGS_BACKPLATE_KEY):'#263943';
+const hasCogsBackplateTint=()=>validHex(store.get(COGS_BACKPLATE_KEY));
+const boardTintLabel=()=>boardId==='grass'?'Flower colour':boardId==='cogs'?'Mechanism colour':'Grimoire colour';
 const paletteKey=id=>'myr5.wormholePalette.'+id;
 const materialLoads=new Map();
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
@@ -146,13 +152,6 @@ const toClientPts=(pts,rect)=>pts.map(([x,y])=>[rect.left+x*rect.width,rect.top+
 const closeLoop=pts=>{const a=pts[0],b=pts.at(-1);return(a[0]===b[0]&&a[1]===b[1])?pts:[...pts,a];};
 const rectBox=el=>{const r=el.getBoundingClientRect();return{width:r.width,height:r.height};};
 function centroidOf(closedPts){const n=closedPts.length-1;let sx=0,sy=0;for(let i=0;i<n;i++){sx+=closedPts[i][0];sy+=closedPts[i][1];}return[sx/n,sy/n];}
-function shapeOutlinePts(id){
- const pts=SHAPES[id][0].points;
- if(id!=='oval')return pts;
- // oval template is 200 points; ~48 is plenty for a smooth clip-path and keeps the string short.
- const step=Math.max(1,Math.floor(pts.length/48));
- return pts.filter((_,i)=>i%step===0);
-}
 const shapeClipPts=(id,rect)=>closeLoop(toClientPts(shapeOutlinePts(id),rect));
 // The glass clip bleeds GLASS_BLEED px past the shape (clamped to the board face): triangles are cut by centroid, so the
 // hole's edge is jagged and would otherwise show bare background in the notches beyond the exact outline.
@@ -218,7 +217,27 @@ function lookControlsHtml(){
  const look=readLook();
  return `<fieldset class="portal-look-controls"><legend>Portal appearance</legend><div>${[['portal','Metal'],['strip','Strip']].map(([key,label])=>`<label>${label}<input type="color" data-look="${key}" aria-label="${label}" value="${look[key]}"></label>`).join('')}</div><button type="button" data-look-reset>Reset portal appearance</button></fieldset>`;
 }
-function updateBoardChips(){const tint=menuSheet?.querySelector('[data-board-tint]');if(tint){tint.value=boardTint();tint.setAttribute('aria-label',boardTintLabel());const label=tint.closest('.portal-color');if(label?.firstChild?.nodeType===Node.TEXT_NODE)label.firstChild.textContent=boardTintLabel()+' ';}menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));const row=menuSheet?.querySelector('[data-palette-row]');if(row)row.innerHTML=paletteSelectHtml();}
+function boardTintControlsHtml(){
+ const mechanism=`<label class="portal-color">${boardTintLabel()} <input type="color" aria-label="${boardTintLabel()}" data-board-tint value="${boardTint()}"></label>`;
+ return `${mechanism}${boardId==='cogs'?`<label class="portal-color">Back wall colour <input type="color" aria-label="Back wall colour" data-backplate-tint value="${cogsBackplateTint()}"></label>`:''}`;
+}
+function updateBoardChips(){
+ const tint=menuSheet?.querySelector('[data-board-tint]'),label=tint?.closest('.portal-color');
+ if(tint){tint.value=boardTint();tint.setAttribute('aria-label',boardTintLabel());if(label?.firstChild?.nodeType===Node.TEXT_NODE)label.firstChild.textContent=boardTintLabel()+' ';}
+ const backplate=menuSheet?.querySelector('[data-backplate-tint]')?.closest('.portal-color');
+ if(boardId==='cogs'&&!backplate)label?.insertAdjacentHTML('afterend',boardTintControlsHtml().slice(boardTintControlsHtml().indexOf('<label',1)));
+ else if(boardId!=='cogs')backplate?.remove();
+ const backplateInput=menuSheet?.querySelector('[data-backplate-tint]');if(backplateInput)backplateInput.value=cogsBackplateTint();
+ menuSheet?.querySelectorAll('[data-board]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.board===boardId)));
+ const row=menuSheet?.querySelector('[data-palette-row]');if(row)row.innerHTML=paletteSelectHtml();
+}
+export function setCogsBackplateTint(hex,selected=true){
+ if(!validHex(hex))return false;
+ if(selected)store.set(COGS_BACKPLATE_KEY,hex);else {try{localStorage.removeItem(COGS_BACKPLATE_KEY);}catch{}}
+ if(base&&boardId==='cogs')base.setBackplateTint?.(hex,selected);
+ if(gl3&&boardId==='cogs')gl3.setBackplateTint?.(hex,selected);
+ return true;
+}
 // Swaps the mounted board. The flat layer goes up first: a poster that doesn't arrive keeps the board already showing (the
 // last good one), else the Quilt, whose own art is drawn in code when it must be, so there is always a board. Then 3D is
 // laid over it while the portal is on screen (threeD). Pointer listeners read the `board` variable at call time.
@@ -271,6 +290,7 @@ function threeD(mounting=false){
   if(id!==boardId||gl3||lifecycle.signal.aborted){created.dispose();return;}
   if(created.canvas.getContext('webgl2')?.isContextLost()!==false){created.dispose();return fell(id,new Error('WebGL context lost before its first frame'));}
   if(id!=='quilt')created.setTint?.(boardTint(id),hasBoardTint(id));
+  if(id==='cogs')created.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());
   gl3=board=created;created.canvas.style.opacity='';if(base.canvas)base.canvas.style.visibility='hidden';
   if(boardShown)created.resume();else created.pause(); // resume draws a fresh frame now it's in sight
   art[id]='3d';portalHome.dataset.art='3d';
@@ -360,7 +380,7 @@ function buildDom(){
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
  // The board picker row only earns its place once a second board ships; one option is nothing to pick from.
  const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div>`;
- menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">GRIMOIRE SETTINGS</h2><button type="button" data-menu-close>Back to portal</button></header>${lookControlsHtml()}<label class="portal-color">${boardTintLabel()} <input type="color" aria-label="${boardTintLabel()}" data-board-tint value="${boardTint()}"></label>${boardRow}<div data-palette-row>${paletteSelectHtml()}</div><details class="portal-full-menu"><summary>Full menu</summary><div class="portal-menu-grid">${menuButtonsHtml()}</div></details><p id="portalMenuStatus" role="status"></p>`;
+ menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">GRIMOIRE SETTINGS</h2><button type="button" data-menu-close>Back to portal</button></header>${lookControlsHtml()}${boardTintControlsHtml()}${boardRow}<div data-palette-row>${paletteSelectHtml()}</div><details class="portal-full-menu"><summary>Full menu</summary><div class="portal-menu-grid">${menuButtonsHtml()}</div></details><p id="portalMenuStatus" role="status"></p>`;
  menuSheet.querySelector('[data-menu-close]').onclick=()=>menuSheet.close();
  menuSheet.querySelectorAll('[data-look]').forEach(input=>input.oninput=()=>{saveLook(input.dataset.look,input.value);applyLook();});
  menuSheet.querySelector('[data-look-reset]').onclick=()=>{for(const name of ['portal','strip'])saveLook(name,LOOK_DEFAULTS[name]);applyLook();};
@@ -375,13 +395,16 @@ function buildDom(){
   if(menu.kind==='dialog'){const run=++sequence;openDirect(menu,()=>run===sequence&&!lifecycle.signal.aborted);return;}
   setVisible(false);menu.open?.();
  });
- menuSheet.querySelector('[data-board-tint]').oninput=e=>{
-  const color=e.target.value;
-  store.set(tintKey(boardId),color);
-  if(base&&boardId!=='quilt')base.setTint?.(color);
-  if(gl3&&boardId!=='quilt')gl3.setTint?.(color);
-  menuSheet.querySelector('[data-board-tint]')?.setAttribute('value',color);
-};
+ menuSheet.addEventListener('input',e=>{
+  if(e.target.matches('[data-board-tint]')){
+   const color=e.target.value;store.set(tintKey(boardId),color);
+   if(base&&boardId!=='quilt')base.setTint?.(color);
+   if(gl3&&boardId!=='quilt')gl3.setTint?.(color);
+   e.target.setAttribute('value',color);
+  }else if(e.target.matches('[data-backplate-tint]')){
+   setCogsBackplateTint(e.target.value);e.target.setAttribute('value',e.target.value);
+  }
+ },{signal:lifecycle.signal});
  menuSheet.addEventListener('change',e=>{if(e.target.matches('[data-palette]')){const options=paletteOptions(boardId);if(options.some(p=>p.id===e.target.value))store.set(paletteKey(boardId),e.target.value);}}, {signal:lifecycle.signal});
  menuSheet.querySelectorAll('[data-board]').forEach(btn=>btn.onclick=async()=>{menuChosen=true;menuSheet.close();const selected=btn.dataset.board;await loadBoard(selected);if(!lifecycle.signal.aborted)setVisible(true);});
  workoutHome=document.createElement('dialog');workoutHome.id='portalWorkoutHome';workoutHome.className='portal-workout-home';document.body.append(workoutHome);
@@ -1720,18 +1743,6 @@ async function openDirect(menu,current){
 // has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
 const SHAPED=new Set(['rect','oval','up','down','vdiamond']);
 // A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
-export function lensPts([ax,ay],[bx,by],half,n=24){
- const l=Math.hypot(bx-ax,by-ay)||1,nx=-(by-ay)/l,ny=(bx-ax)/l;
- const side=sign=>Array.from({length:n+1},(_,i)=>{const t=sign>0?i/n:1-i/n,w=sign*half*Math.sin(Math.PI*t);return [ax+(bx-ax)*t+nx*w,ay+(by-ay)*t+ny*w];});
- return closeLoop([...side(1),...side(-1).slice(1,-1)]);
-}
-// The window a traced shape opens (client px): its stitched outline; a line's lens (and the line, its slit); the
-// X's diamond, centred where its arms cross, its edges parallel to them.
-export function portalWindow(id,rect){
- if(LINE_IDS.has(id)){const [a,b]=toClientPts(lineTemplatePts(id),rect),len=Math.hypot(b[0]-a[0],b[1]-a[1]);return {pts:lensPts(a,b,Math.min(.17*len,.3*rect.width)),axis:[a,b]};}
- if(id==='x'){const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2,r=.3*Math.min(rect.width,rect.height);return {pts:closeLoop([[cx,cy-r],[cx+r,cy],[cx,cy+r],[cx-r,cy]])};}
- return {pts:shapeClipPts(id,rect)};
-}
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
  if(id==='cross'){
