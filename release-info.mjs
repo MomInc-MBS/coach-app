@@ -1,6 +1,6 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-10-04-release-21-'+BUILD_ID,title:'Release 21: Mechanical grimoire, Pond and coach motion',date:'2026-10-04',url:'https://myr5.mominc.online/repair-coach',notes:[
- "Cogs is a metal grimoire: connected gears turn along the familiar shapes, the wall opens along manufactured seams, and the welding trail cools in half the previous time. Choose separate colours for the mechanism and the back wall.",
+export const RELEASE=Object.freeze({id:'2026-10-04-release-21-'+BUILD_ID,title:'Release 21: Pond and coach motion',date:'2026-10-04',url:'https://myr5.mominc.online/repair-coach',notes:[
+ "Pond lily pads move aside around your finger and settle back after release. Cogs has been removed from the board picker; saved Cogs selections now open Pond.",
  "Pond joins the Grimoire menu with water, fish and a touch trail.",
  "Portal glow has a thin bright edge and a soft fade, keeping page panels and controls readable.",
  "Coach heads and feet stay attached during motion, and pupils sit inside their eyes.",
