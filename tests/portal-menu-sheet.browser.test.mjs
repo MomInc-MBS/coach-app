@@ -76,9 +76,9 @@ test('Grimoire settings are reachable, Escape closes the sheet, and destinations
 
  // #25: the exit button now leads to the pod.
  assert.equal(await page.locator('#portalExitButton').innerText(),'Pod');
- // The optional Boards packet adds five boards beside Quilt in the Menu sheet.
+ // The optional Boards packet adds six boards beside Quilt in the Menu sheet.
  assert.equal(await page.locator('.portal-board-chips').count(),1);
- assert.equal(await page.locator('.portal-board-chips [data-board]').count(),6);
+ assert.equal(await page.locator('.portal-board-chips [data-board]').count(),7);
 
   // Exercise the show/hide lifecycle directly; this bare-page fixture has no physical coach dock.
   await page.evaluate(()=>window.portal.hide());

@@ -2,6 +2,7 @@ import * as T from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
+import {clone as cloneSkinned} from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {assembleCreature,type InstalledSkinResolver} from './creator/assemble';
 import {createRig,disposeObject,type CreatureRig} from './rig';
 import {MotionController,type Gesture} from './motion';
@@ -90,7 +91,7 @@ export class CreatureViewer {
  async exportGLB(){
   if(!this.rig||!this.motion)throw Error('Wait for your creature to load.');
   // Export a clean neutral clone and the same reusable clips used in the app.
-  const clone=this.rig.root.clone(true);for(const [name,rest] of Object.entries(this.rig.rest)){const node=clone.getObjectByName(name)!;node.position.copy(rest.position);node.quaternion.copy(rest.quaternion);node.scale.copy(rest.scale);}clone.updateMatrixWorld(true);
+  const clone=cloneSkinned(this.rig.root);for(const [name,rest] of Object.entries(this.rig.rest)){const node=clone.getObjectByName(name)!;node.position.copy(rest.position);node.quaternion.copy(rest.quaternion);node.scale.copy(rest.scale);}clone.updateMatrixWorld(true);
   const result=await new GLTFExporter().parseAsync(clone,{binary:true,animations:this.motion.clips});return new Blob([result as ArrayBuffer],{type:'model/gltf-binary'});
  }
  // renders is a cumulative count of actual renderer.render() calls (D43.5's setMaxFps skips both the render
