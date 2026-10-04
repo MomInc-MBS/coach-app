@@ -20,4 +20,6 @@ Release 21 worktree is untouched. Its integration owner should merge `codex/audi
 
 Pre-deployment live build was `3e9a55ada9708984ac0d`, Worker version `1476a24f-d8a7-490b-9025-95839a5c5154`. Production deployment preserves existing variables and secrets with `--keep-vars`; no schema or account changes are included.
 
-Deployment receipt and final browser smoke results will be appended after publication.
+Final release smoke and dock browser suite: all 12 tests passed at 375×812, covering routes, portal travel, dialog interaction, customizer access and coach sound switch behavior.
+
+Published successfully to the production Worker. Current version: `d4f9401e-2652-4d7c-ba02-a9f7fd1cdc1b`; live build: `fd927767fd253e1337e3`. `/health` reported healthy and the release API returned “Physical sounds and coach voice styles.” Public manifest and credits were available. Every published clip was verified against the manifest SHA-256 and byte count; receipt: `audio-live-assets.json`.

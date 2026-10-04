@@ -1,0 +1,137 @@
+{
+  "build": "fd927767fd253e1337e3",
+  "workerVersion": "d4f9401e-2652-4d7c-ba02-a9f7fd1cdc1b",
+  "verifiedAt": "2026-10-04T05:55:38.192Z",
+  "assets": [
+    {
+      "path": "/audio/sfx/mechanical-click-1.mp3",
+      "bytes": 4114,
+      "sha256": "5049c0c2f3e297ffd05544a0150a24ba0eebc9e7f5bcb931e99ff83721f4a5ef"
+    },
+    {
+      "path": "/audio/sfx/mechanical-click-2.mp3",
+      "bytes": 4306,
+      "sha256": "e134272539997f20e031b3050f1ffae990b7f628a482652ae5f63fb97abc2e49"
+    },
+    {
+      "path": "/audio/sfx/metal-switch-1.mp3",
+      "bytes": 3884,
+      "sha256": "2f45c9891224fef39b30ed048a37de85ef31735b5c69a1bb01b226dd4ae8c0e7"
+    },
+    {
+      "path": "/audio/sfx/metal-switch-2.mp3",
+      "bytes": 1772,
+      "sha256": "2c5a63c961a7c632d8117df36236f98dfbedf522648b49779d4559b32392a5ff"
+    },
+    {
+      "path": "/audio/sfx/ice-crack-1.mp3",
+      "bytes": 7532,
+      "sha256": "d13b487d1b767a83b5a9d010c23cb0c0a0ef3f670434871a6aaf2adc8dfc493c"
+    },
+    {
+      "path": "/audio/sfx/ice-crack-2.mp3",
+      "bytes": 7532,
+      "sha256": "e883b3102cd08aeef403ee08734b123241fb5874cee1a3ee8b29d1e4bc59f131"
+    },
+    {
+      "path": "/audio/sfx/jelly-squish-1.mp3",
+      "bytes": 4844,
+      "sha256": "f3aef20cf320c5475141bdb34435952f5399abde8e09b42b9315c0c5e654fc97"
+    },
+    {
+      "path": "/audio/sfx/jelly-squish-2.mp3",
+      "bytes": 5996,
+      "sha256": "8518fda10d2d926435c7c2e6652f401f9fb7828631054731d1777c4b979e60d3"
+    },
+    {
+      "path": "/audio/sfx/water-splash-1.mp3",
+      "bytes": 4216,
+      "sha256": "c6793cc0e61289045c1f1975164bfa526812eb8f729cdff7b8fbe311302b1b65"
+    },
+    {
+      "path": "/audio/sfx/water-splash-2.mp3",
+      "bytes": 6520,
+      "sha256": "0e8f6004a0d57ce5958c4b2697101a0e9313e117c88a1edb071d64894e78db12"
+    },
+    {
+      "path": "/audio/sfx/water-slosh.mp3",
+      "bytes": 16940,
+      "sha256": "b99ff74a3b4f86951b6a3ab06acbf81edac3b8e3d9bf2559b87671326e77f7b3"
+    },
+    {
+      "path": "/audio/sfx/grass-rustle-1.mp3",
+      "bytes": 6380,
+      "sha256": "82f4c372e46df9443577aa1c375251fe4b1621fcd3aeb227236ea28800a9aec7"
+    },
+    {
+      "path": "/audio/sfx/grass-rustle-2.mp3",
+      "bytes": 6380,
+      "sha256": "7e1592115b5c6582a1bc5b60bbd98fef45d2cdac12c0ce3b0e32933f77fe5a4e"
+    },
+    {
+      "path": "/audio/sfx/grass-tinkle.mp3",
+      "bytes": 2924,
+      "sha256": "996f92a4974ae551a8d7f58873f0e473cadaa50ee57cc752f07cd376aa1fa7c6"
+    },
+    {
+      "path": "/audio/sfx/cloth-rustle-1.mp3",
+      "bytes": 5996,
+      "sha256": "45405bd70643045691627623376ca7eb91e8a886eeb3d65a84c4d003a6e2bd03"
+    },
+    {
+      "path": "/audio/sfx/cloth-rustle-2.mp3",
+      "bytes": 5996,
+      "sha256": "2760c5fa1d97cf22726edc9b3b275a264145ce90a7ba36e337364cbba90fe3e9"
+    },
+    {
+      "path": "/audio/sfx/wood-tap-1.mp3",
+      "bytes": 2732,
+      "sha256": "72b11ecfe7ca8972a7f48feb0b3cb0a19244ca7f9ceb9d683aa5cc774874ec98"
+    },
+    {
+      "path": "/audio/sfx/wood-tap-2.mp3",
+      "bytes": 2732,
+      "sha256": "7d4a4b60ddfd70d71026b1b21a745d6be2281fe1f6bfaf7fc4c645bf3dfaf3c2"
+    },
+    {
+      "path": "/audio/sfx/wood-scrape.mp3",
+      "bytes": 5996,
+      "sha256": "681a12a5bbcf77f0814473d6339e5d009e3194092801bbd87e48b2c4a8a444f3"
+    },
+    {
+      "path": "/audio/sfx/cogs-ratchet-1.mp3",
+      "bytes": 3692,
+      "sha256": "7c3dda03cb42530aa0a69e63070307b63722d55632aa3e5e5f8a4b32dddc435b"
+    },
+    {
+      "path": "/audio/sfx/cogs-ratchet-2.mp3",
+      "bytes": 2732,
+      "sha256": "ea9e9443cdcc64439ef54334dfc128fbc42ce68dc6edb86537bbd3c3c488997d"
+    },
+    {
+      "path": "/audio/sfx/crt-tap.mp3",
+      "bytes": 1580,
+      "sha256": "1fc6d11eb35ca242d66d7f0f19503a1c986b19b58da61c324d8214fcd5aa340a"
+    },
+    {
+      "path": "/audio/sfx/portal-transit.mp3",
+      "bytes": 13676,
+      "sha256": "a200199794750c4620f8fc61496188764d1e6c27c83f858725ea6dc27744ba88"
+    },
+    {
+      "path": "/audio/sfx/dialup.mp3",
+      "bytes": 15020,
+      "sha256": "a3a176ed5e6fd26b74c82b62b85137bda4d7c231a83de711c2b191bd8d362a2e"
+    },
+    {
+      "path": "/audio/sfx/pod-hum.mp3",
+      "bytes": 80300,
+      "sha256": "2c1d783addb9d45199626cbc931e60fbb92a9d07110900cf68adf6f0a4d34cca"
+    },
+    {
+      "path": "/audio/sfx/gentle-breeze.mp3",
+      "bytes": 92780,
+      "sha256": "2de4dce0fe6cab422050c4acbdf961454bd1fea0ca9508bb2bf6ed374312b081"
+    }
+  ]
+}
