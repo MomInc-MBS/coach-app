@@ -5,7 +5,7 @@ import {join,posix} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 
-const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules'];
+const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules','audio'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // D34: core precache holds only what a first run needs (sign-in/onboarding, home, a camera or manual
 // workout with its counter, updates/recovery, the offline shell). Core is every root, /icons/ or /pod/
@@ -31,9 +31,9 @@ const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/)/;
-const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
-const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
-const runtime=/\.(?:html|css|mjs|js|webmanifest|json|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
+const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:audio|icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
+const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
+const runtime=/\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
 
 async function identify(root,path){

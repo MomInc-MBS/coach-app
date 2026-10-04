@@ -6,14 +6,21 @@ import vm from 'node:vm';
 function fixture(){
  const raw=fs.readFileSync(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
  const source=raw.slice(raw.indexOf('function endPointer(e,cancel)'),raw.indexOf('function initialVisible()'));
- const listeners=new Map();let clock=1000,opened=0;
- const noop=()=>{},context={pointers:new Map(),lastTap:null,board:{release:noop,press:noop},busy:false,fading:[],scheduleIdle:noop,kickRender:noop,markHintSeen:noop,stopHint:noop,performance:{now:()=>clock},TAP_MS:350,TAP_MOVE_PX:32,nearestTapShape:()=> 'up',MENUS:{up:{}},buzz:noop,runShape:()=>opened++,overlay:{addEventListener:(type,fn)=>listeners.set(type,fn),setPointerCapture:noop},finalizeTimer:null,clearTimeout:noop,toNorm:(x,y)=>[x/100,y/100]};
+ const listeners=new Map(),sounds=[];let clock=1000,opened=0;
+ const noop=()=>{},context={pointers:new Map(),lastTap:null,board:{release:noop,press:noop},busy:false,fading:[],scheduleIdle:noop,kickRender:noop,markHintSeen:noop,stopHint:noop,portalSound:kind=>sounds.push(kind),performance:{now:()=>clock},TAP_MS:350,TAP_MOVE_PX:32,nearestTapShape:()=> 'up',MENUS:{up:{}},buzz:noop,runShape:()=>opened++,overlay:{addEventListener:(type,fn)=>listeners.set(type,fn),setPointerCapture:noop},finalizeTimer:null,clearTimeout:noop,toNorm:(x,y)=>[x/100,y/100]};
  vm.runInNewContext(source+';wirePointerEvents();',context);
- const send=(type,timeStamp,pointerId=1)=>listeners.get(type)({timeStamp,pointerId,clientX:10,clientY:20});
- return {context,send,tap(t,id=1){send('pointerdown',t,id);send('pointerup',t+1,id)},clock(t){clock=t},opened:()=>opened};
+ const send=(type,timeStamp,pointerId=1,x=10,y=20)=>listeners.get(type)({timeStamp,pointerId,clientX:x,clientY:y});
+ return {context,send,tap(t,id=1){send('pointerdown',t,id);send('pointerup',t+1,id)},clock(t){clock=t},opened:()=>opened,sounds};
 }
 test('queued board taps use input timestamps despite delayed processing',()=>{
- const f=fixture();f.tap(100);f.clock(1500);f.tap(220);assert.equal(f.opened(),1);
+ const f=fixture();f.tap(100);f.clock(1500);f.tap(220);assert.equal(f.opened(),1);assert.deepEqual(f.sounds,['press','press']);
+});
+test('press and spaced drag sounds follow one pointer without firing every move',()=>{
+ const f=fixture();f.send('pointerdown',100);f.clock(1120);f.send('pointermove',120,1,30,20);
+ f.clock(1140);f.send('pointermove',140,1,50,20);
+ f.clock(1240);f.send('pointermove',240,1,70,20);
+ assert.deepEqual(f.sounds,['press','drag','drag']);
+ assert.equal(f.context.pointers.get(1).pts.length,4);
 });
 test('backwards input clocks cannot pair board taps',()=>{
  const f=fixture();f.tap(300);f.tap(100);assert.equal(f.opened(),0);

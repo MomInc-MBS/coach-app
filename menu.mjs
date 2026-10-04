@@ -19,7 +19,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   const button=document.createElement('button');button.className='card-select';button.dataset.movement=id;button.setAttribute('aria-pressed','false');
   button.setAttribute('aria-label',m.name);button.title=m.name;
   const poster=document.createElement('img');poster.src=`/models/previews/${id}.png`;poster.alt='';poster.width=512;poster.height=512;poster.loading='lazy';poster.decoding='async';button.append(poster);
-  button.addEventListener('click',()=>{cancelIntro();showModel(id);speak(m.name,{interrupt:true});});card.append(button);$('movementCards').append(card);
+  button.addEventListener('click',()=>{cancelIntro();showModel(id);});card.append(button);$('movementCards').append(card);
  }
  function paginate(){rewards.paint();const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;}
  $('previousPage').addEventListener('click',()=>{page--;paginate();});$('nextPage').addEventListener('click',()=>{page++;paginate();});
@@ -45,7 +45,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  }
  function gesture(event){
   $('confirmProgress').value=event.progress;
-  if(event.event==='proposed'){selection(event.mode);$('handState').textContent=movements[event.mode].name+'? Hold thumbs up to confirm.';speak(movements[event.mode].name+'? Hold thumbs up to confirm.',{interrupt:true});}
+  if(event.event==='proposed'){selection(event.mode);$('handState').textContent=movements[event.mode].name+'? Hold thumbs up to confirm.';}
   else if(event.event==='holding')$('handState').textContent=`Hold thumbs up… ${Math.round(event.progress*100)}%`;
   else if(event.event==='pending')$('handState').textContent=movements[event.mode].name+'? Hold thumbs up for a moment.';
   else if(event.event==='confirmed'){stopHands();introduce(event.mode);}

@@ -4,9 +4,9 @@ import {join} from 'node:path';
 // The AGPL source offer: the authored source needed to rebuild and run this release.
 // Never secrets or private material (plan/, env files, *.dpapi, private keys), tests,
 // build outputs or media (the app already serves its media).
-const ROOTS=['server','db','scripts','scheduler','pod','local-coach','modules','creature','handborne','war-room','food','packs','arcade','drizzle','release-trust'];
+const ROOTS=['server','db','scripts','scheduler','pod','local-coach','modules','creature','handborne','war-room','food','packs','arcade','drizzle','release-trust','audio'];
 const GENERATED=new Set(['app-runtime.mjs','launch-runtime.mjs','local-coach-runtime.mjs','nutrition-data.mjs','workout-tracks.js','war-room/gala-bay.js','handborne/companion.mjs']);
-const offered=path=>(path==='LICENSE'||/\.(mjs|js|cjs|ts|tsx|html|css|json|jsonc|sql|webmanifest)$/.test(path))&&!GENERATED.has(path)&&!/(^|\/)(assets|node_modules|dist|plan|tests)\/|(^|\/)\.|\.dpapi$|secret|\.env|\.dev\.vars/i.test(path);
+const offered=path=>(path==='LICENSE'||/\.(mjs|js|cjs|ts|tsx|py|html|css|json|jsonc|sql|webmanifest)$/.test(path))&&!GENERATED.has(path)&&!/(^|\/)(assets|node_modules|dist|plan|tests)\/|(^|\/)\.|\.dpapi$|secret|\.env|\.dev\.vars/i.test(path);
 const PRIVATE_KEY=/-----BEGIN [A-Z ]*PRIVATE KEY-----|"d"\s*:\s*"[A-Za-z0-9_-]{40,}"/;
 
 export async function sourceOffer(root='.'){

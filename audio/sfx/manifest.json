@@ -1,0 +1,555 @@
+{
+  "version": 1,
+  "license": "CC0-1.0 AND CC-BY-3.0",
+  "cues": {
+    "mechanical": [
+      "/audio/sfx/mechanical-click-1.mp3",
+      "/audio/sfx/mechanical-click-2.mp3"
+    ],
+    "switch": [
+      "/audio/sfx/metal-switch-1.mp3",
+      "/audio/sfx/metal-switch-2.mp3"
+    ],
+    "ice": [
+      "/audio/sfx/ice-crack-1.mp3",
+      "/audio/sfx/ice-crack-2.mp3"
+    ],
+    "jelly": [
+      "/audio/sfx/jelly-squish-1.mp3",
+      "/audio/sfx/jelly-squish-2.mp3"
+    ],
+    "water": [
+      "/audio/sfx/water-splash-1.mp3",
+      "/audio/sfx/water-splash-2.mp3"
+    ],
+    "water-slosh": [
+      "/audio/sfx/water-slosh.mp3"
+    ],
+    "grass": [
+      "/audio/sfx/grass-rustle-1.mp3",
+      "/audio/sfx/grass-rustle-2.mp3"
+    ],
+    "grass-tinkle": [
+      "/audio/sfx/grass-tinkle.mp3"
+    ],
+    "quilt": [
+      "/audio/sfx/cloth-rustle-1.mp3",
+      "/audio/sfx/cloth-rustle-2.mp3"
+    ],
+    "wood": [
+      "/audio/sfx/wood-tap-1.mp3",
+      "/audio/sfx/wood-tap-2.mp3"
+    ],
+    "wood-scrape": [
+      "/audio/sfx/wood-scrape.mp3"
+    ],
+    "cogs": [
+      "/audio/sfx/cogs-ratchet-1.mp3",
+      "/audio/sfx/cogs-ratchet-2.mp3"
+    ],
+    "crt": [
+      "/audio/sfx/crt-tap.mp3"
+    ],
+    "transit": [
+      "/audio/sfx/portal-transit.mp3"
+    ],
+    "dialup": [
+      "/audio/sfx/dialup.mp3"
+    ],
+    "pod-hum": [
+      "/audio/sfx/pod-hum.mp3"
+    ],
+    "whiteboard": [
+      "/audio/sfx/whiteboard-erase-marker.mp3"
+    ],
+    "electric": [
+      "/audio/sfx/electric-static.mp3"
+    ],
+    "bloop": [
+      "/audio/sfx/menu-bloop.mp3"
+    ],
+    "signal": [
+      "/audio/sfx/signal-beeps.mp3"
+    ],
+    "waterfall": [
+      "/audio/sfx/meditation-waterfall.mp3"
+    ],
+    "breeze": [
+      "/audio/sfx/gentle-breeze.mp3"
+    ],
+    "dial": [
+      "/audio/sfx/mechanical-click-1.mp3",
+      "/audio/sfx/mechanical-click-2.mp3"
+    ],
+    "lever": [
+      "/audio/sfx/metal-switch-1.mp3",
+      "/audio/sfx/metal-switch-2.mp3"
+    ]
+  },
+  "assets": [
+    {
+      "url": "/audio/sfx/mechanical-click-1.mp3",
+      "source": "mechanical",
+      "master": "mechanical/mechanical/mechanical_button-01.flac",
+      "seek": 0,
+      "maxSeconds": 0.4,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.365:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "5049c0c2f3e297ffd05544a0150a24ba0eebc9e7f5bcb931e99ff83721f4a5ef",
+      "masterSha256": "c763eb6d5177c37c422965b47ece95cb824e795d0df3b3f83ae9ef53db161a3e",
+      "bytes": 4114
+    },
+    {
+      "url": "/audio/sfx/mechanical-click-2.mp3",
+      "source": "mechanical",
+      "master": "mechanical/mechanical/mechanical_clicks-05.flac",
+      "seek": 0,
+      "maxSeconds": 0.42,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.385:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "e134272539997f20e031b3050f1ffae990b7f628a482652ae5f63fb97abc2e49",
+      "masterSha256": "59cc4dd84b29ebc147719677bde1256f97222c7e91a398c3b87a401a56c195b6",
+      "bytes": 4306
+    },
+    {
+      "url": "/audio/sfx/metal-switch-1.mp3",
+      "source": "interface",
+      "master": "kenney-interface/Audio/switch_001.ogg",
+      "seek": 0,
+      "maxSeconds": 0.4,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.365:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "2f45c9891224fef39b30ed048a37de85ef31735b5c69a1bb01b226dd4ae8c0e7",
+      "masterSha256": "3b74efad87f1e69dbd1d05c5ad952ab90859b5a3d11da6ec5bd79b4f03b42afa",
+      "bytes": 3884
+    },
+    {
+      "url": "/audio/sfx/metal-switch-2.mp3",
+      "source": "interface",
+      "master": "kenney-interface/Audio/toggle_001.ogg",
+      "seek": 0,
+      "maxSeconds": 0.4,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.365:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "2c5a63c961a7c632d8117df36236f98dfbedf522648b49779d4559b32392a5ff",
+      "masterSha256": "ca1d2dde5f0b286abac4f070e23edab8f30927c8a533665cdf2ac6492a415e49",
+      "bytes": 1772
+    },
+    {
+      "url": "/audio/sfx/ice-crack-1.mp3",
+      "source": "ice",
+      "master": "ice/ice.wav",
+      "seek": 0,
+      "maxSeconds": 0.85,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.815:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "d13b487d1b767a83b5a9d010c23cb0c0a0ef3f670434871a6aaf2adc8dfc493c",
+      "masterSha256": "c3039c864d056d0e4951b84b96a7bb0044ca8cb58aeae514fc256145872b6a94",
+      "bytes": 7532
+    },
+    {
+      "url": "/audio/sfx/ice-crack-2.mp3",
+      "source": "ice",
+      "master": "ice/coldsnap.wav",
+      "seek": 0.1,
+      "maxSeconds": 0.85,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.815:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "e883b3102cd08aeef403ee08734b123241fb5874cee1a3ee8b29d1e4bc59f131",
+      "masterSha256": "090977264d65d90a50b04e9f0c1c4e02fb194e5b50d9fe244f0079a4da54158c",
+      "bytes": 7532
+    },
+    {
+      "url": "/audio/sfx/jelly-squish-1.mp3",
+      "source": "jelly",
+      "master": "squish/impsplat/impactsplat07.mp3.flac",
+      "seek": 0,
+      "maxSeconds": 0.55,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.515:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "f3aef20cf320c5475141bdb34435952f5399abde8e09b42b9315c0c5e654fc97",
+      "masterSha256": "adae57b90523d754a7b0221876d1c3e4c7b90d5ded732af4895c5b8d0489b640",
+      "bytes": 4844
+    },
+    {
+      "url": "/audio/sfx/jelly-squish-2.mp3",
+      "source": "jelly",
+      "master": "squish/impsplat/impactsplat08.mp3.flac",
+      "seek": 0,
+      "maxSeconds": 0.66,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.625:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "8518fda10d2d926435c7c2e6652f401f9fb7828631054731d1777c4b979e60d3",
+      "masterSha256": "08620cd7dbeaa27cff28a5295846ee9079be7ec6c83725a4af568b9dcc0d045d",
+      "bytes": 5996
+    },
+    {
+      "url": "/audio/sfx/water-splash-1.mp3",
+      "source": "water",
+      "master": "splash/ezwa-water_splash/water_splash-02.flac",
+      "seek": 0,
+      "maxSeconds": 0.42,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.385:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "c6793cc0e61289045c1f1975164bfa526812eb8f729cdff7b8fbe311302b1b65",
+      "masterSha256": "c0c2c6e6fa113138a71b9966a456bea844dbb955f0ed7b95a01777cb62fd7461",
+      "bytes": 4216
+    },
+    {
+      "url": "/audio/sfx/water-splash-2.mp3",
+      "source": "water",
+      "master": "splash/ezwa-water_splash/water_splash-03.flac",
+      "seek": 0,
+      "maxSeconds": 0.72,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.6849999999999999:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "0e8f6004a0d57ce5958c4b2697101a0e9313e117c88a1edb071d64894e78db12",
+      "masterSha256": "a22c5cac675fa60aaff8d907acf7627f1e9dcc337798ff4eb34f2f8e7a4c9e2e",
+      "bytes": 6520
+    },
+    {
+      "url": "/audio/sfx/water-slosh.mp3",
+      "source": "waves",
+      "master": "water-slosh.flac",
+      "seek": 0,
+      "maxSeconds": 2.5,
+      "filters": "lowpass=f=2500,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=2.465:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "b99ff74a3b4f86951b6a3ab06acbf81edac3b8e3d9bf2559b87671326e77f7b3",
+      "masterSha256": "6c5b59562bf9b00e77f7bd8d6550912b6326e190ce97e9b8c1a1faa887bb4fac",
+      "bytes": 16940
+    },
+    {
+      "url": "/audio/sfx/grass-rustle-1.mp3",
+      "source": "grass",
+      "master": "leaves/rustle/rustle01.flac",
+      "seek": 0,
+      "maxSeconds": 0.7,
+      "filters": "lowpass=f=4000,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.6649999999999999:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "82f4c372e46df9443577aa1c375251fe4b1621fcd3aeb227236ea28800a9aec7",
+      "masterSha256": "9c5da19eb8d37b59890c0be1171c40fe4dd16177e7a97558a156c1036b7bed05",
+      "bytes": 6380
+    },
+    {
+      "url": "/audio/sfx/grass-rustle-2.mp3",
+      "source": "grass",
+      "master": "leaves/rustle/rustle02.flac",
+      "seek": 0,
+      "maxSeconds": 0.7,
+      "filters": "lowpass=f=4000,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.6649999999999999:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "7e1592115b5c6582a1bc5b60bbd98fef45d2cdac12c0ce3b0e32933f77fe5a4e",
+      "masterSha256": "1e01e752b2165d78482bd91ef8b859541601ae4de6b7cf6178e935cce0036c69",
+      "bytes": 6380
+    },
+    {
+      "url": "/audio/sfx/grass-tinkle.mp3",
+      "source": "interface",
+      "master": "kenney-interface/Audio/glass_001.ogg",
+      "seek": 0,
+      "maxSeconds": 0.6,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.565:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "996f92a4974ae551a8d7f58873f0e473cadaa50ee57cc752f07cd376aa1fa7c6",
+      "masterSha256": "183eebee20eb0a532b0b85104d139cbf2673eb66d95c3cc733ac9ea98362e7e8",
+      "bytes": 2924
+    },
+    {
+      "url": "/audio/sfx/cloth-rustle-1.mp3",
+      "source": "cloth",
+      "master": "cloth.ogg",
+      "seek": 0.5,
+      "maxSeconds": 0.65,
+      "filters": "lowpass=f=4000,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.615:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "45405bd70643045691627623376ca7eb91e8a886eeb3d65a84c4d003a6e2bd03",
+      "masterSha256": "897c0937041afdf3581427b80a7546f99d219d0008e12ff5500c2afdfa4b7a1e",
+      "bytes": 5996
+    },
+    {
+      "url": "/audio/sfx/cloth-rustle-2.mp3",
+      "source": "cloth",
+      "master": "cloth.ogg",
+      "seek": 2,
+      "maxSeconds": 0.65,
+      "filters": "lowpass=f=4000,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.615:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "2760c5fa1d97cf22726edc9b3b275a264145ce90a7ba36e337364cbba90fe3e9",
+      "masterSha256": "897c0937041afdf3581427b80a7546f99d219d0008e12ff5500c2afdfa4b7a1e",
+      "bytes": 5996
+    },
+    {
+      "url": "/audio/sfx/wood-tap-1.mp3",
+      "source": "impact",
+      "master": "kenney-impact/Audio/impactWood_light_000.ogg",
+      "seek": 0,
+      "maxSeconds": 0.45,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.41500000000000004:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "72b11ecfe7ca8972a7f48feb0b3cb0a19244ca7f9ceb9d683aa5cc774874ec98",
+      "masterSha256": "eb45e35b4bed784d3f120de4afec4b0d6ac09d9e143cce8cfcb7d739e1b1f3c3",
+      "bytes": 2732
+    },
+    {
+      "url": "/audio/sfx/wood-tap-2.mp3",
+      "source": "impact",
+      "master": "kenney-impact/Audio/impactWood_light_001.ogg",
+      "seek": 0,
+      "maxSeconds": 0.45,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.41500000000000004:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "7d4a4b60ddfd70d71026b1b21a745d6be2281fe1f6bfaf7fc4c645bf3dfaf3c2",
+      "masterSha256": "4b76bf3ccc8e60d19188f3165b778a7817786faa6887c55d9049bcbeef3b425f",
+      "bytes": 2732
+    },
+    {
+      "url": "/audio/sfx/wood-scrape.mp3",
+      "source": "wood",
+      "master": "wood/wood_impact/crack01.mp3.flac",
+      "seek": 0,
+      "maxSeconds": 0.65,
+      "filters": "lowpass=f=3000,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.615:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "681a12a5bbcf77f0814473d6339e5d009e3194092801bbd87e48b2c4a8a444f3",
+      "masterSha256": "a25993adc8c2bbfdd80490980d83c27a587f2d3452ee4e5bd784f02c082ec448",
+      "bytes": 5996
+    },
+    {
+      "url": "/audio/sfx/cogs-ratchet-1.mp3",
+      "source": "impact",
+      "master": "kenney-impact/Audio/impactMetal_light_000.ogg",
+      "seek": 0,
+      "maxSeconds": 0.4,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.365:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "7c3dda03cb42530aa0a69e63070307b63722d55632aa3e5e5f8a4b32dddc435b",
+      "masterSha256": "33b5e6e37c6e9d54e07bf5a89b12c76e879f40c1ea83cdd82714df1d6f9fec6d",
+      "bytes": 3692
+    },
+    {
+      "url": "/audio/sfx/cogs-ratchet-2.mp3",
+      "source": "impact",
+      "master": "kenney-impact/Audio/impactMetal_light_001.ogg",
+      "seek": 0,
+      "maxSeconds": 0.4,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.365:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "ea9e9443cdcc64439ef54334dfc128fbc42ce68dc6edb86537bbd3c3c488997d",
+      "masterSha256": "fba69c467ddd85da7b1d82e259f936b876d9ba6a3d6f1b24bdd10468e46bfe08",
+      "bytes": 2732
+    },
+    {
+      "url": "/audio/sfx/crt-tap.mp3",
+      "source": "original",
+      "master": "crt-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.12,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.08499999999999999:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "1fc6d11eb35ca242d66d7f0f19503a1c986b19b58da61c324d8214fcd5aa340a",
+      "masterSha256": "30bbf4295902825adfaf0d5666920824a8fdf3321d9a18e033dd511344625835",
+      "bytes": 1580
+    },
+    {
+      "url": "/audio/sfx/portal-transit.mp3",
+      "source": "portal",
+      "master": "teleport.wav",
+      "seek": 0,
+      "maxSeconds": 2,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=1.965:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "a200199794750c4620f8fc61496188764d1e6c27c83f858725ea6dc27744ba88",
+      "masterSha256": "23fe938e7e82931227196bf6b2978ad9154f627af26623acf52958d12125f3b8",
+      "bytes": 13676
+    },
+    {
+      "url": "/audio/sfx/dialup.mp3",
+      "source": "original",
+      "master": "dialup-original.wav",
+      "seek": 0,
+      "maxSeconds": 1.8,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=1.7650000000000001:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "a3a176ed5e6fd26b74c82b62b85137bda4d7c231a83de711c2b191bd8d362a2e",
+      "masterSha256": "8e764074a112044a074d152b9668f456e456a2c81514444f2447c87bc7801138",
+      "bytes": 15020
+    },
+    {
+      "url": "/audio/sfx/pod-hum.mp3",
+      "source": "hum",
+      "master": "shop/TheShopCollection_convenience_store_drinks_fridge_drone.wav",
+      "seek": 1,
+      "maxSeconds": 12,
+      "filters": "highpass=f=50,lowpass=f=1100,loudnorm=I=-22:TP=-3:LRA=7",
+      "loopCrossfadeSeconds": 0.5,
+      "sha256": "2c1d783addb9d45199626cbc931e60fbb92a9d07110900cf68adf6f0a4d34cca",
+      "masterSha256": "222545244c0eed4bb924a3616d1103156d942776681634698f7fa3b11fe99b9d",
+      "bytes": 80300
+    },
+    {
+      "url": "/audio/sfx/whiteboard-erase-marker.mp3",
+      "source": "original",
+      "master": "whiteboard-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.9,
+      "filters": "highpass=f=300,lowpass=f=4200,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.865:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "f43a61da92082b46783739debadee7d048ad89d1c170b1891cca21d8b9982b35",
+      "masterSha256": "d9e768a87004c992dc4260d44342039c982d418e53ad25e4f47a03a793758181",
+      "bytes": 7916
+    },
+    {
+      "url": "/audio/sfx/electric-static.mp3",
+      "source": "original",
+      "master": "electric-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.25,
+      "filters": "highpass=f=1400,lowpass=f=4200,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.215:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "be024f00c395f157a5af227f0eca594a6d13c9a95129567f81919a53fae54da2",
+      "masterSha256": "ee5be1d09a9142ac8d78b80ce45b4c69fe446ce39cbde2068496c7d7ef807fa3",
+      "bytes": 2732
+    },
+    {
+      "url": "/audio/sfx/menu-bloop.mp3",
+      "source": "original",
+      "master": "bloop-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.22,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.185:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "3ac1c6d17a0bd6ac6c50ef303fdb888cbc49cb642a7a604ab06d725843667017",
+      "masterSha256": "662f7caeead7ce14adf60d17904885670766fe212e28176298df056b7b7a26e7",
+      "bytes": 2540
+    },
+    {
+      "url": "/audio/sfx/signal-beeps.mp3",
+      "source": "original",
+      "master": "signal-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.35,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.31499999999999995:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "0bbd26949f9a07ebf88b1caad8192a19aa4507f2506499ea433ee8c03c1967cf",
+      "masterSha256": "97a5c16539be0ee5262d0b4763a8a5b22e68442f93458219d793bb06db254e22",
+      "bytes": 3500
+    },
+    {
+      "url": "/audio/sfx/meditation-waterfall.mp3",
+      "source": "waterfall",
+      "master": "stream-waterfall/stream-waterfall/waterfall1.ogg",
+      "seek": 1,
+      "maxSeconds": 12,
+      "filters": "highpass=f=80,lowpass=f=5500,loudnorm=I=-22:TP=-3:LRA=7",
+      "loopCrossfadeSeconds": 0.5,
+      "sha256": "ff51b4796ae6cde1cdffe289580211b0a943c8c3665bfe8c2c7a7699bca413b4",
+      "masterSha256": "f6c83c65380f3778d068329f7027b7970555d6441c505b9a111f945518030ded",
+      "bytes": 92780
+    },
+    {
+      "url": "/audio/sfx/gentle-breeze.mp3",
+      "source": "wind",
+      "master": "wind.wav",
+      "seek": 2,
+      "maxSeconds": 12,
+      "filters": "lowpass=f=2300,loudnorm=I=-22:TP=-3:LRA=7",
+      "loopCrossfadeSeconds": 0.5,
+      "sha256": "2de4dce0fe6cab422050c4acbdf961454bd1fea0ca9508bb2bf6ed374312b081",
+      "masterSha256": "a2856f794fbf77e05f8241dc4adeade7f62fa21c3c9dc49f7725b6c6218060c3",
+      "bytes": 92780
+    }
+  ],
+  "sources": [
+    {
+      "id": "interface",
+      "author": "Kenney",
+      "url": "https://kenney.nl/assets/interface-sounds",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "impact",
+      "author": "Kenney",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "mechanical",
+      "author": "qubodup",
+      "url": "https://opengameart.org/content/7-mechanical-clicks-and-buzzes",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "ice",
+      "author": "bart",
+      "url": "https://opengameart.org/content/ice-spells",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "jelly",
+      "author": "Independent.nu",
+      "url": "https://opengameart.org/content/8-wet-squish-slurp-impacts",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "water",
+      "author": "ezwa",
+      "url": "https://opengameart.org/content/6-short-water-splashes",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "waves",
+      "author": "transitking",
+      "url": "https://opengameart.org/content/water-waves",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "grass",
+      "author": "qubodup",
+      "url": "https://opengameart.org/content/20-rustles-dry-leaves",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "cloth",
+      "author": "Iochi Glaucus",
+      "url": "https://opengameart.org/content/fabric-rustling",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "wind",
+      "author": "Luke.RUSTLTD",
+      "url": "https://opengameart.org/content/wind1",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "hum",
+      "author": "LEGIT Audio",
+      "url": "https://opengameart.org/content/the-shop",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "portal",
+      "author": "Ogrebane",
+      "url": "https://opengameart.org/content/teleport-spell",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "original",
+      "author": "MOM Inc.",
+      "url": "/source.json",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "waterfall",
+      "author": "kurt",
+      "url": "https://opengameart.org/content/stream-sounds",
+      "license": "CC-BY-3.0"
+    },
+    {
+      "id": "wood",
+      "author": "Independent.nu",
+      "url": "https://opengameart.org/content/35-wooden-crackshitsdestructions",
+      "license": "CC0-1.0"
+    }
+  ]
+}

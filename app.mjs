@@ -3,6 +3,7 @@ import {mountCameraWorkout} from './camera-workout.mjs';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
+import {mountCoachVoiceSettings} from './coach-voice-settings.mjs';
 import {initPod} from './pod/pod.mjs';
 import {openAchievements} from './achievements-board.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
@@ -20,8 +21,10 @@ import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
 import {mountRoutes,hashRoute} from './modules/routes.mjs';
 import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
+import {mountPhysicalSoundUI} from './audio/sound-ui.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
 mountRoutes();
+mountPhysicalSoundUI();
 let phoneOrientation=mountPhoneOrientation();
 window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=null;});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!phoneOrientation)phoneOrientation=mountPhoneOrientation();});
@@ -29,6 +32,7 @@ const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
 const poseFrames=new PoseFrameScheduler(v);
 const schedulePose=run=>poseFrames.schedule(()=>{if(run===generation)void loop(run);});
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
+mountCoachVoiceSettings({voice,settings:$('settings'),testButton:$('testVoice')});
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
 document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
 if(!voice.available){$('voiceType').textContent='Speech unavailable in this browser';$('toggleVoice').disabled=true;}
@@ -140,7 +144,7 @@ async function start(){
   if($('camera').value==='manual')return startManual();
   const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
   $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
-  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say('Get into position.',{interrupt:true});$('detail').textContent='Waiting for video';
+  state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say(MOVEMENTS[session.mode].name+' selected.',{key:'movement',interrupt:true});voice.say('Get into position.',{key:'setup'});$('detail').textContent='Waiting for video';
   let settleCameraStart;
   cameraStartTransition=new Promise(resolve=>{settleCameraStart=resolve;});
   try{
@@ -221,9 +225,9 @@ async function loop(run){
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
 $('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
-$('goal').addEventListener('change',()=>{resetMovement();voice.say('Set goal. '+$('goal').selectedOptions[0].textContent+'.',{interrupt:true});});
-$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();voice.say(MOVEMENTS[$('movement').value].name+' selected.',{interrupt:true});if(active)library.introduce();});
-$('duration').addEventListener('change',()=>{resetMovement();voice.say(Number($('duration').value)?$('duration').value+' second round.':'Open timer.',{interrupt:true});});
+$('goal').addEventListener('change',()=>resetMovement());
+$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();if(active)library.introduce();});
+$('duration').addEventListener('change',()=>resetMovement());
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
 $('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
@@ -343,7 +347,7 @@ async function manualTick(run){
 }
 function startManual(){
  const run=++generation;release();state.phase='manual-starting';controls(true);state.error=null;resetMovement();status('Starting manual workout…');$('detail').textContent='No camera · manual counter';
- return manualStartGate.run(async()=>{let ticket=null;try{ticket=await pod.beginSet(session.mode,{manual:true});if(run!==generation)return;const progress=ticket.progress||{},clock=new ManualActiveClock({now:()=>performance.now(),visible:()=>!document.hidden});clock.start(progress.elapsedSeconds);manual={value:Number(progress.value)||0,clock,savedAt:performance.now()};state.phase='manual';$('previewLabel').textContent='MANUAL';$('primary').tabIndex=0;$('primary').setAttribute('role',['hold','pace'].includes(state.motion.kind)?'timer':'button');$('primary').setAttribute('aria-label',['hold','pace'].includes(state.motion.kind)?'Manual workout timer':'Add one '+(state.motion.kind==='steps'?'step':state.motion.kind==='jumps'?'jump':'rep'));status(['hold','pace'].includes(state.motion.kind)?'Timer running. Stop to pause.':'Tap the counter or press Enter to add each movement.');manualTick(run);}
+ return manualStartGate.run(async()=>{let ticket=null;try{ticket=await pod.beginSet(session.mode,{manual:true});if(run!==generation)return;const progress=ticket.progress||{},clock=new ManualActiveClock({now:()=>performance.now(),visible:()=>!document.hidden});clock.start(progress.elapsedSeconds);manual={value:Number(progress.value)||0,clock,savedAt:performance.now()};state.phase='manual';voice.say(MOVEMENTS[session.mode].name+' selected.',{key:'movement',interrupt:true});voice.say('Begin.',{key:'setup'});$('previewLabel').textContent='MANUAL';$('primary').tabIndex=0;$('primary').setAttribute('role',['hold','pace'].includes(state.motion.kind)?'timer':'button');$('primary').setAttribute('aria-label',['hold','pace'].includes(state.motion.kind)?'Manual workout timer':'Add one '+(state.motion.kind==='steps'?'step':state.motion.kind==='jumps'?'jump':'rep'));status(['hold','pace'].includes(state.motion.kind)?'Timer running. Stop to pause.':'Tap the counter or press Enter to add each movement.');manualTick(run);}
  catch(error){if(run!==generation)return;generation++;release();controls(false);if(ticket)await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}});
 }
 async function activateManual(){

@@ -75,6 +75,7 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
   cut:()=>Promise.resolve(),heal(){},press(){},release(){},pause(){},resume(){},dispose(){},
  })};
 const BOARD_KEY='myr5.portalBoard';
+const portalSound=(kind,extra={})=>window.dispatchEvent(new CustomEvent('myr5:portal-sound',{detail:{kind,board:boardId,...extra}}));
 const tintKey=id=>'myr5.grimoireColor.'+id;
 const validHex=value=>/^#[0-9a-f]{6}$/i.test(value||'');
 const boardTint=(id=boardId)=>validHex(store.get(tintKey(id)))?store.get(tintKey(id)):(id==='cogs'?'#c59a56':'#b026ff');
@@ -278,6 +279,7 @@ async function loadBoardNow(id,load){
  if(!boardShown)base.pause();
  portalHome.style.background=base.background||''; // the canvases are transparent; the board colour lives here, behind the glass
  portalHome.dataset.board=boardId=id;portalHome.dataset.art='flat';
+ portalSound('board');
  store.set(BOARD_KEY,id); // the saved choice is the board on screen: a failed pick keeps the last good one, a failed start the Quilt
  status(failureMessage);updateBoardChips();
  threeD();
@@ -448,6 +450,7 @@ function backgroundBlocked(block){
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
 function openMenu(){
+ portalSound('menu');
  const {face}=restFace();setVisible(false);menuChosen=false;menuSheet.showModal();
  if(face&&frameOn(face,windowLook('line-up',MENUS['line-up'],face)))frameDialog(menuSheet);
  menuSheet.addEventListener('close',()=>{if(framed?.dialog===menuSheet)frameOff();if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
@@ -468,11 +471,13 @@ function setVisible(v){
  if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;frameOff();if(v)applyLook();syncEnergy();
+ portalSound('scene',{visible:v});
  scheduleIdle();if(v)threeD();
 }
 function fadeOutBoard(){
  const run=++visibilityRun;
  backgroundBlocked(false);
+ portalSound('scene',{visible:false});
  motion(portalHome,'opacity .3s ease');portalHome.style.opacity='0';
  return new Promise(r=>setTimeout(()=>{if(run===visibilityRun){portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();scheduleIdle();}r();},prefersReducedMotion()?0:300));
 }
@@ -482,6 +487,7 @@ function fadeInBoard(){
  portalHome.hidden=false;portalHome.style.clipPath='';motion(portalHome,'none');portalHome.style.opacity='0';
  if(boardBtn)boardBtn.hidden=true;
  board?.resume();boardShown=true;frameOff();syncEnergy();backgroundBlocked(true);menuBtn.focus();scheduleIdle();threeD();
+ portalSound('scene',{visible:true});
  const run=visibilityRun;
  settle().then(()=>{if(run!==visibilityRun)return;motion(portalHome,`opacity ${PORTAL.healMs}ms ease`);portalHome.style.opacity='1';});
 }
@@ -591,7 +597,7 @@ function handOver(dialog){
  dialog.addEventListener('close',()=>closed(dialog,{pts:backPts(id),color:menu?.color||'#b026ff'},()=>run===sequence&&!lifecycle.signal.aborted),{once:true});
 }
 function backPts(id){const {pattern}=restFace();if(!pattern)return pattern;const sid=id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect';return boardId==='cogs'?shapeClipPts(sid,pattern):insetPts(shapeClipPts(sid,pattern),sid);}
-function stowBoard(){visibilityRun++;portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();}
+function stowBoard(){visibilityRun++;portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();portalSound('scene',{visible:false});}
 // A destination from the portal closed: back out to the quilt (the reverse dive, or #131's fizzle for a hole), unless the
 // frame already moved on (handOver) or the bar went to another route (it is the active route now).
 function closed(dialog,back,current){
@@ -1661,6 +1667,7 @@ function endPhase(){phase?.stop?.();phase?.dive?.cancel();phase?.glass.remove();
 // canvas is shared with the quilt's glass, so don't play it while the quilt is mid-portal. Reduced motion: instant.
 let wormhole=null;
 export async function playWormhole({direction='in',minMs=900,color='#b026ff'}={}){
+ portalSound('travel');
  const ms=prefersReducedMotion()?0:Math.max(0,minMs),R=Math.ceil(Math.hypot(innerWidth,innerHeight)/2);
  if(!wormhole){
   const el=document.createElement('div'),w=innerWidth,h=innerHeight;el.className='portal-glass portal-wormhole';el.setAttribute('aria-hidden','true');el.innerHTML='<b></b>';
@@ -1709,6 +1716,7 @@ function revealDialogFromPoint(dialog,[cx,cy],ms=500){
 // quick fade. endPhase() cancels it. back: the same dive played in reverse, out of the wormhole (diveBack).
 function dive(pts,back=false){
  if(!phase)return Promise.resolve();
+ if(back)portalSound('travel');
  const c=centroidOf(pts);let rIn=Infinity;
  for(let k=0;k<pts.length-1;k++){const [ax,ay]=pts[k],[bx,by]=pts[k+1],dx=bx-ax,dy=by-ay,t=Math.max(0,Math.min(1,((c[0]-ax)*dx+(c[1]-ay)*dy)/(dx*dx+dy*dy||1)));rIn=Math.min(rIn,Math.hypot(ax+t*dx-c[0],ay+t*dy-c[1]));}
  const far=Math.max(...[[0,0],[innerWidth,0],[0,innerHeight],[innerWidth,innerHeight]].map(([x,y])=>Math.hypot(x-c[0],y-c[1]))),reduced=prefersReducedMotion();
@@ -1764,6 +1772,7 @@ const SHAPED=new Set(['rect','oval','up','down','vdiamond']);
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
  if(id==='cross'){
+  portalSound('travel');
   flashOutline(SHAPES.cross.map(p=>toClientPts(p.points,rect)),'#ffffff');
   const center=[rect.left+rect.width/2,rect.top+rect.height/2];
   const face=board?.faceRect();
@@ -1785,6 +1794,7 @@ async function portalSequence(id,current){
  flashOutline(id==='x'?SHAPES.x.map(p=>toClientPts(p.points,rect)):line?[toClientPts(lineTemplatePts(id),rect)]:[pts],menu.color);
  if(menu.locked?.()){status(menu.lockedMessage);return;}
  status('');
+ portalSound('travel');
  const k=short?PORTAL.short:1,T={cut:PORTAL.cutMs*k,load:PORTAL.loadMinMs*k,reveal:PORTAL.revealMs*k},reduced=prefersReducedMotion();
  showGlass(pts,menu.color,false,pts,{T,axis:win.axis,monochrome:menu.route==='meditate',peek:menu.route}); // PORTAL-PEEK: route
  await cutBoard(pts,menu.color,reduced?0:T.cut);
@@ -1896,7 +1906,8 @@ function wirePointerEvents(){
  overlay.addEventListener('pointerdown',e=>{ if(pointers.size>0){lastTap=null;}
   stopHint(); // #22: any touch stops the first-run hint immediately, mid-animation or not.
   overlay.setPointerCapture(e.pointerId);clearTimeout(finalizeTimer);
-  pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)]});
+  pointers.set(e.pointerId,{pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],norm:[toNorm(e.clientX,e.clientY)],soundX:e.clientX,soundY:e.clientY,soundT:performance.now()});
+  if(pointers.size===1&&!busy)portalSound('press');
   scheduleIdle();
   if(busy)ripple(e.clientX,e.clientY);else board.press(e.pointerId,e.clientX,e.clientY);
   kickRender();
@@ -1904,6 +1915,7 @@ function wirePointerEvents(){
  overlay.addEventListener('pointermove',e=>{
   const p=pointers.get(e.pointerId);if(!p)return;
   p.pts.push({x:e.clientX,y:e.clientY,t:performance.now()});p.norm.push(toNorm(e.clientX,e.clientY));
+  if(pointers.size===1&&!busy&&performance.now()-p.soundT>115&&Math.hypot(e.clientX-p.soundX,e.clientY-p.soundY)>12){p.soundX=e.clientX;p.soundY=e.clientY;p.soundT=performance.now();portalSound('drag');}
   if(!busy)board.press(e.pointerId,e.clientX,e.clientY);
  });
  overlay.addEventListener('pointerup',e=>endPointer(e,false));

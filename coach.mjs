@@ -1,5 +1,5 @@
 // Event-driven cues: no language model or microphone needed during exercise.
-import {RobotAudio} from './robot-audio.mjs';
+import {RobotAudio,COACH_VOICE_VARIANTS} from './robot-audio.mjs';
 import {coachOnline} from './coach-net.mjs';
 function myr5VoiceState(state){if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('myr5:response',{detail:{state}}));}
 export const INTRO = {
@@ -38,6 +38,8 @@ export class CueEvents {
 export class CoachVoice {
  constructor(caption,onMode=()=>{}){this.caption=caption;this.onMode=onMode;this.enabled=true;this.queue=[];this.current=null;this.epoch=0;this.robot=new RobotAudio(onMode);this.available=!!(globalThis.AudioContext||globalThis.webkitAudioContext);}
  unlock(){return this.robot.unlock();}
+ get variant(){return this.robot.variant;}
+ setVariant(id){if(!COACH_VOICE_VARIANTS[id])return false;if(id!==this.variant&&(this.current||this.queue.length))this.cancel();this.robot.setVariant(id);return true;}
  setEnabled(enabled){this.enabled=enabled;if(!enabled)this.cancel();}
  cancel(){this.epoch++;clearTimeout(this.current?.timer);this.robot.stop();globalThis.speechSynthesis?.cancel();this.current?.resolve();this.current=null;this.queue.splice(0).forEach(item=>item.resolve());myr5VoiceState('idle');}
  say(text,{key='guide',interrupt=false}={}){
