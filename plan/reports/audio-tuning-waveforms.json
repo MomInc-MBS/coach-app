@@ -1,0 +1,32 @@
+[
+  {
+    "url": "/audio/sfx/whiteboard-erase-marker.mp3",
+    "peak": 0.303597629070282,
+    "rms": 0.062024772850880296,
+    "frames": 21600
+  },
+  {
+    "url": "/audio/sfx/electric-static.mp3",
+    "peak": 0.6786757707595825,
+    "rms": 0.1945590778961638,
+    "frames": 6000
+  },
+  {
+    "url": "/audio/sfx/menu-bloop.mp3",
+    "peak": 0.6725274324417114,
+    "rms": 0.19308356081498224,
+    "frames": 5280
+  },
+  {
+    "url": "/audio/sfx/signal-beeps.mp3",
+    "peak": 0.6194054484367371,
+    "rms": 0.2764728869460186,
+    "frames": 8400
+  },
+  {
+    "url": "/audio/sfx/meditation-waterfall.mp3",
+    "peak": 0.4187382459640503,
+    "rms": 0.07386567626914704,
+    "frames": 276000
+  }
+]

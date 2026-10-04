@@ -125,13 +125,13 @@ test('ambient bed stops under dialogs and tracking; grass portal uses breeze wit
  sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
  const breeze={duration:12},hum={duration:12};sound.samples.set('breeze',[breeze]);sound.samples.set('pod-hum',[hum]);
  sound.setScene('portal','grass');assert.ok(sound.ambience.sources.some(source=>source.buffer===breeze));assert.ok(!sound.ambience.sources.some(source=>source.buffer===hum));
- documentRef.querySelector=()=>({open:true});sound.syncAmbience();assert.equal(sound.ambience,null);
+ documentRef.querySelector=selector=>selector.startsWith('dialog')?{open:true}:null;sound.syncAmbience();assert.equal(sound.ambience,null);
  documentRef.querySelector=()=>null;documentRef.body.dataset.tracking='true';sound.setScene('pod');assert.equal(sound.ambience,null);
  documentRef.body.dataset.tracking='false';sound.syncAmbience();assert.ok(sound.ambience.sources.some(source=>source.buffer===hum));sound.dispose();
 });
 
 test('pod, grimoire, and pod settings dialogs keep ambience while rooms suppress it',()=>{
- let openId=null;const documentRef={hidden:false,body:{dataset:{screen:'pod'}},querySelector:selector=>openId&&!selector.includes(`#${openId}`)?{id:openId}:null};
+ let openId=null;const documentRef={hidden:false,body:{dataset:{screen:'pod'}},querySelector:selector=>selector.startsWith('dialog')&&openId&&!selector.includes(`#${openId}`)?{id:openId}:null};
  const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef,windowRef:null});
  sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
  for(const id of ['portalWorkoutHome','portalMenu','settings']){openId=id;sound.syncAmbience(true);assert.ok(sound.ambience,`${id} keeps the ship bed`);}
@@ -146,4 +146,24 @@ test('malformed manifest is retried after backoff instead of cached forever',asy
  try{await sound.loadManifest();assert.equal(sound.manifest,null);assert.equal(sound.manifestPending,null);assert.ok(sound.manifestRetryAt>Date.now());
   valid=true;sound.manifestRetryAt=0;await sound.loadManifest();assert.equal(sound.manifest.cues.mechanical.length,1);
  }finally{globalThis.fetch=originalFetch;sound.dispose();}
+});
+
+
+test('meditation uses only waterfall and stops it on room exit, arcade, and mute',()=>{
+ let meditation=true,arcade=false;
+ const doc={hidden:false,body:{dataset:{shipView:'true'}},querySelector:selector=>selector.includes('[data-meditation-scene]')?meditation&&!arcade?{}:null:selector==='.meditation-panel[open]'?meditation?{}:null:null};
+ const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef:doc,windowRef:null});sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
+ const waterfall={duration:11.5},hum={duration:12};sound.samples.set('waterfall',[waterfall]);sound.samples.set('pod-hum',[hum]);sound.syncAmbience();
+ assert.equal(sound.ambience.sources.length,1);assert.equal(sound.ambience.sources[0].buffer,waterfall);assert.equal(sound.ambience.sources[0].loop,true);
+ sound.ducked=true;sound.syncLevel();assert.equal(sound.duck.gain.value,.23);
+ arcade=true;sound.syncAmbience();assert.equal(sound.ambience,null);
+ meditation=false;doc.body.dataset.shipView='false';sound.syncAmbience();assert.equal(sound.ambience.sources[0].buffer,hum);
+ sound.setMuted(true);assert.equal(sound.ambience,null);sound.dispose();
+});
+
+test('deeper main controls leave ordinary coach clicks at their original pitch',()=>{
+ const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef:{hidden:false},windowRef:null});sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
+ for(const kind of ['main-control','mechanical'])sound.samples.set(kind,[{duration:.4}]);
+ sound.play('main-control');const deep=sound.context.nodes.filter(n=>n.kind==='buffer-source').at(-1);assert.ok(deep.playbackRate.value<.8);
+ sound.play('mechanical');const normal=sound.context.nodes.filter(n=>n.kind==='buffer-source').at(-1);assert.ok(normal.playbackRate.value>.95);sound.dispose();
 });

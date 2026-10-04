@@ -58,6 +58,13 @@ generated('crt-original', .12, lambda t:
           rng.uniform(-.2, .2) * math.exp(-t * 55)
           + .08 * math.sin(2 * math.pi * 180 * t) * math.exp(-t * 40))
 
+# Original UI foley and synthesis, dedicated to CC0 by MOM Inc.
+generated('bloop-original', .22, lambda t: .3*math.sin(2*math.pi*(260*t-340*t*t))*math.exp(-t*16))
+generated('signal-original', .35, lambda t: .18*math.sin(2*math.pi*(660 if t<.14 else 880)*t) if t<.08 or .18<t<.26 else 0)
+generated('electric-original', .25, lambda t: rng.uniform(-.22,.22)+.018*math.sin(2*math.pi*110*t))
+generated('whiteboard-original', .9, lambda t: rng.uniform(-.3,.3)*(1 if t<.34 else .05 if t<.4 else .5 if int((t-.4)/.06)%2==0 else .12))
+SOURCES['waterfall'] = ('kurt', 'https://opengameart.org/content/stream-sounds')
+
 # cue, filename, source/master, provenance key, maximum duration, extra filter, seek
 EDITS = [
     ('mechanical', 'mechanical-click-1', 'mechanical/mechanical/mechanical_button-01.flac', 'mechanical', .4, '', 0),
@@ -85,10 +92,15 @@ EDITS = [
     ('transit', 'portal-transit', 'teleport.wav', 'portal', 2, '', 0),
     ('dialup', 'dialup', 'dialup-original.wav', 'original', 1.8, '', 0),
     ('pod-hum', 'pod-hum', 'shop/TheShopCollection_convenience_store_drinks_fridge_drone.wav', 'hum', 12, 'highpass=f=50,lowpass=f=1100,', 1),
+    ('whiteboard', 'whiteboard-erase-marker', 'whiteboard-original.wav', 'original', .9, 'highpass=f=300,lowpass=f=4200,', 0),
+    ('electric', 'electric-static', 'electric-original.wav', 'original', .25, 'highpass=f=1400,lowpass=f=4200,', 0),
+    ('bloop', 'menu-bloop', 'bloop-original.wav', 'original', .22, '', 0),
+    ('signal', 'signal-beeps', 'signal-original.wav', 'original', .35, '', 0),
+    ('waterfall', 'meditation-waterfall', 'stream-waterfall/stream-waterfall/waterfall1.ogg', 'waterfall', 12, 'highpass=f=80,lowpass=f=5500,', 1),
     ('breeze', 'gentle-breeze', 'wind.wav', 'wind', 12, 'lowpass=f=2300,', 2),
 ]
 SOURCES['wood'] = ('Independent.nu', 'https://opengameart.org/content/35-wooden-crackshitsdestructions')
-manifest = {'version': 1, 'license': 'CC0-1.0', 'cues': {}, 'assets': [], 'sources': []}
+manifest = {'version': 1, 'license': 'CC0-1.0 AND CC-BY-3.0', 'cues': {}, 'assets': [], 'sources': []}
 for cue, name, master, provenance, duration, filter_prefix, seek in EDITS:
     source = MASTERS / master
     target = OUT / (name + '.mp3')
@@ -127,16 +139,16 @@ manifest['cues']['dial'] = manifest['cues']['mechanical']
 manifest['cues']['lever'] = manifest['cues']['switch']
 for key, (author, url) in SOURCES.items():
     if any(a['source'] == key for a in manifest['assets']):
-        manifest['sources'].append({'id': key, 'author': author, 'url': url, 'license': 'CC0-1.0'})
+        manifest['sources'].append({'id': key, 'author': author, 'url': url, 'license': 'CC-BY-3.0' if key == 'waterfall' else 'CC0-1.0'})
 (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-items = ''.join(f'<li>{html.escape(s["author"])} — <a href="{html.escape(s["url"])}">{html.escape(s["id"])}</a> (CC0)</li>' for s in manifest['sources'])
+items = ''.join(f'<li>{html.escape(s["author"])} — <a href="{html.escape(s["url"])}">{html.escape(s["id"])}</a> ({html.escape(s["license"])})</li>' for s in manifest['sources'])
 (OUT / 'credits.html').write_text('<!doctype html><html lang="en"><meta charset="utf-8">'
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sound credits</title>'
     '<style>body{font:18px system-ui;max-width:48rem;margin:3rem auto;padding:1rem;background:#101821;color:#e9f0f7}a{color:#9ee4ff}li{margin:1rem 0}</style>'
-    '<h1>Sound credits</h1><p>Every sound effect in this pack is released under '
+    '<h1>Sound credits</h1><p>Effects are released under '
     '<a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. '
-    'Material recordings were edited into short cues; wind, teleport, dial-up and CRT effects include sound design. '
+    'The meditation waterfall is adapted from Stream Sounds by kurt, licensed under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, trimmed, filtered, normalized and crossfaded into a loop. Other effects are CC0. Material recordings were edited into short cues; wind, teleport, dial-up and CRT effects include sound design. '
     'Coach voices are local variants of the existing eSpeak NG generated clips. '
     'The app code remains under its existing AGPL license.</p><ul>' + items + '</ul>'
     '<p><a href="manifest.json">Asset provenance and checksums</a> · <a href="/source.json">App source</a> · <a href="/pose">Back to Coach</a></p></html>', encoding='utf-8')
-print(f'Prepared {len(manifest["assets"])} CC0 clips, {sum(a["bytes"] for a in manifest["assets"]):,} bytes.')
+print(f'Prepared {len(manifest["assets"])} openly licensed clips, {sum(a["bytes"] for a in manifest["assets"]):,} bytes.')

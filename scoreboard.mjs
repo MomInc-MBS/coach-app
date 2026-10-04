@@ -30,6 +30,7 @@ export function mountScoreboard({api,getAccount}){
  }
  function select(group,button){
   if(group===selected&&loaded)return;selected=group;const sequence=++animationNumber;clearAnimation();
+  window.dispatchEvent(new Event('myr5:whiteboard-redraw'));
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){renderGraph();return;}
   const pen=$('boardMovingPen');pen.hidden=false;pen.style.setProperty('--pen-ink',GROUP_INKS[group]);
   const from=button.getBoundingClientRect(),to=$('boardCanvas').getBoundingClientRect();pen.style.setProperty('--pen-from-x',`${from.left+from.width/2-to.left}px`);pen.style.setProperty('--pen-from-y',`${from.top-to.top}px`);

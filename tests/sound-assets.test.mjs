@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 import {sourceOffer} from '../scripts/source-offer.mjs';
 
 const root=new URL('../',import.meta.url);
-test('the physical sound pack has verified local CC0 recordings for every cue',async()=>{
+test('the physical sound pack has verified local openly licensed recordings for every cue',async()=>{
  const manifest=JSON.parse(await readFile(new URL('audio/sfx/manifest.json',root),'utf8'));
- const required=['mechanical','switch','ice','jelly','water','water-slosh','grass','grass-tinkle','quilt','wood','wood-scrape','cogs','crt','transit','dialup','pod-hum','breeze'];
+ const required=['mechanical','switch','ice','jelly','water','water-slosh','grass','grass-tinkle','quilt','wood','wood-scrape','cogs','crt','transit','dialup','pod-hum','breeze','whiteboard','electric','bloop','signal','waterfall'];
  const sources=new Map(manifest.sources.map(source=>[source.id,source]));
  const assets=new Map(manifest.assets.map(asset=>[asset.url,asset]));
  for(const cue of required){
@@ -20,7 +20,7 @@ test('the physical sound pack has verified local CC0 recordings for every cue',a
    assert.ok(data.length>500,path+' is a nonempty clip');
    assert.equal(data.length,asset.bytes);
    assert.equal(createHash('sha256').update(data).digest('hex'),asset.sha256,path);
-   assert.equal(sources.get(asset.source)?.license,'CC0-1.0');
+   assert.ok(['CC0-1.0','CC-BY-3.0'].includes(sources.get(asset.source)?.license));
   }
  }
  assert.ok(manifest.assets.reduce((total,asset)=>total+asset.bytes,0)<512*1024,'small core sound pack');

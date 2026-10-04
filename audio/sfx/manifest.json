@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "license": "CC0-1.0",
+  "license": "CC0-1.0 AND CC-BY-3.0",
   "cues": {
     "mechanical": [
       "/audio/sfx/mechanical-click-1.mp3",
@@ -58,6 +58,21 @@
     ],
     "pod-hum": [
       "/audio/sfx/pod-hum.mp3"
+    ],
+    "whiteboard": [
+      "/audio/sfx/whiteboard-erase-marker.mp3"
+    ],
+    "electric": [
+      "/audio/sfx/electric-static.mp3"
+    ],
+    "bloop": [
+      "/audio/sfx/menu-bloop.mp3"
+    ],
+    "signal": [
+      "/audio/sfx/signal-beeps.mp3"
+    ],
+    "waterfall": [
+      "/audio/sfx/meditation-waterfall.mp3"
     ],
     "breeze": [
       "/audio/sfx/gentle-breeze.mp3"
@@ -373,6 +388,66 @@
       "bytes": 80300
     },
     {
+      "url": "/audio/sfx/whiteboard-erase-marker.mp3",
+      "source": "original",
+      "master": "whiteboard-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.9,
+      "filters": "highpass=f=300,lowpass=f=4200,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.865:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "f43a61da92082b46783739debadee7d048ad89d1c170b1891cca21d8b9982b35",
+      "masterSha256": "d9e768a87004c992dc4260d44342039c982d418e53ad25e4f47a03a793758181",
+      "bytes": 7916
+    },
+    {
+      "url": "/audio/sfx/electric-static.mp3",
+      "source": "original",
+      "master": "electric-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.25,
+      "filters": "highpass=f=1400,lowpass=f=4200,loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.215:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "be024f00c395f157a5af227f0eca594a6d13c9a95129567f81919a53fae54da2",
+      "masterSha256": "ee5be1d09a9142ac8d78b80ce45b4c69fe446ce39cbde2068496c7d7ef807fa3",
+      "bytes": 2732
+    },
+    {
+      "url": "/audio/sfx/menu-bloop.mp3",
+      "source": "original",
+      "master": "bloop-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.22,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.185:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "3ac1c6d17a0bd6ac6c50ef303fdb888cbc49cb642a7a604ab06d725843667017",
+      "masterSha256": "662f7caeead7ce14adf60d17904885670766fe212e28176298df056b7b7a26e7",
+      "bytes": 2540
+    },
+    {
+      "url": "/audio/sfx/signal-beeps.mp3",
+      "source": "original",
+      "master": "signal-original.wav",
+      "seek": 0,
+      "maxSeconds": 0.35,
+      "filters": "loudnorm=I=-22:TP=-3:LRA=7,afade=t=in:st=0:d=0.004,afade=t=out:st=0.31499999999999995:d=0.035",
+      "loopCrossfadeSeconds": null,
+      "sha256": "0bbd26949f9a07ebf88b1caad8192a19aa4507f2506499ea433ee8c03c1967cf",
+      "masterSha256": "97a5c16539be0ee5262d0b4763a8a5b22e68442f93458219d793bb06db254e22",
+      "bytes": 3500
+    },
+    {
+      "url": "/audio/sfx/meditation-waterfall.mp3",
+      "source": "waterfall",
+      "master": "stream-waterfall/stream-waterfall/waterfall1.ogg",
+      "seek": 1,
+      "maxSeconds": 12,
+      "filters": "highpass=f=80,lowpass=f=5500,loudnorm=I=-22:TP=-3:LRA=7",
+      "loopCrossfadeSeconds": 0.5,
+      "sha256": "ff51b4796ae6cde1cdffe289580211b0a943c8c3665bfe8c2c7a7699bca413b4",
+      "masterSha256": "f6c83c65380f3778d068329f7027b7970555d6441c505b9a111f945518030ded",
+      "bytes": 92780
+    },
+    {
       "url": "/audio/sfx/gentle-breeze.mp3",
       "source": "wind",
       "master": "wind.wav",
@@ -463,6 +538,12 @@
       "author": "MOM Inc.",
       "url": "/source.json",
       "license": "CC0-1.0"
+    },
+    {
+      "id": "waterfall",
+      "author": "kurt",
+      "url": "https://opengameart.org/content/stream-sounds",
+      "license": "CC-BY-3.0"
     },
     {
       "id": "wood",
