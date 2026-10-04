@@ -7,7 +7,7 @@
 // scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
 // must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
 import {offAxis} from '../portal/peer.mjs'; // #135: tilt looks round the ship through the portal window
-import {initialScene,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,coachBand,shipPoseAbove,measureShip,openCustomizer} from './ship-scene-domain.mjs';
+import {initialScene,recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,coachBand,shipPoseAbove,measureShip,openCustomizer} from './ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 
 const HASH = '#ship';
@@ -15,6 +15,7 @@ const RECIPE_KEY = 'myr5-recipe-v1';
 const SHIP_SETTINGS_KEY = 'myr5-ship-customization-v1';
 const readJSON = key => { try { const v = JSON.parse(localStorage.getItem(key) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
 
+const savedTint = () => recipeShipTint(readJSON(RECIPE_KEY));
 // Original MYR5's recipe (coach 'supportive') maps to this ship through initialScene().
 const STARTER_SHIP = 'supportive', STARTER_SHIP_URL = '/pod/worlds/starter/supportive.glb';
 const UPGRADE_TEXT = 'Earn ships on your tracks · Download Ships & worlds for all of them';
@@ -28,7 +29,7 @@ function disposeModel(root) {
 
 /** A still (idle hover only) ship + biome backdrop, not the full approach/beam/flash cinematic —
  * used after the first arrival has completed. */
-async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
+async function mountRealShip({ stage, bgEl, bridge, ship, background, tint = null }) {
  const [THREE, { GLTFLoader }] = await Promise.all([import('three'), import('three/addons/loaders/GLTFLoader.js')]);
  bgEl.style.backgroundImage = `url("${bridge.getBackgroundUrl(background)}")`;
  const canvas = document.createElement('canvas'); canvas.className = 'ship-view-canvas'; stage.append(canvas);
@@ -51,7 +52,7 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background }) {
  if (disposed) { disposeModel(loaded.scene); observer.disconnect(); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
  const box = new THREE.Box3().setFromObject(loaded.scene), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
  loaded.scene.position.sub(center);
- const group = new THREE.Group(), model = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); model.rotation.y = SHIP_FACING; model.add(loaded.scene); group.add(model); group.scale.setScalar(fit);
+ const group = new THREE.Group(), model = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); model.rotation.y = SHIP_FACING; model.add(loaded.scene); applyShipTint(model, tint); group.add(model); group.scale.setScalar(fit);
  group.position.set(0, SHIP_ANCHOR_Y, SHIP_REST_Z); group.rotation.set(.08, -.32, 0); scene.add(group);
  // Same hover pose as the arrival scene's end: the whole hull above the coach card.
  const measured = measureShip(THREE, group, camera); let pose;
@@ -121,7 +122,7 @@ async function showStarter({ signedIn, owned, isCurrent, always = false }) {
    if (await offerStarter(isCurrent) && realShip === scene) { scene.dispose(); realShip = null; } if (isCurrent()) offerCustomizer();
    return false;
   }
-  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP });
+  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP, tint: savedTint() });
   if (!isCurrent()) mounted.dispose(); else realShip = mounted;
   return true;
  } catch { await offerStarter(isCurrent); if (isCurrent()) offerCustomizer(); /* no WebGL or model: the wonder and the coach still show */ return false; }
@@ -231,7 +232,7 @@ async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner
    if (!arrived) throw new Error('Ship arrival did not complete'); // the owned ship failed: fall back to the starter below
    fallback.hidden = true; return;
   }
-  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background });
+  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background, tint: /^#[0-9a-f]{6}$/i.test(custom.tint || '') ? custom.tint : savedTint() });
   if (!isCurrent()) { mounted.dispose(); return; }
   realShip = mounted; fallback.hidden = true;
  } catch (error) {

@@ -49,3 +49,21 @@ test('on a 375x812 phone the hover pose also keeps the wings inside the stage wi
  const wide=shipPoseAbove(coachBand({top:0,width:1600,height:1000},{top:360}),measured);
  assert.equal(wide.scale,1,'a wide stage keeps full size when the band allows it');
 });
+
+import { recipeShipTint,applyShipTint } from '../modules/ships/ship-scene-domain.mjs';
+test('the saved ship wins over the personality ship, and falls back to it without one',()=>{
+ assert.equal(initialScene({coach:'analytical',shipId:'mom',styles:{}}).ship,'mom');
+ assert.equal(initialScene({coach:'analytical',styles:{}}).ship,'analytical');
+ assert.equal(initialScene({coach:'analytical',shipId:'bogus',styles:{}}).ship,'supportive');
+});
+test('recipeShipTint reads only a valid hex; null means original materials',()=>{
+ assert.equal(recipeShipTint({shipColor:'#12abEF'}),'#12abEF');
+ assert.equal(recipeShipTint({shipColor:null}),null);assert.equal(recipeShipTint({shipColor:'red'}),null);
+});
+test('applyShipTint tints base colour, keeps glowing materials, and restores originals on null',()=>{
+ const mk=h=>({v:h,getHex(){return this.v},set(x){this.v=typeof x==='string'?parseInt(x.slice(1),16):x}});
+ const hull={color:mk(0x808080),userData:{}},lamp={color:mk(0xffffff),emissive:mk(0xffee88),emissiveIntensity:1,userData:{}};
+ const root={traverse:f=>{f({material:hull});f({material:[lamp]})}};
+ applyShipTint(root,'#ff0000');assert.equal(hull.color.v,0xff0000);assert.equal(lamp.color.v,0xffffff);
+ applyShipTint(root,null);assert.equal(hull.color.v,0x808080);
+});

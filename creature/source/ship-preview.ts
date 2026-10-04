@@ -3,7 +3,7 @@
 // Its own small renderer draws only while the panel is on screen.
 import * as T from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {SHIP_FACING} from '../../modules/ships/ship-scene-domain.mjs';
+import {SHIP_FACING,applyShipTint} from '../../modules/ships/ship-scene-domain.mjs';
 
 export type ShipBridge={ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void};
 
@@ -29,7 +29,7 @@ export function mountShipPreview(host:HTMLElement,bridge:ShipBridge){
   });model.catch(()=>models.delete(id));models.set(id,model);}
   return model;
  }
- function tint(color:string){shown?.traverse(node=>{for(const m of ([] as T.Material[]).concat((node as T.Mesh).material||[]))if((m as T.MeshStandardMaterial).color){(m as T.MeshStandardMaterial).color.set(color);m.needsUpdate=true;}});}
+ function tint(color:string){if(shown)applyShipTint(shown,color==='#ffffff'?null:color);}
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
  function tick(now:number){
   if(disposed)return;raf=requestAnimationFrame(tick);

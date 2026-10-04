@@ -4,7 +4,11 @@ const PART_WEIGHTS=Object.freeze({body:3,head:2,eye:1,collar:1,arms:1,feet:1});
 export const normalizeShip=value=>SHIP_STYLES.includes(value)?value:'supportive';
 export function normalizeBackground(value){if(typeof value==='number'&&Number.isInteger(value))return BIOMES[value]||BIOMES[0];return BIOMES.includes(value)?value:BIOMES[0];}
 export function dominantFamily(design={}){const styles=design.styles&&typeof design.styles==='object'?design.styles:design,body=Number.isInteger(Number(styles.body))?Number(styles.body):0,score=new Map();for(const [part,weight]of Object.entries(PART_WEIGHTS)){const value=Number(styles[part]);if(Number.isInteger(value)&&value>=0)score.set(value,(score.get(value)||0)+weight)}if(!score.size)return body;let best=body,bestScore=score.get(body)||-1;for(const [family,value]of score)if(value>bestScore||(value===bestScore&&family===body)){best=family;bestScore=value}return best;}
-export function initialScene(design={}){return Object.freeze({ship:normalizeShip(design.coach),background:normalizeBackground(dominantFamily(design)),coach:design});}
+/** The tint the recipe saved for the coach's ship; null keeps the ship's own materials. */
+export const recipeShipTint=design=>/^#[0-9a-f]{6}$/i.test(design?.shipColor||'')?design.shipColor:null;
+/** Multiply the hull's base colours by `color` (shading, textures and glowing windows/lights stay); null restores the originals. */
+export function applyShipTint(root,color){const hex=/^#[0-9a-f]{6}$/i.test(color||'')?color:null;root?.traverse(node=>{for(const m of [].concat(node.material||[])){if(!m?.color)continue;if(m.userData.shipBase===undefined)m.userData.shipBase=m.color.getHex();if(m.emissive&&m.emissive.getHex()&&m.emissiveIntensity>0)continue;m.color.set(hex??m.userData.shipBase);m.needsUpdate=true;}});}
+export function initialScene(design={}){return Object.freeze({ship:normalizeShip(design.shipId??design.coach),background:normalizeBackground(dominantFamily(design)),coach:design});}
 export function resolveSceneSwap(current,next={}){return Object.freeze({ship:next.ship===undefined?normalizeShip(current.ship):normalizeShip(next.ship),background:next.background===undefined?normalizeBackground(current.background):normalizeBackground(next.background),coach:next.coach===undefined?current.coach:next.coach});}
 // #145 (Ian 2026-09-23): the ship shows its stern to the viewer, flies in over their head and settles nearer the
 // camera than the coach; the beam waits until it has landed. The duration knobs: the flight, then the beam's charge.

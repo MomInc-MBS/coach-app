@@ -5,7 +5,7 @@
 // front of a portal plane to clip (no oblique near plane needed). On by default (R17); localStorage.myr5PortalPeek = "0" turns it off.
 // Served unbundled (dynamic import from portal.mjs on the first peek): plain JS, no .ts, no __MYR5_* defines.
 import * as THREE from 'three';
-import {SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,shipPoseAbove,measureShip} from '../ships/ship-scene-domain.mjs';
+import {recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,shipPoseAbove,measureShip} from '../ships/ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 
 export const RT_SCALE=Object.freeze({high:1,medium:.55,low:.35});
@@ -88,8 +88,9 @@ async function shipSource(){
  scene.add(new THREE.HemisphereLight(0xe9d9ff,0x23162d,2.5));
  const key=new THREE.DirectionalLight(0xffefca,4.2);key.position.set(-3,5,4);scene.add(key);
  const rim=new THREE.DirectionalLight(0xb58cff,3.2);rim.position.set(4,2,-3);scene.add(rim);
- const model=gltf.scene.clone(),box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());
+ const model=gltf.scene.clone(true),box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());
  model.position.sub(box.getCenter(new THREE.Vector3()));
+ try{applyShipTint(model,recipeShipTint(JSON.parse(localStorage.getItem('myr5-recipe-v1')||'{}')));}catch{} // the coach's saved ship colour (the ship itself stays the starter, see above)
  const turn=new THREE.Group(),group=new THREE.Group(),fit=2.25/(Math.max(size.x,size.y,size.z)||1);
  turn.rotation.y=SHIP_FACING;turn.add(model);group.add(turn);group.scale.setScalar(fit);
  group.position.set(0,SHIP_ANCHOR_Y,SHIP_REST_Z);group.rotation.set(.08,-.32,0);scene.add(group);
