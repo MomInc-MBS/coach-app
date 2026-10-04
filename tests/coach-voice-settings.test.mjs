@@ -25,6 +25,8 @@ test('voice settings restore and persist an explicit local style choice',()=>{
   const [wrap,hint]=row.children,select=wrap.children[1];
   assert.equal(applied[0],'warm');assert.equal(select.value,'warm');
   assert.deepEqual(select.children.map(option=>option.value),Object.keys(COACH_VOICE_VARIANTS));
+  assert.equal(hint.textContent,'Choose a style, then tap Test voice.');
+  assert.match(wrap.style.cssText,/color:inherit/);
   assert.ok(testButton.attributes['aria-describedby']);
   select.value='light';select.listeners.change();
   assert.equal(applied[1],'light');assert.equal(storage.get(COACH_VOICE_PREFERENCE),'light');
@@ -32,18 +34,24 @@ test('voice settings restore and persist an explicit local style choice',()=>{
  }finally{globalThis.document=previousDocument;globalThis.localStorage=previousStorage;}
 });
 
-test('local voice treatments produce distinct WebAudio chains and reject unknown styles',()=>{
- const audio=new RobotAudio(),made=[];
- const context={
-  createBiquadFilter(){const node={type:'',frequency:{value:0},Q:{value:0},gain:{value:0},disconnect(){},connect(){}};made.push(node);return node;},
-  createWaveShaper(){const node={curve:null,oversample:'',disconnect(){},connect(){}};made.push(node);return node;}
+test('each style reaches the output and cancellation disconnects its full graph',async()=>{
+ const created=[];const destination={name:'destination'};
+ const node=(name,props={})=>({name,connections:[],disconnected:false,connect(target){this.connections.push(target);},disconnect(){this.disconnected=true;},...props});
+ const context={state:'running',destination,
+  createBufferSource(){const source=node('source',{playbackRate:{value:1},detune:{value:0},start(){this.started=true;},stop(){this.stopped=true;}});created.push(source);return source;},
+  createBiquadFilter(){const filter=node('filter',{type:'',frequency:{value:0},Q:{value:0},gain:{value:0}});created.push(filter);return filter;},
+  createWaveShaper(){const shaper=node('waveshaper',{curve:null,oversample:''});created.push(shaper);return shaper;}
  };
- audio.context=context;
- const robot=audio.makeVoiceChain(COACH_VOICE_VARIANTS.robot),robotTypes=robot.map(node=>node.type??'waveshaper');
- const clear=audio.makeVoiceChain(COACH_VOICE_VARIANTS.clear),clearTypes=clear.map(node=>node.type);
- const warm=audio.makeVoiceChain(COACH_VOICE_VARIANTS.warm),warmTypes=warm.map(node=>node.type);
- assert.notDeepEqual(robotTypes,clearTypes);assert.notDeepEqual(clearTypes,warmTypes);
- assert.ok(COACH_VOICE_VARIANTS.light.rate>COACH_VOICE_VARIANTS.clear.rate);
- assert.equal(audio.variant,DEFAULT_COACH_VOICE);assert.equal(audio.setVariant('warm'),true);assert.equal(audio.mode,'Warm');
- assert.equal(audio.setVariant('human-voice'),false);assert.equal(audio.variant,'warm');
+ const audio=new RobotAudio();audio.context=context;audio.unlock=()=>true;audio.manifest={phrases:{'Coach ready.':'/unused'}};audio.cache.set('Coach ready.',{length:1,numberOfChannels:1});
+ const reaches=(start,target,seen=new Set())=>start===target||(!seen.has(start)&&(seen.add(start),start.connections.some(next=>reaches(next,target,seen))));
+ for(const id of Object.keys(COACH_VOICE_VARIANTS)){
+  assert.equal(audio.setVariant(id),true);const before=created.length;const playing=audio.play('Coach ready.');
+  await new Promise(resolve=>setImmediate(resolve));
+  const run=created.slice(before),source=run[0];
+  assert.equal(source.started,true,id+' source started');assert.equal(reaches(source,destination),true,id+' graph reaches destination');
+  if(id==='robot'){assert.equal(run.length,1,'the default style keeps direct playback');assert.equal(COACH_VOICE_VARIANTS[id].rate,1);assert.equal(COACH_VOICE_VARIANTS[id].detune,0);}
+  audio.stop();assert.equal(await playing,true,id+' cancellation resolves');
+  assert.ok(run.every(item=>item.disconnected),id+' cancellation disconnects source and every effect');
+ }
+ assert.equal(audio.mode,'Light');assert.equal(audio.setVariant('human-voice'),false);assert.equal(audio.variant,'light');
 });

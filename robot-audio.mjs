@@ -5,7 +5,7 @@ export const VOICE_MANIFEST='/voice/manifest.json?v='+BUILD_ID;
 export const VOICE_CACHE='myr5-voice-approved-v2';
 // Local playback treatments of approved clips; no OS voice or network speech service.
 export const COACH_VOICE_VARIANTS=Object.freeze({
- robot:{label:'Robot',rate:.94,detune:-150,filter:'robot'},
+ robot:{label:'Robot',rate:1,detune:0,filter:null},
  clear:{label:'Clear',rate:1.04,detune:0,filter:'clear'},
  warm:{label:'Warm',rate:.96,detune:-250,filter:'warm'},
  light:{label:'Light',rate:1.10,detune:250,filter:'light'}
@@ -44,7 +44,8 @@ export class RobotAudio {
     if(this.context.state!=='running'){this.onMode('Tap Test voice to enable sound');this.current=null;return false;}
      const profile=COACH_VOICE_VARIANTS[this.variant]??COACH_VOICE_VARIANTS[DEFAULT_COACH_VOICE];
      const source=this.context.createBufferSource();source.buffer=buffer;if(source.playbackRate)source.playbackRate.value=profile.rate;if(source.detune)source.detune.value=profile.detune;
-     const nodes=this.makeVoiceChain(profile);source.connect(nodes[0]??this.context.destination);if(nodes.length)nodes.at(-1).connect(this.context.destination);
+     const nodes=this.makeVoiceChain(profile),chain=[source,...nodes,this.context.destination];
+     for(let i=0;i<chain.length-1;i++)chain[i].connect(chain[i+1]);
      this.onMode('Voice: '+profile.label);
      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;source.disconnect();nodes.forEach(node=>node.disconnect());if(run===this.generation)this.current={abort};resolve();};this.current={source,abort,finish};source.onended=finish;source.start();});
    }
@@ -53,6 +54,7 @@ export class RobotAudio {
  }
  makeVoiceChain(profile){
   const ctx=this.context,chain=[];
+  if(!profile.filter)return chain;
   if(typeof ctx.createBiquadFilter!=='function')return chain;
   const filter=(type,frequency,gain=0,q=0.7)=>{const node=ctx.createBiquadFilter();node.type=type;node.frequency.value=frequency;node.Q.value=q;if(node.gain)node.gain.value=gain;chain.push(node);};
   if(profile.filter==='robot'){
