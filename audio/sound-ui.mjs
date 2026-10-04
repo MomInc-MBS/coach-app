@@ -19,7 +19,7 @@ export function mountPhysicalSoundUI(){
  }
  const routeControl=(event,doc)=>{
   const target=event.target;if(target?.nodeType!==1)return;
-  const el=target.closest(CONTROL);if(!el||el.disabled||el.closest('.physical-sound-settings')||el.closest('.control-board')||el.id==='toggleVoice'||el.id==='portalOverlay')return;
+  const el=target.closest(CONTROL);if(!el||el.disabled||el.closest('.physical-sound-settings')||el.matches('#exerciseDial,#difficultySlider,#harder,#easier,#toggleVoice')||el.id==='portalOverlay')return;
   if(el.matches('input[type="range"],input[type="color"],select'))return;
   sound.play(el.matches('#toggleVoice,[role="switch"]')?'switch':'mechanical');
  };

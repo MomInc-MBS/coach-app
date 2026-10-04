@@ -129,6 +129,15 @@ test('ambient bed stops under dialogs and tracking; grass portal uses breeze wit
  documentRef.body.dataset.tracking='false';sound.syncAmbience();assert.ok(sound.ambience.sources.some(source=>source.buffer===hum));sound.dispose();
 });
 
+test('pod, grimoire, and pod settings dialogs keep ambience while rooms suppress it',()=>{
+ let openId=null;const documentRef={hidden:false,body:{dataset:{screen:'pod'}},querySelector:selector=>openId&&!selector.includes(`#${openId}`)?{id:openId}:null};
+ const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef,windowRef:null});
+ sound.context=new Context();sound.duck=sound.context.createGain();sound.master=sound.context.createGain();
+ for(const id of ['portalWorkoutHome','portalMenu','settings']){openId=id;sound.syncAmbience(true);assert.ok(sound.ambience,`${id} keeps the ship bed`);}
+ openId='meditationPanel';sound.syncAmbience();assert.equal(sound.ambience,null);
+ openId='portalWorkoutHome';documentRef.body.dataset.tracking='true';sound.syncAmbience();assert.equal(sound.ambience,null,'active workout silences the ship bed');sound.dispose();
+});
+
 test('malformed manifest is retried after backoff instead of cached forever',async()=>{
  const originalFetch=globalThis.fetch;let valid=false;
  globalThis.fetch=async url=>({ok:true,json:async()=>valid?{version:1,cues:{mechanical:['/audio/sfx/mechanical-click-1.mp3']}}:{version:1,cues:{}},arrayBuffer:async()=>new ArrayBuffer(20)});

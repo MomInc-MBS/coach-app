@@ -144,7 +144,7 @@ export class PhysicalSound{
  }
  syncAmbience(force=false){
   if(!this.context||this.context.state!=='running')return;
-  const body=this.document?.body,blocked=this.document?.querySelector?.('dialog[open]')||body?.dataset?.tracking==='true'||body?.dataset?.cameraWorkout==='true'||body?.dataset?.shipView==='true'||body?.dataset?.screen==='rest';
+  const body=this.document?.body,blocked=this.document?.querySelector?.('dialog[open]:not(#portalWorkoutHome):not(#portalMenu):not(#settings)')||body?.dataset?.tracking==='true'||body?.dataset?.cameraWorkout==='true'||body?.dataset?.shipView==='true'||body?.dataset?.screen==='rest';
   const scene=this.document?.hidden||this.muted||!this.volume||blocked?'off':this.scene;
   const key=scene==='portal'?`portal:${this.board}`:scene;
   if(!force&&key===this.ambienceKey&&this.ambience)return;
