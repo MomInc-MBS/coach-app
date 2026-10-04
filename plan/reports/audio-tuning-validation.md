@@ -11,3 +11,7 @@ Review caught and corrected two issues before publication: meditation's borrowed
 Validation: 35 focused/regression tests passed. Browser checks confirmed running sample playback for electric static, dial-up, signal beeps, internal bloop and both whiteboard open/category changes. Final package, meditation playback, deployment receipt and live asset verification follow below.
 
 Integration branch: `codex/audio-tuning`, extending `codex/audio-live`. Other workers should include both branches before their next release. Production is checked again before deployment to avoid overwriting a newer worker release.
+
+Final build `23c97ea0197585897a1b` passed. Core offline inventory: 7,792,088 bytes, below 8 MiB. The final dock browser test passed. Live-gesture browser playback confirmed the 11.5-second waterfall loop with the actual borrowed coach's ship-view flag set; the queued approved Begin clips were checked for all movements. Automated playback verification does not replace listening and timbre tuning on speakers.
+
+Deployed to production Worker version `fa26f3f4-8413-44bb-b698-095beffe3f43`, preserving existing settings. Prior version: `d4f9401e-2652-4d7c-ba02-a9f7fd1cdc1b`. Live build, release health and every clip checksum/byte count are verified in `audio-tuning-live-assets.json`.
