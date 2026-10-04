@@ -95,6 +95,10 @@ After the merge: `npm run build`, run the gate with concurrency 4 and solo re-ru
 - **War Room:** add a "Coach" body category to the Gala creator (`pod/gala-avatar.js`, `creature/source/war-room-gala.ts`).
   - Each coach shape is locked until that coach body is unlocked. It reuses the body unlock store (`track-placements.ts` / `unlock-ledger.mjs`).
   - A locked shape shows as a silhouette.
+- **Four-legged coaches become pets (Ian, 3 Oct):** the 10 coaches in the Four-legged family do not become body shapes. Their 64-bit sprites go into the War Room `pet` section (`pod/gala-avatar.js`, pets drawn beside the avatar), in a new "Coach pets" group.
+  - Each one unlocks with its coach body, like the other shapes.
+  - They are drawn at pet scale. The pipeline renders them side-on, not front-on, so the four legs read.
+  - The other 61 coaches stay body shapes.
 - **Review:** Fable rejects any sprite that doesn't read at 1×, and the pipeline re-renders those with tuned camera and lighting.
 
 ### L8 Coach ship can be swapped and coloured in the Species menu (Sonnet)
