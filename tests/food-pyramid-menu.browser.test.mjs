@@ -71,10 +71,10 @@ test('#3/#38 Food is one full-screen pyramid scene: no Camera button or lists on
  assert.deepEqual(returned,{id:'mealsPanel',open:true,dialog:true},'myr5Menus.food() opens Food and returns its dialog');
  await ready(page);
  assert.equal(await page.evaluate(()=>window.pyramidPaint.FOOD),'SCAN A MEAL');
- // Framed portal: a 15px metal rail insets the dialog and the dock rides inside it at the bottom, lit for Food.
+ // Framed portal: a 15px metal rail insets the dialog and the shared 88px console sits beneath it, lit for Food.
  const rail=15,barTop=(await box(page,'#coachDock')).top;
- assert.equal(barTop,812-rail-64);
- assert.deepEqual(await box(page,'#mealsPanel'),{left:rail,top:rail,right:375-rail,bottom:812-rail,width:375-2*rail,height:812-2*rail});
+ assert.equal(barTop,812-88);
+ assert.deepEqual(await box(page,'#mealsPanel'),{left:rail,top:rail,right:375-rail,bottom:812-rail-88,width:375-2*rail,height:812-2*rail-88});
  // The flip switch is lifted clear of the in-dialog dock.
  assert((await box(page,'#pyramidScanner .pyramid-flip')).bottom<=barTop,'the flip switch sits above the dock');
  assert.equal(await page.evaluate(()=>{const b=document.querySelector('#coachDock [data-route="food"]'),r=b.getBoundingClientRect();return b.getAttribute('aria-current')==='page'&&document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===b;}),true,'the bar is lit for Food and tappable');
@@ -321,12 +321,12 @@ test('portal Food peers at the whole pyramid until a decoded photo enters fullsc
  });
  await page.waitForFunction(()=>document.querySelector('#mealsPanel.portal-fullscreen'));
  // Fullscreen keeps the 15px rail round the panel (portal.css dialog.portal-framed.portal-fullscreen); only the photo scene reaches the screen's edge.
- assert.deepEqual(await box(page,'#mealsPanel'),{left:15,top:15,right:360,bottom:797,width:345,height:782});
+ assert.deepEqual(await box(page,'#mealsPanel'),{left:15,top:15,right:360,bottom:709,width:345,height:694});
  assert.deepEqual(await box(page,'#mealScanStage'),{left:0,top:0,right:375,bottom:812,width:375,height:812});
  assert.equal(await page.locator('#mealsPanel').evaluate(el=>getComputedStyle(el).clipPath),'none');
  // R7 (Ian 26 Sept): full screen keeps the energy, round the screen's edge; R16/R17: the frame stays as the 15px rail (portal-housing-fullscreen).
  assert.equal(await page.locator('#portalChrome').evaluate(el=>el.matches(':popover-open')&&el.classList.contains('portal-housing-fullscreen')&&!!el.querySelector('.portal-aura:not(.shaped)')),true);
- assert.equal(await page.locator('#coachDock').isVisible(),true,'R16/R17: the dock stays up inside the rail on the photo scene (foodFrame keeps the pyramid above it)');
+ assert.equal(await page.locator('#coachDock').isVisible(),true,'R16/R17: the shared console stays below the rail on the photo scene (foodFrame keeps the pyramid above it)');
  await page.waitForFunction(()=>document.getElementById('mealScanStage').hidden);
  assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-fullscreen')),true,'recognition result stays fullscreen');
  await page.screenshot({path:resolve('.frames','food-photo-fullscreen.png')});

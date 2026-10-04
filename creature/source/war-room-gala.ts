@@ -1,6 +1,6 @@
 // The War Room's 3D character bay: the player's own 64-bit Gala character (the saved mominc-avatar-v1 look,
-// drawn by the shared Gala renderer and performer) stands on the cage room's pedestal. The coach, its recipe
-// and its customizer are never loaded here. The room's bays open the Gala creator's existing menus: the weapon
+// drawn by the shared Gala renderer and performer) stands on the cage room's pedestal. Coach sprites share
+// the saved coach's colours and body ownership; no coach models or customizer are loaded. The room's bays open the Gala menus: the weapon
 // rack picks the weapon, the animal cages the pet, the mirror the alien features, the centre station the clothes.
 // Choices save to this device like every other Gala look change; tiers stay behind the training that earned them.
 import * as T from 'three';
@@ -8,6 +8,7 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {mountCage,cagePacketReady,cageStyle,SECTIONS,type CageSection,type CageViewer} from './cage';
 import {GALA_KEY,loadGala} from '../../pod/identity.mjs';
+import {loadWarRoomCoaches} from './war-room-coaches';
 
 type Look={schema:string;version:number;name:string;dye:number;parts:Record<string,number>;weapon?:{type:string;tier:number}};
 type Section={id:string;label:string;note:string;names:string[];choices:number[]};
@@ -57,11 +58,13 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
  sprite.position.y=H/2-H*11/168;sprite.name='gala-character';stage.scene.add(sprite);
  stage.bodyBounds.set(new T.Vector3(-Wd*.3,0,-.3),new T.Vector3(Wd*.3,H*144/168,.3));
  let saved:Look,look:Look,performer:any,mode:{name:'idle'|'face'|'walk';since:number}={name:'idle',since:performance.now()},idleSince=performance.now(),frame=0,last=0,disposed=false,open:Bay|null=null;
+ let coaches:Awaited<ReturnType<typeof loadWarRoomCoaches>>|null=null;
+ void loadWarRoomCoaches(doc).then(value=>{if(!disposed){coaches=value;load();}}).catch(()=>{if(!disposed)tell('Coach sprites could not load. Reopen the War Room to retry.');});
  function load(){
   let storage:Storage|undefined;try{storage=localStorage;}catch{}
   saved=loadGala(storage,A).look;look=structuredClone(saved);
   const chosen=look.weapon||{type:'rapier',tier:0};look.weapon=W.unlocked(chosen)?chosen:{type:chosen.type,tier:0};
-  performer=P.create(look);stage.renderer.domElement.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)} in the War Room`);
+  performer=P.create(look,coaches?{draw:(canvas:any,value:any,options:any)=>coaches!.draw(A.draw,canvas,value,options),hasPet:coaches.hasPet}:{});stage.renderer.domElement.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)} in the War Room`);
   if(open)showBay(open);
  }
  const touch=()=>{idleSince=performance.now();if(mode.name==='walk')mode={name:'idle',since:idleSince};};
@@ -100,9 +103,9 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   open=section;panel.hidden=false;panel.dataset.galaBay=section;
   const title={pets:'Animal cages · Pet',weapons:'Weapon rack · Weapon',mirror:'Mirror · Alien features',clothing:'Centre station · Clothes'}[section];
   heading.textContent=title;
-  if(section==='pets')body.replaceChildren(...sections(['pet']));
+  if(section==='pets')body.replaceChildren(...sections(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));
   else if(section==='weapons')body.replaceChildren(weaponForm());
-  else if(section==='mirror')body.replaceChildren(...sections(MIRROR));
+  else if(section==='mirror')body.replaceChildren(...sections(MIRROR),...(coaches?[coaches.picker('body',load)]:[]));
   else{
    const dye=el('label','Silk colour'),select=el('select');select.dataset.galaPart='dye';
    A.dyes.forEach((_:string,i:number)=>{const option=el('option',`Silk ${i+1}`);option.value=String(i);select.append(option);});select.value=String(saved.dye);

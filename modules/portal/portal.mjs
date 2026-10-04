@@ -590,7 +590,7 @@ function handOver(dialog){
  const run=++sequence;
  dialog.addEventListener('close',()=>closed(dialog,{pts:backPts(id),color:menu?.color||'#b026ff'},()=>run===sequence&&!lifecycle.signal.aborted),{once:true});
 }
-function backPts(id){const {pattern}=restFace();if(!pattern)return pattern;const sid=id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect';return insetPts(shapeClipPts(sid,pattern),sid);}
+function backPts(id){const {pattern}=restFace();if(!pattern)return pattern;const sid=id&&SHAPES[id]&&id!=='x'&&id!=='cross'?id:'rect';return boardId==='cogs'?shapeClipPts(sid,pattern):insetPts(shapeClipPts(sid,pattern),sid);}
 function stowBoard(){visibilityRun++;portalHome.hidden=true;if(boardBtn)boardBtn.hidden=false;endPhase();board?.heal();board?.pause();boardShown=false;syncEnergy();}
 // A destination from the portal closed: back out to the quilt (the reverse dive, or #131's fizzle for a hole), unless the
 // frame already moved on (handOver) or the bar went to another route (it is the active route now).

@@ -13,11 +13,11 @@
   let remaining=Math.max(0,time)%scenes.reduce((sum,scene)=>sum+scene.duration,0);
   for(const scene of scenes){if(remaining<scene.duration)return {...scene,time:remaining,progress:remaining/scene.duration};remaining-=scene.duration;}
  }
- function create(look){
+ function create(look,{draw=A.draw,hasPet=false}={}){
   const body=document.createElement('canvas'),pet=document.createElement('canvas'),weapon=document.createElement('canvas');
-  const scenes=playlist(look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity;
+  const scenes=playlist(hasPet?{...look,parts:{...look.parts,pet:1}}:look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity;
   weapon.width=40;weapon.height=72;if(hasWeapon)W.draw(weapon.getContext('2d'),look.weapon);
-  A.draw(pet,look,{base:false,weapon:false,petOnly:true});let lastPose='';
+  draw(pet,look,{base:false,weapon:false,petOnly:true});let lastPose='';
   function paint(canvas,time=0,still=false){
    if(canvas.width!==160||canvas.height!==168){canvas.width=160;canvas.height=168;}
    const specialPlaying=hasWeapon&&window.GalaWeaponMotion&&window.performance.now()-specialAt<(window.GalaWeaponMotion.abilityFor(look.weapon)?.animationMs||0);
@@ -26,7 +26,7 @@
    const seconds=scene.time/1000,wave=Math.sin(seconds*TAU*1.15),blink=!still&&(scene.name==='face'?(seconds>1.5&&seconds<1.68)||(seconds>3.2&&seconds<3.37):(time%4900>4570&&time%4900<4710));
    const pose={};if(scene.name==='walk')pose.walk=wave;if(scene.name==='pet')pose.petting=wave;if(scene.name==='weapon')pose.weapon=true;
    const poseKey=JSON.stringify([blink,scene.name,scene.name==='walk'||scene.name==='pet'?Math.round(wave*10):0]);
-   if(poseKey!==lastPose){A.draw(body,look,{base:false,weapon:false,companion:false,prop:scene.name!=='weapon',blink,pose});lastPose=poseKey;}
+   if(poseKey!==lastPose){draw(body,look,{base:false,weapon:false,companion:false,prop:scene.name!=='weapon',blink,pose});lastPose=poseKey;}
    let offset=0,flip=false,zoom=0;
    if(scene.name==='walk'){
     if(seconds<2.6){offset=170*ease(seconds/2.6);flip=true;}
@@ -42,7 +42,7 @@
     ctx.drawImage(body,0,70,32,26,32,118+wave*2,48,39);
     ctx.drawImage(body,32,70,32,26,80,118-wave*2,48,39);
    }else ctx.drawImage(body,17*zoom,10*zoom,64-34*zoom,96-66*zoom,32-24*zoom,13-3*zoom+bob,96+48*zoom,144);
-   if(look.parts.pet&&zoom<1){
+   if((look.parts.pet||hasPet)&&zoom<1){
     ctx.globalAlpha=1-zoom;const affection=scene.name==='pet'?Math.max(0,wave)*1.3:0;ctx.drawImage(pet,32,13-affection,96,144);ctx.globalAlpha=1;
     if(scene.name==='pet'){const rise=(seconds%1.25)/1.25,hx=45,hy=113-rise*18;ctx.globalAlpha=Math.sin(rise*Math.PI)*.85;ctx.fillStyle='#ff97c2';ctx.fillRect(hx-3,hy-2,3,3);ctx.fillRect(hx+1,hy-2,3,3);ctx.fillRect(hx-2,hy+1,5,2);ctx.fillRect(hx,hy+3,1,1);ctx.globalAlpha=1;}
    }

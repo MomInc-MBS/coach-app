@@ -25,6 +25,11 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;p
 .gala-bay-panel>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 10px}
 .gala-bay-panel label{display:flex;flex-direction:column;gap:2px;font-size:12px}.gala-bay-panel select{min-height:44px;width:100%}
 .gala-weapon{display:contents}.gala-bay-panel .help{grid-column:1/-1;margin:2px 0;font-size:12px;color:var(--muted)}
+.gala-coach-choices{grid-column:1/-1;min-width:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;border:1px solid #6c74ae;padding:8px}
+.gala-coach-choices button{min-height:44px;min-width:0;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;overflow-wrap:anywhere}
+.gala-coach-choices button[aria-pressed=true]{outline:2px solid #cdb3ff;outline-offset:-2px}
+.gala-coach-choices button:disabled{opacity:.65}.gala-coach-choices canvas{width:auto;height:96px;max-width:100%;image-rendering:pixelated}
+.gala-coach-choices canvas[height="36"]{height:36px;width:48px}
 
 /* Controls: a compact, collapsed-by-default drawer that overlays the bay, pinned above the bottom safe area. */
 .controls-drawer{position:absolute;left:0;right:0;bottom:0;z-index:3;max-height:70vh;overflow:auto;border-left:0;border-right:0;border-bottom:0;padding:0 12px env(safe-area-inset-bottom)}

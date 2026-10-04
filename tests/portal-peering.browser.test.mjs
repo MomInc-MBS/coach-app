@@ -216,6 +216,23 @@ test('release 5: switching routes from the bar while a destination is framed mov
  }finally{await context.close();}
 });
 
+test('R21 Cogs route handover returns through manufactured seams and heals the board',{timeout:180000},async()=>{
+ const {context,page}=await openApp(browser,base);
+ try{
+  await page.evaluate(async()=>{await window.myr5Portal.board('cogs');const board=window.myr5Portal.current();window.__cogsCuts=[];const cut=board.cut;board.cut=function(points,...args){window.__cogsCuts.push(points);return cut.call(this,points,...args);};window.__cogsExpected=(await import('/modules/portal/portal-shapes.mjs')).SHAPES.down[0].points.map(([u,v])=>{const p=board.patternRect(),f=board.faceRect();return [(p.left+p.width*u-f.left)/f.width,(p.top+p.height*v-f.top)/f.height];});window.run=window.myr5Portal.open('up');});
+  await page.evaluate(()=>window.run);
+  await page.locator('#coachDock [data-route="achievements"]').click();
+  await page.waitForSelector('.ach-board[open]');
+  await page.locator('.ach-close').click();
+  await quiltHome(page);
+  const result=await page.evaluate(()=>({cuts:window.__cogsCuts,expected:window.__cogsExpected,board:document.querySelector('#portalHome').dataset.board}));
+  assert.equal(result.board,'cogs');assert.ok(result.cuts.length>=2,'entry and handover return both cut the actual board');
+  const actual=result.cuts.at(-1),expected=result.expected;
+  assert.equal(actual.length,expected.length);
+  for(let i=0;i<expected.length;i++)for(let axis=0;axis<2;axis++)assert.ok(Math.abs(actual[i][axis]-expected[i][axis])<1e-6,'return uses the exact manufactured down contour');
+ }finally{await context.close();}
+});
+
 test('iOS tilt permission waits for the Allow chip tap',{timeout:90000},async()=>{
  const {context,page}=await openApp(browser,base);
  try{

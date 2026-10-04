@@ -62,14 +62,29 @@ test('a guest dresses their Gala character from the War Room bays at 375×812, w
  assert.equal((await look(page)).parts.pet,Number(pet));
 
  // Mirror → alien physical changes.
- await tap(page,'mirror');
+ await page.locator('[data-cage-section="mirror"]').click();
  await page.waitForSelector('.gala-bay-panel[data-gala-bay="mirror"]:not([hidden])');
  assert.deepEqual(await page.locator('.gala-bay-panel [data-gala-part]').evaluateAll(s=>s.map(x=>x.dataset.galaPart)),['body','skin','face','hair','facial']);
  const skin=await page.locator('[data-gala-part="skin"] option').nth(2).getAttribute('value');
  await page.selectOption('[data-gala-part="skin"]',skin);
  assert.equal((await look(page)).parts.skin,Number(skin));
+ // R21: the rendered coach choices share the customizer's body ownership, and persist separately from Gala clothes.
+ await page.waitForSelector('.gala-coach-choices [data-coach-sprite="myr5"]');
+ assert.equal(await page.locator('.gala-coach-choices [data-coach-sprite]').count(),58);
+ assert.ok(await page.locator('.gala-coach-choices button:disabled').count()>0,'unearned bodies stay locked');
+ const before=await page.locator('.gala-bay-stage canvas').screenshot();
+ await page.locator('[data-coach-sprite="myr5"]').click();
+ await page.waitForTimeout(150);
+ assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-war-room-coaches-v1')).body),'myr5');
+ assert.notDeepEqual(await page.locator('.gala-bay-stage canvas').screenshot(),before,'equipping the coach changes the actual stage');
+ await page.reload();await page.waitForFunction(()=>window.warRoomGala?.cage&&window.warRoomGala.stage.renderer.info.render.triangles>140000);await page.waitForSelector('.cage-bays:not([hidden])');await page.evaluate(()=>window.warRoomGala.showBay('mirror'));
+ await page.waitForSelector('[data-coach-sprite="myr5"][aria-pressed="true"]');
+ await page.evaluate(()=>window.warRoomGala.showBay('pets'));
+ assert.equal(await page.locator('.gala-coach-choices [data-coach-sprite]').count(),9,'the accepted four-legged coaches live in Coach pets');
+ const petChoice=page.locator('.gala-coach-choices [data-coach-sprite]:not(:disabled)').first(),petId=await petChoice.getAttribute('data-coach-sprite');
+ await petChoice.click();assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-war-room-coaches-v1')).pet),petId);
  // Centre station → clothes.
- await tap(page,'clothing');
+ await page.locator('[data-cage-section="clothing"]').click();
  await page.waitForSelector('.gala-bay-panel[data-gala-bay="clothing"]:not([hidden])');
  const torso=await page.locator('[data-gala-part="torso"] option').nth(1).getAttribute('value');
  await page.selectOption('[data-gala-part="torso"]',torso);
