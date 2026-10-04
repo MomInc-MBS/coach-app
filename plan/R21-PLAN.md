@@ -103,12 +103,20 @@ After the merge: `npm run build`, run the gate with concurrency 4 and solo re-ru
 - **Saving:** save `shipId` and `shipColor` in the recipe, with defaults equal to today's behaviour; `parseRecipe` gets the default.
 - **Where the choice applies:** the home portal ship, the summon scene and ship-view all read the saved choice.
 
-### L9 XP: abilities unlock by level (blocked until the interview with Ian)
-- **Today:**
-  - Weapon tiers unlock by per-muscle active days and XP (`pod/gala-weapons.js:4-10`).
-  - Specials need tier ≥4 (`weapon-evolution.mjs:26`) and also combat level ≥3 (`combat-config.mjs:15-19`).
-- **Target:** a single level ladder that drives ability unlocks.
-- **Process:** Claude interviews Ian, writes `plan/XP-LEVELS.md`, then Sonnet implements it and Haiku updates the tests and strings.
+### L9 XP: abilities unlock by level (decided with Ian, 3 Oct)
+- **One global player level.** Every workout feeds one XP bar.
+- **XP earned:** a day bonus plus XP per set. The defaults are 100 XP per active day and 10 XP per logged set. Kimi tunes these against the curve.
+- **21 levels.** Level N unlocks weapon tier N (Field … Antimatter) for **all** weapons. This replaces the per-muscle days/XP gate in `pod/gala-weapons.js:5-10`.
+- **Curve:** fast at the start, slow later.
+  - Level 2 within the first one or two sessions.
+  - Level 21 after roughly a year of steady training.
+  - Kimi drafts the XP table; Fable checks it against real session data.
+- **Reset everyone** to level 1. There is no grandfathering, the same as R18.
+- **Unchanged:**
+  - Specials stay at weapon tier 4/8/12/16/20 (`weapon-evolution.mjs:26`), so they now follow level indirectly.
+  - Second weapon and pet stay on the battle-pass combat level (`combat-config.mjs`).
+- **UI:** the War Room upgrade list shows "Charged · Level 2" instead of "200 Shoulders XP" (`pod/rest-arena.mjs:29-32`). It also gets a level/XP bar.
+- **Work split:** Sonnet implements it (one `player-level.mjs` with the XP table and the level function, used by `gala-weapons.js`). Haiku updates the strings and tests.
 
 ## Order and parallelism
 1. **First wave, in parallel:** L5 and L6 (Haiku); L2, L3 and L8 (Sonnet); L1 (Kimi diagnosis, then Opus); L7 pipeline (Sonnet).
@@ -117,5 +125,4 @@ After the merge: `npm run build`, run the gate with concurrency 4 and solo re-ru
 4. **Release:** Fable merges into w/release-21, then `npm run build`, the gate, e2e on staging, and Ian's go.
 
 ## Open questions for Ian
-- **L6:** "two, three and four around the head". I read this as frontBack (2) and around (3), since no 4-ring exists. Should Spider or Square (four eyes) also go?
 - **L7:** should coach shapes unlock in the War Room when that coach body is unlocked in the customizer (the default), or on their own schedule?
