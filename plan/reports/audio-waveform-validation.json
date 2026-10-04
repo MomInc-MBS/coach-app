@@ -1,0 +1,158 @@
+[
+  {
+    "file": "mechanical-click-1.mp3",
+    "seconds": 0.391,
+    "peak": 0.8642,
+    "rms": 0.1026
+  },
+  {
+    "file": "mechanical-click-2.mp3",
+    "seconds": 0.42,
+    "peak": 0.3363,
+    "rms": 0.0498
+  },
+  {
+    "file": "metal-switch-1.mp3",
+    "seconds": 0.4,
+    "peak": 0.8903,
+    "rms": 0.0561
+  },
+  {
+    "file": "metal-switch-2.mp3",
+    "seconds": 0.136,
+    "peak": 0.6742,
+    "rms": 0.1486
+  },
+  {
+    "file": "ice-crack-1.mp3",
+    "seconds": 0.85,
+    "peak": 0.71,
+    "rms": 0.029
+  },
+  {
+    "file": "ice-crack-2.mp3",
+    "seconds": 0.85,
+    "peak": 0.8365,
+    "rms": 0.0163
+  },
+  {
+    "file": "jelly-squish-1.mp3",
+    "seconds": 0.524,
+    "peak": 0.5006,
+    "rms": 0.0629
+  },
+  {
+    "file": "jelly-squish-2.mp3",
+    "seconds": 0.654,
+    "peak": 0.6676,
+    "rms": 0.055
+  },
+  {
+    "file": "water-splash-1.mp3",
+    "seconds": 0.419,
+    "peak": 0.2406,
+    "rms": 0.0288
+  },
+  {
+    "file": "water-splash-2.mp3",
+    "seconds": 0.715,
+    "peak": 0.4118,
+    "rms": 0.0349
+  },
+  {
+    "file": "water-slosh.mp3",
+    "seconds": 2.02,
+    "peak": 0.6366,
+    "rms": 0.0678
+  },
+  {
+    "file": "grass-rustle-1.mp3",
+    "seconds": 0.7,
+    "peak": 0.1435,
+    "rms": 0.0233
+  },
+  {
+    "file": "grass-rustle-2.mp3",
+    "seconds": 0.7,
+    "peak": 0.5199,
+    "rms": 0.0599
+  },
+  {
+    "file": "grass-tinkle.mp3",
+    "seconds": 0.276,
+    "peak": 0.5671,
+    "rms": 0.0741
+  },
+  {
+    "file": "cloth-rustle-1.mp3",
+    "seconds": 0.65,
+    "peak": 0.2454,
+    "rms": 0.0522
+  },
+  {
+    "file": "cloth-rustle-2.mp3",
+    "seconds": 0.65,
+    "peak": 0.7021,
+    "rms": 0.1675
+  },
+  {
+    "file": "wood-tap-1.mp3",
+    "seconds": 0.263,
+    "peak": 0.9432,
+    "rms": 0.0814
+  },
+  {
+    "file": "wood-tap-2.mp3",
+    "seconds": 0.263,
+    "peak": 0.9029,
+    "rms": 0.064
+  },
+  {
+    "file": "wood-scrape.mp3",
+    "seconds": 0.65,
+    "peak": 0.7518,
+    "rms": 0.0746
+  },
+  {
+    "file": "cogs-ratchet-1.mp3",
+    "seconds": 0.373,
+    "peak": 0.9524,
+    "rms": 0.0931
+  },
+  {
+    "file": "cogs-ratchet-2.mp3",
+    "seconds": 0.249,
+    "peak": 0.9087,
+    "rms": 0.1047
+  },
+  {
+    "file": "crt-tap.mp3",
+    "seconds": 0.12,
+    "peak": 0.6039,
+    "rms": 0.0969
+  },
+  {
+    "file": "portal-transit.mp3",
+    "seconds": 1.625,
+    "peak": 0.3632,
+    "rms": 0.0565
+  },
+  {
+    "file": "dialup.mp3",
+    "seconds": 1.8,
+    "peak": 0.1439,
+    "rms": 0.0618
+  },
+  {
+    "file": "pod-hum.mp3",
+    "seconds": 10.437,
+    "peak": 0.2969,
+    "rms": 0.0836
+  },
+  {
+    "file": "gentle-breeze.mp3",
+    "seconds": 12.0,
+    "peak": 0.5208,
+    "rms": 0.0739
+  }
+]
