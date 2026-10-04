@@ -2,7 +2,7 @@ import {FOCUS_GROUPS,GROUP_EXERCISES,EXERCISES,exerciseAt,focusFor} from '../exe
 const $=id=>document.getElementById(id),clamp=(x,min,max)=>Math.max(min,Math.min(max,x));
 // #106 control board: a focus dial, a level knob, an easier/harder lever and a sound switch, all
 // driving the same #movement/#goal state the pod already uses. Rotaries sweep 270° (−135° … +135°).
-const SWEEP=270,tick=()=>{try{navigator.vibrate?.(8);}catch{}};
+const SWEEP=270,tick=(kind='dial')=>{try{navigator.vibrate?.(8);}catch{}window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind}}));};
 export const detentAngle=(i,n)=>n>1?-SWEEP/2+SWEEP*i/(n-1):0;
 // Relative turn: the detent reached by rotating detent `start` of `n` by `turn` degrees.
 export const detentFor=(start,turn,n)=>clamp(Math.round(start+turn*(n-1)/SWEEP),0,Math.max(0,n-1));
@@ -67,7 +67,7 @@ export function initHardware(){
  function nudge(step,animate=true){
   if(locked())return;const n=GROUP_EXERCISES[group].length,next=clamp(levelIndex()+step,0,n-1);
   if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)handle.animate([{transform:'translateY(0)'},{transform:`translateY(${-step*24}px)`},{transform:'translateY(0)'}],{duration:260,easing:'ease-out'});
-  if(next!==levelIndex()){tick();selectExercise(exerciseAt(group,next).id);}
+  if(next!==levelIndex()){tick('lever');selectExercise(exerciseAt(group,next).id);}
  }
  $('harder').onclick=()=>{if(performance.now()-thrown>400)nudge(1);};$('easier').onclick=()=>{if(performance.now()-thrown>400)nudge(-1);};
  lever.addEventListener('pointerdown',e=>{if(!locked())pull={id:e.pointerId,y:e.clientY,held:false};});
@@ -84,7 +84,7 @@ export function initHardware(){
  lever.addEventListener('pointerup',e=>release(e,false));lever.addEventListener('pointercancel',e=>release(e,true));
  lever.addEventListener('keydown',e=>{const step={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1}[e.key];if(step){e.preventDefault();nudge(step);}});
  // Toggle switch: app.mjs owns the click (voice on/off); the board adds the tick and arrow keys.
- const sound=$('toggleVoice');sound.addEventListener('click',tick);
+ const sound=$('toggleVoice');sound.addEventListener('click',()=>tick('switch'));
  sound.addEventListener('keydown',e=>{const on={ArrowUp:true,ArrowRight:true,ArrowDown:false,ArrowLeft:false}[e.key];if(on===undefined)return;e.preventDefault();if(!sound.disabled&&(sound.dataset.on==='true')!==on)sound.click();});
  $('goalSlider').addEventListener('input',()=>{if(goal.disabled)return;goal.selectedIndex=Number($('goalSlider').value);goal.dispatchEvent(new Event('change',{bubbles:true}));sync();});
  select.addEventListener('change',sync);goal.addEventListener('change',sync);window.addEventListener('myr5:movement-configured',sync);

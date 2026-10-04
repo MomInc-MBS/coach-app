@@ -168,9 +168,9 @@ export function mountRemindersComputer(panel=document.getElementById('remindersP
     width=host.clientWidth;height=host.clientHeight;if(!width||!height)return;
     renderer.setSize(width,height,false);camera.aspect=width/height;const vfov=THREE.MathUtils.degToRad(camera.fov),distance=Math.max(MODEL_SIZE.y*.53/Math.tan(vfov/2),MODEL_SIZE.x*.53/Math.tan(vfov/2)/camera.aspect)*1.08;camera.position.set(0,.515,.10668+distance);camera.lookAt(MODEL_CENTER);camera.zoom=1.5;camera.updateProjectionMatrix();render();}
    let drag=null;const down=event=>{if(event.target.closest?.(INTERACTIVE)||(event.pointerType==='mouse'&&event.button!==0))return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,yaw,moving:false};};
-   const move=event=>{if(!drag||drag.id!==event.pointerId)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(!drag.moving){if(Math.abs(dy)>DRAG_SLOP&&Math.abs(dy)>Math.abs(dx)){drag=null;return;}if(Math.abs(dx)<DRAG_SLOP)return;drag.moving=true;panel.setPointerCapture?.(drag.id);}yaw=THREE.MathUtils.degToRad(spinBy(THREE.MathUtils.radToDeg(drag.yaw),dx*DRAG_DEG_PER_PX));render();};
+   const move=event=>{if(!drag||drag.id!==event.pointerId)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(!drag.moving){if(Math.abs(dy)>DRAG_SLOP&&Math.abs(dy)>Math.abs(dx)){drag=null;return;}if(Math.abs(dx)<DRAG_SLOP)return;drag.moving=true;panel.setPointerCapture?.(drag.id);}yaw=THREE.MathUtils.degToRad(spinBy(THREE.MathUtils.radToDeg(drag.yaw),dx*DRAG_DEG_PER_PX));render();window.dispatchEvent(new Event('myr5:reminders-turn'));};
    const end=event=>{if(drag?.id===event.pointerId){if(drag.moving)panel.releasePointerCapture?.(drag.id);drag=null;}};
-   const key=event=>{if(event.target!==panel||!/^Arrow(Left|Right)$/.test(event.key))return;event.preventDefault();yaw=THREE.MathUtils.degToRad(spinBy(THREE.MathUtils.radToDeg(yaw),event.key==='ArrowLeft'?-KEY_STEP:KEY_STEP));render();};
+   const key=event=>{if(event.target!==panel||!/^Arrow(Left|Right)$/.test(event.key))return;event.preventDefault();yaw=THREE.MathUtils.degToRad(spinBy(THREE.MathUtils.radToDeg(yaw),event.key==='ArrowLeft'?-KEY_STEP:KEY_STEP));render();window.dispatchEvent(new Event('myr5:reminders-turn'));};
    listen(panel,'pointerdown',down);listen(panel,'pointermove',move);listen(panel,'pointerup',end);listen(panel,'pointercancel',end);listen(panel,'lostpointercapture',end);listen(panel,'keydown',key);
    listen(canvas,'webglcontextlost',event=>{event.preventDefault();if(current(panel,token,mine))token.fail(new Error('WebGL context lost'));});
    // Activate the stage/screen layout before measuring it. In the portal the dialog is
@@ -187,7 +187,7 @@ export function mountRemindersComputer(panel=document.getElementById('remindersP
   }catch(error){if(parsed)releaseObject(parsed);if(!current(panel,token,mine))return;tearDown();setFallback('The computer room is an optional download. Reminders still work.');}
   finally{if(pendingEpoch===mine)pendingEpoch=-1;}
  }
- const observer=new MutationObserver(()=>{if(panel.open)void check();else{epoch++;tearDown();}});observer.observe(panel,{attributes:true,attributeFilter:['open']});
+ const observer=new MutationObserver(()=>{if(panel.open){window.dispatchEvent(new Event('myr5:reminders-open'));void check();}else{epoch++;tearDown();}});observer.observe(panel,{attributes:true,attributeFilter:['open']});
  const onFocus=()=>{if(panel.open)void check();};const onPageHide=()=>{epoch++;tearDown();};const onPageShow=()=>{if(panel.open)void check();};
  window.addEventListener('focus',onFocus);window.addEventListener('pagehide',onPageHide);window.addEventListener('pageshow',onPageShow);
  const onAccountTransition=()=>{if(pendingEpoch<0)return;epoch++;pendingEpoch=-1;if(panel.open)queueMicrotask(()=>void check());};
