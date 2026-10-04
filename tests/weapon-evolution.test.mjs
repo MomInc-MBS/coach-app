@@ -6,11 +6,11 @@ import {WEAPON_FAMILIES, evolution, abilityFor, AbilityCooldown} from '../pod/we
 import {SetFlow} from '../pod/set-flow.mjs';
 import {specialBudget} from '../combat-config.mjs';
 
-const context = {window: {}};
+const context = {window: {}, localStorage: {getItem: () => JSON.stringify({activeDays: 0, completedSets: 0}), setItem() {}}};
 vm.runInNewContext(readFileSync(new URL('../workout-tracks.js',import.meta.url),'utf8'),context);
 vm.runInNewContext(readFileSync(new URL('../pod/gala-weapons.js', import.meta.url), 'utf8'), context);
 const catalog = context.window.GalaWeapons;
-const earned = {trainingVersion:1,training:Object.fromEntries(Object.keys(context.MYR5Training.TRAINING_TRACKS).map(id=>[id,{activeDays:365,completedSets:365}]))};
+const earned = {trainingVersion:1,activeDays:365,completedSets:5475,training:Object.fromEntries(Object.keys(context.MYR5Training.TRAINING_TRACKS).map(id=>[id,{activeDays:365,completedSets:365}]))};
 const weapon = {type: 'rapier', tier: 4};
 
 test('all saved families and tiers have increasing presentation profiles', () => {
@@ -42,7 +42,7 @@ test('special attacks need an earned tier and a rest session', () => {
   const clock = new AbilityCooldown(null, 1000);
   assert.equal(clock.activate(weapon, {now: 1000, progress: earned, catalog}).reason, 'not-rest');
   assert.equal(clock.activate({...weapon, tier: 0}, {now: 1000, inRest: true, progress: earned, catalog}).reason, 'tier');
-  const noDays = {...earned, training:{}};
+  const noDays = {...earned, activeDays:0, completedSets:0};
   assert.equal(clock.activate(weapon, {now: 1000, inRest: true, progress: noDays, catalog}).reason, 'locked');
   assert.equal(clock.activate(weapon, {now: 1000, inRest: true, progress: earned, catalog}).ok, true);
   assert.equal(earned.training.boxing.activeDays,365);

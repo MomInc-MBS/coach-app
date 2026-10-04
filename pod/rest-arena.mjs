@@ -2,17 +2,17 @@ import {GALA_KEY,loadGala} from './identity.mjs';
 import {abilityFor,evolution} from './weapon-evolution.mjs';
 import {drawAnimatedWeapon} from './weapon-animator.mjs';
 export const MELEE=new Set(['rapier','greatsword','dagger','spear','trident','scythe','gauntlets']);
-export function equipmentProgress(value={}){return {activeDays:Math.max(0,Number(value.activeDays)||0),totalXp:Math.max(0,Number(value.activeDays)||0)*100,strength:1+Math.floor(Math.max(0,Number(value.completedSets)||0)/4),...(value.trainingVersion===1?{trainingVersion:1,training:value.training}:{})};}
+export function equipmentProgress(value={}){return {activeDays:Math.max(0,Number(value.activeDays)||0),totalXp:Math.max(0,Number(value.activeDays)||0)*100,completedSets:Math.max(0,Number(value.completedSets)||0),strength:1+Math.floor(Math.max(0,Number(value.completedSets)||0)/4),...(value.trainingVersion===1?{trainingVersion:1,training:value.training}:{})};}
 
 export function initRestArena(){
  const A=window.GalaAvatar,W=window.GalaWeapons,canvas=document.getElementById('restAvatar'),scene=document.querySelector('.encounter');
- const fx=document.getElementById('restWeaponFx'),type=document.getElementById('weaponType'),tier=document.getElementById('weaponTier'),note=document.getElementById('weaponStatus');
+ const fx=document.getElementById('restWeaponFx'),type=document.getElementById('weaponType'),tier=document.getElementById('weaponTier'),note=document.getElementById('weaponStatus'),bar=document.getElementById('weaponLevelBar');
  const body=document.createElement('canvas'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
  let progress=equipmentProgress(),look=null,equipped={type:'rapier',tier:0},running=false,frame=0,last=0,action=null,queued=false;
  let anchor={x:0,y:0,scale:1},lastWeapon='';
  canvas.width=160;canvas.height=168;
  window.GalaProgress={read:()=>progress};
- for(const item of W.types){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+W.requirements({type:item.id,tier:0}).label;type.append(option);}
+ for(const item of W.types){const option=document.createElement('option');option.value=item.id;option.textContent=item.name;type.append(option);}
  function measure(){
   const bounds=scene.getBoundingClientRect(),avatar=canvas.getBoundingClientRect();
   if(!bounds.width||!bounds.height)return;
@@ -26,10 +26,11 @@ export function initRestArena(){
   equipped=W.unlocked(selected,progress)?selected:{type:selected.type,tier:0};
   const key=equipped.type+':'+equipped.tier;if(lastWeapon!==key){action=null;queued=false;lastWeapon=key;}
   A.draw(body,look,{base:false,weapon:false,prop:false});type.value=selected.type;tier.replaceChildren();
-  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=document.createElement('option'),r=W.requirements(item);option.value=i;option.disabled=!W.unlocked(item,progress);option.textContent=W.tiers[i]+(option.disabled?` · ${r.xp} ${r.label} XP`:'');tier.append(option);}
+  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=document.createElement('option');option.value=i;option.disabled=!W.unlocked(item,progress);option.textContent=`${W.tiers[i]} · Level ${i+1}`;tier.append(option);}
   tier.value=equipped.tier;const ability=abilityFor(equipped);
-  const track=W.requirements(equipped),earned=W.trainingProgress(equipped,progress);
-  note.textContent=`${track.label} · ${earned.totalXp} XP · `+(ability?`${ability.name} · ${ability.cooldownMs/1000}s`:'Special at tier 4');
+  const lv=W.level(progress);
+  note.textContent=`Level ${lv.level} · `+(lv.max?'max level':`${lv.into}/${lv.need} XP to next`)+' · '+(ability?`${ability.name} · ${ability.cooldownMs/1000}s`:'Special at tier 4');
+  if(bar){bar.max=lv.max?1:lv.need;bar.value=lv.max?1:lv.into;bar.setAttribute('aria-valuetext',`Level ${lv.level}`+(lv.max?'':`, ${lv.into} of ${lv.need} XP`));}
   if(selected.tier!==equipped.tier)note.textContent+=' Upgrade not yet earned.';
   document.getElementById('restWeaponName').textContent=W.types.find(w=>w.id===equipped.type).name;
   scene.dataset.weapon=MELEE.has(equipped.type)?'melee':'ranged';scene.classList.add('weapon-evolution');

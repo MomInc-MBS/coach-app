@@ -16,10 +16,11 @@ test('category XP rewards each completed category day once across exercises, ret
  const p=trainingFromWorkouts(rows);assert.equal(p.chest.totalXp,200);assert.equal(p.chest.completedSets,3);assert.equal(p.balance.totalXp,100);assert.equal(p.boxing.totalXp,0);assert.equal(p.cardio.totalXp,0);
  assert.deepEqual(trainingFromDaily([{mode:'pushup',sets:2,day:20000},{mode:'pushup',sets:1,day:20001},{mode:'tree',sets:1,day:20000}]),p);
 });
-test('general XP cannot unlock category upgrades and each day is enough without set grinding',async()=>{
- const context={window:{}};vm.runInNewContext(await readFile('workout-tracks.js','utf8'),context);vm.runInNewContext(await readFile('pod/gala-weapons.js','utf8'),context);const W=context.window.GalaWeapons;
- const p={activeDays:999,totalXp:99900,strength:999,trainingVersion:1,training:trainingFromDaily([{mode:'pushup',day:1,sets:1},{mode:'pushup',day:2,sets:1}])};
- assert.equal(W.unlocked({type:'crossbow',tier:1},p),true);assert.equal(W.unlocked({type:'axe',tier:1},p),false);assert.equal(W.unlocked({type:'crossbow',tier:2},p),false);assert.equal(W.unlocked({type:'crossbow',tier:20},{activeDays:999,totalXp:99900,strength:999}),false);assert.equal(W.unlocked({type:'dagger',tier:0},{}),true);
+test('weapon upgrades follow the one global player level, not the muscle trained (R21 L9)',async()=>{
+ const context={window:{},localStorage:{getItem:()=>JSON.stringify({activeDays:0,completedSets:0}),setItem(){}}};vm.runInNewContext(await readFile('workout-tracks.js','utf8'),context);vm.runInNewContext(await readFile('pod/gala-weapons.js','utf8'),context);const W=context.window.GalaWeapons;
+ const chestOnly={trainingVersion:1,activeDays:2,completedSets:2,training:trainingFromDaily([{mode:'pushup',day:1,sets:1},{mode:'pushup',day:2,sets:1}])};
+ assert.equal(W.unlocked({type:'crossbow',tier:1},chestOnly),true);assert.equal(W.unlocked({type:'axe',tier:1},chestOnly),true);assert.equal(W.unlocked({type:'crossbow',tier:2},chestOnly),false);
+ assert.equal(W.unlocked({type:'crossbow',tier:20},{activeDays:999,completedSets:99999}),false);assert.equal(W.unlocked({type:'dagger',tier:0},{}),true);
 });
 test('login streak deduplicates visits, crosses adjacent days and forgives a single gap (D12)',async()=>{
  const now=21000*DAY_MS+1000;
