@@ -229,6 +229,13 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  }
  function cut(polyUv,color='#ffffff',ms=1100){
   heal();
+  // Mechanical modules already have seams and thickness. Release those assemblies
+  // through their own lifecycle rather than manufacturing a sliced door mesh.
+  if(effect.presectioned){
+   const done=effect.cut?.(polyUv,color,ms);
+   wake();
+   return Promise.resolve(done);
+  }
   const pieces=[];portalCutMask.value=createPortalCutMask(polyUv);
   for(const mesh of meshObjs){
    const g=mesh.geometry,p=g.attributes.position.array,index=g.index||(g.setIndex([...Array(g.attributes.position.count).keys()]),g.index);
@@ -245,6 +252,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   return cutting.fall.done;
  }
  function heal(){
+  if(effect.presectioned){effect.heal?.();if(!disposed&&renderer)renderer.render(scene,camera);return;}
   if(!cutting)return;
   cutting.fall.end();for(const mesh of meshObjs){mesh.material.userData.portalCutSideUniform.value=0;const piece=pieceMats.get(mesh.material);if(piece?.userData.portalCutSideUniform)piece.userData.portalCutSideUniform.value=0;}portalCutMask.value?.dispose();portalCutMask.value=null;cutting=null;effect.heal?.();
   rim.ctx.clearRect(0,0,rim.canvas.width,rim.canvas.height);rim.texture.needsUpdate=true;
@@ -259,10 +267,14 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   patternRect(){const hostBox=host.getBoundingClientRect(),F=viewFrame,sx=hostBox.width/width,sy=hostBox.height/height;if(preservedAspect)return {left:hostBox.left+(faceRect.left+faceRect.width*F.x0)*sx,top:hostBox.top+(faceRect.top+faceRect.height*F.y0)*sy,width:faceRect.width*(F.x1-F.x0)*sx,height:faceRect.height*(F.y1-F.y0)*sy};return {left:hostBox.left+hostBox.width*F.x0,top:hostBox.top+hostBox.height*F.y0,width:hostBox.width*(F.x1-F.x0),height:hostBox.height*(F.y1-F.y0)};},
   setTint(hex,selected=true){
    if(!/^#[0-9a-f]{6}$/i.test(hex))return;
-   if(effect.id==='grass')effect.setTint?.(hex,selected);
-   else{uBoardTint.value.set(hex);effect.setTint?.(hex,selected);}
+   if(effect.id==='grass'||effect.presectioned)effect.setTint?.(hex,selected);
+   else{uBoardTint.value.set(effect.doorTone?effect.doorTone(hex):hex);effect.setTint?.(hex,selected);}
 
    wake();
+  },
+  setBackplateTint(hex){
+   if(!/^#[0-9a-f]{6}$/i.test(hex))return;
+   uBoardTint.value.set(hex);effect.setBackplateTint?.(hex);wake();
   },
   press(id,clientX,clientY){
    const painted=faceRectClient();
@@ -274,7 +286,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   release(id){const p=pointers.get(id);if(p){effect.release?.(id,p.u,p.v);pointers.delete(id);}wake();},
   frameMs:()=>frameMs,
   ink:effect.ink, // false: the effect draws its own trace trail, portal.mjs skips its glowing ink line
-  pause(){pointers.clear();cancelAnimationFrame(frame);frame=0;},
+  pause(){for(const [id,p] of pointers)effect.release?.(id,p.u,p.v);pointers.clear();cancelAnimationFrame(frame);frame=0;},
   resume:wake,
   dispose(){
    cutting?.fall.end();portalCutMask.value?.dispose();portalCutMask.value=null;disposed=true;cancelAnimationFrame(frame);observer.disconnect();effect.dispose?.();pieceMats.forEach(m=>m.dispose());rim.texture.dispose();
