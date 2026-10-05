@@ -90,3 +90,22 @@ test('earned earlier variation milestones survive switching and pausing',()=>{
  assert.deepEqual(restored.perDifficultyContinuous,{easy:600,expert:5});assert.equal(restored.continuousSeconds,0);
  restored.resumeHold();restored.update({...hold(610),manual:true},610000);assert.equal(restored.maxContinuousSeconds,5);
 });
+
+test('paid hold blocks replay exact XP through breaks, switches, pauses and the active cap',async()=>{
+ const {holdRate,extendedHoldMultiplier}=await import('../progression-rules.mjs');
+ const w=new PerformanceWorkout({mode:'high-horse',kind:'hold',difficulty:'easy'});
+ for(let seconds=1;seconds<=67;seconds++)w.update({...hold(seconds),manual:true},seconds*1000);
+ w.breakHold(67000);w.update({...hold(82),manual:true},82000);w.resumeHold();w.switchDifficulty('expert');
+ for(let seconds=83;seconds<=700;seconds++)w.update({...hold(seconds),manual:true},seconds*1000);
+ const restored=new PerformanceWorkout({mode:'high-horse',kind:'hold',snapshot:JSON.parse(JSON.stringify(w.snapshot()))});
+ for(let seconds=701;seconds<=1900;seconds++)restored.update({...hold(seconds),manual:true},seconds*1000);
+ assert.equal(restored.holdBlocks.length,120);
+ assert.deepEqual(restored.holdBlocks.map(b=>b.activeStart),Array.from({length:120},(_,i)=>i*15));
+ assert.equal(restored.holdBlocks[0].difficulty,'easy');assert.equal(restored.holdBlocks[4].difficulty,'expert');
+ const replay=restored.holdBlocks.reduce((xp,b)=>xp+holdRate(b.difficulty,b.activeStart)/4*extendedHoldMultiplier(b.continuousStart),0);
+ assert.equal(replay,restored.xpBase);assert.equal(restored.activeSeconds,1800);assert.equal(restored.finished,true);
+});
+test('legacy blockless paused XP is explicitly distinguished from complete paid-block evidence',()=>{
+ const w=new PerformanceWorkout({mode:'high-horse',kind:'hold',snapshot:{mode:'high-horse',kind:'hold',activeSeconds:30,raw:30,value:30,xpBase:2}});
+ w.update({...hold(45),manual:true},45000);const result=w.finish();assert.equal(result.xpBase,3);assert.equal('holdBlocks' in result,false);
+});

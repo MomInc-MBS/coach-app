@@ -1,5 +1,5 @@
 import {EXERCISES} from '../exercise-library.mjs';
-import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS} from '../progression-rules.mjs';
+import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS} from '../progression-rules.mjs';
 
 export function exerciseDifficulty(mode){
  const exercise=EXERCISES[mode];if(!exercise)return 'easy';
@@ -19,8 +19,9 @@ const number=value=>Math.max(0,Number(value)||0);
 export class PerformanceWorkout {
  constructor({mode,kind,difficulty=exerciseDifficulty(mode),cardio='gentle',snapshot=null}={}){
   this.mode=mode;this.kind=kind==='hold'?'hold':kind==='reps'?'reps':cardio==='sprint'?'sprint':'gentle';this.difficulty=difficulty;
-  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;
+  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;this.holdBlocks=[];
   if(snapshot&&snapshot.mode===mode)Object.assign(this,snapshot,{finished:false,continuousSeconds:0,lastNow:null,lastCameraHold:0,continuousRawOffset:0});
+  if(snapshot?.activeSeconds>=HOLD_BLOCK_SECONDS&&!Array.isArray(snapshot.holdBlocks))this.holdBlocks=null;
   if(!Object.keys(this.perDifficultyContinuous).length&&this.maxContinuousSeconds>0)this.perDifficultyContinuous[this.difficulty]=this.maxContinuousSeconds;
  }
  snapshot(){return Object.fromEntries(Object.entries(this).filter(([key])=>!['lastNow','lastMovementNow'].includes(key)));}
@@ -67,6 +68,7 @@ export class PerformanceWorkout {
    this.continuousSeconds=m.manual?continuousBefore+delta:cameraContinuous;
    this.maxContinuousSeconds=Math.max(this.maxContinuousSeconds,this.continuousSeconds);
    this.perDifficultyContinuous[this.difficulty]=Math.max(this.perDifficultyContinuous[this.difficulty]||0,this.continuousSeconds);
+   if(Array.isArray(this.holdBlocks))for(let block=Math.floor(before/HOLD_BLOCK_SECONDS);block<Math.floor(this.activeSeconds/HOLD_BLOCK_SECONDS);block++){const activeStart=block*HOLD_BLOCK_SECONDS;this.holdBlocks.push({difficulty:this.difficulty,activeStart,continuousStart:Math.max(0,continuousBefore+activeStart-before)});}
    this.xpBase+=holdXp({difficulty:this.difficulty,from:before,to:this.activeSeconds,continuousAtFrom:continuousBefore});this.value=this.activeSeconds;
    if(this.activeSeconds>=HOLD_CAP_SECONDS)return this.finish();return null;
   }
@@ -83,6 +85,6 @@ export class PerformanceWorkout {
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-'))return null;
-  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},xpBase:this.xpBase,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
+  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }
