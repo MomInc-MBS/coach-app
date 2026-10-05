@@ -1,4 +1,5 @@
 import {goldenCoach} from '../../performance-progress.mjs';
+import {createStandaloneAccountContext} from '../../standalone-account-context.mjs';
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
@@ -10,7 +11,7 @@ import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete
 import {isGranted,cosmeticId} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
-import {saveRecipe,BODY_KEYS} from './save-look';
+import {saveRecipe,keepOwned,BODY_KEYS} from './save-look';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection,ownedShipIds} from '../../modules/ships/ship-access.mjs';
@@ -37,6 +38,8 @@ const admitShipEditor=(()=>{
  }catch{return false;}
 })();
 if(!admitShipEditor){location.replace('/pose.html#select');await new Promise(()=>{});}
+const standaloneAccount=createStandaloneAccountContext();
+await standaloneAccount.refresh();
 // Safari can restore this document from its back-forward cache without rerunning the admission
 // check above. A restored editor must return through the ship instead of reviving its old state.
 window.addEventListener('pageshow',event=>{if(event.persisted)location.replace('/pose.html#select');});
@@ -52,7 +55,9 @@ let settings=motionSettings(null),initialError='';
 try{recipe=zeroFinish(loadRecipe(localStorage));settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
 let saved=recipe; // the last recipe written to storage: the owned look saveRecipe() falls back to
 // #102: bodies already saved stay usable even if their section is locked (only new picks lock).
-const grandfathered=new Set<string>(BODY_KEYS.map(key=>recipe[key]));
+const appearanceOwner=(()=>{try{return localStorage.getItem('myr5-coach-owner');}catch{return null;}})();
+const grandfathered=new Set<string>((window.myr5AuthenticatedAccount?appearanceOwner===window.myr5AuthenticatedAccount.user.id:!appearanceOwner)?BODY_KEYS.map(key=>recipe[key]):[]);
+recipe=saved=keepOwned(recipe,undefined,grandfathered);
 // #138: the new-user allowance (first bodies of the user's picked paths) lives inside the same lock.
 let progress=loadProgress(),tracks=selectedTracks(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress,tracks);
 const unlockedFirst=<T,>(items:readonly T[],locked:(x:T)=>boolean):T[]=>[...items.filter(x=>!locked(x)),...items.filter(locked)];
@@ -227,6 +232,10 @@ function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach
 shipPick.onchange=()=>{if(shipLocked(shipPick.value)){tell('That ship is locked');syncShipRow();return;}saveShip({shipId:shipPick.value as Design['coach']});};
 fillShipRow();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
+ window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe,undefined,grandfathered);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
+ window.addEventListener('myr5:account-cleared',()=>{grandfathered.clear();undo=[];redo=[];clearPreview();recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
+ window.addEventListener('myr5:login-ready',()=>void standaloneAccount.refresh());
+ window.addEventListener('focus',()=>{if(!standaloneAccount.account)void standaloneAccount.refresh();});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
 
 for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEventListener('change',()=>{const input=$(id) as HTMLInputElement,value=['fingers','toes'].includes(id)?Number(input.value):input.value;
@@ -331,7 +340,7 @@ function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced
 systemMotion.addEventListener('change',applyMotion);
 window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=importCreature(event.newValue);for(const key of BODY_KEYS)grandfathered.add(recipe[key]);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;},250);
-window.addEventListener('pagehide',()=>{closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
+window.addEventListener('pagehide',()=>{standaloneAccount.dispose();closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 // D34 post-download: listen for body download state from service worker
 const pendingBodyUrls=new Set<string>();let bodyDownloadTimer=0;const originalStatus='Your coach is ready';
 navigator.serviceWorker?.addEventListener('message',({data})=>{
