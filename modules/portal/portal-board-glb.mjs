@@ -185,6 +185,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  // so the neon glass can sit between the two and show only through a cut.
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x000000,0);
+ if(effect.shadows){renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;sun.castShadow=true;sun.shadow.normalBias=.02;sun.shadow.bias=-.0004;}
  const canvas=renderer.domElement;canvas.className='portal-board-canvas';canvas.setAttribute('aria-hidden','true');canvas.style.cssText='display:block;width:100%;height:100%';host.append(canvas);
  const startTime=performance.now(),pointers=new Map();
  function layout(){
@@ -192,6 +193,12 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   if(effect.guide!==null){paint.ctx.clearRect(0,0,texW,texH);drawGuides(paint,texW,texH,knobs,{...effect,frame:viewFrame});}
   renderer.setSize(width,height,false);camera.aspect=width/height;
   camera.position.set(width/2,-height/2,(height/2)/Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));camera.near=camera.position.z/10;camera.far=camera.position.z*10;camera.lookAt(width/2,-height/2,0);camera.updateProjectionMatrix();
+  if(effect.shadows){ // tight ortho shadow camera on the board face (world units are px; group sits at the face centre)
+   const cx=width/2,cy=-(faceRect.top+faceRect.height/2),R=Math.hypot(faceRect.width,faceRect.height)/2,d=Math.max(width,height)*2,sc=sun.shadow.camera,ms=Math.min(width,height)<500?512:1024;
+   sun.target.position.set(cx,cy,0);sun.target.updateMatrixWorld();sun.position.set(cx-.7*d,cy+.55*d,.45*d);
+   Object.assign(sc,{left:-R,right:R,top:R,bottom:-R,near:d*.2,far:d*2});sc.updateProjectionMatrix();
+   if(sun.shadow.mapSize.x!==ms){sun.shadow.mapSize.set(ms,ms);sun.shadow.map?.dispose();sun.shadow.map=null;}
+  }
   effect.resize?.({w:fw,h:fh});wake();
  }
  function wake(){awakeUntil=performance.now()+knobs.sleepMs;if(!frame&&!disposed&&renderer){last=performance.now();frame=requestAnimationFrame(tick);}}
