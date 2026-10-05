@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MECHANICAL_FRAME,mechanicalPaths,releasePaths,sectionPanels,mechanicalLayout,pointOnPath,signedRailImpulse,area} from '../modules/portal/portal-mechanical-layout.mjs';
+import {MECHANICAL_FRAME,mechanicalPaths,releasePaths,sectionPanels,mechanicalLayout,mechanismLayout,pointOnPath,signedRailImpulse,area} from '../modules/portal/portal-mechanical-layout.mjs';
 import {gearsFromLayout,applyTorque,stepTrain,KNOBS,cogs} from '../modules/portal/portal-board-cogs.mjs';
 import {pointInPolygon} from '../modules/portal/portal-board-glb.mjs';
 
@@ -55,4 +55,48 @@ test('mechanical release uses assemblies and the weld cools in half the prior ti
  assert.equal(cogs.presectioned,true);assert.equal(typeof cogs.setBackplateTint,'function');
  assert.equal(KNOBS.weldHotMs,500);assert.equal(KNOBS.weldBeadMs,2000);
  assert.equal(KNOBS.weldTrailWidthPx,3);assert.equal(KNOBS.weldBeadRadiusPx,2.5);
+});
+
+test('mechanismLayout lays tubes, bolts, pistons, pulleys, lamps and dial exactly on the shape lines',()=>{
+ const face={w:1,h:1.75},paths=mechanicalPaths(),gl=mechanicalLayout(face,paths),m=mechanismLayout(face,paths,gl);
+ const closed=paths.map(p=>Math.hypot(p.points[0][0]-p.points.at(-1)[0],p.points[0][1]-p.points.at(-1)[1])<1e-7);
+ const stations=gl.parts.filter(p=>p.pathIndex>=0&&p.rot===0);
+ assert.ok(m.pistons.length>=6);assert.equal(m.pistons.length,paths.length);
+ assert.deepEqual([m.pulleys.length,m.cables.length,m.weights.length,m.dial.length],[4,4,4,1]);
+ assert.equal(m.lamps.length,stations.length);
+ assert.equal(m.bolts.length,stations.filter(p=>closed[p.pathIndex]).length);
+ for(const k of ['tubes','bolts','pistons','lamps'])for(const o of m[k])assert.ok(pointOnPath(paths,face,o.u,o.v).distance<1e-6,k);
+ const tangent=(o,k)=>{const pts=paths[o.pathIndex].points,a=pts[o.segment??k],b=pts[(o.segment??k)+1];return Math.atan2((b[1]-a[1])*face.h,(b[0]-a[0])*face.w);};
+ const parallel=(a,b)=>Math.abs(Math.sin(a-b))<1e-9;
+ for(const t of m.tubes)assert.ok(parallel(t.rot,tangent(t)));
+ for(const b of m.bolts){const hit=pointOnPath([paths[b.pathIndex]],face,b.u,b.v);assert.ok(parallel(b.rot,tangent(b,hit.segment)));}
+ for(const p of m.pistons){const hit=pointOnPath([paths[p.pathIndex]],face,p.u,p.v);assert.ok(parallel(p.rot,tangent(p,hit.segment)));assert.ok(gl.parts[p.drives]);}
+ paths.forEach((_,pi)=>{const ls=m.lamps.filter(l=>l.pathIndex===pi);for(let i=1;i<ls.length;i++)assert.ok(ls[i].station>ls[i-1].station);});
+ const tubes=m.tubes;
+ for(let i=0;i<tubes.length;i++)for(let j=i+1;j<tubes.length;j++){const a=tubes[i],b=tubes[j];if(a.pathIndex!==b.pathIndex||a.segment!==b.segment)continue;
+  assert.ok(Math.hypot(a.u-b.u,(a.v-b.v)*face.h/face.w)>=(a.len+b.len)/2-1e-9,'tubes overlap');}
+ assert.ok(m.tubes.every(t=>t.len>=.012));assert.ok(m.cables.every(c=>Math.hypot(c.to[0]-c.from[0],c.to[1]-c.from[1])>0));
+});
+
+test('review fixes: pistons spread, bolts withdraw inward, tubes split at crossings, cables in the margin',()=>{
+ const face={w:1,h:1.75},paths=mechanicalPaths(),m=mechanismLayout(face),d=(a,b)=>Math.hypot(a[0]-b[0],(a[1]-b[1])*face.h/face.w);
+ for(const [i,a] of m.pistons.entries()){
+  for(const b of m.pistons.slice(i+1))assert.ok(d([a.u,a.v],[b.u,b.v])>=.08,'pistons apart');
+  if(paths[a.pathIndex].id!=='oval')for(const p of paths[a.pathIndex].points)assert.ok(d([a.u,a.v],p)>=.06,'piston clear of vertices');
+ }
+ for(const b of m.bolts){
+  assert.ok(b.side===1||b.side===-1);
+  const c=[b.u+b.side*b.throw*Math.sin(b.rot),b.v-b.side*b.throw*Math.cos(b.rot)*face.w/face.h];
+  assert.ok(pointInPolygon(...c,paths[b.pathIndex].points)||pointOnPath([paths[b.pathIndex]],face,...c).distance<1e-6,'withdrawn bolt inside its polygon (or sliding along the edge at a corner station)');
+ }
+ for(const t of m.tubes){
+  assert.equal(t.r,.007);const a=[t.u-Math.cos(t.rot)*t.len/2,t.v-Math.sin(t.rot)*t.len/2*face.w/face.h],b=[t.u+Math.cos(t.rot)*t.len/2,t.v+Math.sin(t.rot)*t.len/2*face.w/face.h];
+  paths.forEach((q,j)=>{if(j===t.pathIndex)return;for(let k=1;k<q.points.length;k++)for(const f of [.1,.5,.9]){
+   const p=[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
+   assert.ok(pointOnPath([{points:[q.points[k-1],q.points[k]]}],face,...p).distance>1e-4||t.len<.02,'tube interior crosses another path');}});
+ }
+ const F=MECHANICAL_FRAME,out=(u,v)=>u<F.x0||u>F.x1||v<F.y0||v>F.y1;
+ for(const c of m.cables)assert.ok(out(...c.from)&&out(...c.to));
+ for(const w of m.weights)assert.ok(out(w.u,w.v));
+ assert.ok(m.lamps.every(l=>l.r===.018));
 });

@@ -1,6 +1,7 @@
 import test from 'node:test';
+import {mechanicalPaths} from '../modules/portal/portal-mechanical-layout.mjs';
 import assert from 'node:assert/strict';
-import {idleSpin,doorTone,stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,beadAlpha,stepSpark,KNOBS,METAL,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
+import {idleSpin,doorTone,stepTrain,applyTorque,gearsFromLayout,hitGear,nearestPipe,valveAngle,wiggleStep,wiggleKick,lightLevel,heatColor,weldBeadAlpha,beadAlpha,stepSpark,boltOut,pistonExt,lampLit,pathProgress,trackFinger,KNOBS,METAL,DEFAULT_FRAME,cogs} from '../modules/portal/portal-board-cogs.mjs';
 
 const TAU=Math.PI*2;
 
@@ -230,4 +231,43 @@ test('doorTone: the door gets a darker, desaturated complement, never the part t
   assert.notEqual(door,part);assert.ok(d.l<p.l&&d.s<p.s,door+' darker and less saturated than '+part);
  }
  const red=hsl(doorTone('#ff2020'));assert.ok(red.b>red.r&&red.g>red.r,'red parts -> cyan-ish door');
+});
+
+test('boltOut: bolts withdraw one after another as p advances',()=>{
+ assert.equal(boltOut(0,0,4),0);assert.equal(boltOut(.125,0,4),.5);assert.equal(boltOut(.25,0,4),1);
+ assert.equal(boltOut(.25,1,4),0);assert.equal(boltOut(1,3,4),1);
+});
+test('pistonExt: stroke*(.5+.5sin)',()=>{
+ assert.equal(pistonExt(.05,-Math.PI/2),0);assert.ok(Math.abs(pistonExt(.05,Math.PI/2)-.05)<1e-12);assert.ok(Math.abs(pistonExt(.05,0)-.025)<1e-12);
+});
+test('lampLit: off at rest, lights in station order',()=>{
+ assert.equal([0,1,2,3].filter(k=>lampLit(0,k,4)).length,0);
+ assert.deepEqual([0,1,2,3].map(k=>lampLit(.3,k,4)),[true,true,false,false]);
+ assert.deepEqual([0,1,2,3].map(k=>lampLit(1,k,4)),[true,true,true,true]);
+});
+test('pathProgress: fraction of polyline length at a hit',()=>{
+ const face={w:1,h:1},pts=[[0,0],[.5,0],[.5,.5]];
+ assert.equal(pathProgress(pts,face,0,.25,0),.25);assert.equal(pathProgress(pts,face,1,.5,.5),1);
+});
+
+const walk=(paths,i,rev,upto=1)=>{
+ const face={w:1,h:1.75},pts=paths[i].points.slice(),closed=paths.map(p=>Math.hypot(p.points[0][0]-p.points.at(-1)[0],p.points[0][1]-p.points.at(-1)[1])<1e-7),prog=paths.map(()=>0),d={pi:null,f:null},out=[];
+ if(rev)pts.reverse();const L=pts.slice(1).map((b,k)=>Math.hypot((b[0]-pts[k][0])*face.w,(b[1]-pts[k][1])*face.h)),T=L.reduce((a,b)=>a+b,0),N=Math.round(T/.02);
+ for(let n=0;n<=N*upto;n++){let t=n/N*T,k=0;while(k<L.length-1&&t>L[k])t-=L[k++];const a=pts[k],b=pts[k+1],e=Math.min(1,t/L[k]);trackFinger(paths,closed,face,prog,d,a[0]+(b[0]-a[0])*e,a[1]+(b[1]-a[1])*e);out.push(prog[i]);}
+ return prog.concat([out]);
+};
+test('trackFinger: forward and reverse traces both fill the lock only at the end',()=>{
+ const paths=mechanicalPaths(),i=paths.findIndex(p=>p.id==='rect');
+ for(const rev of [false,true]){const r=walk(paths,i,rev),out=r.at(-1);assert.ok(out[Math.floor(out.length/2)]<.6);assert.ok(out.at(-1)>=.9,String(out.at(-1)));}
+});
+test('trackFinger: a tap or a jump gives no progress',()=>{
+ const paths=mechanicalPaths(),face={w:1,h:1.75},closed=paths.map(()=>false),prog=paths.map(()=>0),d={pi:null,f:null},p=paths[0].points;
+ trackFinger(paths,closed,face,prog,d,(p[0][0]+p[1][0])/2,(p[0][1]+p[1][1])/2);
+ assert.ok(prog.every(x=>x===0));
+});
+
+test('trackFinger: a fast 8-step swipe along a straight x line still completes it',()=>{
+ const paths=mechanicalPaths(),face={w:1,h:1.75},closed=paths.map(()=>false),i=paths.findIndex(p=>p.id==='x'),prog=paths.map(()=>0),d={pi:null,f:null},[a,b]=paths[i].points;
+ for(let k=0;k<=8;k++)trackFinger(paths,closed,face,prog,d,a[0]+(b[0]-a[0])*k/8,a[1]+(b[1]-a[1])*k/8);
+ assert.ok(prog[i]>=.95,String(prog[i]));
 });

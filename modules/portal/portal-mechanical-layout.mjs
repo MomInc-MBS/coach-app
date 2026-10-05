@@ -100,3 +100,49 @@ export function mechanicalLayout(face,paths=mechanicalPaths(),nodes=['m19']){
  return {parts,trains,paths};
 }
 export function signedRailImpulse(hit,du,dv,face,r,gain=2){return (du*face.w*hit.tx+dv*face.h*hit.ty)/(r*face.w)*gain;}
+// Lock-ring machinery along the shape lines. Lengths/radii are face-WIDTH fractions, rot = tangent in face space.
+// bolt.side: sign so that local +y*side (3D, y up = -v) withdraws toward the path centroid; in uv the withdrawn centre is c+side*throw*(sin,-cos) in face-width units.
+export function mechanismLayout(face,paths=mechanicalPaths(),gearLayout=mechanicalLayout(face,paths)){
+ const {parts}=gearLayout,out={tubes:[],bolts:[],pistons:[],pulleys:[],cables:[],weights:[],lamps:[],dial:[]};
+ const W=(a,b)=>Math.hypot(b[0]-a[0],(b[1]-a[1])*face.h/face.w),rotOf=(a,b)=>Math.atan2((b[1]-a[1])*face.h,(b[0]-a[0])*face.w);
+ const nearGear=(u,v)=>parts.reduce((best,p,i)=>W([u,v],[p.u,p.v])<W([u,v],[parts[best].u,parts[best].v])?i:best,0);
+ paths.forEach((path,pathIndex)=>{
+  const pts=path.points,closed=Math.hypot(pts[0][0]-pts.at(-1)[0],pts[0][1]-pts.at(-1)[1])<EPS,gs=parts.filter(p=>p.pathIndex===pathIndex),st=[];
+  const body=closed?pts.slice(1):pts,cu=body.reduce((a,p)=>a+p[0],0)/body.length,cv=body.reduce((a,p)=>a+p[1],0)/body.length;
+  for(let i=0;i<gs.length;i+=2){const a=gs[i],b=gs[i+1],u=(a.u+b.u)/2,v=(a.v+b.v)/2;st.push({u,v,segment:pointOnPath([path],face,u,v).segment,station:a.station,clear:(a.r+b.r)*.47+a.r});}
+  for(const s of st){
+   const a=pts[s.segment],b=pts[s.segment+1],rot=rotOf(a,b),L=W(a,b),at=W(a,[s.u,s.v]),to=Math.min(Math.max(at,.03),L-.03),bu=s.u+(b[0]-a[0])*(to-at)/L,bv=s.v+(b[1]-a[1])*(to-at)/L;
+   out.lamps.push({u:s.u,v:s.v,r:.018,pathIndex,station:s.station});
+   // a bolt on a vertex slides .03 along its segment so the withdrawn bar stays inside the polygon
+   if(closed)out.bolts.push({u:L>.06?bu:s.u,v:L>.06?bv:s.v,rot,r:.02,pathIndex,station:s.station,throw:.025,side:Math.sign(Math.sin(rot)*(cu-bu)*face.w-Math.cos(rot)*(cv-bv)*face.h)||1});
+  }
+  const mine=out.tubes.length;
+  for(let seg=0;seg<pts.length-1;seg++){
+   const a=pts[seg],b=pts[seg+1],L=W(a,b),rot=rotOf(a,b),nodes=[{s:0,c:0},...st.filter(s=>s.segment===seg).map(s=>({s:W(a,[s.u,s.v]),c:s.clear+.005})),{s:L,c:0}];
+   // every crossing with another path splits the tube, so a tube never spans two panels
+   paths.forEach((q,j)=>{if(j===pathIndex)return;for(let k=0;k<q.points.length-1;k++){
+    const c=q.points[k],d=q.points[k+1],rx=b[0]-a[0],ry=b[1]-a[1],sx=d[0]-c[0],sy=d[1]-c[1],x=rx*sy-ry*sx;
+    if(Math.abs(x)<EPS)continue;const t=((c[0]-a[0])*sy-(c[1]-a[1])*sx)/x,u=((c[0]-a[0])*ry-(c[1]-a[1])*rx)/x;
+    if(t>=-EPS&&t<=1+EPS&&u>=-EPS&&u<=1+EPS)nodes.push({s:t*L,c:.003});
+   }});
+   nodes.sort((p,q)=>p.s-q.s);
+   for(let i=1;i<nodes.length;i++){
+    const from=nodes[i-1].s+nodes[i-1].c,to=nodes[i].s-nodes[i].c,len=to-from;
+    if(len<.012)continue;const t=(from+to)/2/L;
+    out.tubes.push({u:a[0]+(b[0]-a[0])*t,v:a[1]+(b[1]-a[1])*t,len,rot,r:.007,pathIndex,segment:seg});
+   }
+  }
+  // one piston per path, at the centre of its longest tube
+  const t=out.tubes.slice(mine).sort((p,q)=>q.len-p.len)[0];
+  if(t)out.pistons.push({u:t.u,v:t.v,rot:t.rot,r:.02,stroke:.04,pathIndex,drives:nearGear(t.u,t.v)});
+ });
+ // Corner hubs become pulleys; cables hang in the side margin outside the frame so nothing hides them.
+ parts.forEach((p,drives)=>{if(!p.hub)return;
+  const sx=p.u<.5?-1:1,sy=p.v<.5?1:-1,from=[p.u+sx*p.r,p.v],to=[from[0],p.v+sy*.22],len=W(from,to);
+  out.pulleys.push({u:p.u,v:p.v,r:p.r,drives});out.cables.push({from,to,r:.004});
+  out.weights.push({u:from[0]+(to[0]-from[0])*.4,v:from[1]+(to[1]-from[1])*.4,r:.016,travel:len*.5,drives});
+ });
+ const oi=paths.findIndex(p=>p.id==='oval'),op=paths[oi].points.slice(1);
+ out.dial.push({u:op.reduce((a,p)=>a+p[0],0)/op.length,v:op.reduce((a,p)=>a+p[1],0)/op.length,r:.11,drives:gearLayout.trains[oi][0]});
+ return out;
+}
