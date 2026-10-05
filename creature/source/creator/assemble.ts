@@ -1,3 +1,4 @@
+import {goldenCoach} from '../../../performance-progress.mjs';
 import {arrangeEyes} from './anatomy';
 import {EYE_LAYOUTS,EYE_REFERENCE,EYE_SCALE_DEFAULT} from './eye-layouts';
 import {EYE_OVERRIDES} from './eye-overrides';
@@ -160,6 +161,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
   if(failed?.status==='rejected'){for(const state of previous)state.mesh.material=state.material;stagedMaterials.forEach(material=>material.dispose());continue;}
   const replaced=new Set<THREE.Material>();for(const state of previous)for(const material of Array.isArray(state.material)?state.material:[state.material])replaced.add(material);replaced.forEach(material=>material.dispose());
  }
+ if(d.golden!==false&&goldenCoach(d.body))root.traverse(object=>{if(!(object instanceof THREE.Mesh))return;for(const material of Array.isArray(object.material)?object.material:[object.material]){const m=material as THREE.MeshStandardMaterial;if(m.color&&object.userData.region!=='eye'){m.color.set('#e8bc4d');m.metalness=.8;m.roughness=.24;}}});
  root.userData.recipe=JSON.parse(JSON.stringify(d));root.userData.eyeOffset=eyeOffset;root.userData.eyeScale=eyeScale;root.userData.eyeSurfaceZ=surfaceZ;root.userData.pivots=pivots;
  return {root,skinTextures,dispose:disposeAssembly};
 }

@@ -22,6 +22,7 @@
 // is still a placeholder: the production pixel-art recipe is a later rank (handoff §9 step 2).
 import {REJECTED_BODY_IDS} from './design';
 import {ROWS as BOARD_ROWS,TRACKS,LEVELS_PER_BOSS} from '../../../battle-pass-rewards.mjs';
+import {coachAccess} from '../../../performance-progress.mjs';
 export {REJECTED_BODY_IDS};
 
 export const TRACK_IDS = ['chest', 'quads', 'glutes', 'arms', 'yoga', 'martial-arts', 'cardio', 'meditation'] as const;
@@ -147,5 +148,5 @@ function newUserBody(id:string,tracks:Iterable<string>){
  * selectedTracks(), D25 ids) or one with a completed section. */
 export function bodyLockSection(id:string,state:Record<string,number>,tracks:Iterable<string>=[]):string|null{
  const placement=TRACK_PLACEMENTS.find(p=>p.stableId===id);
- return !placement||placement.tracks.some(t=>sectionComplete(t,state))||newUserBody(id,tracks)?null:placement.tracks.map(t=>SECTION_NAMES[t]).join(' or ');
+ return !placement||coachAccess(id)?null:placement.tracks.map(t=>SECTION_NAMES[t]+' performance milestone').join(' or ');
 }

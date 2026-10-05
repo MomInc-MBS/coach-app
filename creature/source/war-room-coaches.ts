@@ -1,3 +1,4 @@
+import {goldenCoach} from '../../performance-progress.mjs';
 import {BODIES,parseRecipe,fresh} from './creator/design';
 import {bodyLockSection} from './creator/track-placements';
 import {resolveRegionMaterial,regionChoice} from './creator/materials-registry';
@@ -18,7 +19,7 @@ export async function loadWarRoomCoaches(doc:Document){
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&s.kind===kind)&&!lock(saved[kind]))selection[kind]=saved[kind];}catch{}
  const cache=new Map<string,HTMLCanvasElement>();
  function art(sprite:Sprite,silhouette=false){
-  const r=recipe(),colours=['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region)).primary);
+  const r=recipe(),colours=goldenCoach(sprite.id)&&r.golden!==false?['#e8bc4d','#ffe4a1','#6b4214']:['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region)).primary);
   const key=JSON.stringify([sprite.id,silhouette,colours]);if(cache.has(key))return cache.get(key)!;
   const [x,y,w,h]=sprite.frame,canvas=doc.createElement('canvas');canvas.width=w;canvas.height=h;
   const ctx=canvas.getContext('2d',{willReadFrequently:true})!,mask=doc.createElement('canvas');mask.width=w;mask.height=h;
@@ -35,7 +36,7 @@ export async function loadWarRoomCoaches(doc:Document){
   const choose=(id:string|null)=>{if(id&&lock(id))return;const next={...selection,[kind]:id};try{localStorage.setItem(KEY,JSON.stringify(next));selection=next;changed();}catch{group.setAttribute('aria-label','This choice could not be saved. Storage is unavailable.');}};
   const standard=doc.createElement('button');standard.type='button';standard.textContent=kind==='body'?'Gala body':'Gala pet';standard.setAttribute('aria-pressed',String(!selection[kind]));standard.onclick=()=>choose(null);group.append(standard);
   for(const sprite of sprites.filter(s=>s.kind===kind)){
-   const locked=lock(sprite.id),button=doc.createElement('button'),name=BODIES.find(b=>b.id===sprite.id)?.label||sprite.family;
+   const locked=lock(sprite.id),button=doc.createElement('button'),name=(goldenCoach(sprite.id)?'Golden ':'')+(BODIES.find(b=>b.id===sprite.id)?.label||sprite.family);
    button.type='button';button.disabled=!!locked;button.dataset.coachSprite=sprite.id;button.setAttribute('aria-label',name+(locked?' · Complete '+locked:''));button.setAttribute('aria-pressed',String(selection[kind]===sprite.id));
    const preview=art(sprite,!!locked).cloneNode() as HTMLCanvasElement;preview.width=sprite.frame[2];preview.height=sprite.frame[3];preview.getContext('2d')!.drawImage(art(sprite,!!locked),0,0);
    const label=doc.createElement('span');label.textContent=(locked?'🔒 ':'')+name;button.append(preview,label);button.onclick=()=>choose(sprite.id);group.append(button);

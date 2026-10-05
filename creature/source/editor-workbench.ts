@@ -1,3 +1,4 @@
+import {goldenCoach} from '../../performance-progress.mjs';
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
 import {GESTURES,type Gesture} from './motion';
@@ -164,6 +165,9 @@ for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',p
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
 function fillTextures(){$('textureId').replaceChildren();for(const t of unlockedFirst(TEXTURES,t=>idLocked(t.id))){const o=document.createElement('option');o.value=t.id;o.textContent=(idLocked(t.id)?'🔒 ':'')+t.displayName;if(isGranted('texture',t.id))sparkleOption(o,'texture',t.id);$('textureId').append(o);}}
 fillBodies();fillTextures();
+const goldenToggle=document.createElement('button');goldenToggle.type='button';goldenToggle.textContent='Golden coach';goldenToggle.title='Unlocked by a ten-minute uninterrupted hold';
+function syncGolden(){goldenToggle.disabled=!goldenCoach(shown().body);goldenToggle.setAttribute('aria-pressed',String(shown().golden!==false&&goldenCoach(shown().body)));}
+goldenToggle.onclick=()=>{if(goldenCoach(shown().body)){commit({...shown(),golden:shown().golden===false});syncGolden();}};$('body').after(goldenToggle);$('body').addEventListener('change',()=>queueMicrotask(syncGolden));window.addEventListener('myr5:performance-progress',()=>{refreshLists();syncGolden();});syncGolden();
 watchSelect($('body') as HTMLSelectElement);watchSelect($('textureId') as HTMLSelectElement);
 $('textureId').addEventListener('change',()=>pickTexture(($('textureId') as HTMLSelectElement).value));
 const colorSwatches=[
