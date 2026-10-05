@@ -271,3 +271,15 @@ test('trackFinger: a fast 8-step swipe along a straight x line still completes i
  for(let k=0;k<=8;k++)trackFinger(paths,closed,face,prog,d,a[0]+(b[0]-a[0])*k/8,a[1]+(b[1]-a[1])*k/8);
  assert.ok(prog[i]>=.95,String(prog[i]));
 });
+
+// --- Dressing keep-out: old-door parts never sit on a shape line, a keep-out circle or a cable ---
+test('dressingKeep/dressingPlace honour shape lines, circles and cables',async()=>{
+ const {dressingKeep,dressingPlace}=await import('../modules/portal/portal-board-cogs.mjs');
+ const face={w:1,h:1.75},paths=[{id:'t',points:[[.2,.5],[.8,.5]]}];
+ const parts=[{u:.5,v:.5,r:.01},{u:.5,v:.51,r:.01},{u:.5,v:.6,r:.01},{u:.3,v:.7,r:.01},{u:.3,v:.8,r:.01}];
+ assert.deepEqual(dressingKeep(parts,paths,face).map(p=>p.v),[.6,.7,.8]);
+ assert.deepEqual(dressingKeep(parts,paths,face,[{u:.3,v:.7,r:.02}],[{a:[0,.8],b:[1,.8],r:.004}]).map(p=>p.v),[.6]);
+ const placed=dressingPlace(parts,paths,face,[],[]);
+ assert.ok(placed.length>=4);
+ for(const p of placed)assert.ok(dressingKeep([p],paths,face).length===1);
+});
