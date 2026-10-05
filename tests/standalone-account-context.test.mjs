@@ -2,11 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAuthTransition} from '../auth-transition.mjs';
 import {createStandaloneAccountContext} from '../standalone-account-context.mjs';
-import {performanceOwner} from '../performance-progress.mjs';
+import {performanceOwner,readPerformanceProgress,recordPerformanceSession} from '../performance-progress.mjs';
 import {grantUnlock,isGranted} from '../creature/source/creator/unlock-store.ts';
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 const account=(id='A',dataEpoch=1)=>({user:{id},dataEpoch,progress:{},entitlements:{}});
 const reply=value=>new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});
+test('verified standalone reads hydrate progression before announcing account ownership',async()=>{
+ const remoteStorage=new Map(),storage={getItem:k=>remoteStorage.get(k)??null,setItem:(k,v)=>remoteStorage.set(k,v)};
+ const verified=account('synced-owner',2);
+ verified.progress.performance=recordPerformanceSession({id:'synced-workout',mode:'knee-pushup',kind:'reps',difficulty:'easy',value:8,xpBase:9,day:'2026-10-04'},{storage,account:verified});
+ const f=fixture(async()=>reply(verified));let announcedXp;
+ f.target.addEventListener('myr5:account-ready',()=>{announcedXp=readPerformanceProgress().totalXp;});
+ try{await f.context.refresh();assert.equal(announcedXp,9);assert.equal(Object.keys(readPerformanceProgress().sessions).length,1);await f.context.refresh();assert.equal(readPerformanceProgress().totalXp,9);}finally{f.close();}
+});
 function fixture(request,timeoutMs=100){
  const data=new Map(),storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,String(value))};
  const target=new EventTarget(),channel=new EventTarget();channel.postMessage=()=>{};

@@ -48,18 +48,6 @@ export function loadProgress({tracks=stepTracks(),account,stepsPerLevel=STEPS_PE
  const performance=readPerformanceProgress({account}),result=Object.fromEntries(BOSSES.map(b=>[b.id,0]));
  for(const row of ROWS){if(!row.track)continue;const coaches=COACH_REQUIREMENTS.filter(c=>c.tracks.includes(TRACKS[row.track].catalog));for(let index=0;index<row.bosses;index++){const coach=coaches[Math.min(coaches.length-1,Math.floor(index*coaches.length/row.bosses))];if(coach)result[`${row.id}-${index+1}`]=performance.goldenCoaches.includes(coach.id)?5:performance.coaches.includes(coach.id)?4:0;}}
  return result;
- /* Legacy step-map reconstruction is retained below for migration reference.
- const available=selectedTracks(account),progress=Object.fromEntries(BOSSES.map(b=>[b.id,0])); // board order
- // ponytail: overflow banks while other rows catch up; swap for a separate shared-boss counter if tuning wants one.
- let overflow=0,allRowsDone=true,shared=0;
- for(const row of ROWS){
-  if(!row.track)continue;
-  const open=available.has(row.track),level=open?levelsBeaten(tracks?.[TRACKS[row.track].circuit]?.steps,stepsPerLevel):0,end=row.bosses*LEVELS_PER_BOSS;
-  for(let k=1;k<=row.bosses;k++)progress[`${row.id}-${k}`]=clamp(level-LEVELS_PER_BOSS*(k-1));
-  if(open){overflow+=Math.max(0,level-end);if(level<end)allRowsDone=false;}
- }
- for(const row of ROWS)if(!row.track)progress[`${row.id}-1`]=allRowsDone?clamp(overflow-LEVELS_PER_BOSS*shared++):0;
- return progress; */
 }
 
 /** Combat kit level (1–5, D8/D22) for the rest-arena boss after a set of `mode`: the levels beaten

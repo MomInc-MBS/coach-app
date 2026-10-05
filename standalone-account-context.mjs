@@ -1,6 +1,7 @@
 // Standalone pages obtain ownership only from a verified account read. They do
 // not treat device appearance, a cached ID or a login-provider flag as identity.
 import {authFetch} from './auth-client.mjs';
+import {mergeVerifiedPerformance} from './performance-progress.mjs';
 import {authTransitions} from './auth-transition.mjs';
 export function createStandaloneAccountContext({request=authFetch,transitions=authTransitions(),target=globalThis.window??globalThis,timeoutMs=8000}={}){
  let active=null,generation=0,disposed=false;
@@ -18,7 +19,7 @@ export function createStandaloneAccountContext({request=authFetch,transitions=au
    if(disposed||current!==generation)return null;
    if(typeof account?.user?.id!=='string'||!account.user.id||account.user.id.length>128||!Number.isSafeInteger(account.dataEpoch)||account.dataEpoch<1)throw Error('Invalid verified account.');
    if(active&&(active.user.id!==account.user.id||active.dataEpoch!==account.dataEpoch)){transitions.invalidate();return null;}
-   active=account;target.myr5AuthenticatedAccount=account;target.coachEntitlements=account.entitlements??null;target.coachProgress=account.progress??null;emit('myr5:account-ready',account);return account;
+   mergeVerifiedPerformance(account);active=account;target.myr5AuthenticatedAccount=account;target.coachEntitlements=account.entitlements??null;target.coachProgress=account.progress??null;emit('myr5:account-ready',account);return account;
   }catch{
    if(!disposed&&current===generation&&transitions.isCurrent(ticket))clear();return null;
   }finally{clearTimeout(timer);controller.abort();}

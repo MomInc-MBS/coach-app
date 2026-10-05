@@ -87,7 +87,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   type.setAttribute('aria-label','Gala weapon');tier.setAttribute('aria-label','Weapon upgrade');type.dataset.galaWeapon='type';tier.dataset.galaWeapon='tier';
   for(const item of W.types){const option=el('option',item.name);option.value=item.id;type.append(option);}
   type.value=selected.type;
-  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=el('option'),locked=!W.unlocked(item);option.value=String(i);option.disabled=locked;option.textContent=W.tiers[i]+(locked?` · 🔒 Level ${i+1}`:'');tier.append(option);}
+  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=el('option'),locked=!W.unlocked(item);option.value=String(i);option.disabled=locked;option.textContent=W.tiers[i]+(locked?` · 🔒 ${W.requirements(item).label}`:'');tier.append(option);}
   tier.value=String(selected.tier);
   // The weapon already saved is kept as it is (an earned tier survives a guest or offline visit); anything else must be earned.
   const equip=(next:{type:string;tier:number})=>{touch();const kept=next.type===selected.type&&next.tier===selected.tier;if(!kept&&!W.unlocked(next))next={type:next.type,tier:0};save({...saved,weapon:next},W.name(next)+'.');};
