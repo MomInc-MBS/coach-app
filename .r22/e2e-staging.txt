@@ -1,0 +1,131 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36me2e v0.16.0[39m [90mD:\Repos\myr5-e2e[39m
+      [2mrun 01a10b01-0d77-7f4a-922e-970113a465af · targets: mobile[22m
+      [2mmodel nvidia.chat/moonshotai/kimi-k3[22m
+
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/customizer.e2e.ts[2m > [22mcustomize coach: war room loads and stations can be opened
+(node:52852) Warning: AI SDK Warning System: To turn off warning logging, set the AI_SDK_LOG_WARNINGS global to false.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the War Room page is loaded with stations for pets, weapons, mirror and…" [2m20.28s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/customizer.e2e.ts[2m > [22mcustomize coach: war room loads and stations can be opened
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [31m×[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the mirror / alien features station is active or emphasised, and the pa…" [2m30.01s · 2 model calls failed[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/customizer.e2e.ts[2m > [22mcustomize coach: war room loads and stations can be opened
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the War Room page is loaded with stations for pets, weapons, mirror and…" [2m23.45s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/customizer.e2e.ts[2m > [22mcustomize coach: war room loads and stations can be opened
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the mirror / alien features station is active or emphasised, and the pa…" [2m24.07s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/customizer.e2e.ts[2m > [22mcustomize coach: war room loads and stations can be opened
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the centre station / clothes station is active or emphasised, and the p…" [2m23.61s · 1 model call[22m
+ [32m✓[39m [30m[103m mobile [49m[39m tests/customizer.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[33m1 flaky[39m[2m)[22m [2m168.88s[22m [2mai 11.2k tokens[22m
+   [33m✓[39m customize coach: war room loads and stations can be opened [33m(flaky)[39m [2m168.88s[22m [2mai 11.2k tokens[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts[2m > [22mfood can be opened via the Coach tools nav and shows the food state
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m30.53s · 2 model calls failed[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts[2m > [22mfood can be opened via the Coach tools nav and shows the food state
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m27.60s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts[2m > [22mfood can be opened via the Coach tools nav and shows the food state
+(node:52852) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "the current mode indicator says "Food" and the page is responsive with …" [2m30.02s · 2 model calls failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m183.93s[22m [2mai 1.6k tokens[22m
+   [31m× food can be opened via the Coach tools nav and shows the food state[39m [2m183.93s[22m [2mai 1.6k tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+ [32m✓[39m [30m[103m mobile [49m[39m tests/home-pod.e2e.ts [2m([22m[2m2 tests[22m[2m)[22m [2m24.42s[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.waitFor[22m "a wormhole portal transition is playing" [2m8.40s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.assert[22m "the page offers a way to install the MYR5 coach, with an "Install Coach…" [2m30.01s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.waitFor[22m "a wormhole portal transition is playing" [2m8.08s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.assert[22m "the page offers a way to install the MYR5 coach, with an "Install Coach…" [2m30.01s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/install-wormhole.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m93.20s[22m [2mai 0 tokens[22m
+   [31m× install route reachable via the gate Get-started link[39m [2m93.20s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+   [31m×[39m [2mmeditation route reaches a meditation state (status + scene-or-hub)[22m[2m > [22m[2magent.assert[22m "a breathing scene dialog (the still room) is open with guided breathing…" [2m50.11s · 1 model call failed[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/meditation.e2e.ts[2m > [22mmeditation route reaches a meditation state (status + scene-or-hub)
+(node:47092) Warning: AI SDK Warning System: To turn off warning logging, set the AI_SDK_LOG_WARNINGS global to false.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:47092) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [31m×[39m [2mmeditation route reaches a meditation state (status + scene-or-hub)[22m[2m > [22m[2magent.assert[22m "a breathing scene dialog (the still room) is open with guided breathing…" [2m30.54s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/meditation.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m176.57s[22m [2mai 0 tokens[22m
+   [31m× meditation route reaches a meditation state (status + scene-or-hub)[39m [2m176.57s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts[2m > [22mmovement library opens, paginates and shows a hologram
+(node:29892) Warning: AI SDK Warning System: To turn off warning logging, set the AI_SDK_LOG_WARNINGS global to false.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:29892) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mmovement library opens, paginates and shows a hologram[22m[2m > [22m[2magent.assert[22m "the movement library dialog is open showing movement cards" [2m29.45s · 1 model call[22m
+   [31m×[39m [2mmovement library opens, paginates and shows a hologram[22m[2m > [22m[2magent.assert[22m "the movement library shows a different page of movement cards" [2m30.02s · 1 model call failed[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts[2m > [22mmovement library opens, paginates and shows a hologram
+(node:29892) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mmovement library opens, paginates and shows a hologram[22m[2m > [22m[2magent.assert[22m "the movement library dialog is open showing movement cards" [2m13.85s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts[2m > [22mmovement library opens, paginates and shows a hologram
+(node:29892) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2mmovement library opens, paginates and shows a hologram[22m[2m > [22m[2magent.assert[22m "the movement library shows a different page of movement cards" [2m32.24s · 1 model call[22m
+   [31m×[39m [2mmovement library opens, paginates and shows a hologram[22m[2m > [22m[2magent.act[22m "tap the first movement card" [2m113.31s · 2 model calls failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m335.94s[22m [2mai 19.2k tokens[22m
+   [31m× movement library opens, paginates and shows a hologram[39m[31m (timed-out)[39m [2m335.94s[22m [2mai 19.2k tokens[22m
+     [31m→ test timed out after 180000 ms in phase body[39m
+   [32m✓[39m [2magent wiring: open settings by instruction[22m[2m > [22m[2magent.act[22m "tap the "Open pod settings" button" [2m83.10s · 1 model call[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/provider-wiring.e2e.ts[2m > [22magent wiring: open settings by instruction
+(node:58552) Warning: AI SDK Warning System: To turn off warning logging, set the AI_SDK_LOG_WARNINGS global to false.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58552) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [32m✓[39m [2magent wiring: open settings by instruction[22m[2m > [22m[2magent.assert[22m "the Settings dialog is open" [2m9.16s · 1 model call[22m
+ [32m✓[39m [30m[103m mobile [49m[39m tests/provider-wiring.e2e.ts [2m([22m[2m1 test[22m[2m)[22m [2m123.44s[22m [2mai 7.5k tokens[22m
+   [32m✓[39m [2msettings: camera manual mode, goal slider and coach sound[22m[2m > [22m[2magent.act[22m "set the Camera select to "Manual / timer"" [2m51.90s · 2 model calls[22m
+[33mstderr[39m [2m|[22m [30m[103m mobile [49m[39m tests/settings.e2e.ts[2m > [22msettings: camera manual mode, goal slider and coach sound
+(node:58552) Warning: AI SDK Warning (nvidia.chat / moonshotai/kimi-k3): The feature "responseFormat" is not supported. JSON response format schema is only supported with structuredOutputs
+   [31m×[39m [2msettings: camera manual mode, goal slider and coach sound[22m[2m > [22m[2magent.assert[22m "the Camera select shows "Manual / timer"" [2m30.01s · 2 model calls failed[22m
+   [31m×[39m [2msettings: camera manual mode, goal slider and coach sound[22m[2m > [22m[2magent.act[22m "set the Camera select to "Manual / timer"" [2m120.01s · 2 model calls failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/settings.e2e.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m291.15s[22m [2mai 20.8k tokens[22m
+   [32m✓[39m settings dialog shows workout, voice, materials, pod and about groups [2m25.40s[22m
+   [31m× settings: camera manual mode, goal slider and coach sound[39m [2m265.76s[22m [2mai 20.8k tokens[22m
+     [31m→ agent.act exceeded its 120000 ms timeout[39m
+ [32m✓[39m [30m[103m mobile [49m[39m tests/smoke.e2e.ts [2m([22m[2m1 test[22m[2m)[22m [2m65.69s[22m
+
+[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts[2m > [22mfood can be opened via the Coach tools nav and shows the food state
+[31m[1mSTEP_TIMEOUT[22m: model call exceeded the remaining step timeout[39m
+[36m [2m❯[22m [2mat[22m https://myr5-coach-staging.mominc-coach.workers.dev/#food[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_food-pyramid.e2e.ts__food_20can_20be_20opened_20via_20the_20Coach_20tools_20nav_20and_20shows_20the_20foo-04bc06fc\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/install-wormhole.e2e.ts[2m > [22minstall route reachable via the gate Get-started link
+[31m[1mSTEP_TIMEOUT[22m: model call exceeded the remaining step timeout[39m
+[36m [2m❯[22m [2mat[22m https://myr5-coach-staging.mominc-coach.workers.dev/install[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_install-wormhole.e2e.ts__install_20route_20reachable_20via_20the_20gate_20Get-started_20link-2c2d7e05\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/meditation.e2e.ts[2m > [22mmeditation route reaches a meditation state (status + scene-or-hub)
+[31m[1mSTEP_TIMEOUT[22m: model call exceeded the remaining step timeout[39m
+[36m [2m❯[22m [2mat[22m https://myr5-coach-staging.mominc-coach.workers.dev/#meditate[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_meditation.e2e.ts__meditation_20route_20reaches_20a_20meditation_20state_20_28status_20_2B_20scene-or-hub-c9ffa496\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts[2m > [22mmovement library opens, paginates and shows a hologram
+[31m[1mTEST_TIMEOUT[22m: test timed out after 180000 ms in phase body[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/settings.e2e.ts[2m > [22msettings: camera manual mode, goal slider and coach sound
+[31m[1mSTEP_TIMEOUT[22m: agent.act exceeded its 120000 ms timeout[39m
+[36m [2m❯[22m [2mat[22m https://myr5-coach-staging.mominc-coach.workers.dev/#settings[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_settings.e2e.ts__settings_3A_20camera_20manual_20mode_2C_20goal_20slider_20and_20coach_20sound-6a63caa7\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files  [22m[1m[31m5 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (9)[39m
+[2m      Tests  [22m[1m[31m5 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[2m | [22m[33m1 flaky[39m[90m (11)[39m
+[2m         AI  [22m60.2k tokens · 31 model calls · nvidia.chat/moonshotai/kimi-k3
+[2m      Cache  [22m[33m1 handed off[39m[2m · [22m3 missed
+[2m   Start at  [22m00:39:43
+[2m   Duration  [22m1548.45s [2m(25m 48s)[22m
+[2m     Report  [22m.e2e\report.json
+

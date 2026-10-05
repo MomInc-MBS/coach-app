@@ -1,0 +1,5 @@
+tests/food-pyramid.e2e.ts
+tests/install-wormhole.e2e.ts
+tests/meditation.e2e.ts
+tests/movement-library.e2e.ts
+tests/settings.e2e.ts
