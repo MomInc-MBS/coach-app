@@ -30,7 +30,7 @@ export type InstalledSkinResolver=(id:string)=>Promise<InstalledSkin|null>;
 export async function assembleCreature(d:Design,assetBase:string,resolveInstalledSkin?:InstalledSkinResolver,preview=false){
  // The build meshopt-compresses these models (scripts/optimize-glb.mjs).
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
- const look=(region:Region)=>resolveRegionMaterial(d.styles[region],regionChoice(d.materials,region),preview);
+ const look=(region:Region)=>resolveRegionMaterial(d.styles[region],regionChoice(d.materials,region),preview,d.body);
  const load=async(name:string)=>loader.parseAsync(await bytes(assetBase+'models/'+name+'.glb'),assetBase+'models/');
  // Each region can come from a different creature. A GLTF scene can only give each node away once,
  // so every distinct source id is parsed once and reused across the regions that name it.

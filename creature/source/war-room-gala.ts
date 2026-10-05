@@ -65,6 +65,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   saved=loadGala(storage,A).look;look=structuredClone(saved);
   const chosen=look.weapon||{type:'rapier',tier:0};look.weapon=W.unlocked(chosen)?chosen:{type:chosen.type,tier:0};
   performer=P.create(look,coaches?{draw:(canvas:any,value:any,options:any)=>coaches!.draw(A.draw,canvas,value,options),hasPet:coaches.hasPet}:{});stage.renderer.domElement.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)} in the War Room`);
+  stage.mount.querySelectorAll<HTMLElement>('[data-cage-section=clothing]').forEach(control=>{control.hidden=!!coaches?.hasBody;});
   if(open)showBay(open);
  }
  const touch=()=>{idleSince=performance.now();if(mode.name==='walk')mode={name:'idle',since:idleSince};};
@@ -92,7 +93,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   const equip=(next:{type:string;tier:number})=>{touch();const kept=next.type===selected.type&&next.tier===selected.tier;if(!kept&&!W.unlocked(next))next={type:next.type,tier:0};save({...saved,weapon:next},W.name(next)+'.');};
   type.onchange=()=>equip({type:type.value,tier:type.value===selected.type?selected.tier:0});tier.onchange=()=>equip({type:type.value,tier:Number(tier.value)});
   const typeLabel=el('label','Weapon'),tierLabel=el('label','Upgrade');typeLabel.append(type);tierLabel.append(tier);
-  form.append(typeLabel,tierLabel,el('p','Workout XP raises your level; each level unlocks a tier.','help'));
+  form.append(typeLabel,tierLabel,el('p','Workout performance earns weapon upgrades.','help'));
   return form;
  }
  function showBay(section:Bay){
@@ -105,7 +106,10 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   heading.textContent=title;
   if(section==='pets')body.replaceChildren(...sections(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));
   else if(section==='weapons')body.replaceChildren(weaponForm());
-  else if(section==='mirror')body.replaceChildren(...sections(MIRROR),...(coaches?[coaches.picker('body',load)]:[]));
+  else if(section==='mirror')body.replaceChildren(...sections(coaches?.hasBody?['skin']:MIRROR),...(coaches?[coaches.picker('body',load)]:[]));
+  else if(coaches?.hasBody){
+   body.replaceChildren(el('p','Coach characters do not wear Gala clothes. Change their colour at the mirror.','help'));
+  }
   else{
    const dye=el('label','Silk colour'),select=el('select');select.dataset.galaPart='dye';
    A.dyes.forEach((_:string,i:number)=>{const option=el('option',`Silk ${i+1}`);option.value=String(i);select.append(option);});select.value=String(saved.dye);
@@ -121,14 +125,14 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
  function flatBays(){
   const row=el('div','','cage-bays');row.setAttribute('role','group');row.setAttribute('aria-label','War Room sections');
   for(const s of SECTIONS){if(s.id==='overview'||s.id==='pedestal')continue;const b=el('button',LABELS[s.id].label);b.type='button';b.setAttribute('aria-label',LABELS[s.id].name);b.dataset.cageSection=s.id;b.classList.add('bay-terminal-line');b.onclick=()=>{for(const x of row.children)x.setAttribute('aria-pressed',String(x===b));if(s.id==='overview')closeBay();else showBay(s.id);};row.append(b);}
-  stageEl.append(row);
+  stageEl.append(row);row.querySelectorAll<HTMLElement>('[data-cage-section=clothing]').forEach(control=>{control.hidden=!!coaches?.hasBody;});
  }
  void cagePacketReady().then(have=>{
   if(disposed)return;
   if(!have){flatBays();tell('Download the 3D cage: Install → Downloads.');return;}
   cage=mountCage(stage,{openTab:()=>false,showBay:()=>{},closeBay,tell,bay:showBay,labels:LABELS,volumes:{pedestal:[[.02,.64,-.01,.22,.20,.24,0]],clothing:[[.06,.3,-.31,.18,.12,.1,0]]}});
   stage.mount.querySelectorAll('[data-cage-section=overview],[data-cage-section=pedestal]').forEach(el=>el.remove());
-  void cage.ready.then(ok=>{if(!disposed&&!ok)flatBays();});
+  void cage.ready.then(ok=>{if(!disposed){if(!ok)flatBays();load();}});
  });
  const tick=(now:number)=>{
   if(disposed)return;frame=requestAnimationFrame(tick);if(now-last<32||doc.hidden)return;last=now;

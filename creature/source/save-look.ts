@@ -7,7 +7,7 @@ import {bodyLockSection} from './creator/track-placements';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 import {RECIPE_KEY} from './profile';
 
-const ownedChoice=(c?:MaterialChoice):c is MaterialChoice=>!!c&&!idLocked(c.textureId)&&!idLocked(c.colorId);
+const ownedChoice=(c:MaterialChoice|undefined,coachId:string):c is MaterialChoice=>!!c&&!idLocked(c.textureId,coachId)&&!idLocked(c.colorId,coachId);
 export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 
 /** Locked material regions fall back to `lastOwned`'s choice for that region (or the original style);
@@ -16,12 +16,12 @@ export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 export function keepOwned(d:Design,lastOwned?:Design,grandfathered:ReadonlySet<string>=new Set(),progress:Record<string,number>=loadProgress(),tracks:Iterable<string>=selectedTracks()):Design{
  const bodyOk=(id?:string):id is string=>!!id&&(grandfathered.has(id)||!bodyLockSection(id,progress,tracks));
  let next=d;
- if(d.materials&&!Object.values(d.materials).every(ownedChoice)){
+ for(const key of BODY_KEYS)if(!bodyOk(next[key])){const fallback=lastOwned?.[key];next={...next,[key]:bodyOk(fallback)?fallback:'myr5'};}
+ if(d.materials&&!Object.values(d.materials).every(choice=>ownedChoice(choice,next.body))){
   const materials:Design['materials']={};
-  for(const [region,choice] of Object.entries(d.materials) as [Region,MaterialChoice][]){const keep=ownedChoice(choice)?choice:lastOwned?.materials?.[region];if(ownedChoice(keep))materials[region]=keep;}
+  for(const [region,choice] of Object.entries(d.materials) as [Region,MaterialChoice][]){const keep=ownedChoice(choice,next.body)?choice:lastOwned?.materials?.[region];if(ownedChoice(keep,next.body))materials[region]=keep;}
   next={...next,materials:Object.keys(materials).length?materials:undefined};
  }
- for(const key of BODY_KEYS)if(!bodyOk(next[key])){const fallback=lastOwned?.[key];next={...next,[key]:bodyOk(fallback)?fallback:'myr5'};}
  return next;
 }
 

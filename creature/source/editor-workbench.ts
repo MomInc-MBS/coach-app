@@ -5,7 +5,7 @@ import {GESTURES,type Gesture} from './motion';
 import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,isLocked as idLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
 import {isGranted} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
@@ -78,9 +78,10 @@ const strip=document.createElement('p');strip.className='preview-strip';strip.hi
 const previewing=()=>previewDraft!==null;
 function clearPreview(){previewDraft=null;}
 function shown():Design{return previewDraft??recipe;}
+const idLocked=(id:string)=>registryLocked(id,shown().body);
 function isLocked(design:Design):boolean{
  if(bodyLock(design.body))return true;
- for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(idLocked(mc.textureId)||idLocked(mc.colorId)))return true;}
+ for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(registryLocked(mc.textureId,design.body)||registryLocked(mc.colorId,design.body)))return true;}
  return false;
 }
 function previewMessage(_design:Design):string{return'Preview only';} // R18: no unlock hints anywhere; locked items show just a lock
@@ -104,7 +105,7 @@ function syncMaterials(){
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
  // R20: the toggle shows each part's current colour as a dot; the single grid marks the active part's colour.
  const partColour=(c:typeof COLOUR_CHANNELS[number])=>regionChoice(shown().materials,c.regions[0])?.colorId??DEFAULT_MATERIAL.colorId;
- for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-part]')){const c=COLOUR_CHANNELS.find(x=>x.id===b.dataset.part)!,on=c===activeChannel;b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;(b.firstElementChild as HTMLElement).style.background=colorTriad(partColour(c))?.primary??partColour(c);}
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-part]')){const c=COLOUR_CHANNELS.find(x=>x.id===b.dataset.part)!,on=c===activeChannel;b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;(b.firstElementChild as HTMLElement).style.background=colorTriad(partColour(c),false,shown().body)?.primary??partColour(c);}
  for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.kind==='color'&&b.dataset.color===partColour(activeChannel)));
  ($('materialClear') as HTMLButtonElement).disabled=!activeChannel.regions.some(r=>shown().materials?.[r]);
 }
@@ -112,8 +113,10 @@ function syncMomOnly(){
  const show=shown().body===MOM_APPROVED_BODY_ID;
  for(const id of MOM_ONLY_FIELD_IDS){const el=document.getElementById(id);if(el)el.style.display=show?'':'none';}
 }
+let cosmeticCoach='';
 function sync(){
  const look=shown();
+ if(cosmeticCoach!==look.body){cosmeticCoach=look.body;fillTextures();fillColours();}
  for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
 
  syncMomOnly();
