@@ -40,7 +40,9 @@ export function recordPerformanceSession(record,options={}){
   if(milestones.golden){for(const coach of matches)unique(state.goldenCoaches,coach.id);if(record.coachId&&state.coaches.includes(record.coachId))unique(state.goldenCoaches,record.coachId);}
   const key=`${group}/${kind}/${difficulty}`;
   if(milestones.coach)state.completions[key]=(state.completions[key]??0)+1;
-  const tier=milestones.coach?performanceWeaponTier(difficulty,state.completions[key]):milestones.weapon2?performanceWeaponTier(difficulty,0)+2:milestones.weapon1?performanceWeaponTier(difficulty,0)+1:0;
+  // The first coach clear keeps the two milestone tiers. Each re-clear upgrades
+  // once within this difficulty's five-tier block; a ten-minute hold earns its special.
+  const tier=milestones.special?performanceWeaponTier(difficulty,5):milestones.coach?performanceWeaponTier(difficulty,state.completions[key]+1):milestones.weapon2?performanceWeaponTier(difficulty,0)+2:milestones.weapon1?performanceWeaponTier(difficulty,0)+1:0;
   for(const weapon of WEAPON_GROUPS[group]??[])if(tier)state.weapons[weapon]=Math.max(state.weapons[weapon]??0,Math.min(20,tier));
   if(milestones.coach&&difficulty==='expert')for(const ship of SHIP_REQUIREMENTS.filter(s=>s.group===group&&s.kind===kind))unique(state.ships,ship.id);
  }
