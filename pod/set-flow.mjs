@@ -4,6 +4,8 @@ export const REST_IDLE_MS=3000;
 import {weaponDamage,dayAt} from '../combat.mjs';
 import {tapDamage,kitPetDps,bossHp,dailyCap,specialBudget,SPECIAL_LEVEL,BOSS_ATTACK_EVERY_HITS,REST_SECONDS} from '../combat-config.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
+import {PerformanceWorkout} from './performance-workout.mjs';
+import {cosmeticLevel} from '../progression-rules.mjs';
 import {AbilityCooldown} from './weapon-evolution.mjs';
 export {bossHp as bossHealthMax} from '../combat-config.mjs';
 export const DEFAULT_GOALS={...Object.fromEntries(Object.values(EXERCISES).map(m=>[m.id,m.defaultGoal])),squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
@@ -24,8 +26,8 @@ export class SetFlow {
   // bout, so one boss fight can span all 3 rests of a workout (D20).
   this.damageDay=dayAt(now);this.tapDamageToday=0;this.specialDamageToday=0;this.lastPetTick=null;
  }
- get xp(){return this.progress.completedSets*XP_PER_SET;}
- get level(){return 1+Math.floor(this.xp/XP_PER_LEVEL);}
+ get xp(){return this.performanceXp??this.progress.completedSets*XP_PER_SET;}
+ get level(){return this.performanceXp!==undefined?cosmeticLevel(this.xp).level:1+Math.floor(this.xp/XP_PER_LEVEL);}
  get coachHealth(){return Math.max(0,bossHp(this.kitLevel??1)-this.damage);}
  resetIfNewDay(now){const day=dayAt(now);if(this.damageDay!==day){this.damageDay=day;this.damage=0;this.tapDamageToday=0;this.specialDamageToday=0;}}
  // Pet DPS (D22) accrues for the time since the last tap/rest-start, capped
@@ -36,12 +38,13 @@ export class SetFlow {
  touchRest(now=Date.now()){if(this.phase==='rest')this.lastRestInteraction=Math.max(this.lastRestInteraction,now);}
  shouldEndRest(now=Date.now()){return this.phase==='rest'&&now>=Math.max(this.restUntil,this.lastRestInteraction)+REST_IDLE_MS;}
  get attackDamage(){return weaponDamage(this.combat,this.weapon);}
- start(mode,goal=DEFAULT_GOALS[mode],restSeconds=REST_SECONDS){
+ start(mode,goal=DEFAULT_GOALS[mode],restSeconds=REST_SECONDS,options={}){
   if(!Object.hasOwn(DEFAULT_GOALS,mode))throw new Error('Unknown exercise');
-  this.active={id:++this.sequence,mode,goal:Math.max(1,Number(goal)||DEFAULT_GOALS[mode]),restSeconds:Math.max(15,Math.min(180,Number(restSeconds)||REST_SECONDS))};this.phase='set';this.preview=false;return this.active;
+  this.active={id:++this.sequence,mode,goal:Math.max(1,Number(goal)||DEFAULT_GOALS[mode]),restSeconds:Math.max(15,Math.min(180,Number(restSeconds)||REST_SECONDS))};this.phase='set';this.preview=false;this.workout=options.performance?new PerformanceWorkout({mode,kind:EXERCISES[mode]?.kind??(['tree','warrior','horse'].includes(mode)?'hold':'reps'),...options}):null;if(this.workout)this.active.restSeconds=30;return this.active;
  }
  consume(m,now){
   if(this.phase!=='set'||!this.active||m.mode!==this.active.mode)return null;
+  if(this.workout){const result=this.workout.update(m,now);return result?this.completePerformance(result,now,m.name):null;}
   const reached=valueOf(m)>=this.active.goal;
   if(!reached)return null;
   // Timed boxing needs observed hand movement, not simply an unattended timer.
@@ -50,6 +53,13 @@ export class SetFlow {
   this.resetIfNewDay(now);
   this.phase='rest';this.preview=false;this.restUntil=now+this.active.restSeconds*1000;this.hits=0;this.lastTap=-Infinity;this.lastRestInteraction=-Infinity;this.lastPetTick=now;
   return {mode:m.mode,name:m.name,value:valueOf(m),goal:this.active.goal,earned,xp:earned?XP_PER_SET:0,level:this.level,set:this.progress.completedSets};
+ }
+ completePerformance(result,now,name){
+  this.resetIfNewDay(now);this.phase='rest';this.preview=false;this.restUntil=now+30000;this.hits=0;this.lastTap=-Infinity;this.lastRestInteraction=-Infinity;this.lastPetTick=now;
+  return {...result,name:name??EXERCISES[result.mode]?.name??result.mode,goal:this.active.goal,xp:result.xpBase,level:this.level,set:this.progress.completedSets+1};
+ }
+ finishWorking(m,now=Date.now()){
+  if(this.phase!=='set'||!this.workout)return null;const result=this.workout.update(m,now)??this.workout.finish();return result?this.completePerformance(result,now,m.name):null;
  }
  previewRest(now,seconds=REST_SECONDS){this.resetIfNewDay(now);this.phase='rest';this.preview=true;this.restUntil=now+seconds*1000;this.hits=0;this.lastTap=-Infinity;this.lastRestInteraction=-Infinity;this.lastPetTick=now;}
  remaining(now){return Math.max(0,Math.ceil((this.restUntil-now)/1000));}

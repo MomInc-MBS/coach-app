@@ -24,8 +24,10 @@ export class WorkoutSessionOwner {
     const result = await this.saveProgress?.(payload);
     if (!result?.local) return { saved: false, reason: result?.reason || 'workout progress was not saved' };
     this.phase = 'idle'; this.revision++;
-    if (!this.persist()) return { saved: false, reason: 'workout session acknowledgement was not saved' };
-    return { saved: true, ...result };
+    const acknowledged=this.persist();
+    // The workout database is the completion authority. A failed UI cache write
+    // must not turn an already committed completion into an impossible retry.
+    return { saved: true, acknowledged, ...result };
   }
   acquireIdleLease() {
     if (!this.canStart()) return null;
