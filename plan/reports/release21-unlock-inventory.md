@@ -321,7 +321,7 @@ Every collectible below belongs to an owned coach. The exact grant ID is `coach:
 | pal-105: Oatmeal Standby | pal-106: Blueberry Audit |
 | pal-107: Avocado Escrow |  |
 
-Free color channels: `#060409`, `#ffffff`, `#7f7d78`, `#ff3b30`, `#ff8a2a`, `#ffd100`, `#2bd97c`, `#008c8c`, `#2454d6`, `#6a2bd9`, `#f59ec4`, `#7a5530`, `#c4a77d`, `#0b1a45`, `#9fe2bf`. Palette channel hexes are contained in each palette JSON record; an owned palette opens its own channels. Historic `unlockRule`, `reward` and `unlockAtDay` metadata is retained in the registry, but the current cosmetic pack pool contains all 107 palettes.
+Free color channels: `#060409`, `#ffffff`, `#7f7d78`, `#ff3b30`, `#ff8a2a`, `#ffd100`, `#2bd97c`, `#008c8c`, `#2454d6`, `#6a2bd9`, `#f59ec4`, `#7a5530`, `#c4a77d`, `#0b1a45`, `#9fe2bf`. Palette colors are contained in each palette JSON record; an owned palette blends all of its colors across the selected Body, Head or Eyes part, leaving the other parts unchanged. Palette colors are not distributed across different parts or granted as separate base colors. Historic `unlockRule`, `reward` and `unlockAtDay` metadata is retained in the registry, but the current cosmetic pack pool contains all 107 palettes.
 
 ## Cosmetic levels and packs
 

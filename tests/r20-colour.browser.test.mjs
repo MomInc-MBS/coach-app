@@ -6,7 +6,7 @@ import {resolve,extname} from 'node:path';
 import {chromium} from 'playwright';
 
 // R20 lane COLOUR (built dist/client, 375x812): a Body/Head/Eyes radiogroup over one wrapped colour grid, then
-// a palette grid. A swatch colours only the toggled part; a palette fills all three; unlocked entries come first.
+// a palette grid. A swatch colours only the toggled part; a palette blends all colors on only the selected part; unlocked entries come first.
 const TYPES={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp'};
 test('customizer colour tab: part toggle + grouped colour grid; Head swatch changes only the head',{timeout:180000},async()=>{
  const root=resolve('dist/client');
@@ -14,7 +14,11 @@ test('customizer colour tab: part toggle + grouped colour grid; Head swatch chan
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:375,height:812}});
-  await page.addInitScript(()=>sessionStorage.setItem('myr5-ship-gate','ship-admission-v2'));
+  await page.addInitScript(()=>{
+   sessionStorage.setItem('myr5-ship-gate','ship-admission-v2');
+   localStorage.setItem('myr5-local-guest-owner-v1','palette-browser');
+   localStorage.setItem('myr5-unlocks-v2/'+encodeURIComponent('guest:palette-browser'),JSON.stringify({texture:[],color:[],palette:['coach:myr5:pal-04']}));
+  });
   await page.goto('http://127.0.0.1:'+server.address().port+'/creature/index.html');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
   await page.click('#tab-materials');
@@ -53,7 +57,7 @@ test('customizer colour tab: part toggle + grouped colour grid; Head swatch chan
   await shot('head');
   await page.click('#colorSwatches [data-part="body"]');
   assert.equal(await page.getAttribute('#colourGrid [data-color="#ff3b30"]','aria-pressed'),'false','Body does not show the head colour as pressed');
-  // Eyes + swatch, then Reset clears only the toggled part. (Palette -> body/head/eyes mapping: r18-unlocks.test.mjs.)
+  // Eyes + swatch, then Reset clears only the toggled part. (Palette ownership is covered in r18-unlocks.test.mjs.)
   await page.click('#colorSwatches [data-part="eyes"]');
   await page.click('#colourGrid [data-color="#2bd97c"]');
   await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.eye?.colorId==='#2bd97c'&&window.myr5Companion?.ready===true,null,{timeout:60000});
@@ -62,6 +66,12 @@ test('customizer colour tab: part toggle + grouped colour grid; Head swatch chan
   await page.evaluate(()=>document.querySelector('#paletteGrid').scrollIntoView());
   assert.ok(await page.locator('#paletteGrid [data-color]').count()>0,'palettes grid is populated');
   await shot('palettes');
+  const paletteBefore=await page.evaluate(()=>window.myr5Companion.recipe.materials);
+  await page.click('#paletteGrid [data-color="pal-04"]');
+  await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.eye?.colorId==='pal-04'&&window.myr5Companion.ready,null,{timeout:60000});
+  const paletteAfter=await page.evaluate(()=>window.myr5Companion.recipe.materials);
+  for(const part of ['head','body','arms','feet','collar'])assert.deepEqual(paletteAfter?.[part],paletteBefore?.[part],part+' stays unchanged by an eye palette');
+  assert.equal(await page.getAttribute('#paletteGrid [data-color="pal-04"]','aria-pressed'),'true');
   await page.click('#materialClear');
   await page.waitForFunction(()=>!window.myr5Companion?.recipe?.materials?.eye&&window.myr5Companion?.ready===true,null,{timeout:60000});
   assert.equal(await page.evaluate(()=>window.myr5Companion.recipe.materials.head.colorId),'#ff3b30','reset touched eyes only');
