@@ -12,7 +12,8 @@ import {WorkoutSessionOwner} from './workout-session-owner.mjs';
 import {combatLevel} from '../battle-pass.mjs';
 import {throughWormhole,LINES} from './set-transition.mjs';
 import {SPECIAL_LEVEL} from '../combat-config.mjs';
-import {recordPerformanceSession,readPerformanceProgress,workoutEligibility,performanceOwner} from '../performance-progress.mjs';
+import {recordPerformanceSession,readPerformanceProgress,workoutEligibility,performanceOwner,localDay} from '../performance-progress.mjs';
+import {STARTER_COACH_IDS} from '../performance-catalog.mjs';
 import {HOLD_TARGET_SECONDS,REP_CAP} from '../progression-rules.mjs';
 import {mountShipBackdropMotion} from './ship-backdrop.mjs';
 let voiceManifest=null;
@@ -105,7 +106,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  async function persistResult(result,m,now){
   const before={...flow.progress},id=flow.active?.localId,manual=flow.active?.control==='manual',owner=flow.active?.performanceOwner;
   let coachId;try{coachId=JSON.parse(safeRead('myr5-recipe-v1')||'null')?.body;}catch{}
-  const performance={...result,id,performanceOwner:owner,...(coachId?{coachId}: {})};
+  const earningProgress=readPerformanceProgress({owner}),earnedCoachCount=new Set(earningProgress.coaches.filter(id=>!STARTER_COACH_IDS.includes(id))).size;
+  const performance={...result,id,day:localDay(now),earnedCoachCount,performanceOwner:owner,...(coachId?{coachId}: {})};
   const saved=await workoutOwner.complete({id,value:result.value,activeSeconds:result.activeSeconds||m.active||0,elapsedSeconds:m.elapsed||0,earned:result.earned,progress:{...flow.progress,value:result.value,performanceOwner:owner,performance,performanceWorkout:flow.workout?.snapshot()}});
   if(!saved.saved){flow.progress=before;flow.phase='set';if(flow.workout)flow.workout.finished=false;throw Error(saved.reason);}
   const priorXp=readPerformanceProgress({owner}).totalXp,progress=recordPerformanceSession(performance,{owner});result.xp=Math.max(0,progress.totalXp-priorXp);flow.performanceXp=progress.totalXp;flow.progress.completedSets++;
