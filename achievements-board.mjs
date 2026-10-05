@@ -12,14 +12,14 @@ const groupName=g=>GROUP_NAMES[g]||g;
 export function coachRequirements(id){
  const coach=BOSSES.find(c=>c.id===id);if(!coach)return null;
  const r=coach.requirement;if(!r)return {starter:true,unlock:'Available from the start',gold:'Select this coach and complete a 10-minute uninterrupted hold to earn its golden version.',exercises:[]};
- if(r.groups.includes('meditation'))return {starter:false,unlock:`Complete meditation on ${CADENCE_MILESTONES.meditationDays[DIFFICULTIES.indexOf(r.difficulty)]} separate days.`,gold:null,exercises:[]};
+ if(r.groups.includes('meditation'))return {starter:false,unlock:`Complete meditation on ${CADENCE_MILESTONES.meditationDays[DIFFICULTIES.indexOf(r.difficulty)]} separate days.`,gold:'Once unlocked, select this coach and complete a 10-minute uninterrupted hold to earn its golden version.',exercises:[]};
  const exercises=Object.values(EXERCISES).filter(e=>r.groups.includes(e.group)&&exerciseDifficulty(e.id)===r.difficulty);
  const kinds=[...new Set(exercises.map(e=>e.kind))],options=[];
  if(kinds.includes('hold'))options.push('hold for 5 uninterrupted minutes');
  if(kinds.includes('reps'))options.push('complete 15 reps in one working set');
  if(r.groups.includes('cardio'))options.push('complete 5 sprint rounds or 5 active minutes of gentle cardio');
  else if(kinds.some(k=>k==='pace'||k==='steps'))options.push('complete 5 active minutes');
- return {starter:false,difficulty:r.difficulty,groups:r.groups,unlock:`${difficultyName(r.difficulty)} · ${r.groups.map(groupName).join(' / ')}: ${options.join(' OR ')}.`,gold:kinds.includes('hold')?'Complete a 10-minute uninterrupted hold at this difficulty in one of these groups. Breaks and difficulty changes restart the uninterrupted attempt.':null,exercises:exercises.map(e=>e.name)};
+ return {starter:false,difficulty:r.difficulty,groups:r.groups,unlock:`${difficultyName(r.difficulty)} · ${r.groups.map(groupName).join(' / ')}: ${options.join(' OR ')}.`,gold:kinds.includes('hold')?'Complete a 10-minute uninterrupted hold at this difficulty in one of these groups. Breaks and difficulty changes restart the uninterrupted attempt.':'Once unlocked, select this coach and complete a 10-minute uninterrupted hold to earn its golden version.',exercises:exercises.map(e=>e.name)};
 }
 export function bossStates(progress=readPerformanceProgress()){
  return BOSSES.map(b=>({...b,state:progress.coaches?.includes(b.id)?'done':'locked',golden:progress.goldenCoaches?.includes(b.id)===true,requirements:coachRequirements(b.id)}));
