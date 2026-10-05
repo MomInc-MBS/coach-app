@@ -50,7 +50,7 @@ const wait=p=>Promise.race([p,new Promise((_,reject)=>{const timer=setTimeout(()
 
 
 async function unlock(user){await db.prepare("INSERT INTO account_entitlements(user_id,coach_army_status,coach_army_completed_at,coach_army_event_id,updated_at) VALUES(?,'completed',1,'event',1) ON CONFLICT(user_id) DO NOTHING").bind(user).run();}
-const room=(user,options={})=>call(user,'/api/war-room/loadout',{method:'PUT',data:{revision:0,loadout:{type:'staff',tier:4}},...options});
+const room=(user,options={})=>call(user,'/api/war-room/loadout',{method:'PUT',data:{revision:0,loadout:{type:'staff',tier:0}},...options});
 const invite=(user,options={})=>call(user,'/api/scoreboard/invite',{data:{consent:true},...options});
 const join=(user,code,options={})=>call(user,'/api/scoreboard/join',{data:{consent:true,code},...options});
 for(const [name,make,prefix,table,column] of [
@@ -63,8 +63,8 @@ for(const [name,make,prefix,table,column] of [
 });
 test('old War Room revision cannot overwrite fresh generation with matching revision',async()=>{
  const user=owner();await unlock(user);const held=holdBatch(r=>r.sql.startsWith('INSERT INTO war_room_arsenals'));const pending=room(user,{database:held.database});await wait(held.ready);
- try{await remove(user);await unlock(user);assert.equal((await room(user,{epoch:2,data:{revision:0,loadout:{type:'bow',tier:2}}})).status,200);}finally{held.release();}
- assert.equal((await pending).status,409);const state=await call(user,'/api/war-room',{method:'GET'});assert.equal(state.data.dataEpoch,2);assert.equal(state.data.targetAccountId,user);assert.deepEqual(state.data.state.loadout,{type:'bow',tier:2});
+ try{await remove(user);await unlock(user);assert.equal((await room(user,{epoch:2,data:{revision:0,loadout:{type:'bow',tier:0}}})).status,200);}finally{held.release();}
+ assert.equal((await pending).status,409);const state=await call(user,'/api/war-room',{method:'GET'});assert.equal(state.data.dataEpoch,2);assert.equal(state.data.targetAccountId,user);assert.deepEqual(state.data.state.loadout,{type:'bow',tier:0});
  assert.equal((await room(user,{epoch:2})).status,409); // original revision CAS retained
 });
 test('old invite revoke cannot remove fresh generation invitation',async()=>{

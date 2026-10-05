@@ -128,6 +128,7 @@ test('guarded import and deletion in both serial orders cannot resurrect stale-e
  }
 });
 test('patched authority consumers exclude import while personal records keep all rows',async()=>{
+ await db.batch((await readFile(new URL('drizzle/0022_performance_progression.sql',product),'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>db.prepare(s)));
  const owner='matrix',now=1700000000000;
  await server('matrix-pending',owner,now-20000,5).run();await server('matrix-accepted',owner,now-10000,6).run();await decision('matrix-accepted',2,'accepted').run();
  await db.batch([guest('matrix-import',owner,'c',now-5000,999),metadata('matrix-import')]);
