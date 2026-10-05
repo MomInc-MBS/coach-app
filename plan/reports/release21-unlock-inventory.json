@@ -126452,7 +126452,7 @@
       "name": "Shield",
       "line": "The shield holds.",
       "status": "free",
-      "note": "Server account-progress power gates use saved server set count, independently of cosmetic XP.",
+      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
       "requirement": null
     },
     {
@@ -126460,9 +126460,9 @@
       "name": "Ember",
       "line": "The ember field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use saved server set count, independently of cosmetic XP.",
+      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
       "requirement": {
-        "completedServerSets": 4,
+        "completedPerformanceSets": 4,
         "legacyLevel": 2
       }
     },
@@ -126471,9 +126471,9 @@
       "name": "Arc",
       "line": "The arc field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use saved server set count, independently of cosmetic XP.",
+      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
       "requirement": {
-        "completedServerSets": 16,
+        "completedPerformanceSets": 16,
         "legacyLevel": 5
       }
     },
@@ -126482,9 +126482,9 @@
       "name": "Frost",
       "line": "The frost field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use saved server set count, independently of cosmetic XP.",
+      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
       "requirement": {
-        "completedServerSets": 36,
+        "completedPerformanceSets": 36,
         "legacyLevel": 10
       }
     }
@@ -139643,9 +139643,9 @@
   "powerMilestones": [
     {
       "id": "shieldBreak",
-      "completedServerSets": 196,
+      "completedPerformanceSets": 196,
       "legacyLevel": 50,
-      "status": "active-legacy-server-progression"
+      "status": "active-performance-completion-gate"
     }
   ]
 }

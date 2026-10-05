@@ -426,12 +426,12 @@ All 420 weapon presentation IDs are `<family>:<tier>`. All 100 ability IDs are `
 | Power / milestone ID | Name | Current gate |
 | --- | --- | --- |
 | shield | Shield | Free |
-| ember | Ember | 4 saved server sets; legacy level 2 |
-| arc | Arc | 16 saved server sets; legacy level 5 |
-| frost | Frost | 36 saved server sets; legacy level 10 |
-| shieldBreak | Shield-break milestone | 196 saved server sets; legacy level 50 |
+| ember | Ember | 4 verified workout completions; original level 2 |
+| arc | Arc | 16 verified workout completions; original level 5 |
+| frost | Frost | 36 verified workout completions; original level 10 |
+| shieldBreak | Shield-break milestone | 196 verified workout completions; original level 50 |
 
-These power gates remain active server-account compatibility behavior (`server/domain.mjs`, consumed in `pod/pod.mjs`), distinct from the 250-level cosmetic curve. The older server rank is 1 + floor(saved sets / 4), with 25 XP per saved set. Combat kit has five damage stages (1, 2, 3, 4, 8 base tap damage), weapon bonuses at kit levels 1 and 3, pet DPS at 4, special at 3; these are combat tuning gates, not additional per-coach cosmetic assets. Login streak bonuses are 5 / 10 / 20 days at 1.1 / 1.25 / 1.5.
+These power gates retain their existing thresholds and now accept valid version-2 performance sessions as well as legacy server completions (`server/worker.mjs`, using `server/domain.mjs`, consumed in `pod/pod.mjs`). Legacy version-1 guest imports do not count. They remain distinct from the 250-level cosmetic curve. The older compatibility server rank is 1 + floor(saved sets / 4), with 25 XP per saved set. Combat kit has five damage stages (1, 2, 3, 4, 8 base tap damage), weapon bonuses at kit levels 1 and 3, pet DPS at 4, special at 3; these are combat tuning gates, not additional per-coach cosmetic assets. Login streak bonuses are 5 / 10 / 20 days at 1.1 / 1.25 / 1.5.
 
 ## Free Gala appearance choices, pads and companions
 

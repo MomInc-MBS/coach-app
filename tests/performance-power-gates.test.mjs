@@ -12,7 +12,7 @@ async function add(owner,index,{version=2,source='guest_import'}={}){
  const completedAt=Date.parse('2025-01-01T12:00:00Z')+index*2*86400000,id=crypto.randomUUID();
  const snapshot={schemaVersion:1,clientWorkoutId:id,mode:'knee-pushup',goal:8,restSeconds:30,startedAt:completedAt-30000,completedAt,value:8,activeSeconds:30,elapsedSeconds:30,...(version===2?{performance:{version:2,kind:'reps',difficulty:'easy',maxContinuousSeconds:0,perDifficultyContinuous:{},holdBlocks:[],coachId:'myr5',rounds:0}}:{})};
  const canonical=(await prepareWorkoutImport(snapshot,{targetAccountId:owner,targetDataEpoch:1})).snapshot;
- return db.prepare('INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active,source,competitive_status,client_workout_id,performance_snapshot) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,owner,snapshot.mode,8,snapshot.startedAt,completedAt,8,30,source,'not_eligible',id,version===2?JSON.stringify(canonical):null);
+ return db.prepare('INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active,source,competitive_status,client_workout_id,performance_snapshot) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,owner,snapshot.mode,8,snapshot.startedAt,completedAt,8,30,source,null,source==='server'?null:id,version===2?JSON.stringify(canonical):null);
 }
 test('verified v2 performance sessions unlock the existing power thresholds without adding legacy XP or completed sets',async()=>{
  const owner='v2-power-owner';let inserted=0;

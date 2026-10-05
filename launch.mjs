@@ -81,7 +81,6 @@ packGrantCache=createPackGrantCache({storage:accountStorage});
 const accountWorkoutSync=createAccountWorkoutSync({storage:accountStorage,api,transitions:accountTransitions,getAccount:()=>account,publishProgress});
 const performanceAccountSync=createPerformanceAccountSync({storage:accountStorage,api,transitions:accountTransitions,getAccount:()=>account,maxUploads:120,getRows:async()=>{localHistoryRepository??=await openLocalCoach();return localHistoryRepository.forOwner(localHistoryRepository.guestOwnerId).listWorkouts();},onAccount:value=>publishProgress(value.progress)});
 window.addEventListener('myr5:local-history-refresh',()=>void flushSets());
-window.addEventListener('online',()=>void flushSets());
 const pendingKey=accountPendingKey;
 const pending=user=>accountWorkoutSync.pending(user);
 async function flushSets(){if(accountTransitionBusy||!account)return;let ticket;try{ticket=accountTransitions.capture();const result=await performanceAccountSync.flush();accountTransitions.assertCurrent(ticket);await accountWorkoutSync.flush();if(result?.failed?.length)set('syncBadge','Workout saved on this device · account sync will retry.');}catch(error){if(!ticket||!accountTransitions.isCurrent(ticket))return;if(error.code!=='auth_transition'&&error.code!=='account_scope_changed')set('syncBadge',error.message);}}
