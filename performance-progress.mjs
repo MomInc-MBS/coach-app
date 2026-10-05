@@ -1,27 +1,34 @@
 import {EXERCISES} from './exercise-library.mjs';
-import {STARTER_COACH_IDS,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
+import {COACHES,STARTER_COACH_IDS,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
 import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier} from './progression-rules.mjs';
 export const PERFORMANCE_KEY='myr5-performance-progress-v2';
 export function performanceOwner(storage=globalThis.localStorage,account=globalThis.myr5AuthenticatedAccount){
  const id=account?.user?.id;if(id)return `account:${id}${account.dataEpoch!=null?`:${account.dataEpoch}`:''}`;
- const key='myr5-local-guest-owner-v1';let guest=storage?.getItem(key);if(!guest){guest=globalThis.crypto?.randomUUID?.()||`guest-${Date.now()}-${Math.random()}`;storage?.setItem(key,guest);}return `guest:${guest}`;
+ if(!storage)return 'guest:unavailable';
+ const key='myr5-local-guest-owner-v1';try{let guest=storage.getItem(key);if(!guest){guest=globalThis.crypto?.randomUUID?.()||`guest-${Date.now()}-${Math.random()}`;storage.setItem(key,guest);}return `guest:${guest}`;}catch{return 'guest:unavailable';}
 }
 export function localDay(time=Date.now()){const date=new Date(time);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
 const fresh=()=>({version:2,sessions:{},days:{},coaches:[...STARTER_COACH_IDS],goldenCoaches:[],weapons:{},ships:[],completions:{},totalXp:0});
-function scope(options={}){const storage=options.storage??globalThis.localStorage;return {storage,owner:options.owner??performanceOwner(storage,options.account??globalThis.myr5AuthenticatedAccount)};}
-export function readPerformanceProgress(options={}){const {storage,owner}=scope(options);try{const value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return value?.version===2&&value.sessions&&value.days?value:fresh();}catch{return fresh();}}
+function scope(options={}){const storage=Object.hasOwn(options,'storage')?options.storage:globalThis.localStorage,account=Object.hasOwn(options,'account')?options.account:globalThis.myr5AuthenticatedAccount;return {storage,owner:options.owner??performanceOwner(storage,account)};}
+const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+const finite=v=>Number.isFinite(v)&&v>=0;
+const validDay=day=>typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)&&new Date(`${day}T12:00:00Z`).toISOString().slice(0,10)===day;
+function validState(v){return v?.version===2&&(v.activities===undefined||(object(v.activities)&&Object.values(v.activities).every(a=>object(a)&&['meditation','food'].includes(a.kind)&&validDay(a.day))))&&object(v.sessions)&&object(v.days)&&object(v.weapons)&&object(v.completions)&&Array.isArray(v.coaches)&&v.coaches.every(id=>COACHES.some(c=>c.id===id))&&new Set(v.coaches).size===v.coaches.length&&Array.isArray(v.goldenCoaches)&&v.goldenCoaches.every(id=>v.coaches.includes(id))&&Array.isArray(v.ships)&&v.ships.every(id=>SHIP_REQUIREMENTS.some(s=>s.id===id))&&Object.values(v.weapons).every(n=>Number.isInteger(n)&&n>=0&&n<=20)&&Object.values(v.completions).every(n=>Number.isSafeInteger(n)&&n>=0)&&Object.entries(v.days).every(([day,d])=>validDay(day)&&object(d)&&finite(d.workoutXp)&&['workout','meditation','food'].every(k=>typeof d[k]==='boolean'))&&Object.values(v.sessions).every(s=>object(s)&&validDay(s.day)&&finite(s.xp)&&finite(s.value)&&finite(s.continuous));}
+export function readPerformanceProgress(options={}){try{const {storage,owner}=scope(options),value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return validState(value)?recalculate(value):fresh();}catch{return fresh();}}
 function save(state,options){const {storage,owner}=scope(options);if(!storage)throw Error('Progress storage is unavailable.');storage.setItem(`${PERFORMANCE_KEY}/${owner}`,JSON.stringify(state));if(typeof globalThis.CustomEvent==='function')globalThis.dispatchEvent?.(new CustomEvent('myr5:performance-progress',{detail:{owner,progress:state}}));return state;}
-function dayEntry(state,day){if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw RangeError('Invalid workout day.');return state.days[day]??=( {workoutXp:0,workout:false,meditation:false,food:false});}
+function dayEntry(state,day){if(!validDay(day))throw RangeError('Invalid workout day.');return state.days[day]??=( {workoutXp:0,workout:false,meditation:false,food:false});}
 function recalculate(state){state.totalXp=Object.values(state.days).reduce((sum,d)=>sum+d.workoutXp*(d.meditation?2:1)+(d.workout&&d.meditation&&d.food?500:0),0);return state;}
-export function recordDailyActivity(kind,{day=localDay(),id}={},options={}){if(!['meditation','food'].includes(kind))throw RangeError('Unknown daily activity.');const state=readPerformanceProgress(options);dayEntry(state,day)[kind]=true;
+export function recordDailyActivity(kind,{day=localDay(),id}={},options={}){if(!['meditation','food'].includes(kind))throw RangeError('Unknown daily activity.');const state=readPerformanceProgress(options);
+ state.activities??={};if(id!=null){if(typeof id!=='string'||!id||['__proto__','constructor','prototype'].includes(id))throw RangeError('Invalid daily activity ID.');const key=`${kind}:${id}`;if(Object.hasOwn(state.activities,key))return state;state.activities[key]={kind,day};}
+ dayEntry(state,day)[kind]=true;
  // Existing meditation coaches use completed-day milestones, separate from XP.
  // Three, six, nine and twelve days cover the four difficulty blocks.
  if(kind==='meditation'){const days=Object.values(state.days).filter(d=>d.meditation).length;for(let i=0;i<4;i++)if(days>=CADENCE_MILESTONES.meditationDays[i])for(const coach of matchingCoaches('meditation',['easy','medium','hard','expert'][i]))unique(state.coaches,coach.id);}
  return save(recalculate(state),options);}
 const unique=(list,id)=>{if(!list.includes(id))list.push(id);};
 export function recordPerformanceSession(record,options={}){
- if(!record||typeof record.id!=='string'||!record.id)throw RangeError('Saved workout ID is required.');
- const state=readPerformanceProgress(options);if(state.sessions[record.id]||record.preparation||record.earned===false)return state;
+ if(!record||typeof record.id!=='string'||!record.id||['__proto__','constructor','prototype'].includes(record.id))throw RangeError('Saved workout ID is required.');
+ const state=readPerformanceProgress(options);if(Object.hasOwn(state.sessions,record.id)||record.preparation||record.earned===false)return state;
  const exercise=EXERCISES[record.mode],kind=record.kind??(exercise?.kind==='hold'?'hold':'reps'),difficulty=record.difficulty??exerciseDifficulty(record.mode),group=exercise?.group??record.group;
  const day=record.day??localDay(record.completedAt??Date.now()),value=Number(record.value??record.activeSeconds??0),continuous=Number(record.maxContinuousSeconds??record.continuousSeconds??0);
  if(!Number.isFinite(value)||value<0||!Number.isFinite(continuous)||continuous<0)throw RangeError('Invalid saved performance.');
@@ -31,6 +38,10 @@ export function recordPerformanceSession(record,options={}){
  let xp=record.xpBase??record.earnedXp;
  if(xp===undefined)xp=kind==='hold'?holdXp({difficulty,to:record.activeSeconds??value}):kind==='reps'?repXp({difficulty,to:Math.floor(value)}):0;
  if(!Number.isFinite(xp)||xp<0)throw RangeError('Invalid workout XP.');
+ // Persisted controller totals may include difficulty switches. Bound the raw
+ // total by the expert session cap without reassigning those completed segments.
+ if(kind==='reps')xp=Math.min(xp,repXp({difficulty:'expert',to:30}));
+ if(kind==='hold')xp=Math.min(xp,holdXp({difficulty:'expert',to:1800}));
  // Controllers provide base XP before coach/daily multipliers. A credited ID never earns twice.
  const entry=dayEntry(state,day);entry.workoutXp+=xp*multiplier;entry.workout=true;
  state.sessions[record.id]={mode:record.mode,group,kind,difficulty,value,continuous,day,xp:xp*multiplier};
