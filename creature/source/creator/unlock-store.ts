@@ -1,5 +1,5 @@
 // Cosmetic ownership follows the account/guest and the coach wearing the item.
-import { markPending } from '../../../unlock-pending.mjs';
+import { markPending,markPendingMany } from '../../../unlock-pending.mjs';
 import { performanceOwner } from '../../../performance-progress.mjs';
 export type UnlockKind = 'texture' | 'color' | 'palette';
 const KEY = 'myr5-unlocks-v2';
@@ -41,4 +41,13 @@ export function migrateSavedCosmetics(recipe?: {body?:string;materials?:Record<s
   }
   localStorage.setItem(migration,'1');
  }catch{/* Legacy storage is optional. */}
+}
+
+// Collection completion writes once per owner, rather than once per cosmetic.
+export const ownerGrantedIds=(kind:UnlockKind)=>read()[kind]||[];
+export function grantUnlocks(items:{kind:UnlockKind;id:string;coachId:string}[]){
+ const data=read(),sets=Object.fromEntries(['texture','color','palette'].map(kind=>[kind,new Set(data[kind as UnlockKind])])) as Record<UnlockKind,Set<string>>;
+ const added:{kind:UnlockKind;id:string}[]=[];
+ for(const item of items){if(!sets[item.kind]||typeof item.id!=='string'||!item.id||typeof item.coachId!=='string'||!item.coachId)continue;const id=cosmeticId(item.coachId,item.id);if(sets[item.kind].has(id))continue;sets[item.kind].add(id);data[item.kind].push(id);added.push({kind:item.kind,id});}
+ if(!added.length||!write(data))return 0;markPendingMany(added);return added.length;
 }

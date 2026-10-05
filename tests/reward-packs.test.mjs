@@ -126,3 +126,12 @@ test('collection completion grants every remaining eligible cosmetic once',()=>{
  const item=packItem('legendary','reward-pack:legendary:complete');ledger.grantUnlock('reward-pack',item.id);
  assert.equal(openRewardPack(item).complete,true);assert(!unopenedPacks().includes(item.id));
 });
+
+
+test('completion for all 67 coaches uses bounded storage writes, including pending markers',async()=>{
+ memory.clear();const {COACHES}=await import('../performance-catalog.mjs');const {readPerformanceProgress,performanceOwner,PERFORMANCE_KEY}=await import('../performance-progress.mjs');
+ const state=readPerformanceProgress();state.coaches=COACHES.map(coach=>coach.id);localStorage.setItem(`${PERFORMANCE_KEY}/${performanceOwner()}`,JSON.stringify(state));
+ const before=remainingCosmetics();assert(before.length>10000);const write=localStorage.setItem;let writes=0;
+ localStorage.setItem=(key,value)=>{writes++;write(key,value);};
+ try{const completed=completeCosmeticCollection();assert.equal(completed.granted,before.length);assert.equal(completed.remaining,0);assert(writes<=6,`${writes} writes should be grouped by ledger`);}finally{localStorage.setItem=write;}
+});

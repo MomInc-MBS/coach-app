@@ -27,9 +27,10 @@ test('exactly 13 textures are free, and they are the 13 named ones',()=>{
  assert.equal(FREE_TEXTURE_IDS.length,13);
 });
 
-test('every non-free texture is in the texture pack pool, and the pool holds nothing free or unknown',()=>{
+test('every ordinary non-free texture is in the texture pack pool; the pixel finish uses the 64-bit category, and the pool holds nothing free or unknown',()=>{
  const pool=new Set(textureRewardPool().map(t=>t.id)),ids=new Set(TEXTURES.map(t=>t.id));
- for(const t of TEXTURES)assert.equal(pool.has(t.id),!isTextureUnlocked(t),t.id);
+ for(const t of TEXTURES.filter(t=>t.id!=='coach-64-bit'))assert.equal(pool.has(t.id),!isTextureUnlocked(t),t.id);
+ assert(TEXTURES.some(t=>t.id==='coach-64-bit'));assert(!pool.has('coach-64-bit'));
  for(const id of pool)assert.ok(ids.has(id),`pool id ${id} exists in the registry`);
  assert.equal(textureRewardPool().length,pool.size,'no duplicate pool entries');
 });
@@ -63,7 +64,7 @@ test('three channels: body colour reaches body, arms, feet and collar; head and 
  assert.deepEqual(COLOUR_CHANNELS.map(c=>c.id),['body','head','eyes']);
  for(const r of m.REGIONS)assert.ok(COLOUR_SOURCE[r]);
  const src=readFileSync('creature/source/creator/assemble.ts','utf8');
- assert.match(src,/resolveRegionMaterial\(d\.styles\[region\],regionChoice\(d\.materials,region\),preview\)/,'assemble resolves every region through the channel colour');
+ assert.match(src,/resolveRegionMaterial\(d\.styles\[region\],regionChoice\(d\.materials,region\),preview,d\.body\)/,'assemble resolves every region through the channel colour');
 });
 
 test('an owned palette fills the three channels: primary body, secondary head, accent eyes',()=>{

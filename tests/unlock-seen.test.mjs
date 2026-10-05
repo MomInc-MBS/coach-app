@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {isUnseen,markSeen} from '../unlock-seen.mjs';
 import {PENDING_KEY,noteUnlocked} from '../unlock-pending.mjs';
 import {grantUnlock,LEDGER_KEY} from '../unlock-ledger.mjs';
-import {grantUnlock as grantStoreUnlock} from '../creature/source/creator/unlock-store.ts';
+import {grantUnlock as grantStoreUnlock,cosmeticId} from '../creature/source/creator/unlock-store.ts';
 
 function withDevice(run){
  const prior=globalThis.localStorage,data=new Map();
@@ -20,7 +20,7 @@ test('existing grants with no pending marker stay quiet (zero-flood migration)',
  assert.equal(grantUnlock('weapon','new-w'),true);
  grantStoreUnlock('texture','new-t');
  assert.equal(isUnseen('weapon','new-w'),true);
- assert.equal(isUnseen('texture','new-t'),true);
+ assert.equal(isUnseen('texture',cosmeticId('myr5','new-t')),true);
  assert.equal(isUnseen('weapon','old-w'),false);
 }));
 
@@ -38,14 +38,14 @@ test('viewing clears exactly that item, not its neighbours or other kinds',()=>w
  assert.equal(isUnseen('pet','w1'),true);
 }));
 
-test('device kinds share one record; account kinds are per account and need an account',()=>withDevice(data=>{
+test('device kinds share one record; account kinds remain separate from persistent guest ownership',()=>withDevice(data=>{
  grantUnlock('pet','push-pet');
  assert.deepEqual(JSON.parse(data.get(PENDING_KEY)),{pet:['push-pet']});
- assert.equal(grantUnlock('ship','ship-calm',{account:null}),false);
+ assert.equal(grantUnlock('ship','ship-calm',{account:null}),true);
  assert.equal(grantUnlock('ship','ship-calm',{account:'user_a'}),true);
  assert.equal(isUnseen('ship','ship-calm',{account:'user_a'}),true);
  assert.equal(isUnseen('ship','ship-calm',{account:'user_b'}),false);
- assert.equal(isUnseen('ship','ship-calm',{account:null}),false);
+ assert.equal(isUnseen('ship','ship-calm',{account:null}),true);
  markSeen('ship','ship-calm',{account:null});
  assert.equal(isUnseen('ship','ship-calm',{account:'user_a'}),true);
  markSeen('ship','ship-calm',{account:'user_a'});
@@ -107,3 +107,16 @@ test('a visible new item retains its badge briefly before it is marked seen',asy
   assert.equal(isUnseen('weapon','dwell-w'),false,'sustained visibility clears only this item');
  }finally{if(priorStore===undefined)delete globalThis.localStorage;else globalThis.localStorage=priorStore;if(priorObserver===undefined)delete globalThis.IntersectionObserver;else globalThis.IntersectionObserver=priorObserver;}
 });
+
+
+test('coach material pending markers stay with their account and coach',()=>withDevice(()=>{
+ const original=globalThis.myr5AuthenticatedAccount;
+ try{
+  globalThis.myr5AuthenticatedAccount={user:{id:'markers-a'}};
+  grantStoreUnlock('texture','chest-plate-steel','myr5');
+  const id=cosmeticId('myr5','chest-plate-steel');assert(isUnseen('texture',id));
+  assert(!isUnseen('texture',cosmeticId('another-coach','chest-plate-steel')));
+  globalThis.myr5AuthenticatedAccount={user:{id:'markers-b'}};assert(!isUnseen('texture',id));
+  globalThis.myr5AuthenticatedAccount={user:{id:'markers-a'}};markSeen('texture',id);assert(!isUnseen('texture',id));
+ }finally{globalThis.myr5AuthenticatedAccount=original;}
+}));

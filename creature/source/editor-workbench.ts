@@ -7,7 +7,7 @@ import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPOR
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
 import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
-import {isGranted} from './creator/unlock-store';
+import {isGranted,cosmeticId} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
 import {saveRecipe,BODY_KEYS} from './save-look';
@@ -166,7 +166,7 @@ function focusPart(_region:Region,_frame=true){sync();}
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 // Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
-function fillTextures(){$('textureId').replaceChildren();for(const t of unlockedFirst(TEXTURES,t=>idLocked(t.id))){const o=document.createElement('option');o.value=t.id;o.textContent=(idLocked(t.id)?'🔒 ':'')+t.displayName;if(isGranted('texture',t.id))sparkleOption(o,'texture',t.id);$('textureId').append(o);}}
+function fillTextures(){$('textureId').replaceChildren();for(const t of unlockedFirst(TEXTURES,t=>idLocked(t.id))){const o=document.createElement('option');o.value=t.id;o.textContent=(idLocked(t.id)?'🔒 ':'')+t.displayName;if(isGranted('texture',t.id,shown().body))sparkleOption(o,'texture',cosmeticId(shown().body,t.id));$('textureId').append(o);}}
 fillBodies();fillTextures();
 const goldenToggle=document.createElement('button');goldenToggle.type='button';goldenToggle.textContent='Golden coach';goldenToggle.title='Unlocked by a ten-minute uninterrupted hold';
 function syncGolden(){goldenToggle.disabled=!goldenCoach(shown().body);goldenToggle.setAttribute('aria-pressed',String(shown().golden!==false&&goldenCoach(shown().body)));}
@@ -177,7 +177,7 @@ const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id))sparkle(b,s.kind,s.id);return b;}
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>idLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
 // that fills all three parts at once. Every colour def plus the free hexes no def starts with.

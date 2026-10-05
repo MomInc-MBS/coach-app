@@ -26,10 +26,10 @@ export type ColorDef = { id: string; displayName: string; unlockRule: UnlockRule
 // ('<bossId>:L<n>' or 'food:L<n>', read by battle-pass-rewards.mjs).
 export type PaletteDef = { id: string; displayName: string; tagline: string; unlockRule: 'aura-milestone' | 'battle-pass'; unlockAtDay?: number; reward?: string; colors: [string, string, string] };
 
-const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule },coachId?:string) => item.unlockRule === 'default' || isGranted(kind, item.id,coachId);
+const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule },coachId?:string) => item.unlockRule === 'default' || isGranted(kind, item.id,typeof coachId==='string'?coachId:undefined);
 // R18 G2: a single-colour def is free exactly when its primary is one of the 15 free hexes (battle-pass-rewards.mjs FREE_COLOURS).
 const colourRule = (c: { primary: string }): UnlockRule => FREE_COLOURS.includes(c.primary.toLowerCase()) ? 'default' : 'battle-pass';
-export const hasCoach64BitSkin = (coachId=currentCosmeticCoach()) => ledgerGranted('boss-skin',cosmeticId(coachId,`${coachId}-skin`));
+export const hasCoach64BitSkin = (coachId=currentCosmeticCoach()) => ledgerGranted('boss-skin',cosmeticId(typeof coachId==='string'?coachId:currentCosmeticCoach(),`${typeof coachId==='string'?coachId:currentCosmeticCoach()}-skin`));
 export const isTextureUnlocked = (t: TextureDef,coachId?:string) => t.id==='coach-64-bit'?hasCoach64BitSkin(coachId):isUnlocked('texture', t,coachId);
 export const isColorUnlocked = (c: ColorDef,coachId?:string) => isUnlocked('color', c,coachId);
 export const isPaletteUnlocked = (p: PaletteDef,coachId?:string) => isUnlocked('palette', p,coachId);
