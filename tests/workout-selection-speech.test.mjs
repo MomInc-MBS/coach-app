@@ -51,7 +51,7 @@ test('camera Begin announces the selected exercise before camera setup',async()=
 test('choosing a library exercise previews it without reading its name',()=>{
  let click,previews=0,cancellations=0;const spoken=[];
  const start=librarySource.indexOf("button.addEventListener('click',()=>{cancelIntro();showModel(id);");
- const end=librarySource.indexOf(';card.append(button)',start);
+ const end=librarySource.indexOf('});',start)+2;
  assert.ok(start>=0&&end>start);
  vm.runInNewContext(librarySource.slice(start,end),{button:{addEventListener:(_name,fn)=>click=fn},cancelIntro:()=>cancellations++,showModel:()=>previews++,speak:text=>spoken.push(text),id:'squat'});
  click();assert.equal(cancellations,1);assert.equal(previews,1);assert.deepEqual(spoken,[]);
