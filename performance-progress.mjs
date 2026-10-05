@@ -1,5 +1,5 @@
 import {EXERCISES} from './exercise-library.mjs';
-import {COACHES,STARTER_COACH_IDS,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
+import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
 import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier} from './progression-rules.mjs';
 export const PERFORMANCE_KEY='myr5-performance-progress-v2';
 export function performanceOwner(storage=globalThis.localStorage,account=globalThis.myr5AuthenticatedAccount){
@@ -34,7 +34,9 @@ export function recordPerformanceSession(record,options={}){
  if(!Number.isFinite(value)||value<0||!Number.isFinite(continuous)||continuous<0)throw RangeError('Invalid saved performance.');
  if(kind==='hold'&&continuous>Number(record.activeSeconds??value))throw RangeError('Continuous time cannot exceed active hold time.');
  if(kind==='meditation')return recordDailyActivity('meditation',{day,id:record.id},options);
- const multiplier=coachXpMultiplier(state.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length);
+ const earnedCoachCount=record.earnedCoachCount??state.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length;
+ if(!Number.isSafeInteger(earnedCoachCount)||earnedCoachCount<0||earnedCoachCount>COACH_REQUIREMENTS.length)throw RangeError('Invalid saved coach bonus.');
+ const multiplier=coachXpMultiplier(earnedCoachCount);
  let xp=record.xpBase??record.earnedXp;
  if(xp===undefined)xp=kind==='hold'?holdXp({difficulty,to:record.activeSeconds??value}):kind==='reps'?repXp({difficulty,to:Math.floor(value)}):0;
  if(!Number.isFinite(xp)||xp<0)throw RangeError('Invalid workout XP.');
