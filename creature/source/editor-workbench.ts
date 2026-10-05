@@ -203,7 +203,7 @@ for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton
 const label=document.createElement('strong');label.textContent='Multicolor palettes';
 const palettes=document.createElement('div');palettes.className='material-grid';palettes.id='paletteGrid';palettes.setAttribute('role','group');palettes.setAttribute('aria-label','Palettes');
 for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>setChannel(activeChannel,p.id));b.dataset.kind='palette';palettes.append(b);}
-const paletteHelp=document.createElement('p');paletteHelp.className='help';paletteHelp.textContent='Blend every palette color across the selected part. Other parts keep their own colors.';
+const paletteHelp=document.createElement('p');paletteHelp.className='help';paletteHelp.textContent='Map palette colors to the selected texture?s dark, middle and light areas. Other parts keep their own colors.';
 colorRoot.append(toggle,grid,label,palettes,paletteHelp);}
 fillColours();
 // R21: the coach's ship, picked and tinted here in Species. Saved in the recipe (shipId, shipColor); owned ships also mirror to the

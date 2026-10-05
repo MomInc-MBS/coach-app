@@ -1,5 +1,4 @@
 import * as T from 'three';
-import {PALETTE_SURFACE_GLSL} from './palette-surface.mjs';
 
 export type SkinMapName='basecolor'|'normal'|'roughness'|'height'|'metalness'|'tintMask'|'ao'|'opacity'|'emissive'|'preview';
 export type InstalledSkin={id:string;displayName:string;track:string;maps:Partial<Record<SkinMapName,Uint8Array>>};
@@ -55,16 +54,18 @@ export async function applyInstalledSkin(mesh:T.Mesh,skin:InstalledSkin,palette:
     shader.uniforms.myr5SkinPrimary={value:new T.Color(palette.primary)};
     shader.uniforms.myr5SkinSecondary={value:new T.Color(palette.secondary)};
     shader.uniforms.myr5SkinAccent={value:new T.Color(palette.accent)};
+    if(loaded.has('height'))shader.uniforms.myr5SkinHeight={value:loaded.get('height')};
     if(loaded.has('basecolor'))shader.uniforms.myr5SkinBasecolor={value:loaded.get('basecolor')};
     if(loaded.has('emissive'))shader.uniforms.myr5SkinEmissive={value:loaded.get('emissive')};
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vMyr5SkinUv;').replace('#include <uv_vertex>','#include <uv_vertex>\nvMyr5SkinUv=uv;');
-    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D myr5SkinMask;\nuniform sampler2D myr5SkinBasecolor;\nuniform sampler2D myr5SkinEmissive;\nuniform vec3 myr5SkinPrimary;\nuniform vec3 myr5SkinSecondary;\nuniform vec3 myr5SkinAccent;\nvarying vec2 vMyr5SkinUv;'+(palette.paletteId?PALETTE_SURFACE_GLSL:''));
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D myr5SkinMask;\nuniform sampler2D myr5SkinHeight;\nuniform sampler2D myr5SkinBasecolor;\nuniform sampler2D myr5SkinEmissive;\nuniform vec3 myr5SkinPrimary;\nuniform vec3 myr5SkinSecondary;\nuniform vec3 myr5SkinAccent;\nvarying vec2 vMyr5SkinUv;');
     // The texture is tagged SRGBColorSpace, so WebGL's sRGB sampling decodes the mask to linear.
-    const layers=palette.paletteId?'float skinTint=myr5PaletteSurfaceTint(vMyr5SkinUv);\nvec3 skinPalette=skinTint<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinTint*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinTint-0.5)*2.0);\ndiffuseColor.rgb=skinPalette;'+(loaded.has('tintMask')?'\ndiffuseColor.rgb*=0.65+0.35*dot(texture2D(myr5SkinMask,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722));':loaded.has('basecolor')?'\ndiffuseColor.rgb*=0.65+0.35*dot(texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722));':''):loaded.has('tintMask')?'vec3 skinBase=texture2D(myr5SkinMask,vMyr5SkinUv).rgb;\nfloat skinMask=dot(skinBase,vec3(0.2126,0.7152,0.0722));\nvec3 skinPalette=skinMask<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinMask*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinMask-0.5)*2.0);\ndiffuseColor.rgb=skinBase*skinPalette;':loaded.has('basecolor')?'diffuseColor.rgb*=texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb;':'';
+    const tone=loaded.has('tintMask')?'dot(texture2D(myr5SkinMask,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722))':loaded.has('height')?'texture2D(myr5SkinHeight,vMyr5SkinUv).r':loaded.has('basecolor')?'dot(texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722))':'0.5';
+    const layers=palette.paletteId?`float skinTint=clamp(${tone},0.0,1.0);\nvec3 skinPalette=skinTint<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinTint*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinTint-0.5)*2.0);\ndiffuseColor.rgb=skinPalette;`:loaded.has('tintMask')?'vec3 skinBase=texture2D(myr5SkinMask,vMyr5SkinUv).rgb;\nfloat skinMask=dot(skinBase,vec3(0.2126,0.7152,0.0722));\nvec3 skinPalette=skinMask<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinMask*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinMask-0.5)*2.0);\ndiffuseColor.rgb=skinBase*skinPalette;':loaded.has('basecolor')?'diffuseColor.rgb*=texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb;':'';
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+layers);
     if(loaded.has('emissive'))shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=texture2D(myr5SkinEmissive,vMyr5SkinUv).rgb*0.85;');
    };
-   const priorKey=material.customProgramCacheKey.bind(material),mapKey=[...loaded.keys()].sort().join(',');material.customProgramCacheKey=()=>priorKey()+'|myr5-installed-skin-palette-v3|'+mapKey+'|'+(palette.paletteId?'palette':'colour');
+   const priorKey=material.customProgramCacheKey.bind(material),mapKey=[...loaded.keys()].sort().join(',');material.customProgramCacheKey=()=>priorKey()+'|myr5-installed-skin-palette-v4|'+mapKey+'|'+(palette.paletteId?'palette':'colour');
    material.userData.installedSkinId=skin.id;
   }
   material.needsUpdate=true;

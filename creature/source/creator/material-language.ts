@@ -2,7 +2,6 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {builtinSurfaceProfile,sampleBuiltinSurface} from './material-patterns';
 import {refineCoachGeometry,type CoachReliefBudget} from './material-refinement';
-import {paletteSurfaceTint} from './palette-surface.mjs';
 
 // This material language is shared verbatim by Coach and Helping Hand. Maps are
 // ordinary glTF-compatible PBR textures, so the appearance also survives export.
@@ -89,7 +88,7 @@ function materialMaps(style:Style){
  const dark=new T.Color(style.secondary),base=new T.Color(style.primary),light=new T.Color(style.accent),color=new T.Color(),profile=builtinSurfaceProfile(style.id);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
   const s=surfaceSample(style.id,x/size,y/size),i=(y*size+x)*4;
-  const tint=style.paletteId?paletteSurfaceTint(x/size,y/size):s.tint;
+  const tint=s.tint; // Palette stops follow the existing texture tones, never a second pattern.
   color.copy(tint<.5?dark:base).lerp(tint<.5?base:light,tint<.5?tint*2:(tint-.5)*2);
   const roughnessMap=profile?clamp(.9+(s.rough-profile.roughness)*.75,0,1):s.rough;
   for(let k=0;k<3;k++){buffers[0][i+k]=Math.round([color.r,color.g,color.b][k]*255);buffers[1][i+k]=s.height*255;buffers[2][i+k]=roughnessMap*255;buffers[3][i+k]=s.glow*255;}
@@ -99,9 +98,9 @@ function materialMaps(style:Style){
  const result={map:textures[0],bump:textures[1],rough:textures[2],glow:textures[3]};maps.set(key,result);return result;
 }
 /** Colour-only path for irises and other parts whose geometry must stay intact. */
-export function applyPaletteSurface(material:T.MeshStandardMaterial,palette:{primary:string;secondary:string;accent:string;paletteId?:string}){
+export function applyPaletteSurface(material:T.MeshStandardMaterial,palette:{primary:string;secondary:string;accent:string;paletteId?:string;id?:number}){
  if(!palette.paletteId)return;
- material.map=materialMaps({...palette,id:30,emissive:'#000000',roughness:.55,metalness:0,detail:'palette'}).map;
+ material.map=materialMaps({...palette,id:palette.id??30,emissive:'#000000',roughness:.55,metalness:0,detail:'palette'}).map;
  material.color.set('white');material.needsUpdate=true;
 }
 export function materialFor(style:Style,unit:number,original?:T.MeshStandardMaterial){
