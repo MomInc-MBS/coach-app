@@ -64,3 +64,17 @@ test('golden coach sprite variants are selectable separately and remain scoped t
  globalThis.myr5AuthenticatedAccount={user:{id:'different-owner'}};assert.equal(room.hasBody,false);
  globalThis.myr5AuthenticatedAccount={user:{id:'coach-cosmetic-tests'}};assert(room.hasBody);
 });
+
+test('a shared saved recipe cannot bypass performance ownership for a locked 64-bit coach',async()=>{
+ memory.clear();const state=readPerformanceProgress(),locked=manifest.sprites.find(sprite=>!state.coaches.includes(sprite.id));assert(locked);
+ const recipe={...mod.fresh(),body:locked.id,headFrom:locked.id,armsFrom:locked.id,feetFrom:locked.id};localStorage.setItem('myr5-recipe-v1',JSON.stringify(recipe));
+ const key=`myr5-war-room-coaches-v2/${encodeURIComponent(performanceOwner())}`;localStorage.setItem(key,JSON.stringify({body:locked.id,pet:null,goldenBody:false}));
+ const room=await mod.loadWarRoomCoaches(doc),picker=room.picker('body',()=>{}),button=picker.children.find(child=>child.dataset?.coachSprite===locked.id);
+ assert(button.disabled);assert.equal(room.hasBody,false);button.onclick();assert.equal(room.hasBody,false);
+ let fallback=false;room.draw(()=>{fallback=true;},new Canvas(),globalThis.GalaAvatar.defaultLook);assert(fallback);
+});
+
+test('fallback material ownership follows the selected 64-bit sprite rather than the 3D recipe body',async()=>{
+ const source=await readFile(new URL('../creature/source/war-room-coaches.ts',import.meta.url),'utf8');
+ assert.match(source,/resolveRegionMaterial\(r\.styles\[region\],regionChoice\(r\.materials,region\),false,sprite\.id\)/);
+});

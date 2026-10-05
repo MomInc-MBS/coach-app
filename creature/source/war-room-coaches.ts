@@ -1,8 +1,6 @@
-import {goldenCoach,performanceOwner} from '../../performance-progress.mjs';
+import {goldenCoach,performanceOwner,coachAccess} from '../../performance-progress.mjs';
 import {BODIES,parseRecipe,fresh} from './creator/design';
-import {bodyLockSection} from './creator/track-placements';
 import {resolveRegionMaterial,regionChoice} from './creator/materials-registry';
-import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
 
 const KEY='myr5-war-room-coaches-v2';
 const selectionKey=()=>`${KEY}/${encodeURIComponent(performanceOwner())}`;
@@ -15,7 +13,7 @@ export async function loadWarRoomCoaches(doc:Document){
  const image=async(name:string)=>{const img=new Image();img.src='/pod/gala-coaches/'+name;await img.decode();return img;};
  await Promise.all(Object.entries(manifest.sheets).map(async([id,s]:[string,any])=>{const [art,mask]=await Promise.all([image(s.image),image(s.mask)]);sheets.set(id,{image:art,mask});}));
  const recipe=()=>{try{return parseRecipe(localStorage.getItem('myr5-recipe-v1')||'null');}catch{return fresh();}};
- const lock=(id:string)=>{const r=recipe();return [r.body,r.headFrom,r.armsFrom,r.feetFrom].includes(id)?null:bodyLockSection(id,loadProgress(),selectedTracks());};
+ const lock=(id:string)=>coachAccess(id)?null:'Coach performance milestone';
  let selection:Selection={body:null,pet:null,goldenBody:false},selectionOwner='';
  function readSelection(){const owner=selectionKey();if(owner===selectionOwner)return;selectionOwner=owner;selection={body:null,pet:null,goldenBody:false};
   try{const saved=JSON.parse(localStorage.getItem(owner)||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&(kind==='body'||s.kind===kind))&&!lock(saved[kind]))selection[kind]=saved[kind];selection.goldenBody=saved?.goldenBody===true&&!!selection.body&&goldenCoach(selection.body);}catch{}
@@ -23,7 +21,7 @@ export async function loadWarRoomCoaches(doc:Document){
  readSelection();
  const cache=new Map<string,HTMLCanvasElement>();
  function art(sprite:Sprite,silhouette=false,look?:any,golden=false){
-  const r=recipe(),skin=look&&(globalThis as any).GalaAvatar?.skinColor?.(look),colours=golden&&goldenCoach(sprite.id)?['#e8bc4d','#ffe4a1','#6b4214']:skin?[skin,skin,'#fff9df']:['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region),false,r.body).primary);
+  const r=recipe(),skin=look&&(globalThis as any).GalaAvatar?.skinColor?.(look),colours=golden&&goldenCoach(sprite.id)?['#e8bc4d','#ffe4a1','#6b4214']:skin?[skin,skin,'#fff9df']:['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region),false,sprite.id).primary);
   const key=JSON.stringify([sprite.id,silhouette,colours]);if(cache.has(key))return cache.get(key)!;
   const [x,y,w,h]=sprite.frame,canvas=doc.createElement('canvas');canvas.width=w;canvas.height=h;
   const ctx=canvas.getContext('2d',{willReadFrequently:true})!,mask=doc.createElement('canvas');mask.width=w;mask.height=h;
