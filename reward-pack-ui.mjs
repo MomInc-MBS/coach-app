@@ -1,3 +1,4 @@
+import {COACHES} from './performance-catalog.mjs';
 import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
 import {grantDailyPack,openRewardPackExclusive,unopenedPacks,PACK_SIZES} from './reward-packs.mjs';
 
@@ -87,7 +88,7 @@ export function mountRewardPacks(){
   if(!summary.rewards.length)result.textContent='All cosmetics for your unlocked coaches are collected.';
   for(const reward of summary.rewards){
    const itemSummary=rewardSummary({reward,category:reward.category});
-   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${itemSummary.title} unlocked!`;kind.textContent=`${itemSummary.detail} ? ${reward.coachId}`;result.append(title,kind);
+   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${itemSummary.title} unlocked!`;kind.textContent=`${itemSummary.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`;result.append(title,kind);
    if(itemSummary.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of itemSummary.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
   }
   open.hidden=true;close.textContent='Done';close.focus();
