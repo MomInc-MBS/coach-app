@@ -96,6 +96,7 @@ export async function openGuestWorkoutAdapter({
   async complete(id,completion){const token=assertLease(),result=await scope.completeWorkout(id,completion,{leaseToken:token});active=null;release();return {local:true,queued:!!result.outbox,workout:result.workout,duplicate:result.duplicate};},
   async interrupt(id,progress){const token=assertLease();if(progress)await scope.updateWorkout(id,{progress},{leaseToken:token});const workout=await scope.interruptWorkout(id,{leaseToken:token});active=null;release();return workout;},
   async history(){return (await scope.listWorkouts()).filter(row=>row.status==='completed').sort((a,b)=>(b.completedAt??0)-(a.completedAt??0)||b.id.localeCompare(a.id));},
+  async listPerformanceWorkouts(){return (await scope.listWorkouts()).filter(row=>row.status==='completed'&&row.progress?.performance).sort((a,b)=>(a.completedAt??0)-(b.completedAt??0)||a.id.localeCompare(b.id));},
   snapshot(){return {held,active,foreign:foreign()};},
   close(){if(disposed)return;disposed=true;release();channel?.removeEventListener?.('message',receive);channel?.close?.();repository.close();},
  });
