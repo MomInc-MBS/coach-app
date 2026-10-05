@@ -7,7 +7,7 @@ import {PRODUCTION_PORTALS} from '../modules/portal/portal.mjs';
 import {offlineInventory} from '../scripts/offline-assets.mjs';
 
 test('Quilt remains the built-in fallback while physics boards are selectable',async()=>{
- assert.deepEqual(PRODUCTION_PORTALS,['quilt','ice','grass','jelly','wood','pond']);
+ assert.deepEqual(PRODUCTION_PORTALS,['quilt','ice','grass','cogs','jelly','wood','pond']);
  const portal=await readFile(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
  assert.match(portal,/return 'quilt'/);
  assert.match(portal,/const BOARDS=\{quilt:/);
