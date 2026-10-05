@@ -108,7 +108,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   const performance={...result,id,...(coachId?{coachId}: {})};
   const saved=await workoutOwner.complete({id,value:result.value,activeSeconds:result.activeSeconds||m.active||0,elapsedSeconds:m.elapsed||0,earned:result.earned,progress:{...flow.progress,value:result.value,performance,performanceWorkout:flow.workout?.snapshot()}});
   if(!saved.saved){flow.progress=before;flow.phase='set';if(flow.workout)flow.workout.finished=false;throw Error(saved.reason);}
-  const progress=recordPerformanceSession(performance,{owner});flow.performanceXp=progress.totalXp;flow.progress.completedSets++;
+  const priorXp=readPerformanceProgress({owner}).totalXp,progress=recordPerformanceSession(performance,{owner});result.xp=Math.max(0,progress.totalXp-priorXp);flow.performanceXp=progress.totalXp;flow.progress.completedSets++;
   window.dispatchEvent(new Event('myr5:local-history-refresh'));onStop();await toRest(result,{silent:manual,started:now});return true;
  }
  async function consume(m,now){const result=flow.consume({...m,manual:flow.active?.control==='manual'},now);publishInstruction();if(!result)return false;return persistResult(result,m,now);}
@@ -160,6 +160,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  new MutationObserver(syncStatus).observe(statusLine,{childList:true,characterData:true,subtree:true});syncStatus();
  const requestedPanel=new URLSearchParams(location.search).get('panel');if(['avatar','hand'].includes(requestedPanel)){$('identity').showModal();if(requestedPanel==='hand')hand.edit();}
  window.addEventListener('myr5:account-progress',({detail:p})=>{flow.combat=p.combat;flow.progress.completedSets=p.completedSets;flow.progress.circuit=p.circuit||null;store(PROGRESS,JSON.stringify(flow.progress));for(const option of $('coachPower').options){if(option.value!=='shield'){option.disabled=!p.unlocks[option.value];option.textContent=POWERS[option.value].name+(option.disabled?' · Locked':'');}}if($('coachPower').selectedOptions[0]?.disabled)$('coachPower').value='shield';power();updateProgress();});
+ window.addEventListener('myr5:performance-progress',()=>{updateProgress();if(flow.phase==='pod')$('start').disabled=!workoutEligibility(currentMode).allowed;});
  window.addEventListener('myr5:round-rejected',({detail})=>{if(awaitingRound?.id!==detail.id)return;awaitingRound=null;pendingChallenge=null;$('setReceipt').textContent=detail.message;$('earnedXp').textContent='NO XP';route.render();circuit.render();});
  window.addEventListener('myr5:account-progress',({detail:p})=>{if(awaitingRound&&p.lastSyncedWorkoutId===awaitingRound.id){awaitingRound=null;route.render();if(flow.phase==='rest'&&!flow.preview){const next=route.suggestion();pendingChallenge=(next?.line||ROUTE_LINES.limit)+' '+ROUTE_LINES.rest;speakChallenge();}}if(document.body.dataset.tracking!=='true')$('start').disabled=!workoutEligibility(currentMode).allowed;route.render();});
  const hydrationLease=workoutOwner.acquireIdleLease();
