@@ -19,8 +19,9 @@ const number=value=>Math.max(0,Number(value)||0);
 export class PerformanceWorkout {
  constructor({mode,kind,difficulty=exerciseDifficulty(mode),cardio='gentle',snapshot=null}={}){
   this.mode=mode;this.kind=kind==='hold'?'hold':kind==='reps'?'reps':cardio==='sprint'?'sprint':'gentle';this.difficulty=difficulty;
-  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;
-  if(snapshot&&snapshot.mode===mode)Object.assign(this,snapshot,{finished:false,continuousSeconds:0,lastNow:null});
+  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;
+  if(snapshot&&snapshot.mode===mode)Object.assign(this,snapshot,{finished:false,continuousSeconds:0,lastNow:null,lastCameraHold:0,continuousRawOffset:0});
+  if(!Object.keys(this.perDifficultyContinuous).length&&this.maxContinuousSeconds>0)this.perDifficultyContinuous[this.difficulty]=this.maxContinuousSeconds;
  }
  snapshot(){return Object.fromEntries(Object.entries(this).filter(([key])=>!['lastNow','lastMovementNow'].includes(key)));}
  get counting(){return !this.finished&&!this.paused&&this.stage!=='preparation-rest'&&this.stage!=='sprint-rest';}
@@ -38,7 +39,7 @@ export class PerformanceWorkout {
  breakHold(now=Date.now()){if(this.kind!=='hold'||this.finished)return;this.paused=true;this.continuousSeconds=0;this.recoveryUntil=now+HOLD_RECOVERY_SECONDS*1000;}
  resumeHold(){this.paused=false;this.continuousSeconds=0;this.recoveryUntil=0;}
  extendRecovery(seconds=15,now=Date.now()){this.recoveryUntil=Math.max(now,this.recoveryUntil)+seconds*1000;}
- switchDifficulty(difficulty){if(!['easy','medium','hard','expert'].includes(difficulty))throw Error('Unknown exercise difficulty.');this.difficulty=difficulty;}
+ switchDifficulty(difficulty){if(!['easy','medium','hard','expert'].includes(difficulty))throw Error('Unknown exercise difficulty.');if(difficulty===this.difficulty)return;if(this.kind!=='hold')throw Error('Choose repetition difficulty before the working set.');this.perDifficultyContinuous[this.difficulty]=Math.max(this.perDifficultyContinuous[this.difficulty]||0,this.maxContinuousSeconds);this.difficulty=difficulty;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.continuousRawOffset=this.lastCameraHold;}
  update(m,now=Date.now()){
   if(this.finished)return null;
   const raw=number(this.kind==='hold'?m.totalHold:this.kind==='reps'?m.count:m.manual?m.elapsed:['steps','jumps','reps'].includes(m.kind)?m.count:m.active);
@@ -57,14 +58,15 @@ export class PerformanceWorkout {
    if(this.value>=REP_CAP)return this.finish();return null;
   }
   if(this.kind==='hold'){
-   const cameraContinuous=m.manual?null:number(m.hold);
-   if(!m.manual&&cameraContinuous===0&&this.continuousSeconds>0)this.breakHold(now);
+   const wasHolding=this.continuousSeconds>0,cameraHold=number(m.hold);if(!m.manual&&cameraHold<this.lastCameraHold){this.continuousRawOffset=0;this.continuousSeconds=0;}this.lastCameraHold=cameraHold;const cameraContinuous=m.manual?null:Math.max(0,cameraHold-this.continuousRawOffset);
+   if(!m.manual&&cameraContinuous===0&&wasHolding)this.breakHold(now);
    if(!m.manual&&this.paused&&cameraContinuous>0)this.resumeHold();
    if(this.paused)return null;
    const before=this.activeSeconds,continuousBefore=this.continuousSeconds;
    this.activeSeconds=Math.min(HOLD_CAP_SECONDS,before+delta);
    this.continuousSeconds=m.manual?continuousBefore+delta:cameraContinuous;
    this.maxContinuousSeconds=Math.max(this.maxContinuousSeconds,this.continuousSeconds);
+   this.perDifficultyContinuous[this.difficulty]=Math.max(this.perDifficultyContinuous[this.difficulty]||0,this.continuousSeconds);
    this.xpBase+=holdXp({difficulty:this.difficulty,from:before,to:this.activeSeconds,continuousAtFrom:continuousBefore});this.value=this.activeSeconds;
    if(this.activeSeconds>=HOLD_CAP_SECONDS)return this.finish();return null;
   }
@@ -81,6 +83,6 @@ export class PerformanceWorkout {
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-'))return null;
-  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,xpBase:this.xpBase,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
+  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},xpBase:this.xpBase,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }

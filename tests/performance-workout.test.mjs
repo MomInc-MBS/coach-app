@@ -71,3 +71,22 @@ test('warming up increases rest-strike damage and preparation taps never award X
  assert.equal(f.preparationTap(1000).damage,2);f.workout.nextStage='working';assert.equal(f.preparationTap(2000).damage,4);assert.equal(f.xp,0);
  f.workout.stage='working';assert.equal(f.preparationTap(3000),null);f.workout.value=8;f.workout.xpBase=9;f.finishWorking({count:8,mode:'squat',kind:'reps'},3100);assert.equal(f.tap(4000).damage,6);
 });
+
+test('switching hold difficulty keeps active XP time but never transfers continuous achievements',()=>{
+ for(const manual of [true,false]){
+  const w=new PerformanceWorkout({mode:'high-horse',kind:'hold',difficulty:'easy'});
+  for(let seconds=1;seconds<=595;seconds++)w.update({...hold(seconds),manual},seconds*1000);
+  const xpBefore=w.xpBase;w.switchDifficulty('expert');assert.equal(w.activeSeconds,595);assert.equal(w.continuousSeconds,0);assert.equal(w.maxContinuousSeconds,0);
+  for(let seconds=596;seconds<=600;seconds++)w.update({...hold(seconds),manual},seconds*1000);
+  assert.equal(w.activeSeconds,600);assert.equal(w.continuousSeconds,5);assert.equal(w.maxContinuousSeconds,5);assert.ok(w.xpBase>xpBefore);
+  const result=w.finish();assert.deepEqual(result.perDifficultyContinuous,{easy:595,expert:5});
+ }
+});
+test('earned earlier variation milestones survive switching and pausing',()=>{
+ const w=new PerformanceWorkout({mode:'high-horse',kind:'hold',difficulty:'easy'});
+ for(let seconds=1;seconds<=600;seconds++)w.update({...hold(seconds),manual:true},seconds*1000);
+ w.switchDifficulty('expert');w.update({...hold(605),manual:true},605000);w.breakHold(605000);
+ const restored=new PerformanceWorkout({mode:'high-horse',kind:'hold',snapshot:JSON.parse(JSON.stringify(w.snapshot()))});
+ assert.deepEqual(restored.perDifficultyContinuous,{easy:600,expert:5});assert.equal(restored.continuousSeconds,0);
+ restored.resumeHold();restored.update({...hold(610),manual:true},610000);assert.equal(restored.maxContinuousSeconds,5);
+});
