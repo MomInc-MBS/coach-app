@@ -27,7 +27,7 @@ export const SPECIAL_DAMAGE_FRACTION=0.1;
 export const STREAK_BREAKPOINTS=[[20,1.5],[10,1.25],[5,1.1]];
 
 export const BOSS_HP_FACTOR=0.9;    // a level's boss HP = this fraction of that level's own kit output over KILL_TARGET_SECONDS — every level's own kit (taps only) clears it with 1/0.9 = 11.1% to spare, at any KILL_TARGET_SECONDS (plan/COMBAT-TUNING.md)
-export const DAILY_CAP_FACTOR=2;    // daily cap = this many boss-kills worth of damage, so it never blocks the intended kill
+export const DAILY_CAP_FACTOR=5;    // daily cap = this many boss-kills worth of damage, so it never blocks the intended kill
 
 export const BOSS_ATTACK_EVERY_HITS=6; // spectacle only (D7) — no gameplay listener consumes this
 
