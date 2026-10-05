@@ -497,3 +497,7 @@ This inventory deliberately distinguishes selectable/free content, implemented p
 
 Verification: catalogs were bundled directly from the integration worktree using esbuild; Gala indexes were read by executing the source catalog in a VM without drawing. Checked unique coach IDs, equality with approved body picker, exact scoped cosmetic cross product, level curve monotonicity and endpoint, pack counts/sizes, full 20 x 21 weapon tier product, 100 unique ability IDs, 57 unique workout IDs and all 680 Gala option indexes. Source SHA-256 hashes are recorded in JSON.
 
+
+## Post-snapshot integration addendum
+
+Commit `8d9fc5b` retains power thresholds 4 / 16 / 36 / 196 while including validated account-owned performance sessions, as described above. Historical snapshot source hashes remain unchanged. Commit `c20ef6c` adds rest-boss pack rewards: the first distinct boss defeated that day grants one uncommon pack; the fifth grants one legendary pack, once each day. Pack IDs are `reward-pack:<tier>:rest-boss-v1:<YYYY-MM-DD>`. Each real workout has stable preparation-1, preparation-2 and working boss encounter IDs. Reopening/replaying an encounter, including the next day, cannot count it twice; practice earns no pack. These optional packs supplement the 249 XP-level packs and accelerate cosmetic collection. Defeating a rest boss never unlocks a coach. The daily tap allowance is five boss budgets; streak and weapon damage math stays unchanged.

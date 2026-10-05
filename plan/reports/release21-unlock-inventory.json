@@ -126452,7 +126452,7 @@
       "name": "Shield",
       "line": "The shield holds.",
       "status": "free",
-      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
+      "note": "Account-owned validated performance sessions also count toward existing power thresholds; cosmetic level remains independent.",
       "requirement": null
     },
     {
@@ -126460,10 +126460,11 @@
       "name": "Ember",
       "line": "The ember field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
+      "note": "Account-owned validated performance sessions also count toward existing power thresholds; cosmetic level remains independent.",
       "requirement": {
         "completedPerformanceSets": 4,
-        "legacyLevel": 2
+        "legacyLevel": 2,
+        "countSource": "max(legacy completed server sets, validated v2 performance session count)"
       }
     },
     {
@@ -126471,10 +126472,11 @@
       "name": "Arc",
       "line": "The arc field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
+      "note": "Account-owned validated performance sessions also count toward existing power thresholds; cosmetic level remains independent.",
       "requirement": {
         "completedPerformanceSets": 16,
-        "legacyLevel": 5
+        "legacyLevel": 5,
+        "countSource": "max(legacy completed server sets, validated v2 performance session count)"
       }
     },
     {
@@ -126482,10 +126484,11 @@
       "name": "Frost",
       "line": "The frost field holds.",
       "status": "active-legacy-server-set-gate",
-      "note": "Server account-progress power gates use the greater of legacy server set count and verified version-2 performance session count, independently of cosmetic XP; legacy version-1 guest imports are excluded.",
+      "note": "Account-owned validated performance sessions also count toward existing power thresholds; cosmetic level remains independent.",
       "requirement": {
         "completedPerformanceSets": 36,
-        "legacyLevel": 10
+        "legacyLevel": 10,
+        "countSource": "max(legacy completed server sets, validated v2 performance session count)"
       }
     }
   ],
@@ -139645,7 +139648,46 @@
       "id": "shieldBreak",
       "completedPerformanceSets": 196,
       "legacyLevel": 50,
-      "status": "active-performance-completion-gate"
+      "status": "active-performance-completion-gate",
+      "countSource": "max(legacy completed server sets, validated v2 performance session count)"
+    }
+  ],
+  "addenda": [
+    {
+      "capturedAt": "2026-10-05T04:01:44.841Z",
+      "sourceCommit": "8d9fc5b",
+      "scope": "power compatibility gates",
+      "note": "Account-owned imported validated v2 performance sessions count toward the existing 4/16/36/196 thresholds. Original snapshot source hashes remain historical."
+    },
+    {
+      "capturedAt": "2026-10-05T04:01:44.841Z",
+      "sourceCommit": "c20ef6c",
+      "scope": "rest boss cosmetic rewards",
+      "dailyMilestones": [
+        {
+          "defeats": 1,
+          "tier": "uncommon",
+          "items": 1
+        },
+        {
+          "defeats": 5,
+          "tier": "legendary",
+          "items": 3
+        }
+      ],
+      "packIdPattern": "reward-pack:<tier>:rest-boss-v1:<YYYY-MM-DD>",
+      "ownership": "account/epoch or persistent guest owner",
+      "distinctEncounterId": "<adapter workout ID>:preparation-1 | preparation-2 | working",
+      "replay": "Same encounter cannot count again, including on a later day.",
+      "coaches": "Rest combat never unlocks performance coaches.",
+      "dailyDamageBudgetFactor": 5,
+      "streakDamage": "unchanged",
+      "sourceFiles": [
+        "rest-boss-rewards.mjs",
+        "pod/pod.mjs",
+        "pod/set-flow.mjs",
+        "combat-config.mjs"
+      ]
     }
   ]
 }
