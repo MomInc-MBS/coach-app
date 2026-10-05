@@ -1,8 +1,9 @@
 import * as T from 'three';
+import {PALETTE_SURFACE_GLSL} from './palette-surface.mjs';
 
 export type SkinMapName='basecolor'|'normal'|'roughness'|'height'|'metalness'|'tintMask'|'ao'|'opacity'|'emissive'|'preview';
 export type InstalledSkin={id:string;displayName:string;track:string;maps:Partial<Record<SkinMapName,Uint8Array>>};
-export type PaletteTriad={primary:string;secondary:string;accent:string};
+export type PaletteTriad={primary:string;secondary:string;accent:string;paletteId?:string};
 
 const SPACE:Partial<Record<SkinMapName,'srgb'|'linear'>>={basecolor:'srgb',tintMask:'srgb',emissive:'srgb',normal:'linear',roughness:'linear',height:'linear',metalness:'linear',ao:'linear',opacity:'linear'};
 export type SkinTextureCache=Map<Uint8Array,Partial<Record<'srgb'|'linear',Promise<T.Texture>>>>;
@@ -39,14 +40,14 @@ export async function applyInstalledSkin(mesh:T.Mesh,skin:InstalledSkin,palette:
  if(!mesh.geometry.getAttribute('uv2')&&mesh.geometry.getAttribute('uv'))mesh.geometry.setAttribute('uv2',mesh.geometry.getAttribute('uv').clone());
  for(const raw of Array.isArray(mesh.material)?mesh.material:[mesh.material]){
   const material=raw as T.MeshPhysicalMaterial;
-  if((loaded.has('basecolor')||loaded.has('tintMask')||loaded.has('emissive'))&&mesh.geometry.getAttribute('uv'))material.defines={...material.defines,USE_UV:''};
+  if((palette.paletteId||loaded.has('basecolor')||loaded.has('tintMask')||loaded.has('emissive'))&&mesh.geometry.getAttribute('uv'))material.defines={...material.defines,USE_UV:''};
   if(loaded.has('normal')){material.normalMap=loaded.get('normal')!;material.normalScale.set(1,1);material.userData.normalConvention='OpenGL +Y';}
   if(loaded.has('roughness'))material.roughnessMap=loaded.get('roughness')!;
   if(loaded.has('height')){material.bumpMap=loaded.get('height')!;material.bumpScale=.018;}
   if(loaded.has('metalness')){material.metalnessMap=loaded.get('metalness')!;material.metalness=1;}
   if(loaded.has('ao'))material.aoMap=loaded.get('ao')!;
   if(loaded.has('opacity')){material.alphaMap=loaded.get('opacity')!;material.transparent=true;material.depthWrite=false;}
-  if((loaded.has('basecolor')||loaded.has('tintMask')||loaded.has('emissive'))&&mesh.geometry.getAttribute('uv')){
+  if((palette.paletteId||loaded.has('basecolor')||loaded.has('tintMask')||loaded.has('emissive'))&&mesh.geometry.getAttribute('uv')){
    const previous=material.onBeforeCompile;
    material.onBeforeCompile=(shader,renderer)=>{
     previous.call(material,shader,renderer);
@@ -57,13 +58,13 @@ export async function applyInstalledSkin(mesh:T.Mesh,skin:InstalledSkin,palette:
     if(loaded.has('basecolor'))shader.uniforms.myr5SkinBasecolor={value:loaded.get('basecolor')};
     if(loaded.has('emissive'))shader.uniforms.myr5SkinEmissive={value:loaded.get('emissive')};
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vMyr5SkinUv;').replace('#include <uv_vertex>','#include <uv_vertex>\nvMyr5SkinUv=uv;');
-    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D myr5SkinMask;\nuniform sampler2D myr5SkinBasecolor;\nuniform sampler2D myr5SkinEmissive;\nuniform vec3 myr5SkinPrimary;\nuniform vec3 myr5SkinSecondary;\nuniform vec3 myr5SkinAccent;\nvarying vec2 vMyr5SkinUv;');
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D myr5SkinMask;\nuniform sampler2D myr5SkinBasecolor;\nuniform sampler2D myr5SkinEmissive;\nuniform vec3 myr5SkinPrimary;\nuniform vec3 myr5SkinSecondary;\nuniform vec3 myr5SkinAccent;\nvarying vec2 vMyr5SkinUv;'+(palette.paletteId?PALETTE_SURFACE_GLSL:''));
     // The texture is tagged SRGBColorSpace, so WebGL's sRGB sampling decodes the mask to linear.
-    const layers=loaded.has('tintMask')?'vec3 skinBase=texture2D(myr5SkinMask,vMyr5SkinUv).rgb;\nfloat skinMask=dot(skinBase,vec3(0.2126,0.7152,0.0722));\nvec3 skinPalette=skinMask<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinMask*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinMask-0.5)*2.0);\ndiffuseColor.rgb=skinBase*skinPalette;':loaded.has('basecolor')?'diffuseColor.rgb*=texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb;':'';
+    const layers=palette.paletteId?'float skinTint=myr5PaletteSurfaceTint(vMyr5SkinUv);\nvec3 skinPalette=skinTint<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinTint*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinTint-0.5)*2.0);\ndiffuseColor.rgb=skinPalette;'+(loaded.has('tintMask')?'\ndiffuseColor.rgb*=0.65+0.35*dot(texture2D(myr5SkinMask,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722));':loaded.has('basecolor')?'\ndiffuseColor.rgb*=0.65+0.35*dot(texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb,vec3(0.2126,0.7152,0.0722));':''):loaded.has('tintMask')?'vec3 skinBase=texture2D(myr5SkinMask,vMyr5SkinUv).rgb;\nfloat skinMask=dot(skinBase,vec3(0.2126,0.7152,0.0722));\nvec3 skinPalette=skinMask<0.5?mix(myr5SkinSecondary,myr5SkinPrimary,skinMask*2.0):mix(myr5SkinPrimary,myr5SkinAccent,(skinMask-0.5)*2.0);\ndiffuseColor.rgb=skinBase*skinPalette;':loaded.has('basecolor')?'diffuseColor.rgb*=texture2D(myr5SkinBasecolor,vMyr5SkinUv).rgb;':'';
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+layers);
     if(loaded.has('emissive'))shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=texture2D(myr5SkinEmissive,vMyr5SkinUv).rgb*0.85;');
    };
-   const priorKey=material.customProgramCacheKey.bind(material),mapKey=[...loaded.keys()].sort().join(',');material.customProgramCacheKey=()=>priorKey()+'|myr5-installed-skin-triad-v2|'+mapKey;
+   const priorKey=material.customProgramCacheKey.bind(material),mapKey=[...loaded.keys()].sort().join(',');material.customProgramCacheKey=()=>priorKey()+'|myr5-installed-skin-palette-v3|'+mapKey+'|'+(palette.paletteId?'palette':'colour');
    material.userData.installedSkinId=skin.id;
   }
   material.needsUpdate=true;
