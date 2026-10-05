@@ -28,7 +28,7 @@ async function load(){
  }catch(error){if(!transitions.isCurrent(ticket))return;$('runStatus').textContent=error.message;$('arsenalStatus').textContent='Arsenal unavailable: '+error.message;$('access').textContent='Signed in · service unavailable';}
  finally{await board;if(transitions.isCurrent(ticket))$('refresh').disabled=false;}
 }
-$('refresh').addEventListener('click',load);window.addEventListener('myr5:login-ready',()=>void load());load();
+$('refresh').addEventListener('click',load);window.addEventListener('myr5:login-ready',()=>void load());window.addEventListener('pageshow',event=>{if(event.persisted){accountContext.clear();void load();}});load();
 $('saveLoadout').addEventListener('click',async()=>{if(!arsenal)return;const ticket=transitions.capture(),button=$('saveLoadout');button.disabled=true;try{const reply=await api('/api/war-room/loadout',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:arsenal.revision,loadout:{type:$('weaponType').value,tier:Number($('weaponTier').value)}})});transitions.assertCurrent(ticket);renderArsenal(reply.state);}catch(error){if(transitions.isCurrent(ticket))$('arsenalStatus').textContent=error.message;}finally{if(transitions.isCurrent(ticket))button.disabled=false;}});
 
 // The character bay dresses the player's own 64-bit Gala character in the cage room. It never opens the
