@@ -5,6 +5,7 @@ import {GUIDE} from '../progression-guide.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 import {exerciseDifficulty} from '../performance-catalog.mjs';
 import {workoutChoices,workoutLevel,workoutKind} from '../workout-levels.mjs';
+import {PerformanceWorkout} from '../pod/performance-workout.mjs';
 import {nextPerformanceChallenge} from '../workout-route-ui.mjs';
 const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
 test('field manual explains performance unlocks and daily cosmetics without old daily category XP',()=>{
@@ -22,4 +23,8 @@ test('performance route has meaningful coach targets and no legacy five-round ga
  const options={storage:storage(),account:null},reps=nextPerformanceChallenge('squat',options),hold=nextPerformanceChallenge('knee-plank',options);
  assert.equal(reps.goal,15);assert.equal(reps.unit,'reps');assert.equal(hold.goal,300);assert.equal(hold.unit,'seconds');assert.equal(reps.allowed,true);
  const source=readFileSync(new URL('../workout-route-ui.mjs',import.meta.url),'utf8');assert(!source.includes('route.limit'));assert(!source.includes('exerciseRoute'));
+});
+
+test('workout labels match the actual controller kind for every stable mode',()=>{
+ for(const e of Object.values(EXERCISES)){const controller=new PerformanceWorkout({mode:e.id,kind:e.kind}),kind=workoutKind(e.id);assert.equal(kind,controller.kind==='gentle'?'cardio':controller.kind,e.id);if(e.group==='cardio'&&e.kind==='reps'){assert.match(workoutLevel(e.id).xp,/XP per rep/);assert.match(workoutLevel(e.id).unlock,/15/);}if(e.kind==='pace'&&e.group!=='cardio'){assert.match(workoutLevel(e.id).unlock,/5 active minutes/);assert(!workoutLevel(e.id).unlock.includes('sprint'));}}
 });

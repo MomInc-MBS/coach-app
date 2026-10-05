@@ -1,5 +1,5 @@
-﻿/* Real coach performance achievements over the original constellation backdrop. */
-.ach-board{position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border:0;background:linear-gradient(#05030cef,#05030cf5),url('/pod/worlds/achievements.jpg') center/cover;color:#f7f4ff;overflow:hidden;font:16px/1.5 var(--font,system-ui)}
+/* Real coach performance achievements over the original constellation backdrop. */
+.ach-board{box-sizing:border-box;position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border:0;background:linear-gradient(#05030cef,#05030cf5),url('/pod/worlds/achievements.jpg') center/cover;color:#f7f4ff;overflow:hidden;font:16px/1.5 var(--font,system-ui)}
 .ach-board[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:18px}
 .ach-board::backdrop{background:#000}
 .ach-head{padding-right:70px}.ach-head h1{margin:0;font-size:26px}.ach-count{color:#d6c2ff;margin:4px 0}.ach-intro{font-size:14px;margin:5px 0;color:#cbc8d4}

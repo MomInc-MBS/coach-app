@@ -1,43 +1,23 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
-import {extname,resolve,sep} from 'node:path';
-import {chromium} from 'playwright';
-import {boardBundle} from './board-bundle.mjs';
-
-test('achievement detail renders the catalogued weapon name and pack tier for each level',async()=>{
- const root=resolve(import.meta.dirname,'..');
- const server=createServer(async(req,res)=>{
-  const pathname=new URL(req.url,'http://local').pathname;
-  if(pathname==='/'){
-   res.writeHead(200,{'Content-Type':'text/html'});
-   res.end('<!doctype html><body><script type="module">import {openAchievements} from "/achievements-board.mjs";window.openBoard=openAchievements;</script></body>');return;
-  }
-  if(pathname==='/achievements-board.mjs'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(await boardBundle());return;}
-  if(pathname==='/battle-pass.mjs'){
-   res.writeHead(200,{'Content-Type':'text/javascript'});
-   res.end('export const selectedTracks=()=>new Set(["chest"]);export const loadProgress=()=>({});export const battlePassState=()=>({bosses:[]});');return;
-  }
-  const file=resolve(root,'.'+decodeURIComponent(pathname));
-  if(file!==root&&!file.startsWith(root+sep)){res.writeHead(403);res.end();return;}
-  try{
-   const type=extname(file)==='.json'?'application/json':extname(file)==='.css'?'text/css':'text/javascript';
-   const contents=await readFile(file);res.writeHead(200,{'Content-Type':type});res.end(contents);
-  }catch{res.writeHead(404);res.end();}
- });
- await new Promise(resolveListen=>server.listen(0,'127.0.0.1',resolveListen));let browser;
- try{
-  browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage();
-  await page.goto('http://127.0.0.1:'+server.address().port+'/');
-  await page.waitForFunction(()=>window.openBoard);
-  const rendered=await page.evaluate(()=>{
-   window.openBoard();document.querySelector('.ach-boss[data-id="strider-1"]').click();
-   return [...document.querySelectorAll('.ach-detail ol li span')].map(node=>node.textContent);
-  });
-  // R18 lane E: each level line is just the weapon name and pack tier (no skin/ship rewards), taken from the catalog.
-  assert.deepEqual(rendered,[' · Glove on a Stick · Legendary Pack',' · Uncommon Pack',' · Chrome Bar Mace · Legendary Pack',' · Rare Pack',' · Legendary Pack']);
-  assert.doesNotMatch(rendered.join(' '),/Magma|Rubber Grip|Ship/);
-  assert.doesNotMatch(rendered.join(' '),/Weapon 1|Texture 1|Boss skin/,'catalogued names replace the generic placeholders');
- }finally{await browser?.close();server.closeAllConnections();await new Promise(resolveClose=>server.close(resolveClose));}
+import {openAchievementFixture} from './achievements-browser-fixture.mjs';
+import {WEAPON_GROUPS,SHIP_REQUIREMENTS} from '../performance-catalog.mjs';
+test('achievement weapon and ship guidance uses difficulty blocks and performance thresholds',async()=>{
+ const fixture=await openAchievementFixture();try{
+  const {page}=fixture;await page.locator('[data-ach-tab=weapons]').click();assert.equal(await page.locator('.ach-card').count(),Object.keys(WEAPON_GROUPS).length);
+  const weapons=await page.locator('.ach-catalog').textContent();for(const phrase of ['Easy 1–5','Medium 6–10','Hard 11–15','Expert 16–20','1 uninterrupted minute','3 minutes','5 minutes','10 minutes','8 reps','12 reps','15 reps'])assert(weapons.includes(phrase),phrase);
+  await page.locator('[data-ach-tab=ships]').click();assert.equal(await page.locator('.ach-card').count(),SHIP_REQUIREMENTS.length);
+  for(const row of await page.locator('.ach-card').allTextContents())assert.match(row,/Expert.+(5 uninterrupted minutes|15 reps)/);
+ }finally{await fixture.close();}
+});
+test('XP rewards tab shows new cosmetic rules and updates daily rest victories without unlocking coaches',async()=>{
+ const fixture=await openAchievementFixture();try{
+  const {page}=fixture,initial=await page.evaluate(()=>window.performanceProgress.readPerformanceProgress().coaches);
+  await page.locator('[data-ach-tab=rewards]').click();let text=await page.locator('.ach-catalog').textContent();
+  for(const phrase of ['250','double today’s workout XP','separate 500 XP','one uncommon pack','five bosses','one legendary pack','once per day','0 / 5 daily boss defeats'])assert(text.includes(phrase),phrase);
+  await page.evaluate(()=>window.restRewards.recordRestBossDefeat('browser-defeat-1'));assert.match(await page.locator('.ach-catalog').textContent(),/1 \/ 5 daily boss defeats/);
+  const progress=await page.evaluate(()=>{for(let i=2;i<=5;i++)window.restRewards.recordRestBossDefeat(`browser-defeat-${i}`);window.restRewards.recordRestBossDefeat('browser-defeat-5');return window.restRewards.readRestBossRewards();});
+  assert.equal(progress.count,5);assert(progress.packs.every(p=>p.earned&&p.granted));assert.match(await page.locator('.ach-catalog').textContent(),/5 \/ 5 daily boss defeats/);
+  assert.deepEqual(await page.evaluate(()=>window.performanceProgress.readPerformanceProgress().coaches),initial);
+ }finally{await fixture.close();}
 });
