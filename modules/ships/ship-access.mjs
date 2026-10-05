@@ -1,4 +1,5 @@
 import * as ledger from '../../unlock-ledger.mjs';
+import {shipAccess} from '../../performance-progress.mjs';
 
 export const SHIP_REVEAL_KEY = 'myr5-ship-reveal-seen-v1';
 export const SHIP_IDS = Object.freeze(['supportive','direct','analytical','playful','calm','mom']);
@@ -6,7 +7,7 @@ const stableOwner = account => {
   const id = typeof account==='string'?account:account?.user?.id;
   return typeof id === 'string' && /^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id) ? id : null;
 };
-const ownedId = (id,options) => SHIP_IDS.includes(id) && ledger.isGranted('ship', `ship-${id}`,options);
+const ownedId = (id,options) => SHIP_IDS.includes(id) && (shipAccess(id,options)||ledger.isGranted('ship', `ship-${id}`,options));
 function read(store = globalThis.localStorage) {
   try { const value = JSON.parse(store?.getItem(SHIP_REVEAL_KEY) || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
   catch { return {}; }

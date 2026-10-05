@@ -59,9 +59,9 @@ test('250 cosmetic levels have strictly increasing costs and exact benchmark end
  assert.equal(COSMETIC_LEVEL_XP.length,250);
  const gaps=COSMETIC_LEVEL_XP.slice(1).map((xp,i)=>xp-COSMETIC_LEVEL_XP[i]);
  for(let i=1;i<gaps.length;i++)assert.ok(gaps[i]>gaps[i-1]);
- assert.equal(COSMETIC_XP_TARGET,100800);
- assert.equal(COSMETIC_LEVEL_XP.at(-1),100800);
- assert.equal(cosmeticLevel(100799).level,249);assert.equal(cosmeticLevel(100800).level,250);
+ assert.equal(COSMETIC_XP_TARGET,261600);
+ assert.equal(COSMETIC_LEVEL_XP.at(-1),261600);
+ assert.equal(cosmeticLevel(261599).level,249);assert.equal(cosmeticLevel(261600).level,250);
 });
 test('pack content sizes and category odds retain the confirmed values',()=>{
  assert.deepEqual(PACK_SIZES,{uncommon:1,rare:2,legendary:3});

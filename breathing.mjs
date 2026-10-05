@@ -1,4 +1,5 @@
 import {authTransitions} from './auth-transition.mjs';
+import {recordDailyActivity,localDay} from './performance-progress.mjs';
 import {createAccountSessionActions} from './account-session-actions.mjs';
 import {BreathingSession,BREATHING_MS} from './combat.mjs';
 import {BREATHING_MODES,SEATED_ONLY_NOTICE,NO_MEDICAL_CLAIM,GENTLE_DIALOGUE,GUIDED_ROUND_TIMING,GUIDED_ROUND_MS,buildScript,phaseAt,totalBreaths as countBreaths,breathsDone,revealRadius,pulseRadius,breathPhaseProgress} from './breathing-modes.mjs';
@@ -7,7 +8,7 @@ export const bubble=(el,text)=>{el.textContent=text;el.classList.remove('bubble'
 
 // Both modes use the existing account-owned breathing ticket and completion path. The guided
 // round's timing lives in breathing-modes.mjs so cadence review can tune phases without changing ownership.
-const DEFAULT_STATUS='Complete a session for today’s ×100 damage.';
+const DEFAULT_STATUS='Complete a session to double today’s workout XP.';
 const IDLE_CAPTION='Breathe in. Breathe out.';
 // The big caption follows the phase. Reduced motion keeps it steady through fast in/out breathing.
 function captionFor(p,reduced){
@@ -43,7 +44,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  const modesEl=$('[data-breath-modes]'),runEl=$('[data-breath-run]'),phaseEl=$('[data-phase-label]'),bar=$('progress'),stopCircle=scene.querySelector?.('[data-breathing-stop], [data-breath-exit]'),retry=$('[data-retry]'),skipHold=$('[data-skip-hold]'),stanceLink=$('[data-stance-link]'),statusEl=$('[data-status]'),countEl=scene.querySelector?.('[data-breath-count]'),sessionClock=scene.querySelector?.('[data-session-clock]'),directionEl=scene.querySelector?.('[data-breath-direction]'),cueEl=scene.querySelector?.('[data-breath-cue]'),settleEl=scene.querySelector?.('[data-settle-countdown]');
  // Both exercises and the decorative pose selector share a compact, reachable control strip.
  const speech=scene.querySelector?.('.meditation-speech'),reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
- let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS,totalBreaths=0,held=false;
+ let clock=new BreathingSession(),ticket=null,saving=false,finished=false,awaitingRetry=false,run=0,script=null,caption='',duration=BREATHING_MS,totalBreaths=0,held=false,completionDay=null;
  function renderPhase(ms){
   const p=phaseAt(script,ms);runEl.dataset.phase=p.key;skipHold.hidden=!['optional-hold','recovery-hold'].includes(p.key);
   phaseEl.textContent=({settle:'Settle gently',breathe:p.breath==='in'?'Breathe in':'Breathe out',transition:'Easy exhale','optional-hold':'Optional pause',recovery:'Easy inhale','recovery-hold':'Optional recovery',rest:'Breathe normally'})[p.key]||p.label;
@@ -68,7 +69,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   dialog.classList.toggle('meditation-colour',totalBreaths>0&&done>=totalBreaths);
  }
  function reset({keepPose=false}={}){
-  run++;clock=new BreathingSession();duration=BREATHING_MS;ticket=null;saving=false;finished=false;awaitingRetry=false;script=null;
+  run++;clock=new BreathingSession();duration=BREATHING_MS;ticket=null;completionDay=null;saving=false;finished=false;awaitingRetry=false;script=null;
   if(caption&&speech)bubble(speech,IDLE_CAPTION);caption='';totalBreaths=0;held=false;scene.querySelector?.('.meditation-grey')?.style.setProperty('--reveal-r','0px');if(cueEl)cueEl.hidden=true;if(settleEl)settleEl.hidden=true;clearTimeout(calmTimer);dialog.classList.remove('hud-calm');
   bar.max=BREATHING_MS;bar.value=0;sessionClock&&(sessionClock.textContent='3:30');countEl&&(countEl.textContent='—');directionEl&&(directionEl.textContent='READY');pause.disabled=true;pause.hidden=true;pause.textContent='Pause';dialog.classList.remove('breathing-paused');
   modesEl.hidden=false;runEl.hidden=true;seated.hidden=true;retry.hidden=true;skipHold.hidden=true;stanceLink.hidden=true;runEl.dataset.phase='';
@@ -76,13 +77,14 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
  }
  async function finish(){
   if(saving||finished||!ticket||!clock.complete)return;
-  saving=true;awaitingRetry=false;retry.hidden=true;pause.disabled=true;statusEl.textContent='Saving your breathing bonus…';const current=run;
+  saving=true;awaitingRetry=false;retry.hidden=true;pause.disabled=true;statusEl.textContent='Saving your breathing bonus…';const current=run;completionDay??=localDay();
   try{
    const binding=ticket;await actions.completeBreathing(binding,clock.elapsed);
    if(current!==run||!transitions.isCurrent(binding.transitionTicket))return;
+   recordDailyActivity('meditation',{id:binding.id,day:completionDay},{account:{user:{id:binding.ownerId},dataEpoch:binding.dataEpoch}});
    await onComplete?.();
    if(current!==run||!transitions.isCurrent(binding.transitionTicket))return;
-   finished=true;statusEl.textContent='Breathing complete · ×100 damage today';sessionClock&&(sessionClock.textContent='0:00');countEl&&(countEl.textContent='30');directionEl&&(directionEl.textContent='DONE');phaseEl.textContent='Complete';runEl.dataset.phase='complete';stanceLink.hidden=true;pause.hidden=true;if(stopCircle)stopCircle.hidden=false;onSessionComplete?.();
+   finished=true;statusEl.textContent='Meditation complete · ×2 workout XP today';sessionClock&&(sessionClock.textContent='0:00');countEl&&(countEl.textContent='30');directionEl&&(directionEl.textContent='DONE');phaseEl.textContent='Complete';runEl.dataset.phase='complete';stanceLink.hidden=true;pause.hidden=true;if(stopCircle)stopCircle.hidden=false;onSessionComplete?.();
   }catch(error){if(current===run){statusEl.textContent=error.message;retry.hidden=false;awaitingRetry=true;}}
   finally{if(current===run)saving=false;}
  }

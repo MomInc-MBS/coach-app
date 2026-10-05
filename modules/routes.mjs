@@ -36,6 +36,7 @@ export const ROUTES={
  select:{label:'Coach arrival',dialog:'dialog.ship-view',shared:true,open:()=>whenOpen('dialog.ship-view',window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
  food:{label:'Food',dialog:'#mealsPanel',open:()=>typeof window.myr5Menus?.food==='function'?window.myr5Menus.food():panel('meals')},
  achievements:{label:'Achievements',dialog:'.ach-board',open:()=>window.myr5Menus?.achievements?.()},
+ battlepass:{label:'Battle pass',dialog:'#battlePassPanel',open:()=>window.myr5Menus?.battlePass?.()},
  scoreboard:{label:'Scoreboard',dialog:'#accountPanel',open:()=>panel('account')},
  // #148 (Ian 2026-09-23): the customizer's one door is the oval: its ship arrives and the user taps it (ship-intro.mjs
  // opens /creature/index.html with the gate the editor checks). So #customize, the X and any link to it land on the arrival.

@@ -22,11 +22,13 @@ export const COSMETIC_PACK_ODDS=Object.freeze({
  rare:Object.freeze({color:80,'64-bit':15,texture:5}),
  legendary:Object.freeze({color:70,'64-bit':20,texture:10}),
 });
-export const BENCHMARK=Object.freeze({sessions:120,activeMinutes:30,expertXpPerMinute:28});
-export const COSMETIC_XP_TARGET=BENCHMARK.sessions*BENCHMARK.activeMinutes*BENCHMARK.expertXpPerMinute;
+export const DAILY_MEDITATION_MULTIPLIER=2,DAILY_TRIO_BONUS=500;
+export const BENCHMARK=Object.freeze({sessions:120,activeMinutes:30,expertXpPerMinute:28,meditationMultiplier:DAILY_MEDITATION_MULTIPLIER,trioBonus:DAILY_TRIO_BONUS});
+export const COSMETIC_XP_TARGET=BENCHMARK.sessions*(BENCHMARK.activeMinutes*BENCHMARK.expertXpPerMinute*BENCHMARK.meditationMultiplier+BENCHMARK.trioBonus);
 export const COSMETIC_LEVEL_COUNT=250;
 const transitions=COSMETIC_LEVEL_COUNT-1,firstCost=40;
-// Increasing per-level costs, exact 100,800 base-XP endpoint. Additive coach bonuses
+// Increasing per-level costs, exact 261,600 XP endpoint with meditation and all-three
+// completion on each benchmark training day. Additive coach bonuses
 // deliberately accelerate this conservative benchmark; achievements never require XP.
 export const COSMETIC_LEVEL_XP=Object.freeze(Array.from({length:COSMETIC_LEVEL_COUNT},(_,n)=>
  firstCost*n+Math.floor((COSMETIC_XP_TARGET-firstCost*transitions)*n*(n-1)/(transitions*(transitions-1)))

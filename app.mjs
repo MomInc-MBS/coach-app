@@ -7,6 +7,9 @@ import {mountCoachVoiceSettings} from './coach-voice-settings.mjs';
 import {initPod} from './pod/pod.mjs';
 import {openAchievements} from './achievements-board.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
+import {mountBattlePass} from './battle-pass-page.mjs';
+import {performanceOwner} from './performance-progress.mjs';
+import {reconcilePerformanceWorkouts} from './performance-reconcile.mjs';
 import {mountHomeCharacter} from './pod/home-character.mjs';
 import {mountContinueWorkout} from './pod/continue-workout.mjs';
 import {initHardware} from './pod/hardware.mjs';
@@ -24,6 +27,7 @@ import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
 import {mountPhysicalSoundUI} from './audio/sound-ui.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
 mountRoutes();
+mountBattlePass();
 mountPhysicalSoundUI();
 let phoneOrientation=mountPhoneOrientation();
 window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=null;});
@@ -114,6 +118,7 @@ function resetMovement(){
   status(state.phase==='tracking'?config.hint:'Ready');
 }
 function renderMotion(m){
+  const rawMotion=m;m=pod?.workoutMotion?.(m)||m;
   $('movementName').textContent=m.name;
   const label=m.kind==='hold'?'hold time':m.kind==='pace'?'active time':m.kind==='steps'?'steps':m.kind==='jumps'?'jumps':'reps';
   setFlipValue($('primary'),m.kind==='hold'?clockDigits(m.totalHold):m.kind==='pace'?clockDigits(m.active):countDigits(m.count),label);
@@ -127,7 +132,10 @@ function renderMotion(m){
   $('paceNote').hidden=m.kind!=='pace';
   const paused=!m.tracking||(m.kind==='hold'&&!m.progress)||(m.kind==='reps'&&!m.calibrated);
   cameraWorkout.show({status:paused?m.message:'',reps:m.kind==='reps'&&state.phase==='tracking'});
-  pod?.render(m);
+  pod?.render(rawMotion);
+  const instruction=pod?.flow?.workout?.instruction;if(instruction)$('status').textContent=typeof instruction==='string'?instruction:instruction.message||instruction.text||'';
+  const tools=document.querySelector('.workout-performance-controls'),workout=pod?.flow?.workout;
+  if(tools){const cameraStage=document.getElementById('cameraWorkout');if(state.phase==='tracking'&&cameraStage&&tools.parentElement!==cameraStage)cameraStage.append(tools);else if(state.phase!=='tracking'&&tools.parentElement===cameraStage)document.getElementById('battlePassOpen').after(tools);tools.hidden=!['tracking','manual'].includes(state.phase);for(const button of tools.querySelectorAll('button')){const label=button.textContent;button.hidden=label==='Finish working set'?workout?.stage?.startsWith('preparation-'):label==='Break hold'?workout?.kind!=='hold'||workout.paused:label==='Resume hold'||label==='More recovery'?workout?.kind!=='hold'||!workout.paused:false;}const variation=tools.querySelector('[data-hold-variation]');if(variation){variation.hidden=workout?.kind!=='hold';if(workout?.kind==='hold')variation.querySelector('select').value=workout.difficulty;}const recovery=tools.querySelector('[data-hold-recovery]');if(recovery){recovery.hidden=!workout?.paused;recovery.textContent=`Recovery · ${Math.ceil(Math.max(0,(workout?.recoveryUntil-Date.now())/1000))}s. Resume whenever ready.`;}}
 }
 function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true}={}){
   const unfinished=interrupt&&['camera','model','tracking'].includes(state.phase);
@@ -238,10 +246,12 @@ $('widest').addEventListener('click',async()=>{
   catch(error){$('lensInfo').textContent='Could not change the lens: '+error.message;}
   finally{$('widest').disabled=state.phase!=='tracking';}
 });
- const workoutReady=openGuestWorkoutAdapter({exerciseKeys:Object.keys(MOVEMENTS)}).then(adapter=>{if(disposed)adapter.close();return adapter;});
+ const workoutReady=openGuestWorkoutAdapter({exerciseKeys:Object.keys(MOVEMENTS)}).then(adapter=>{workouts.ownerId=adapter.ownerId;if(disposed)adapter.close();return adapter;});
  const workouts={paused:(...args)=>workoutReady.then(value=>value.paused(...args)),start:(...args)=>workoutReady.then(value=>value.start(...args)),update:(...args)=>workoutReady.then(value=>value.update(...args)),pause:(...args)=>workoutReady.then(value=>value.pause(...args)),complete:(...args)=>workoutReady.then(value=>value.complete(...args)),interrupt:(...args)=>workoutReady.then(value=>value.interrupt(...args)),unfinished:(...args)=>workoutReady.then(value=>value.unfinished(...args)),close(){disposed=true;void workoutReady.then(value=>value.close(),()=>{});}};
  window.addEventListener('pagehide',()=>{if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady().finally(()=>workouts.close());else{const stopped=stop();void Promise.allSettled([stopped,cameraStartTransition]).then(()=>workouts.close());}});document.addEventListener('visibilitychange',()=>{if(!document.hidden||state.phase==='idle')return;if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady();else void stop('Paused while the page was hidden. Tap Start for a new session.');});
  pod=initPod({voice,movements:MOVEMENTS,workouts,onStop:()=>{if(state.phase==='manual'){generation++;release();controls(false);state.phase='idle';manual=null;}else stop('Set ended. Your camera is off.',{interrupt:false});},onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
+async function repairWorkoutRewards(){const owner=performanceOwner();try{const adapter=await workoutReady,rows=await adapter.listPerformanceWorkouts();if(disposed||performanceOwner()!==owner)return;const repaired=reconcilePerformanceWorkouts(rows,{owner});if(repaired.failed.length)status('Your workout is saved. Rewards will retry when progress storage is available.');}catch(error){if(!disposed)console.warn('Workout reward repair is waiting:',error.message);}}
+void repairWorkoutRewards();for(const event of ['myr5:local-history-refresh','myr5:account-ready','storage'])window.addEventListener(event,()=>void repairWorkoutRewards());
 // P13D: optional pack UI may bind this actual owner after user intent; packs are not imported at startup.
 window.myr5WorkoutOwner=pod.workoutOwner;
 window.dispatchEvent(new Event('myr5:workout-owner-ready'));
@@ -351,11 +361,17 @@ function startManual(){
  catch(error){if(run!==generation)return;generation++;release();controls(false);if(ticket)await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}});
 }
 async function activateManual(){
- if(state.phase!=='manual'||!manual||['hold','pace'].includes(state.motion.kind))return;
+ if(state.phase!=='manual'||!manual||['hold','pace'].includes(state.motion.kind)||pod?.canCount?.()===false)return;
+ const run=generation;
  manual.value++;try{const motion=manualSnapshot();await pod.saveManual(motion);renderMotion(motion);await pod.consume(motion,Date.now());}catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;manual=null;status(error.message);}
 }
 async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await pod.pauseManual(state.motion);generation++;release();controls(false);state.phase='idle';manual=null;status('Paused. Tap Begin to resume this workout.');$('detail').textContent='Manual workout paused on this device';window.myr5Routes?.home?.();}catch(error){status(error.message);}}
 function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}
+const workoutTools=document.createElement('div');workoutTools.className='workout-performance-controls';workoutTools.hidden=true;
+const recoveryStatus=document.createElement('p');recoveryStatus.dataset.holdRecovery='';recoveryStatus.setAttribute('role','status');recoveryStatus.hidden=true;workoutTools.append(recoveryStatus);
+const holdVariationLabel=document.createElement('label');holdVariationLabel.textContent='Hold difficulty ';holdVariationLabel.dataset.holdVariation='';const holdVariation=document.createElement('select');holdVariation.setAttribute('aria-label','Hold difficulty');for(const [value,label] of [['easy','Easy'],['medium','Medium'],['hard','Hard'],['expert','Expert']]){const option=document.createElement('option');option.value=value;option.textContent=label;holdVariation.append(option);}holdVariation.onchange=()=>{pod?.switchDifficulty?.(holdVariation.value);status('Use the selected hold variation. Active XP time continues; uninterrupted time restarts.');};holdVariationLabel.append(holdVariation);workoutTools.append(holdVariationLabel);
+for(const [label,action] of [['Finish working set',async()=>{try{if(state.phase==='manual')manualSnapshot();await pod?.finishWorking?.(state.motion,Date.now());}catch(error){status(error.message);}}],['Break hold',()=>{pod?.breakHold?.();manual?.clock.pause();status('Hold paused. Shake out, then resume when ready.');}],['Resume hold',()=>{pod?.resumeHold?.();manual?.clock.resume();}],['More recovery',()=>pod?.extendHoldRecovery?.()]]){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=action;workoutTools.append(button);}
+const cardioLabel=document.createElement('label');cardioLabel.textContent='Cardio ';const cardioStyle=document.createElement('select');cardioStyle.setAttribute('aria-label','Cardio style');for(const [value,label] of [['gentle','Gentle cardio'],['sprint','Sprint intervals']]){const option=document.createElement('option');option.value=value;option.textContent=label;cardioStyle.append(option);}cardioStyle.onchange=()=>pod?.setCardioStyle?.(cardioStyle.value);cardioLabel.append(cardioStyle);$('battlePassOpen').after(workoutTools);$('roundControl').append(cardioLabel);
 $('primary').addEventListener('pointerdown',event=>{if(state.phase==='manual'){event.preventDefault();void activateManual();}});
 $('primary').addEventListener('keydown',event=>{if(state.phase==='manual'&&(event.key==='Enter'||event.key===' ')){event.preventDefault();void activateManual();}});
 void mountArmieInboxUI().catch(()=>{}); // D23 inbox; best-effort so a failure here never blocks the workout.

@@ -6,8 +6,8 @@ const strength=[1,2,3,4,5,6,8,10,12,15,18,20,23,27,31,35,40,45,50,60,75];
 function normalize(value){if(!value||!types.some(t=>t.id===value.type)||!Number.isInteger(value.tier)||value.tier<0||value.tier>20)throw Error('This look has an unknown weapon.');return {type:value.type,tier:value.tier};}
 // R21: one global player level (player-level.mjs, bundled as MYR5Training); level N unlocks tier N-1 for every weapon.
 function level(progress=window.GalaProgress?.read()){return globalThis.MYR5Training?.playerLevel(progress)||{level:1,xp:0,floor:0,next:200,into:0,need:200,max:false};}
-function requirements(value){const w=normalize(value),T=globalThis.MYR5Training;return {level:w.tier+1,xp:T?.LEVEL_XP[w.tier]??0,strength:strength[w.tier],sets:(strength[w.tier]-1)*4,label:'Level '+(w.tier+1)};}
-function unlocked(value,progress=window.GalaProgress?.read()){const w=normalize(value);return w.tier===0||level(progress).level>=w.tier+1;}
+function requirements(value){const w=normalize(value),block=Math.min(4,Math.ceil(w.tier/5));return {level:block,xp:0,strength:strength[w.tier],sets:0,label:w.tier===0?'Starter weapon':['Shallow','Medium','Hard','Expert'][block-1]+' performance · tier '+w.tier};}
+function unlocked(value){const w=normalize(value);return w.tier===0||(globalThis.MYR5Training?.weaponTierFor?.(w.type)||0)>=w.tier;}
 function name(value){const w=normalize(value);return tiers[w.tier]+' '+types.find(t=>t.id===w.type).name;}
 function draw(ctx,value,{x=0,y=0,scale=1,palette=null}={}){
  const w=normalize(value),i=types.findIndex(type=>type.id===w.type),t=w.tier;

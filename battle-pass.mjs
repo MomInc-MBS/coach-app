@@ -8,6 +8,10 @@ import {ROWS,BOSSES,TRACKS,LEVELS_PER_BOSS,PET_SUBSTITUTE_PALETTE,FOOD_LEVELS,bo
 import {readSelectedTracks} from './chosen-styles.mjs';
 import * as store from './creature/source/creator/unlock-store.ts';
 import * as ledger from './unlock-ledger.mjs';
+import {readPerformanceProgress} from './performance-progress.mjs';
+import {COACH_REQUIREMENTS} from './performance-catalog.mjs';
+import {cosmeticLevel} from './progression-rules.mjs';
+import {completeCosmeticCollection} from './reward-packs.mjs';
 export {setSelectedTracks} from './chosen-styles.mjs';
 // The ONE tuning knob: steps per level. Shared with circuit.mjs so the step meter and the board agree.
 export {STEPS_PER_LEVEL};
@@ -41,6 +45,10 @@ export const levelsBeaten=(steps,stepsPerLevel=STEPS_PER_LEVEL)=>Math.floor(Math
  * once every available row is fully beaten.
  * opts: {tracks: circuit `tracks` object, account, stepsPerLevel} — all optional. */
 export function loadProgress({tracks=stepTracks(),account,stepsPerLevel=STEPS_PER_LEVEL}={}){
+ const performance=readPerformanceProgress({account}),result=Object.fromEntries(BOSSES.map(b=>[b.id,0]));
+ for(const row of ROWS){if(!row.track)continue;const coaches=COACH_REQUIREMENTS.filter(c=>c.tracks.includes(TRACKS[row.track].catalog));for(let index=0;index<row.bosses;index++){const coach=coaches[Math.min(coaches.length-1,Math.floor(index*coaches.length/row.bosses))];if(coach)result[`${row.id}-${index+1}`]=performance.goldenCoaches.includes(coach.id)?5:performance.coaches.includes(coach.id)?4:0;}}
+ return result;
+ /* Legacy step-map reconstruction is retained below for migration reference.
  const available=selectedTracks(account),progress=Object.fromEntries(BOSSES.map(b=>[b.id,0])); // board order
  // ponytail: overflow banks while other rows catch up; swap for a separate shared-boss counter if tuning wants one.
  let overflow=0,allRowsDone=true,shared=0;
@@ -51,7 +59,7 @@ export function loadProgress({tracks=stepTracks(),account,stepsPerLevel=STEPS_PE
   if(open){overflow+=Math.max(0,level-end);if(level<end)allRowsDone=false;}
  }
  for(const row of ROWS)if(!row.track)progress[`${row.id}-1`]=allRowsDone?clamp(overflow-LEVELS_PER_BOSS*shared++):0;
- return progress;
+ return progress; */
 }
 
 /** Combat kit level (1–5, D8/D22) for the rest-arena boss after a set of `mode`: the levels beaten
@@ -98,10 +106,12 @@ export function battlePassState(opts={}){
  * window with `{granted:[item], state}`. Returns the same `{granted, state}`. */
 export function syncBattlePass(opts={}){
  const state=battlePassState(opts),granted=[];
- for(const level of [...state.bosses.flatMap(boss=>boss.rewards),...state.food.rewards])if(level.beaten)for(const item of level.items)if(!item.granted&&grant(item,opts)){item.granted=true;granted.push(item);}
+ const rank=cosmeticLevel(readPerformanceProgress(opts).totalXp);
+ for(let level=2;level<=rank.level;level++){const tier=level%10===0?'legendary':level%5===0?'rare':'uncommon',item={kind:'reward-pack',id:`reward-pack:${tier}:cosmetic-pass-v2:L${level}`,tier,name:`${tier} pack`};if(ledger.grantUnlock(item.kind,item.id,opts))granted.push(item);}
+ if(rank.max)completeCosmeticCollection(opts);
  if(granted.length&&typeof window!=='undefined'&&window.dispatchEvent)window.dispatchEvent(new CustomEvent('myr5:battle-pass',{detail:{granted,state}}));
  return {granted,state};
 }
 
 // Grants follow step progress: pod.mjs/launch.mjs publish it as `myr5:account-progress`.
-if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('myr5:account-progress',event=>syncBattlePass({tracks:event.detail?.circuit?.tracks}));
+if(typeof window!=='undefined'&&window.addEventListener){window.addEventListener('myr5:account-progress',()=>syncBattlePass());window.addEventListener('myr5:performance-progress',()=>syncBattlePass());}

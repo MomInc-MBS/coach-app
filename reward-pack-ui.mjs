@@ -32,7 +32,7 @@ export function rewardSummary(opened){
  // A single colour (pool items carry `hex`; a hex id is itself one) shows one swatch the way a palette shows its bands.
  const single=reward.kind==='color'?[/^#[0-9a-f]{6}$/i.test(reward.id)?reward.id:reward.hex].filter(Boolean):[];
  const colors=reward.kind==='palette'?PALETTES.find(item=>item.id===reward.id)?.colors||[]:single;
- return {title:reward.name||'Collection complete',detail:CATEGORY[reward.category||opened?.category]||'Cosmetic',colors,rewards};
+ return {title:reward.name||'Collection complete',detail:reward.kind==='boss-skin'?'64-bit boss skin':CATEGORY[reward.category||opened?.category]||'Cosmetic',colors,rewards};
 }
 const shade=(hex,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v+amount))));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');};
 // A 64x64 bevelled pixel tile in the tier colour. Unopened: a pixel "?" glyph. Opened: the awarded palette's

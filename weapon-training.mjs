@@ -1,5 +1,6 @@
 import {EXERCISES,FOCUS_GROUPS} from './exercise-library.mjs';
 export {playerLevel,levelFor,xpFromHistory,LEVEL_XP,XP_KNOBS} from './player-level.mjs';
+export {weaponTierFor} from './performance-progress.mjs';
 
 const families={chest:['crossbow','cannon'],legs:['greatsword','hammer'],hips:['scythe','halberd'],core:['mace','tome'],shoulders:['bow','trident'],balance:['axe','sabre'],yoga:['staff','wand'],stances:['dagger','spear'],boxing:['gauntlets','rapier'],cardio:['chakram','flail']};
 export const TRAINING_TRACKS=Object.freeze(Object.fromEntries(FOCUS_GROUPS.map(g=>[g.id,Object.freeze({id:g.id,name:g.name,weapons:Object.freeze(families[g.id])})])));
