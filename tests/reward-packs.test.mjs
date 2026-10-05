@@ -4,7 +4,7 @@ const memory=new Map();
 globalThis.localStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,String(value)),removeItem:key=>memory.delete(key),clear:()=>memory.clear()};
 globalThis.myr5AuthenticatedAccount={user:{id:'reward-test'}};
 const {bossRewards,foodRewards}=await import('../battle-pass-rewards.mjs');
-const {grantDailyPack,openRewardPack,rollCategory,openedPack,unopenedPacks}=await import('../reward-packs.mjs');
+const {grantDailyPack,openRewardPack,rollCategory,openedPack,unopenedPacks,PACK_SIZES,packItem,remainingCosmetics,completeCosmeticCollection,hasCosmetic}=await import('../reward-packs.mjs');
 const ledger=await import('../unlock-ledger.mjs');
 const store=await import('../creature/source/creator/unlock-store.ts');
 
@@ -54,7 +54,7 @@ test('a saved roll repairs an interrupted cosmetic grant without rerolling',()=>
  memory.clear();const item=bossRewards('strider-1')[1].find(item=>item.tier==='uncommon');
  assert(ledger.grantUnlock('reward-pack',item.id));
  const original=localStorage.setItem;
- localStorage.setItem=(key,value)=>{if(key==='myr5-unlocks-v1')throw Error('quota');original(key,value);};
+ localStorage.setItem=(key,value)=>{if(key.startsWith('myr5-unlocks-v2/'))throw Error('quota');original(key,value);};
  try{assert.equal(openRewardPack(item,{random:()=>0}),null);}finally{localStorage.setItem=original;}
  const saved=openedPack(item.id);assert(saved);
  assert(!store.isGranted('palette',saved.reward.id));
@@ -71,6 +71,58 @@ test('64-bit rolls award existing boss skins and do not advance boss progress',a
  const before=loadProgress({tracks:{},account:{onboarding:{data:{profile:{exercises:[]}}}}});
  const result=openRewardPack(item,{random:(()=>{let n=0;return ()=>n++?0:.82;})()});
  assert.equal(result.category,'64-bit');assert.equal(result.reward.kind,'boss-skin');
- assert(ledger.isGranted('boss-skin',result.reward.id));
+ assert(ledger.isGranted('boss-skin',store.cosmeticId(result.reward.coachId,result.reward.id)));
  assert.deepEqual(loadProgress({tracks:{},account:{onboarding:{data:{profile:{exercises:[]}}}}}),before);
+});
+
+test('tiers award one, two and three distinct coach-specific items',()=>{
+ memory.clear();
+ for(const tier of Object.keys(PACK_SIZES)){
+  const item=packItem(tier,`reward-pack:${tier}:size-test`);ledger.grantUnlock('reward-pack',item.id);
+  const result=openRewardPack(item,{random:()=>0});
+  assert.equal(result.rewards.length,PACK_SIZES[tier]);
+  assert.equal(new Set(result.rewards.map(r=>r.kind+':'+r.coachId+':'+r.id)).size,PACK_SIZES[tier]);
+  for(const reward of result.rewards)assert(hasCosmetic(reward));
+ }
+});
+
+test('ownership stays with its coach, account and account reset epoch',()=>{
+ memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'owner-a'}};
+ assert(store.grantUnlock('texture','chest-plate-steel','myr5'));
+ assert(!store.isGranted('texture','chest-plate-steel','another-coach'));
+ const item=packItem('rare','reward-pack:rare:owner-test');ledger.grantUnlock('reward-pack',item.id);
+ const result=openRewardPack(item,{random:()=>0});
+ globalThis.myr5AuthenticatedAccount={user:{id:'owner-b'}};
+ assert(!store.isGranted('texture','chest-plate-steel','myr5'));
+ assert(!ledger.isGranted('reward-pack',item.id));assert.equal(openedPack(item.id),null);
+ globalThis.myr5AuthenticatedAccount={user:{id:'owner-a'},dataEpoch:2};
+ assert(!store.isGranted('texture','chest-plate-steel','myr5'));assert.equal(openedPack(item.id),null);
+ assert(!ledger.isGranted('reward-pack',item.id));
+ globalThis.myr5AuthenticatedAccount={user:{id:'owner-a'}};
+ assert.deepEqual(openedPack(item.id),result);
+ globalThis.myr5AuthenticatedAccount={user:{id:'reward-test'}};
+});
+
+test('guest packs and opened rolls survive reload without crossing into accounts',()=>{
+ memory.clear();globalThis.myr5AuthenticatedAccount=null;
+ const item=packItem('legendary','reward-pack:legendary:guest-test');assert(ledger.grantUnlock('reward-pack',item.id));
+ const result=openRewardPack(item,{random:()=>0});assert.equal(result.rewards.length,3);
+ assert.deepEqual(openRewardPack(item,{random:()=>.99}),result);
+ globalThis.myr5AuthenticatedAccount={user:{id:'reward-test'}};
+ assert(!ledger.isGranted('reward-pack',item.id));assert.equal(openedPack(item.id),null);
+});
+
+test('category exhaustion awards another unowned category instead of a duplicate',()=>{
+ memory.clear();const pending=remainingCosmetics();for(const r of pending.filter(r=>r.category==='64-bit'))ledger.grantUnlock(r.kind,store.cosmeticId(r.coachId,r.id));
+ const item=packItem('rare','reward-pack:rare:exhaustion');ledger.grantUnlock('reward-pack',item.id);
+ const result=openRewardPack(item,{random:()=>.85});assert.equal(result.rewards.length,2);
+ assert(result.rewards.every(r=>r.category!=='64-bit'));
+});
+
+test('collection completion grants every remaining eligible cosmetic once',()=>{
+ memory.clear();const before=remainingCosmetics();assert(before.length>0);
+ const result=completeCosmeticCollection();assert.equal(result.granted,before.length);assert.equal(result.remaining,0);
+ assert.deepEqual(completeCosmeticCollection(),{granted:0,remaining:0});
+ const item=packItem('legendary','reward-pack:legendary:complete');ledger.grantUnlock('reward-pack',item.id);
+ assert.equal(openRewardPack(item).complete,true);assert(!unopenedPacks().includes(item.id));
 });

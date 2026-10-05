@@ -1,5 +1,5 @@
 import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
-import {grantDailyPack,openRewardPack,unopenedPacks} from './reward-packs.mjs';
+import {grantDailyPack,openRewardPackExclusive,unopenedPacks,PACK_SIZES} from './reward-packs.mjs';
 
 // The pack is just a tile: a 64x64 pixel tile in its tier colour, then the item it awarded. Both popups are
 // modal <dialog> (top layer) so the portal's background inerting never swallows it, and it presents itself
@@ -23,14 +23,15 @@ const CSS=`
 `;
 export const TIER_COLORS=Object.freeze({uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36'});
 export const tierOf=id=>{const tier=String(id).startsWith('reward-pack:')?String(id).split(':')[1]:'uncommon';return Object.hasOwn(TIER_COLORS,tier)?tier:'uncommon';};
-const CATEGORY={color:'Colour palette','64-bit':'64-bit boss skin',texture:'Texture'};
+const CATEGORY={color:'Colour palette','64-bit':'64-bit pixel finish',texture:'Texture'};
 // What the tile says about an opened pack: the actual item, what kind it is, and its colours when it is a palette.
 export function rewardSummary(opened){
- const reward=opened?.reward||{};
+ const rewards=opened?.rewards|| (opened?.reward?[opened.reward]:[]);
+ const reward=rewards[0]||{};
  // A single colour (pool items carry `hex`; a hex id is itself one) shows one swatch the way a palette shows its bands.
  const single=reward.kind==='color'?[/^#[0-9a-f]{6}$/i.test(reward.id)?reward.id:reward.hex].filter(Boolean):[];
  const colors=reward.kind==='palette'?PALETTES.find(item=>item.id===reward.id)?.colors||[]:single;
- return {title:reward.name||'Reward',detail:CATEGORY[opened?.category]||'Cosmetic',colors};
+ return {title:reward.name||'Collection complete',detail:CATEGORY[reward.category||opened?.category]||'Cosmetic',colors,rewards};
 }
 const shade=(hex,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v+amount))));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');};
 // A 64x64 bevelled pixel tile in the tier colour. Unopened: a pixel "?" glyph. Opened: the awarded palette's
@@ -74,21 +75,26 @@ export function mountRewardPacks(){
  function show(id){
   current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);
   overlay.querySelector('h2').textContent=`${current.tier} pack`;tile.setAttribute('aria-label',`${current.tier} pack tile`);drawTierTile(tile.getContext('2d'),current.tier);
-  result.textContent='One cosmetic inside. Tap to open.';open.hidden=false;close.textContent='Later';
+  result.textContent=`${PACK_SIZES[current.tier]} coach cosmetic${PACK_SIZES[current.tier]===1?'':'s'} inside. Tap to open.`;open.hidden=false;close.textContent='Later';
   launch.hidden=true;overlay.showModal();open.focus();
  }
  launch.onclick=()=>{const id=available()[0];if(id)show(id);};close.onclick=hide;overlay.addEventListener('close',()=>{current=null;update();});
- open.onclick=()=>{
-  if(!current)return;const opened=openRewardPack(current);if(!opened){result.textContent='Could not save this pack. Try again.';return;}
+ open.onclick=async()=>{
+  if(!current)return;const pending=current;open.disabled=true;let opened;try{opened=await openRewardPackExclusive(pending);}finally{open.disabled=false;}if(current!==pending)return;if(!opened){result.textContent='Could not save this pack. Try again.';return;}
   const summary=rewardSummary(opened);drawTierTile(tile.getContext('2d'),current.tier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
   overlay.classList.remove('opened');void tile.offsetWidth;overlay.classList.add('opened');
-  const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${summary.title} unlocked!`;kind.textContent=summary.detail;result.replaceChildren(title,kind);
-  if(summary.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of summary.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
+  result.replaceChildren();
+  if(!summary.rewards.length)result.textContent='All cosmetics for your unlocked coaches are collected.';
+  for(const reward of summary.rewards){
+   const itemSummary=rewardSummary({reward,category:reward.category});
+   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${itemSummary.title} unlocked!`;kind.textContent=`${itemSummary.detail} ? ${reward.coachId}`;result.append(title,kind);
+   if(itemSummary.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of itemSummary.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
+  }
   open.hidden=true;close.textContent='Done';close.focus();
  };
  const onGrant=event=>{if(event.detail?.granted?.some(item=>item.kind==='reward-pack')){update();present();}};
  const onReady=event=>{grantDailyPack({account:event.detail});update();present();};
  const onCleared=()=>{clearTimeout(presentTimer);hide();update();};
- window.addEventListener('myr5:battle-pass',onGrant);window.addEventListener('myr5:account-ready',onReady);window.addEventListener('myr5:account-cleared',onCleared);update();
- return ()=>{clearTimeout(presentTimer);hide();window.removeEventListener('myr5:battle-pass',onGrant);window.removeEventListener('myr5:account-ready',onReady);window.removeEventListener('myr5:account-cleared',onCleared);launch.remove();overlay.remove();style.remove();};
+ window.addEventListener('myr5:performance-progress',update);window.addEventListener('myr5:battle-pass',onGrant);window.addEventListener('myr5:account-ready',onReady);window.addEventListener('myr5:account-cleared',onCleared);update();
+ return ()=>{clearTimeout(presentTimer);hide();window.removeEventListener('myr5:performance-progress',update);window.removeEventListener('myr5:battle-pass',onGrant);window.removeEventListener('myr5:account-ready',onReady);window.removeEventListener('myr5:account-cleared',onCleared);launch.remove();overlay.remove();style.remove();};
 }

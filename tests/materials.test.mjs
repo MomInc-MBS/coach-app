@@ -68,7 +68,7 @@ test('registry has Flat+Clay, every legacy family, and stable procedural ids for
  for(const t of TEXTURES)assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
  assert.equal(TEXTURES.filter(t=>t.unlockRule==='default').length,13);
  assert.equal(TEXTURES.filter(t=>t.unlockRule==='battle-pass').length,TEXTURES.length-13);
- const builtins=TEXTURES.filter(t=>t.familyId>=32).sort((a,b)=>a.familyId-b.familyId);
+ const builtins=TEXTURES.filter(t=>t.familyId>=32&&t.familyId<=55).sort((a,b)=>a.familyId-b.familyId);
  assert.equal(builtins.length,24);assert.deepEqual(builtins.map(t=>t.familyId),Array.from({length:24},(_,i)=>32+i));
  for(const [i,t] of builtins.entries()){const p=builtinSurfaceProfile(t.familyId);assert.ok(p,`${t.displayName} profile exists`);assert.equal(p.name,t.displayName,`${t.displayName} keeps its named pattern`);assert.equal(p.id,32+i);assert.equal(textureDefaultMetalness(t.id),p.metalness);}
  assert.deepEqual(BUILTIN_SURFACE_PROFILES.map(p=>p.id),Array.from({length:24},(_,i)=>32+i));
@@ -108,7 +108,7 @@ test('a locked battle-pass texture stays locked in normal assembly while its pre
 });
 
 test('all 24 named surfaces return distinguishable phone-scale height/roughness patterns and material relief',()=>{
- const textures=TEXTURES.filter(t=>t.familyId>=32).sort((a,b)=>a.familyId-b.familyId),fingerprints=new Set();
+ const textures=TEXTURES.filter(t=>t.familyId>=32&&t.familyId<=55).sort((a,b)=>a.familyId-b.familyId),fingerprints=new Set();
  for(const t of textures){
   const heights=[],rough=[];for(let y=0;y<24;y++)for(let x=0;x<24;x++){const s=surfaceSample(t.familyId,x/24,y/24);assert.ok(Number.isFinite(s.height)&&Number.isFinite(s.rough),t.displayName);heights.push(s.height);rough.push(s.rough);}
   const mean=heights.reduce((a,b)=>a+b,0)/heights.length,variance=heights.reduce((a,b)=>a+(b-mean)**2,0)/heights.length,roughMean=rough.reduce((a,b)=>a+b,0)/rough.length;
@@ -120,8 +120,8 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
  assert.equal(fingerprints.size,24);
 });
 
-test('all 49 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
- assert.equal(TEXTURES.length,49);
+test('all 50 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
+ assert.equal(TEXTURES.length,50);
  for(const t of TEXTURES){
   const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);
@@ -142,7 +142,7 @@ test('repeat-wrapped geometry samples match texture-domain samples for all 24 fa
 
 test('every built-in family sculpts measurable vertex relief on a real mesh',()=>{
  const geometry=new THREE.SphereGeometry(.6,32,20),base=geometry.attributes.position.array.slice();
- for(const t of TEXTURES.filter(t=>t.familyId>=32)){
+ for(const t of TEXTURES.filter(t=>t.familyId>=32&&t.familyId<=55)){
   const style=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:textureDefaultMetalness(t.id)??0},true),mesh=new THREE.Mesh(geometry.clone(),new THREE.MeshStandardMaterial());
   sculptMaterial(mesh,style,1,1);
   const after=mesh.geometry.attributes.position.array;let displacement=0;for(let i=0;i<after.length;i+=3)displacement=Math.max(displacement,Math.hypot(after[i]-base[i],after[i+1]-base[i+1],after[i+2]-base[i+2]));

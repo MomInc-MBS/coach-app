@@ -29,7 +29,8 @@ export const BUILTIN_SURFACE_PROFILES:readonly SurfaceProfile[]=[
  {id:54,name:'River Stone',roughness:.72,metalness:.01,relief:.031,bump:.019,sheen:.04,sheenRoughness:.7,clearcoat:.1,clearcoatRoughness:.32},
  {id:55,name:'Moss',roughness:.99,metalness:0,relief:.022,bump:.023,sheen:.38,sheenRoughness:.98,clearcoat:0,clearcoatRoughness:.5},
 ];
-const profiles=new Map(BUILTIN_SURFACE_PROFILES.map(p=>[p.id,p]));
+const pixelProfile:SurfaceProfile={id:56,name:'64-bit Skin',roughness:.58,metalness:.12,relief:.018,bump:.01,sheen:0,sheenRoughness:.7,clearcoat:.1,clearcoatRoughness:.4};
+const profiles=new Map([...BUILTIN_SURFACE_PROFILES,pixelProfile].map(p=>[p.id,p]));
 export const builtinSurfaceProfile=(id:number)=>profiles.get(id);
 const fract=(x:number)=>x-Math.floor(x),clamp=(x:number)=>Math.max(0,Math.min(1,x));
 const hash=(x:number,y:number)=>fract(Math.sin(x*127.1+y*311.7)*43758.5453);
@@ -45,6 +46,7 @@ export function sampleBuiltinSurface(id:number,x:number,y:number):SurfaceSample|
  const line=(v:number,n:number,w:number)=>1-smooth(w,w*2,Math.abs(fract(v*n)-.5));
  let h=.5,t=.5,glow=0,rough=.8;
  switch(id){
+  case 56:{const ix=Math.floor(x*16),iy=Math.floor(y*16),pixel=Math.floor(hash(ix,iy)*4)/3;h=.35+.3*pixel;t=.1+.8*pixel;rough=.5+.15*(1-pixel);break;}
   case 32:{const u=fract(x*3),v=fract(y*3),edge=Math.min(u,1-u,v,1-v),seam=1-smooth(.025,.065,edge),rivet=Math.hypot(u-.5,v-.5),dot=(1-smooth(.035,.075,rivet))*((Math.floor(x*3)+Math.floor(y*3))%2===0?1:.35);h=.69-.34*seam+.28*dot;t=.69-.49*seam+.18*dot;rough=.3+.45*seam;break;}
   case 33:{const d=Math.abs(fract((x+y)*6)-.5),a=Math.abs(fract((x-y)*6)-.5),ridge=Math.max(1-smooth(.045,.12,d),1-smooth(.045,.12,a)),trough=smooth(.16,.34,Math.min(d,a));h=.25+.64*ridge-.1*trough;t=.09+.82*ridge-.08*trough;rough=.99-.16*ridge;break;}
   case 34:{const u=fract(x*7),v=fract(y*7),cx=Math.floor(x*7)+(Math.floor(y*7)%2)*.5+.5,cy=Math.floor(y*7)+.5,r=Math.hypot((x*7-cx)*.72,y*7-cy),ring=1-smooth(.055,.13,Math.abs(r-.31)),hole=1-smooth(.16,.25,r);h=.42+.39*ring-.15*hole;t=.3+.58*ring;rough=.58-.23*ring;void u;void v;break;}

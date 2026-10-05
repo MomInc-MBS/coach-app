@@ -1,6 +1,7 @@
 // Global battle-pass ledger (rank 6b) for the items unlock-store.ts doesn't hold: weapons, pets,
 // boss looks, specials, auras, Food bonuses (D32). Textures/colours/palettes stay in unlock-store.ts. Same API
 // shape as unlock-store.ts, one localStorage key, not per-coach (unlocks are global).
+import {performanceOwner} from './performance-progress.mjs';
 import {markPending,ACCOUNT_SCOPED_LEDGER_KINDS} from './unlock-pending.mjs';
 export {ACCOUNT_SCOPED_LEDGER_KINDS};
 export const LEDGER_KEY='myr5-battle-pass-ledger-v1';
@@ -13,10 +14,10 @@ function read(){
  }catch{return Object.fromEntries(LEDGER_KINDS.map(k=>[k,[]]));}
 }
 
-const accountKinds=new Set(ACCOUNT_SCOPED_LEDGER_KINDS);
+const accountKinds=new Set([...ACCOUNT_SCOPED_LEDGER_KINDS,'boss-skin']);
 const ownerKey=({account=globalThis.myr5AuthenticatedAccount}={})=>{
  const id=typeof account==='string'?account:account?.user?.id;
- return typeof id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id)?`${LEDGER_KEY}/account/${id}`:null;
+ return typeof id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id)?`${LEDGER_KEY}/account/${id}${typeof account==='object'&&account?.dataEpoch!=null?`/epoch/${encodeURIComponent(String(account.dataEpoch))}`:''}`:`${LEDGER_KEY}/guest/${encodeURIComponent(performanceOwner())}`;
 };
 function accountRead(options){try{const key=ownerKey(options);if(!key)return {};const data=JSON.parse(localStorage.getItem(key)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch{return {};}}
 export const grantedIds=(kind,options)=>{const value=(accountKinds.has(kind)?accountRead(options):read())[kind];return Array.isArray(value)?value:[];};
