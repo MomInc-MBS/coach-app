@@ -1,6 +1,6 @@
 import {EXERCISES} from './exercise-library.mjs';
 import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
-import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier} from './progression-rules.mjs';
+import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier,DIFFICULTIES} from './progression-rules.mjs';
 export const PERFORMANCE_KEY='myr5-performance-progress-v2';
 export function performanceOwner(storage=globalThis.localStorage,account=globalThis.myr5AuthenticatedAccount){
  const id=account?.user?.id;if(id)return `account:${id}${account.dataEpoch!=null?`:${account.dataEpoch}`:''}`;
@@ -33,6 +33,8 @@ export function recordPerformanceSession(record,options={}){
  const day=record.day??localDay(record.completedAt??Date.now()),value=Number(record.value??record.activeSeconds??0),continuous=Number(record.maxContinuousSeconds??record.continuousSeconds??0);
  if(!Number.isFinite(value)||value<0||!Number.isFinite(continuous)||continuous<0)throw RangeError('Invalid saved performance.');
  if(kind==='hold'&&continuous>Number(record.activeSeconds??value))throw RangeError('Continuous time cannot exceed active hold time.');
+ const holdPerformances=record.perDifficultyContinuous??{[difficulty]:continuous};
+ if(kind==='hold'&&(!object(holdPerformances)||Object.entries(holdPerformances).some(([level,seconds])=>!DIFFICULTIES.includes(level)||!finite(seconds))||Object.values(holdPerformances).reduce((sum,seconds)=>sum+seconds,0)>Number(record.activeSeconds??value)+1e-7))throw RangeError('Invalid per-difficulty hold performance.');
  if(kind==='meditation')return recordDailyActivity('meditation',{day,id:record.id},options);
  const earnedCoachCount=record.earnedCoachCount??state.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length;
  if(!Number.isSafeInteger(earnedCoachCount)||earnedCoachCount<0||earnedCoachCount>COACH_REQUIREMENTS.length)throw RangeError('Invalid saved coach bonus.');
@@ -46,18 +48,20 @@ export function recordPerformanceSession(record,options={}){
  if(kind==='hold')xp=Math.min(xp,holdXp({difficulty:'expert',to:1800}));
  // Controllers provide base XP before coach/daily multipliers. A credited ID never earns twice.
  const entry=dayEntry(state,day);entry.workoutXp+=xp*multiplier;entry.workout=true;
- state.sessions[record.id]={mode:record.mode,group,kind,difficulty,value,continuous,day,xp:xp*multiplier};
+ state.sessions[record.id]={mode:record.mode,group,kind,difficulty,value,continuous,day,xp:xp*multiplier,...(kind==='hold'?{perDifficultyContinuous:{...holdPerformances}}:{})};
  if(kind==='hold'||kind==='reps'){
-  const milestones=performanceMilestones(kind,kind==='hold'?continuous:value),matches=matchingCoaches(group,difficulty);
+  for(const [performedDifficulty,performance] of kind==='hold'?Object.entries(holdPerformances):[[difficulty,value]]){
+  const milestones=performanceMilestones(kind,performance),matches=matchingCoaches(group,performedDifficulty);
   if(milestones.coach)for(const coach of matches)unique(state.coaches,coach.id);
   if(milestones.golden){for(const coach of matches)unique(state.goldenCoaches,coach.id);if(record.coachId&&state.coaches.includes(record.coachId))unique(state.goldenCoaches,record.coachId);}
-  const key=`${group}/${kind}/${difficulty}`;
+  const key=`${group}/${kind}/${performedDifficulty}`;
   if(milestones.coach)state.completions[key]=(state.completions[key]??0)+1;
   // The first coach clear keeps the two milestone tiers. Each re-clear upgrades
   // once within this difficulty's five-tier block; a ten-minute hold earns its special.
-  const tier=milestones.special?performanceWeaponTier(difficulty,5):milestones.coach?performanceWeaponTier(difficulty,state.completions[key]+1):milestones.weapon2?performanceWeaponTier(difficulty,0)+2:milestones.weapon1?performanceWeaponTier(difficulty,0)+1:0;
+  const tier=milestones.special?performanceWeaponTier(performedDifficulty,5):milestones.coach?performanceWeaponTier(performedDifficulty,state.completions[key]+1):milestones.weapon2?performanceWeaponTier(performedDifficulty,0)+2:milestones.weapon1?performanceWeaponTier(performedDifficulty,0)+1:0;
   for(const weapon of WEAPON_GROUPS[group]??[])if(tier)state.weapons[weapon]=Math.max(state.weapons[weapon]??0,Math.min(20,tier));
-  if(milestones.coach&&difficulty==='expert')for(const ship of SHIP_REQUIREMENTS.filter(s=>s.group===group&&s.kind===kind))unique(state.ships,ship.id);
+  if(milestones.coach&&performedDifficulty==='expert')for(const ship of SHIP_REQUIREMENTS.filter(s=>s.group===group&&s.kind===kind))unique(state.ships,ship.id);
+  }
  }
  if(['sprint','gentle','pace'].includes(kind)){
   const count=kind==='sprint'?Number(record.rounds??value):Number(record.activeSeconds??value),threshold=kind==='sprint'?CADENCE_MILESTONES.sprintRounds:kind==='gentle'?CADENCE_MILESTONES.gentleActiveSeconds:CADENCE_MILESTONES.paceActiveSeconds;
