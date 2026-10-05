@@ -1,3 +1,4 @@
+import {readAccountPerformance} from './performance-progress.mjs';
 import {epochFencedBatch} from './remote-epochs.mjs';
 import {fail} from './domain.mjs';
 
@@ -37,7 +38,8 @@ export async function warRoomApi(database,user,path,method,input,now=Date.now(),
  if(path==='/api/war-room'&&method==='GET')return {state};
  if(path==='/api/war-room/loadout'&&method==='PUT'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
-  return {state:await save(database,user,state,{...state,loadout:weapon(input.loadout)},now,dataEpoch)};
+  const selected=weapon(input.loadout),performance=await readAccountPerformance(database,user);if(selected.tier>(performance.weapons[selected.type]??0)&&!(selected.type===state.loadout.type&&selected.tier<=state.loadout.tier))fail('Earn this weapon tier through its workout milestones.',403);
+  return {state:await save(database,user,state,{...state,loadout:selected},now,dataEpoch)};
  }
  if(path==='/api/war-room/recipes'&&method==='POST'){
   if(!Number.isSafeInteger(input?.revision)||input.revision!==state.revision)fail('War Room changed on another device. Refresh before saving.',409);
@@ -51,7 +53,7 @@ export async function warRoomApi(database,user,path,method,input,now=Date.now(),
   // never claim a legacy Gala save.
   const profile=await database.prepare('SELECT data FROM profiles WHERE user_id=?').bind(user).first();
   const saved=parse(profile?.data,{}),avatar=parse(saved['mominc-avatar-v1'],{}),next={...state};
-  if(avatar.weapon){try{next.loadout=weapon(avatar.weapon);}catch{/* malformed legacy appearance is ignored */}}
+  if(avatar.weapon){try{const legacy=weapon(avatar.weapon);const performance=await readAccountPerformance(database,user);if(legacy.tier<=(performance.weapons[legacy.type]??0)||legacy.type===state.loadout.type&&legacy.tier<=state.loadout.tier)next.loadout=legacy;}catch{/* malformed legacy appearance is ignored */}}
   const legacyRecipe=saved['myr5-recipe-v1'];
   if(typeof legacyRecipe==='string'&&legacyRecipe.length>0&&legacyRecipe.length<=30000&&!next.recipes.some(item=>item.id==='legacy-myr5'))next.recipes=[...next.recipes,{id:'legacy-myr5',name:'Imported MYR5 recipe',data:legacyRecipe}];
   if(JSON.stringify(next.loadout)===JSON.stringify(state.loadout)&&JSON.stringify(next.recipes)===JSON.stringify(state.recipes))fail('No validated legacy War Room data is available for this account.',404);

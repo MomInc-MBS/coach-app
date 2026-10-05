@@ -55,9 +55,9 @@ export async function importWorkout(database,{ownerId,targetAccountId,idempotenc
  await readAccountDataEpoch(database,ownerId,now);
  const id=globalThis.crypto.randomUUID();
  await database.batch([
-  database.prepare(`INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active,source,client_workout_id,competitive_status)
-   SELECT ?,?,?,?,?,?,?,?,'guest_import',?,NULL FROM account_data_epochs WHERE owner_id=? AND epoch=?
-   ON CONFLICT(user_id,client_workout_id) WHERE client_workout_id IS NOT NULL DO NOTHING`).bind(id,ownerId,snapshot.mode,snapshot.goal,snapshot.startedAt,snapshot.completedAt,snapshot.value,snapshot.activeSeconds,snapshot.clientWorkoutId,ownerId,request.targetDataEpoch),
+  database.prepare(`INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active,source,client_workout_id,competitive_status,performance_snapshot)
+   SELECT ?,?,?,?,?,?,?,?,'guest_import',?,NULL,? FROM account_data_epochs WHERE owner_id=? AND epoch=?
+   ON CONFLICT(user_id,client_workout_id) WHERE client_workout_id IS NOT NULL DO NOTHING`).bind(id,ownerId,snapshot.mode,snapshot.goal,snapshot.startedAt,snapshot.completedAt,snapshot.value,snapshot.activeSeconds,snapshot.clientWorkoutId,snapshot.performance?JSON.stringify(snapshot):null,ownerId,request.targetDataEpoch),
   database.prepare(`INSERT INTO workout_imports(workout_id,idempotency_key,fingerprint,digest_version,account_data_epoch,created_at)
    SELECT id,?,?,?,?,? FROM workouts WHERE id=? AND user_id=?`).bind(request.idempotencyKey,request.fingerprint,request.digestVersion,request.targetDataEpoch,now,id,ownerId),
 

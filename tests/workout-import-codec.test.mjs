@@ -79,7 +79,7 @@ test('fingerprints cover each payload field and keys cover target, epoch, id and
  const initial=await importIdempotencyKey(key());
  for(const change of [{targetAccountId:'bob'},{targetDataEpoch:2},{clientWorkoutId:changes.clientWorkoutId},{fingerprint:'1'.repeat(64)}])assert.notEqual(await importIdempotencyKey({...key(),...change}),initial);
  invalid(()=>canonicalImportSnapshot(base,2),'unsupported_digest_version');
- invalid(()=>canonicalImportKey({...key(),digestVersion:2}),'unsupported_digest_version');
+ invalid(()=>canonicalImportKey({...key(),digestVersion:3}),'unsupported_digest_version');
 });
 
 test('key scope validates exact inputs and rejects accessors without evaluating them',()=>{

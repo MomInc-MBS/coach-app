@@ -131,7 +131,7 @@ const readClaim = raw => {
   const prepared = raw.kind === 'import' && (own(raw,'digestVersion') || own(raw,'idempotencyKey'));
   if (prepared) {
     fields.push('digestVersion','idempotencyKey');
-    if (raw.digestVersion !== 1 || typeof raw.idempotencyKey !== 'string' || !/^[0-9a-f]{64}$/.test(raw.idempotencyKey)) fail('invalid-record');
+    if (![1,2].includes(raw.digestVersion) || typeof raw.idempotencyKey !== 'string' || !/^[0-9a-f]{64}$/.test(raw.idempotencyKey)) fail('invalid-record');
   }
   if (Object.keys(raw).some(key => !fields.includes(key))) fail('invalid-record', 'unexpected claim field');
   const base = Object.fromEntries(fields.filter(key => !['completed','targetDataEpoch','fingerprint','snapshot','digestVersion','idempotencyKey'].includes(key)).map(key => [key, opaque(raw[key], key)]));

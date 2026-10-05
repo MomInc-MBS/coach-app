@@ -63,7 +63,7 @@ export function createImportDrain({repository,loadAccount,postImport,transition,
    try{
     try{runTicket=transition.capture();unsubscribe=transition.subscribe(()=>controller.abort());if(!transition.isCurrent(runTicket))throw abortError();}catch{summary.stopped='identity_unavailable';return summary;}
     const ledger=await repository.listImportAssignments();
-    const candidates=ledger.items.filter(item=>item.kind==='import'&&item.targetAccountId===targetAccountId&&item.digestVersion===1&&typeof item.idempotencyKey==='string');
+    const candidates=ledger.items.filter(item=>item.kind==='import'&&item.targetAccountId===targetAccountId&&[1,2].includes(item.digestVersion)&&typeof item.idempotencyKey==='string');
     const resume=new Set(resumeParkedClaimIds);let processedItems=0;
     for(const selected of candidates){
      if(!current(runTicket)){summary.stopped='identity_changed';break;}

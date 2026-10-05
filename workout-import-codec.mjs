@@ -1,3 +1,4 @@
+import {projectImportedPerformance,validateImportedPerformance} from './performance-import-codec.mjs';
 // Shared browser/Worker codec; no authentication or network I/O.
 // Version 1 is immutable: preserve its validation and bytes for old replays.
 export const IMPORT_DIGEST_VERSION = 1;
@@ -31,9 +32,9 @@ function exact(raw,keys,code){
 }
 function integer(value,min,max,code){if(!Number.isSafeInteger(value)||Object.is(value,-0)||value<min||value>max)fail(code);}
 function uuid(value,code){if(typeof value!=='string'||!(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/).test(value))fail(code);}
-function version(value){if(value!==IMPORT_DIGEST_VERSION)fail('unsupported_digest_version');}
+function version(value){if(![1,2].includes(value))fail('unsupported_digest_version');}
 export function validateImportSnapshot(raw){
-  const s=exact(raw,IMPORT_SNAPSHOT_KEYS,'invalid_snapshot');
+  const supplied=record(raw,'invalid_snapshot');const s=exact(raw,own(supplied,'performance')?[...IMPORT_SNAPSHOT_KEYS,'performance']:IMPORT_SNAPSHOT_KEYS,'invalid_snapshot');
   if(s.schemaVersion!==1)fail();
   uuid(s.clientWorkoutId,'invalid_snapshot');
   if(typeof s.mode!=='string'||!own(IMPORT_MODE_LIMITS,s.mode))fail();
@@ -42,10 +43,9 @@ export function validateImportSnapshot(raw){
   integer(s.restSeconds,15,180,'invalid_snapshot');
   integer(s.startedAt,0,8640000000000000,'invalid_snapshot');
   integer(s.completedAt,s.startedAt,8640000000000000,'invalid_snapshot');
-  integer(s.value,0,limits.value,'invalid_snapshot');
-  integer(s.activeSeconds,0,7200,'invalid_snapshot');
-  integer(s.elapsedSeconds,s.activeSeconds,7200,'invalid_snapshot');
-  return Object.freeze(Object.fromEntries(IMPORT_SNAPSHOT_KEYS.map(key=>[key,s[key]])));
+  if(own(s,'performance')){for(const [value,min,max] of [[s.value,0,limits.value],[s.activeSeconds,0,7200],[s.elapsedSeconds,s.activeSeconds,7200]])if(!Number.isFinite(value)||Object.is(value,-0)||value<min||value>max)fail();}
+  else{integer(s.value,0,limits.value,'invalid_snapshot');integer(s.activeSeconds,0,7200,'invalid_snapshot');integer(s.elapsedSeconds,s.activeSeconds,7200,'invalid_snapshot');}
+  const base=Object.fromEntries(IMPORT_SNAPSHOT_KEYS.map(key=>[key,s[key]]));if(own(s,'performance')){try{base.performance=validateImportedPerformance(s.performance,base);}catch{fail();}}return Object.freeze(base);
 }
 // Caller must obtain this row through its owner-scoped repository. Shape checks
 // are not an ownership check. Only these explicit source fields are projected.
@@ -54,12 +54,15 @@ export function snapshotFromCompletedWorkout(raw){
     const row=record(raw,'snapshot_unavailable');
     if(row.status!=='completed')fail('snapshot_unavailable');
     const completion=record(row.completion,'snapshot_unavailable');
-    return validateImportSnapshot({schemaVersion:row.schemaVersion,clientWorkoutId:row.clientWorkoutId,mode:row.mode,goal:row.goal,restSeconds:row.restSeconds,startedAt:row.startedAt,completedAt:row.completedAt,value:completion.value,activeSeconds:completion.activeSeconds,elapsedSeconds:completion.elapsedSeconds});
+    const base={schemaVersion:row.schemaVersion,clientWorkoutId:row.clientWorkoutId,mode:row.mode,goal:row.goal,restSeconds:row.restSeconds,startedAt:row.startedAt,completedAt:row.completedAt,value:completion.value,activeSeconds:completion.activeSeconds,elapsedSeconds:completion.elapsedSeconds};
+    const descriptor=row.progress&&typeof row.progress==='object'?Object.getOwnPropertyDescriptor(row.progress,'performance'):null;
+    if(descriptor&&own(descriptor,'value')&&descriptor.value){const p=record(descriptor.value,'snapshot_unavailable');if(!p.preparation&&p.earned!==false&&(p.kind!=='hold'||Array.isArray(p.holdBlocks)))return validateImportSnapshot({...base,performance:projectImportedPerformance(p,base)});}
+    return validateImportSnapshot(base);
   }catch{fail('snapshot_unavailable');}
 }
 export function canonicalImportSnapshot(raw,digestVersion=IMPORT_DIGEST_VERSION){
   version(digestVersion);
-  return JSON.stringify([digestVersion,validateImportSnapshot(raw)]);
+  const snapshot=validateImportSnapshot(raw);if((snapshot.performance?2:1)!==digestVersion)fail('unsupported_digest_version');return JSON.stringify([digestVersion,snapshot]);
 }
 async function sha256(text){
   if(typeof globalThis.crypto?.subtle?.digest!=='function')fail('crypto_unavailable');
@@ -84,9 +87,10 @@ export async function importIdempotencyKey(raw){return sha256(canonicalImportKey
 export async function prepareWorkoutImport(snapshotInput,targetInput){
   // Capture all untrusted inputs synchronously before the first async boundary.
   const snapshot=validateImportSnapshot(snapshotInput);
+  const digestVersion=snapshot.performance?2:1;
   const target=exact(targetInput,['targetAccountId','targetDataEpoch'],'invalid_key_input');
-  canonicalImportKey({digestVersion:IMPORT_DIGEST_VERSION,...target,clientWorkoutId:snapshot.clientWorkoutId,fingerprint:'0'.repeat(64)});
-  const fingerprint=await fingerprintImportSnapshot(snapshot);
-  const idempotencyKey=await importIdempotencyKey({digestVersion:IMPORT_DIGEST_VERSION,...target,clientWorkoutId:snapshot.clientWorkoutId,fingerprint});
-  return Object.freeze({snapshot,digestVersion:IMPORT_DIGEST_VERSION,fingerprint,idempotencyKey});
+  canonicalImportKey({digestVersion,...target,clientWorkoutId:snapshot.clientWorkoutId,fingerprint:'0'.repeat(64)});
+  const fingerprint=await fingerprintImportSnapshot(snapshot,digestVersion);
+  const idempotencyKey=await importIdempotencyKey({digestVersion,...target,clientWorkoutId:snapshot.clientWorkoutId,fingerprint});
+  return Object.freeze({snapshot,digestVersion,fingerprint,idempotencyKey});
 }

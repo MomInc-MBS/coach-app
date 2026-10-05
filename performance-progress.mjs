@@ -74,5 +74,20 @@ export const coachAccess=(id,options={})=>unlockedCoachIds(options).includes(id)
 export const goldenCoach=(id,options={})=>readPerformanceProgress(options).goldenCoaches.includes(id);
 export const weaponTierFor=(type,options={})=>readPerformanceProgress(options).weapons[type]??0;
 export const shipAccess=(id,options={})=>readPerformanceProgress(options).ships.includes(id);
+/** Call only with the result of the authenticated account reader, never a
+ * CustomEvent or user-supplied profile. Pending device-only sessions survive. */
+export function mergeVerifiedPerformance(account,{storage=globalThis.localStorage}={}){
+ const remote=account?.progress?.performance;if(!remote)return readPerformanceProgress({storage,account});
+ if(!account?.user?.id||!Number.isSafeInteger(account.dataEpoch)||account.dataEpoch<1)throw RangeError('Verified account identity is required.');if(!validState(remote))throw RangeError('Invalid synced performance progress.');
+ const options={storage,account},local=readPerformanceProgress(options),before=JSON.stringify(local),next=JSON.parse(JSON.stringify(local));
+ next.sessions={...local.sessions,...remote.sessions};next.days={};
+ for(const [day,d] of [...Object.entries(local.days),...Object.entries(remote.days)]){const entry=dayEntry(next,day);entry.food||=d.food;entry.meditation||=d.meditation;}
+ for(const session of Object.values(next.sessions)){const entry=dayEntry(next,session.day);entry.workout=true;entry.workoutXp+=session.xp;}
+ next.coaches=[...new Set([...local.coaches,...remote.coaches])];next.goldenCoaches=[...new Set([...local.goldenCoaches,...remote.goldenCoaches])].filter(id=>next.coaches.includes(id));next.ships=[...new Set([...local.ships,...remote.ships])];
+ for(const [key,value] of Object.entries(remote.weapons))next.weapons[key]=Math.max(next.weapons[key]??0,value);
+ for(const [key,value] of Object.entries(remote.completions))next.completions[key]=Math.max(next.completions[key]??0,value);
+ next.activities={...(local.activities??{}),...(remote.activities??{})};recalculate(next);
+ return JSON.stringify(next)===before?local:!storage?next:save(next,options);
+}
 function priorDay(day,offset){const d=new Date(`${day}T12:00:00`);d.setDate(d.getDate()-offset);return localDay(d.getTime());}
 export function workoutEligibility(mode,{day=localDay(),kind,...options}={}){const group=EXERCISES[mode]?.group;if(!group)return {allowed:true,reason:null,group:null};const sessions=Object.values(readPerformanceProgress(options).sessions),trained=d=>sessions.some(s=>s.day===d&&s.group===group);if(trained(priorDay(day,1))&&trained(priorDay(day,2)))return {allowed:false,reason:'Your boss is recovering. Take today off this muscle group.',group};if((kind??EXERCISES[mode].kind)==='reps'&&sessions.some(s=>s.day===day&&s.group===group&&s.kind==='reps'))return {allowed:false,reason:'Working set complete for this muscle group today.',group};return {allowed:true,reason:null,group};}

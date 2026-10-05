@@ -89,7 +89,7 @@ function preparedItem(state,claimId,ownerId,deviceId){
   if(selected.has(s.clientWorkoutId)||identities.has(s.claimId)||identities.has(s.itemId)||s.claimId===s.itemId)invalid();
   selected.add(s.clientWorkoutId);identities.add(s.claimId);identities.add(s.itemId);
   const row=rows.find(i=>i.clientWorkoutId===s.clientWorkoutId&&i.claimId===s.claimId&&i.itemId===s.itemId);
-  if(!row||row.kind!=='import'||row.sourceOwnerId!==ownerId||row.sourceDeviceId!==deviceId||row.targetAccountId!==header.targetAccountId||row.targetDataEpoch!==header.targetDataEpoch||row.digestVersion!==1||typeof row.idempotencyKey!=='string'||!(/^[a-f0-9]{64}$/).test(row.idempotencyKey))invalid();
+  if(!row||row.kind!=='import'||row.sourceOwnerId!==ownerId||row.sourceDeviceId!==deviceId||row.targetAccountId!==header.targetAccountId||row.targetDataEpoch!==header.targetDataEpoch||![1,2].includes(row.digestVersion)||typeof row.idempotencyKey!=='string'||!(/^[a-f0-9]{64}$/).test(row.idempotencyKey))invalid();
   validateImportSnapshot(row.snapshot);if(row.snapshot.clientWorkoutId!==row.clientWorkoutId)invalid();
   canonicalImportKey({digestVersion:row.digestVersion,targetAccountId:row.targetAccountId,targetDataEpoch:row.targetDataEpoch,clientWorkoutId:row.clientWorkoutId,fingerprint:row.fingerprint});
  }

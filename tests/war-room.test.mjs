@@ -17,6 +17,8 @@ test('War Room rejects anonymous requests but needs no Coach Army entitlement fo
  const open=await call('/api/war-room',{user:'fresh'});assert.equal(open.status,200);assert.equal(open.data.targetAccountId,'fresh');
 });
 test('account saves and reloads its own validated loadout and recipes',async()=>{
+ const stamp=Date.now(),id=crypto.randomUUID(),performance={version:2,kind:'hold',difficulty:'easy',maxContinuousSeconds:600,perDifficultyContinuous:{easy:600},holdBlocks:Array.from({length:40},(_,i)=>({difficulty:'easy',activeStart:i*15,continuousStart:i*15})),coachId:'myr5',rounds:0},snapshot={schemaVersion:1,clientWorkoutId:id,mode:'mountain',goal:600,restSeconds:30,startedAt:stamp-600000,completedAt:stamp,value:600,activeSeconds:600,elapsedSeconds:600,performance};
+ await env.DB.prepare('INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active,performance_snapshot) VALUES(?,?,?,?,?,?,?,?,?)').bind(id,'alice','mountain',600,stamp-600000,stamp,600,600,JSON.stringify(snapshot)).run();
  const initial=await call('/api/war-room');assert.equal(initial.status,200);assert.deepEqual(initial.data.state.loadout,{type:'rapier',tier:0});
  const saved=await call('/api/war-room/loadout',{method:'PUT',data:{revision:0,userId:'bob',loadout:{type:'staff',tier:4}}});assert.equal(saved.status,200);assert.deepEqual(saved.data.state.loadout,{type:'staff',tier:4});
  const recipe=await call('/api/war-room/recipes',{method:'POST',data:{revision:1,recipe:{id:'saved-1',name:'Existing design',data:'HB4-01-01-01-01-01-01-01-01-01'}}});assert.equal(recipe.status,200);assert.equal(recipe.data.state.recipes.length,1);
@@ -24,12 +26,13 @@ test('account saves and reloads its own validated loadout and recipes',async()=>
  assert.deepEqual((await call('/api/war-room',{user:'bob'})).data.state.loadout,{type:'rapier',tier:0});
  assert.equal((await call('/api/war-room/loadout',{method:'PUT',data:{revision:2,loadout:{type:'invented',tier:999}}})).status,400);
 });
-test('profile import is explicit, validated, and cannot claim another owner',async()=>{
+test('profile import is explicit, validated, and cannot mint a claimed weapon tier',async()=>{
  await env.DB.prepare('INSERT INTO profiles(user_id,data,revision,updated_at) VALUES(?,?,0,1)').bind('bob',JSON.stringify({'mominc-avatar-v1':JSON.stringify({weapon:{type:'cannon',tier:20}}),'myr5-recipe-v1':'legacy-recipe'})).run();
- const before=await call('/api/war-room',{user:'bob'});const imported=await call('/api/war-room/import/profile',{method:'POST',user:'bob',data:{revision:before.data.state.revision,ownerId:'alice'}});assert.equal(imported.status,200);assert.deepEqual(imported.data.state.loadout,{type:'cannon',tier:20});assert.equal(imported.data.state.recipes[0].id,'legacy-myr5');
+ const before=await call('/api/war-room',{user:'bob'});const imported=await call('/api/war-room/import/profile',{method:'POST',user:'bob',data:{revision:before.data.state.revision,ownerId:'alice'}});assert.equal(imported.status,200);assert.deepEqual(imported.data.state.loadout,{type:'rapier',tier:0});assert.equal(imported.data.state.recipes[0].id,'legacy-myr5');
  const alice=await call('/api/war-room');assert.deepEqual(alice.data.state.loadout,{type:'staff',tier:4});
 });
 test('writes cannot be replayed or crossed into another verified account',async()=>{
+ const stamp=Date.now();await env.DB.prepare('INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value,active) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),'bob','front-raise',8,stamp-30000,stamp,8,30).run();
  const own=await call('/api/war-room',{user:'bob'});assert.equal((await call('/api/war-room/loadout',{method:'PUT',user:'bob',data:{revision:own.data.state.revision,loadout:{type:'bow',tier:1}}})).status,200);
  const stale=await call('/api/war-room/loadout',{method:'PUT',user:'bob',data:{revision:own.data.state.revision,loadout:{type:'bow',tier:2}}});assert.equal(stale.status,409);
  const alice=await call('/api/war-room');assert.deepEqual(alice.data.state.loadout,{type:'staff',tier:4});

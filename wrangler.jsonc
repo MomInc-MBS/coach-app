@@ -25,6 +25,7 @@
 	// Public values (live /api/auth/config serves the Clerk ones). Clerk sign-in also needs the
 	// CLERK_JWT_KEY secret; release email stays off unless the RESEND_API_KEY secret exists.
 	"vars": {
+		"WORKOUT_IMPORTS_ENABLED": "true",
 		"CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubW9taW5jLm9ubGluZSQ",
 		"CLERK_FRONTEND_URL": "https://clerk.mominc.online",
 		"CLERK_AUTHORIZED_PARTIES": "https://myr5.mominc.online",
@@ -47,7 +48,7 @@
 		"routes": [],
 			"triggers": { "crons": [] },
 			// No Clerk (its production keys only accept mominc.online) and no release email on staging.
-			"vars": {},
+			"vars": { "WORKOUT_IMPORTS_ENABLED": "true" },
 			"d1_databases": [
 				{
 					"binding": "DB",
