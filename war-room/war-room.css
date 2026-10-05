@@ -2,6 +2,7 @@
 .war-room{position:fixed;inset:15px 15px calc(var(--myr5-bar,88px) + 15px);overflow:hidden} /* R20: inside the metal housing, above the dock */
 .panel{background:linear-gradient(145deg,#123747,#0a2430);border:1px solid var(--line);box-shadow:0 12px 30px #0004}
 button{border:1px solid var(--accent);background:#183f48;color:var(--ink);padding:10px 14px;cursor:pointer;font-weight:600;min-height:44px}button:disabled{cursor:not-allowed;opacity:.55}
+[hidden]{display:none!important}
 label{font-size:13px}
 .checks{margin:8px 0 0}.checks div{display:flex;justify-content:space-between;border-top:1px solid #35647366;padding:8px 0}.checks dd,.checks dt{margin:0}.checks dd{color:var(--accent);font-family:monospace}
 .section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}

@@ -1,4 +1,5 @@
 import {recordDailyActivity,readPerformanceProgress,localDay,mergeVerifiedPerformance} from './performance-progress.mjs';
+import {createPerformanceAccountSync} from './performance-account-sync.mjs';
 import {cosmeticLevel} from './progression-rules.mjs';
 import {createAccountReadinessRefresh} from './account-readiness-client.mjs';
 import {createImportAccountAdapter} from './local-coach/import-account-adapter.mjs';
@@ -78,9 +79,12 @@ async function refresh(){if(accountTransitionBusy)return null;let ticket;try{tic
 let accountStorage;try{accountStorage=localStorage;}catch{}
 packGrantCache=createPackGrantCache({storage:accountStorage});
 const accountWorkoutSync=createAccountWorkoutSync({storage:accountStorage,api,transitions:accountTransitions,getAccount:()=>account,publishProgress});
+const performanceAccountSync=createPerformanceAccountSync({storage:accountStorage,api,transitions:accountTransitions,getAccount:()=>account,maxUploads:120,getRows:async()=>{localHistoryRepository??=await openLocalCoach();return localHistoryRepository.forOwner(localHistoryRepository.guestOwnerId).listWorkouts();},onAccount:value=>publishProgress(value.progress)});
+window.addEventListener('myr5:local-history-refresh',()=>void flushSets());
+window.addEventListener('online',()=>void flushSets());
 const pendingKey=accountPendingKey;
 const pending=user=>accountWorkoutSync.pending(user);
-async function flushSets(){if(accountTransitionBusy||!account)return;let ticket;try{ticket=accountTransitions.capture();await accountWorkoutSync.flush();}catch(error){if(!ticket||!accountTransitions.isCurrent(ticket))return;if(error.code!=='auth_transition'&&error.code!=='account_scope_changed')set('syncBadge',error.message);}}
+async function flushSets(){if(accountTransitionBusy||!account)return;let ticket;try{ticket=accountTransitions.capture();const result=await performanceAccountSync.flush();accountTransitions.assertCurrent(ticket);await accountWorkoutSync.flush();if(result?.failed?.length)set('syncBadge','Workout saved on this device · account sync will retry.');}catch(error){if(!ticket||!accountTransitions.isCurrent(ticket))return;if(error.code!=='auth_transition'&&error.code!=='account_scope_changed')set('syncBadge',error.message);}}
 window.coachAccount={refresh,async start(mode,goal){if(accountTransitionBusy)throw Error('Account is changing.');const ticket=accountTransitions.capture(),ready=account||await refresh();accountTransitions.assertCurrent(ticket);if(ready!==account)throw Error('Account changed. Refresh to continue.');if(!ready)throw Error('Sign in from Progress before starting a saved workout.');if(!ready.onboarding)throw Error('Complete your coach setup first.');return accountWorkoutSync.start(mode,goal);},async complete(data){if(accountTransitionBusy)throw Error('Account is changing.');return accountWorkoutSync.complete(data);}};
 accountTransitions.subscribe(()=>{account=null;scoreboard.clear();clearCoachAccount();$('signIn').hidden=false;$('accountContent').hidden=true;$('accountSettingsContent').hidden=true;$('workoutList').replaceChildren();$('mealList').replaceChildren();mealItems=null;$('reminderList').replaceChildren();reminderSnapshot=null;liveReminders.update([]);});
 const localDate=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
