@@ -2,6 +2,7 @@ import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,WEAPON_GROUPS,SHIP_REQUIREM
 import {EXERCISES,FOCUS_GROUPS} from './exercise-library.mjs';
 import {readPerformanceProgress} from './performance-progress.mjs';
 import {cosmeticLevel,DIFFICULTIES} from './progression-rules.mjs';
+import {readRestBossRewards} from './rest-boss-rewards.mjs';
 import {SHIP_CATALOG} from './modules/ships/ship-catalog.mjs';
 export {selectedTracks} from './battle-pass.mjs';
 export const loadProgress=readPerformanceProgress;
@@ -43,7 +44,7 @@ function paint(){
  if(current==='ships')for(const ship of shipRequirements())content.append(card(ship.name,state.ships.includes(ship.id)?'Unlocked':'Locked',[['Unlock',ship.unlock]]));
  if(current==='rewards'){
   content.append(card('Cosmetic battle pass',`Level ${rank.level} / 250 · ${Math.floor(state.totalXp)} XP`,[['XP','Active exercise earns XP for packs, colors, palettes, textures and finishes. Cosmetic levels do not unlock coaches, weapons or ships.'],['Coach bonus','Each earned coach adds 25% to workout XP. Bonuses add together.'],['Daily meditation','Complete meditation to double today’s workout XP, including workout XP already earned.'],['Daily trio','Workout + meditation + food earns a separate 500 XP once that local day.'],['Packs','Uncommon contains 1 cosmetic; rare 2; legendary 3.']]));
-  content.append(card('Rest arena','Rewards reset each local day',[['First defeat','Defeat one boss during a rest timer to earn one uncommon pack that day.'],['Fifth defeat','Defeat five bosses during rest timers that day to earn one legendary pack. Both rewards are granted once per day.'],['Streak damage','Your login streak and weapon strength still power your attacks. Rest defeats award packs; coach ownership comes from exercise performance.']]));
+  const rest=readRestBossRewards();content.append(card('Rest arena',`${rest.count} / 5 daily boss defeats ? ${rest.day}`,[['First defeat','Defeat one boss during a rest timer to earn one uncommon pack that day.'],['Fifth defeat','Defeat five bosses during rest timers that day to earn one legendary pack. Both rewards are granted once per day.'],['Streak damage','Your login streak and weapon strength still power your attacks. Rest defeats award packs; coach ownership comes from exercise performance.']]));
  }
 }
 function build(){
@@ -53,7 +54,7 @@ function build(){
  for(const [id,label] of [['coaches','Coaches'],['weapons','Weapons'],['ships','Ships'],['rewards','XP & packs']]){const button=element('button',label);button.type='button';button.dataset.achTab=id;button.id=`ach-tab-${id}`;button.setAttribute('role','tab');button.setAttribute('aria-controls','ach-catalog');button.onclick=()=>{current=id;content.setAttribute('aria-labelledby',button.id);paint();content.scrollTop=0;};dialog.querySelector('.ach-tabs').append(button);}
  dialog.querySelector('.ach-tabs').onkeydown=event=>{const tabs=[...dialog.querySelectorAll('[data-ach-tab]')],index=tabs.findIndex(t=>t.dataset.achTab===current),next={ArrowRight:(index+1)%tabs.length,ArrowLeft:(index+tabs.length-1)%tabs.length,Home:0,End:tabs.length-1}[event.key];if(next!==undefined){event.preventDefault();tabs[next].click();tabs[next].focus();}};
  dialog.querySelector('.ach-close').onclick=()=>dialog.close();
- for(const event of ['myr5:performance-progress','myr5:account-ready','myr5:account-cleared','storage'])window.addEventListener(event,()=>{if(dialog.open)paint();});
+ for(const event of ['myr5:performance-progress','myr5:rest-boss-rewards','myr5:account-ready','myr5:account-cleared','storage'])window.addEventListener(event,()=>{if(dialog.open)paint();});
  content.setAttribute('aria-labelledby','ach-tab-coaches');
 }
 export function openAchievements(){if(!dialog)build();paint();if(!dialog.open)dialog.showModal();return dialog;}
