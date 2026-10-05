@@ -71,10 +71,11 @@ export class SetFlow {
   const level=this.kitLevel??1;
   if(this.tapDamageToday>=dailyCap(level))return null; // daily cap reached: no further damage events
   this.lastTap=now;this.hits++;
-  const assisted=withHand&&this.hits%3===0,damage=tapDamage(level,this.combat,now)+this.petTick(now);
+  const assisted=withHand&&this.hits%3===0,warmth=this.workout?(this.workout.stage==='preparation-rest'?(this.workout.nextStage==='working'?2:1):3):1,damage=tapDamage(level,this.combat,now)*warmth+this.petTick(now);
   this.tapDamageToday+=damage;this.damage+=damage;
   return {hits:this.hits,damage,totalDamage:this.damage,blocked:damage===0,assisted,charge:withHand?this.hits%3:0,bossAttack:this.hits%BOSS_ATTACK_EVERY_HITS===0};
  }
+ preparationTap(now=Date.now()){if(this.phase!=='set'||this.workout?.stage!=='preparation-rest')return null;this.phase='rest';try{return this.tap(now);}finally{this.phase='set';}}
  special(weapon,{now=Date.now(),progress,catalog}={}){this.touchRest(now);this.resetIfNewDay(now);const level=this.kitLevel??1;
  if(level<SPECIAL_LEVEL)return {ok:false,reason:'level',unlockLevel:SPECIAL_LEVEL}; // D17: specials unlock at L3
  if(this.tapDamageToday>=dailyCap(level))return {ok:false,reason:'daily-cap'}; // both checked before activate() so a refused special never burns its cooldown

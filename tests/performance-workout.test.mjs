@@ -65,3 +65,9 @@ test('controller snapshots persist as finite JSON and database success survives 
  const owner=new WorkoutSessionOwner({storage:{getItem:()=>null,setItem(){throw Error('full');}},saveProgress:async()=>({local:true})});
  owner.start();const result=await owner.complete({id:'saved'});assert.equal(result.saved,true);assert.equal(result.acknowledged,false);assert.equal(owner.canStart(),true);
 });
+
+test('warming up increases rest-strike damage and preparation taps never award XP',()=>{
+ const f=new SetFlow(null,{now:0});f.start('squat',30,30,{performance:true,kind:'reps'});f.workout.stage='preparation-rest';f.workout.nextStage='preparation-slow';
+ assert.equal(f.preparationTap(1000).damage,2);f.workout.nextStage='working';assert.equal(f.preparationTap(2000).damage,4);assert.equal(f.xp,0);
+ f.workout.stage='working';assert.equal(f.preparationTap(3000),null);f.workout.value=8;f.workout.xpBase=9;f.finishWorking({count:8,mode:'squat',kind:'reps'},3100);assert.equal(f.tap(4000).damage,6);
+});
