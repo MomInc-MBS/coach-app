@@ -135,3 +135,14 @@ test('completion for all 67 coaches uses bounded storage writes, including pendi
  localStorage.setItem=(key,value)=>{writes++;write(key,value);};
  try{const completed=completeCosmeticCollection();assert.equal(completed.granted,before.length);assert.equal(completed.remaining,0);assert(writes<=6,`${writes} writes should be grouped by ledger`);}finally{localStorage.setItem=write;}
 });
+
+
+test('explicit guest grants remain bound to the guest while an account is globally signed in',()=>{
+ memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'signed-in-account'},dataEpoch:3};
+ const id='reward-pack:rare:captured-guest';assert(ledger.grantUnlock('reward-pack',id,{account:null}));
+ assert(ledger.isGranted('reward-pack',id,{account:null}));assert(!ledger.isGranted('reward-pack',id));
+ globalThis.myr5AuthenticatedAccount={user:{id:'another-account'},dataEpoch:4};
+ assert(ledger.isGranted('reward-pack',id,{account:null}));assert(!ledger.isGranted('reward-pack',id));
+ globalThis.myr5AuthenticatedAccount=null;assert(ledger.isGranted('reward-pack',id));
+ globalThis.myr5AuthenticatedAccount={user:{id:'reward-test'}};
+});

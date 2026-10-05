@@ -18,7 +18,7 @@ const accountKinds=new Set([...ACCOUNT_SCOPED_LEDGER_KINDS,'boss-skin']);
 const ownerKey=({account=globalThis.myr5AuthenticatedAccount}={})=>{
  try{
  const id=typeof account==='string'?account:account?.user?.id;
- return typeof id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id)?`${LEDGER_KEY}/account/${id}${typeof account==='object'&&account?.dataEpoch!=null?`/epoch/${encodeURIComponent(String(account.dataEpoch))}`:''}`:`${LEDGER_KEY}/guest/${encodeURIComponent(performanceOwner())}`;
+ return typeof id==='string'&&/^[A-Za-z0-9](?:[A-Za-z0-9._:-]{0,127})$/.test(id)?`${LEDGER_KEY}/account/${id}${typeof account==='object'&&account?.dataEpoch!=null?`/epoch/${encodeURIComponent(String(account.dataEpoch))}`:''}`:`${LEDGER_KEY}/guest/${encodeURIComponent(performanceOwner(globalThis.localStorage,account))}`;
  }catch{return null;}
 };
 function accountRead(options){try{const key=ownerKey(options);if(!key)return {};const data=JSON.parse(localStorage.getItem(key)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch{return {};}}
