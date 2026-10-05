@@ -6,7 +6,7 @@ import {GESTURES,type Gesture} from './motion';
 import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
-import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,paletteChannelIds,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
+import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
 import {isGranted,cosmeticId} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
@@ -111,7 +111,7 @@ function syncMaterials(){
  // R20: the toggle shows each part's current colour as a dot; the single grid marks the active part's colour.
  const partColour=(c:typeof COLOUR_CHANNELS[number])=>regionChoice(shown().materials,c.regions[0])?.colorId??DEFAULT_MATERIAL.colorId;
  for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-part]')){const c=COLOUR_CHANNELS.find(x=>x.id===b.dataset.part)!,on=c===activeChannel;b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;(b.firstElementChild as HTMLElement).style.background=colorTriad(partColour(c),false,shown().body)?.primary??partColour(c);}
- for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.kind==='color'&&b.dataset.color===partColour(activeChannel)));
+ for(const b of document.querySelectorAll<HTMLButtonElement>('#colorSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===partColour(activeChannel)));
  ($('materialClear') as HTMLButtonElement).disabled=!activeChannel.regions.some(r=>shown().materials?.[r]);
 }
 function syncMomOnly(){
@@ -185,7 +185,7 @@ const colorSwatches=[
 function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>idLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
-// that fills all three parts at once. Every colour def plus the free hexes no def starts with.
+// that blends its colours across the selected part. Every colour def plus the free hexes no def starts with.
 const rowColours=[...FREE_COLOURS.map((h,n)=>({id:h,name:FREE_COLOUR_NAMES[n],hex:h})),...COLORS.filter(c=>!FREE_COLOURS.includes(c.primary.toLowerCase())).map(c=>({id:c.id,name:c.displayName,hex:c.primary}))]; // free hexes first, then the locked defs
 let activeChannel:typeof COLOUR_CHANNELS[number]=COLOUR_CHANNELS[0];
 function setChannel(channel:typeof COLOUR_CHANNELS[number],colorId:string){
@@ -200,14 +200,11 @@ for(const channel of COLOUR_CHANNELS){const b=document.createElement('button');b
  toggle.append(b);}
 const grid=document.createElement('div');grid.className='material-grid';grid.id='colourGrid';grid.setAttribute('role','group');grid.setAttribute('aria-label','Colours');
 for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(activeChannel,c.id));b.dataset.kind='color';grid.append(b);}
-const label=document.createElement('strong');label.textContent='Palettes';
+const label=document.createElement('strong');label.textContent='Multicolor palettes';
 const palettes=document.createElement('div');palettes.className='material-grid';palettes.id='paletteGrid';palettes.setAttribute('role','group');palettes.setAttribute('aria-label','Palettes');
-for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>{
- const ids=paletteChannelIds(p),base=shown(),materials={...base.materials};
- COLOUR_CHANNELS.forEach((channel,n)=>{for(const r of channel.regions)materials[r]={...(materials[r]??DEFAULT_MATERIAL),colorId:ids[n]};});
- commit({...base,materials});
-});b.dataset.kind='palette';palettes.append(b);}
-colorRoot.append(toggle,grid,label,palettes);}
+for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>setChannel(activeChannel,p.id));b.dataset.kind='palette';palettes.append(b);}
+const paletteHelp=document.createElement('p');paletteHelp.className='help';paletteHelp.textContent='Blend every palette color across the selected part. Other parts keep their own colors.';
+colorRoot.append(toggle,grid,label,palettes,paletteHelp);}
 fillColours();
 // R21: the coach's ship, picked and tinted here in Species. Saved in the recipe (shipId, shipColor); owned ships also mirror to the
 // Ship tab's per-account key so the arrival scene's recolour event keeps working.

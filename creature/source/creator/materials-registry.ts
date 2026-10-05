@@ -115,7 +115,7 @@ export function textureDefaultMetalness(id:string):number|undefined {
  return builtinSurfaceProfile(texture.familyId)?.metalness??(texture.legacy?LEGACY_STYLES[texture.familyId]?.metalness:texture.id==='clay'?CLAY_BASE.metalness:FLAT_BASE.metalness);
 }
 
-function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent }; }
+function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = p.colors; return { primary, secondary, accent, paletteId:p.id }; }
 
 // R18 G2/G3: a colour channel holds ONE colour. A "#rrggbb" colorId is a single hex: free if it is one of
 // the 15 FREE_COLOURS, otherwise owned when any owned colour or palette contains it (so unlocking a
@@ -123,12 +123,9 @@ function triadFromPalette(p: PaletteDef) { const [primary, secondary, accent] = 
 const HEX = /^#[0-9a-f]{6}$/i;
 const mix = (hex: string, to: number, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + to * t).toString(16).padStart(2, '0')).join('');
 const hexOwned = (hex: string,coachId?:string) => FREE_COLOURS.includes(hex) || COLORS.some(c => isColorUnlocked(c,coachId) && [c.primary, c.secondary, c.accent].some(h => h.toLowerCase() === hex)) || PALETTES.some(p => isPaletteUnlocked(p,coachId) && p.colors.some(h => h.toLowerCase() === hex));
-/** A palette as three single-colour channel ids: primary -> body, secondary -> head, accent -> eyes. */
-export const paletteChannelIds = (p: PaletteDef) => p.colors.map(h => h.toLowerCase()) as [string, string, string];
-
 /** The tint triad for a colour, hex or palette id, or undefined if it doesn't exist or isn't unlocked yet
  * (`preview` paints a locked one too — the editor's look-before-you-unlock layer, never saved). */
-export function colorTriad(id: string, preview = false,coachId?:string): { primary: string; secondary: string; accent: string } | undefined {
+export function colorTriad(id: string, preview = false,coachId?:string): { primary: string; secondary: string; accent: string; paletteId?:string } | undefined {
  if (HEX.test(id)) { const hex = id.toLowerCase(); return preview || hexOwned(hex,coachId) ? { primary: hex, secondary: mix(hex, 0, .55), accent: mix(hex, 255, .55) } : undefined; }
  const c = findColor(id); if (c) return preview || isColorUnlocked(c,coachId) ? { primary: c.primary, secondary: c.secondary, accent: c.accent } : undefined;
  const p = findPalette(id); if (p) return preview || isPaletteUnlocked(p,coachId) ? triadFromPalette(p) : undefined;
@@ -177,7 +174,7 @@ export function regionChoice(materials: Partial<Record<Region, MaterialChoice>> 
 }
 
 export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false,coachId?:string) {
- if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0 };
+ if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0, paletteId:undefined as string|undefined };
  const texture = findTexture(choice.textureId);
  const safeTexture = texture && (preview || isTextureUnlocked(texture,coachId)) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
  const profile=builtinSurfaceProfile(safeTexture.familyId);
@@ -185,5 +182,5 @@ export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoi
  const triad = colorTriad(choice.colorId, preview,coachId) ?? colorTriad(safeTexture.defaultColorId, preview,coachId) ?? base;
  const metalness = Number.isFinite(choice.metallic) ? Math.max(0, Math.min(1, choice.metallic)) : base.metalness;
  const sparkle = Number.isFinite(choice.sparkle) ? Math.max(0, Math.min(1, choice.sparkle)) : 0;
- return { ...base, ...triad, metalness, sparkle };
+ return { ...base, ...triad, paletteId:'paletteId' in triad?triad.paletteId:undefined, metalness, sparkle };
 }

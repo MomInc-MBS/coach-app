@@ -10,7 +10,7 @@ globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,
 globalThis.myr5AuthenticatedAccount={user:{id:'r18-unlocks'}};
 const result=await build({stdin:{contents:"export * from './creature/source/creator/materials-registry';export {COLOUR_CHANNELS,COLOUR_SOURCE,REGIONS} from './creature/source/creator/design';",resolveDir:process.cwd(),loader:'ts'},bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022'});
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {TEXTURES,COLORS,PALETTES,FREE_COLOURS,isTextureUnlocked,isColorUnlocked,isLocked,regionChoice,colorTriad,paletteChannelIds,COLOUR_SOURCE,COLOUR_CHANNELS}=m;
+const {TEXTURES,COLORS,PALETTES,FREE_COLOURS,isTextureUnlocked,isColorUnlocked,isLocked,regionChoice,colorTriad,resolveRegionMaterial,COLOUR_SOURCE,COLOUR_CHANNELS}=m;
 const {PACK_ODDS}=await import('../reward-packs.mjs');
 const {textureRewardPool,colourRewardPool,FREE_TEXTURE_IDS}=await import('../battle-pass-rewards.mjs');
 
@@ -67,15 +67,22 @@ test('three channels: body colour reaches body, arms, feet and collar; head and 
  assert.match(src,/resolveRegionMaterial\(d\.styles\[region\],regionChoice\(d\.materials,region\),preview,d\.body\)/,'assemble resolves every region through the channel colour');
 });
 
-test('an owned palette fills the three channels: primary body, secondary head, accent eyes',()=>{
+test('an owned palette keeps all three colors together on its selected part; base colors stay distinct',()=>{
  memory.clear();
  const p=PALETTES.find(p=>!p.colors.some(h=>FREE_COLOURS.includes(h.toLowerCase())));
  assert.equal(isLocked(p.id),true);
- const [body,head,eyes]=paletteChannelIds(p);
- assert.deepEqual([body,head,eyes],p.colors.map(h=>h.toLowerCase()));
- assert.equal(isLocked(body),true,`${body} is not free until the palette is owned`);
+ assert.equal(colorTriad(p.id),undefined);
+ assert.equal(colorTriad(p.id,true).paletteId,p.id,'locked preview renders the complete palette');
  m.grantUnlock('palette',p.id);
- for(const h of [body,head,eyes]){assert.equal(isLocked(h),false);assert.equal(colorTriad(h).primary,h);}
+ const triad=colorTriad(p.id);
+ assert.equal(triad.paletteId,p.id);assert.deepEqual([triad.primary,triad.secondary,triad.accent],p.colors);
+ const materials={body:{textureId:'flat',colorId:'#7f7d78'},head:{textureId:'clay',colorId:p.id},eye:{textureId:'flat',colorId:'#ffffff'}};
+ assert.equal(resolveRegionMaterial(0,regionChoice(materials,'head')).paletteId,p.id);
+ assert.equal(resolveRegionMaterial(0,regionChoice(materials,'body')).paletteId,undefined);
+ assert.equal(resolveRegionMaterial(0,regionChoice(materials,'eye')).paletteId,undefined);
+ assert.equal(colorTriad('#7f7d78').paletteId,undefined);
+ assert.equal(colorTriad(p.id,false,'other-coach'),undefined,'palette ownership is still coach-specific');
+ for(const h of p.colors){assert.equal(isLocked(h),false,'old single-color saved choices remain usable');}
 });
 
 test('no "unlocks at" text anywhere in creature/source',()=>{

@@ -5,7 +5,7 @@ import {EYE_OVERRIDES} from './eye-overrides';
 import {pupilGeometry} from './pupils';
 import {getCoach} from './coaching';
 import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
-import {sculptMaterial,growMaterial,applySparkle} from './material-language';
+import {sculptMaterial,growMaterial,applySparkle,applyPaletteSurface} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
 import {colorTriad,resolveRegionMaterial,regionChoice} from './materials-registry';
 import {applyInstalledSkin,loadInstalledSkinTextures,type InstalledSkin,type SkinTextureCache} from './skin-materials';
@@ -122,6 +122,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     if(/^Crown.scale/.test(o.name))o.visible=d.styles[region]===0;
     deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible){const customSkin=d.materials?.[region]?.textureId?.startsWith('creature-')??false,alternate=from[region]!=='myr5'&&!customSkin;if(style.id!==0){sculptMaterial(o,style,1,d.detail,alternate?coachRelief:undefined);applySparkle(o.material as THREE.MeshPhysicalMaterial,style.sparkle);}}
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
+    if(style.paletteId&&!fixed&&(region==='eye'&&o.name==='Iris'||region!=='eye'&&style.id===0))applyPaletteSurface(m,style);
    });
   }
   const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':look('head').primary);
@@ -151,7 +152,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
  })();
  // Retain unused variants for cleanup after geometry is baked into the animation rig.
  const disposeAssembly=()=>{const geometries=new Set<THREE.BufferGeometry>(),mats=new Set<THREE.Material>();for(const object of [root,...variants.values(),anatomy.scene,hands.scene,...[...sources.values()].map(s=>s.scene)])object.traverse(o=>{if(o instanceof THREE.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());};
- for(const [region,skin]of installedSkins){const selected=regionChoice(d.materials,region),triad=colorTriad(selected?.colorId||'#7f7d78',preview)??colorTriad('#7f7d78')!,group=e.regions[region];
+ for(const [region,skin]of installedSkins){const selected=regionChoice(d.materials,region),triad=colorTriad(selected?.colorId||'#7f7d78',preview,d.body)??colorTriad('#7f7d78')!,group=e.regions[region];
   let meshes:THREE.Mesh[]=[];group.traverse(object=>{if(object instanceof THREE.Mesh)meshes.push(object);});
   try{await loadInstalledSkinTextures(skin,skinTextures,skinTextureCache);}catch{/* Optional corrupted skin: this whole region keeps its built-in materials. */continue;}
   const previous=meshes.map(mesh=>({mesh,material:mesh.material})),stagedMaterials=new Set<THREE.Material>();
