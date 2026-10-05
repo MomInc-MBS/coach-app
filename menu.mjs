@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs',kind='reps';
  const kindLabel=document.createElement('label');kindLabel.className='library-kind';kindLabel.textContent='Training type';const kindSelect=document.createElement('select');kindSelect.id='libraryKind';for(const item of WORKOUT_KINDS){const o=document.createElement('option');o.value=item.id;o.textContent=item.name;kindSelect.append(o);}kindLabel.append(kindSelect);$('libraryFocus').closest('label').before(kindLabel);kindSelect.value=kind;kindSelect.onchange=()=>{kind=kindSelect.value;page=0;paginate();};
- const rewards=mountWeaponRewards($('libraryFocus').closest('label'),()=>filter);
+ const rewards=mountWeaponRewards($('libraryFocus').closest('label'),()=>filter,()=>kind);
  for(const g of FOCUS_GROUPS){const o=document.createElement('option');o.value=g.id;o.textContent=g.name;$('libraryFocus').append(o);}
  $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();rewards.paint();});
  const speak=(text,options={})=>voice.say(text,options);

@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {openAchievementFixture} from './achievements-browser-fixture.mjs';
 import {WEAPON_GROUPS,SHIP_REQUIREMENTS} from '../performance-catalog.mjs';
@@ -19,5 +19,16 @@ test('XP rewards tab shows new cosmetic rules and updates daily rest victories w
   const progress=await page.evaluate(()=>{for(let i=2;i<=5;i++)window.restRewards.recordRestBossDefeat(`browser-defeat-${i}`);window.restRewards.recordRestBossDefeat('browser-defeat-5');return window.restRewards.readRestBossRewards();});
   assert.equal(progress.count,5);assert(progress.packs.every(p=>p.earned&&p.granted));assert.match(await page.locator('.ach-catalog').textContent(),/5 \/ 5 daily boss defeats/);
   assert.deepEqual(await page.evaluate(()=>window.performanceProgress.readPerformanceProgress().coaches),initial);
+ }finally{await fixture.close();}
+});
+
+test('movement library weapon widget refreshes earned family tiers from performance events',async()=>{
+ const fixture=await openAchievementFixture();try{
+  const {page}=fixture;
+  const before=await page.evaluate(async()=>{const {mountWeaponRewards}=await import('/weapon-rewards.mjs');const host=document.createElement('div');document.querySelector('.ach-board').append(host);window.testWeaponRewards=mountWeaponRewards(host,()=> 'legs',()=> 'reps');return window.testWeaponRewards.element.textContent;});
+  assert.match(before,/Legs \u00b7 Earned weapon tiers/);assert.match(before,/Starter/);assert.doesNotMatch(before,/100 XP|10 per set|Next: Level/);
+  const state=await page.evaluate(()=>window.performanceProgress.recordPerformanceSession({id:'browser-leg-reps',mode:'shallow-squat',kind:'reps',difficulty:'easy',value:15,xpBase:1,day:window.performanceProgress.localDay()}));
+  for(const type of ['greatsword','hammer'])assert.equal(await page.locator(`.training-rewards [data-weapon="${type}"]`).getAttribute('data-tier'),String(state.weapons[type]));
+  const after=await page.locator('.training-rewards').textContent();assert.match(after,/Tier 2 \/ 20/);assert.match(after,/8.+12.+15/);
  }finally{await fixture.close();}
 });

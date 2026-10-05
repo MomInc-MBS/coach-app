@@ -5,6 +5,7 @@ import {GUIDE} from '../progression-guide.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 import {exerciseDifficulty} from '../performance-catalog.mjs';
 import {workoutChoices,workoutLevel,workoutKind} from '../workout-levels.mjs';
+import {weaponRewardSummary} from '../weapon-rewards.mjs';
 import {PerformanceWorkout} from '../pod/performance-workout.mjs';
 import {nextPerformanceChallenge} from '../workout-route-ui.mjs';
 const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
@@ -27,4 +28,8 @@ test('performance route has meaningful coach targets and no legacy five-round ga
 
 test('workout labels match the actual controller kind for every stable mode',()=>{
  for(const e of Object.values(EXERCISES)){const controller=new PerformanceWorkout({mode:e.id,kind:e.kind}),kind=workoutKind(e.id);assert.equal(kind,controller.kind==='gentle'?'cardio':controller.kind,e.id);if(e.group==='cardio'&&e.kind==='reps'){assert.match(workoutLevel(e.id).xp,/XP per rep/);assert.match(workoutLevel(e.id).unlock,/15/);}if(e.kind==='pace'&&e.group!=='cardio'){assert.match(workoutLevel(e.id).unlock,/5 active minutes/);assert(!workoutLevel(e.id).unlock.includes('sprint'));}}
+});
+
+test('library weapon summaries show actual earned tiers and type-specific performance targets',()=>{
+ const options={storage:storage(),account:null},reps=weaponRewardSummary('legs',{kind:'reps',options}),hold=weaponRewardSummary('legs',{kind:'hold',options}),pace=weaponRewardSummary('boxing',{kind:'cardio',options});assert(reps.weapons.every(w=>w.tier===0));assert.match(reps.target,/8.+12.+15/);assert.match(hold.target,/1 uninterrupted minute.+3 minutes.+5 minutes.+10 minutes/);assert.match(pace.target,/5 active minutes/);assert(!pace.target.includes('sprint'));assert(!reps.target.includes('XP'));
 });

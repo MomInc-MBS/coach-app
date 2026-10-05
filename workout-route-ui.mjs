@@ -1,4 +1,4 @@
-﻿import {EXERCISES,GROUP_EXERCISES} from './exercise-library.mjs';
+import {EXERCISES,GROUP_EXERCISES} from './exercise-library.mjs';
 import {workoutEligibility,readPerformanceProgress} from './performance-progress.mjs';
 import {workoutLevel,workoutKind} from './workout-levels.mjs';
 import {DIFFICULTIES} from './progression-rules.mjs';
@@ -6,7 +6,7 @@ export function nextPerformanceChallenge(mode,options={}){
  const current=EXERCISES[mode];if(!current)return null;
  const level=workoutLevel(mode),choices=GROUP_EXERCISES[current.group].filter(e=>workoutKind(e.id)===level.kind),state=readPerformanceProgress(options);
  const cleared=Object.values(state.sessions).some(s=>{
-  if(s.group!==current.group)return false;
+  if(s.group!==current.group||s.kind==='hold'&&level.kind!=='hold'||s.kind==='reps'&&level.kind!=='reps'||!['hold','reps'].includes(s.kind)&&level.kind!=='cardio')return false;
   if(s.kind==='hold')return (s.perDifficultyContinuous?.[level.difficulty]??(s.difficulty===level.difficulty?s.continuous:0))>=300;
   return s.difficulty===level.difficulty&&(s.kind==='reps'?s.value>=15:s.kind==='sprint'?s.value>=5:s.value>=300);
  });
