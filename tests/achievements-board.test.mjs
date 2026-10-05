@@ -1,44 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSSES,TIERS,MAX_LEVEL,bossStates,selectedTracks,layerTransform} from '../achievements-board.mjs';
-const byTier=(states,id)=>states.filter(b=>b.id.startsWith(id+'-'));
-const beat=ids=>Object.fromEntries(ids.map(id=>[id,MAX_LEVEL]));
-test('every boss has a box inside the art and a unique id',()=>{
- assert.equal(BOSSES.length,38);
- assert.equal(new Set(BOSSES.map(b=>b.id)).size,BOSSES.length);
- for(const {box:[x,y,w,h]} of BOSSES){assert(x>=0&&y>=0&&w>0&&h>0&&x+w<=100&&y+h<=100);}
- assert.deepEqual(TIERS.filter(t=>t.track===null).map(t=>t.id),['warden','lume']);
+import {BOSSES,bossStates,coachRequirements,shipRequirements,weaponRequirements} from '../achievements-board.mjs';
+import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,SHIP_REQUIREMENTS} from '../performance-catalog.mjs';
+import {readPerformanceProgress,recordPerformanceSession} from '../performance-progress.mjs';
+const storage=()=>{const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
+test('achievements represents every actual coach exactly once, including starters',()=>{
+ assert.deepEqual(BOSSES.map(b=>b.id),COACHES.map(c=>c.id));assert.equal(BOSSES.length,67);
+ const state=readPerformanceProgress({storage:storage(),account:null}),rows=bossStates(state);
+ assert.equal(rows.filter(b=>b.state==='done').length,STARTER_COACH_IDS.length);
+ for(const row of rows)assert(row.requirements.unlock.length>0);
+ for(const r of COACH_REQUIREMENTS){const requirement=coachRequirements(r.id);assert.equal(requirement.starter,false);if(!r.groups.includes('meditation')){assert.equal(requirement.difficulty,r.difficulty);assert.deepEqual(requirement.groups,r.groups);}}
 });
-test('only the selected paths and meditation are playable; rows unlock left to right',()=>{
- const tracks=new Set(['quads','meditation']);
- const fresh=bossStates({},tracks);
- assert(byTier(fresh,'strider').every(b=>b.state==='locked'),'unselected path stays locked');
- assert.deepEqual(byTier(fresh,'ringer').map(b=>b.state),['open','locked','locked','locked','locked']);
- assert.equal(byTier(fresh,'tanka')[0].state,'open','meditation is always available');
- assert(byTier(fresh,'warden').concat(byTier(fresh,'lume')).every(b=>b.state==='locked'),'shared bosses wait');
- const partial=bossStates({'ringer-1':MAX_LEVEL,'ringer-2':2},tracks);
- assert.deepEqual(byTier(partial,'ringer').map(b=>b.state),['done','open','locked','locked','locked']);
- assert.equal(byTier(partial,'ringer')[1].levels,2);
- const paths=beat([...byTier(fresh,'ringer'),...byTier(fresh,'tanka')].map(b=>b.id));
- const shared=bossStates(paths,tracks);
- assert.equal(byTier(shared,'warden')[0].state,'open','shared boss opens once every available row is beaten');
- assert.equal(byTier(shared,'lume')[0].state,'locked');
- assert.equal(byTier(bossStates({...paths,'warden-1':99},tracks),'lume')[0].state,'open');
+test('performance ownership and gold are reflected independently of defeat counts and XP',()=>{
+ const memory=storage(),options={storage:memory,account:null},state=recordPerformanceSession({id:'gold-hold',mode:'knee-plank',kind:'hold',difficulty:'easy',value:600,activeSeconds:600,maxContinuousSeconds:600,xpBase:0,day:'2026-10-05'},options);
+ assert(state.goldenCoaches.length>0);const rows=bossStates(state);for(const id of state.goldenCoaches){assert.equal(rows.find(b=>b.id===id).state,'done');assert.equal(rows.find(b=>b.id===id).golden,true);}
+ assert(bossStates({coaches:[],goldenCoaches:[],totalXp:999999,sessions:{},days:{}}).every(b=>b.state==='locked'));
+ assert.equal(coachRequirements('unknown'),null);
 });
-test('with no track filter every row is playable',()=>{
- const all=bossStates({});
- for(const tier of TIERS.filter(t=>t.track!==null))assert.equal(byTier(all,tier.id)[0].state,'open');
-});
-test('selected tracks come from the onboarding movements plus meditation',()=>{
- assert.deepEqual([...selectedTracks(null)],['meditation']);
- const account={onboarding:{data:{profile:{exercises:['squat','pushup','boxing','jumping','tree']}}}};
- assert.deepEqual([...selectedTracks(account)].sort(),['cardio','chest','martial-arts','meditation','quads']);
-});
-test('layerTransform: identity at no zoom, far moves less than near',()=>{
- for(const depth of ['far','mid','near'])assert.deepEqual(layerTransform(depth,{}),{tx:0,ty:0,scale:1});
- const far=layerTransform('far',{tx:120,ty:-40,scale:3}),mid=layerTransform('mid',{tx:120,ty:-40,scale:3}),near=layerTransform('near',{tx:120,ty:-40,scale:3});
- assert(Math.abs(far.tx)<Math.abs(mid.tx)&&Math.abs(mid.tx)<Math.abs(near.tx),'far < mid < near translate');
- assert(Math.abs(far.ty)<Math.abs(near.ty));
- assert(far.scale<mid.scale&&mid.scale<near.scale,'far < mid < near scale');
- assert(near.tx>far.tx*2,'near overshoots the stage translate (foreground rushes past faster)');
+test('all weapon groups have matching five-tier blocks and ships use performance requirements',()=>{
+ assert.deepEqual(weaponRequirements('legs').blocks.map(b=>[b.first,b.last]),[[1,5],[6,10],[11,15],[16,20]]);
+ assert.deepEqual(shipRequirements().map(s=>s.id),SHIP_REQUIREMENTS.map(s=>s.id));
+ for(const ship of shipRequirements())assert.match(ship.unlock,/Expert.+(5 uninterrupted minutes|15 reps)/);
 });

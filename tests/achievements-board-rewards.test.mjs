@@ -1,28 +1,10 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSSES,LEVELS,MAX_LEVEL,levelRewardsForBoss} from '../achievements-board.mjs';
-import {BOSSES as PASS_BOSSES,bossRewards} from '../battle-pass-rewards.mjs';
-
-test('board reward data follows the battle-pass definitions for every boss and level',()=>{
- assert.deepEqual(BOSSES.map(b=>b.id),PASS_BOSSES.map(b=>b.id));
- assert.equal(MAX_LEVEL,LEVELS.length);
- for(const boss of BOSSES){
-  const rewards=levelRewardsForBoss(boss.id);
-  assert.deepEqual(rewards,bossRewards(boss.id),boss.id);
-  assert.equal(rewards.length,MAX_LEVEL,boss.id);
- }
- assert.equal(levelRewardsForBoss('unknown-boss'),null);
+import {coachRequirements,BOSSES} from '../achievements-board.mjs';
+import {COACH_REQUIREMENTS,CADENCE_MILESTONES} from '../performance-catalog.mjs';
+test('meditation coach descriptions reflect separate-day thresholds',()=>{
+ for(const r of COACH_REQUIREMENTS.filter(r=>r.groups.includes('meditation'))){const target=CADENCE_MILESTONES.meditationDays[['easy','medium','hard','expert'].indexOf(r.difficulty)];assert.match(coachRequirements(r.id).unlock,new RegExp(`${target} separate days`));}
 });
-
-test('the detail data names skin and ship grants while preserving shared-boss rewards',()=>{
- const first=levelRewardsForBoss('strider-1');
- assert(first[0].some(item=>item.kind==='reward-pack'&&item.tier==='legendary'));
- assert(first[2].some(item=>item.kind==='ship'&&item.name==='Supportive Ship'));
- assert(first[4].some(item=>item.kind==='ship'&&item.name==='Direct Ship'));
- assert.deepEqual(levelRewardsForBoss('warden-1').map(items=>items.map(item=>item.kind)),[
-  ['reward-pack'],['boss-texture','reward-pack'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock','reward-pack']
- ]);
- assert.deepEqual(levelRewardsForBoss('lume-1').map(items=>items.map(item=>item.kind)),[
-  ['reward-pack'],['boss-texture','reward-pack'],['reward-pack'],['reward-pack','reward-pack'],['boss-unlock','reward-pack']
- ]);
+test('hold gold requires uninterrupted performance; rep-only coaches do not promise hold gold',()=>{
+ for(const c of BOSSES){const r=coachRequirements(c.id);if(r.gold)assert.match(r.gold,/10-minute uninterrupted hold/);if(r.unlock.includes('15 reps')&&!r.unlock.includes('hold'))assert.equal(r.gold,null);}
 });

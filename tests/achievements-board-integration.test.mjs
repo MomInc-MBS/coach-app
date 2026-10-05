@@ -1,22 +1,25 @@
-// Rank 12b port: the owner's board (achievements-board.mjs) now reads the battle-pass API for its two
-// swap points. One end-to-end check from step counts to what the board paints, plus the combat level.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSSES,bossStates,selectedTracks as boardTracks,loadProgress as boardProgress} from '../achievements-board.mjs';
-import {selectedTracks,loadProgress,combatLevel} from '../battle-pass.mjs';
-
-test('step counts reach the board: selected path + meditation open, other rows locked, shared bosses after overflow, combat level per track',()=>{
- assert.equal(boardTracks,selectedTracks);assert.equal(boardProgress,loadProgress);
- const account={onboarding:{data:{profile:{exercises:['squat']}}}}; // quads (+ meditation, always)
- // quads: 30 levels (5 bosses x 5 + 5 over); meditation: 23 levels (4 x 5 + 3 over); chest is not a selected path.
- const tracks={legs:{steps:30*5},meditation:{steps:23*5},chest:{steps:999}};
- const states=bossStates(loadProgress({tracks,account}),selectedTracks(account)),at=id=>states.find(b=>b.id===id);
- assert.deepEqual(states.map(b=>b.id),BOSSES.map(b=>b.id));
- assert.equal(at('ringer-5').state,'done');assert.equal(at('tanka-4').state,'done');
- assert.equal(at('strider-1').state,'locked');assert.equal(at('strider-1').levels,0,'unselected rows never progress');
- assert.equal(at('warden-1').state,'done','overflow 5 + 3 fills Warden first');
- assert.equal(at('lume-1').state,'open');assert.equal(at('lume-1').levels,3);
- assert.equal(combatLevel('squat',{tracks,account}),5);
- assert.equal(combatLevel('pushup',{tracks,account}),1,'an unselected track fights at the L1 kit');
- assert.equal(combatLevel('squat',{tracks:{legs:{steps:14}},account}),2);
+import {readFileSync} from 'node:fs';
+import {GUIDE} from '../progression-guide.mjs';
+import {EXERCISES} from '../exercise-library.mjs';
+import {exerciseDifficulty} from '../performance-catalog.mjs';
+import {workoutChoices,workoutLevel,workoutKind} from '../workout-levels.mjs';
+import {nextPerformanceChallenge} from '../workout-route-ui.mjs';
+const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
+test('field manual explains performance unlocks and daily cosmetics without old daily category XP',()=>{
+ const text=GUIDE.flatMap(r=>r[3].flat()).join(' ');
+ for(const phrase of ['5 uninterrupted minutes','10 uninterrupted minutes','15 reps','250 levels','500 XP','one uncommon pack','one legendary pack','Rest defeats do not unlock coaches'])assert(text.includes(phrase),phrase);
+ assert(!text.includes('100 XP for that category'));
+ const hub=readFileSync(new URL('../coach-hub.mjs',import.meta.url),'utf8');assert(hub.includes("from './progression-guide.mjs'"));assert(hub.includes('for(const [label,text] of items)'),'weapon tab renders its explanatory paragraphs too');
+});
+test('every stable exercise ID shows the same level its performance uses, with holds separated',()=>{
+ for(const e of Object.values(EXERCISES)){const l=workoutLevel(e.id);assert.equal(l.difficulty,exerciseDifficulty(e.id));assert(l.unlock);assert(l.xp);assert(workoutChoices(e.group,l.kind).some(x=>x.id===e.id));if(e.kind==='hold')assert.equal(workoutKind(e.id),'hold');}
+ for(const e of workoutChoices('legs','hold'))assert.equal(e.kind,'hold');
+ for(const e of workoutChoices('legs','reps'))assert.equal(e.kind,'reps');
+});
+test('performance route has meaningful coach targets and no legacy five-round gating',()=>{
+ const options={storage:storage(),account:null},reps=nextPerformanceChallenge('squat',options),hold=nextPerformanceChallenge('knee-plank',options);
+ assert.equal(reps.goal,15);assert.equal(reps.unit,'reps');assert.equal(hold.goal,300);assert.equal(hold.unit,'seconds');assert.equal(reps.allowed,true);
+ const source=readFileSync(new URL('../workout-route-ui.mjs',import.meta.url),'utf8');assert(!source.includes('route.limit'));assert(!source.includes('exerciseRoute'));
 });

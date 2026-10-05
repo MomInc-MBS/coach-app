@@ -1,4 +1,5 @@
 import {FOCUS_GROUPS,GROUP_EXERCISES,EXERCISES,exerciseAt,focusFor} from '../exercise-library.mjs';
+import {workoutLevel} from '../workout-levels.mjs';
 const $=id=>document.getElementById(id),clamp=(x,min,max)=>Math.max(min,Math.min(max,x));
 // #106 control board: a focus dial, a level knob, an easier/harder lever and a sound switch, all
 // driving the same #movement/#goal state the pod already uses. Rotaries sweep 270° (−135° … +135°).
@@ -42,7 +43,7 @@ export function initHardware(){
  let group=focusFor(select.value);const remembered=new Map();
  const groupIndex=()=>Math.max(0,FOCUS_GROUPS.findIndex(g=>g.id===group));
  const levelIndex=()=>Math.max(0,GROUP_EXERCISES[group].findIndex(m=>m.id===select.value));
- const levelText=(i,n)=>`LV ${i+1}/${n}`;
+ const levelText=(i,n)=>`${workoutLevel(GROUP_EXERCISES[group][i].id).label} ${i+1}/${n}`;
  function selectExercise(id){if(goal.disabled)return;window.dispatchEvent(new Event('myr5:exercise-selected'));if(id!==select.value){select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));}sync();}
  const locked=()=>goal.disabled;
  const paintDial=rotary(dial,{count:()=>FOCUS_GROUPS.length,value:groupIndex,locked,preview:i=>{$('exerciseName').textContent=FOCUS_GROUPS[i].name;},
@@ -53,12 +54,12 @@ export function initHardware(){
   group=focusFor(select.value);const choices=GROUP_EXERCISES[group],index=levelIndex(),n=choices.length,focus=FOCUS_GROUPS[groupIndex()];
   remembered.set(group,index);const isLocked=locked(),m=EXERCISES[select.value]??choices[index];
   dial.setAttribute('aria-valuenow',String(groupIndex()));dial.setAttribute('aria-valuemax',String(FOCUS_GROUPS.length-1));dial.setAttribute('aria-valuetext',focus.name);$('exerciseName').textContent=focus.name;
-  knob.setAttribute('aria-valuenow',String(index+1));knob.setAttribute('aria-valuemax',String(n));knob.setAttribute('aria-valuetext',`${m.name}, level ${index+1} of ${n}`);$('difficultyMax').textContent=n;
+  knob.setAttribute('aria-valuenow',String(index+1));knob.setAttribute('aria-valuemax',String(n));knob.setAttribute('aria-valuetext',`${workoutLevel(m.id).label}, ${m.name}, variation ${index+1} of ${n}`);$('difficultyMax').textContent=n;
   for(const el of [dial,knob])el.setAttribute('aria-disabled',String(isLocked));
   for(const id of ['harder','easier','goalSlider'])$(id).disabled=isLocked;
   paintDial(groupIndex());paintKnob(index);
   $('variationName').textContent=m.name;$('difficultySetting').textContent=levelText(index,n);
-  $('variationHint').textContent=m.hint;$('trackingScope').textContent='Camera estimates; not a form or safety check. '+m.measurement+' · '+m.limits;
+  $('variationHint').textContent=m.hint+' '+workoutLevel(m.id).unlock;$('trackingScope').textContent='Camera estimates; not a form or safety check. '+m.measurement+' · '+m.limits;
   const target=$('goalSlider');target.max=Math.max(0,goal.options.length-1);target.value=goal.selectedIndex;
   const chosen=goal.selectedOptions[0];if(chosen){target.setAttribute('aria-valuetext',chosen.textContent);$('goalSetting').textContent=chosen.textContent;$('goalMin').textContent=goal.options[0].value;$('goalMax').textContent=goal.options[goal.options.length-1].value;target.style.setProperty('--fill',`${100*goal.selectedIndex/Math.max(1,goal.options.length-1)}%`);}
  }
