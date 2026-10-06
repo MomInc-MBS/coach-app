@@ -1,0 +1,53 @@
+{
+  "build": "18520032b2cc293fcf15",
+  "origin": "https://myr5.mominc.online",
+  "checkedAt": "2026-10-06T03:50:22.226Z",
+  "assets": [
+    {
+      "path": "/release-build.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/creature/assets/editor.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/creature/creature.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/battle-pass-page.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/battle-pass-page.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/level-map-scene.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/flight-score.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/app-runtime.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "match": true
+    }
+  ],
+  "healthOk": true
+}
