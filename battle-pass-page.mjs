@@ -5,6 +5,7 @@ import {syncBattlePass} from './battle-pass.mjs';
 import {coachRequirements} from './achievements-board.mjs';
 import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach,chapterConstellation} from './level-map-domain.mjs';
 import {mountLevelMapScene} from './level-map-scene.mjs';
+import {mountFlightScroll} from './flight-scroll.mjs';
 
 const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!=null)el.textContent=value;if(className)el.className=className;return el;};
 const localDay=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
@@ -145,12 +146,15 @@ export function mountBattlePass(){
  previewPrev.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.max(0,previewChapter-1);renderPreview();};
  previewNext.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.min(CHAPTER_COUNT-1,previewChapter+1);renderPreview();};
  let activePointer=null;
- const stopPointer=()=>{activePointer=null;scene.stopFiring();};
- dialog.addEventListener('pointerdown',e=>{
+ const flightScroll=mountFlightScroll(viewport);
+ const stopPointer=()=>{activePointer=null;flightScroll.stop();scene.stopFiring();};
+ shell.addEventListener('pointerdown',e=>{
   if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,[contenteditable]'))return;
-  activePointer=e.pointerId;scene.aim(e.clientX,e.clientY);scene.startFiring();
+  e.preventDefault();activePointer=e.pointerId;shell.setPointerCapture(e.pointerId);
+  scene.aim(e.clientX,e.clientY);flightScroll.aim(e.clientY);scene.startFiring();
  });
- document.addEventListener('pointermove',e=>{if(e.pointerId===activePointer&&dialog.open)scene.aim(e.clientX,e.clientY);});
+ document.addEventListener('pointermove',e=>{if(e.pointerId===activePointer&&dialog.open){e.preventDefault();scene.aim(e.clientX,e.clientY);flightScroll.aim(e.clientY);}});
+ shell.addEventListener('lostpointercapture',stopPointer);
  document.addEventListener('pointerup',e=>{if(e.pointerId===activePointer)stopPointer();});
  document.addEventListener('pointercancel',e=>{if(e.pointerId===activePointer)stopPointer();});
  window.addEventListener('blur',stopPointer);

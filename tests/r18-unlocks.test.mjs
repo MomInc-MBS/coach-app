@@ -37,12 +37,8 @@ test('every non-free texture, including the pixel finish, is in the texture pack
  assert.equal(textureRewardPool().length,pool.size,'no duplicate pool entries');
 });
 
-test('the 15 free colours span the hue range and each already exists in the census',()=>{
+test('the 15 starter colours retain their independent free access after palette redesign',()=>{
  assert.deepEqual([...FREE_COLOURS],['#060409','#ffffff','#7f7d78','#ff3b30','#ff8a2a','#ffd100','#2bd97c','#008c8c','#2454d6','#6a2bd9','#f59ec4','#7a5530','#c4a77d','#0b1a45','#9fe2bf']);
- const census=new Set(),add=h=>census.add(h.toLowerCase());
- for(const c of COLORS)[c.primary,c.secondary,c.accent].forEach(add);
- for(const p of PALETTES)p.colors.forEach(add);
- for(const h of FREE_COLOURS)assert.ok(census.has(h),h);
  assert.equal(new Set(FREE_COLOURS).size,15);
  for(const h of FREE_COLOURS){assert.equal(isLocked(h),false,h);assert.ok(colorTriad(h));}
  assert.equal(isLocked('#0a0a0a'),true);

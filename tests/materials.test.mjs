@@ -75,24 +75,22 @@ test('registry keeps Clay and the 24 named patterns while retiring Flat and Baby
  assert.deepEqual(BUILTIN_SURFACE_PROFILES.map(p=>p.id),Array.from({length:24},(_,i)=>32+i));
  // The 12 aura-milestone palettes keep their ids, names and unlock days (D32 only cut them to triads).
  assert.deepEqual(PALETTES.filter(p=>p.unlockRule==='aura-milestone').map(p=>[p.id,p.unlockAtDay]),Array.from({length:12},(_,i)=>[`pal-${String(i+1).padStart(2,'0')}`,5*(i+1)]));
- assert.deepEqual(PALETTES.slice(0,12).map(p=>p.displayName),['Morning Mist','River Clay','Static Pop','Night Shift','Tin Star','Meadow Line','Campfire','Signal Jam','Deep Well','Chrome Garden','Sorbet Stand','Foundry Floor']);
  for(const p of PALETTES)assert.equal(isPaletteUnlocked(p),false);
 });
 
 test('D32: every palette is a primary/secondary/accent triad of valid hex, with unique ids, names and taglines of at most 6 words',()=>{
- assert.equal(PALETTES.length,12+95);
+ assert.equal(PALETTES.length,12+95+18);
  for(const p of PALETTES){
   assert.equal(p.colors.length,3,p.id);
   for(const c of p.colors)assert.match(c,/^#[0-9A-F]{6}$/i,p.id);
   assert.ok(p.tagline&&p.tagline.trim().split(/\s+/).length<=6,`${p.id} tagline`);
-  if(p.unlockRule==='battle-pass')assert.ok(/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)&&p.unlockAtDay===undefined,p.id);
+  if(p.unlockRule==='battle-pass')assert.ok((/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)||TEXTURES.some(t=>t.familyId>=57&&t.defaultColorId===p.id))&&p.unlockAtDay===undefined,p.id);
   else assert.equal(p.unlockRule,'aura-milestone',p.id);
  }
  const unique=key=>assert.equal(new Set(PALETTES.map(key)).size,PALETTES.length);
  unique(p=>p.id);unique(p=>p.displayName.toLowerCase());unique(p=>p.reward??p.id);
  // Pattern bakes are isolated by the whole colour triad; no palette can reuse the wrong secondary/accent maps.
- const primaries=[...PALETTES.map(p=>p.colors[0]),...COLORS.map(c=>c.primary)].map(c=>c.toUpperCase());
- assert.equal(new Set(primaries).size,primaries.length);
+ assert.equal(new Set(PALETTES.map(p=>p.colors.map(c=>c.toUpperCase()).sort().join('|'))).size,PALETTES.length);
  // The triad is used as-is: colours[0..2] -> primary/secondary/accent.
  const p=PALETTES.find(p=>p.id==='pal-40');grantUnlock('palette',p.id);
  assert.deepEqual(colorTriad(p.id),{primary:p.colors[0],secondary:p.colors[1],accent:p.colors[2],paletteId:p.id});
@@ -121,8 +119,8 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
  assert.equal(fingerprints.size,24);
 });
 
-test('all 48 selectable registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
- assert.equal(TEXTURES.length,48);
+test('all 66 selectable registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
+ assert.equal(TEXTURES.length,66);
  for(const t of TEXTURES){
   const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);

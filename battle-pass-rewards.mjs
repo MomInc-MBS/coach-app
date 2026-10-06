@@ -131,6 +131,7 @@ export const LEGACY_NAMES=Object.freeze(['Mortal','Verdant','Mycelial','Chitin',
 // battle-pass slot names; the pack pool never depends on it, so no texture can be unreachable.)
 export const textureRewardPool=()=>[
  ...TEXTURES.map(t=>item('texture',t)),
+ ...[["opal-jelly","Opal Jelly"],["bubble-glass","Bubble Glass"],["prism-crystal","Prism Crystal"],["holo-foil","Holographic Foil"],["glitter-resin","Glitter Resin"],["galaxy-geode","Galaxy Geode"],["caustic-slime", "Caustic Slime"], ["blister-hide", "Blister Hide"], ["rotten-rind", "Rotten Rind"], ["parasite-nest", "Parasite Nest"], ["exposed-sinew", "Exposed Sinew"], ["abyssal-maw", "Abyssal Maw"], ["circuit-alloy", "Circuit Alloy"], ["servo-armor", "Servo Armor"], ["chrome-rib", "Chrome Rib"], ["carbon-mech", "Carbon Mech"], ["hazard-panel", "Hazard Panel"], ["reactor-glass", "Reactor Glass"]].map(([id,name])=>item('texture',[id,name,''])),
  ...LEGACY_NAMES.map((name,n)=>item('texture',[`legacy-${n}`,name,''])),
  item('texture',['coach-64-bit','64-bit Pixel Finish','A pixel finish for a coach with a boss skin.']),
 ].filter(t=>!FREE_TEXTURE_IDS.includes(t.id)&&!RETIRED_TEXTURE_IDS.includes(t.id));

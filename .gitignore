@@ -9,3 +9,6 @@ creature/models/*.glb
 !creature/models/hands-v2.glb
 handborne/models/family-20.glb
 vendor/mediapipe/
+
+*.tsbuildinfo
+.sites-runtime/
