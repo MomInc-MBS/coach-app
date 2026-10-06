@@ -133,6 +133,7 @@ export const LEGACY_NAMES=Object.freeze(['Mortal','Verdant','Mycelial','Chitin',
 // battle-pass slot names; the pack pool never depends on it, so no texture can be unreachable.)
 export const textureRewardPool=()=>[
  ...TEXTURES.map(t=>item('texture',t)),
+ ...[["caustic-slime", "Caustic Slime"], ["blister-hide", "Blister Hide"], ["rotten-rind", "Rotten Rind"], ["parasite-nest", "Parasite Nest"], ["exposed-sinew", "Exposed Sinew"], ["abyssal-maw", "Abyssal Maw"], ["circuit-alloy", "Circuit Alloy"], ["servo-armor", "Servo Armor"], ["chrome-rib", "Chrome Rib"], ["carbon-mech", "Carbon Mech"], ["hazard-panel", "Hazard Panel"], ["reactor-glass", "Reactor Glass"]].map(([id,name])=>item('texture',[id,name,''])),
  ...LEGACY_NAMES.map((name,n)=>item('texture',[`legacy-${n}`,name,''])),
 ].filter(t=>!FREE_TEXTURE_IDS.includes(t.id));
 // R18 G2b: the 15 free colours span the hue range; each is the nearest (Lab) hex

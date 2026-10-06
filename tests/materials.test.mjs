@@ -78,12 +78,12 @@ test('registry has Flat+Clay, every legacy family, and stable procedural ids for
 });
 
 test('D32: every palette is a primary/secondary/accent triad of valid hex, with unique ids, names and taglines of at most 6 words',()=>{
- assert.equal(PALETTES.length,12+95+6);
+ assert.equal(PALETTES.length,12+95+18);
  for(const p of PALETTES){
   assert.equal(p.colors.length,3,p.id);
   for(const c of p.colors)assert.match(c,/^#[0-9A-F]{6}$/i,p.id);
   assert.ok(p.tagline&&p.tagline.trim().split(/\s+/).length<=6,`${p.id} tagline`);
-  if(p.unlockRule==='battle-pass')assert.ok(/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)&&p.unlockAtDay===undefined,p.id);
+  if(p.unlockRule==='battle-pass')assert.ok((/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)||mod.SPECIAL_TEXTURES.some(t=>t.familyId>=63&&t.defaultColorId===p.id))&&p.unlockAtDay===undefined,p.id);
   else assert.ok(['aura-milestone','default'].includes(p.unlockRule),p.id);
  }
  const unique=key=>assert.equal(new Set(PALETTES.map(key)).size,PALETTES.length);
@@ -118,8 +118,8 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
  assert.equal(fingerprints.size,24);
 });
 
-test('all 56 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
- assert.equal(TEXTURES.length,56);
+test('all 68 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
+ assert.equal(TEXTURES.length,68);
  for(const t of TEXTURES){
   const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);

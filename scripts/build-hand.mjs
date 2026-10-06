@@ -10,6 +10,7 @@ if(result.status!==0)throw Error('Hand customizer build failed.');
 const out=new URL('dist/embedded/',source),target=new URL('../handborne/',import.meta.url);
 await cp(new URL('assets/',out),new URL('assets/',target),{recursive:true});
 await cp(new URL('companion.mjs',out),new URL('companion.mjs',target));
+await cp(new URL('unlock-bridge.mjs',out),new URL('unlock-bridge.mjs',target));
 const built=await readFile(new URL('index.html',out),'utf8');
 const js=built.match(/src="([^"]+\.js)"/)?.[1],css=built.match(/href="([^"]+\.css)"/)?.[1];
 if(!js||!css)throw Error('Hand build entrypoints missing.');
