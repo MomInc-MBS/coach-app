@@ -31,16 +31,16 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   await page.goto(base+'/creature/index.html');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
 
-  // Seed a known, already-saved coach (owned "flat" texture on body) so the repro has a real baseline
+  // Seed a known, already-saved coach (owned Clay texture on body) so the repro has a real baseline
   // to compare against -- a fresh, never-saved page has nothing in storage yet.
   await page.evaluate(()=>{
-   const seed={...window.myr5Companion.recipe,materials:{body:{textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0}}};
+   const seed={...window.myr5Companion.recipe,materials:{body:{textureId:'clay',colorId:'#7f7d78',sparkle:0,metallic:0}}};
    localStorage.setItem('myr5-recipe-v1',JSON.stringify(seed));
   });
   await page.reload();
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
   const before=await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1'));
-  assert.equal(JSON.parse(before).materials.body.textureId,'flat','fixture: the saved coach owns the flat texture');
+  assert.equal(JSON.parse(before).materials.body.textureId,'clay','fixture: the saved coach owns Clay');
 
   // Preview a locked body -- must not save by itself either.
   await page.selectOption('#body',LOCKED_BODY);
@@ -61,6 +61,6 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   await page.selectOption('#body','myr5');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true&&window.myr5Companion?.recipe?.body==='myr5',null,{timeout:60000});
   const afterLeaving=JSON.parse(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')));
-  assert.equal(afterLeaving.materials?.body?.textureId,'flat','the preview-only texture tweak was discarded, not saved');
+  assert.equal(afterLeaving.materials?.body?.textureId,'clay','the preview-only texture tweak was discarded, not saved');
  } finally {await browser?.close();await new Promise(r=>server.close(r));}
 });

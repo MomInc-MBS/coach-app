@@ -1,5 +1,13 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-10-05-release-23-'+BUILD_ID,title:'Release 23: Coach cosmos',date:'2026-10-05',url:'https://myr5.mominc.online/repair-coach',notes:[
+export const RELEASE=Object.freeze({id:'2026-10-05-release-24-'+BUILD_ID,title:'Release 24: Workout startup and constellation flight',date:'2026-10-05',url:'https://myr5.mominc.online/repair-coach',notes:[
+ "Workout Begin and Continue recover from stalled draft checks. Closing a workout releases its session heartbeat and camera resources.",
+ "Chosen workout paths apply to the movement library and physical controls. Earned coaches keep their unlocked movements available.",
+ "Coach selectors show names and pixel sprites, put available choices first, and show unlock requirements in the selected preview.",
+ "Touch and hold the flight map to steer and fire continuously. Unlocks connect across an open, branching constellation, with a matching compact terminal preview.",
+ "Grimoire and Spotify controls move with the metal frame and stay off full-screen destinations. The hub matches your selected metal; the flat diamond opens Spotify.",
+ "Dr. Girlfriend crosses behind the pyramid as a transparent cutout. The DJ hand floats over a small controller at the bottom of your playlists.",
+ "Texture choices show miniature swatches. Clay, Graph Paper, Fine Stripe, Holey and Speckled are free; other textures require packs. Baby and Flat are retired.",
+ "The coach preview has gentle atmospheric lighting, and its bottom controls match the pod, including the Sound switch.",
  "Coaches use the revised fitness-inspired names. Start with MYR5 and Blob 1, then choose two workout paths to unlock their introductory coaches. Flyer and Quad 10 are removed.",
  "Achievements restore the constellation view and coach zoom, with each coach's performance requirements and sequential weapon unlocks.",
  "The XP terminal pages through solar-system areas. Open it to fly your chosen pixel ship through 250 levels, revisit past unlocks and fire at asteroids. Future scenery stays fogged until unlocked.",

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach} from '../level-map-domain.mjs';
+import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach,chapterConstellation} from '../level-map-domain.mjs';
 
 test('250 cosmetic thresholds appear once across 25 ten-level chapters',()=>{
  const thresholds=Array.from({length:250},(_,i)=>i*41);
@@ -24,4 +24,16 @@ test('chapter scenery grows and coach constellations preserve requirement order'
  assert.ok(chosen.every((coach,i)=>i===0||Number(coach.id.slice(6))>Number(chosen[i-1].id.slice(6))));
  assert.equal(chapterWorld(0).intensity,0);
  assert.equal(chapterWorld(24).intensity,1);
+});
+
+test('every sector has ten spaced nodes and joins its neighbors',()=>{
+ for(let chapter=0;chapter<CHAPTER_COUNT;chapter++){
+  const {nodes,main,branch,coach}=chapterConstellation(chapter);
+  assert.equal(nodes.length,10);
+  assert.match(main,/^M 50 0 L /);
+  assert.match(main,/ L 50 100$/);
+  assert.match(branch,/^M \d+ /);
+  assert.ok(nodes.every(({x,y},i)=>x>=16&&x<=84&&y>=8&&y<=92&&(i===0||y-nodes[i-1].y>=9)));
+  assert.ok(coach.x===17||coach.x===83);
+ }
 });

@@ -26,25 +26,30 @@ function drawShip(ctx,x,y,style,t){
  ctx.fillStyle=t%360<180?'#f58b40':'#ffe5a0';ctx.fillRect(19,48,4,8);ctx.fillRect(27,48,4,8);ctx.restore();
 }
 export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false}={}){
- const ctx=canvas.getContext('2d');if(!ctx)return {start(){},stop(){},fire(){},aim(){},setShip(){},resize(){}};
- let running=false,raf=0,w=1,h=1,last=0,time=0,style=ship,aimX=.5,aimY=.72,x=.5,y=.72;
+ const ctx=canvas.getContext('2d');if(!ctx)return {start(){},stop(){},startFiring(){},stopFiring(){},fire(){},aim(){},setShip(){},resize(){}};
+ let running=false,raf=0,w=1,h=1,last=0,time=0,style=ship,aimX=.5,aimY=.72,x=.5,y=.72,firing=false,shotClock=0;
  const asteroids=Array.from({length:9},(_,i)=>({x:((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
  const lasers=[];const blasts=[];
+ // Kenney Space Shooter Remastered, CC0: https://kenney.nl/assets/space-shooter-remastered
+ const meteors=['/pod/worlds/kenney-meteor-grey-tiny1.png','/pod/worlds/kenney-meteor-brown-tiny1.png'].map(src=>{const img=new Image();img.src=src;img.onload=()=>{if(!running)draw();};return img;});
  const resize=()=>{const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);w=Math.max(1,rect.width);h=Math.max(1,rect.height);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();};
  function draw(){ctx.clearRect(0,0,w,h);const now=time;
-  for(const a of asteroids){if(a.hit>0)continue;ctx.fillStyle='#758a9caa';const px=a.x*w,py=a.y*h;ctx.beginPath();ctx.moveTo(px-a.r,py);ctx.lineTo(px-a.r*.35,py-a.r);ctx.lineTo(px+a.r*.8,py-a.r*.6);ctx.lineTo(px+a.r,py+a.r*.4);ctx.lineTo(px,py+a.r);ctx.closePath();ctx.fill();ctx.fillStyle='#b8d7e3aa';ctx.fillRect(px-a.r*.5,py-a.r*.4,Math.max(2,a.r*.5),2);}
+  for(let index=0;index<asteroids.length;index++){const a=asteroids[index];if(a.hit>0)continue;const px=a.x*w,py=a.y*h,img=meteors[index%meteors.length];if(img.complete&&img.naturalWidth){ctx.drawImage(img,px-a.r,py-a.r,a.r*2,a.r*2);}else{ctx.fillStyle='#aabcca';ctx.fillRect(px-a.r,py-a.r,a.r*2,a.r*2);}}
   for(const l of lasers){ctx.strokeStyle='#b9faff';ctx.lineWidth=2;ctx.shadowBlur=12;ctx.shadowColor='#60e6ff';ctx.beginPath();ctx.moveTo(l.x*w,l.y*h);ctx.lineTo(l.x*w,(l.y-.08)*h);ctx.stroke();ctx.shadowBlur=0;}
   for(const b of blasts){ctx.strokeStyle=`rgba(255,190,105,${Math.max(0,1-b.age/380)})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(b.x*w,b.y*h,3+b.age/24,0,Math.PI*2);ctx.stroke();}
   drawShip(ctx,x*w,y*h,style,now);
  }
  function frame(now){if(!running)return;const dt=Math.min(40,Math.max(0,now-last));last=now;time+=dt;
-  x+=(aimX-x)*Math.min(1,dt*.009);y+=(aimY-y)*Math.min(1,dt*.009);
-  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=(a.x+.37)%1;}}
+  x+=(aimX-x)*Math.min(1,dt*.04);y+=(aimY-y)*Math.min(1,dt*.04);
+  if(firing){shotClock+=dt;while(shotClock>=125){lasers.push({x,y:y-.04});shotClock-=125;}}
+  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}if(!reducedMotion){a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=(a.x+.37)%1;}}}
   for(let i=lasers.length-1;i>=0;i--){const l=lasers[i];l.y-=dt*.0016;if(l.y<-.1){lasers.splice(i,1);continue;}const hit=asteroids.find(a=>a.hit<=0&&Math.abs(a.x-l.x)*w<a.r+5&&Math.abs(a.y-l.y)*h<a.r+10);if(hit){hit.hit=700;blasts.push({x:hit.x,y:hit.y,age:0});lasers.splice(i,1);}}
   for(let i=blasts.length-1;i>=0;i--){blasts[i].age+=dt;if(blasts[i].age>380)blasts.splice(i,1);}
   draw();raf=requestAnimationFrame(frame);
  }
- function start(){resize();if(running||reducedMotion||document.hidden)return;running=true;last=performance.now();raf=requestAnimationFrame(frame);}
- function stop(){running=false;if(raf)cancelAnimationFrame(raf);raf=0;}
- return {start,stop,resize,aim(clientX,clientY){const r=canvas.getBoundingClientRect();aimX=clamp((clientX-r.left)/r.width,.12,.88);aimY=clamp((clientY-r.top)/r.height,.16,.88);if(reducedMotion){x=aimX;y=aimY;draw();}},fire(){if(reducedMotion){draw();return;}lasers.push({x,y:y-.04});},setShip(value){style=value;draw();}};
+ function start(){resize();if(running||document.hidden)return;running=true;last=performance.now();raf=requestAnimationFrame(frame);}
+ function stopFiring(){firing=false;shotClock=0;}
+ function stop(){stopFiring();running=false;if(raf)cancelAnimationFrame(raf);raf=0;}
+ function fire(){if(document.hidden)return;lasers.push({x,y:y-.04});if(!running)draw();}
+ return {start,stop,stopFiring,startFiring(){if(document.hidden)return;firing=true;shotClock=0;fire();},resize,aim(clientX,clientY){const r=canvas.getBoundingClientRect();aimX=clamp((clientX-r.left)/r.width,.1,.9);aimY=clamp((clientY-r.top)/r.height,.14,.88);x=aimX;y=aimY;draw();},fire,setShip(value){style=value;draw();}};
 }

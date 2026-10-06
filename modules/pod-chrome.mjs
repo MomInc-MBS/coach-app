@@ -44,11 +44,19 @@ export function mountPodChrome(grimoireButton,{signal}={}){
   const settings=doc.getElementById('settings');
   if(settingsKey)settingsKey.setAttribute('aria-expanded',String(!!settings?.open));
   const dialogs=[...doc.querySelectorAll('dialog[open]')].filter(d=>!d.matches('[data-phone-portrait-notice],#coachGate'));
-  const owner=dialogs.at(-1)||doc.body;
+  const active=dialogs.at(-1);
+  const portal=doc.getElementById('portalHome');
+  const housing=doc.getElementById('portalChrome');
+  const cutaway=active?.classList.contains('portal-shaped')&&!active.classList.contains('portal-fullscreen');
+  const frame=cutaway?housing?.querySelector('.portal-frame'):!active&&portal&&!portal.hidden?portal.querySelector('#portalBoardHost > .portal-frame'):null;
+  const owner=frame||(!active?doc.querySelector('.ship-header'):null)||doc.body;
+  nav.hidden=!!active&&!cutaway;
+  nav.classList.toggle('frame-mounted',!!frame);
+  if(frame){frame.removeAttribute('aria-hidden');housing?.removeAttribute('aria-hidden');}
   if(nav.parentNode!==owner)owner.append(nav);
-  for(const dialog of dialogs)dialog.classList.toggle('has-pod-chrome',dialog===owner);
+  for(const dialog of dialogs)if(dialog.classList.contains('has-pod-chrome'))dialog.classList.remove('has-pod-chrome');
  };
- const observer=new MutationObserver(move);observer.observe(doc.body,{subtree:true,childList:true,attributes:true,attributeFilter:['open']});
+ const observer=new MutationObserver(records=>{if(records.some(r=>r.target!==nav&&!nav.contains(r.target)))move();});observer.observe(doc.body,{subtree:true,childList:true,attributes:true,attributeFilter:['open','hidden','class']});
  const close=()=>queueMicrotask(move);doc.addEventListener('close',close,true);
  const dispose=()=>{observer.disconnect();doc.removeEventListener('close',close,true);nav.remove();};
  signal?.addEventListener('abort',dispose,{once:true});move();return nav;

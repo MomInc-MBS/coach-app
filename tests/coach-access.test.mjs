@@ -2,7 +2,7 @@ import {test,describe,beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {STARTER_COACH_IDS,EXCLUDED_COACH_IDS,COACHES,COACH_REQUIREMENTS,PATH_INTRO_COACH_IDS,CHOOSABLE_TRACKS} from '../performance-catalog.mjs';
-import {chooseWorkoutPaths,readSelectedTracks,SELECTED_TRACKS_KEY} from '../chosen-styles.mjs';
+import {chooseWorkoutPaths,readSelectedTracks,workoutPathAccess,SELECTED_TRACKS_KEY} from '../chosen-styles.mjs';
 import {COACH_NAMES,COACH_NAME_META,coachName,cycleCoachName} from '../coach-names.mjs';
 import {PERFORMANCE_KEY,readPerformanceProgress,recordPerformanceSession,recordDailyActivity,coachAccess,mergeVerifiedPerformance,validPerformanceState,migratePerformanceAccess} from '../performance-progress.mjs';
 import {rosterModels} from '../creature/source/creator/roster.ts';
@@ -158,6 +158,17 @@ describe('legacy access migration',()=>{
 });
 
 describe('owner-scoped workout paths',()=>{
+ test('movement access follows chosen paths and an actually owned coach',()=>{
+  const storage=store(),options={storage,owner:'path-access'};
+  assert.equal(workoutPathAccess('high-horse',options).allowed,false);
+  chooseWorkoutPaths(['quads','martial-arts'],options);
+  assert.equal(workoutPathAccess('high-horse',options).allowed,true);
+  assert.equal(workoutPathAccess('squat',options).allowed,true);
+  assert.equal(workoutPathAccess('pushup',options).allowed,false);
+  const state=readPerformanceProgress(options),chest=COACH_REQUIREMENTS.find(c=>c.tracks.includes('chest'));
+  state.coaches.push(chest.id);put(storage,options.owner,state);
+  assert.equal(workoutPathAccess('pushup',options).allowed,true);
+ });
  let storage,saved;
  beforeEach(()=>{storage=store();saved=Object.getOwnPropertyDescriptor(globalThis,'localStorage');});
  afterEach(()=>{if(saved)Object.defineProperty(globalThis,'localStorage',saved);else delete globalThis.localStorage;});

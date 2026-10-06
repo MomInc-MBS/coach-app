@@ -130,7 +130,7 @@ export const MENUS={
  up:{label:'Food',route:'food',color:'#39ff14',icon:ICONS.bowl,kind:'dialog',open:via('food',()=>{document.querySelector('.coach-dock [data-panel="meals"]')?.click();return document.getElementById('mealsPanel');})},
  down:{label:'Achievements',route:'achievements',color:'#ff4fa0',icon:ICONS.star,kind:'dialog',open:via('achievements',()=>window.myr5Menus?.achievements?.())},
  vdiamond:LEADERBOARD,
- hdiamond:LEADERBOARD,
+ hdiamond:{label:'Spotify DJ',route:'spotify',color:'#ff982f',icon:ICONS.joystick,kind:'dialog',open:via('spotify',()=>window.myr5Menus?.spotify?.())},
  x:{label:'War Room',route:'war-room',color:'#ff10f0',icon:ICONS.joystick,kind:'nav',open:via('war-room',()=>location.assign('/war-room/index.html'))},
  'line-lr':{label:'Meditation',route:'meditate',color:'#b026ff',icon:ICONS.lotus,kind:'dialog',open:via('meditate',()=>{document.querySelector('.meditation-entry')?.click();return document.querySelector('.meditation-panel');})},
  'line-rl':{label:'Reminders',route:'reminders',color:'#ff10f0',icon:ICONS.bell,kind:'dialog',open:via('reminders',()=>{document.querySelector('.coach-dock [data-panel="reminders"]')?.click();return document.getElementById('remindersPanel');})},
@@ -1792,7 +1792,6 @@ async function portalSequence(id,current){
   menuSheet.addEventListener('close',()=>{motion(menuSheet,'');menuSheet.style.transform='';menuSheet.style.opacity='';},{once:true});
   return;
  }
- if(id==='hdiamond')id='vdiamond'; // Ian 26 Sept: the leaderboard is the tall diamond only; a flat trace still reaches it
  const menu=MENUS[id];if(!menu)return;
  const line=LINE_IDS.has(id),short=line||id==='x';
  if(!SHAPES[id]&&!line){if(menu.locked?.()){status(menu.lockedMessage);return;}setVisible(false);menu.open?.();return;} // menu without a traced shape (opened by id)

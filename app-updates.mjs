@@ -56,8 +56,9 @@ export function initAppUpdates({api,applyButton,onRegistration,onBeforeUpdate}) 
    // Never a trap: the worker can be stopped mid-update (iOS) or still be waiting on the old one. If the
    // new worker took over without telling this page, reload into it; otherwise hand the app back with a retry.
    const timer=setTimeout(async()=>{
-    const r=await navigator.serviceWorker.getRegistration().catch(()=>null);if(r&&!r.waiting)return location.reload();
-    await participant.message({type:'UPDATE_ABORT',id});applying=false;dismissed=false;retryAt=Date.now()+60000;error='Coach couldn’t finish updating. Tap Update now to try again.';paint();
+    await participant.message({type:'UPDATE_ABORT',id});
+    const r=await Promise.race([navigator.serviceWorker.getRegistration().catch(()=>null),new Promise(resolve=>setTimeout(()=>resolve(null),1000))]);if(r&&!r.waiting)return location.reload();
+    applying=false;dismissed=false;retryAt=Date.now()+60000;error='Coach couldn’t finish updating. Tap Update now to try again.';paint();
    },UPDATE_BARRIER_MS);
    return ()=>{clearTimeout(timer);barrier.remove();paint();};},
   reload:()=>location.reload()

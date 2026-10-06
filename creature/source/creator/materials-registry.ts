@@ -2,14 +2,16 @@
 // Adding a texture/colour/palette is a new entry (+ files for battle-pass packs) here —
 // no other code changes. See plan/PLAN.md "Rank 4" and plan/reports/audit-materials.md.
 import {STYLES as LEGACY_STYLES, COLOUR_SOURCE, type MaterialChoice, type Region} from './design';
-import {isGranted, grantUnlock, type UnlockKind,migrateSavedCosmetics} from './unlock-store';
+import {isGranted, type UnlockKind,migrateSavedCosmetics} from './unlock-store';
 import {isGranted as ledgerGranted} from '../../../unlock-ledger.mjs';
 import {currentCosmeticCoach,cosmeticId} from './unlock-store';
 import PALETTE_DATA from './palettes.json';
-import {TEXTURE_SWAP,FREE_TEXTURE_IDS,FREE_COLOURS} from '../../../battle-pass-rewards.mjs';
+import {TEXTURE_SWAP,FREE_COLOURS} from '../../../battle-pass-rewards.mjs';
+import {FREE_TEXTURE_IDS,RETIRED_TEXTURE_IDS} from './texture-policy.mjs';
 import {RECIPE_KEY} from '../profile';
 import {builtinSurfaceProfile} from './material-patterns';
-export {grantUnlock,FREE_COLOURS};
+export {grantUnlock} from './unlock-store';
+export {FREE_COLOURS};
 
 export type UnlockRule = 'default' | 'battle-pass' | 'aura-milestone';
 export type Track = 'chest' | 'quads' | 'glutes' | 'arms' | 'yoga' | 'martial-arts' | 'cardio' | 'meditation';
@@ -30,15 +32,17 @@ const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule
 // R18 G2: a single-colour def is free exactly when its primary is one of the 15 free hexes (battle-pass-rewards.mjs FREE_COLOURS).
 const colourRule = (c: { primary: string }): UnlockRule => FREE_COLOURS.includes(c.primary.toLowerCase()) ? 'default' : 'battle-pass';
 export const hasCoach64BitSkin = (coachId=currentCosmeticCoach()) => ledgerGranted('boss-skin',cosmeticId(typeof coachId==='string'?coachId:currentCosmeticCoach(),`${typeof coachId==='string'?coachId:currentCosmeticCoach()}-skin`));
-export const isTextureUnlocked = (t: TextureDef,coachId?:string) => t.id==='coach-64-bit'?hasCoach64BitSkin(coachId):isUnlocked('texture', t,coachId);
+export const isTextureUnlocked = (t: TextureDef,coachId?:string) => !RETIRED_TEXTURE_IDS.includes(t.id)
+ && (FREE_TEXTURE_IDS.includes(t.id) || isGranted('texture',t.id,coachId))
+ && (t.id!=='coach-64-bit' || hasCoach64BitSkin(coachId));
 export const isColorUnlocked = (c: ColorDef,coachId?:string) => isUnlocked('color', c,coachId);
 export const isPaletteUnlocked = (p: PaletteDef,coachId?:string) => isUnlocked('palette', p,coachId);
 
-// --- Flat + Clay: always unlocked, procedural, never downloaded (PLAN §6.1). ---
+// Clay remains the safe starter finish. Flat survives only as an internal legacy profile.
 // familyId 30/31 have matching cases added to surfaceSample() in material-language.ts.
 const FLAT_BASE = { id: 30, name: 'Flat', realm: '', primary: '#c7c3ce', secondary: '#6d6a75', accent: '#ffffff', emissive: '#000000', roughness: .55, metalness: 0, detail: 'flat' } as const;
 const CLAY_BASE = { id: 31, name: 'Clay', realm: '', primary: '#b7a68e', secondary: '#7a6b57', accent: '#ddcdb3', emissive: '#000000', roughness: .92, metalness: 0, detail: 'clay' } as const;
-export const FLAT_TEXTURE: TextureDef = { id: 'flat', displayName: 'Flat', unlockRule: 'default', familyId: FLAT_BASE.id, defaultColorId: '#7f7d78' };
+export const FLAT_TEXTURE: TextureDef = { id: 'flat', displayName: 'Flat', unlockRule: 'battle-pass', familyId: FLAT_BASE.id, defaultColorId: '#7f7d78' };
 const CLAY_TEXTURE: TextureDef = { id: 'clay', displayName: 'Clay', unlockRule: 'default', familyId: CLAY_BASE.id, defaultColorId: '#c4a77d' };
 
 // --- The 22 (well, 23: 0-22) existing procedural surface families keep working exactly as
@@ -89,7 +93,7 @@ const BATTLE_PASS_SOURCE: { id: string; name: string; slot: string; track: strin
  { id: 'meditation-river-stone', name: 'River Stone', slot: 'texture-2', track: 'meditation',familyId:54 },
  { id: 'meditation-moss', name: 'Moss', slot: 'texture-3', track: 'meditation',familyId:55 },
 ];
-// R18 G1: only FREE_TEXTURE_IDS (battle-pass-rewards.mjs) are free; TEXTURE_SWAP now just names which legacy
+// R18 G1: only FREE_TEXTURE_IDS (texture-policy.mjs) are free; TEXTURE_SWAP now just names which legacy
 // texture sits in a battle-pass slot (and drives the #140 grandfather below), it never unlocks anything.
 const SWAPPED_IN = new Map<string, string>(Object.entries(TEXTURE_SWAP).map(([freed, [legacyId]]) => [legacyId as string, freed]));
 const textureRule = (id: string): UnlockRule => FREE_TEXTURE_IDS.includes(id) ? 'default' : 'battle-pass';
@@ -100,7 +104,7 @@ const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
 });
 
 export const COACH_64_BIT_TEXTURE:TextureDef={id:'coach-64-bit',displayName:'64-bit Pixel Finish',unlockRule:'battle-pass',familyId:56,defaultColorId:'#7f7d78'};
-export const TEXTURES: TextureDef[] = [FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES,COACH_64_BIT_TEXTURE];
+export const TEXTURES: TextureDef[] = [CLAY_TEXTURE, ...LEGACY_TEXTURES.filter(t=>!RETIRED_TEXTURE_IDS.includes(t.id)), ...BATTLE_PASS_TEXTURES,COACH_64_BIT_TEXTURE];
 export const COLORS: ColorDef[] = [...SIMPLE_COLORS, ...LEGACY_COLORS];
 
 // --- Palettes: palettes.json next to this file (plan/muse/palettes.json cut to triads, plus the
@@ -135,6 +139,7 @@ export function colorTriad(id: string, preview = false,coachId?:string): { prima
 /** True when a texture/colour/palette id is a registry item the player doesn't own yet (the UI shows just a lock).
  * Installed creature skins and unknown ids guard themselves and are never "locked" here. */
 export function isLocked(id: string,coachId?:string): boolean {
+ if(RETIRED_TEXTURE_IDS.includes(id))return true;
  const t = findTexture(id); if (t) return !isTextureUnlocked(t,coachId);
  if (HEX.test(id)) return !hexOwned(id.toLowerCase(),coachId);
  const c = findColor(id); if (c) return !isColorUnlocked(c,coachId);
@@ -142,21 +147,17 @@ export function isLocked(id: string,coachId?:string): boolean {
  return false;
 }
 
-// #140 grandfather: a coach saved while the swapped-in legacy textures were still free keeps them.
-// Once per device, on the first saved recipe any renderer sees (this module's load in the customizer,
-// pod or ship, or a `myr5:recipe` handoff); grants only textures that recipe actually uses.
-const SWAP_MIGRATED_KEY = 'myr5-texture-swap-v1';
-export function grandfatherSwappedTextures(recipe?: { body?:string;materials?: Record<string, { textureId?: string } | undefined> } | null) {
+// A saved recipe alone is not proof of a pack grant. Only migrate IDs that were
+// explicitly earned in the historical unlock store; all other non-free finishes
+// remain preview-only and fall back to Clay when rendered or saved.
+export function migrateEarnedTextureUnlocks(recipe?: { body?:string;materials?: Record<string, { textureId?: string } | undefined> } | null) {
  try {
   if (!recipe) return;
   migrateSavedCosmetics(recipe);
-  if(localStorage.getItem(SWAP_MIGRATED_KEY))return;
-  for (const choice of Object.values(recipe.materials ?? {})) if (choice?.textureId && SWAPPED_IN.has(choice.textureId)) grantUnlock('texture', choice.textureId,recipe.body);
-  localStorage.setItem(SWAP_MIGRATED_KEY, '1');
  } catch { /* no storage or unreadable recipe: nothing to keep */ }
 }
-try { const raw = localStorage.getItem(RECIPE_KEY); if (raw) grandfatherSwappedTextures(JSON.parse(raw)); } catch { /* no storage */ }
-globalThis.addEventListener?.('myr5:recipe', event => grandfatherSwappedTextures((event as CustomEvent).detail));
+try { const raw = localStorage.getItem(RECIPE_KEY); if (raw) migrateEarnedTextureUnlocks(JSON.parse(raw)); } catch { /* no storage */ }
+globalThis.addEventListener?.('myr5:recipe', event => migrateEarnedTextureUnlocks((event as CustomEvent).detail));
 
 /**
  * The single seam between the old `styles[region]` numeric recipe and the new decoupled
@@ -176,9 +177,9 @@ export function regionChoice(materials: Partial<Record<Region, MaterialChoice>> 
 export function resolveRegionMaterial(legacyIndex: number, choice?: MaterialChoice, preview = false,coachId?:string) {
  if (!choice) return { ...LEGACY_STYLES[legacyIndex], sparkle: 0, paletteId:undefined as string|undefined };
  const texture = findTexture(choice.textureId);
- const safeTexture = texture && (preview || isTextureUnlocked(texture,coachId)) && texture.familyId >= 0 ? texture : FLAT_TEXTURE;
+ const safeTexture = texture && (preview || isTextureUnlocked(texture,coachId)) && texture.familyId >= 0 ? texture : CLAY_TEXTURE;
  const profile=builtinSurfaceProfile(safeTexture.familyId);
- const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : profile ? {id:profile.id,name:profile.name,realm:'',primary:'#8b8f9a',secondary:'#4a4d55',accent:'#e7e9ee',emissive:'#000000',roughness:profile.roughness,metalness:profile.metalness,detail:profile.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')} : FLAT_BASE;
+ const base = safeTexture.legacy ? LEGACY_STYLES[safeTexture.familyId] : safeTexture.id === 'clay' ? CLAY_BASE : profile ? {id:profile.id,name:profile.name,realm:'',primary:'#8b8f9a',secondary:'#4a4d55',accent:'#e7e9ee',emissive:'#000000',roughness:profile.roughness,metalness:profile.metalness,detail:profile.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')} : CLAY_BASE;
  const triad = colorTriad(choice.colorId, preview,coachId) ?? colorTriad(safeTexture.defaultColorId, preview,coachId) ?? base;
  const metalness = Number.isFinite(choice.metallic) ? Math.max(0, Math.min(1, choice.metallic)) : base.metalness;
  const sparkle = Number.isFinite(choice.sparkle) ? Math.max(0, Math.min(1, choice.sparkle)) : 0;

@@ -1,0 +1,13 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {RELEASE} from '../../release-info.mjs';
+const origin='https://myr5.mominc.online';
+const paths=['app-runtime.mjs','release-build.mjs','modules/routes.mjs','modules/pod-chrome.mjs','pod/persistent-chrome.css','audio/standalone-sound.mjs','spotify-terminal.mjs','level-map-scene.mjs','creature/assets/editor.js','food/drgf-paper-character.png'];
+const hash=data=>createHash('sha256').update(data).digest('hex');
+const results=await Promise.all(paths.map(async path=>{const response=await fetch(`${origin}/${path}?release-check=${Date.now()}`,{cache:'no-store'});const remote=Buffer.from(await response.arrayBuffer()),local=await readFile(`dist/client/${path}`);return {path,status:response.status,matches:hash(remote)===hash(local)};}));
+const health=await fetch(origin+'/health',{cache:'no-store'});
+const current=await(await fetch(origin+'/api/releases/current',{cache:'no-store'})).json();
+const result={expectedRelease:RELEASE.id,release:current,health:health.status,assets:results};
+await writeFile('plan/reports/release24-live-checks.json',JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({release:current,health:health.status,assets:results},null,2));
+if(health.status!==200||results.some(r=>r.status!==200||!r.matches)||!JSON.stringify(current).includes(RELEASE.id))process.exitCode=1;

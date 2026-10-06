@@ -19,18 +19,20 @@ test('pack odds are exactly the spec and each tier sums to 100',()=>{
  for(const odds of Object.values(PACK_ODDS))assert.equal(Object.values(odds).reduce((a,b)=>a+b,0),100);
 });
 
-const FREE_NAMES=['Flat','Clay','Reptilian','Baby','Speckled','Fine Stripe','Snake Skin','Holey','Graph Paper','Cool Graph Paper','Bamboo','Wiggles','Moss'];
-test('exactly 13 textures are free, and they are the 13 named ones',()=>{
+const FREE_NAMES=['Clay','Graph Paper','Fine Stripe','Holey','Speckled'];
+test('only five named textures are free, while Flat and Baby are retired',()=>{
  const free=TEXTURES.filter(isTextureUnlocked);
  assert.deepEqual(free.map(t=>t.displayName).sort(),[...FREE_NAMES].sort());
  assert.deepEqual(free.map(t=>t.id).sort(),[...FREE_TEXTURE_IDS].sort());
- assert.equal(FREE_TEXTURE_IDS.length,13);
+ assert.equal(FREE_TEXTURE_IDS.length,5);
+ assert.equal(TEXTURES.some(t=>t.id==='flat'||t.id==='legacy-22'),false);
+ assert.equal(isLocked('flat'),true);assert.equal(isLocked('legacy-22'),true);
 });
 
-test('every ordinary non-free texture is in the texture pack pool; the pixel finish uses the 64-bit category, and the pool holds nothing free or unknown',()=>{
+test('every non-free texture, including the pixel finish, is in the texture pack pool',()=>{
  const pool=new Set(textureRewardPool().map(t=>t.id)),ids=new Set(TEXTURES.map(t=>t.id));
- for(const t of TEXTURES.filter(t=>t.id!=='coach-64-bit'))assert.equal(pool.has(t.id),!isTextureUnlocked(t),t.id);
- assert(TEXTURES.some(t=>t.id==='coach-64-bit'));assert(!pool.has('coach-64-bit'));
+ for(const t of TEXTURES)assert.equal(pool.has(t.id),!isTextureUnlocked(t),t.id);
+ assert(TEXTURES.some(t=>t.id==='coach-64-bit'));assert(pool.has('coach-64-bit'));
  for(const id of pool)assert.ok(ids.has(id),`pool id ${id} exists in the registry`);
  assert.equal(textureRewardPool().length,pool.size,'no duplicate pool entries');
 });

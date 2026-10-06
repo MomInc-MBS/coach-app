@@ -111,28 +111,32 @@ export function createGalaEditor({ document: doc, avatar, weapons, look, onPart,
     }
     const tierHeading = make('h4', '', 'Upgrade');
     const tierGrid = make('div', 'gala-option-grid gala-tier-grid');
+    const previewStatus = make('p', 'help gala-preview-status');
+    previewStatus.setAttribute('role', 'status');
     for (let tier = 0; tier < weapons.tiers.length; tier++) {
       const weapon = { type: chosen.type, tier };
       const isLocked = Boolean(locked?.(weapon));
       const button = optionButton(doc, {
-        label: `${weapons.tiers[tier]}${isLocked ? ' (locked)' : ''}`, value: tier,
+        label: weapons.tiers[tier], value: tier,
         selected: tier === chosen.tier, preview: makeWeaponPreview(doc, weapons, weapon),
         className: isLocked ? 'is-locked' : '',
         onClick: target => {
-          if (isLocked) return;
+          if (isLocked) {
+            previewStatus.textContent = `Preview only · How to unlock ${weapons.tiers[tier]}: ${weapons.requirements(weapon).label}.`;
+            return;
+          }
+          previewStatus.textContent = '';
           tierGrid.querySelectorAll('.gala-option').forEach(item => item.setAttribute('aria-pressed', String(item === target)));
           onWeapon({ type: chosen.type, tier });
         }
       });
       button.dataset.galaWeapon = 'tier';
       if (isLocked) {
-        button.disabled = true;
-        const requirement = weapons.requirements(weapon);
-        button.title = `Unlock through ${requirement.label}`;
+        button.dataset.locked = 'true';
       }
       tierGrid.append(button);
     }
-    root.append(typeHeading, typeGrid, tierHeading, tierGrid, make('p', 'help', 'Workout performance earns weapon upgrades.'));
+    root.append(typeHeading, typeGrid, tierHeading, tierGrid, previewStatus, make('p', 'help', 'Workout performance earns weapon upgrades.'));
     return root;
   }
 

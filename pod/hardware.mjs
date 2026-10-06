@@ -38,35 +38,35 @@ function rotary(el,{count,value,preview,commit,locked}){
  return paint;
 }
 
-export function initHardware(){
+export function initHardware({canUse=()=>true}={}){
  const select=$('movement'),goal=$('goal'),dial=$('exerciseDial'),knob=$('difficultySlider'),lever=document.querySelector('.cb-lever');
  let group=focusFor(select.value);const remembered=new Map();
  const groupIndex=()=>Math.max(0,FOCUS_GROUPS.findIndex(g=>g.id===group));
  const levelIndex=()=>Math.max(0,GROUP_EXERCISES[group].findIndex(m=>m.id===select.value));
  const levelText=(i,n)=>`${workoutLevel(GROUP_EXERCISES[group][i].id).label} ${i+1}/${n}`;
- function selectExercise(id){if(goal.disabled)return;window.dispatchEvent(new Event('myr5:exercise-selected'));if(id!==select.value){select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));}sync();}
+ function selectExercise(id){if(goal.disabled||!canUse(id))return;window.dispatchEvent(new Event('myr5:exercise-selected'));if(id!==select.value){select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));}sync();}
  const locked=()=>goal.disabled;
- const paintDial=rotary(dial,{count:()=>FOCUS_GROUPS.length,value:groupIndex,locked,preview:i=>{$('exerciseName').textContent=FOCUS_GROUPS[i].name;},
-  commit:i=>{const next=FOCUS_GROUPS[i].id;selectExercise(exerciseAt(next,remembered.get(next)??0).id);}});
- const paintKnob=rotary(knob,{count:()=>GROUP_EXERCISES[group].length,value:levelIndex,locked,preview:i=>{$('difficultySetting').textContent=levelText(i,GROUP_EXERCISES[group].length);},
+ const paintDial=rotary(dial,{count:()=>FOCUS_GROUPS.length,value:groupIndex,locked,preview:i=>{const next=FOCUS_GROUPS[i];$('exerciseName').textContent=next.name+(GROUP_EXERCISES[next.id].some(m=>canUse(m.id))?'':' · locked');},
+  commit:i=>{const next=FOCUS_GROUPS[i].id,preferred=exerciseAt(next,remembered.get(next)??0),exercise=canUse(preferred.id)?preferred:GROUP_EXERCISES[next].find(m=>canUse(m.id));if(exercise)selectExercise(exercise.id);else sync();}});
+ const paintKnob=rotary(knob,{count:()=>GROUP_EXERCISES[group].length,value:levelIndex,locked:()=>locked()||!canUse(select.value),preview:i=>{$('difficultySetting').textContent=levelText(i,GROUP_EXERCISES[group].length);},
   commit:i=>selectExercise(exerciseAt(group,i).id)});
  function sync(){
   group=focusFor(select.value);const choices=GROUP_EXERCISES[group],index=levelIndex(),n=choices.length,focus=FOCUS_GROUPS[groupIndex()];
-  remembered.set(group,index);const isLocked=locked(),m=EXERCISES[select.value]??choices[index];
+  remembered.set(group,index);const isLocked=locked(),pathLocked=!canUse(select.value),m=EXERCISES[select.value]??choices[index];
   dial.setAttribute('aria-valuenow',String(groupIndex()));dial.setAttribute('aria-valuemax',String(FOCUS_GROUPS.length-1));dial.setAttribute('aria-valuetext',focus.name);$('exerciseName').textContent=focus.name;
   knob.setAttribute('aria-valuenow',String(index+1));knob.setAttribute('aria-valuemax',String(n));knob.setAttribute('aria-valuetext',`${workoutLevel(m.id).label}, ${m.name}, variation ${index+1} of ${n}`);$('difficultyMax').textContent=n;
-  for(const el of [dial,knob])el.setAttribute('aria-disabled',String(isLocked));
-  for(const id of ['harder','easier','goalSlider'])$(id).disabled=isLocked;
+  dial.setAttribute('aria-disabled',String(isLocked));knob.setAttribute('aria-disabled',String(isLocked||pathLocked));
+  for(const id of ['harder','easier','goalSlider'])$(id).disabled=isLocked||pathLocked;
   paintDial(groupIndex());paintKnob(index);
   $('variationName').textContent=m.name;$('difficultySetting').textContent=levelText(index,n);
-  $('variationHint').textContent=m.hint+' '+workoutLevel(m.id).unlock;$('trackingScope').textContent='Camera estimates; not a form or safety check. '+m.measurement+' · '+m.limits;
+  $('variationHint').textContent=pathLocked?'This workout path is locked. Choose it as one of your two paths or earn its coach.':m.hint+' '+workoutLevel(m.id).unlock;$('trackingScope').textContent='Camera estimates; not a form or safety check. '+m.measurement+' · '+m.limits;
   const target=$('goalSlider');target.max=Math.max(0,goal.options.length-1);target.value=goal.selectedIndex;
   const chosen=goal.selectedOptions[0];if(chosen){target.setAttribute('aria-valuetext',chosen.textContent);$('goalSetting').textContent=chosen.textContent;$('goalMin').textContent=goal.options[0].value;$('goalMax').textContent=goal.options[goal.options.length-1].value;target.style.setProperty('--fill',`${100*goal.selectedIndex/Math.max(1,goal.options.length-1)}%`);}
  }
  // Spring-loaded lever: tap HARDER/EASIER, or throw the handle up/down and let go. Arrow keys work on either end.
  const handle=lever.querySelector('i');let pull=null,thrown=-Infinity;
  function nudge(step,animate=true){
-  if(locked())return;const n=GROUP_EXERCISES[group].length,next=clamp(levelIndex()+step,0,n-1);
+  if(locked()||!canUse(select.value))return;const n=GROUP_EXERCISES[group].length,next=clamp(levelIndex()+step,0,n-1);
   if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)handle.animate([{transform:'translateY(0)'},{transform:`translateY(${-step*24}px)`},{transform:'translateY(0)'}],{duration:260,easing:'ease-out'});
   if(next!==levelIndex()){tick('lever');selectExercise(exerciseAt(group,next).id);}
  }
@@ -88,6 +88,6 @@ export function initHardware(){
  const sound=$('toggleVoice');sound.addEventListener('click',()=>tick('switch'));
  sound.addEventListener('keydown',e=>{const on={ArrowUp:true,ArrowRight:true,ArrowDown:false,ArrowLeft:false}[e.key];if(on===undefined)return;e.preventDefault();if(!sound.disabled&&(sound.dataset.on==='true')!==on)sound.click();});
  $('goalSlider').addEventListener('input',()=>{if(goal.disabled)return;goal.selectedIndex=Number($('goalSlider').value);goal.dispatchEvent(new Event('change',{bubbles:true}));sync();});
- select.addEventListener('change',sync);goal.addEventListener('change',sync);window.addEventListener('myr5:movement-configured',sync);
+ select.addEventListener('change',sync);goal.addEventListener('change',sync);window.addEventListener('myr5:movement-configured',sync);window.addEventListener('myr5:performance-progress',sync);window.addEventListener('myr5:account-ready',sync);
  const observer=new MutationObserver(sync);observer.observe(goal,{attributes:true,attributeFilter:['disabled'],childList:true});window.addEventListener('pagehide',()=>observer.disconnect());sync();
 }

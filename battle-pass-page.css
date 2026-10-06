@@ -58,3 +58,41 @@
  .pass-planet{width:88px}.pass-fire{right:7px;bottom:7px;min-width:58px;padding:6px;font-size:.7rem!important}
 }
 @media(prefers-reduced-motion:reduce){.pass-planet,.pass-sky,.pass-level{animation:none!important;transition:none!important}}
+
+/* The CRT is a small star chart for its ten-level sector. */
+.pass-crt-chart{display:block;width:100%;height:22px;margin:2px 0;overflow:visible}
+.pass-crt-line,.pass-crt-branch{fill:none;stroke:#66a9a5;stroke-width:.65;opacity:.75;vector-effect:non-scaling-stroke}
+.pass-crt-branch{stroke:#70979a;opacity:.5}
+.pass-crt-dot{fill:#536f71;stroke:#9cb7ad;stroke-width:.45;vector-effect:non-scaling-stroke}
+.pass-crt-dot.is-earned{fill:#adf8cb;stroke:#e7ffe9;filter:drop-shadow(0 0 2px #90ffb9)}
+.pass-crt-dot.is-current{fill:#ffe8a1;stroke:#fff7d9;filter:drop-shadow(0 0 3px #ffe29b)}
+
+/* Open space, with one unbroken constellation through all 25 sectors. */
+.pass-route{background:#030916}
+.pass-area,.pass-area[data-chapter="0"],.pass-area[data-chapter="9"],.pass-area[data-chapter="10"],.pass-area[data-chapter="14"],.pass-area[data-chapter="18"],.pass-area[data-chapter="22"],.pass-area[data-chapter="23"],.pass-area[data-chapter="24"]{min-height:1500px;border:0;background:radial-gradient(ellipse at var(--object-x) var(--object-y),hsl(calc(205 + var(--world-intensity)*280) 80% 42% / .14),transparent 28%),radial-gradient(ellipse at 22% 69%,hsl(calc(245 + var(--world-intensity)*190) 65% 35% / .12),transparent 36%),linear-gradient(180deg,#030916,#070e22 52%,#030916)}
+.pass-area:before{background:radial-gradient(ellipse at 53% 44%,#40659a22,transparent 48%);opacity:calc(.2 + var(--world-intensity)*.8)}
+.pass-sky{opacity:calc(.52 + var(--world-intensity)*.48);background-image:radial-gradient(1px 1px at 15% 12%,#fff 90%,transparent),radial-gradient(2px 2px at 75% 20%,#bde7ff 90%,transparent),radial-gradient(1px 1px at 45% 36%,#fff 90%,transparent),radial-gradient(2px 2px at 85% 63%,#fff 90%,transparent),radial-gradient(1px 1px at 28% 78%,#fff 90%,transparent);background-size:157px 190px,281px 260px,231px 251px,307px 280px,201px 330px}
+.pass-planet,.pass-area[data-chapter="0"] .pass-planet,.pass-area[data-chapter="14"] .pass-planet,.pass-area[data-chapter="18"] .pass-planet,.pass-area[data-chapter="22"] .pass-planet,.pass-area[data-chapter="23"] .pass-planet{top:var(--object-y);left:var(--object-x);right:auto;width:clamp(28px,4vw,55px);aspect-ratio:1;transform:translate(-50%,-50%);opacity:calc(.5 + var(--world-intensity)*.5);background:radial-gradient(circle at 30% 27%,#fff6df 1%,#c3d8eb 12%,#638fbd 37%,#1e406b 66%,#08172d 84%);box-shadow:inset -5px -5px 7px #020715,0 0 14px #9ebdff7a;filter:hue-rotate(var(--world-hue))}
+.pass-area:nth-child(5n+2) .pass-planet:after,.pass-area:nth-child(5n+3) .pass-planet:after{content:'';position:absolute;inset:36% -30%;border:2px solid #d2d5e899;border-radius:50%;transform:rotate(-24deg)}
+.pass-area:nth-child(5n) .pass-planet{border-radius:33% 56% 45% 61%;clip-path:polygon(20% 0,78% 8%,100% 41%,83% 95%,31% 100%,0 65%)}
+.pass-area:nth-child(7n) .pass-planet{background:radial-gradient(circle at 34% 29%,#fff6b0,#f7b773 28%,#bd526f 59%,#34153d 82%);box-shadow:0 0 20px #e6859c99}
+.pass-route-lines{position:absolute;inset:0;z-index:1;width:100%;height:100%;overflow:visible;pointer-events:none}
+.pass-route-main,.pass-route-branch{fill:none;stroke:#77d9ed;stroke-width:1.5;stroke-opacity:.55;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 4px #52d5f9)}
+.pass-route-branch{stroke:#b8a4f3;stroke-width:1;stroke-opacity:.5;stroke-dasharray:3 5}
+.pass-area[data-future="true"]:after,.pass-current-fog{z-index:2;background:linear-gradient(#02061170,#03091a82 60%,#02071375)}
+.pass-world-title{position:absolute;top:18px;left:5%;z-index:5;gap:2px;padding:0;max-width:90%;text-shadow:0 1px 7px #010511,0 0 14px #79c3ea88}
+.pass-world-title small{font-size:.61rem}.pass-world-title b{font-size:clamp(1rem,2.3vw,1.45rem)}.pass-world-title span{font-size:.65rem}
+.pass-constellation{top:auto;right:auto;z-index:3;width:min(32vw,180px);transform:translate(-50%,-3px);gap:4px;filter:drop-shadow(0 0 7px #b991ff70)}
+.pass-coach-star{display:block;width:10px;height:10px;background:#f7e4ff;transform:rotate(45deg);box-shadow:0 0 0 4px #bc91e14d,0 0 16px 7px #c59bff9c}
+.pass-coach-caption{display:grid;gap:2px;padding:0;border:0;background:none;text-shadow:0 1px 5px #010410,0 0 7px #a479d5}
+.pass-coach-caption span{font-size:.53rem}.pass-coach-caption strong{font-size:clamp(.72rem,1.5vw,1rem)}.pass-coach-caption small,.pass-coach-caption p{font-size:.55rem}.pass-coach-caption p{line-height:1.15}
+.pass-levels{position:absolute;inset:0;z-index:3;display:block;width:auto;margin:0;padding:0}
+.pass-level,.pass-level:nth-child(even),.pass-level[data-state=earned],.pass-level[data-state=current],.pass-level[data-state=locked]{position:absolute;top:var(--node-y);left:var(--node-x);display:flex;align-items:center;gap:8px;width:clamp(155px,21vw,205px);min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;transform:translateY(-50%);color:#c5dbe2;text-shadow:0 1px 6px #000,0 0 8px #5ebde375}
+.pass-level.is-right,.pass-level.is-right:nth-child(even){flex-direction:row-reverse;transform:translate(-100%,-50%);text-align:right}
+.pass-level[data-state=locked]{opacity:.84}.pass-level[data-state=earned]{color:#d6ffe9}.pass-level[data-state=current]{color:#fff3cc;text-shadow:0 0 11px #f8d77c}
+.pass-level-number{flex:none;width:30px;height:30px;border:2px solid currentColor;border-radius:50%;background:#0a2030;box-shadow:0 0 10px #78d7ea9a,0 0 0 4px #6fcbdd30;font-size:.72rem;line-height:1}
+.pass-level[data-state=earned] .pass-level-number{background:#174a45;box-shadow:0 0 13px #8affc3,0 0 0 4px #87efbd4d}
+.pass-level[data-state=current] .pass-level-number{background:#6f552a;box-shadow:0 0 17px #ffe09d,0 0 0 5px #ffdc8a66}
+.pass-level-body{gap:2px;min-width:0}.pass-level-body strong{font-size:.72rem;line-height:1.15}.pass-level-body span,.pass-level-body small{font-size:.57rem;line-height:1.1;color:inherit}
+.pass-fire,.pass-coach-art{display:none}
+@media(max-width:650px){.pass-area,.pass-area[data-chapter="0"],.pass-area[data-chapter="9"],.pass-area[data-chapter="10"],.pass-area[data-chapter="14"],.pass-area[data-chapter="18"],.pass-area[data-chapter="22"],.pass-area[data-chapter="23"],.pass-area[data-chapter="24"]{min-height:1300px}.pass-level,.pass-level:nth-child(even),.pass-level[data-state=earned],.pass-level[data-state=current],.pass-level[data-state=locked]{width:145px;gap:5px}.pass-level-number{width:27px;height:27px;font-size:.65rem}.pass-level-body strong{font-size:.59rem}.pass-level-body span,.pass-level-body small{font-size:.5rem}.pass-constellation{width:30vw}.pass-coach-caption span{font-size:.42rem}.pass-coach-caption strong{font-size:.62rem}.pass-coach-caption small,.pass-coach-caption p{font-size:.44rem}.pass-planet,.pass-area[data-chapter="0"] .pass-planet{width:34px}}

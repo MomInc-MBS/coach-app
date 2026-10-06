@@ -8,6 +8,7 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {mountCage,cagePacketReady,cageStyle,SECTIONS,type CageSection,type CageViewer} from './cage';
 import {GALA_KEY,loadGala} from '../../pod/identity.mjs';
+import {PERFORMANCE_KEY} from '../../performance-progress.mjs';
 import {loadWarRoomCoaches} from './war-room-coaches';
 import {createGalaEditor} from '../../war-room/gala-editor.js';
 
@@ -88,7 +89,7 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   type.setAttribute('aria-label','Gala weapon');tier.setAttribute('aria-label','Weapon upgrade');type.dataset.galaWeapon='type';tier.dataset.galaWeapon='tier';
   for(const item of W.types){const option=el('option',item.name);option.value=item.id;type.append(option);}
   type.value=selected.type;
-  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=el('option'),locked=!W.unlocked(item);option.value=String(i);option.disabled=locked;option.textContent=W.tiers[i]+(locked?` · 🔒 ${W.requirements(item).label}`:'');tier.append(option);}
+  for(let i=0;i<W.tiers.length;i++){const item={type:selected.type,tier:i},option=el('option');option.value=String(i);option.disabled=!W.unlocked(item);option.textContent=W.tiers[i];tier.append(option);}
   tier.value=String(selected.tier);
   // The weapon already saved is kept as it is (an earned tier survives a guest or offline visit); anything else must be earned.
   const equip=(next:{type:string;tier:number})=>{touch();const kept=next.type===selected.type&&next.tier===selected.tier;if(!kept&&!W.unlocked(next))next={type:next.type,tier:0};save({...saved,weapon:next},W.name(next)+'.');};
@@ -147,11 +148,12 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   texture.needsUpdate=true;stage.orbit.update();stage.renderer.render(stage.scene,stage.camera);
  };
  const resize=new ResizeObserver(()=>stage.resize());resize.observe(stageEl);stage.resize();
- const onStorage=(event:StorageEvent)=>{if(event.key===GALA_KEY)load();},onReduced=()=>{stage.settings.reduced=reduced.matches;};
+ const onStorage=(event:StorageEvent)=>{if(event.key===GALA_KEY)load();else if(event.key?.startsWith(PERFORMANCE_KEY+'/')&&open)showBay(open);},onReduced=()=>{stage.settings.reduced=reduced.matches;};
+ const onCoachProgress=()=>{if(open)showBay(open);};
  stage.renderer.domElement.addEventListener('pointerdown',touch);
- addEventListener('mominc-avatar-change',load);addEventListener('storage',onStorage);reduced.addEventListener('change',onReduced);
+ addEventListener('mominc-avatar-change',load);addEventListener('storage',onStorage);addEventListener('myr5:performance-progress',onCoachProgress);reduced.addEventListener('change',onReduced);
  load();frame=requestAnimationFrame(tick);
  return {stage,get cage(){return cage;},get mode(){return mode.name;},showBay,closeBay,
-  dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);cage?.dispose();resize.disconnect();removeEventListener('mominc-avatar-change',load);removeEventListener('storage',onStorage);reduced.removeEventListener('change',onReduced);
+  dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);cage?.dispose();resize.disconnect();removeEventListener('mominc-avatar-change',load);removeEventListener('storage',onStorage);removeEventListener('myr5:performance-progress',onCoachProgress);reduced.removeEventListener('change',onReduced);
    texture.dispose();sprite.geometry.dispose();(sprite.material as T.Material).dispose();stage.orbit.dispose();stage.scene.environment?.dispose();stage.renderer.dispose();host.replaceChildren();}};
 }

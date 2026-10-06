@@ -1,4 +1,7 @@
 import {goldenCoach} from '../../performance-progress.mjs';
+import {PERFORMANCE_KEY,readPerformanceProgress} from '../../performance-progress.mjs';
+import {pathIntroCoachIds} from '../../performance-catalog.mjs';
+import {loadCoachSpritePreviews} from './war-room-coaches';
 import {createStandaloneAccountContext} from '../../standalone-account-context.mjs';
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
@@ -7,9 +10,9 @@ import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPOR
 
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
 import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
-import {TRACK_IDS,TRACK_PLACEMENTS,SECTION_NAMES,bodyLockSection,sectionComplete,type TrackId} from './creator/track-placements';
+import {TRACK_PLACEMENTS,bodyLockSection,sectionComplete} from './creator/track-placements';
 import {isGranted,cosmeticId} from './creator/unlock-store';
-import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
+import {sparkle,isUnseen,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
 import {saveRecipe,keepOwned,BODY_KEYS} from './save-look';
 import {loadProgress} from '../../battle-pass.mjs';
@@ -66,7 +69,7 @@ function tell(text:string){$('creatureStatus').textContent=text;}
 
 // Texture/colour/sparkle/metallic override for the selected part (Rank 4 registry, Rank 5 UI).
 // No override -> renders exactly like the legacy `styles[region]` index (old saves keep working).
-const DEFAULT_MATERIAL:MaterialChoice={textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0};
+const DEFAULT_MATERIAL:MaterialChoice={textureId:'clay',colorId:'#7f7d78',sparkle:0,metallic:0};
 function zeroFinish(d:Design):Design{return d.materials?{...d,materials:Object.fromEntries(Object.entries(d.materials).map(([r,c])=>[r,c&&{...c,sparkle:0,metallic:0}])) as Design['materials']}:d;} // hoisted: used by the load on L49
 function materialChoice():MaterialChoice{return shown().materials?.[selected]??DEFAULT_MATERIAL;}
 function setMaterial(patch:Partial<MaterialChoice>,rangeId:string|null=null){const base=shown();commit({...base,materials:{...base.materials,[selected]:{...materialChoice(),...patch}}},rangeId);}
@@ -85,7 +88,15 @@ function isLocked(design:Design):boolean{
  for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(registryLocked(mc.textureId,design.body)||registryLocked(mc.colorId,design.body)))return true;}
  return false;
 }
-function previewMessage(_design:Design):string{return'Preview only';} // R18: no unlock hints anywhere; locked items show just a lock
+function previewMessage(design:Design):string{
+ const body=bodyLock(design.body);if(body)return `Preview only · How to unlock ${PICKER_BODIES.find(b=>b.id===design.body)?.label||'this coach'}: ${body}.`;
+ const choice=regionChoice(design.materials,selected);
+ if(choice){for(const [id,kind] of [[choice.textureId,'adaptation'],[choice.colorId,'colour']] as const)if(idLocked(id)){
+  const texture=TEXTURES.find(t=>t.id===id),palette=PALETTES.find(p=>p.id===id),color=COLORS.find(c=>c.id===id);
+  const detail=texture?.id==='coach-64-bit'?'Open the 64-bit Pixel Finish in a texture pack and complete this coach’s boss skin milestone':texture?'Open a texture pack':palette?.unlockRule==='aura-milestone'?`Reach aura day ${palette.unlockAtDay}`:'Earn it through the battle pass';
+  return `Preview only · How to unlock ${texture?.displayName||palette?.displayName||color?.displayName||kind}: ${detail}.`;
+ }}return 'Preview only';
+}
 // A locked pick starts or continues the draft. #1 bug: while already previewing, even an unlocked pick
 // must stay in the draft too -- otherwise a texture/colour tweak silently drops the body being previewed
 // and falls through to commit(), which would save. commit() below enforces this for every caller.
@@ -102,6 +113,7 @@ function endPreview(){if(!previewing())return false;clearPreview();render('Back 
 function syncMaterials(){
  const mc=materialChoice();
  ($('textureId') as HTMLSelectElement).value=mc.textureId;
+ for(const button of textureGrid.querySelectorAll<HTMLButtonElement>('[data-texture]'))button.setAttribute('aria-pressed',String(button.dataset.texture===mc.textureId));
  const texture=TEXTURES.find(t=>t.id===mc.textureId);
  ($('texturePreview') as HTMLImageElement).src=texture?texturePreviewDataURL(texture.familyId):'';
  // R20: the toggle shows each part's current colour as a dot; the single grid marks the active part's colour.
@@ -121,6 +133,7 @@ function sync(){
  for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
 
  syncMomOnly();
+ for(const button of bodyGrid.querySelectorAll<HTMLButtonElement>('[data-body]'))button.setAttribute('aria-pressed',String(button.dataset.body===look.body));
  syncShipRow();
  syncMaterials();
  syncSkinChoice();
@@ -151,14 +164,20 @@ function commit(next:Design,rangeId:string|null=null){
  if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;render('Coach updated',true);
 }
 function options(id:string,entries:ReadonlyArray<readonly [unknown,string]>){for(const [value,label] of entries){const o=document.createElement('option');o.value=String(value);o.textContent=label;$(id).append(o);}}
-// #102: creatures grouped by workout section in dial order, after a Starter group (Original MYR5 and
-// unplaced bodies, never locked). A locked section's bodies show a lock and preview when picked.
-// Rank 5: body is the only body-family select left — head/arms/legs mixing is gone from the UI
-// (see the 'body' change handler below, which still forces headFrom/armsFrom/feetFrom to match).
-// #138: a section lists its bodies in placement order, so the one a new user may use comes first.
-function fillBodies(){$('body').replaceChildren();const placed=new Set(TRACK_PLACEMENTS.map(p=>p.stableId)),inSection=(track:TrackId)=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(track)).flatMap(p=>PICKER_BODIES.filter(b=>b.id===p.stableId));
- for(const [label,bodies] of [['Starter',PICKER_BODIES.filter(b=>!placed.has(b.id))],...TRACK_IDS.map(t=>[SECTION_NAMES[t],inSection(t)])] as [string,typeof PICKER_BODIES][]){
-  const g=document.createElement('optgroup');g.label=label;for(const b of unlockedFirst(bodies,b=>!!bodyLock(b.id))){const o=document.createElement('option'),section=bodyLock(b.id);o.value=b.id;o.textContent=section?`🔒 ${b.label} (locked — complete ${section})`:b.label;if(!section&&TRACK_PLACEMENTS.find(p=>p.stableId===b.id)?.tracks.some(t=>sectionComplete(t,progress)))sparkleOption(o,'body',b.id);g.append(o);}$('body').append(g);}}
+// Keep the chosen workout introductions and every owned shape ahead of locked shapes. The
+// native select provides a name-only fallback; the sprite grid uses the same selection path.
+const orderedBodies=()=>{const introductory=new Set(pathIntroCoachIds(readPerformanceProgress().paths));return [...PICKER_BODIES].sort((a,b)=>Number(!!bodyLock(a.id))-Number(!!bodyLock(b.id))||Number(introductory.has(b.id))-Number(introductory.has(a.id)));};
+let spritePreviews:Awaited<ReturnType<typeof loadCoachSpritePreviews>>|null=null;
+const bodyGrid=document.createElement('div');bodyGrid.className='material-grid coach-sprite-grid';bodyGrid.setAttribute('role','group');bodyGrid.setAttribute('aria-label','Creature shapes');
+function fillBodySprites(){if(!spritePreviews)return;bodyGrid.replaceChildren();for(const b of orderedBodies()){
+ const sprite=spritePreviews.sprites.find(s=>s.id===b.id);if(!sprite)continue;
+ const button=document.createElement('button');button.type='button';button.dataset.body=b.id;button.setAttribute('aria-label',b.label);button.setAttribute('aria-pressed',String(shown().body===b.id));
+ const source=spritePreviews.art(sprite),canvas=document.createElement('canvas');canvas.width=source.width;canvas.height=source.height;canvas.getContext('2d')!.drawImage(source,0,0);
+ const caption=document.createElement('span');caption.textContent=b.label;button.append(canvas,caption);button.onclick=()=>{const select=$('body') as HTMLSelectElement;select.value=b.id;select.dispatchEvent(new Event('change',{bubbles:true}));};if(!bodyLock(b.id))sparkle(button,'body',b.id);bodyGrid.append(button);
+ }}
+function fillBodies(){$('body').replaceChildren();for(const b of orderedBodies()){
+ const o=document.createElement('option');o.value=b.id;o.textContent=b.label;if(!bodyLock(b.id)&&isUnseen('body',b.id))o.dataset.sparkle=`body:${b.id}`;$('body').append(o);
+ }fillBodySprites();}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 
@@ -167,8 +186,17 @@ function focusPart(_region:Region,_frame=true){sync();}
 for(const [id,region] of Object.entries({body:'body',eyeLayout:'eye',eye:'eye',pupil:'eye',iris:'eye',pupilSize:'eye',fingers:'arms',toes:'feet',fur:'collar',detail:'body'}))$(id).addEventListener('focus',()=>focusPart(region as Region));
 // Rank 4: texture dropdown (registry-driven) and colour/palette swatch grid, separate axes. #1: locked
 // entries keep a lock mark and their unlock source, and picking one previews it (see pick()).
-function fillTextures(){$('textureId').replaceChildren();for(const t of unlockedFirst(TEXTURES,t=>idLocked(t.id))){const o=document.createElement('option');o.value=t.id;o.textContent=(idLocked(t.id)?'🔒 ':'')+t.displayName;if(isGranted('texture',t.id,shown().body))sparkleOption(o,'texture',cosmeticId(shown().body,t.id));$('textureId').append(o);}}
+const textureGrid=document.createElement('div');textureGrid.className='material-grid texture-grid';textureGrid.setAttribute('role','group');textureGrid.setAttribute('aria-label','Adaptation textures');
+function fillTextures(){$('textureId').replaceChildren();textureGrid.replaceChildren();for(const t of unlockedFirst(TEXTURES,t=>idLocked(t.id))){
+ const o=document.createElement('option');o.value=t.id;o.textContent=t.displayName;const id=cosmeticId(shown().body,t.id);if(isGranted('texture',t.id,shown().body)&&isUnseen('texture',id))o.dataset.sparkle=`texture:${id}`;$('textureId').append(o);
+ const locked=idLocked(t.id),button=document.createElement('button'),preview=document.createElement('img'),name=document.createElement('span');button.type='button';button.dataset.texture=t.id;button.setAttribute('aria-label',`${t.displayName}${locked?', locked':''}`);button.setAttribute('aria-pressed',String(materialChoice().textureId===t.id));preview.src=texturePreviewDataURL(t.familyId);preview.alt='';name.textContent=t.displayName;button.append(preview,name);if(locked){const icon=document.createElement('i');icon.className='texture-tile-lock';icon.textContent='🔒';icon.setAttribute('aria-hidden','true');button.append(icon);}button.onclick=()=>{const select=$('textureId') as HTMLSelectElement;select.value=t.id;select.dispatchEvent(new Event('change',{bubbles:true}));};textureGrid.append(button);
+}}
 fillBodies();fillTextures();
+($('textureId') as HTMLSelectElement).parentElement!.after(textureGrid);
+void loadCoachSpritePreviews(document).then(previews=>{
+ spritePreviews=previews;fillBodySprites();
+ if(bodyGrid.childElementCount)($('body') as HTMLSelectElement).parentElement!.after(bodyGrid);
+}).catch(()=>{}); // Native name-only select remains available if sprite sheets cannot load.
 const goldenToggle=document.createElement('button');goldenToggle.type='button';goldenToggle.textContent='Golden coach';goldenToggle.title='Unlocked by a ten-minute uninterrupted hold';
 function syncGolden(){goldenToggle.disabled=!goldenCoach(shown().body);goldenToggle.setAttribute('aria-pressed',String(shown().golden!==false&&goldenCoach(shown().body)));}
 goldenToggle.onclick=()=>{if(goldenCoach(shown().body)){commit({...shown(),golden:shown().golden===false});syncGolden();}};$('body').after(goldenToggle);$('body').addEventListener('change',()=>queueMicrotask(syncGolden));window.addEventListener('myr5:performance-progress',()=>{refreshLists();syncGolden();});syncGolden();
@@ -178,7 +206,7 @@ const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',locked?s.name+', locked':s.name);b.style.background=s.background;if(locked){b.dataset.locked='';b.textContent='🔒';}b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',s.name);b.style.background=s.background;if(locked)b.dataset.locked='';b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>idLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
 // that blends its colours across the selected part. Every colour def plus the free hexes no def starts with.
@@ -210,16 +238,17 @@ function saveShip(patch:{shipId?:Design['coach'];shipColor?:string|null}){
 }
 function persistRecipeShip(){const owner=editorOwner(),ship=recipe.shipId??recipe.coach;if(owner&&(ship==='supportive'||ownedShipIds().includes(ship))){const choice={ownerId:owner,ship,tint:recipe.shipColor??'#ffffff',colorId:rowColours.find(c=>c.hex===recipe.shipColor)?.id};localStorage.setItem(`${SHIP_SETTINGS_KEY}/${owner}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}}
 function fillShipRow(){
- shipPick.replaceChildren(...SHIP_CATALOG.map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=(shipLocked(c.id)?'🔒 ':'')+c.name;o.disabled=shipLocked(c.id);return o;}));
+ shipPick.replaceChildren(...unlockedFirst(SHIP_CATALOG,c=>shipLocked(c.id)).map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;return o;}));
  shipRow.replaceChildren();const grid=document.createElement('div');grid.className='material-grid';grid.id='shipColourGrid';
  const original=document.createElement('button');original.type='button';original.dataset.ship='original';original.textContent='Orig.';original.title='Original ship colours';original.setAttribute('aria-label','Original ship colours');original.onclick=()=>saveShip({shipColor:null});grid.append(original);
  for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(idLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}
  shipRow.append(grid);syncShipRow();
 }
 function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach;const color=look.shipColor??null;for(const b of shipRow.querySelectorAll<HTMLButtonElement>('button')){b.setAttribute('aria-pressed',String(b.dataset.ship==='original'?color===null:b.dataset.hex===color));}queueMicrotask(()=>void previewShip());}
-shipPick.onchange=()=>{if(shipLocked(shipPick.value)){tell('That ship is locked');syncShipRow();return;}saveShip({shipId:shipPick.value as Design['coach']});};
+shipPick.onchange=()=>{if(shipLocked(shipPick.value)){const name=SHIP_CATALOG.find(c=>c.id===shipPick.value)?.name||'this ship';tell(`Preview only · How to unlock ${name}: complete its workout milestone.`);syncShipRow();return;}saveShip({shipId:shipPick.value as Design['coach']});};
 fillShipRow();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
+window.addEventListener('storage',event=>{if(event.key?.startsWith(PERFORMANCE_KEY+'/')||event.key?.startsWith('myr5-unlocks-v2/'))refreshLists();});
  window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
  window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];clearPreview();recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
  window.addEventListener('myr5:login-ready',()=>void standaloneAccount.refresh());
@@ -286,15 +315,16 @@ $('shipPreviewRetry').onclick=()=>{closeShipPreview();void previewShip();};
 syncShipEditor();watchSelect(shipPick);watchSelect($('skinChoice') as HTMLSelectElement);window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});document.addEventListener('visibilitychange',()=>{if(document.hidden)closeShipPreview();else if(shipTab.getAttribute('aria-selected')==='true')void previewShip();});
 let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,pendingSkinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,skinEpoch=0,skinChoices:{id:string;displayName:string}[]=[];
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}
-function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;sparkleOption(option,'creature-skin',skin.id);return option}));select.value='';syncSkinChoice();}
+function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;if(isUnseen('creature-skin',skin.id))option.dataset.sparkle=`creature-skin:${skin.id}`;return option}));select.value='';syncSkinChoice();}
 async function refreshSkinEditor(account=window.myr5AuthenticatedAccount){
- const run=++skinEpoch,owner=typeof account==='string'?account:typeof account?.user?.id==='string'?account.user.id:null,ownerChanged=owner!==skinOwner;skinOwner=owner;
- if(ownerChanged){undo=[];redo=[];activeRange=null;skinSource?.dispose();skinSource=null;pendingSkinSource?.dispose();pendingSkinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);}
+ const run=++skinEpoch,owner=typeof account==='string'?account:typeof account?.user?.id==='string'?account.user.id:null,ownerChanged=owner!==skinOwner;
+ const hadAppliedSkin=!ownerChanged&&Object.values(recipe.materials??{}).some(choice=>choice?.textureId.startsWith('creature-'));skinOwner=owner;
+ if(ownerChanged){undo=[];redo=[];activeRange=null;skinSource?.dispose();skinSource=null;pendingSkinSource?.dispose();pendingSkinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'clay'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);}
  renderSkinChoices();if(!owner){pendingSkinSource?.dispose();pendingSkinSource=null;render('Your coach is ready');return;}
  pendingSkinSource?.dispose();const source=createInstalledCreatureSkinSource({account});pendingSkinSource=source;tell('Checking installed skins');
- let rows:{id:string;displayName:string}[];try{rows=await source.list();}catch{const active=window.myr5AuthenticatedAccount,activeOwner=typeof active==='string'?active:active?.user?.id;if(run!==skinEpoch||activeOwner!==owner||skinOwner!==owner){source.dispose();if(pendingSkinSource===source)pendingSkinSource=null;return;}if(pendingSkinSource===source)pendingSkinSource=null;source.dispose();skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);renderSkinChoices();render('Could not verify installed skins. Check your connection and try again.');return;}
+ let rows:{id:string;displayName:string}[];try{rows=await source.list();}catch{const active=window.myr5AuthenticatedAccount,activeOwner=typeof active==='string'?active:active?.user?.id;if(run!==skinEpoch||activeOwner!==owner||skinOwner!==owner){source.dispose();if(pendingSkinSource===source)pendingSkinSource=null;return;}if(pendingSkinSource===source)pendingSkinSource=null;source.dispose();skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'clay'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);renderSkinChoices();render('Could not verify installed skins. Check your connection and try again.');return;}
  const active=window.myr5AuthenticatedAccount,activeOwner=typeof active==='string'?active:active?.user?.id;if(run!==skinEpoch||activeOwner!==owner||skinOwner!==owner){source.dispose();if(pendingSkinSource===source)pendingSkinSource=null;return;}if(pendingSkinSource===source)pendingSkinSource=null;
- if(!rows.length){source.dispose();skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'flat'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);renderSkinChoices();render('No verified installed skins. Check your extra packs and try again.');return;}
+ if(!rows.length){source.dispose();skinSource?.dispose();skinSource=null;skinChoices=[];viewer?.clearSkinState();viewer?.setSkinResolver(undefined);if(recipe.materials)recipe={...recipe,materials:Object.fromEntries(Object.entries(recipe.materials).map(([region,choice])=>[region,choice.textureId.startsWith('creature-')?{...choice,textureId:'clay'}:choice])) as Design['materials']};skinTab.hidden=true;skinTab.setAttribute('aria-hidden','true');if(skinTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);renderSkinChoices();render(hadAppliedSkin?'No verified installed skins. Check your extra packs and try again.':'Your coach is ready');return;}
  const previous=skinSource;skinSource=source;previous?.dispose();skinChoices=rows.map(({id,displayName})=>({id,displayName}));viewer?.setSkinResolver(source.resolve);skinTab.hidden=false;skinTab.tabIndex=-1;skinTab.setAttribute('aria-hidden','false');const remembered=skinSettings();for(const region of REGIONS){const id=remembered[region];if(typeof id==='string'&&skinChoices.some(s=>s.id===id))recipe={...recipe,materials:{...recipe.materials,[region]:{...(recipe.materials?.[region]??DEFAULT_MATERIAL),textureId:id}}};}renderSkinChoices();render('Installed skins ready');
 }
 skinTab.onclick=()=>openMenu(skinTab);($('skinChoice') as HTMLSelectElement).addEventListener('change',()=>{const id=($('skinChoice') as HTMLSelectElement).value;if(!skinOwner||!skinChoices.some(s=>s.id===id))return;pickTexture(id);});

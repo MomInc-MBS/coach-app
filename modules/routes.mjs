@@ -117,7 +117,8 @@ function adopt(id,dialog){
    // Keep this session's listener armed for its eventual real close.
    if(dialog.open||entry.done)return;
    dialog.removeEventListener('close',entry.closeListener);
-   finish(entry,entry.reason||'user');
+   const reason=dialog.dataset.workoutBegin==='true'?'workout-begin':entry.reason||'user';delete dialog.dataset.workoutBegin;
+   finish(entry,reason);
   };
   dialog.addEventListener('close',entry.closeListener);
  }
@@ -138,7 +139,7 @@ function finish(entry,reason){
   const bar=dock();if(bar?.parentNode===dialog)(active?.dialog||document.body).append(bar);
   if(dialog.open)dialog.close();
  }
- if(!entry.own&&(reason==='user'||reason==='portal')&&location.hash==='#'+entry.id){
+ if(!entry.own&&(reason==='user'||reason==='portal'||reason==='workout-begin')&&location.hash==='#'+entry.id){
   if(entry.pushed){expectBack=true;history.back();}else history.replaceState(null,'',bare());
  }
  if(reason==='back'||(reason==='user'&&entry.deepLink))showQuiltLater();

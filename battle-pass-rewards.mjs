@@ -22,6 +22,8 @@ import PALETTES from './creature/source/creator/palettes.json' with {type:'json'
 import SKIN_CATALOG from './creature/source/creator/creature-skins.json' with {type:'json'};
 import {FOOD_BONUS_DAMAGE_MULTIPLIER} from './combat-config.mjs';
 import {STYLES as LEGACY_STYLES} from './creature/source/creator/catalog.ts';
+import {FREE_TEXTURE_IDS,RETIRED_TEXTURE_IDS} from './creature/source/creator/texture-policy.mjs';
+export {FREE_TEXTURE_IDS};
 
 // D30 rows, top to bottom — ids/order/counts must match achievements-board.mjs TIERS.
 export const ROWS=Object.freeze([
@@ -122,11 +124,7 @@ const PET_LINES={
 
 const item=(kind,[id,name,line])=>({kind,id,name,line});
 const rewardPack=(tier,id)=>({kind:'reward-pack',id:`reward-pack:${tier}:${id}`,tier,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,line:'Open for one random cosmetic.'});
-// R18 G1 (Ian's spec): EXACTLY these 13 textures are free; every other texture, legacy ones included,
-// is pack-only. materials-registry.ts derives every texture's unlockRule from this list.
-export const FREE_TEXTURE_IDS=Object.freeze(['flat','clay','legacy-4','legacy-22', // Flat, Clay, Reptilian, Baby
- 'glutes-peach','arms-rope','arms-leather','yoga-cork','martial-arts-canvas-gi','cardio-mesh','meditation-sand-garden', // Speckled, Fine Stripe, Snake Skin, Holey, Graph Paper, Cool Graph Paper, Wiggles
- 'martial-arts-bamboo','meditation-moss']); // Bamboo, Moss
+// The five free texture IDs live in texture-policy.mjs; catalog additions go to packs.
 // catalog.ts STYLES names, id order (legacy-<n> textures; legacy-color-<n> colours are "<name> (original)").
 export const LEGACY_NAMES=Object.freeze(['Mortal','Verdant','Mycelial','Chitin','Reptilian','Abyssal','Coral','Skeletal','Spectral','Infernal','Celestial','Voidborn','Eldritch','Stone Golem','Crystal','Magma','Glacial','Stormcharged','Clockwork Robot','Neon Synth','Fluffy','Jelly','Baby']);
 // The texture pack pool: every non-free texture, once. (TEXTURE_SWAP below only decides which texture a
@@ -134,7 +132,8 @@ export const LEGACY_NAMES=Object.freeze(['Mortal','Verdant','Mycelial','Chitin',
 export const textureRewardPool=()=>[
  ...TEXTURES.map(t=>item('texture',t)),
  ...LEGACY_NAMES.map((name,n)=>item('texture',[`legacy-${n}`,name,''])),
-].filter(t=>!FREE_TEXTURE_IDS.includes(t.id));
+ item('texture',['coach-64-bit','64-bit Pixel Finish','A pixel finish for a coach with a boss skin.']),
+].filter(t=>!FREE_TEXTURE_IDS.includes(t.id)&&!RETIRED_TEXTURE_IDS.includes(t.id));
 // R18 G2b: the 15 free colours span the hue range; each is the nearest (Lab) hex
 // already present in the census of palettes.json + SIMPLE_COLORS + LEGACY_COLORS
 // (scripts/colour-census.mjs). Everything else is pack-only.

@@ -2,15 +2,14 @@ import {COSMETIC_LEVEL_XP,cosmeticLevel,coachXpMultiplier} from './progression-r
 import {readPerformanceProgress} from './performance-progress.mjs';
 import {COACH_REQUIREMENTS,STARTER_COACH_IDS} from './performance-catalog.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
-import {coachRequirements,coachPages} from './achievements-board.mjs';
-import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach} from './level-map-domain.mjs';
+import {coachRequirements} from './achievements-board.mjs';
+import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach,chapterConstellation} from './level-map-domain.mjs';
 import {mountLevelMapScene} from './level-map-scene.mjs';
 
 const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!=null)el.textContent=value;if(className)el.className=className;return el;};
 const localDay=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const format=x=>Math.floor(x).toLocaleString();
 const validShips=new Set(['supportive','direct','analytical','playful','calm','mom']);
-const artBoxes=new Map(coachPages().flat().map(({coach,slot})=>[coach.id,slot.box]));
 function selectedShip(){
  try{
   const owner=globalThis.myr5AuthenticatedAccount?.user?.id;
@@ -20,16 +19,7 @@ function selectedShip(){
   return validShips.has(choice)?choice:'supportive';
  }catch{return 'supportive';}
 }
-function artFor(coach){
- const box=artBoxes.get(coach?.id);if(!box)return null;
- const [left,top,width,height]=box,frame=node('div',null,'pass-coach-art');
- frame.style.aspectRatio=`${1141*width}/${2000*height}`;
- const image=node('img');image.src='/pod/worlds/achievements.jpg';image.alt='';
- image.loading='lazy';image.decoding='async';
- image.style.width=`${10000/width}%`;image.style.height=`${10000/height}%`;
- image.style.left=`-${left/width*100}%`;image.style.top=`-${top/height*100}%`;
- frame.append(image);frame.setAttribute('aria-hidden','true');return frame;
-}
+const svgNode=(tag,attrs={})=>{const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));return el;};
 export function mountBattlePass(){
  if(document.getElementById('battlePassPanel'))return;
  const entry=document.getElementById('battlePassOpen');
@@ -47,8 +37,7 @@ export function mountBattlePass(){
  const viewport=node('div',null,'pass-map-viewport');viewport.tabIndex=0;viewport.setAttribute('role','region');viewport.setAttribute('aria-label','All 250 levels, from level 1 at the bottom to level 250 at the top. Scroll to inspect.');
  const route=node('div',null,'pass-route');viewport.append(route);
  const canvas=node('canvas',null,'pass-scene');canvas.setAttribute('aria-hidden','true');
- const fire=node('button','FIRE ◈','pass-fire');fire.type='button';fire.setAttribute('aria-label','Fire decorative laser at asteroids');
- shell.append(viewport,canvas,fire);
+ shell.append(viewport,canvas);
  dialog.append(header,daily,summary,shell);document.body.append(dialog);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const scene=mountLevelMapScene(canvas,{ship:selectedShip(),reducedMotion:reduced.matches});
@@ -63,7 +52,15 @@ export function mountBattlePass(){
   const line3='10 COSMETIC PACKS · RARE + LEGENDARY';
   entry.classList.add('pass-crt-entry');
   const meter=node('span',null,'pass-entry-meter');meter.setAttribute('aria-hidden','true');meter.style.setProperty('--pass-fill',`${current?(rank.max?100:Math.max(0,Math.min(100,rank.into/rank.need*100))):0}%`);
-  entry.replaceChildren(node('strong',line1),node('small',line2),node('small',line3),meter);
+  const chart=svgNode('svg',{class:'pass-crt-chart',viewBox:'0 0 100 29','aria-hidden':'true',preserveAspectRatio:'none'});
+  const positions=[[4,20],[14,8],[25,18],[36,6],[46,21],[57,11],[68,22],[78,7],[89,18],[98,6]];
+  chart.append(svgNode('path',{d:`M ${positions.map(([x,y])=>`${x} ${y}`).join(' L ')}`,class:'pass-crt-line'}));
+  chart.append(svgNode('path',{d:'M 36 6 L 43 2 M 68 22 L 75 27',class:'pass-crt-branch'}));
+  for(let index=0;index<levels.length;index++){
+   const [x,y]=positions[index],level=levels[index].level;
+   chart.append(svgNode('rect',{x:x-1.3,y:y-1.3,width:2.6,height:2.6,class:`pass-crt-dot ${level<rank.level?'is-earned':level===rank.level?'is-current':'is-locked'}`}));
+  }
+  entry.replaceChildren(node('strong',line1),node('small',line2),chart,node('small',line3),meter);
   entry.setAttribute('aria-label',`Open full 250-level XP flight map at ${world.name}, levels ${levels[0].level} through ${levels.at(-1).level}`);
   previewPrev.disabled=previewChapter===0;previewNext.disabled=previewChapter===CHAPTER_COUNT-1;
  }
@@ -82,38 +79,45 @@ export function mountBattlePass(){
   summary.replaceChildren(node('strong',`LV ${rank.level} / 250`),node('span',`${format(rank.xp)} TOTAL XP`),progress,node('b',rank.max?'ALL LEVELS REACHED':`${Math.ceil(rank.next-rank.xp).toLocaleString()} XP → LV ${rank.level+1}`));
  }
  function buildArea(chapter){
-  const world=chapterWorld(chapter),levels=chapterLevels(chapter,COSMETIC_LEVEL_XP),coach=chapterCoach(chapter,COACH_REQUIREMENTS);
+  const world=chapterWorld(chapter),levels=chapterLevels(chapter,COSMETIC_LEVEL_XP),coach=chapterCoach(chapter,COACH_REQUIREMENTS),geometry=chapterConstellation(chapter);
   const area=node('section',null,'pass-area');area.dataset.chapter=String(chapter);area.dataset.future=String(chapter>chapterForLevel(rank.level));
   area.style.setProperty('--world-intensity',world.intensity);area.style.setProperty('--world-hue',`${205+chapter*12}deg`);
+  area.style.setProperty('--object-x',`${chapter%2?13:81}%`);area.style.setProperty('--object-y',`${16+(chapter*11)%19}%`);
   area.setAttribute('aria-label',`System ${chapter+1}: ${world.name}, levels ${levels[0].level} through ${levels.at(-1).level}`);
   const sky=node('div',null,'pass-sky'),planet=node('div',null,'pass-planet');
   sky.setAttribute('data-peer-depth','far');planet.setAttribute('data-peer-depth','mid');sky.setAttribute('aria-hidden','true');planet.setAttribute('aria-hidden','true');
-  area.append(sky,planet);
+  const lines=svgNode('svg',{class:'pass-route-lines',viewBox:'0 0 100 100',preserveAspectRatio:'none','aria-hidden':'true'});
+  lines.append(svgNode('path',{d:geometry.main,class:'pass-route-main'}),svgNode('path',{d:geometry.branch,class:'pass-route-branch'}));
+  area.append(sky,planet,lines);
   const title=node('div',null,'pass-world-title');
   title.append(node('small',`SYSTEM ${String(chapter+1).padStart(2,'0')} / 25 · LEVELS ${levels[0].level}–${levels.at(-1).level}`),node('b',world.name),node('span',world.body));
   area.append(title);
   const constellation=node('aside',null,'pass-constellation');constellation.setAttribute('data-peer-depth','mid');
+  constellation.style.left=`${geometry.coach.x}%`;constellation.style.top=`${geometry.coach.y}%`;
   if(coach){
-   const art=artFor(coach);if(art)constellation.append(art);
+   const star=node('span',null,'pass-coach-star');star.setAttribute('aria-hidden','true');
    const caption=node('div',null,'pass-coach-caption');
    const requirement=coachRequirements(coach.id);
    caption.append(node('span','COACH CONSTELLATION'),node('strong',coach.name),node('small',performance?.coaches.includes(coach.id)?'PERFORMANCE UNLOCKED':'PERFORMANCE MILESTONE'),node('p',requirement?.unlock||'Earn through a workout milestone.'));
-   constellation.append(caption);
+   constellation.append(star,caption);
   }
   area.append(constellation);
   const track=node('ol',null,'pass-levels');track.setAttribute('aria-label',`Cosmetic rewards in system ${chapter+1}, highest level first`);
-  for(const item of [...levels].reverse()){
-   const row=node('li',null,'pass-level');row.dataset.level=String(item.level);row.dataset.state=item.level<rank.level?'earned':item.level===rank.level?'current':'locked';
+  for(const [index,item] of [...levels].reverse().entries()){
+   const point=geometry.nodes[index],row=node('li',null,`pass-level ${point.x>50?'is-right':'is-left'}`);
+   row.style.setProperty('--node-x',`${point.x}%`);row.style.setProperty('--node-y',`${point.y}%`);
+   row.dataset.level=String(item.level);row.dataset.state=item.level<rank.level?'earned':item.level===rank.level?'current':'locked';
    if(item.level===rank.level)row.setAttribute('aria-current','step');
    const body=node('div',null,'pass-level-body');
    body.append(node('strong',item.level===1?'Starter cosmetics':`${item.tier} cosmetic pack`),node('span',item.level===1?'Your launch kit':`${format(item.xp)} XP threshold`));
    if(item.level===rank.level)body.append(node('small',rank.max?'Final level reached':`${Math.ceil(rank.next-rank.xp).toLocaleString()} XP to next unlock`));
-   row.append(node('b',String(item.level),'pass-level-number'),body,node('i','✦'));track.append(row);
+   row.append(node('b',String(item.level),'pass-level-number'),body);track.append(row);
   }
   area.append(track);
   if(chapter===chapterForLevel(rank.level)){
    const fog=node('div',null,'pass-current-fog');fog.setAttribute('aria-hidden','true');area.append(fog);
-   requestAnimationFrame(()=>{if(!area.isConnected)return;const current=track.querySelector('[aria-current="step"]');if(current)fog.style.height=`${track.offsetTop+current.offsetTop+current.offsetHeight/2}px`;});
+   const currentIndex=levels.at(-1).level-rank.level;
+   fog.style.height=`${geometry.nodes[currentIndex].y}%`;
   }
   return area;
  }
@@ -140,11 +144,19 @@ export function mountBattlePass(){
  }
  previewPrev.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.max(0,previewChapter-1);renderPreview();};
  previewNext.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.min(CHAPTER_COUNT-1,previewChapter+1);renderPreview();};
- fire.onclick=()=>scene.fire();
- shell.addEventListener('pointermove',e=>scene.aim(e.clientX,e.clientY));
- dialog.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.target.closest('button,input,textarea,select')){e.preventDefault();scene.fire();}});
- dialog.addEventListener('close',()=>scene.stop());
- document.addEventListener('visibilitychange',()=>{if(document.hidden)scene.stop();else if(dialog.open)scene.start();});
+ let activePointer=null;
+ const stopPointer=()=>{activePointer=null;scene.stopFiring();};
+ dialog.addEventListener('pointerdown',e=>{
+  if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,[contenteditable]'))return;
+  activePointer=e.pointerId;scene.aim(e.clientX,e.clientY);scene.startFiring();
+ });
+ document.addEventListener('pointermove',e=>{if(e.pointerId===activePointer&&dialog.open)scene.aim(e.clientX,e.clientY);});
+ document.addEventListener('pointerup',e=>{if(e.pointerId===activePointer)stopPointer();});
+ document.addEventListener('pointercancel',e=>{if(e.pointerId===activePointer)stopPointer();});
+ window.addEventListener('blur',stopPointer);
+  dialog.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.target.closest('button,input,textarea,select')){e.preventDefault();scene.fire();}});
+ dialog.addEventListener('close',()=>{stopPointer();scene.stop();});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopPointer();scene.stop();}else if(dialog.open)scene.start();});
  window.addEventListener('resize',()=>{if(dialog.open)scene.resize();});
  const open=()=>{
   syncBattlePass();render();

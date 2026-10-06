@@ -18,7 +18,7 @@ test('Begin uses approved clips and the new wall sit name remains caption-only',
 test('changing exercise and difficulty updates the workout without speaking',()=>{
  const elements=Object.fromEntries(['goal','movement','duration'].map(id=>[id,{value:id==='movement'?'squat':'3',listeners:new Map(),addEventListener(name,fn){this.listeners.set(name,fn);}}]));
  let resets=0,selected=0,libraryOpens=0;const spoken=[];
- const context={$:id=>elements[id],resetMovement:()=>resets++,state:{phase:'idle'},window:{dispatchEvent:()=>selected++},Event:class Event{},voice:{say:text=>spoken.push(text)},MOVEMENTS:{squat:{name:'Squat'}},library:{introduce:()=>libraryOpens++}};
+ const context={$:id=>elements[id],resetMovement:()=>resets++,controls(){},workoutPathAccess:()=>({allowed:true}),state:{phase:'idle'},window:{dispatchEvent:()=>selected++},Event:class Event{},voice:{say:text=>spoken.push(text)},MOVEMENTS:{squat:{name:'Squat'}},library:{introduce:()=>libraryOpens++}};
  const handlers=source.slice(source.indexOf("$('goal').addEventListener('change'"),source.indexOf('function soundSwitch()'));
  vm.runInNewContext(handlers,context);
  elements.goal.listeners.get('change')();elements.movement.listeners.get('change')({detail:{automatic:false}});elements.duration.listeners.get('change')();
@@ -55,4 +55,25 @@ test('choosing a library exercise previews it without reading its name',()=>{
  assert.ok(start>=0&&end>start);
  vm.runInNewContext(librarySource.slice(start,end),{button:{addEventListener:(_name,fn)=>click=fn},cancelIntro:()=>cancellations++,showModel:()=>previews++,speak:text=>spoken.push(text),id:'squat'});
  click();assert.equal(cancellations,1);assert.equal(previews,1);assert.deepEqual(spoken,[]);
+});
+
+test('gesture proposals cannot switch to or start a locked workout path',()=>{
+ const gesture=librarySource.slice(librarySource.indexOf(' function gesture(event){'),librarySource.indexOf(" $('toggleHands').addEventListener('click'"));
+ const values={confirmProgress:{value:0},handState:{textContent:''}};let selected=0,started=0,stopped=0;
+ const context={$:id=>values[id],canUse:()=>false,selection:()=>selected++,stopHands:()=>stopped++,introduce:()=>started++,movements:{'high-horse':{name:'High horse stance'}},speak(){}};
+ vm.runInNewContext(`${gesture};gesture({event:'proposed',mode:'high-horse',progress:0.2});gesture({event:'confirmed',mode:'high-horse',progress:1});`,context);
+ assert.equal(selected,0);assert.equal(started,0);assert.equal(stopped,1);
+ assert.match(values.handState.textContent,/locked/);
+});
+
+test('closing the library preview to begin camera does not cancel that camera start',()=>{
+ const handler=source.slice(source.indexOf("window.addEventListener('myr5:route-leave'"),source.indexOf('function timeout('));
+ let routeLeave,stopped=0;const context={window:{addEventListener:(name,fn)=>{if(name==='myr5:route-leave')routeLeave=fn;}},ACTIVE_PHASES:new Set(['camera','tracking']),state:{phase:'camera'},stop:()=>{stopped++;}};
+ vm.runInNewContext(handler,context);
+ routeLeave({detail:{id:'library',reason:'workout-begin'}});
+ assert.equal(stopped,0,'closing the movement preview must leave the new camera start alive');
+ routeLeave({detail:{id:'library',reason:'user'}});
+ assert.equal(stopped,1,'ordinary library departure still stops an active set');
+ routeLeave({detail:{id:'settings',reason:'user'}});
+ assert.equal(stopped,2,'leaving a different route still stops an active set');
 });

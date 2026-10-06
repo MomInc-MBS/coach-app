@@ -62,3 +62,10 @@ body>.pod-persistent-chrome,#portalWorkoutHome>.pod-persistent-chrome{top:calc(7
 
 #homeScreen .deck-strip{justify-content:center!important}
 body>#podPersistentChrome .pod-now-playing{width:112px;min-width:112px;max-width:112px}
+/* Terminals are attached to their housing, so they inherit its movement. */
+.pod-persistent-chrome[hidden]{display:none!important}
+.ship-header{position:relative}
+.ship-header>#podPersistentChrome{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:5}
+.portal-frame>.pod-persistent-chrome{position:absolute;top:calc(-1 * var(--portal-rail) + 4px);left:10px;right:10px;z-index:5;height:40px}
+.portal-frame>.pod-persistent-chrome>button{min-height:32px;font-size:9px}
+#coachDock.coach-dock.ship-control-deck button.dock-portal{border-color:color-mix(in srgb,var(--portal-metal,#4d3d4f),#fff 40%);background:radial-gradient(circle at 50% 40%,var(--portal-metal,#4d3d4f) 0 46%,color-mix(in srgb,var(--portal-metal,#4d3d4f),#000 65%) 47% 58%,transparent 59%),repeating-conic-gradient(color-mix(in srgb,var(--portal-metal,#4d3d4f),#fff 40%) 0deg 8deg,color-mix(in srgb,var(--portal-metal,#4d3d4f),#000 30%) 8deg 15deg)}

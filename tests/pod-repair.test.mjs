@@ -7,7 +7,7 @@ const {dailyGuideDue,markDailyGuide,guideOwner,localDay}=await import('../daily-
 const {TIER_COLORS,tierOf,rewardSummary,drawTierTile}=await import('../reward-pack-ui.mjs');
 const {SETTINGS_LINKS,collapseOnOpen}=await import('../coach-hub.mjs');
 const {idleStatus}=await import('../pod/pod.mjs');
-const {continueVisible}=await import('../pod/continue-workout.mjs');
+const {continueVisible,continuePrompt}=await import('../pod/continue-workout.mjs');
 const {setArmieLauncherOwned}=await import('../armie-inbox-ui.mjs');
 const html=fs.readFileSync(new URL('../pose.html',import.meta.url),'utf8');
 const store=()=>{const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,String(value))};};
@@ -76,6 +76,15 @@ test('Continue is offered on the pod only, idle, until dismissed for that workou
  assert.equal(continueVisible({shown:true,idle:true,row:null,dismissed:null}),false);
  const app=fs.readFileSync(new URL('../app.mjs',import.meta.url),'utf8');
  assert(!app.includes('dock-continue'),'the quilt dock chip is no longer driven');
+});
+
+test('a saved set on a locked path explains the lock and offers no impossible Continue action',()=>{
+ const row={id:'unfinished-horse',mode:'high-horse',metadata:{control:'camera'}};
+ const locked=continuePrompt(row,'High horse stance',{allowed:false,reason:'Martial arts is locked.'});
+ assert.equal(locked.allowed,false);
+ assert.match(locked.text,/Martial arts is locked/);
+ assert.match(locked.text,/remains in history/);
+ assert.equal(continuePrompt(row,'High horse stance',{allowed:true}).allowed,true);
 });
 
 test('the Armie launcher is hidden and inert until the player owns a letter',()=>{

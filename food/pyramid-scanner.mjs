@@ -22,9 +22,9 @@ const ROOM_CSS=`
 #pyramidScanner .pyramid-room{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
 #pyramidScanner .dg-paper-wall{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 139px,#604c4133 140px 142px),repeating-linear-gradient(0deg,#b8a477 0 79px,#c3b181 80px 82px);border:14px solid #665044}
 #pyramidScanner .dg-paper-wall:after{content:'';position:absolute;inset:0;opacity:.22;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23p)' opacity='.7' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
-#pyramidScanner .dg-pyramid-walker{position:absolute;bottom:8%;left:-25%;height:45%;width:auto;z-index:1;animation:dg-pyramid-cross 10s linear infinite;filter:drop-shadow(2px 4px 2px #30251977)}
-@keyframes dg-pyramid-cross{0%,56%{transform:translateX(0) rotate(-2deg)}60%{transform:translateX(80px) rotate(2deg)}70%{transform:translateX(240px) rotate(-2deg)}80%{transform:translateX(420px) rotate(2deg)}90%,100%{transform:translateX(720px) rotate(-2deg)}}
-@media(prefers-reduced-motion:reduce){#pyramidScanner .dg-pyramid-walker{animation:none;left:4%}}
+#pyramidScanner .dg-pyramid-walker{position:absolute;bottom:0;left:0;height:100%;width:auto;max-width:none;z-index:1;animation:dg-pyramid-cross 10s linear infinite;filter:drop-shadow(2px 4px 2px #30251977)}
+@keyframes dg-pyramid-cross{0%,55%{left:0;transform:translateX(-110%) rotate(-2deg)}65%{left:25%;transform:translateX(-50%) rotate(2deg)}80%{left:75%;transform:translateX(-50%) rotate(-2deg)}95%,100%{left:100%;transform:translateX(10%) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){#pyramidScanner .dg-pyramid-walker{animation:none;transform:translateX(-110%)}}
 #pyramidScanner .paper-poster{position:absolute;z-index:1;top:clamp(74px,10%,120px);left:5%;width:min(33%,220px);box-sizing:border-box;padding:13px 9px;background:#e5d4a2;border:2px solid #ad9769;box-shadow:5px 5px #76614955;text-align:center;transform:rotate(-3deg);color:#4c3255;font:700 clamp(12px,3.3vw,20px)/1.25 Georgia,serif}
 #pyramidScanner .paper-poster:before{content:'';position:absolute;width:45%;height:15px;left:27%;top:-9px;background:#e2c388bb;transform:rotate(3deg)}
 #pyramidScanner .paper-poster small{display:block;font:9px monospace;letter-spacing:.1em;margin-top:10px}

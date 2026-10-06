@@ -35,3 +35,16 @@ The existing collaborative browser profile still held the prior cached release a
 
 External asset generator
 D:/MYR5 Roster/tools/publish_roster.py was corrected to preserve central names/exclusions and the current roster source path. No asset regeneration was run.
+
+Release 24 asset edit
+Built-in imagegen transparent-background edit removed the baked checkerboard from food/drgf-paper-character.png. Prompt preserved the original purple/gold paper coat, pose, label and framing; no redesign requested. Generated source: C:/Users/ianmy/.codex/generated_images/01a10e45-141e-7b51-9e62-2b82904114f9/exec-63ca2ecb-ea82-46ff-99b8-baad0eae0e95.png.
+Spotify anonymous authorization probes reached login with both the configured callback and an intentionally invalid control URI. This does not validate redirect registration after sign-in. Source and deployed configuration use the exact callback supplied to the user; real account login, redirect matching and playback remain unverified.
+
+Release 24 implementation and verification
+Workout startup: read-only draft hydration no longer takes the Begin lease; bounded adapter/set startup restores retry controls; the routed hologram Begin handoff no longer cancels its own camera request. Immediate pagehide heartbeat release is recovered into interrupted history on next boot, with no XP. Path access is enforced in library, dials, gestures, Continue and camera start.
+Texture policy: only Clay, Graph Paper, Fine Stripe, Holey and Speckled are free. Every other texture, including pixel finish, requires a pack texture grant; pixel finish additionally keeps its existing skin prerequisite. Retired Flat/Baby migrate to Clay. Old saved looks do not auto-grant formerly free textures. Every texture has a 44px procedural swatch.
+UI: names-only sprite selectors sorted with selected intro coaches first; floating connected flight nodes with hold-to-fire and stop on release; frame-mounted chrome hidden in fullscreen; portal flat diamond opens Spotify; hub follows chosen metal; transparent DJ controller and full-height offscreen DrGF cameo; modest static preview atmosphere; editor seven-control dock with persisted Sound switch.
+Focused combined test run: 127/127 passed (reports/release24-final-focused-tests.log). Built browser camera handoff, locked preview, lighting and dock tests passed; texture catalog browser expectation was updated to distinguish 24 named families from the added pixel finish, then passed. Native 375x812 QA confirmed named/sprite selectors, exactly five free texture swatches, locked preview requirements and Sound control. Native camera request reached getUserMedia and gracefully handled denied permission; no physical phone camera tracking was validated.
+Final production build offline core was 8,023,416 / 8,388,608 bytes before the final status-copy rebuild; final values recorded below after rebuild. No new database migration is required.
+
+Final Release 24 build: 23f0772cce9a545e9149. Offline core 8,023,416 / 8,388,608 bytes. Final built camera handoff and editor dock smoke tests passed. Signed installed-skin browser rerun passed, including offline reload, account teardown and revoked-skin status; initial concurrent-load timeout required no product fix.

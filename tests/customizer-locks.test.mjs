@@ -7,27 +7,27 @@ import {build} from 'esbuild';
 const memory=new Map();
 globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k),clear:()=>memory.clear()};
 const result=await build({
- stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export {choosePerformancePaths,recordPerformanceSession} from './performance-progress.mjs';export {coachRequirements} from './achievements-board.mjs';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
+ stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export {parseRecipe} from './creature/source/creator/design';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export {choosePerformancePaths,recordPerformanceSession} from './performance-progress.mjs';export {coachRequirements} from './achievements-board.mjs';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,isLocked,resolveRegionMaterial,grantUnlock,grandfatherSwappedTextures,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
+const {saveRecipe,keepOwned,loadRecipe,parseRecipe,fresh,RECIPE_KEY,isLocked,isTextureUnlocked,resolveRegionMaterial,grantUnlock,migrateEarnedTextureUnlocks,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
 const STARTER_BODY='roster/23-blob-texture-bodies--blob_creature_3d_model'; // Blob 1
 const EXCLUDED_BODY='roster/21-flyer--winged_humanoid_3d_model'; // formerly selectable Flyer 1
 const row=(id,n,levels)=>Object.fromEntries(Array.from({length:n},(_,i)=>[`${id}-${i+1}`,levels]));
-const owned={...fresh(),materials:{body:{textureId:'flat',colorId:'#2454d6',sparkle:0,metallic:0}}};
+const owned={...fresh(),materials:{body:{textureId:'clay',colorId:'#2454d6',sparkle:0,metallic:0}}};
 
-test('R18: only the free 13 textures and 15 colours are open; the rest read as locked (no unlock text)',()=>{
+test('only five textures and the 15 free colours are open; retired finishes are unavailable',()=>{
  memory.clear();
  assert.equal(isLocked('chest-plate-steel'),true);
  // #140: the legacy textures take the freed slots; the "lame" ones are open.
  assert.equal(isLocked('legacy-15'),true);assert.equal(isLocked('legacy-14'),true);assert.equal(isLocked('legacy-13'),true);
- assert.equal(isLocked('arms-rope'),false);assert.equal(isLocked('chest-rubber-grip'),true);assert.equal(isLocked('legacy-3'),true);assert.equal(isLocked('legacy-4'),false);
+ assert.equal(isLocked('arms-rope'),false);assert.equal(isLocked('chest-rubber-grip'),true);assert.equal(isLocked('legacy-3'),true);assert.equal(isLocked('legacy-4'),true);
  assert.equal(isLocked('pal-01'),true);
- assert.equal(isLocked('flat'),false);assert.equal(isLocked('default-ruby'),true);assert.equal(isLocked('#ff3b30'),false);assert.equal(isLocked('default-gold'),true);assert.equal(isLocked('creature-anything'),false);assert.equal(isLocked('#060409'),false);assert.equal(isLocked('#0a0a0a'),true);
+ assert.equal(isLocked('flat'),true);assert.equal(isLocked('legacy-22'),true);assert.equal(isLocked('default-ruby'),true);assert.equal(isLocked('#ff3b30'),false);assert.equal(isLocked('default-gold'),true);assert.equal(isLocked('creature-anything'),false);assert.equal(isLocked('#060409'),false);assert.equal(isLocked('#0a0a0a'),true);
 });
 
 test('a locked palette paints only in preview; the normal render still falls back',()=>{
@@ -46,7 +46,7 @@ test('a locked battle-pass texture previews its built-in pattern without changin
  assert.equal(previewed.primary,'#ff3b30','the selected colour stays independent from surface family');
  assert.equal(isLocked(texture.id),true,'renderable preview does not grant a locked texture');
  const real=resolveRegionMaterial(0,choice); // normal assembly still enforces the existing reward gate
- assert.equal(real.detail,'flat');
+ assert.equal(real.detail,'clay');
 });
 
 test('save guard: a locked texture, palette or body forced into the save path is rejected and the last owned look is kept',()=>{
@@ -55,7 +55,7 @@ test('save guard: a locked texture, palette or body forced into the save path is
  const forced={...owned,body:CHEST_BODY,headFrom:CHEST_BODY,armsFrom:CHEST_BODY,feetFrom:CHEST_BODY,materials:{body:{textureId:'chest-plate-steel',colorId:'#2454d6',sparkle:.3,metallic:0},head:{textureId:'flat',colorId:'pal-01',sparkle:0,metallic:0}}};
  const kept=saveRecipe(localStorage,forced,owned,new Set(['myr5']));
  const stored=JSON.parse(localStorage.getItem(RECIPE_KEY));
- assert.deepEqual(stored,kept);
+ assert.deepEqual(stored,JSON.parse(JSON.stringify(kept)));
  assert.deepEqual(stored.materials,owned.materials,'locked body texture falls back to the owned choice; locked head palette (no owned choice) drops to the original style');
  for(const key of ['body','headFrom','armsFrom','feetFrom'])assert.equal(stored[key],'myr5',key);
  assert.doesNotMatch(localStorage.getItem(RECIPE_KEY),/chest-plate-steel|pal-01|spade-arch/);
@@ -70,16 +70,29 @@ test('save guard keeps what is owned: granted items, clean recipes unchanged',()
  assert.deepEqual(saveRecipe(localStorage,next,owned).materials,next.materials);
 });
 
-test('#140 grandfather: a coach saved with a newly locked texture keeps it, once per device, and nothing else is granted',()=>{
+test('a saved formerly free texture stays locked unless the historical ledger records an earned grant',()=>{
  memory.clear();
- const magma={textureId:'legacy-15',colorId:'#7f7d78',sparkle:0,metallic:0},before={...fresh(),materials:{body:magma,head:{...magma,textureId:'flat'}}};
- assert.equal(resolveRegionMaterial(0,magma).detail,'flat','locked for a user who never had it');
- grandfatherSwappedTextures(before);
+ const magma={textureId:'legacy-15',colorId:'#7f7d78',sparkle:0,metallic:0},before={...fresh(),materials:{body:magma,head:{...magma,textureId:'clay'}}};
+ assert.equal(resolveRegionMaterial(0,magma).detail,'clay','locked for a user who never had it');
+ migrateEarnedTextureUnlocks(before);
+ assert.equal(isLocked('legacy-15'),true,'a saved recipe is not proof of a pack grant');
+ assert.equal(saveRecipe(localStorage,before,before).materials?.body?.textureId,undefined,'the save guard strips unearned finishes');
+ memory.clear();localStorage.setItem('myr5-unlocks-v1',JSON.stringify({texture:['legacy-15']}));
+ migrateEarnedTextureUnlocks(before);
  assert.equal(isLocked('legacy-15'),false);assert.equal(resolveRegionMaterial(0,magma).detail,'magma');
- assert.deepEqual(saveRecipe(localStorage,before,before).materials,before.materials,'the save guard keeps it');
- grandfatherSwappedTextures({...fresh(),materials:{body:{...magma,textureId:'legacy-14'}}});
- assert.equal(isLocked('legacy-14'),true,'one-time: a later recipe grants nothing');
+ assert.deepEqual(saveRecipe(localStorage,before,before).materials,before.materials,'a genuinely earned legacy finish survives');
  assert.ok([...memory.keys()].some(key=>key.startsWith('myr5-unlocks-v2/')&&JSON.parse(memory.get(key)).texture?.some(id=>id.endsWith(':legacy-15'))),'the earned legacy finish stays scoped to its coach');
+});
+
+test('new textures do not become free through a default rule, and a pixel pack alone does not skip its boss skin gate',()=>{
+ memory.clear();
+ const future={id:'future-texture',unlockRule:'default',familyId:57,displayName:'Future',defaultColorId:'#7f7d78'};
+ assert.equal(isTextureUnlocked(future),false);
+ grantUnlock('texture',future.id);
+ assert.equal(isTextureUnlocked(future),true);
+ assert.equal(isLocked('coach-64-bit'),true);
+ grantUnlock('texture','coach-64-bit');
+ assert.equal(isLocked('coach-64-bit'),true,'pixel finish also needs the coach boss-skin milestone');
 });
 
 test('sectionComplete: every boss in the section row fully beaten (sample board progress)',()=>{
@@ -123,6 +136,17 @@ test('a saved unearned body cannot grandfather access, while non-body look data 
  const quads='roster/22-curve--stylized_cartoon_figure_3d_model';
  assert.equal(saveRecipe(localStorage,{...loaded,body:quads,headFrom:quads,armsFrom:quads,feetFrom:quads},loaded,grandfathered).body,'myr5','an unearned lastOwned body cannot be reused');
  assert.equal(saveRecipe(localStorage,{...loaded,body:EXCLUDED_BODY},loaded,new Set([EXCLUDED_BODY])).body,'myr5','excluded saved IDs cannot be selected');
+});
+
+test('old Flat and Baby recipes migrate to Clay and cannot restore retired IDs',()=>{
+ memory.clear();
+ const old={...fresh(),styles:{...fresh().styles,head:22},materials:{body:{textureId:'flat',colorId:'#7f7d78',sparkle:0,metallic:0},head:{textureId:'legacy-22',colorId:'#7f7d78',sparkle:0,metallic:0}}};
+ const parsed=parseRecipe(JSON.stringify(old));
+ assert.equal(parsed.styles.head,0);assert.deepEqual(Object.values(parsed.materials).map(c=>c.textureId),['clay','clay']);
+ grantUnlock('texture','flat');grantUnlock('texture','legacy-22');
+ assert.equal(isLocked('flat'),true);assert.equal(isLocked('legacy-22'),true);
+ saveRecipe(localStorage,old);
+ assert.doesNotMatch(localStorage.getItem(RECIPE_KEY),/"textureId":"(?:flat|legacy-22)"|"head":22/);
 });
 
 test('ship save guard rejects unearned selection and stale last-owned ship',()=>{

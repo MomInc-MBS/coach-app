@@ -101,7 +101,20 @@ test('camera hide and pagehide during held begin interrupt the new row before ad
  const stop=()=>{const unfinished=['camera','model','tracking'].includes(phase);generation++;phase='idle';return unfinished?interruptCurrent():Promise.resolve();};
  const starting=startCamera();await entered;const hidden=stop(),pagehide=Promise.allSettled([stop(),cameraStartTransition]).then(()=>{closed=true;client.close();});assert.equal(closed,false);releaseStart();await Promise.all([starting,hidden,pagehide]);assert.equal(closed,true);assert.equal(phase,'idle');assert.equal(owner.snapshot().phase,'idle');assert.equal(flow.phase,'pod');
  const check=await open(db)(),scope=check.forOwner(check.guestOwnerId),rows=await scope.listWorkouts();assert.equal(rows.length,1);assert.equal(rows[0].status,'interrupted');assert.deepEqual((await scope.listEvents(rows[0].id)).map(event=>event.type),['started','updated','interrupted']);assert.deepEqual(await scope.listOutbox(),[]);check.close();
- const app=await readFile(new URL('../app.mjs',import.meta.url),'utf8');assert.match(app,/if\(run!==generation\)\{await pod\.interruptCurrent\(state\.motion\);return;\}/);assert.match(app,/Promise\.allSettled\(\[stopped,cameraStartTransition\]\)\.then\(\(\)=>\{releaseOwner\(\);workouts\.close\(\)\;\}\)/);
+ const app=await readFile(new URL('../app.mjs',import.meta.url),'utf8');assert.match(app,/if\(run!==generation\)\{void pod\.interruptCurrent\(state\.motion\)\.catch\(\(\)=>\{\}\);return;\}/);assert.match(app,/const stopped=ACTIVE_PHASES\.has\(state\.phase\)\?stop\('Workout stopped\.'/);assert.match(app,/releaseOwner\(\);workouts\.close\(\);void Promise\.allSettled\(\[stopped,cameraStartTransition\]\)/);
+});
+
+test('closing a camera tab releases its heartbeat and the next boot interrupts its active draft without XP',async()=>{
+ const db=name(),storage=memory(),bus=new Bus(),clock={value:Date.now()},first=await adapter({db,storage,bus,clock});
+ const row=await first.start({mode:'squat',goal:3,restSeconds:60,control:'camera'});
+ assert.equal(first.snapshot().held,true);
+ first.close();
+ const second=await adapter({db,storage,bus,clock});
+ const repo=await open(db)(),scope=repo.forOwner(repo.guestOwnerId);
+ assert.equal((await scope.getWorkout(row.id)).status,'interrupted');
+ assert.deepEqual(await scope.listOutbox(),[]);
+ assert.equal((await second.unfinished())?.id,row.id);
+ second.close();repo.close();
 });
 
 test('manual control is removed from Begin and cannot produce workout XP',async()=>{const app=await readFile(new URL('../app.mjs',import.meta.url),'utf8'),pod=await readFile(new URL('../pod/pod.mjs',import.meta.url),'utf8');assert.match(app,/querySelector\('option\[value="manual"\]'\)\?\.remove\(\)/);assert.match(app,/if\(\$\('camera'\)\.value==='manual'\)\$\('camera'\)\.value='user'/);assert.match(app,/\$\('camera'\)\.value==='manual'\?start\(\):library\.introduce\(\)/);assert.match(pod,/if\(manual\)throw Error\('Camera tracking is required for workout XP\.'\)/);assert.doesNotMatch(app,/if\(\$\('camera'\)\.value==='manual'\)return startManual\(\)/);});

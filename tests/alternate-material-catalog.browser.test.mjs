@@ -30,7 +30,7 @@ async function withPage(run){
  finally{await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 }
 
-test('all49 texture catalog renders on assembled Boxy and Crescent coaches within strict geometry caps',{timeout:600000},async()=>withPage(async(page,url,shaderConsole)=>{
+test('all 48 selectable texture catalog entries render on assembled Boxy and Crescent coaches within strict geometry caps',{timeout:600000},async()=>withPage(async(page,url,shaderConsole)=>{
  await page.goto(url);
  const reports=await page.evaluate(async()=>{
   const {THREE:T,assembleCreature,fresh,TEXTURES,isTextureUnlocked,resolveRegionMaterial,textureDefaultMetalness,sculptMaterial,createCoachReliefBudget}=await import('/test-fixture.mjs');
@@ -53,15 +53,15 @@ test('all49 texture catalog renders on assembled Boxy and Crescent coaches withi
    const originals=targets.map(mesh=>({geometry:mesh.geometry.clone(),material:mesh.material.clone()}));
    const disposeCurrent=mesh=>{mesh.geometry.dispose();if(Array.isArray(mesh.material))mesh.material.forEach(material=>material.dispose());else mesh.material.dispose();};
    const restore=()=>targets.forEach((mesh,index)=>{disposeCurrent(mesh);mesh.geometry=originals[index].geometry.clone();mesh.material=originals[index].material.clone();mesh.userData.ownedGeometry=false;});
-   const samples=[];let flatSignature=null;
+   const samples=[];let claySignature=null;
    for(const texture of types){
     restore();const style=resolveRegionMaterial(0,{textureId:texture.id,colorId:'default-slate',sparkle:0,metallic:textureDefaultMetalness(texture.id)??0},true);
     if(style.id!==texture.familyId)throw Error(`${texture.displayName} resolved to family ${style.id}, expected ${texture.familyId}`);
     const budget=createCoachReliefBudget();for(const mesh of targets){const previousGeometry=mesh.geometry,previousMaterial=mesh.material;sculptMaterial(mesh,style,1,recipe.detail,budget);if(mesh.geometry!==previousGeometry)previousGeometry.dispose();if(mesh.material!==previousMaterial)previousMaterial.dispose();if(!checkNormals(mesh))throw Error(`${id} ${texture.displayName} has a mesh without normals`);}
     const added=[];let maxMeshAdded=0,maxMeshVertices=0,maxLevels=0;
     for(const mesh of targets){const stats=mesh.geometry.userData.coachRelief;if(!stats)continue;added.push(stats.addedTriangles);maxMeshAdded=Math.max(maxMeshAdded,stats.addedTriangles);maxMeshVertices=Math.max(maxMeshVertices,mesh.geometry.attributes.position.count);maxLevels=Math.max(maxLevels,stats.levels);}
-    const rendered=draw();if(!flatSignature&&texture.id==='flat')flatSignature=rendered.signature;
-    if(texture.familyId>=32&&rendered.signature===flatSignature)throw Error(`${id} ${texture.displayName} pixels match Flat`);
+    const rendered=draw();if(!claySignature&&texture.id==='clay')claySignature=rendered.signature;
+    if(texture.familyId>=32&&rendered.signature===claySignature)throw Error(`${id} ${texture.displayName} pixels match Clay`);
     samples.push({id:texture.id,name:texture.displayName,familyId:texture.familyId,unlocked:isTextureUnlocked(texture),added:budget.usedTriangles,remaining:budget.remainingTriangles,maxMeshAdded,maxMeshVertices,maxLevels,...rendered});
     if(budget.usedTriangles>240000||budget.remainingTriangles<0)throw Error(`${id} ${texture.displayName} exceeded the coach triangle cap (${budget.usedTriangles})`);
     for(const mesh of targets){const stats=mesh.geometry.userData.coachRelief;if(stats&&(stats.addedTriangles>64000||mesh.geometry.attributes.position.count>32000||stats.levels>5))throw Error(`${id} ${texture.displayName} exceeded a per-mesh cap: ${JSON.stringify(stats)}`);}
@@ -73,12 +73,12 @@ test('all49 texture catalog renders on assembled Boxy and Crescent coaches withi
   }
   renderer.dispose();return{catalogCount:types.length,familyCount:new Set(types.map(texture=>texture.familyId)).size,reports,shaderErrors,canvas:[375,812]};
  });
- assert.deepEqual(reports.canvas,[375,812]);assert.equal(reports.catalogCount,49,'all catalog entries render');assert.equal(reports.familyCount,49,'all 49 entries represent distinct texture families');assert.equal(reports.reports.length,2);
+ assert.deepEqual(reports.canvas,[375,812]);assert.equal(reports.catalogCount,48,'all selectable catalog entries render');assert.equal(reports.familyCount,48,'all 48 entries represent distinct texture families');assert.equal(reports.reports.length,2);
  assert.deepEqual(reports.shaderErrors,[],'renderer reported no shader compile errors');assert.deepEqual(shaderConsole,[],'browser console reported no shader or WebGL errors');
  for(const coach of reports.reports){
-  assert.ok(coach.meshes>0,`${coach.id} has assembled textured geometry`);assert.equal(coach.samples.length,49);
+  assert.ok(coach.meshes>0,`${coach.id} has assembled textured geometry`);assert.equal(coach.samples.length,48);
   assert.deepEqual(coach.endUnlocks,coach.initialUnlocks,`${coach.id} leaves unlock state unchanged`);assert.equal(coach.storageAfter,coach.storageBefore,`${coach.id} leaves local cache state untouched`);
   for(const sample of coach.samples){assert.ok(sample.foreground>600,`${coach.id} ${sample.name} produces actual phone pixels (${sample.foreground})`);assert.ok(Number.isFinite(sample.variance)&&sample.variance>20,`${coach.id} ${sample.name} has rendered tonal variation`);assert.ok(sample.colors>8,`${coach.id} ${sample.name} renders multiple colors`);assert.ok(sample.added<=240000&&sample.remaining>=0,`${coach.id} ${sample.name} meets the coach cap`);assert.ok(sample.maxMeshAdded<=64000&&sample.maxMeshVertices<=32000&&sample.maxLevels<=5,`${coach.id} ${sample.name} meets per-mesh caps`);}
-  const rewards=coach.samples.filter(sample=>sample.familyId>=32);assert.equal(rewards.length,24);assert.equal(new Set(rewards.map(sample=>sample.signature)).size,24,`${coach.id} renders 24 distinct reward patterns`);
+  const rewards=coach.samples.filter(sample=>sample.familyId>=32&&sample.familyId<=55);assert.equal(rewards.length,24);assert.equal(new Set(rewards.map(sample=>sample.signature)).size,24,`${coach.id} renders 24 distinct reward patterns`);
  }
 }));

@@ -19,7 +19,7 @@ export function rollCategory(tier,random=Math.random){
  return roll<odds.color?'color':roll<odds.color+odds['64-bit']?'64-bit':'texture';
 }
 const pools={color:colourRewardPool(),texture:textureRewardPool()};
-export function setTexturePool(items){pools.texture=items.filter(item=>item.kind==='texture'&&item.id!=='coach-64-bit').map(({kind,id,name})=>({kind,id,name}));}
+export function setTexturePool(items){pools.texture=items.filter(item=>item.kind==='texture').map(({kind,id,name})=>({kind,id,name}));}
 const identity=reward=>store.cosmeticId(reward.coachId,reward.id);
 export const hasCosmetic=reward=>reward.kind==='boss-skin'?ledger.isGranted('boss-skin',identity(reward)):store.isGranted(reward.kind,reward.id,reward.coachId);
 const categoryPool=(category,coaches)=>coaches.flatMap(coachId=>category==='64-bit'?[{kind:'boss-skin',id:`${coachId}-skin`,name:'64-bit Pixel Finish',coachId}]:pools[category].map(item=>({...item,coachId})));
