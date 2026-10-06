@@ -49,8 +49,12 @@ export function mountPodChrome(grimoireButton,{signal}={}){
   const housing=doc.getElementById('portalChrome');
   const cutaway=active?.classList.contains('portal-shaped')&&!active.classList.contains('portal-fullscreen');
   const frame=cutaway?housing?.querySelector('.portal-frame'):!active&&portal&&!portal.hidden?portal.querySelector('#portalBoardHost > .portal-frame'):null;
-  const owner=frame||(!active?doc.querySelector('.ship-header'):null)||doc.body;
-  nav.hidden=!!active&&!cutaway;
+  // The board's frame sits below its full-screen drawing canvas. Keep interactive
+  // terminals in the portal's control layer, outside that lower stacking context.
+  const owner=frame&&frame.closest('#portalHome')?portal:frame||(!active?doc.querySelector('.ship-header'):null)||doc.body;
+  // Native modal dialogs make external controls inert, even in a raised popover.
+  // Hide those keys until returning to the Grimoire rather than draw dead buttons.
+  nav.hidden=!!active&&(!cutaway||active.matches(':modal'));
   nav.classList.toggle('frame-mounted',!!frame);
   if(frame){frame.removeAttribute('aria-hidden');housing?.removeAttribute('aria-hidden');}
   if(nav.parentNode!==owner)owner.append(nav);

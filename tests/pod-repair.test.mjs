@@ -36,7 +36,9 @@ test('the reward pack is a 64x64 tier tile in its tier colour and names the actu
   assert(fills.every(f=>f.x>=0&&f.y>=0&&f.x+f.w<=64&&f.y+f.h<=64),'drawn inside the 64x64 tile');
  }
  const palette=rewardSummary({category:'color',reward:{kind:'palette',id:'pal-03',name:'Static Pop'}});
- assert.equal(palette.title,'Static Pop');assert.equal(palette.detail,'Colour palette');assert.deepEqual(palette.colors,['#FF3B30','#111111','#FFFFFF']);
+ assert.equal(palette.title,'Static Pop');assert.equal(palette.detail,'Colour palette');
+ const catalog=JSON.parse(fs.readFileSync(new URL('../creature/source/creator/palettes.json',import.meta.url),'utf8'));
+ assert.deepEqual(palette.colors,catalog.find(p=>p.id==='pal-03').colors,'reward swatches use the actual palette currently in the catalog');
  const fills=[];drawTierTile({clearRect(){},fillRect(){fills.push(this.fillStyle);}},'rare',{opened:true,colors:palette.colors});
  for(const color of palette.colors)assert(fills.includes(color),'the opened tile shows the palette it awarded');
  const skin=rewardSummary({category:'64-bit',reward:{kind:'boss-skin',id:'strider-1-skin',name:'Strider Skin'}});
