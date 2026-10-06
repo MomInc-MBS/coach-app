@@ -25,11 +25,13 @@ Focused browser tests cover 250-level map, early chrome, movement menu and stand
 Live authenticated Spotify login/playback was not tested in the local static preview.
 
 Release state
-The user explicitly authorized going live after the final name selections. Production deployment is being coordinated from the isolated working branch.
+The user explicitly authorized going live after the final name selections. Release 23 is deployed to https://myr5.mominc.online as Worker version eaac5cf9-5529-4056-9ced-994d33187315, build 2bbff87fa4e6f2aac8d0, from code commit 618fe1a.
 Public Spotify Client ID and callback are configured; user confirmed callback registration.
-Spotify encryption binding was staged as Worker version e76dc546-19ca-4541-9ac6-53ca28fce2de; not traffic-deployed.
+The live Worker version contains SPOTIFY_TOKEN_KEY; the staged encryption binding was preserved by the production deployment.
 Production migrations 0025_spotify_connection.sql and 0026_workout_paths.sql were applied successfully. 0022 was already applied remotely and is also in the journal. The pre-migration D1 recovery bookmark is 000002c3-00000006-000050fc-b38d202f887c177662a5d8c6c1ffcd61.
 Native Spotify Jam creation remains in Spotify; Coach accepts its invitation link. Tempo unavailable from this API stays idle rather than inventing a beat.
+Post-deployment checks: /health returned 200 with active cron; /api/releases/current matched Release 23. Names, app runtime, release build, Spotify terminal, level-map scene and Gala bay returned 200 and matched the built assets byte-for-byte. Spotify status requires sign-in (401), and a callback without state safely redirected to the expired-connection screen (303). Live authenticated Spotify login/playback remains untested.
+The existing collaborative browser profile still held the prior cached release and a waiting service worker, with an old-session saving notice. Fresh network checks verified the published release; users should close all Coach windows and reopen for cached-shell activation. Earlier product-native UI checks cover this implementation, but the cached profile was not treated as a fresh Release 23 UI validation.
 
 External asset generator
 D:/MYR5 Roster/tools/publish_roster.py was corrected to preserve central names/exclusions and the current roster source path. No asset regeneration was run.
