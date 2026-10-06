@@ -1,6 +1,6 @@
 Coach-name provenance and naming direction
 
-The 65 retained-coach options are in coach-name-options.txt. The `person` field in coach-names.mjs records the fitness figure behind each display pun; full person names are kept out of display labels. References recur across related strength and movement tracks when a figure genuinely belongs to both fields.
+The 65 retained coaches and 97 user-selected display names are in coach-name-options.txt. The `person` field in coach-names.mjs records the fitness figure behind each display name. The user-approved strings take precedence over the earlier pun-format rules. References recur across related strength and movement tracks when a figure belongs to both fields.
 
 Primary-source anchors checked for the reference pool:
 - Bodybuilding / strength: Olympia identifies Jay Cutler and Ronnie Coleman as Mr. Olympia rivals and bodybuilding champions: https://mrolympia.com/2019-Honorary-Olympia-Weekend-Ambassador
@@ -14,4 +14,4 @@ Primary-source anchors checked for the reference pool:
 
 The science-fiction naming cue follows Lucasfilm's documented use of compact designations and sound-play names: https://www.starwars.com/databank/r2-d2 ; https://www.starwars.com/news/buckets-list-extra-the-missing-agent-star-wars-resistance ; https://www.starwars.com/news/25-weird-star-wars-character-names
 
-Editorial check: a candidate should be short enough for a coach label, recognizable aloud as a figure fragment, and carry a workout/movement idea fused with a plausible technology or science-fiction idea. The annotation in coach-name-options.txt makes each reading inspectable; it is not a claim that every pun is self-explanatory without context.
+The workout and technology notes are retained from the corresponding candidate before the user's final edits. They document its origin and may describe an idea that the final display string no longer spells out.

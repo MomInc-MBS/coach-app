@@ -1,6 +1,6 @@
-Coach name options | 65 retained coaches / 130 distinct candidates
-Each line shows the display name, its fitness-field person reference, and the workout and science-fiction/mechanical ideas fused into it.
-The four additional metadata IDs stay available for roster compatibility but are not part of this retained coach catalog.
+Coach name selections | 65 retained coaches | 97 user-selected names
+Each line shows the approved display name, its original fitness-person reference, and the original workout and technology notes.
+A single entry means the other candidate was removed. Four additional metadata IDs remain for roster compatibility and are not part of this retained catalog.
 
 myr5 [original]
   1. MYR5 Jacked LaLAN | Jack LaLanne; workout: jacked strength; tech: local area network
@@ -55,84 +55,73 @@ roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model [glutes]
   2. Simmonics Bridge-Servo | Whitney Simmons; workout: bridge; tech: electronics servo
 
 roster/04-crest-wedge--robot_creature_3d_model [chest]
-  1. Ferri-Pec Reactor | Lou Ferrigno; workout: pec; tech: reactor
+  1. L0U Ferri-pecctor | Lou Ferrigno; workout: pec; tech: reactor
   2. Wheeler Wheel-Bench | Flex Wheeler; workout: bench; tech: drive wheel
 
 roster/04-crest-wedge--stylized_3d_character [chest]
   1. Gr33ne Grid-Press | Kai Greene; workout: press; tech: power grid designation
-  2. Sand-OW Pec-Servo | Eugen Sandow; workout: pec; tech: servo
 
 roster/05-slope-bobble--clay_humanoid_figure_3d_model [martial-arts]
-  1. McG-Gear Kick | Conor McGregor; workout: kick; tech: gear transmission
+  1. C0N0R McG-Gear | Conor McGregor; workout: kick; tech: gear transmission
   2. Nor-Rotor Punch | Chuck Norris; workout: punch; tech: rotor
 
 roster/06-ridge-triad--geometric_robot_3d_model1 [chest]
-  1. Colum-Bench Exo | Franco Columbu; workout: bench; tech: exosuit
-  2. Oli-Vac Pec | Sergio Oliva; workout: pec; tech: vacuum drive
+  1. Oliva-C Pec | Sergio Oliva; workout: pec; tech: vacuum drive
 
 roster/06-ridge-triad--robot_3d_model1 [cardio]
-  1. Farad Fastlane | Mo Farah; workout: fast run; tech: electric capacitance
-  2. Flo-Jet Sprint | Florence Griffith Joyner; workout: sprint; tech: jet propulsion
+  1. M0 Farah Fastlane | Mo Farah; workout: fast run; tech: electric capacitance
 
 roster/07-bulb-sphereling--cute_robot_3d_model [cardio]
-  1. Blanx Bootwave | Billy Blanks; workout: boot camp; tech: waveform
+  1. Billy Blanx Beam | Billy Blanks; workout: boot camp; tech: waveform
   2. GebreShell Runloop | Haile Gebrselassie; workout: run; tech: software shell loop
 
 roster/07-bulb-sphereling--humanoid_robot_3d_model [cardio]
   1. B0LT Sprint-Drive | Usain Bolt; workout: sprint; tech: electrical bolt drive
-  2. Kipcho-Gait Tachyon | Eliud Kipchoge; workout: running gait; tech: tachyon
 
 roster/08-shard-asym--fantasy_creature_3d_model2 [martial-arts]
-  1. Waters0nic Kick | Michelle Waterson; workout: kick; tech: sonic drive
-  2. Nu-NEURAL Strike | Amanda Nunes; workout: strike; tech: neural implant
+  1. Waters0nic | Michelle Waterson; workout: kick; tech: sonic drive
+  2. Amanda Nu-NEURAL | Amanda Nunes; workout: strike; tech: neural implant
 
 roster/08-shard-asym--geometric_robot_3d_model [chest]
   1. Pec-n0ld Reactor | Arnold Schwarzenegger; workout: pec; tech: reactor
-  2. Pecole-MAN Coil | Ronnie Coleman; workout: pec; tech: magnetic coil
 
 roster/08-shard-asym--robot_3d_model4 [arms]
-  1. BUM-stead Bicep.exe | Chris Bumstead; workout: bicep; tech: software executable
-  2. Oli-VArmature | Sergio Oliva; workout: arm; tech: motor armature
+  1. S3RG Oliv-Armature | Sergio Oliva; workout: arm; tech: motor armature
 
 roster/08-shard-asym--stylized_action_figure_3d_model [yoga]
   1. Yee-lastic Flow | Rodney Yee; workout: yoga flow; tech: elastic mechanics
-  2. C0RNe Circuit | Seane Corn; workout: core; tech: circuit designation
 
 roster/09-monolith-tanka--3d_robot_model [chest]
-  1. Ree-volts Bench | Steve Reeves; workout: bench; tech: voltage
-  2. BenchSTEAD Bot | Chris Bumstead; workout: bench; tech: robot
+  1. chris BenchSTEAD | Chris Bumstead; workout: bench; tech: robot
 
 roster/09-monolith-tanka--boxy_humanoid_3d_model [martial-arts]
-  1. Bruce L33 Kick | Bruce Lee; workout: kick; tech: alphanumeric call sign
-  2. GSP Spar-Drive | Georges St-Pierre; workout: spar; tech: motor drive
+  1. Bruce L3300 | Bruce Lee; workout: kick; tech: alphanumeric call sign
+  2. GSP-Drive | Georges St-Pierre; workout: spar; tech: motor drive
 
 roster/09-monolith-tanka--mini_robot_3d_model [martial-arts]
-  1. Machi-Droid Chop | Lyoto Machida; workout: chop; tech: android
-  2. Rut-TORque Kick | Bas Rutten; workout: kick; tech: motor torque
+  1. Machi-Droid-a | Lyoto Machida; workout: chop; tech: android
+  2. Bas Rut-TORque | Bas Rutten; workout: kick; tech: motor torque
 
 roster/09-monolith-tanka--robot_3d_model3 [martial-arts]
-  1. Ade-SYNC Strike | Israel Adesanya; workout: strike; tech: synchronization
+  1. Israel Ade-SYNC-ya | Israel Adesanya; workout: strike; tech: synchronization
   2. Shev-Servo Sweep | Valentina Shevchenko; workout: sweep; tech: servo
 
 roster/09-monolith-tanka--white_horned_robot_3d_model [chest]
-  1. Bail-EY Bench | Dana Linn Bailey; workout: bench; tech: cybernetic eye
-  2. Cavalier-EX Chest | Jeff Cavaliere; workout: chest; tech: exercise model EX
+  1. Cavalier-EX Chest | Jeff Cavaliere; workout: chest; tech: exercise model EX
 
 roster/10-petal-wisp--fantasy_creature_3d_model4 [yoga]
-  1. Iyeng-Align Gyro | B. K. S. Iyengar; workout: alignment; tech: gyroscopic balance
-  2. Adriene A-Sana Mk II | Adriene Mishler; workout: asana; tech: model revision
+  1. Adriene A-Sana Mk II | Adriene Mishler; workout: asana; tech: model revision
 
 roster/10-petal-wisp--ghost_character_3d_model [yoga]
   1. Warri0r-ner Drive | Dylan Werner; workout: warrior pose; tech: motor designation
-  2. Bend-ig Bot | Kathryn Budig; workout: bend; tech: robot
+  2. Kathryn Bend-1g | Kathryn Budig; workout: bend; tech: robot
 
 roster/10-petal-wisp--stylized_creature_3d_model [yoga]
-  1. Adri-ENgine Pose | Adriene Mishler; workout: pose; tech: engine
-  2. Iyeng-Arc Inversion | B. K. S. Iyengar; workout: inversion; tech: powered arc
+  1. Iyeng-Arc Inversion | B. K. S. Iyengar; workout: inversion; tech: powered arc
 
 roster/11-anvil-cask--clay-style_robot_3d_model [martial-arts]
-  1. Sil-VOLT Strike | Anderson Silva; workout: strike; tech: voltage
-  2. Rous-Bot Armbar | Ronda Rousey; workout: armbar; tech: robot
+  1. Anderson Sil-VOLT | Anderson Silva; workout: strike; tech: voltage
+  2. r0nda Rous-Bot | Ronda Rousey; workout: armbar; tech: robot
 
 roster/12-seedpod-snailslug--stylized_slug_3d_model [meditation]
   1. H0F Hold-Circuit | Wim Hof; workout: breath hold; tech: circuit and model code
@@ -140,10 +129,9 @@ roster/12-seedpod-snailslug--stylized_slug_3d_model [meditation]
 
 roster/12-seedpod-snailslug--stylized_worm_3d_model [meditation]
   1. Pilat-OS Calm-Circuit | Joseph Pilates; workout: mindful breathing; tech: operating system circuit
-  2. Iyeng-Align Airlock | B. K. S. Iyengar; workout: alignment and breath; tech: airlock
 
 roster/13-fan-split--stylized_3d_character2 [quads]
-  1. Quad-Cutler Circuit | Jay Cutler; workout: quad; tech: circuit
+  1. Quad-Cutler LEGS THO | Jay Cutler; workout: quad; tech: circuit
   2. BumSTEADy Squat | Chris Bumstead; workout: squat; tech: steady-state control
 
 roster/13-fan-split--stylized_toy_3d_model [martial-arts]
@@ -156,108 +144,87 @@ roster/14-chisel-spire--cone_head_3d_model [martial-arts]
 
 roster/14-chisel-spire--low_poly_robot_3d_model [meditation]
   1. Rea-Spire Relay | Shiva Rea; workout: respiration; tech: air relay
-  2. Yee Breathware | Rodney Yee; workout: yoga breath; tech: software
 
 roster/15-orbital-coili--robot_character_3d_model [quads]
-  1. Platzma Squat | Tom Platz; workout: squat; tech: plasma
-  2. Coil-MAN Lunge | Ronnie Coleman; workout: lunge; tech: motor coil
+  1. t-OHM Platzma | Tom Platz; workout: squat; tech: plasma
 
 roster/16-spade-arch--pyramid_head_figure_3d_model [chest]
-  1. Pec-Zane Drive | Frank Zane; workout: pec; tech: motor drive
-  2. Y4TES Press-Yoke | Dorian Yates; workout: press; tech: powered yoke
+  1. Franx Pec-Zane | Frank Zane; workout: pec; tech: motor drive
+  2. Y4TES Yoke | Dorian Yates; workout: press; tech: powered yoke
 
 roster/16-spade-arch--stylized_humanoid_3d_model [chest]
   1. Cutlerator Press | Jay Cutler; workout: press; tech: accelerator
-  2. Hane-Yoke Bench | Lee Haney; workout: bench; tech: powered yoke
 
 roster/17-shellcap-manyarm--3d_character_figurine [arms]
-  1. Yate-SYNC Press | Dorian Yates; workout: press; tech: synchronized motor
-  2. Delt-a Bailey | Dana Linn Bailey; workout: delt; tech: Delta designation
+  1. Delt-alinn Bailey | Dana Linn Bailey; workout: delt; tech: Delta designation
 
 roster/17-shellcap-manyarm--mushroom_creature_3d_model [arms]
   1. KAI-nematic Raise | Kai Greene; workout: raise; tech: kinematic mechanism
-  2. Philament Press | Phil Heath; workout: press; tech: electrical filament
+  2. Philament Heave Press | Phil Heath; workout: press; tech: electrical filament
 
 roster/17-shellcap-manyarm--mushroom_robot_3d_model [arms]
   1. Wheel-er Servo-Shrug | Flex Wheeler; workout: shrug; tech: servo wheel
-  2. Fletch-ER Armature | C. T. Fletcher; workout: arm; tech: motor armature
 
 roster/18-quad-all--dragon_creature_3d_model [meditation]
   1. H0F-Lung | Wim Hof; workout: breathing; tech: oxygen-code lung
-  2. McKe-Om Breathware | Patrick McKeown; workout: breath meditation; tech: software
 
 roster/18-quad-all--fantasy_creature_3d_model1 [meditation]
-  1. Ohm-Strom Breath | Max Strom; workout: breathing; tech: electrical resistance
+  1. Max Ohm-Strom Breath | Max Strom; workout: breathing; tech: electrical resistance
   2. Yee-uro Zen | Rodney Yee; workout: mindful movement; tech: neural interface
 
 roster/18-quad-all--fantasy_creature_3d_model3 [meditation]
-  1. Pilat-OS Breath | Joseph Pilates; workout: breathing; tech: operating system
-  2. Rea-Spire Airlock | Shiva Rea; workout: respiration; tech: airlock
+  1. Shiva Rea-spatory | Shiva Rea; workout: respiration; tech: airlock
 
 roster/18-quad-all--four-legged_robot_3d_model [meditation]
-  1. Stile-Standby Breath | Tara Stiles; workout: breathing; tech: computer standby
-  2. Adri-ENgine Air-Sana | Adriene Mishler; workout: breath and asana; tech: air engine
+  1. Tara-5tile5-Standby | Tara Stiles; workout: breathing; tech: computer standby
 
 roster/18-quad-all--quadruped_robot_3d_model [meditation]
-  1. Vertu-al Breath | Shona Vertue; workout: breathing; tech: virtual reality
-  2. Yee Holo-Om | Rodney Yee; workout: mindful movement; tech: hologram
+  1. Yee Holo-Om | Rodney Yee; workout: mindful movement; tech: hologram
 
 roster/18-quad-all--quadruped_robot_3d_model1 [meditation]
-  1. Iyeng-Inhale Gyro | B. K. S. Iyengar; workout: inhale; tech: gyroscopic balance
-  2. Werner Wind0wn | Dylan Werner; workout: wind-down practice; tech: alphanumeric standby mode
+  1. Werner Wind0wn | Dylan Werner; workout: wind-down practice; tech: alphanumeric standby mode
 
 roster/18-quad-all--robotic_dog_3d_model [meditation]
-  1. Corn Kernel Calm | Seane Corn; workout: calm meditation; tech: computing kernel
-  2. Budig-ital Breath | Kathryn Budig; workout: breathing; tech: digital
+  1. Budig-ital Breath | Kathryn Budig; workout: breathing; tech: digital
 
 roster/18-quad-all--wooden_four-legged_robot_3d_model [quads]
-  1. Bail-EY Lunge | Dana Linn Bailey; workout: lunge; tech: cybernetic eye
-  2. Priest-on Squat | Lee Priest; workout: squat; tech: piston
+  1. Priest-L33 Squat | Lee Priest; workout: squat; tech: piston
 
 roster/19-genie-multi--fantasy_creature_3d_model [yoga]
   1. Mat-Gregor Matrix | Kino MacGregor; workout: mat; tech: simulation matrix
-  2. Stile-Cycle Stretch | Tara Stiles; workout: stretch; tech: pose cycle
 
 roster/19-genie-multi--multi-armed_humanoid_3d_model [arms]
-  1. Delt-Zane Coil | Frank Zane; workout: delt; tech: magnetic coil
+  1. Frank Delt-Zan3 | Frank Zane; workout: delt; tech: magnetic coil
   2. Cutlerator Curl | Jay Cutler; workout: curl; tech: accelerator
 
 roster/19-genie-multi--multi-armed_humanoid_3d_model1 [arms]
   1. Ferri-Delt L0U | Lou Ferrigno; workout: delt; tech: robot designation
-  2. Cole-MANifold Curl | Ronnie Coleman; workout: curl; tech: engine manifold
+  2. R0N Curlman | Ronnie Coleman; workout: curl; tech: engine manifold
 
 roster/19-genie-multi--stylized_octopus_3d_model [yoga]
-  1. Stile-Servo Pose | Tara Stiles; workout: pose; tech: servo
-  2. Yee Gyro-Yoga | Rodney Yee; workout: yoga; tech: gyroscope
+  1. Yee Gyro-Yogi | Rodney Yee; workout: yoga; tech: gyroscope
 
 roster/20-lume--robotic_figure_3d_model [cardio]
   1. Pre-Font-AI-ne Pace | Steve Prefontaine; workout: pace; tech: AI running model
   2. Ohm-wens Run | Jesse Owens; workout: run; tech: electrical resistance
 
 roster/22-curve--stylized_alien_3d_model [yoga]
-  1. Rea-Align Servo | Shiva Rea; workout: alignment; tech: servo
-  2. Strom Stretch-Current | Max Strom; workout: stretch; tech: electric current
+  1. Strom Flex Current | Max Strom; workout: stretch; tech: electric current
 
 roster/22-curve--stylized_cartoon_figure_3d_model [quads]
-  1. Gr33ne Lunge-Gear | Kai Greene; workout: lunge; tech: gear designation
-  2. Warr-ENgine Squat | Branch Warren; workout: squat; tech: engine
+  1. Kai Gr33ne Lunge | Kai Greene; workout: lunge; tech: gear designation
 
 roster/23-blob-texture-bodies--blob_creature_3d_model [meditation]
   1. Blob 1 · H0F Hold-Drive | Wim Hof; workout: breath hold; tech: air drive and model code
-  2. Blob 1 · Adriene A-Sana Core | Adriene Mishler; workout: breath and asana; tech: core processing
 
 roster/23-blob-texture-bodies--cute_blob_creature_3d_model [glutes]
-  1. Arz-on Glute-Drive | Robin Arzon; workout: glute; tech: power-on motor
-  2. Chlo-Turbo Thrust | Chloe Ting; workout: thrust; tech: turbine
+  1. Chlo-Turbo Thrust | Chloe Ting; workout: thrust; tech: turbine
 
 roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model [glutes]
   1. Con-Thrust-Era | Bret Contreras; workout: hip thrust; tech: thruster
-  2. C0RE-sey Hip-Drive | Cassey Ho; workout: hip and core; tech: motor drive and model code
 
 roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model [arms]
-  1. Sand-OHM Press | Eugen Sandow; workout: press; tech: electrical resistance
-  2. Ree-volts Raise | Steve Reeves; workout: raise; tech: voltage
+  1. Ree-volts Raise | Steve Reeves; workout: raise; tech: voltage
 
 roster/23-blob-texture-bodies--sand_creature_3d_model [glutes]
   1. Tingularity Thrust | Chloe Ting; workout: hip thrust; tech: singularity
-  2. Arz-on Bridge | Robin Arzon; workout: bridge; tech: power-on switch

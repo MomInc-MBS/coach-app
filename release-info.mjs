@@ -1,16 +1,12 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-10-05-release-22-'+BUILD_ID,title:'Release 22: Mechanical safe door',date:'2026-10-05',url:'https://myr5.mominc.online/repair-coach',notes:[
- "Cogs is back in the board picker as a mechanical safe door: the eight portal shapes are lock rings of tubes, bolts, pistons, pulleys and lamps. Tracing a shape withdraws its bolts and lights its lamps, the dial spins, and the door panels fall open.",
- "The safe door casts real shadows, its lamps glow warm, and the steampunk pipes, valves, plates and screws dress the panels between the lines.",
- "Pond lily pads move aside around your finger and settle back after release. Cogs has been removed from the board picker; saved Cogs selections now open Pond.",
- "After the initial splash, Pond water sounds are quieter. Only nearby fish follow your finger, and they scatter promptly when you lift it.",
- "Ship choices show the matching 3D hull and describe its shape. Your chosen ship takes priority over other earned ships.",
- "Pond joins the Grimoire menu with water, fish and a touch trail.",
- "Portal glow has a thin bright edge and a soft fade, keeping page panels and controls readable.",
- "Coach heads and feet stay attached during motion, and pupils sit inside their eyes.",
- "War Room offers your unlocked coach shapes as pixel bodies and four-legged coaches as pets. Their colours follow your coach design.",
- "Ship arrivals, portal transitions and coach reactions use the revised timing.",
- "Camera tracking prefers GPU with CPU fallback and shows its inference rate. Counting handles slower observed frames, and cropped plank tracking labels an upper-body estimate.",
- "The camera coach responds to swept limb strikes, grabs and releases.",
- "Weapon upgrades follow player level. The new player-level progression begins at level 1."
+export const RELEASE=Object.freeze({id:'2026-10-05-release-23-'+BUILD_ID,title:'Release 23: Coach cosmos',date:'2026-10-05',url:'https://myr5.mominc.online/repair-coach',notes:[
+ "Coaches use the revised fitness-inspired names. Start with MYR5 and Blob 1, then choose two workout paths to unlock their introductory coaches. Flyer and Quad 10 are removed.",
+ "Achievements restore the constellation view and coach zoom, with each coach's performance requirements and sequential weapon unlocks.",
+ "The XP terminal pages through solar-system areas. Open it to fly your chosen pixel ship through 250 levels, revisit past unlocks and fire at asteroids. Future scenery stays fogged until unlocked.",
+ "The War Room uses orange CRT styling with visual customization previews and combined clothing categories. Tap the pod character to open it.",
+ "The pod has persistent metal-mounted Grimoire and Now Playing terminals, simplified labels and physical portal controls. Menus share the phone movement effect.",
+ "Connect Spotify for playlists and playback controls, with native Spotify Jam invitation links and a compact DJ terminal. The hand follows available song tempo or idles when tempo is unavailable.",
+ "Workout instructions fit on the hologram screen with Begin underneath. Leaving a workout or menu releases its resources, and camera workouts prevent manual rep changes from granting XP.",
+ "Pond's big fish arrives after eight seconds and follows more strongly. Gear Grimoire and whiteboard goal entry are removed. The classroom adds light flicker, a paper crawler and squeaky marker audio.",
+ "Coach surface details are more visible on larger models. The recovery room returns automatically during preparation recovery without a manual workout-credit button."
 ]});

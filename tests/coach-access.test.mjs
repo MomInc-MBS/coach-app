@@ -1,12 +1,14 @@
 import {test,describe,beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {STARTER_COACH_IDS,EXCLUDED_COACH_IDS,COACHES,COACH_REQUIREMENTS,PATH_INTRO_COACH_IDS,CHOOSABLE_TRACKS} from '../performance-catalog.mjs';
 import {chooseWorkoutPaths,readSelectedTracks,SELECTED_TRACKS_KEY} from '../chosen-styles.mjs';
-import {COACH_NAMES,COACH_NAME_META,coachName,cycleCoachName,normalizePun} from '../coach-names.mjs';
+import {COACH_NAMES,COACH_NAME_META,coachName,cycleCoachName} from '../coach-names.mjs';
 import {PERFORMANCE_KEY,readPerformanceProgress,recordPerformanceSession,recordDailyActivity,coachAccess,mergeVerifiedPerformance,validPerformanceState,migratePerformanceAccess} from '../performance-progress.mjs';
 import {rosterModels} from '../creature/source/creator/roster.ts';
 
 const BLOB1='roster/23-blob-texture-bodies--blob_creature_3d_model';
+const userSelections=JSON.parse(readFileSync(new URL('../plan/user-name-selections.json',import.meta.url),'utf8'));
 const id=suffix=>COACHES.find(c=>c.id.endsWith(suffix))?.id??assert.fail(`no coach ${suffix}`);
 const store=()=>{const map=new Map();return {map,getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v))};};
 const requirement=coachId=>COACH_REQUIREMENTS.find(c=>c.id===coachId);
@@ -39,12 +41,18 @@ describe('starters and exclusions',()=>{
 
 describe('coach names',()=>{
  const metas=Object.entries(COACH_NAME_META);
- test('every catalog and roster coach has two distinct named candidates, no fallback',()=>{
+ test('every catalog and roster coach has its selected names, no unknown-id fallback',()=>{
   for(const coach of [...COACHES,...rosterModels]){
    const pair=COACH_NAMES[coach.id];
    assert.ok(pair,`${coach.id} unnamed`);
-   assert.equal(pair.length,2);assert.notEqual(pair[0],pair[1]);
-   assert.equal(coachName(coach.id),pair[0]);assert.equal(coachName(coach.id,true),pair[1]);
+   assert.ok(pair.length===1||pair.length===2,`${coach.id} has ${pair.length} names`);
+   if(pair.length===2)assert.notEqual(pair[0],pair[1]);
+   assert.equal(coachName(coach.id),pair[0]);assert.equal(coachName(coach.id,true),pair[1]??pair[0]);
+  }
+  assert.equal(Object.keys(userSelections).length,COACHES.length);
+  for(const coach of COACHES){
+   const path=coach.id==='myr5'?'myr5':coach.id.slice('roster/'.length);
+   assert.deepEqual(COACH_NAMES[coach.id],userSelections[path],coach.id);
   }
   assert.throws(()=>coachName('roster/unknown--test'),/No coach name/);
  });
@@ -53,33 +61,33 @@ describe('coach names',()=>{
   assert.equal(COACHES.find(c=>c.id==='myr5').sourceLabel,'Original MYR5');
   assert.equal(COACHES.find(c=>c.id===BLOB1).sourceLabel,'Blob 1');
  });
- test('every name is unique, compact and annotated with fitness provenance and its two ideas',()=>{
+ test('selected names are unique, compact and retain provenance notes',()=>{
   const seen=new Set();
   for(const [coachId,meta] of metas)for(const n of meta.names){
-   const flat=normalizePun(n.name);
    assert.ok(n.person,`${n.name} lacks a person reference`);
    assert.ok(n.workout?.trim(),`${n.name} lacks a workout idea`);
    assert.ok(n.scifi?.trim(),`${n.name} lacks a technology or science-fiction idea`);
-   assert.ok(!flat.includes(normalizePun(n.person)),`${n.name} shows the full famous name`);
    assert.ok(n.name.length<=42,`${n.name} is too long for a coach label`);
    assert.ok(!/['’]/.test(n.name),`${n.name} has an apostrophe`);
    assert.ok(!seen.has(n.name),`${n.name} duplicated`);seen.add(n.name);
   }
-  assert.equal(seen.size,metas.length*2);
-  for(const [coachId,meta] of metas)assert.notEqual(meta.names[0].person,meta.names[1].person,`${coachId} pair repeats a person`);
+  assert.equal(seen.size,metas.reduce((count,[,meta])=>count+meta.names.length,0));
+  for(const [coachId,meta] of metas)if(meta.names.length===2)assert.notEqual(meta.names[0].person,meta.names[1].person,`${coachId} pair repeats a person`);
  });
  test('names follow the mapped workout group',()=>{
   for(const c of COACH_REQUIREMENTS)assert.equal(COACH_NAME_META[c.id].track,c.tracks[0],c.id);
   assert.deepEqual(COACH_NAMES[id('taper-tallstalk--humanoid_robot_3d_model1')][0],'Arnoid Press');
-  assert.equal(COACH_NAMES[id('monolith-tanka--boxy_humanoid_3d_model')][0],'Bruce L33 Kick');
-  assert.equal(COACH_NAMES[id('petal-wisp--fantasy_creature_3d_model4')][0],'Iyeng-Align Gyro');
+  assert.equal(COACH_NAMES[id('monolith-tanka--boxy_humanoid_3d_model')][0],'Bruce L3300');
+  assert.equal(COACH_NAMES[id('petal-wisp--fantasy_creature_3d_model4')][0],'Adriene A-Sana Mk II');
  });
  test('original MYR5 and Blob 1 stay recognisable',()=>{
   for(const name of COACH_NAMES.myr5)assert.match(name,/^MYR5 /);
   for(const name of COACH_NAMES[BLOB1])assert.match(name,/^Blob 1 /);
  });
- test('cycleCoachName toggles between the two candidates',()=>{
+ test('cycleCoachName toggles pairs and leaves one-name coaches unchanged',()=>{
   const [a,b]=COACH_NAMES.myr5;assert.equal(cycleCoachName('myr5',a),b);assert.equal(cycleCoachName('myr5',b),a);
+  const single=id('bulb-sphereling--humanoid_robot_3d_model');
+  assert.equal(cycleCoachName(single,COACH_NAMES[single][0]),COACH_NAMES[single][0]);
  });
 });
 
