@@ -4,7 +4,7 @@ import {EYE_LAYOUTS,EYE_REFERENCE,EYE_SCALE_DEFAULT} from './eye-layouts';
 import {EYE_OVERRIDES} from './eye-overrides';
 import {pupilGeometry} from './pupils';
 import {getCoach} from './coaching';
-import {prepareEyeMesh,conformEyeMesh,LID_RADIUS} from './eye-surface';
+import {prepareEyeMesh,conformEyeMesh,bloodshotVeins,LID_RADIUS} from './eye-surface';
 import {sculptMaterial,growMaterial,applySparkle,applyPaletteSurface} from './material-language';
 import {boneSockets,skeletalStructure,materialCollar,robotStructure} from './skeletal-anatomy';
 import {colorTriad,resolveRegionMaterial,regionChoice} from './materials-registry';
@@ -100,6 +100,8 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     if(region!=='eye'&&EYE_OVERRIDES[from[region]]?.flipX)source.scale.x*=-1;
     const wrapper=new THREE.Group();wrapper.name=region;root.add(wrapper);wrapper.add(source);regions[region]=wrapper;wrapper.traverse(o=>{if(o instanceof THREE.Mesh){if(region==='eye')prepareEyeMesh(o);o.userData.region=region;o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material=(o.material as THREE.MeshStandardMaterial).clone();const m=o.material as THREE.MeshStandardMaterial;m.userData={baseColor:m.color.clone(),baseRough:m.roughness,baseMetal:m.metalness,name:m.name};materials.push(m);}});}
    const lid=new THREE.Mesh(new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,.57),new THREE.MeshStandardMaterial({color:STYLES[0].primary,roughness:.58}));lid.position.copy(reference);lid.name='Expression eyelid';lid.userData.region='eye';const eyeTemplate=regions.eye.children[0] as THREE.Group;eyeTemplate.add(lid);
+   // R25 eye styles: squinty adds a lower lid (below); bloodshot adds veins that conform to the globe like the iris.
+   if(d.eye==='bloodshot'){const veinMaterial=new THREE.MeshStandardMaterial({color:'#b0122b',roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1});veinMaterial.userData={baseColor:veinMaterial.color.clone(),baseRough:.42,baseMetal:0,name:'Eye vein'};const veins=new THREE.Mesh(bloodshotVeins(),veinMaterial);veins.name='Eye vein';veins.userData={region:'eye',basePosition:veins.position.clone(),baseScale:veins.scale.clone()};eyeTemplate.add(veins);}
    // MYR5's anatomy variants (eye-socket crowns, finger and toe counts) only apply to regions MYR5 supplies.
    const variants=new Map<string,THREE.Object3D>();if(from.head==='myr5')variants.set('head_single',regions.head.children[0]);variants.set('original_arms',regions.arms.children[0]);variants.set('original_feet',regions.feet.children[0]);
    for(const object of [...anatomy.scene.children].filter(o=>!o.name.startsWith('arms_')).concat([...hands.scene.children])){const region=object.name.split('_')[0] as Region;object.traverse(o=>{if(o instanceof THREE.Mesh){o.userData.region=region;o.userData.basePosition=o.position.clone();o.userData.baseScale=o.scale.clone();o.material=(o.material as THREE.MeshStandardMaterial).clone();const m=o.material as THREE.MeshStandardMaterial;m.userData={baseColor:m.color.clone(),baseRough:m.roughness,baseMetal:m.metalness,name:m.name};}});object.removeFromParent();variants.set(object.name,object);}
@@ -112,7 +114,7 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
    // The eye region is placed by arrangeEyes below, so its wrapper stays at the origin.
    group.position.set(0,0,0);group.scale.setScalar(1);if(region!=='eye'){group.position.copy(fits[region].t);group.scale.setScalar(fits[region].s);}
    if(parts){const offsets:Record<Region,number[]>={head:[0,.65,0],eye:[0,.18,1.0],collar:[0,-.1,0],body:[0,-.45,0],arms:[.45,0,0],feet:[0,-.65,0]};group.position.add(new THREE.Vector3().fromArray(offsets[region]));}
-   group.traverse(o=>{if(!(o instanceof THREE.Mesh)||o===e.lid)return;const m=o.material as THREE.MeshStandardMaterial;const base=m.userData.baseColor as THREE.Color;const name=m.userData.name as string;const fixed=['Eye ivory','Pupil','Eye glint'].includes(name);
+   group.traverse(o=>{if(!(o instanceof THREE.Mesh)||o===e.lid)return;const m=o.material as THREE.MeshStandardMaterial;const base=m.userData.baseColor as THREE.Color;const name=m.userData.name as string;const fixed=['Eye ivory','Pupil','Eye glint','Eye vein'].includes(name);
     m.color.copy(base);m.emissive.set(0);m.metalness=m.userData.baseMetal;m.roughness=m.userData.baseRough;m.transparent=false;m.opacity=1;m.depthWrite=true;
     if(style.id!==0&&!fixed){m.color.set(name==='Lilac hair'||name==='Raised scales'?style.accent:style.primary);if(name==='Socket shadow'||name==='Body velvet')m.color.multiplyScalar(.43);m.roughness=style.roughness;m.metalness=style.metalness;m.emissive.set(style.emissive).multiplyScalar(.25);}
     if(hologram){m.color.set(fixed&&name==='Pupil'?'#261336':'#c9b0ea');m.emissive.set('#76518f');m.emissiveIntensity=.55;m.roughness=.25;m.metalness=.1;}
@@ -123,9 +125,13 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     deformMesh(o,region,d);if(region==='eye')conformEyeMesh(o);else if(o.visible){const customSkin=d.materials?.[region]?.textureId?.startsWith('creature-')??false,alternate=from[region]!=='myr5'&&!customSkin;if(style.id!==0){sculptMaterial(o,style,1,d.detail,alternate?coachRelief:undefined);applySparkle(o.material as THREE.MeshPhysicalMaterial,style.sparkle);}}
     if(o.name==='Iris'){const p=o.geometry.attributes.position,colors=new Float32Array(p.count*3);for(let j=0;j<p.count;j++){const a=Math.atan2(p.getY(j),p.getX(j)),r=Math.hypot(p.getX(j),p.getY(j));const shade=.78+.16*Math.sin(a*117+r*35)+.06*Math.cos(a*61);colors[j*3]=shade;colors[j*3+1]=shade;colors[j*3+2]=Math.min(1,shade+.07);}o.geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));m.vertexColors=true;m.needsUpdate=true;}
     if(style.paletteId&&!fixed&&(region==='eye'&&o.name==='Iris'||region!=='eye'&&style.id===0))applyPaletteSurface(m,style);
+    // R25: bloodshot whites blush pink; blind eyes are milky, with no pupil or iris fibres.
+    if(region==='eye'&&d.eye==='bloodshot'&&name==='Eye ivory')m.color.lerp(new THREE.Color('#ff9c9c'),.28);
+    if(region==='eye'&&d.eye==='blind'){if(o.name==='Pupil'||/^Iris.fiber/.test(o.name))o.visible=false;if(o.name==='Iris'){m.map=null;m.color.set('#dfe7ea');m.roughness=.3;m.needsUpdate=true;}}
    });
   }
-  const cap=d.eye==='sleepy'?1.56:d.eye==='wide'?.30:.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':look('head').primary);
+  const cap=({sleepy:1.56,wide:.30,anime:.22,squinty:1.28,bloodshot:.78,blind:.66} as Record<string,number>)[d.eye]??.57;e.lid.geometry.dispose();e.lid.geometry=new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,cap);(e.lid.material as THREE.MeshStandardMaterial).color.set(hologram?'#c9b0ea':look('head').primary);
+  if(d.eye==='squinty'){const lower=new THREE.Mesh(new THREE.SphereGeometry(LID_RADIUS,48,24,0,Math.PI*2,0,1.2).rotateX(Math.PI),e.lid.material);lower.position.copy(e.lid.position);lower.name='Expression lower eyelid';lower.userData.region='eye';e.eyeTemplate.add(lower);}
   if(d.eyeLayout!=='single'||eyeMoved){e.eyeCopies=arrangeEyes(e.eyeTemplate,d.eyeLayout,eyeOffset,eyeScale,surfaceZ);e.regions.eye.add(e.eyeCopies);e.eyeTemplate.visible=false;}
   const key=JSON.stringify([d.styles,d.detail,d.eyeLayout,d.fingers,d.toes,d.body,d.headFrom,d.armsFrom,d.feetFrom,hologram,parts]);e.details.userData.key=key;
   e.details.children.slice().forEach(o=>{o.traverse(c=>{if(c instanceof THREE.Mesh){c.geometry.dispose();(c.material as THREE.Material).dispose();}});e.details.remove(o);});

@@ -12,6 +12,7 @@ import {GESTURES,type Gesture} from './motion';
 import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 
 import {COLOUR_CHANNELS,type Design,type Region,type MaterialChoice} from './creator/design';
+import {EYE_STYLES} from '../../eye-styles.mjs';
 import {TEXTURES,COLORS,PALETTES,isLocked as registryLocked,regionChoice,FREE_COLOURS,resolveRegionMaterial,colorTriad} from './creator/materials-registry';
 import {TRACK_PLACEMENTS,bodyLockSection,sectionComplete} from './creator/track-placements';
 import {isGranted,cosmeticId} from './creator/unlock-store';
@@ -188,7 +189,7 @@ function fillBodySprites(){if(!spritePreviews)return;bodyGrid.replaceChildren();
 function fillBodies(){$('body').replaceChildren();for(const b of orderedBodies()){
  const o=document.createElement('option');o.value=b.id;o.textContent=b.label+(bodyLock(b.id)?' (Locked)':'');if(!bodyLock(b.id)&&isUnseen('body',b.id))o.dataset.sparkle=`body:${b.id}`;$('body').append(o);
  }fillBodySprites();}
-options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);
+options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('eye',EYE_STYLES);options('pupil',PUPILS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
 
 function focusPart(_region:Region,_frame=true){sync();}

@@ -206,3 +206,16 @@ test('removed textures migrate: Jelly -> Opal Jelly, Bubble Glass -> Glitter Res
  const unowned=saveRecipe(localStorage,old,owned);
  assert.equal(unowned.materials.body.textureId,'clay');assert.equal(unowned.materials.arms.textureId,'clay');
 });
+
+// R25 item 9: four new eye styles are free starter choices, accepted by the editor and the account validator.
+test('anime, squinty, bloodshot and blind eyes load, save unlocked and pass the account recipe check',async()=>{
+ memory.clear();
+ const {validRecipe}=await import('../onboarding-domain.mjs');
+ for(const eye of ['anime','squinty','bloodshot','blind']){
+  const recipe=parseRecipe(JSON.stringify({...fresh(),eye}));
+  assert.equal(recipe.eye,eye);
+  assert.equal(saveRecipe(localStorage,recipe,recipe).eye,eye,`${eye} needs no unlock`);
+  assert.equal(validRecipe(recipe),true,`${eye} passes the account validator`);
+ }
+ assert.throws(()=>parseRecipe(JSON.stringify({...fresh(),eye:'laser'})));
+});
