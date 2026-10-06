@@ -39,9 +39,15 @@ export function mountBattlePass(){
  const route=node('div',null,'pass-route');viewport.append(route);
  const canvas=node('canvas',null,'pass-scene');canvas.setAttribute('aria-hidden','true');
  shell.append(viewport,canvas);
- dialog.append(header,daily,summary,shell);document.body.append(dialog);
+ const flightScore=node('div',null,'pass-flight-score');flightScore.setAttribute('aria-label','Asteroid flight score');
+ const hits=node('strong'),score=node('strong'),multiplier=node('strong');
+ flightScore.append(hits,score,multiplier);flightScore.title='Each hit earns the current multiplier in flight points, then increases it by one. An asteroid passing the bottom resets the multiplier to ×1.';
+ dialog.append(header,flightScore,daily,summary,shell);document.body.append(dialog);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- const scene=mountLevelMapScene(canvas,{ship:selectedShip(),reducedMotion:reduced.matches});
+ const scene=mountLevelMapScene(canvas,{ship:selectedShip(),reducedMotion:reduced.matches,onScore:state=>{
+  hits.textContent=`HITS ${format(state.hits)}`;score.textContent=`SCORE ${format(state.score)}`;multiplier.textContent=`×${format(state.multiplier)}`;
+  flightScore.dataset.multiplier=String(state.multiplier);
+ }});
  let previewChapter=0,rank=null,performance=null,hasPreviewSelection=false,renderedLevel=0;
  const previewFocus=()=>hasPreviewSelection?previewChapter:chapterForLevel(rank.level);
  function renderPreview(){
@@ -164,7 +170,7 @@ export function mountBattlePass(){
  window.addEventListener('resize',()=>{if(dialog.open)scene.resize();});
  const open=()=>{
   syncBattlePass();render();
-  if(!dialog.open)dialog.showModal();
+  if(!dialog.open){scene.resetScore?.();dialog.showModal();}
   buildMap();
   const targetChapter=previewFocus();
   const target=targetChapter===chapterForLevel(rank.level)?route.querySelector('[aria-current="step"]'):route.querySelector(`[data-chapter="${targetChapter}"] [data-level="${targetChapter*10+8}"]`);

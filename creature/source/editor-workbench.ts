@@ -94,16 +94,14 @@ function isLocked(design:Design):boolean{
 }
 function previewMessage(design:Design):string{
  const body=bodyLock(design.body);if(body)return `Preview only · How to unlock ${PICKER_BODIES.find(b=>b.id===design.body)?.label||'this coach'}: ${body}.`;
- const choice=regionChoice(design.materials,selected);
- if(choice){for(const [id,kind] of [[choice.textureId,'adaptation'],[choice.colorId,'colour']] as const)if(kind==='colour'?colorLocked(id):idLocked(id)){
+ for(const region of [selected,...REGIONS.filter(r=>r!==selected)]){const choice=regionChoice(design.materials,region);if(!choice)continue;for(const [id,kind] of [[choice.textureId,'adaptation'],[choice.colorId,'colour']] as const)if(kind==='colour'?colorLocked(id):idLocked(id)){
   const texture=kind==='adaptation'?TEXTURES.find(t=>t.id===id):undefined,palette=PALETTES.find(p=>p.id===id),color=COLORS.find(c=>c.id===id);
   const detail=texture?.id==='coach-64-bit'?'Open the 64-bit Pixel Finish in a texture pack and complete this coach’s boss skin milestone':texture?'Open a texture pack':palette?.unlockRule==='aura-milestone'?`Reach aura day ${palette.unlockAtDay}`:'Earn it through the battle pass';
   return `Preview only · How to unlock ${texture?.displayName||palette?.displayName||color?.displayName||kind}: ${detail}.`;
  }}return 'Preview only';
 }
-// A locked pick starts or continues the draft. #1 bug: while already previewing, even an unlocked pick
-// must stay in the draft too -- otherwise a texture/colour tweak silently drops the body being previewed
-// and falls through to commit(), which would save. commit() below enforces this for every caller.
+// Locked choices remain drafts. Available colors on owned bodies use an earned-material
+// baseline, so switching away from a locked preview can save without granting that preview.
 function pick(patch:Partial<MaterialChoice>){const base=shown();commit({...base,materials:{...base.materials,[selected]:{...(base.materials?.[selected]??DEFAULT_MATERIAL),...patch}}});}
 // #139: an Adaptation (texture) covers the whole coach: every part gets the same textureId, colours stay
 // per part. A part with no material of its own yet takes the texture's own colour (TextureDef.defaultColorId).
@@ -164,11 +162,10 @@ function render(message:string,persist=false){
 }
 function commit(next:Design,rangeId:string|null=null){
  next=zeroFinish(next);
- // #1 root fix: the one guarded path every caller (materials, body, sliders, selects, applyAll,
- // import) routes through. A locked pick, or any further edit made while a locked pick is already
- // only being previewed, becomes a draft -- never `recipe`, never undo/redo, never storage -- until
- // the draft ends via an owned body, Done, or close (those callers clearPreview() first).
- if(previewing()||isLocked(next)){previewDraft=next;render(previewMessage(next));return;}
+ // Every writer shares this guard: any remaining locked choice stays a draft.
+ // A completely earned design ends preview before entering undo history and storage.
+ if(isLocked(next)){previewDraft=next;render(previewMessage(next));return;}
+ clearPreview();
  if(JSON.stringify(next)===JSON.stringify(recipe)){if(JSON.stringify(shown())!==lastShown)render('Back to your look');return;}
  if(!rangeId||activeRange!==rangeId){undo.push(recipe);undo=undo.slice(-40);}activeRange=rangeId;redo=[];recipe=next;render('Coach updated',true);
 }
@@ -219,14 +216,15 @@ const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=colorLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',s.name);b.style.background=s.background;if(locked)b.dataset.locked='';b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=colorLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',s.name+(locked?', locked':''));b.style.background=s.background;if(locked){b.dataset.locked='';const icon=document.createElement('span');icon.className='swatch-lock';icon.textContent='\u{1f512}';icon.setAttribute('aria-hidden','true');b.append(icon);}b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
 function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>colorLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
 // that blends its colours across the selected part. Every colour def plus the free hexes no def starts with.
 const rowColours=[...FREE_COLOURS.map((h,n)=>({id:h,name:FREE_COLOUR_NAMES[n],hex:h})),...COLORS.filter(c=>!FREE_COLOURS.includes(c.primary.toLowerCase())).map(c=>({id:c.id,name:c.displayName,hex:c.primary}))]; // free hexes first, then the locked defs
 let activeChannel:typeof COLOUR_CHANNELS[number]=COLOUR_CHANNELS[0];
 function setChannel(channel:typeof COLOUR_CHANNELS[number],colorId:string){
- const base=shown();commit({...base,materials:{...base.materials,...Object.fromEntries(channel.regions.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),colorId}]))}});
+ const draft=shown(),base=!colorLocked(colorId)&&BODY_KEYS.every(key=>!bodyLock(draft[key]))?keepOwned(draft,recipe):draft;
+ commit({...base,materials:{...base.materials,...Object.fromEntries(channel.regions.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),colorId}]))}});
 }
 function choosePart(channel:typeof COLOUR_CHANNELS[number]){activeChannel=channel;selected=channel.regions[0];sync();}
 const colorRoot=$('colorSwatches');
@@ -247,11 +245,12 @@ fillColours();
 const shipRow=$('shipColourRow'),shipPick=$('shipPick') as HTMLSelectElement;
 const shipLocked=(id:string)=>id!=='supportive'&&!coachEditorShips().includes(id);
 function saveShip(patch:{shipId?:Design['coach'];shipColor?:string|null}){
- commit({...shown(),...patch});
+ const draft=shown(),base=BODY_KEYS.every(key=>!bodyLock(draft[key]))?keepOwned(draft,recipe):draft;
+ commit({...base,...patch});
 }
 function persistRecipeShip(){const owner=editorOwner(),ship=recipe.shipId??recipe.coach;if(owner&&(ship==='supportive'||ownedShipIds().includes(ship))){const choice={ownerId:owner,ship,tint:recipe.shipColor??'#ffffff',colorId:rowColours.find(c=>c.hex===recipe.shipColor)?.id};localStorage.setItem(`${SHIP_SETTINGS_KEY}/${owner}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));}}
 function fillShipRow(){
- shipPick.replaceChildren(...unlockedFirst(SHIP_CATALOG,c=>shipLocked(c.id)).map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;return o;}));
+ shipPick.replaceChildren(...unlockedFirst(SHIP_CATALOG,c=>shipLocked(c.id)).map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=(shipLocked(c.id)?'\u{1f512} ':'')+c.name;return o;}));
  shipRow.replaceChildren();const grid=document.createElement('div');grid.className='material-grid';grid.id='shipColourGrid';
  const original=document.createElement('button');original.type='button';original.dataset.ship='original';original.textContent='Orig.';original.title='Original ship colours';original.setAttribute('aria-label','Original ship colours');original.onclick=()=>saveShip({shipColor:null});grid.append(original);
  for(const c of unlockedFirst(rowColours,c=>colorLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(colorLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}

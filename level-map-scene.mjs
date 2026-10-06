@@ -1,4 +1,5 @@
-// A deliberately small canvas effect: no models, downloads, gameplay state, or XP writes.
+// A small arcade canvas with run-local points; it never writes workout XP or unlocks.
+import {createFlightScore} from './flight-score.mjs';
 const SHIPS=['supportive','direct','analytical','playful','calm','mom'];
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const sprite=[
@@ -25,7 +26,9 @@ function drawShip(ctx,x,y,style,t){
  }
  ctx.fillStyle=t%360<180?'#f58b40':'#ffe5a0';ctx.fillRect(19,48,4,8);ctx.fillRect(27,48,4,8);ctx.restore();
 }
-export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false}={}){
+export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false,onScore=()=>{}}={}){
+ const points=createFlightScore();
+ const publish=()=>onScore(points.read());publish();
  const ctx=canvas.getContext('2d');if(!ctx)return {start(){},stop(){},startFiring(){},stopFiring(){},fire(){},aim(){},setShip(){},resize(){}};
  let running=false,raf=0,w=1,h=1,last=0,time=0,style=ship,aimX=.5,aimY=.72,x=.5,y=.72,firing=false,shotClock=0;
  const asteroids=Array.from({length:9},(_,i)=>({x:((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
@@ -42,8 +45,8 @@ export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false
  function frame(now){if(!running)return;const dt=Math.min(40,Math.max(0,now-last));last=now;time+=dt;
   x+=(aimX-x)*Math.min(1,dt*.04);y+=(aimY-y)*Math.min(1,dt*.04);
   if(firing){shotClock+=dt;while(shotClock>=125){lasers.push({x,y:y-.04});shotClock-=125;}}
-  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}if(!reducedMotion){a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=(a.x+.37)%1;}}}
-  for(let i=lasers.length-1;i>=0;i--){const l=lasers[i];l.y-=dt*.0016;if(l.y<-.1){lasers.splice(i,1);continue;}const hit=asteroids.find(a=>a.hit<=0&&Math.abs(a.x-l.x)*w<a.r+5&&Math.abs(a.y-l.y)*h<a.r+10);if(hit){hit.hit=700;blasts.push({x:hit.x,y:hit.y,age:0});lasers.splice(i,1);}}
+  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}if(!reducedMotion){a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=(a.x+.37)%1;points.miss();publish();}}}
+  for(let i=lasers.length-1;i>=0;i--){const l=lasers[i];l.y-=dt*.0016;if(l.y<-.1){lasers.splice(i,1);continue;}const hit=asteroids.find(a=>a.hit<=0&&Math.abs(a.x-l.x)*w<a.r+5&&Math.abs(a.y-l.y)*h<a.r+10);if(hit){hit.hit=700;blasts.push({x:hit.x,y:hit.y,age:0});hit.y=-.08;hit.x=(hit.x+.37)%1;lasers.splice(i,1);points.hit();publish();}}
   for(let i=blasts.length-1;i>=0;i--){blasts[i].age+=dt;if(blasts[i].age>380)blasts.splice(i,1);}
   draw();raf=requestAnimationFrame(frame);
  }
@@ -51,5 +54,5 @@ export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false
  function stopFiring(){firing=false;shotClock=0;}
  function stop(){stopFiring();running=false;if(raf)cancelAnimationFrame(raf);raf=0;}
  function fire(){if(document.hidden)return;lasers.push({x,y:y-.04});if(!running)draw();}
- return {start,stop,stopFiring,startFiring(){if(document.hidden)return;firing=true;shotClock=0;fire();},resize,aim(clientX,clientY){const r=canvas.getBoundingClientRect();aimX=clamp((clientX-r.left)/r.width,.1,.9);aimY=clamp((clientY-r.top)/r.height,.14,.88);x=aimX;y=aimY;draw();},fire,setShip(value){style=value;draw();}};
+ return {start,stop,stopFiring,resetScore(){points.reset();publish();},startFiring(){if(document.hidden)return;firing=true;shotClock=0;fire();},resize,aim(clientX,clientY){const r=canvas.getBoundingClientRect();aimX=clamp((clientX-r.left)/r.width,.1,.9);aimY=clamp((clientY-r.top)/r.height,.14,.88);x=aimX;y=aimY;draw();},fire,setShip(value){style=value;draw();}};
 }

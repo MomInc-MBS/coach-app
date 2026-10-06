@@ -12,6 +12,8 @@
 .battle-pass-page button{font:inherit;cursor:pointer}.battle-pass-page button:focus-visible,.pass-map-viewport:focus-visible{outline:3px solid #f8db83;outline-offset:2px}
 .pass-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:42px;padding:3px 12px;border-bottom:1px solid #477785;background:linear-gradient(90deg,#143346,#091e2a 65%,#292541)}
 .pass-header h2{margin:0;font-size:clamp(.92rem,2.3vw,1.3rem);letter-spacing:.15em;text-shadow:0 0 18px #73d6ee99}
+.pass-flight-score{flex:none;display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-bottom:1px solid #477785;background:#091d2b;color:#b9faff;font-size:clamp(.68rem,2vw,.9rem);font-variant-numeric:tabular-nums}
+.pass-flight-score strong:last-child{color:#ffe4a0;text-shadow:0 0 9px #f2b85980}
 .pass-close,.pass-fire{border:2px solid #789dab;border-radius:5px;background:linear-gradient(#294553,#152c39);box-shadow:inset 0 1px #d9f8ff55,0 3px 0 #0a1925;color:#e9faff;text-shadow:0 0 7px #9cefff}
 .pass-close{padding:5px 9px;white-space:nowrap;font-size:.72rem!important}
 .pass-daily{flex:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:3px 8px;margin:5px 8px 0;padding:5px 8px;border:1px solid #548b85;border-left:3px solid #86debb;background:linear-gradient(110deg,#112c35e8,#0a1c2be8)}
