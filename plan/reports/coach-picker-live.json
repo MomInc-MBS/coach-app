@@ -1,0 +1,15 @@
+{
+  "version": "c2b107d8-90eb-4482-baae-d91b6e7ec08e",
+  "build": "5f63eef6435a9b8a9817",
+  "checks": {
+    "release-build.mjs": true,
+    "modules/pod-chrome.mjs": true,
+    "pod/persistent-chrome.css": true,
+    "creature/assets/editor.js": true,
+    "spotify-terminal.css": true,
+    "handborne/companion.mjs": true,
+    "achievements-board.mjs": true,
+    "creature/index.html has current menus": true
+  },
+  "htmlNote": "Cloudflare injects its analytics beacon into served HTML; executable assets match byte-for-byte."
+}
