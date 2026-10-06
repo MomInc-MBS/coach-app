@@ -34,8 +34,9 @@ export async function loadWarRoomCoaches(doc:Document){
  const {sprites,art}=await loadCoachSpritePreviews(doc);
  const lock=(id:string)=>bodyLockSection(id,{});
  let selection:Selection={body:null,pet:null,goldenBody:false},selectionOwner='';
- function readSelection(){const owner=selectionKey();if(owner===selectionOwner)return;selectionOwner=owner;selection={body:null,pet:null,goldenBody:false};
-  try{const saved=JSON.parse(localStorage.getItem(owner)||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&(kind==='body'||s.kind===kind))&&!lock(saved[kind]))selection[kind]=saved[kind];selection.goldenBody=saved?.goldenBody===true&&!!selection.body&&goldenCoach(selection.body);}catch{}
+ // Keyed by owner and stored value: the pod reuses this across War Room visits (another page writes the choice).
+ function readSelection(){const owner=selectionKey();let raw:string|null=null;try{raw=localStorage.getItem(owner);}catch{}if(owner+' '+raw===selectionOwner)return;selectionOwner=owner+' '+raw;selection={body:null,pet:null,goldenBody:false};
+  try{const saved=JSON.parse(raw||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&(kind==='body'||s.kind===kind))&&!lock(saved[kind]))selection[kind]=saved[kind];selection.goldenBody=saved?.goldenBody===true&&!!selection.body&&goldenCoach(selection.body);}catch{}
  }
  readSelection();
  function picker(kind:'body'|'pet',changed:()=>void){

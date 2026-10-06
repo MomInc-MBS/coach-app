@@ -18,3 +18,21 @@ test('Gala stays through exercise changes and returns after stop, camera failure
  body.dataset.screen='rest';sync();assert.equal(host.hidden,true);
  body.dataset.screen='pod';sync();assert.equal(host.hidden,false);assert.equal(hud.hidden,true);
 });
+test('R26: the pod window draws the War Room coach sprites and redraws after a coach or War Room change',async()=>{
+ const listeners=new Map(),created=[];let loads=0;
+ const coaches={draw:(avatarDraw,canvas)=>{canvas.drawnBy='coach';},hasPet:true};
+ const canvas={setAttribute(){}},button={setAttribute(){},addEventListener(){}},label={};
+ const host={hidden:true,querySelector:s=>s==='canvas'?canvas:s==='button'?button:label};
+ const document={body:{dataset:{screen:'pod',tracking:'false'}},hidden:false,getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
+ const window={addEventListener:(key,fn)=>listeners.set(key,fn),GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{draw(){}},GalaPerformance:{create:(look,options={})=>{created.push(options);return {paint(){}};}}};
+ const stub=source.replace('import(COACH_SPRITES)','Promise.resolve({loadWarRoomCoaches:async()=>{bump();return stubCoaches;}})');
+ vm.runInNewContext(stub+';mountHomeCharacter();',{bump:()=>loads++,stubCoaches:coaches,window,document,matchMedia:()=>({matches:false,addEventListener(){}}),loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
+ await new Promise(r=>setTimeout(r));
+ assert.equal(loads,1);
+ const last=()=>created.at(-1);
+ assert.equal(typeof last().draw,'function','the pod uses the coach sprite drawer once it loads');
+ const c={};last().draw(c,{},{});assert.equal(c.drawnBy,'coach');assert.equal(last().hasPet,true);
+ for(const fire of [()=>listeners.get('myr5:recipe')(),()=>listeners.get('storage')({key:'myr5-recipe-v1'}),()=>listeners.get('storage')({key:'myr5-war-room-coaches-v2/guest%3Aa'}),()=>listeners.get('pageshow')({persisted:true})]){
+  const before=created.length;fire();assert.equal(created.length,before+1,'each coach change repaints the pod window');
+ }
+});

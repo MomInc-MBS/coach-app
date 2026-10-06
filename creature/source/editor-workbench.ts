@@ -264,7 +264,9 @@ fillShipRow();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
 window.addEventListener('storage',event=>{if(event.key?.startsWith(PERFORMANCE_KEY+'/')||event.key?.startsWith('myr5-unlocks-v2/'))refreshLists();});
  window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
- window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];clearPreview();recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
+ // R26: account-bridge clears before every re-verify (focus, visibilitychange), so a clear is often a blink, not a
+ // sign-out. Keep the saved look: ownership is re-applied on account-ready, and commit() keeps any locked edit a preview.
+ window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];clearPreview();cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
  window.addEventListener('myr5:login-ready',()=>void standaloneAccount.refresh());
  window.addEventListener('focus',()=>{if(!standaloneAccount.account)void standaloneAccount.refresh();});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
