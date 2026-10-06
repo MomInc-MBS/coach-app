@@ -1,0 +1,2461 @@
+### tests/achievements-board-rewards.browser.test.mjs
+✖ achievement weapon and ship guidance uses difficulty blocks and performance thresholds (31204.7714ms)
+✖ XP rewards tab shows new cosmetic rules and updates daily rest victories without unlocking coaches (31070.6176ms)
+✔ movement library weapon widget refreshes earned family tiers from performance events (1172.399ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 1
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63777.9764
+
+✖ failing tests:
+
+test at tests\achievements-board-rewards.browser.test.mjs:5:1
+✖ achievement weapon and ship guidance uses difficulty blocks and performance thresholds (31204.7714ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('[data-ach-tab=weapons]')[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\achievements-board-rewards.browser.test.mjs:7:69) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('[data-ach-tab=weapons]')" ]
+  }
+
+test at tests\achievements-board-rewards.browser.test.mjs:13:1
+✖ XP rewards tab shows new cosmetic rules and updates daily rest victories without unlocking coaches (31070.6176ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('[data-ach-tab=rewards]')[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\achievements-board-rewards.browser.test.mjs:16:48) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('[data-ach-tab=rewards]')" ]
+  }
+### tests/achievements-stars.browser.test.mjs
+✖ mobile achievements lists all actual coaches and makes locked performance requirements inspectable (1149.492ms)
+✖ visible coach ownership and golden status update from actual completed hold performance (31101.9337ms)
+✖ category tabs work by keyboard and the roster stays readable without animation (30990.9554ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 0
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63572.3769
+
+✖ failing tests:
+
+test at tests\achievements-stars.browser.test.mjs:5:1
+✖ mobile achievements lists all actual coaches and makes locked performance requirements inspectable (1149.492ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'myr5',
+  -   'roster/01-seed-pearo--3d_character_model',
+  -   'roster/01-seed-pearo--cute_alien_figure_3d_model',
+  -   'roster/01-seed-pearo--blank_toy_figure_3d_model',
+  -   'roster/02-taper-tallstalk--3d_humanoid_figure',
+  -   'roster/02-taper-tallstalk--humanoid_robot_3d_model1',
+  -   'roster/02-taper-tallstalk--white_humanoid_doll_3d_model',
+  -   'roster/03-pearl-orb-ring--abstract_humanoid_3d_model',
+  -   'roster/03-pearl-orb-ring--circle_center',
+  -   'roster/03-pearl-orb-ring--ringed_humanoid_3d_model',
+  -   'roster/03-pearl-orb-ring--robot_3d_model',
+  -   'roster/03-pearl-orb-ring--stylized_3d_character1',
+  -   'roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model',
+  -   'roster/04-crest-wedge--robot_creature_3d_model',
+  -   'roster/04-crest-wedge--stylized_3d_character',
+  -   'roster/05-slope-bobble--clay_humanoid_figure_3d_model',
+  -   'roster/06-ridge-triad--geometric_robot_3d_model1',
+  -   'roster/06-ridge-triad--robot_3d_model1',
+  -   'roster/07-bulb-sphereling--cute_robot_3d_model',
+  -   'roster/07-bulb-sphereling--humanoid_robot_3d_model',
+  -   'roster/08-shard-asym--geometric_robot_3d_model',
+  -   'roster/08-shard-asym--robot_3d_model4',
+  -   'roster/08-shard-asym--fantasy_creature_3d_model2',
+  -   'roster/08-shard-asym--stylized_action_figure_3d_model',
+  -   'roster/09-monolith-tanka--3d_robot_model',
+  -   'roster/09-monolith-tanka--boxy_humanoid_3d_model',
+  -   'roster/09-monolith-tanka--mini_robot_3d_model',
+  -   'roster/09-monolith-tanka--robot_3d_model3',
+  -   'roster/09-monolith-tanka--white_horned_robot_3d_model',
+  -   'roster/10-petal-wisp--stylized_creature_3d_model',
+  -   'roster/10-petal-wisp--ghost_character_3d_model',
+  -   'roster/10-petal-wisp--fantasy_creature_3d_model4',
+  -   'roster/11-anvil-cask--clay-style_robot_3d_model',
+  -   'roster/12-seedpod-snailslug--stylized_slug_3d_model',
+  -   'roster/12-seedpod-snailslug--stylized_worm_3d_model',
+  -   'roster/13-fan-split--stylized_3d_character2',
+  -   'roster/13-fan-split--stylized_toy_3d_model',
+  -   'roster/14-chisel-spire--cone_head_3d_model',
+  -   'roster/14-chisel-spire--low_poly_robot_3d_model',
+  -   'roster/15-orbital-coili--robot_character_3d_model',
+  -   'roster/16-spade-arch--pyramid_head_figure_3d_model',
+  -   'roster/16-spade-arch--stylized_humanoid_3d_model',
+  -   'roster/17-shellcap-manyarm--3d_character_figurine',
+  -   'roster/17-shellcap-manyarm--mushroom_creature_3d_model',
+  -   'roster/17-shellcap-manyarm--mushroom_robot_3d_model',
+  -   'roster/18-quad-all--dragon_creature_3d_model',
+  -   'roster/18-quad-all--fantasy_creature_3d_model1',
+  -   'roster/18-quad-all--fantasy_creature_3d_model3',
+  -   'roster/18-quad-all--four-legged_robot_3d_model',
+  -   'roster/18-quad-all--quadruped_robot_3d_model1',
+  -   'roster/18-quad-all--quadruped_robot_3d_model',
+  -   'roster/18-quad-all--robotic_dog_3d_model',
+  -   'roster/18-quad-all--wooden_four-legged_robot_3d_model',
+  -   'roster/19-genie-multi--fantasy_creature_3d_model',
+  -   'roster/19-genie-multi--multi-armed_humanoid_3d_model1',
+  -   'roster/19-genie-multi--multi-armed_humanoid_3d_model',
+  -   'roster/19-genie-multi--stylized_octopus_3d_model',
+  -   'roster/20-lume--robotic_figure_3d_model',
+  -   'roster/22-curve--stylized_alien_3d_model',
+  -   'roster/22-curve--stylized_cartoon_figure_3d_model',
+  -   'roster/23-blob-texture-bodies--blob_creature_3d_model',
+  -   'roster/23-blob-texture-bodies--cute_blob_creature_3d_model',
+  -   'roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model',
+  -   'roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model',
+  -   'roster/23-blob-texture-bodies--sand_creature_3d_model'
+  - ]
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/achievements-stars.browser.test.mjs:8:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [
+      'myr5',                                                        'roster/01-seed-pearo--3d_character_model',
+      'roster/01-seed-pearo--cute_alien_figure_3d_model',            'roster/01-seed-pearo--blank_toy_figure_3d_model',
+      'roster/02-taper-tallstalk--3d_humanoid_figure',               'roster/02-taper-tallstalk--humanoid_robot_3d_model1',
+      'roster/02-taper-tallstalk--white_humanoid_doll_3d_model',     'roster/03-pearl-orb-ring--abstract_humanoid_3d_model',
+      'roster/03-pearl-orb-ring--circle_center',                     'roster/03-pearl-orb-ring--ringed_humanoid_3d_model',
+      'roster/03-pearl-orb-ring--robot_3d_model',                    'roster/03-pearl-orb-ring--stylized_3d_character1',
+      'roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model', 'roster/04-crest-wedge--robot_creature_3d_model',
+      'roster/04-crest-wedge--stylized_3d_character',                'roster/05-slope-bobble--clay_humanoid_figure_3d_model',
+      'roster/06-ridge-triad--geometric_robot_3d_model1',            'roster/06-ridge-triad--robot_3d_model1',
+      'roster/07-bulb-sphereling--cute_robot_3d_model',              'roster/07-bulb-sphereling--humanoid_robot_3d_model',
+      'roster/08-shard-asym--geometric_robot_3d_model',              'roster/08-shard-asym--robot_3d_model4',
+      'roster/08-shard-asym--fantasy_creature_3d_model2',            'roster/08-shard-asym--stylized_action_figure_3d_model',
+      'roster/09-monolith-tanka--3d_robot_model',                    'roster/09-monolith-tanka--boxy_humanoid_3d_model',
+      'roster/09-monolith-tanka--mini_robot_3d_model',               'roster/09-monolith-tanka--robot_3d_model3',
+      'roster/09-monolith-tanka--white_horned_robot_3d_model',       'roster/10-petal-wisp--stylized_creature_3d_model',
+      'roster/10-petal-wisp--ghost_character_3d_model',              'roster/10-petal-wisp--fantasy_creature_3d_model4',
+      'roster/11-anvil-cask--clay-style_robot_3d_model',             'roster/12-seedpod-snailslug--stylized_slug_3d_model',
+      'roster/12-seedpod-snailslug--stylized_worm_3d_model',         'roster/13-fan-split--stylized_3d_character2',
+      'roster/13-fan-split--stylized_toy_3d_model',                  'roster/14-chisel-spire--cone_head_3d_model',
+      'roster/14-chisel-spire--low_poly_robot_3d_model',             'roster/15-orbital-coili--robot_character_3d_model',
+      'roster/16-spade-arch--pyramid_head_figure_3d_model',          'roster/16-spade-arch--stylized_humanoid_3d_model',
+      'roster/17-shellcap-manyarm--3d_character_figurine',           'roster/17-shellcap-manyarm--mushroom_creature_3d_model',
+      'roster/17-shellcap-manyarm--mushroom_robot_3d_model',         'roster/18-quad-all--dragon_creature_3d_model',
+      'roster/18-quad-all--fantasy_creature_3d_model1',              'roster/18-quad-all--fantasy_creature_3d_model3',
+      'roster/18-quad-all--four-legged_robot_3d_model',              'roster/18-quad-all--quadruped_robot_3d_model1',
+      'roster/18-quad-all--quadruped_robot_3d_model',                'roster/18-quad-all--robotic_dog_3d_model',
+      'roster/18-quad-all--wooden_four-legged_robot_3d_model',       'roster/19-genie-multi--fantasy_creature_3d_model',
+      'roster/19-genie-multi--multi-armed_humanoid_3d_model1',       'roster/19-genie-multi--multi-armed_humanoid_3d_model',
+      'roster/19-genie-multi--stylized_octopus_3d_model',            'roster/20-lume--robotic_figure_3d_model',
+      'roster/22-curve--stylized_alien_3d_model',                    'roster/22-curve--stylized_cartoon_figure_3d_model',
+      'roster/23-blob-texture-bodies--blob_creature_3d_model',       'roster/23-blob-texture-bodies--cute_blob_creature_3d_model',
+      'roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model',  'roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model',
+      'roster/23-blob-texture-bodies--sand_creature_3d_model'
+    ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\achievements-stars.browser.test.mjs:13:1
+✖ visible coach ownership and golden status update from actual completed hold performance (31101.9337ms)
+  locator.getAttribute: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('.ach-card[data-id="roster/10-petal-wisp--fantasy_creature_3d_model4"]')[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\achievements-stars.browser.test.mjs:16:153) {
+    name: 'TimeoutError',
+    log: [ `  - waiting for locator('.ach-card[data-id="roster/10-petal-wisp--fantasy_creature_3d_model4"]')` ]
+  }
+
+test at tests\achievements-stars.browser.test.mjs:20:1
+✖ category tabs work by keyboard and the roster stays readable without animation (30990.9554ms)
+  locator.focus: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('[data-ach-tab=coaches]')[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\achievements-stars.browser.test.mjs:22:119) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('[data-ach-tab=coaches]')" ]
+  }
+### tests/alternate-material-catalog.browser.test.mjs
+✖ all 48 selectable texture catalog entries render on assembled Boxy and Crescent coaches within strict geometry caps (68395.0792ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68834.5089
+
+✖ failing tests:
+
+test at tests\alternate-material-catalog.browser.test.mjs:33:1
+✖ all 48 selectable texture catalog entries render on assembled Boxy and Crescent coaches within strict geometry caps (68395.0792ms)
+  AssertionError [ERR_ASSERTION]: all selectable catalog entries render
+  
+  63 !== 48
+  
+      at file:///D:/myr5-work/r25-base/tests/alternate-material-catalog.browser.test.mjs:76:52
+      at async withPage (file:///D:/myr5-work/r25-base/tests/alternate-material-catalog.browser.test.mjs:29:421)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 63,
+    expected: 48,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/camera-counting.browser.test.mjs
+✖ camera workouts count reps through the real start paths, including at a phone-like 1.6 updates/s (31494.6144ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31816.9564
+
+✖ failing tests:
+
+test at tests\camera-counting.browser.test.mjs:31:1
+✖ camera workouts count reps through the real start paths, including at a phone-like 1.6 updates/s (31494.6144ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\camera-counting.browser.test.mjs:63:15) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/camera-workout-housing.browser.test.mjs
+✖ camera workout shows the housing around the edge, keeps counter/stop usable, and removes it on stop (31476.745ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31814.3853
+
+✖ failing tests:
+
+test at tests\camera-workout-housing.browser.test.mjs:10:1
+✖ camera workout shows the housing around the edge, keeps counter/stop usable, and removes it on stop (31476.745ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\camera-workout-housing.browser.test.mjs:24:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/camera-workout.browser.test.mjs
+✖ camera workout fills phone portrait and landscape with only a stoppable counter (21369.9414ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21678.8558
+
+✖ failing tests:
+
+test at tests\camera-workout.browser.test.mjs:10:1
+✖ camera workout fills phone portrait and landscape with only a stoppable counter (21369.9414ms)
+  Error: page.waitForFunction: Timeout 20000ms exceeded. {"state":{"version":"pod-1","phase":"idle","frames":0,"poses":0,"inferenceMs":0,"rate":0,"camera":null,"delegate":null,"error":null,"motion":{"mode":"squat","name":"Bodyweight squat","kind":"reps","count":0,"elapsed":0,"remaining":null,"hold":0,"totalHold":0,"bestHold":0,"active":0,"speed":0,"bestSpeed":0,"cadence":0,"complete":false,"tracking":false,"calibrated":false,"setupProgress":0,"phase":"ready","message":"Face the camera. Show shoulders and hips. Start standing tall.","measurement":"","progress":0,"side":null,"jointReadings":""}},"status":"Ready","hidden":false}
+      at file:///D:/myr5-work/r25-base/tests/camera-workout.browser.test.mjs:24:165
+      at async TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/camera-workout.browser.test.mjs:24:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+### tests/circuit.browser.test.mjs
+✖ circuit meter advances per step, speaks the right line, stays silent for food, and survives reload (24079.8016ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24401.7954
+
+✖ failing tests:
+
+test at tests\circuit.browser.test.mjs:28:1
+✖ circuit meter advances per step, speaks the right line, stays silent for food, and survives reload (24079.8016ms)
+  Error: page.waitForFunction: Timeout 20000ms exceeded. {"version":"pod-1","phase":"idle","frames":0,"poses":0,"inferenceMs":0,"rate":0,"camera":null,"delegate":null,"error":null,"motion":{"mode":"squat","name":"Bodyweight squat","kind":"reps","count":0,"elapsed":0,"remaining":null,"hold":0,"totalHold":0,"bestHold":0,"active":0,"speed":0,"bestSpeed":0,"cadence":0,"complete":false,"tracking":false,"calibrated":false,"setupProgress":0,"phase":"ready","message":"Face the camera. Show shoulders and hips. Start standing tall.","measurement":"","progress":0,"side":null,"jointReadings":""}}
+      at file:///D:/myr5-work/r25-base/tests/circuit.browser.test.mjs:91:127
+      at async TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/circuit.browser.test.mjs:91:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+### tests/coach-cap.browser.test.mjs
+✖ the AR coach goes off when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window (21251.882ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21570.5168
+
+✖ failing tests:
+
+test at tests\coach-cap.browser.test.mjs:19:1
+✖ the AR coach goes off when tracking is slow during a counted set, stays uncapped when fast, and recovers after the hysteresis window (21251.882ms)
+  page.waitForFunction: Timeout 20000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\coach-cap.browser.test.mjs:34:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/coach-cosmetics.test.mjs
+✔ a texture and palette belong only to the coach that earned them; save guards reject cross-coach reuse (2.4692ms)
+✔ the mirror skin helper uses the same palette and shade as regular Gala avatars (0.2204ms)
+✖ approved 64-bit coaches follow ownership, including quadrupeds, and mirror colors redraw them (55.3844ms)
+✔ golden coach sprite variants are selectable separately and remain scoped to their owner (40.8932ms)
+✖ a shared saved recipe cannot bypass performance ownership for a locked 64-bit coach (38.466ms)
+✖ fallback material ownership follows the selected 64-bit sprite rather than the 3D recipe body (4.3494ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 3
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 317.1683
+
+✖ failing tests:
+
+test at tests\coach-cosmetics.test.mjs:50:1
+✖ approved 64-bit coaches follow ownership, including quadrupeds, and mirror colors redraw them (55.3844ms)
+  AssertionError [ERR_ASSERTION]: unearned quadruped starts locked
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/coach-cosmetics.test.mjs:60:132)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\coach-cosmetics.test.mjs:73:1
+✖ a shared saved recipe cannot bypass performance ownership for a locked 64-bit coach (38.466ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert(button.disabled)
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/coach-cosmetics.test.mjs:78:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\coach-cosmetics.test.mjs:82:1
+✖ fallback material ownership follows the selected 64-bit sprite rather than the 3D recipe body (4.3494ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /resolveRegionMaterial\(r\.styles\[region\],regionChoice\(r\.materials,region\),false,sprite\.id\)/. Input:
+  
+  "import {COACHES,pathIntroCoachIds} from '../../performance-catalog.mjs';\r\n" +
+    "import {goldenCoach,performanceOwner,readPerformanceProgress} from '../../performance-progress.mjs';\r\n" +
+    "import {parseRecipe,fresh} from './creator/design';\r\n" +
+    "import {bodyLockSection} from './creator/track-placements';\r\n" +
+    "import {resolveRegionMaterial,regionChoice} from './creator/materials-registry';\r\n" +
+    '\r\n' +
+    "const KEY='myr5-war-room-coaches-v2';\r\n" +
+    'const selectionKey=()=>`${KEY}/${encodeURIComponent(performanceOwner())}`;\r\n' +
+    "type Sprite={id:string;family:string;kind:'body'|'pet';sheet:string;frame:number[]};\r\n" +
+    'type Selection={body:string|null;pet:string|null;goldenBody:boolean};\r\n' +
+    'export async function loadCoachSpritePreviews(doc:Document){\r\n' +
+    " const response=await fetch('/pod/gala-coaches/manifest.json');if(!response.ok)throw Error('Coach sprites are unavailable.');\r\n" +
+    ' const manifest=await response.json(),sprites:Sprite[]=manifest.sprites.filter((sprite:Sprite)=>COACHES.some((coach:any)=>coach.id===sprite.id));\r\n' +
+    ' const sheets=new Map<string,{image:HTMLImageElement;mask:HTMLImageElement}>();\r\n' +
+    " const image=async(name:string)=>{const img=new Image();img.src='/pod/gala-coaches/'+name;await img.decode();return img;};\r\n" +
+    ' await Promise.all(Object.entries(manifest.sheets).map(async([id,s]:[string,any])=>{const [art,mask]=await Promise.all([image(s.image),image(s.mask)]);sheets.set(id,{image:art,mask});}));\r\n' +
+    " const recipe=()=>{try{return parseRecipe(localStorage.getItem('myr5-recipe-v1')||'null');}catch{return fresh();}};\r\n" +
+    ' const cache=new Map<string,HTMLCanvasElement>();\r\n' +
+    ' function art(sprite:Sprite,silhouette=false,look?:any,golden=false){\r\n' +
+    "  const r=recipe(),skin=look&&(globalThis as any).GalaAvatar?.skinColor?.(look),colours=golden&&goldenCoach(sprite.id)?['#e8bc4d','#ffe4a1','#6b4214']:skin?[skin,skin,'#fff9df']:['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region),true,sprite.id).primary);\r\n" +
+    '  const key=JSON.stringify([sprite.id,silhouette,colours]);if(cache.has(key))return cache.get(key)!;\r\n' +
+    "  const [x,y,w,h]=sprite.frame,canvas=doc.createElement('canvas');canvas.width=w;canvas.height=h;\r\n" +
+    "  const ctx=canvas.getContext('2d',{willReadFrequently:true})!,mask=doc.createElement('canvas');mask.width=w;mask.height=h;\r\n" +
+    '  const sheet=sheets.get(sprite.sheet)!;ctx.drawImage(sheet.image,x,y,w,h,0,0,w,h);const pixels=ctx.getImageData(0,0,w,h);\r\n' +
+    "  const mc=mask.getContext('2d',{willReadFrequently:true})!;mc.drawImage(sheet.mask,x,y,w,h,0,0,w,h);const regions=mc.getImageData(0,0,w,h).data;\r\n" +
+    '  const rgb=(hex:string)=>{const n=parseInt(hex.slice(1),16);return [n>>16,n>>8&255,n&255];};\r\n' +
+    '  for(let i=0;i<pixels.data.length;i+=4){if(!pixels.data[i+3])continue;const region=regions[i],tone=region===0?[33,23,46]:rgb(colours[Math.min(2,Math.round(region/64)-1)]);\r\n' +
+    '   const shade=pixels.data[i]/184;for(let c=0;c<3;c++)pixels.data[i+c]=silhouette?35:region===0?tone[c]:Math.min(255,Math.round(tone[c]*shade));}\r\n' +
+    '  ctx.putImageData(pixels,0,0);cache.set(key,canvas);return canvas;\r\n' +
+    ' }\r\n' +
+    ' return {sprites,art};\r\n' +
+    '}\r\n' +
+    'export async function loadWarRoomCoaches(doc:Document){\r\n' +
+    ' const {sprites,art}=await loadCoachSpritePreviews(doc);\r\n' +
+    ' const lock=(id:string)=>bodyLockSection(id,{});\r\n' +
+    " let selection:Selection={body:null,pet:null,goldenBody:false},selectionOwner='';\r\n" +
+    ' // Keyed by owner and stored value: the pod reuses this across War Room visits (another page writes the choice).\r\n' +
+    " function readSelection(){const owner=selectionKey();let raw:string|null=null;try{raw=localStorage.getItem(owner);}catch{}if(owner+' '+raw===selectionOwner)return;selectionOwner=owner+' '+raw;selection={body:null,pet:null,goldenBody:false};\r\n" +
+    "  try{const saved=JSON.parse(raw||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&(kind==='body'||s.kind===kind))&&!lock(saved[kind]))selection[kind]=saved[kind];selection.goldenBody=saved?.goldenBody===true&&!!selection.body&&goldenCoach(selection.body);}catch{}\r\n" +
+    ' }\r\n' +
+    ' readSelection();\r\n' +
+    " function picker(kind:'body'|'pet',changed:()=>void){\r\n" +
+    '  readSelection();\r\n' +
+    "  const group=doc.createElement('fieldset'),legend=doc.createElement('legend');legend.textContent=kind==='body'?'Coach body':'Coach pets';group.append(legend);group.className='gala-coach-choices';\r\n" +
+    "  const note=doc.createElement('p');note.className='help';note.textContent=kind==='body'?'Choose a coach character, then change its colour in the mirror. Choose Gala body to show your Gala wardrobe.':'Coach pets unlock with their coach bodies.';group.append(note);\r\n" +
+    "  const choose=(id:string|null,golden=false)=>{if(id&&lock(id))return;const next={...selection,[kind]:id,...(kind==='body'?{goldenBody:golden}: {})};try{localStorage.setItem(selectionKey(),JSON.stringify(next));selection=next;changed();}catch{group.setAttribute('aria-label','This choice could not be saved. Storage is unavailable.');}};\r\n" +
+    "  const standard=doc.createElement('button');standard.type='button';standard.textContent=kind==='body'?'Gala body':'Gala pet';standard.setAttribute('aria-pressed',String(!selection[kind]));standard.onclick=()=>choose(null);group.append(standard);\r\n" +
+    '  const introductory=new Set(pathIntroCoachIds(readPerformanceProgress().paths));\r\n' +
+    "  const ordered=[...sprites.filter(s=>kind==='body'||s.kind===kind)].sort((a,b)=>Number(!!lock(a.id))-Number(!!lock(b.id))||Number(introductory.has(b.id))-Number(introductory.has(a.id)));\r\n" +
+    '  for(const sprite of ordered){\r\n' +
+    "   const locked=lock(sprite.id),button=doc.createElement('button'),name=COACHES.find(c=>c.id===sprite.id)?.label||sprite.family;\r\n" +
+    "   button.type='button';button.dataset.coachSprite=sprite.id;button.setAttribute('aria-label',name);button.setAttribute('aria-pressed',String(selection[kind]===sprite.id&&(kind!=='body'||!selection.goldenBody)));\r\n" +
+    "   const source=art(sprite),preview=doc.createElement('canvas');preview.width=source.width;preview.height=source.height;preview.getContext('2d')!.drawImage(source,0,0);\r\n" +
+    "   const label=doc.createElement('span');label.textContent=name;button.append(preview,label);button.onclick=()=>{if(locked){note.textContent=`Preview only · How to unlock ${name}: ${locked}.`;return;}choose(sprite.id);};group.append(button);\r\n" +
+    "   if(kind==='body'&&goldenCoach(sprite.id)&&!locked){const gold=doc.createElement('button');gold.type='button';gold.dataset.coachSprite=sprite.id;gold.dataset.goldenCoach='true';gold.setAttribute('aria-label','Golden '+name);gold.setAttribute('aria-pressed',String(selection.body===sprite.id&&selection.goldenBody));const artPreview=art(sprite,false,undefined,true),goldCanvas=doc.createElement('canvas');goldCanvas.width=artPreview.width;goldCanvas.height=artPreview.height;goldCanvas.getContext('2d')!.drawImage(artPreview,0,0);const text=doc.createElement('span');text.textContent='Golden '+name;gold.append(goldCanvas,text);gold.onclick=()=>choose(sprite.id,true);group.append(gold);}\r\n" +
+    '  }return group;\r\n' +
+    ' }\r\n' +
+    ' function draw(avatarDraw:any,canvas:HTMLCanvasElement,look:any,options:any={}){\r\n' +
+    '  readSelection();\r\n' +
+    '  const id=options.petOnly?selection.pet:selection.body,sprite=sprites.find(s=>s.id===id);\r\n' +
+    '  if(!sprite||lock(sprite.id)){avatarDraw(canvas,look,options);return;}\r\n' +
+    "  canvas.width=64;canvas.height=96;const ctx=canvas.getContext('2d')!;ctx.imageSmoothingEnabled=false;\r\n" +
+    "  if(options.petOnly)ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0,48,36,0,60,48,36);else if(sprite.kind==='pet')ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0,48,36,0,48,64,48);else ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0);\r\n" +
+    ' }\r\n' +
+    ' return {picker,draw,get hasBody(){readSelection();return !!selection.body&&!lock(selection.body);},get hasPet(){readSelection();return !!selection.pet&&!lock(selection.pet);}};\r\n' +
+    '}\r\n'
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/coach-cosmetics.test.mjs:84:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "import {COACHES,pathIntroCoachIds} from '../../performance-catalog.mjs';\r\nimport {goldenCoach,performanceOwner,readPerformanceProgress} from '../../performance-progress.mjs';\r\nimport {parseRecipe,fresh} from './creator/design';\r\nimport {bodyLockSection} from './creator/track-placements';\r\nimport {resolveRegionMaterial,regionChoice} from './creator/materials-registry';\r\n\r\nconst KEY='myr5-war-room-coaches-v2';\r\nconst selectionKey=()=>`${KEY}/${encodeURIComponent(performanceOwner())}`;\r\ntype Sprite={id:string;family:string;kind:'body'|'pet';sheet:string;frame:number[]};\r\ntype Selection={body:string|null;pet:string|null;goldenBody:boolean};\r\nexport async function loadCoachSpritePreviews(doc:Document){\r\n const response=await fetch('/pod/gala-coaches/manifest.json');if(!response.ok)throw Error('Coach sprites are unavailable.');\r\n const manifest=await response.json(),sprites:Sprite[]=manifest.sprites.filter((sprite:Sprite)=>COACHES.some((coach:any)=>coach.id===sprite.id));\r\n const sheets=new Map<string,{image:HTMLImageElement;mask:HTMLImageElement}>();\r\n const image=async(name:string)=>{const img=new Image();img.src='/pod/gala-coaches/'+name;await img.decode();return img;};\r\n await Promise.all(Object.entries(manifest.sheets).map(async([id,s]:[string,any])=>{const [art,mask]=await Promise.all([image(s.image),image(s.mask)]);sheets.set(id,{image:art,mask});}));\r\n const recipe=()=>{try{return parseRecipe(localStorage.getItem('myr5-recipe-v1')||'null');}catch{return fresh();}};\r\n const cache=new Map<string,HTMLCanvasElement>();\r\n function art(sprite:Sprite,silhouette=false,look?:any,golden=false){\r\n  const r=recipe(),skin=look&&(globalThis as any).GalaAvatar?.skinColor?.(look),colours=golden&&goldenCoach(sprite.id)?['#e8bc4d','#ffe4a1','#6b4214']:skin?[skin,skin,'#fff9df']:['body','head','eye'].map(region=>resolveRegionMaterial(r.styles[region],regionChoice(r.materials,region),true,sprite.id).primary);\r\n  const key=JSON.stringify([sprite.id,silhouette,colours]);if(cache.has(key))return cache.get(key)!;\r\n  const [x,y,w,h]=sprite.frame,canvas=doc.createElement('canvas');canvas.width=w;canvas.height=h;\r\n  const ctx=canvas.getContext('2d',{willReadFrequently:true})!,mask=doc.createElement('canvas');mask.width=w;mask.height=h;\r\n  const sheet=sheets.get(sprite.sheet)!;ctx.drawImage(sheet.image,x,y,w,h,0,0,w,h);const pixels=ctx.getImageData(0,0,w,h);\r\n  const mc=mask.getContext('2d',{willReadFrequently:true})!;mc.drawImage(sheet.mask,x,y,w,h,0,0,w,h);const regions=mc.getImageData(0,0,w,h).data;\r\n  const rgb=(hex:string)=>{const n=parseInt(hex.slice(1),16);return [n>>16,n>>8&255,n&255];};\r\n  for(let i=0;i<pixels.data.length;i+=4){if(!pixels.data[i+3])continue;const region=regions[i],tone=region===0?[33,23,46]:rgb(colours[Math.min(2,Math.round(region/64)-1)]);\r\n   const shade=pixels.data[i]/184;for(let c=0;c<3;c++)pixels.data[i+c]=silhouette?35:region===0?tone[c]:Math.min(255,Math.round(tone[c]*shade));}\r\n  ctx.putImageData(pixels,0,0);cache.set(key,canvas);return canvas;\r\n }\r\n return {sprites,art};\r\n}\r\nexport async function loadWarRoomCoaches(doc:Document){\r\n const {sprites,art}=await loadCoachSpritePreviews(doc);\r\n const lock=(id:string)=>bodyLockSection(id,{});\r\n let selection:Selection={body:null,pet:null,goldenBody:false},selectionOwner='';\r\n // Keyed by owner and stored value: the pod reuses this across War Room visits (another page writes the choice).\r\n function readSelection(){const owner=selectionKey();let raw:string|null=null;try{raw=localStorage.getItem(owner);}catch{}if(owner+' '+raw===selectionOwner)return;selectionOwner=owner+' '+raw;selection={body:null,pet:null,goldenBody:false};\r\n  try{const saved=JSON.parse(raw||'null');for(const kind of ['body','pet'] as const)if(sprites.some(s=>s.id===saved?.[kind]&&(kind==='body'||s.kind===kind))&&!lock(saved[kind]))selection[kind]=saved[kind];selection.goldenBody=saved?.goldenBody===true&&!!selection.body&&goldenCoach(selection.body);}catch{}\r\n }\r\n readSelection();\r\n function picker(kind:'body'|'pet',changed:()=>void){\r\n  readSelection();\r\n  const group=doc.createElement('fieldset'),legend=doc.createElement('legend');legend.textContent=kind==='body'?'Coach body':'Coach pets';group.append(legend);group.className='gala-coach-choices';\r\n  const note=doc.createElement('p');note.className='help';note.textContent=kind==='body'?'Choose a coach character, then change its colour in the mirror. Choose Gala body to show your Gala wardrobe.':'Coach pets unlock with their coach bodies.';group.append(note);\r\n  const choose=(id:string|null,golden=false)=>{if(id&&lock(id))return;const next={...selection,[kind]:id,...(kind==='body'?{goldenBody:golden}: {})};try{localStorage.setItem(selectionKey(),JSON.stringify(next));selection=next;changed();}catch{group.setAttribute('aria-label','This choice could not be saved. Storage is unavailable.');}};\r\n  const standard=doc.createElement('button');standard.type='button';standard.textContent=kind==='body'?'Gala body':'Gala pet';standard.setAttribute('aria-pressed',String(!selection[kind]));standard.onclick=()=>choose(null);group.append(standard);\r\n  const introductory=new Set(pathIntroCoachIds(readPerformanceProgress().paths));\r\n  const ordered=[...sprites.filter(s=>kind==='body'||s.kind===kind)].sort((a,b)=>Number(!!lock(a.id))-Number(!!lock(b.id))||Number(introductory.has(b.id))-Number(introductory.has(a.id)));\r\n  for(const sprite of ordered){\r\n   const locked=lock(sprite.id),button=doc.createElement('button'),name=COACHES.find(c=>c.id===sprite.id)?.label||sprite.family;\r\n   button.type='button';button.dataset.coachSprite=sprite.id;button.setAttribute('aria-label',name);button.setAttribute('aria-pressed',String(selection[kind]===sprite.id&&(kind!=='body'||!selection.goldenBody)));\r\n   const source=art(sprite),preview=doc.createElement('canvas');preview.width=source.width;preview.height=source.height;preview.getContext('2d')!.drawImage(source,0,0);\r\n   const label=doc.createElement('span');label.textContent=name;button.append(preview,label);button.onclick=()=>{if(locked){note.textContent=`Preview only · How to unlock ${name}: ${locked}.`;return;}choose(sprite.id);};group.append(button);\r\n   if(kind==='body'&&goldenCoach(sprite.id)&&!locked){const gold=doc.createElement('button');gold.type='button';gold.dataset.coachSprite=sprite.id;gold.dataset.goldenCoach='true';gold.setAttribute('aria-label','Golden '+name);gold.setAttribute('aria-pressed',String(selection.body===sprite.id&&selection.goldenBody));const artPreview=art(sprite,false,undefined,true),goldCanvas=doc.createElement('canvas');goldCanvas.width=artPreview.width;goldCanvas.height=artPreview.height;goldCanvas.getContext('2d')!.drawImage(artPreview,0,0);const text=doc.createElement('span');text.textContent='Golden '+name;gold.append(goldCanvas,text);gold.onclick=()=>choose(sprite.id,true);group.append(gold);}\r\n  }return group;\r\n }\r\n function draw(avatarDraw:any,canvas:HTMLCanvasElement,look:any,options:any={}){\r\n  readSelection();\r\n  const id=options.petOnly?selection.pet:selection.body,sprite=sprites.find(s=>s.id===id);\r\n  if(!sprite||lock(sprite.id)){avatarDraw(canvas,look,options);return;}\r\n  canvas.width=64;canvas.height=96;const ctx=canvas.getContext('2d')!;ctx.imageSmoothingEnabled=false;\r\n  if(options.petOnly)ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0,48,36,0,60,48,36);else if(sprite.kind==='pet')ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0,48,36,0,48,64,48);else ctx.drawImage(art(sprite,false,look,!options.petOnly&&selection.goldenBody),0,0);\r\n }\r\n return {picker,draw,get hasBody(){readSelection();return !!selection.body&&!lock(selection.body);},get hasPet(){readSelection();return !!selection.pet&&!lock(selection.pet);}};\r\n}\r\n",
+    expected: /resolveRegionMaterial\(r\.styles\[region\],regionChoice\(r\.materials,region\),false,sprite\.id\)/,
+    operator: 'match',
+    diff: 'simple'
+  }
+### tests/coach-joints.browser.test.mjs
+measured 8 / 69
+measured 16 / 69
+measured 24 / 69
+measured 32 / 69
+measured 40 / 69
+measured 48 / 69
+measured 56 / 69
+measured 64 / 69
+measured 69 / 69
+myr5                                                                   head 0.0008 laugh@2.07       feet 0.0003 laugh@2.07       contact 59 2
+roster/01-seed-pearo--3d_character_model                               head 0.0010 laugh@2.07       feet 0.0009 laugh@2.07       contact 77 87
+roster/01-seed-pearo--cute_alien_figure_3d_model                       head 0.0005 laugh@2.07       feet 0.0009 laugh@2.07       contact 81 84
+roster/01-seed-pearo--white_3d_character_model                         head 0.0010 laugh@2.07       feet 0.0011 laugh@2.07       contact 69 55
+roster/01-seed-pearo--blank_humanoid_figure_3d_model                   head 0.0012 laugh@2.07       feet 0.0007 laugh@2.07       contact 62 49
+roster/01-seed-pearo--blank_toy_figure_3d_model                        head 0.0015 laugh@2.07       feet 0.0008 laugh@2.07       contact 32 42
+roster/02-taper-tallstalk--3d_humanoid_figure                          head 0.0007 laugh@2.07       feet 0.0009 laugh@2.07       contact 56 81
+roster/02-taper-tallstalk--humanoid_robot_3d_model1                    head 0.0009 laugh@2.07       feet 0.0010 laugh@2.07       contact 18 59
+roster/02-taper-tallstalk--white_humanoid_doll_3d_model                head 0.0007 laugh@2.07       feet 0.0008 laugh@2.07       contact 47 71
+roster/03-pearl-orb-ring--abstract_humanoid_3d_model                   head 0.0014 laugh@2.07       feet 0.0013 laugh@2.07       contact 74 135
+roster/03-pearl-orb-ring--circle_center                                head 0.0004 laugh@2.07       feet 0.0010 laugh@2.07       contact 24 82
+roster/03-pearl-orb-ring--ringed_humanoid_3d_model                     head 0.0004 laugh@2.07       feet 0.0010 laugh@2.07       contact 24 82
+roster/03-pearl-orb-ring--robot_3d_model                               head 0.0009 laugh@2.33       feet 0.0006 laugh@2.07       contact 57 55
+roster/03-pearl-orb-ring--stylized_3d_character1                       head 0.0008 laugh@2.07       feet 0.0010 laugh@2.07       contact 76 58
+roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model            head 0.0012 laugh@2.07       feet 0.0009 laugh@2.07       contact 55 70
+roster/04-crest-wedge--robot_creature_3d_model                         head 0.0018 laugh@2.07       feet 0.0012 laugh@2.07       contact 52 49
+roster/04-crest-wedge--stylized_3d_character                           head 0.0006 laugh@2.07       feet 0.0006 laugh@2.07       contact 66 34
+roster/05-slope-bobble--clay_humanoid_figure_3d_model                  head 0.0011 laugh@2.07       feet 0.0011 laugh@2.07       contact 59 92
+roster/06-ridge-triad--geometric_robot_3d_model1                       head 0.0009 laugh@2.07       feet 0.0012 laugh@2.07       contact 76 91
+roster/06-ridge-triad--robot_3d_model1                                 head 0.0005 laugh@2.07       feet 0.0006 laugh@2.07       contact 57 75
+roster/07-bulb-sphereling--cute_robot_3d_model                         head 0.0013 laugh@2.07       feet 0.0013 laugh@2.07       contact 58 74
+roster/07-bulb-sphereling--humanoid_robot_3d_model                     head 0.0011 laugh@2.07       feet 0.0006 laugh@2.07       contact 17 17
+roster/08-shard-asym--geometric_robot_3d_model                         head 0.0005 laugh@2.07       feet 0.0005 laugh@2.07       contact 77 90
+roster/08-shard-asym--robot_3d_model4                                  head 0.0017 laugh@2.07       feet 0.0018 laugh@2.07       contact 54 49
+roster/08-shard-asym--fantasy_creature_3d_model2                       head 0.0006 laugh@2.07       feet 0.0006 laugh@2.07       contact 37 25
+roster/08-shard-asym--stylized_action_figure_3d_model                  head 0.0011 laugh@2.07       feet 0.0012 laugh@2.07       contact 72 75
+roster/09-monolith-tanka--3d_robot_model                               head 0.0013 laugh@2.07       feet 0.0010 laugh@2.07       contact 128 95
+roster/09-monolith-tanka--boxy_humanoid_3d_model                       head 0.0005 laugh@2.07       feet 0.0008 laugh@2.07       contact 68 82
+roster/09-monolith-tanka--mini_robot_3d_model                          head 0.0010 laugh@2.07       feet 0.0020 victory@2.47     contact 48 58
+roster/09-monolith-tanka--robot_3d_model2                              head 0.0010 laugh@2.33       feet 0.0007 laugh@2.07       contact 131 146
+roster/09-monolith-tanka--robot_3d_model3                              head 0.0008 laugh@2.07       feet 0.0007 laugh@2.07       contact 105 54
+roster/09-monolith-tanka--white_horned_robot_3d_model                  head 0.0013 laugh@2.07       feet 0.0018 laugh@2.07       contact 23 75
+roster/10-petal-wisp--stylized_creature_3d_model                       head 0.0007 laugh@2.07       feet 0.0007 laugh@2.07       contact 39 104
+roster/10-petal-wisp--ghost_character_3d_model                         head 0.0005 laugh@2.07       feet 0.0005 laugh@2.07       contact 42 64
+roster/10-petal-wisp--fantasy_creature_3d_model4                       head 0.0004 laugh@2.07       feet 0.0005 laugh@2.07       contact 26 69
+roster/11-anvil-cask--clay-style_robot_3d_model                        head 0.0021 laugh@2.07       feet 0.0016 laugh@2.07       contact 85 57
+roster/12-seedpod-snailslug--stylized_slug_3d_model                    head 0.0000                  feet 0.0008 laugh@2.07       contact 0 77
+roster/12-seedpod-snailslug--stylized_worm_3d_model                    head 0.0007 laugh@2.07       feet 0.0007 laugh@2.07       contact 18 123
+roster/13-fan-split--stylized_3d_character2                            head 0.0016 laugh@2.07       feet 0.0013 laugh@2.07       contact 32 36
+roster/13-fan-split--stylized_toy_3d_model                             head 0.0016 laugh@2.07       feet 0.0013 laugh@2.07       contact 34 36
+roster/14-chisel-spire--cone_head_3d_model                             head 0.0004 laugh@2.07       feet 0.0003 laugh@2.07       contact 110 118
+roster/14-chisel-spire--low_poly_robot_3d_model                        head 0.0009 laugh@2.07       feet 0.0009 laugh@2.07       contact 60 74
+roster/15-orbital-coili--robot_character_3d_model                      head 0.0010 laugh@2.07       feet 0.0012 laugh@2.07       contact 27 22
+roster/16-spade-arch--pyramid_head_figure_3d_model                     head 0.0010 laugh@2.07       feet 0.0008 laugh@2.07       contact 55 51
+roster/16-spade-arch--stylized_humanoid_3d_model                       head 0.0017 laugh@2.07       feet 0.0014 laugh@2.07       contact 82 58
+roster/17-shellcap-manyarm--3d_character_figurine                      head 0.0010 laugh@2.07       feet 0.0012 laugh@2.07       contact 52 49
+roster/17-shellcap-manyarm--mushroom_creature_3d_model                 head 0.0013 laugh@2.07       feet 0.0013 laugh@2.07       contact 117 58
+roster/17-shellcap-manyarm--mushroom_robot_3d_model                    head 0.0015 laugh@2.07       feet 0.0015 laugh@2.07       contact 34 49
+roster/18-quad-all--dragon_creature_3d_model                           head 0.0000                  feet 0.0005 laugh@2.07       contact 0 68
+roster/18-quad-all--fantasy_creature_3d_model1                         head 0.0000                  feet 0.0005 laugh@2.07       contact 0 60
+roster/18-quad-all--fantasy_creature_3d_model3                         head 0.0005 laugh@2.07       feet 0.0006 laugh@2.07       contact 2 95
+roster/18-quad-all--four-legged_robot_3d_model                         head 0.0000                  feet 0.0028 laugh@2.07       contact 0 160
+roster/18-quad-all--quadruped_robot_3d_model1                          head 0.0000                  feet 0.0010 laugh@2.07       contact 0 54
+roster/18-quad-all--quadruped_robot_3d_model                           head 0.0000                  feet 0.0010 laugh@2.07       contact 0 59
+roster/18-quad-all--robotic_dog_3d_model                               head 0.0005 laugh@2.07       feet 0.0017 laugh@2.07       contact 1 29
+roster/18-quad-all--stylized_quadruped_3d_model                        head 0.0000                  feet 0.0013 laugh@2.07       contact 0 58
+roster/18-quad-all--wooden_four-legged_robot_3d_model                  head 0.0000                  feet 0.0020 laugh@2.07       contact 0 152
+roster/19-genie-multi--fantasy_creature_3d_model                       head 0.0008 laugh@2.07       feet 0.0009 laugh@2.07       contact 34 29
+roster/19-genie-multi--multi-armed_humanoid_3d_model1                  head 0.0018 laugh@2.07       feet 0.0014 laugh@2.07       contact 26 14
+roster/19-genie-multi--multi-armed_humanoid_3d_model                   head 0.0017 laugh@2.07       feet 0.0009 laugh@2.07       contact 7 22
+roster/19-genie-multi--stylized_octopus_3d_model                       head 0.0014 laugh@2.07       feet 0.0019 laugh@2.07       contact 46 46
+roster/20-lume--robotic_figure_3d_model                                head 0.0015 laugh@2.07       feet 0.0015 laugh@2.07       contact 11 26
+roster/22-curve--stylized_alien_3d_model                               head 0.0009 laugh@2.07       feet 0.0010 laugh@2.07       contact 20 47
+roster/22-curve--stylized_cartoon_figure_3d_model                      head 0.0008 laugh@2.07       feet 0.0008 laugh@2.07       contact 58 39
+roster/23-blob-texture-bodies--blob_creature_3d_model                  head 0.0016 laugh@2.07       feet 0.0011 laugh@2.07       contact 38 31
+roster/23-blob-texture-bodies--cute_blob_creature_3d_model             head 0.0025 laugh@2.07       feet 0.0021 laugh@2.07       contact 76 96
+roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model             head 0.0014 laugh@2.33       feet 0.0009 laugh@2.07       contact 43 37
+roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model         head 0.0015 laugh@2.33       feet 0.0011 laugh@2.07       contact 72 96
+roster/23-blob-texture-bodies--sand_creature_3d_model                  head 0.0025 laugh@2.07       feet 0.0020 laugh@2.07       contact 106 96
+✖ no coach body opens a gap at the neck or feet at max lean, every gesture at amount 1.5 (17325.7836ms)
+✔ 375x812 captures at max lean (3858.605ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21863.016
+
+✖ failing tests:
+
+test at tests\coach-joints.browser.test.mjs:77:1
+✖ no coach body opens a gap at the neck or feet at max lean, every gesture at amount 1.5 (17325.7836ms)
+  AssertionError [ERR_ASSERTION]: every body measured
+      at file:///D:/myr5-work/r25-base/tests/coach-joints.browser.test.mjs:84:9
+      at async withPage (file:///D:/myr5-work/r25-base/tests/coach-joints.browser.test.mjs:24:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+### tests/coach-overlay.browser.test.mjs
+✖ AR coach stays hidden until counting, walks in, wanders, and a kick spins it away over the real camera shell (21280.55ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21654.1998
+
+✖ failing tests:
+
+test at tests\coach-overlay.browser.test.mjs:11:1
+✖ AR coach stays hidden until counting, walks in, wanders, and a kick spins it away over the real camera shell (21280.55ms)
+  page.waitForFunction: Timeout 20000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\coach-overlay.browser.test.mjs:25:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/control-board.browser.test.mjs
+✔ rotary detents sweep 270° and a relative turn snaps to the nearest detent (0.9089ms)
+✖ control board: dial, knob, lever and switch work by keyboard and pointer, and lock during a set (1454.2756ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1771.5347
+
+✖ failing tests:
+
+test at tests\control-board.browser.test.mjs:20:1
+✖ control board: dial, knob, lever and switch work by keyboard and pointer, and lock during a set (1454.2756ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'Easy 2/8'
+  - 'LV 2/8'
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/control-board.browser.test.mjs:66:72)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Easy 2/8',
+    expected: 'LV 2/8',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/creature-account-bridge.browser.test.mjs
+✖ standalone creature page hydrates a stable same-origin account before revealing account-owned tabs (6054.6081ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6421.1741
+
+✖ failing tests:
+
+test at tests\creature-account-bridge.browser.test.mjs:10:1
+✖ standalone creature page hydrates a stable same-origin account before revealing account-owned tabs (6054.6081ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/creature-account-bridge.browser.test.mjs:53:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/customizer-cage.browser.test.mjs
+✔ customizer shares the current six-button dock and saved metal housing at phone sizes (6131.5222ms)
+✔ customizer tilt moves content within a fixed frame and stops on reduced motion, hidden pages and disposal (5629.6914ms)
+✔ Original MYR5 Infernal stays assembled through amplified idle motion and gesture crossfades (5460.8691ms)
+✔ mixed nonrest plateaus survive repeated weighting, pause, reduced mode, sleep and neutral reset (3410.4383ms)
+✔ customizer permanently uses maximum motion; the Motion tab is gone but old motion data still loads (13288.5722ms)
+✖ the customizer shows only the close-up coach: no cage, no bays, no cage offer, even with the packet downloaded (5385.459ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39694.8389
+
+✖ failing tests:
+
+test at tests\customizer-cage.browser.test.mjs:104:1
+✖ the customizer shows only the close-up coach: no cage, no bays, no cage offer, even with the packet downloaded (5385.459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'Species',
+  +   'Textures',
+      'Colour',
+      'Face',
+  +   'Ship',
+      'Files'
+    ]
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/customizer-cage.browser.test.mjs:111:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Species', 'Textures', 'Colour', 'Face', 'Ship', 'Files' ],
+    expected: [ 'Species', 'Colour', 'Face', 'Files' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/customizer-editor.browser.test.mjs
+✖ customizer editor: body-first tab, no limb-mixing UI, mom-only gating, save/reload, old mixed recipes still load (3462.1918ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3770.7661
+
+✖ failing tests:
+
+test at tests\customizer-editor.browser.test.mjs:17:1
+✖ customizer editor: body-first tab, no limb-mixing UI, mom-only gating, save/reload, old mixed recipes still load (3462.1918ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'Species',
+  +   'Textures',
+      'Colour',
+      'Face',
+  +   'Ship',
+      'Files'
+    ]
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/customizer-editor.browser.test.mjs:31:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Species', 'Textures', 'Colour', 'Face', 'Ship', 'Files' ],
+    expected: [ 'Species', 'Colour', 'Face', 'Files' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/customizer-locked-preview.browser.test.mjs
+✖ locked body preview: picking an unlocked texture keeps previewing the locked body and never saves (35645.8632ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36001.9108
+
+✖ failing tests:
+
+test at tests\customizer-locked-preview.browser.test.mjs:22:1
+✖ locked body preview: picking an unlocked texture keeps previewing the locked body and never saves (35645.8632ms)
+  page.selectOption: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#body')[22m
+  [2m    - locator resolved to <select id="body">…</select>[22m
+  [2m  - attempting select option action[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m      - waiting 100ms[22m
+  [2m    59 × waiting for element to be visible and enabled[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying select option action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\customizer-locked-preview.browser.test.mjs:46:14) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#body')", '    - locator resolved to <select id="body">…</select>', '  - attempting select option action', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '    - waiting 20ms', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '      - waiting 100ms', '    59 × waiting for element to be visible and enabled', '       - element is not visible', '     - retrying select option action', '       - waiting 500ms' ]
+  }
+### tests/installed-creature-skins.browser.test.mjs
+✔ skin editor stays hidden for anonymous, unowned, and unsigned packs while old fitness materials still render (4325.9423ms)
+✖ signed installed skin survives the real rig shader handoff, offline reload, and account teardown (45128.0837ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 50214.5508
+
+✖ failing tests:
+
+test at tests\installed-creature-skins.browser.test.mjs:29:1
+✖ signed installed skin survives the real rig shader handoff, offline reload, and account teardown (45128.0837ms)
+  page.selectOption: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#textureId')[22m
+  [2m    - locator resolved to <select id="textureId">…</select>[22m
+  [2m  - attempting select option action[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m      - waiting 100ms[22m
+  [2m    54 × waiting for element to be visible and enabled[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying select option action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\installed-creature-skins.browser.test.mjs:69:44) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#textureId')", '    - locator resolved to <select id="textureId">…</select>', '  - attempting select option action', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '    - waiting 20ms', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '      - waiting 100ms', '    54 × waiting for element to be visible and enabled', '       - element is not visible', '     - retrying select option action', '       - waiting 500ms' ]
+  }
+### tests/material-original-preservation.test.mjs
+✖ Original MYR5 single-pass geometry, texture bytes and material profile stay byte-exact to deployed a2 across texture families and transforms (44.7128ms)
+ℹ Oracle: tests/material-original-baseline.ts, source SHA-256 38a2eff5f1a3e698c087719022cbd0368ef13680532988cc4588e69e367d9c7c (Release 10 build a2a1dba564ef1f4fbac5)
+✖ animated, morph-target and interleaved meshes with a relief budget fall back to exact deployed single-pass output (65.5162ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 514.1396
+
+✖ failing tests:
+
+test at tests\material-original-preservation.test.mjs:49:1
+✖ Original MYR5 single-pass geometry, texture bytes and material profile stay byte-exact to deployed a2 across texture families and transforms (44.7128ms)
+  AssertionError [ERR_ASSERTION]: family 57 (Opal Jelly)
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      bounds: {
+        max: [
+          0.7300734519958496,
+          0.7300416827201843,
+  ...
+      material: {
+  +     attenuationColor: 13214010,
+  +     attenuationDistance: 4.095,
+  -     attenuationColor: 16777215,
+  -     attenuationDistance: Infinity,
+        bumpMap: {
+          colorSpace: '',
+          data: '1bd647350a5652b9ec75c0ae5e2121e26b53ba58878461be2c72b74deff078da',
+          flipY: false,
+          format: 1023,
+  ...
+        emissiveMap: null,
+  +     envMapIntensity: 1.65,
+  -     envMapIntensity: 1,
+        flatShading: false,
+  +     ior: 1.38,
+  -     ior: 1.5,
+        map: {
+          colorSpace: '',
+          data: 'a8f568682edd674199c5a5337e28586badb74c2d99251de4143334a7cb26f96f',
+          flipY: false,
+          format: 1023,
+  ...
+        metalness: 0,
+  +     name: 'opal-jelly · material-horror-robot-2026-10-05-r1',
+  -     name: 'opal-jelly · material-procedural-families-2026-10-01-r2',
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        roughness: 0.06,
+  +     roughnessMap: null,
+  -     roughnessMap: {
+  -       colorSpace: '',
+  -       data: '63a51f129ba68497b0a79b73040b30cc9ebdd5910e12b00c6692359ddd50f54a',
+  -       flipY: false,
+  -       format: 1023,
+  -       generateMipmaps: true,
+  -       image: [
+  -         192,
+  -         192
+  -       ],
+  -       magFilter: 1006,
+  -       mapping: 300,
+  -       minFilter: 1008,
+  -       offset: [
+  -         0,
+  -         0
+  -       ],
+  -       premultiplyAlpha: false,
+  -       repeat: [
+  -         1,
+  -         1
+  -       ],
+  -       rotation: 0,
+  -       type: 1009,
+  -       unpackAlignment: 1,
+  -       wrapS: 1000,
+  -       wrapT: 1000
+  -     },
+        sheen: 0,
+        sheenColor: 16771496,
+        sheenRoughness: 0.3,
+        side: 2,
+  +     thickness: 0.5616,
+  +     transmission: 0.88,
+  -     thickness: 0,
+  -     transmission: 0,
+        type: 'MeshPhysicalMaterial'
+      },
+      normal: {
+        arrayType: 'Float32Array',
+        count: 117,
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/material-original-preservation.test.mjs:56:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { position: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '12ab85d26d834b2756e34c17386328d14e9364baa689e0712ac5a4b2fb684d9b' }, normal: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '6e27da592b601b574df5159e60d7cd76c989027fd1839a805e8fb3205f60be3f' }, uv: { count: 117, itemSize: 2, normalized: false, arrayType: 'Float32Array', sha256: '45eca24b813b74a05ad026aeb6828de5e93a2f98525b3321d7baa5dca09d9755' }, color: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '5d145fc88f36b2f7eebd3c18aadd8bb75de4768ecf935e69cbbde988c9c3a9ad' }, bounds: { min: [Array], max: [Array] }, sphere: { center: [Array], radius: 0.7302927332156718 }, material: { type: 'MeshPhysicalMaterial', name: 'opal-jelly · material-horror-robot-2026-10-05-r1', color: 16777215, emissive: 0, emissiveIntensity: 1, roughness: 0.06, metalness: 0, bumpScale: 0.00117, side: 2, polygonOffset: true, polygonOffsetFactor: 1, flatShading: false, clearcoat: 1, clearcoatRoughness: 0.035, transmission: 0.88, thickness: 0.5616, ior: 1.38, attenuationColor: 13214010, attenuationDistance: 4.095, sheen: 0, sheenColor: 16771496, sheenRoughness: 0.3, envMapIntensity: 1.65, materialStyle: 57, map: [Object], bumpMap: [Object], roughnessMap: null, emissiveMap: null } },
+    expected: { position: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '12ab85d26d834b2756e34c17386328d14e9364baa689e0712ac5a4b2fb684d9b' }, normal: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '6e27da592b601b574df5159e60d7cd76c989027fd1839a805e8fb3205f60be3f' }, uv: { count: 117, itemSize: 2, normalized: false, arrayType: 'Float32Array', sha256: '45eca24b813b74a05ad026aeb6828de5e93a2f98525b3321d7baa5dca09d9755' }, color: { count: 117, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '5d145fc88f36b2f7eebd3c18aadd8bb75de4768ecf935e69cbbde988c9c3a9ad' }, bounds: { min: [Array], max: [Array] }, sphere: { center: [Array], radius: 0.7302927332156718 }, material: { type: 'MeshPhysicalMaterial', name: 'opal-jelly · material-procedural-families-2026-10-01-r2', color: 16777215, emissive: 0, emissiveIntensity: 1, roughness: 0.06, metalness: 0, bumpScale: 0.00117, side: 2, polygonOffset: true, polygonOffsetFactor: 1, flatShading: false, clearcoat: 1, clearcoatRoughness: 0.035, transmission: 0, thickness: 0, ior: 1.5, attenuationColor: 16777215, attenuationDistance: Infinity, sheen: 0, sheenColor: 16771496, sheenRoughness: 0.3, envMapIntensity: 1, materialStyle: 57, map: [Object], bumpMap: [Object], roughnessMap: [Object], emissiveMap: null } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\material-original-preservation.test.mjs:79:1
+✖ animated, morph-target and interleaved meshes with a relief budget fall back to exact deployed single-pass output (65.5162ms)
+  AssertionError [ERR_ASSERTION]: skin geometry
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      bounds: {
+        max: [
+          0.5682352185249329,
+          0.5830357670783997,
+  ...
+        metalness: 0.82,
+  +     name: 'gears · material-horror-robot-2026-10-05-r1',
+  -     name: 'gears · material-procedural-families-2026-10-01-r2',
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        roughness: 1,
+        roughnessMap: {
+          colorSpace: '',
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/material-original-preservation.test.mjs:84:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { position: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '6c96d91d77c5601af7bde472161cc7a5282e6f4bf48279d48018226a85e2a057' }, normal: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '4787af15662ab23691c5e2358af8f95b524112e5083daed5e59645ba2eb308f4' }, uv: { count: 88, itemSize: 2, normalized: false, arrayType: 'Float32Array', sha256: '9507a3dbb8349173eb0fb4011b718e81a0ba1aba7e9b159363a7bdc7d37df193' }, color: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: 'e03d294e9d00dce987ec1269826bc295b61b6315a97cad98a7a8a2ffcbbf8a20' }, bounds: { min: [Array], max: [Array] }, sphere: { center: [Array], radius: 0.5833348118303564 }, material: { type: 'MeshPhysicalMaterial', name: 'gears · material-horror-robot-2026-10-05-r1', color: 16777215, emissive: 0, emissiveIntensity: 1, roughness: 1, metalness: 0.82, bumpScale: 0.009170000000000001, side: 2, polygonOffset: true, polygonOffsetFactor: 1, flatShading: false, clearcoat: 0.6, clearcoatRoughness: 0.19, transmission: 0, thickness: 0, ior: 1.5, attenuationColor: 16777215, attenuationDistance: Infinity, sheen: 0, sheenColor: 0, sheenRoughness: 1, envMapIntensity: 1.3, materialStyle: 18, map: [Object], bumpMap: [Object], roughnessMap: [Object], emissiveMap: null } },
+    expected: { position: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '6c96d91d77c5601af7bde472161cc7a5282e6f4bf48279d48018226a85e2a057' }, normal: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: '4787af15662ab23691c5e2358af8f95b524112e5083daed5e59645ba2eb308f4' }, uv: { count: 88, itemSize: 2, normalized: false, arrayType: 'Float32Array', sha256: '9507a3dbb8349173eb0fb4011b718e81a0ba1aba7e9b159363a7bdc7d37df193' }, color: { count: 88, itemSize: 3, normalized: false, arrayType: 'Float32Array', sha256: 'e03d294e9d00dce987ec1269826bc295b61b6315a97cad98a7a8a2ffcbbf8a20' }, bounds: { min: [Array], max: [Array] }, sphere: { center: [Array], radius: 0.5833348118303564 }, material: { type: 'MeshPhysicalMaterial', name: 'gears · material-procedural-families-2026-10-01-r2', color: 16777215, emissive: 0, emissiveIntensity: 1, roughness: 1, metalness: 0.82, bumpScale: 0.009170000000000001, side: 2, polygonOffset: true, polygonOffsetFactor: 1, flatShading: false, clearcoat: 0.6, clearcoatRoughness: 0.19, transmission: 0, thickness: 0, ior: 1.5, attenuationColor: 16777215, attenuationDistance: Infinity, sheen: 0, sheenColor: 0, sheenRoughness: 1, envMapIntensity: 1.3, materialStyle: 18, map: [Object], bumpMap: [Object], roughnessMap: [Object], emissiveMap: null } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/material-surfaces.browser.test.mjs
+✖ all 48 selectable material choices render on the assembled 3D coach at phone size, with 24 distinct named reward surfaces (28337.2839ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 29130.6491
+
+✖ failing tests:
+
+test at tests\material-surfaces.browser.test.mjs:25:1
+✖ all 48 selectable material choices render on the assembled 3D coach at phone size, with 24 distinct named reward surfaces (28337.2839ms)
+  AssertionError [ERR_ASSERTION]: Clay, 22 available legacy families, 24 named rewards and the pixel finish were rendered
+  
+  63 !== 48
+  
+      at file:///D:/myr5-work/r25-base/tests/material-surfaces.browser.test.mjs:54:79
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processImmediate (node:internal/timers:502:9)
+      at async withPage (file:///D:/myr5-work/r25-base/tests/material-surfaces.browser.test.mjs:21:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 63,
+    expected: 48,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/meditation-modes.browser.test.mjs
+✔ no downloaded wonder: the bundled starter wonder for the day shows, with the one Begin button on screen (1077.8468ms)
+✖ Begin -> seated warning -> settle countdown -> breathing, hold, exit mid-hold, then complete once (86139.8934ms)
+✔ always-visible exits and reduced motion: Close stays pinned when scrolled, Esc closes, breathing cue stays visible (17242.1083ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 105053.7977
+
+✖ failing tests:
+
+test at tests\meditation-modes.browser.test.mjs:80:1
+✖ Begin -> seated warning -> settle countdown -> breathing, hold, exit mid-hold, then complete once (86139.8934ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\meditation-modes.browser.test.mjs:103:13) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/meditation-review.browser.test.mjs
+✔ the room renders the saved player Gala avatar at its native pixel resolution, seated only (1556.3894ms)
+✔ the accessible circle exits without a character poke, while five avatar taps preserve Tub Flight and its completion link (1658.1246ms)
+✖ single round runs 210 active seconds, freezes when paused/hidden, and saves once (57975.8459ms)
+✔ WHM instructs seated practice; the counter chip follows phases (22869.7192ms)
+✔ breathing cue remains phase-driven with motion preference no-preference (2806.441ms)
+✔ breathing cue remains phase-driven with motion preference reduce (2802.808ms)
+✔ a delayed completion callback cannot wake a closed and reopened room (22622.72ms)
+✔ a delayed completion callback cannot wake the room after account invalidation (22660.9433ms)
+✔ optional hold can be skipped and cartoon early exit immediately abandons saving (23859.6886ms)
+✔ returning from a cached page restores a usable room and account fencing (3495.5852ms)
+✔ controls fit 375x812 (2887.3231ms)
+✔ controls fit 375x748 (2888.3647ms)
+✔ controls fit 375x667 (2891.8264ms)
+✔ controls fit 375x603 (2902.2405ms)
+✔ controls fit 812x375 (2867.0165ms)
+✔ controls fit 375x812 integrated route (5771.7318ms)
+✔ controls fit 375x667 integrated route (5389.6062ms)
+✔ controls fit 812x375 integrated route (5551.4704ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 17
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 194056.7202
+
+✖ failing tests:
+
+test at tests\meditation-review.browser.test.mjs:71:1
+✖ single round runs 210 active seconds, freezes when paused/hidden, and saves once (57975.8459ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\meditation-review.browser.test.mjs:79:44) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/meditation-scene.browser.test.mjs
+✔ open: three black-and-white peering layers, the big meditation coach borrowed asleep; drag peers by depth; close hands it back (1264.2678ms)
+✔ one 3:30 breathing round counts breaths, retains pause time, and lets the user skip the optional hold (15319.1128ms)
+✔ reduced motion: dragging never moves the layers; an unavailable body leaves the four-legged room figure visible (492.3138ms)
+✖ a full session: colour returns to every layer, then the coach wakes, turns and walks off; Done does not smack (51885.0583ms)
+✔ circle exit abandons immediately without saving, bounces briefly, then closes (21352.6814ms)
+✔ real viewer: preview() shows a temporary body without writing myr5-recipe-v1, and falls back when the body cannot load (3925.21ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 94848.3614
+
+✖ failing tests:
+
+test at tests\meditation-scene.browser.test.mjs:132:1
+✖ a full session: colour returns to every layer, then the coach wakes, turns and walks off; Done does not smack (51885.0583ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\meditation-scene.browser.test.mjs:135:13) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/offline-camera.browser.test.mjs
+✖ a camera workout opened once online, or downloaded with Starter, starts and tracks offline (32056.5422ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32383.6416
+
+✖ failing tests:
+
+test at tests\offline-camera.browser.test.mjs:15:1
+✖ a camera workout opened once online, or downloaded with Starter, starts and tracks offline (32056.5422ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at begin (D:\myr5-work\r25-base\tests\offline-camera.browser.test.mjs:33:16)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\offline-camera.browser.test.mjs:42:22) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/phone-bundle.test.mjs
+✖ the shipped phone viewer imports every current and legacy coach material (40.4446ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 498.8679
+
+✖ failing tests:
+
+test at tests\phone-bundle.test.mjs:3:1
+✖ the shipped phone viewer imports every current and legacy coach material (40.4446ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 22
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/phone-bundle.test.mjs:6:170)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 22,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/portal-context-loss.browser.test.mjs
+✖ context losses while cycling every board never blank the stage; routes and the dock keep working (18038.5108ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 18455.9497
+
+✖ failing tests:
+
+test at tests\portal-context-loss.browser.test.mjs:62:1
+✖ context losses while cycling every board never blank the stage; routes and the dock keep working (18038.5108ms)
+  page.waitForFunction: Timeout 15000ms exceeded.
+      at portalUp (D:\myr5-work\r25-base\tests\portal-context-loss.browser.test.mjs:46:27)
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-context-loss.browser.test.mjs:78:79) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/portal-effect-color.browser.test.mjs
+✔ Jelly compiled 3D gash shader restores and updates its own selected tint without erasing the active trail (8851.1499ms)
+✖ Cogs mechanism and back wall tints persist independently across live updates and reselect (4828.8798ms)
+✔ jelly 2D drawn effect restores its selected color and repaints existing and new trails (3181.2873ms)
+✔ ice 2D drawn effect restores its selected color and repaints existing and new trails (3241.2361ms)
+﹣ ice 3D drawn effect restores its selected color and repaints existing and new trails (0.5642ms) # 3D trail canvases fill unreliably under software GL on a busy machine: set MYR5_FULL_ENV=1 on a quiet GPU machine
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 20690.798
+
+✖ failing tests:
+
+test at tests\portal-effect-color.browser.test.mjs:37:1
+✖ Cogs mechanism and back wall tints persist independently across live updates and reselect (4828.8798ms)
+  AssertionError [ERR_ASSERTION]: Cogs exposes a mechanism color control
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/portal-effect-color.browser.test.mjs:44:91)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/portal-frame.browser.test.mjs
+✖ #111 the metal cap fills above the proportionate board and never takes a pointer (2752.1733ms)
+✔ #111 a square traced on the proportional stitched outline opens the rect portal, bezel on the outline and frame in place (11592.9091ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14692.3738
+
+✖ failing tests:
+
+test at tests\portal-frame.browser.test.mjs:42:1
+✖ #111 the metal cap fills above the proportionate board and never takes a pointer (2752.1733ms)
+  AssertionError [ERR_ASSERTION]: engraved logo on the rail, right of the key: {"left":0,"top":0,"width":0,"height":0}
+      at file:///D:/myr5-work/r25-base/tests/portal-frame.browser.test.mjs:58:2
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-frame.browser.test.mjs:22:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+### tests/portal-idle-flash.browser.test.mjs
+✔ #104 R7 idle ambient flash: nothing for 7s, then only the slow cycle in order, a gap between shapes, a touch stops it instantly (12967.6445ms)
+✔ #104 reduced motion shows every idle outline and label at once, no cycling, pauses when hidden (9928.6839ms)
+✔ W2-FIX risk 4: a dialog opened over the quilt without going through setVisible freezes the idle flash, and closing it re-arms the cycle (17312.7765ms)
+✔ W2-FIX: dispose leaves no stray rAF drawing a frame after teardown (8845.4281ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49376.4923
+### tests/portal-lifecycle.browser.test.mjs
+✖ Quilt traps focus, opens Grimoire settings, honors reduced motion and returns from Food (2486.1508ms)
+✔ Back to Coach cancels a pending destination and flash duration/completion are reliable (5627.7675ms)
+✔ a renderer failure leaves a usable portal on the 2D quilt, with no orphaned canvases (1432.482ms)
+✔ a missing quilt texture (no Starter pack, offline) gives a plain stitched board that still works (2816.3718ms)
+✔ the rectangular portal frames the live workout page, restores it on close, and restores it before BEGIN (4609.577ms)
+✖ retired line-up and cross gestures do nothing; Grimoire settings opens Menu (32267.011ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 4
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49571.1961
+
+✖ failing tests:
+
+test at tests\portal-lifecycle.browser.test.mjs:21:1
+✖ Quilt traps focus, opens Grimoire settings, honors reduced motion and returns from Food (2486.1508ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'portalExitButton'
+  - 'portalSettingsButton'
+           ^
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-lifecycle.browser.test.mjs:27:42
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-lifecycle.browser.test.mjs:16:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'portalExitButton',
+    expected: 'portalSettingsButton',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\portal-lifecycle.browser.test.mjs:116:1
+✖ retired line-up and cross gestures do nothing; Grimoire settings opens Menu (32267.011ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#portalSettingsButton')[22m
+  [2m    - locator resolved to <button type="button" id="portalSettingsButton" class="metal-grimoire-key" aria-label="Grimoire settings">GRIMOIRE</button>[22m
+  [2m  - attempting click action[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is visible, enabled and stable[22m
+  [2m      - scrolling into view if needed[22m
+  [2m      - done scrolling[22m
+  [2m      - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m    - retrying click action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is visible, enabled and stable[22m
+  [2m      - scrolling into view if needed[22m
+  [2m      - done scrolling[22m
+  [2m      - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 100ms[22m
+  [2m    57 × waiting for element to be visible, enabled and stable[22m
+  [2m       - element is visible, enabled and stable[22m
+  [2m       - scrolling into view if needed[22m
+  [2m       - done scrolling[22m
+  [2m       - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m     - retrying click action[22m
+  [2m       - waiting 500ms[22m
+  
+      at D:\myr5-work\r25-base\tests\portal-lifecycle.browser.test.mjs:122:46
+      at async withPortal (D:\myr5-work\r25-base\tests\portal-lifecycle.browser.test.mjs:16:162) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#portalSettingsButton')", '    - locator resolved to <button type="button" id="portalSettingsButton" class="metal-grimoire-key" aria-label="Grimoire settings">GRIMOIRE</button>', '  - attempting click action', '    2 × waiting for element to be visible, enabled and stable', '      - element is visible, enabled and stable', '      - scrolling into view if needed', '      - done scrolling', '      - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '    - retrying click action', '    - waiting 20ms', '    2 × waiting for element to be visible, enabled and stable', '      - element is visible, enabled and stable', '      - scrolling into view if needed', '      - done scrolling', '      - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '    - retrying click action', '      - waiting 100ms', '    57 × waiting for element to be visible, enabled and stable', '       - element is visible, enabled and stable', '       - scrolling into view if needed', '       - done scrolling', '       - <canvas width="375" height="812" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '     - retrying click action', '       - waiting 500ms' ]
+  }
+### tests/portal-menu-sheet.browser.test.mjs
+✖ Grimoire settings are reachable, Escape closes the sheet, and destinations return to the quilt (31095.0193ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31407.0843
+
+✖ failing tests:
+
+test at tests\portal-menu-sheet.browser.test.mjs:27:1
+✖ Grimoire settings are reachable, Escape closes the sheet, and destinations return to the quilt (31095.0193ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#portalSettingsButton')[22m
+  [2m    - locator resolved to <button type="button" id="portalSettingsButton" class="metal-grimoire-key" aria-label="Grimoire settings">GRIMOIRE</button>[22m
+  [2m  - attempting click action[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is visible, enabled and stable[22m
+  [2m      - scrolling into view if needed[22m
+  [2m      - done scrolling[22m
+  [2m      - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m    - retrying click action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is visible, enabled and stable[22m
+  [2m      - scrolling into view if needed[22m
+  [2m      - done scrolling[22m
+  [2m      - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 100ms[22m
+  [2m    55 × waiting for element to be visible, enabled and stable[22m
+  [2m       - element is visible, enabled and stable[22m
+  [2m       - scrolling into view if needed[22m
+  [2m       - done scrolling[22m
+  [2m       - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events[22m
+  [2m     - retrying click action[22m
+  [2m       - waiting 500ms[22m
+  
+      at D:\myr5-work\r25-base\tests\portal-menu-sheet.browser.test.mjs:38:46
+      at async withPortal (D:\myr5-work\r25-base\tests\portal-menu-sheet.browser.test.mjs:23:70) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#portalSettingsButton')", '    - locator resolved to <button type="button" id="portalSettingsButton" class="metal-grimoire-key" aria-label="Grimoire settings">GRIMOIRE</button>', '  - attempting click action', '    2 × waiting for element to be visible, enabled and stable', '      - element is visible, enabled and stable', '      - scrolling into view if needed', '      - done scrolling', '      - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '    - retrying click action', '    - waiting 20ms', '    2 × waiting for element to be visible, enabled and stable', '      - element is visible, enabled and stable', '      - scrolling into view if needed', '      - done scrolling', '      - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '    - retrying click action', '      - waiting 100ms', '    55 × waiting for element to be visible, enabled and stable', '       - element is visible, enabled and stable', '       - scrolling into view if needed', '       - done scrolling', '       - <canvas width="390" height="844" id="portalOverlay" aria-hidden="true"></canvas> intercepts pointer events', '     - retrying click action', '       - waiting 500ms' ]
+  }
+### tests/portal-peer-frames.browser.test.mjs
+R7-PEER frame cost (4x CPU, 375x812@2x; still phone 4 s, then turning +-8 deg 4 s = turn*):
+┌─────────┬────────────┬──────┬─────────┬───────┬────────────┬─────────────┬────────────┬─────────────┬────────────┬─────────────┬─────────┬───────────┬────────────────┐
+│ (index) │ id         │ fps  │ frameMs │ p95Ms │ busyMsPerS │ styleMsPerS │ stylesPerS │ layoutsPerS │ clipWrites │ peerXWrites │ turnFps │ turnP95Ms │ turnClipWrites │
+├─────────┼────────────┼──────┼─────────┼───────┼────────────┼─────────────┼────────────┼─────────────┼────────────┼─────────────┼─────────┼───────────┼────────────────┤
+│ 0       │ 'up'       │ 59.9 │ 16.7    │ 16.8  │ 383        │ 66.9        │ 59.9       │ 25.2        │ 0          │ 0           │ 60.3    │ 16.8      │ 0              │
+│ 1       │ 'down'     │ 60.2 │ 16.7    │ 16.8  │ 394        │ 124.8       │ 60         │ 0           │ 0          │ 0           │ 60      │ 16.8      │ 0              │
+│ 2       │ 'vdiamond' │ 60   │ 16.7    │ 16.8  │ 274        │ 51          │ 60         │ 0           │ 0          │ 0           │ 60.3    │ 16.8      │ 0              │
+│ 3       │ 'oval'     │ 60.1 │ 16.7    │ 16.8  │ 398        │ 55.1        │ 60.1       │ 0.5         │ 0          │ 0           │ 60.3    │ 16.8      │ 0              │
+└─────────┴────────────┴──────┴─────────┴───────┴────────────┴─────────────┴────────────┴─────────────┴────────────┴─────────────┴─────────┴───────────┴────────────────┘
+✔ R7-PEER: the four cut-throughs, held still on a jittery Android tilt sensor, never rewrite the cut or restyle the whole menu per frame (69099.0817ms)
+✔ R7-PEER: two fingers never zoom an open menu or the quilt; one finger still traces (15643.6627ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85373.069
+### tests/portal-peering.browser.test.mjs
+✔ #134 #131 R7: Food, Achievements, Leaderboard and the ship open in their cut with the energy in the portal's shape and no text, and a double-tap steps each in to the full screen, energy and tilt kept (118634.8042ms)
+✔ R7 (Ian 29 Sept): with its Close hidden, a peered menu still lets you out: Escape, phone back and the bar's Portal key; a scene tap that opens a card steps in (60365.8278ms)
+✔ release 5: switching routes from the bar while a destination is framed moves the frame to the next page, with no reverse dive behind it (11714.2528ms)
+✖ R21 Cogs frame handover returns through manufactured seams and heals the board (7901.5124ms)
+✔ iOS tilt permission waits for the Allow chip tap (9395.4889ms)
+✔ #135 tilt looks round the pyramid through the triangle (the cut stays put), flat menus stay still, reduced motion stays still (42499.4174ms)
+✔ #124 a line's glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then opens the War Room (42711.5643ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 293919.1926
+
+✖ failing tests:
+
+test at tests\portal-peering.browser.test.mjs:216:1
+✖ R21 Cogs frame handover returns through manufactured seams and heals the board (7901.5124ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'quilt' !== 'cogs'
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/portal-peering.browser.test.mjs:227:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'quilt',
+    expected: 'cogs',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/portal-persistent-housing.browser.test.mjs
+✖ pod starts with cheap grimoire and DJ controls, then swaps to the real grimoire without opening the quilt (35154.3696ms)
+✖ movement library adopts shared housing and tilt while its hologram guidance and Begin fit on a phone (35553.0546ms)
+✖ abandoned direct housing requests cannot reopen after Home or supersede a newer route (46475.442ms)
+✔ cold direct destination links establish their own housing without a previous portal visit (94965.7058ms)
+✖ each direct menu tilts while open without a fall-through entrance or moving its frame and dock (72073.6711ms)
+✖ direct destination buttons share the metal housing and feathered strip at 375x812 (120006.2429ms)
+✔ direct destination buttons share the metal housing and feathered strip at 375x667 (100295.1854ms)
+✖ permanent housing contains meditation and expanded scenes at 375x812 (35886.6896ms)
+✖ permanent housing contains meditation and expanded scenes at 375x667 (46105.1425ms)
+✖ permanent housing contains meditation and expanded scenes at 812x375 (45564.0874ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 2
+ℹ fail 7
+ℹ cancelled 1
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 632984.5776
+
+✖ failing tests:
+
+test at tests\portal-persistent-housing.browser.test.mjs:54:1
+✖ pod starts with cheap grimoire and DJ controls, then swaps to the real grimoire without opening the quilt (35154.3696ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#podGrimoireLazyOpen')[22m
+  [2m    - locator resolved to <button hidden="" type="button" id="podGrimoireLazyOpen" class="metal-grimoire-key" aria-label="Open grimoire settings">GRIMOIRE</button>[22m
+  [2m  - attempting click action[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 100ms[22m
+  [2m    3 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 500ms[22m
+  [2m    - found locator('.reward-pack-dialog[open]'), intercepting action to run the handler[22m
+  [2m    - locator handler has finished, waiting for locator('.reward-pack-dialog[open]') to be hidden[22m
+  [2m    - interception handler has finished, continuing[22m
+  [2m    53 × waiting for element to be visible, enabled and stable[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying click action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:60:46) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#podGrimoireLazyOpen')", '    - locator resolved to <button hidden="" type="button" id="podGrimoireLazyOpen" class="metal-grimoire-key" aria-label="Open grimoire settings">GRIMOIRE</button>', '  - attempting click action', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '    - waiting 20ms', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '      - waiting 100ms', '    3 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '      - waiting 500ms', "    - found locator('.reward-pack-dialog[open]'), intercepting action to run the handler", "    - locator handler has finished, waiting for locator('.reward-pack-dialog[open]') to be hidden", '    - interception handler has finished, continuing', '    53 × waiting for element to be visible, enabled and stable', '       - element is not visible', '     - retrying click action', '       - waiting 500ms' ]
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:71:1
+✖ movement library adopts shared housing and tilt while its hologram guidance and Begin fit on a phone (35553.0546ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at openApp (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:40:82)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:72:23) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:92:1
+✖ abandoned direct housing requests cannot reopen after Home or supersede a newer route (46475.442ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at openApp (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:40:82)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:93:23) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:114:1
+✖ each direct menu tilts while open without a fall-through entrance or moving its frame and dock (72073.6711ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:124:78) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:129:71
+✖ direct destination buttons share the metal housing and feathered strip at 375x812 (120006.2429ms)
+  'test timed out after 120000ms'
+
+test at tests\portal-persistent-housing.browser.test.mjs:160:94
+✖ permanent housing contains meditation and expanded scenes at 375x812 (35886.6896ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at openApp (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:40:82)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:161:23) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:160:94
+✖ permanent housing contains meditation and expanded scenes at 375x667 (46105.1425ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at openApp (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:40:82)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:161:23) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-persistent-housing.browser.test.mjs:160:94
+✖ permanent housing contains meditation and expanded scenes at 812x375 (45564.0874ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at openApp (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:40:82)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-persistent-housing.browser.test.mjs:161:23) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/portal-pond.browser.test.mjs
+✖ pond grimoire: nearby koi follow, disperse, idle show and a portal cut (35114.2508ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35512.3998
+
+✖ failing tests:
+
+test at tests\portal-pond.browser.test.mjs:25:1
+✖ pond grimoire: nearby koi follow, disperse, idle show and a portal cut (35114.2508ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-pond.browser.test.mjs:41:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/portal-redesign.browser.test.mjs
+✖ phone device keeps artwork proportional and renders every downloaded tunnel (32261.2266ms)
+✔ meditation tunnel loses colour throughout its duration and lands fullscreen (7825.9727ms)
+✖ a failed jelly or cogs packet shows its poster, then retries without poisoning the other boards (8998.9412ms)
+✔ saved or explicit missing jelly (no GLB, no poster) keeps a board up without redirecting Downloads; rapid picks end on grass (14782.6031ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 2
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 64209.574
+
+✖ failing tests:
+
+test at tests\portal-redesign.browser.test.mjs:45:1
+✖ phone device keeps artwork proportional and renders every downloaded tunnel (32261.2266ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'quilt' !== 'cogs'
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-redesign.browser.test.mjs:55:10
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-redesign.browser.test.mjs:22:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'quilt',
+    expected: 'cogs',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\portal-redesign.browser.test.mjs:107:1
+✖ a failed jelly or cogs packet shows its poster, then retries without poisoning the other boards (8998.9412ms)
+  AssertionError [ERR_ASSERTION]: cogs requested its optional asset
+  
+  false !== true
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-redesign.browser.test.mjs:113:10
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-redesign.browser.test.mjs:22:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/portal-startup.browser.test.mjs
+✖ installed Coach starts at Quilt only after setup and preserves panel deep links (55051.6071ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55489.256
+
+✖ failing tests:
+
+test at tests\portal-startup.browser.test.mjs:12:1
+✖ installed Coach starts at Quilt only after setup and preserves panel deep links (55051.6071ms)
+  locator.selectOption: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#camera')[22m
+  [2m    - locator resolved to <select id="camera" aria-label="Camera">…</select>[22m
+  [2m  - attempting select option action[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - did not find some options[22m
+  [2m    - retrying select option action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - did not find some options[22m
+  [2m    - retrying select option action[22m
+  [2m      - waiting 100ms[22m
+  [2m    52 × waiting for element to be visible and enabled[22m
+  [2m       - did not find some options[22m
+  [2m     - retrying select option action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\portal-startup.browser.test.mjs:45:637) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#camera')", '    - locator resolved to <select id="camera" aria-label="Camera">…</select>', '  - attempting select option action', '    2 × waiting for element to be visible and enabled', '      - did not find some options', '    - retrying select option action', '    - waiting 20ms', '    2 × waiting for element to be visible and enabled', '      - did not find some options', '    - retrying select option action', '      - waiting 100ms', '    52 × waiting for element to be visible and enabled', '       - did not find some options', '     - retrying select option action', '       - waiting 500ms' ]
+  }
+### tests/portal-tap-almost-hint.browser.test.mjs
+✔ #20 a double-tap on a shape's stitched outline opens it exactly like tracing; a single tap does not (6564.5049ms)
+✔ #20 taps far from any outline, and taps too slow/far apart to be a double-tap, never open anything (4362.0189ms)
+✔ #21 a near-miss trace flashes "Almost: <Destination>" faintly, buzzes a double pulse, and never opens it (6007.2164ms)
+✔ #22 first-run hint: animates once labelled, a touch stops it instantly, and it never plays again (11053.0719ms)
+✔ #22 the hint never shows once localStorage already marks it seen (3693.8024ms)
+✔ #24 reduced motion drops the wait: the glass phase (loadMinMs) and the fall-in resolve fast, not after PORTAL.loadMinMs (3073.4547ms)
+✔ #29 a matched trace buzzes once; reduced motion never vibrates, even on a match (6569.4727ms)
+✖ the magical finger trail and the first-run hint are quilt-only: a non-quilt board draws neither (2857.3771ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 44720.5186
+
+✖ failing tests:
+
+test at tests\portal-tap-almost-hint.browser.test.mjs:214:1
+✖ the magical finger trail and the first-run hint are quilt-only: a non-quilt board draws neither (2857.3771ms)
+  AssertionError [ERR_ASSERTION]: expected the stub board, not the quilt
+  
+  2 !== 0
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-tap-almost-hint.browser.test.mjs:222:9
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-tap-almost-hint.browser.test.mjs:29:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/portal-webgl-fallback.browser.test.mjs
+✖ no WebGL shows the picked board flat, keeps routes usable, returns to 3D with WebGL and survives a lost context (31138.1136ms)
+✔ R7: picking Jelly on a phone-like GPU keeps WebGL for Jelly and every board after it (12166.7892ms)
+✖ R7: selected wormhole palettes show through 3D boards, while the flat Quilt keeps its finger trail (21746.2788ms)
+✖ R7: every board shows its own trace under a finger, in 3D and flat (31575.2873ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 1
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 97013.6335
+
+✖ failing tests:
+
+test at tests\portal-webgl-fallback.browser.test.mjs:35:1
+✖ no WebGL shows the picked board flat, keeps routes usable, returns to 3D with WebGL and survives a lost context (31138.1136ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at D:\myr5-work\r25-base\tests\portal-webgl-fallback.browser.test.mjs:43:13
+      at async withPortal (D:\myr5-work\r25-base\tests\portal-webgl-fallback.browser.test.mjs:20:162) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\portal-webgl-fallback.browser.test.mjs:148:1
+✖ R7: selected wormhole palettes show through 3D boards, while the flat Quilt keeps its finger trail (21746.2788ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      art: 'flat',
+  +   board: 'quilt'
+  -   board: 'cogs'
+    }
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-webgl-fallback.browser.test.mjs:173:10
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-webgl-fallback.browser.test.mjs:20:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { board: 'quilt', art: 'flat' },
+    expected: { board: 'cogs', art: 'flat' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\portal-webgl-fallback.browser.test.mjs:206:1
+✖ R7: every board shows its own trace under a finger, in 3D and flat (31575.2873ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      art: '3d',
+  +   board: 'quilt'
+  -   board: 'cogs'
+    }
+  
+      at file:///D:/myr5-work/r25-base/tests/portal-webgl-fallback.browser.test.mjs:215:11
+      at async withPortal (file:///D:/myr5-work/r25-base/tests/portal-webgl-fallback.browser.test.mjs:20:162)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { board: 'quilt', art: '3d' },
+    expected: { board: 'cogs', art: '3d' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/post-download-safety.browser.test.mjs
+✖ signed packet UI pauses/resumes verified chunks, resets on account switch and ignores stale discovery (31465.8368ms)
+✔ ship reduced-motion reveal stamps its owner, stays still, covers dialogs and disposes on logout (1280.9585ms)
+✔ ship close during load disposes late models and never completes a reveal (1127.9486ms)
+✔ ship WebGL failure restores the coach and revokes the verified bridge (1131.676ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35605.9416
+
+✖ failing tests:
+
+test at tests\post-download-safety.browser.test.mjs:21:1
+✖ signed packet UI pauses/resumes verified chunks, resets on account switch and ignores stale discovery (31465.8368ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('button', { name: 'Download starter styles', exact: true })[22m
+  
+      at D:\myr5-work\r25-base\tests\post-download-safety.browser.test.mjs:31:77
+      at async withPage (D:\myr5-work\r25-base\tests\post-download-safety.browser.test.mjs:19:256) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('button', { name: 'Download starter styles', exact: true })" ]
+  }
+### tests/post-download.browser.test.mjs
+✔ every package file has a group, and the regular coach never pulls a roster body (1.6682ms)
+✖ the Downloads menu opens once after the first open, before the quilt; Settings and Install reopen it; never in camera-only mode (4068.1145ms)
+✔ W2-FIX risk 1: a first-open menu that opens before the quilt finishes mounting still shows the quilt once it closes (3772.842ms)
+✔ picking one group downloads only its files (6014.0543ms)
+✔ a roster body that isn't downloaded is fetched alone when it's needed, with a note; offline, the page says so (5350.8394ms)
+✖ everything downloads, then a deferred feature works offline (46267.0758ms)
+ℹ full package: 1515 files in 10.2 s over localhost
+✔ an interrupted download resumes where it stopped, after a reload and after going offline (20188.0094ms)
+ℹ resume: 1240 package requests for 1241 files (45 before the reload)
+✖ a first run works offline with only the core install: camera start stops cleanly without the tracker, and manual mode (34291.7426ms)
+✔ an app update keeps the package and saved data, and refreshes only the files that changed (6266.3661ms)
+ℹ after the update the package fetched: /achievements.mjs
+✔ W2-2O without the Starter pack, online: each scene fetches its art on demand with a note, and keeps it (24893.4319ms)
+✖ W2-2O without the Starter pack, offline: plain quilt, and each scene shows a clean placeholder offering the pack (22282.3376ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 7
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 173797.5368
+
+✖ failing tests:
+
+test at tests\post-download.browser.test.mjs:85:1
+✖ the Downloads menu opens once after the first open, before the quilt; Settings and Install reopen it; never in camera-only mode (4068.1145ms)
+  AssertionError [ERR_ASSERTION]: a toggle for every group the build has
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      'bodies-arms',
+      'bodies-cardio',
+      'bodies-chest',
+      'bodies-glutes',
+  ...
+      'games',
+  -   'grimoire-cogs',
+      'grimoire-grass',
+      'grimoire-ice',
+      'grimoire-jelly',
+      'grimoire-pond',
+      'grimoire-wood',
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/post-download.browser.test.mjs:94:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [
+      'bodies-arms',         'bodies-cardio',
+      'bodies-chest',        'bodies-glutes',
+      'bodies-martial-arts', 'bodies-meditation',
+      'bodies-quads',        'bodies-starter',
+      'bodies-yoga',         'coach',
+      'food',                'games',
+      'grimoire-grass',      'grimoire-ice',
+      'grimoire-jelly',      'grimoire-pond',
+      'grimoire-wood',       'hand',
+      'meditation',          'room-cage',
+      'room-reminders',      'room-scoreboard',
+      'starter',             'voices'
+    ],
+    expected: [
+      'bodies-arms',         'bodies-cardio',
+      'bodies-chest',        'bodies-glutes',
+      'bodies-martial-arts', 'bodies-meditation',
+      'bodies-quads',        'bodies-starter',
+      'bodies-yoga',         'coach',
+      'food',                'games',
+      'grimoire-cogs',       'grimoire-grass',
+      'grimoire-ice',        'grimoire-jelly',
+      'grimoire-pond',       'grimoire-wood',
+      'hand',                'meditation',
+      'room-cage',           'room-reminders',
+      'room-scoreboard',     'starter',
+      'voices'
+    ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\post-download.browser.test.mjs:248:1
+✖ everything downloads, then a deferred feature works offline (46267.0758ms)
+  page.selectOption: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#body')[22m
+  [2m    - locator resolved to <select id="body">…</select>[22m
+  [2m  - attempting select option action[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m      - waiting 100ms[22m
+  [2m    59 × waiting for element to be visible and enabled[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying select option action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\post-download.browser.test.mjs:274:14) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#body')", '    - locator resolved to <select id="body">…</select>', '  - attempting select option action', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '    - waiting 20ms', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '      - waiting 100ms', '    59 × waiting for element to be visible and enabled', '       - element is not visible', '     - retrying select option action', '       - waiting 500ms' ]
+  }
+
+test at tests\post-download.browser.test.mjs:324:1
+✖ a first run works offline with only the core install: camera start stops cleanly without the tracker, and manual mode (34291.7426ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\post-download.browser.test.mjs:341:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\post-download.browser.test.mjs:451:1
+✖ W2-2O without the Starter pack, offline: plain quilt, and each scene shows a clean placeholder offering the pack (22282.3376ms)
+  page.waitForFunction: Timeout 20000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\post-download.browser.test.mjs:459:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/public-access.test.mjs
+✔ coachArmyComplete reads only the explicit authoritative entitlement (War Room lane) (0.9423ms)
+✔ installed app has no second Coach Army gate on optional routes or materials (3.4342ms)
+✔ the main Coach page never applies the optional-access visual lock (0.8172ms)
+✔ initial precache omits optional editor and pocket assets but keeps shell assets (0.645ms)
+✖ editor documents defer their heavy bootstrap behind the public gate (0.843ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 99.7092
+
+✖ failing tests:
+
+test at tests\public-access.test.mjs:33:1
+✖ editor documents defer their heavy bootstrap behind the public gate (0.843ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-module="\/handborne\/assets\/hand-entry-BrVOFL10\.js/. Input:
+  
+  '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6427a5"><title>Helping Hand · Customizer</title><meta name="description" content="Customize your Helping Hand with a live preview, creature styles, nails, scales and gestures.">  <script type="module" src="/audio/standalone-sound.mjs"></script>  <script src="/public-entry.mjs" data-entry="/handborne" data-module="/handborne/assets/hand-entry-B9VM-Sgb.js"></script>\r\n' +
+    '  <link rel="stylesheet" crossorigin href="/handborne/assets/hand-entry-BUSUnr2n.css">\r\n' +
+    '</head><body><div id="root"></div></body></html>\r\n'
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/public-access.test.mjs:36:49)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6427a5"><title>Helping Hand · Customizer</title><meta name="description" content="Customize your Helping Hand with a live preview, creature styles, nails, scales and gestures.">  <script type="module" src="/audio/standalone-sound.mjs"></script>  <script src="/public-entry.mjs" data-entry="/handborne" data-module="/handborne/assets/hand-entry-B9VM-Sgb.js"></script>\r\n  <link rel="stylesheet" crossorigin href="/handborne/assets/hand-entry-BUSUnr2n.css">\r\n</head><body><div id="root"></div></body></html>\r\n',
+    expected: /data-module="\/handborne\/assets\/hand-entry-BrVOFL10\.js/,
+    operator: 'match',
+    diff: 'simple'
+  }
+### tests/r18-customizer.browser.test.mjs
+✖ customizer: coach fills ~80% of the preview, zoom slider clamps, trimmed tabs, icon file buttons, finish forced to 0 (3986.1143ms)
+✔ the personality chooser lives in Reminders on the same recipe key; the customizer no longer reads it (2.2228ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4315.3557
+
+✖ failing tests:
+
+test at tests\r18-customizer.browser.test.mjs:10:1
+✖ customizer: coach fills ~80% of the preview, zoom slider clamps, trimmed tabs, icon file buttons, finish forced to 0 (3986.1143ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'Species',
+  +   'Textures',
+      'Colour',
+      'Face',
+  +   'Ship',
+      'Files'
+    ]
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/r18-customizer.browser.test.mjs:20:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Species', 'Textures', 'Colour', 'Face', 'Ship', 'Files' ],
+    expected: [ 'Species', 'Colour', 'Face', 'Files' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/r19-customizer.browser.test.mjs
+✖ customizer: unlocked first, no region chips, zoom frames the bounding box centred for two species (35379.5293ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35731.9996
+
+✖ failing tests:
+
+test at tests\r19-customizer.browser.test.mjs:10:1
+✖ customizer: unlocked first, no region chips, zoom frames the bounding box centred for two species (35379.5293ms)
+  page.selectOption: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#body')[22m
+  [2m    - locator resolved to <select id="body">…</select>[22m
+  [2m  - attempting select option action[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible and enabled[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying select option action[22m
+  [2m      - waiting 100ms[22m
+  [2m    59 × waiting for element to be visible and enabled[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying select option action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\r19-customizer.browser.test.mjs:37:45) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#body')", '    - locator resolved to <select id="body">…</select>', '  - attempting select option action', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '    - waiting 20ms', '    2 × waiting for element to be visible and enabled', '      - element is not visible', '    - retrying select option action', '      - waiting 100ms', '    59 × waiting for element to be visible and enabled', '       - element is not visible', '     - retrying select option action', '       - waiting 500ms' ]
+  }
+### tests/r19-glow.browser.test.mjs
+✖ standalone glow: thin bright edge fades across the face and stays above the dock (4635.3569ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4958.2513
+
+✖ failing tests:
+
+test at tests\r19-glow.browser.test.mjs:11:1
+✖ standalone glow: thin bright edge fades across the face and stays above the dock (4635.3569ms)
+  AssertionError [ERR_ASSERTION]: the feather stays soft and fades out instead of washing the screen {"face":[60,29,80],"fade":[65,47,75]}
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/r19-glow.browser.test.mjs:26:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+### tests/r20-colour.browser.test.mjs
+✖ customizer colour tab: Full body/Eyes toggle + grouped colour grid; Full body colours body and head together (4213.552ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4538.0076
+
+✖ failing tests:
+
+test at tests\r20-colour.browser.test.mjs:11:1
+✖ customizer colour tab: Full body/Eyes toggle + grouped colour grid; Full body colours body and head together (4213.552ms)
+  AssertionError [ERR_ASSERTION]: wraps as a grid, got 3 per row
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/r20-colour.browser.test.mjs:43:10)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processImmediate (node:internal/timers:502:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+### tests/release-smoke.browser.test.mjs
+✖ 1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt (5009.1283ms)
+✔ 1b. the far-left dock key keeps its gear icon but opens the coach customizer, not Settings (1340.3336ms)
+✔ 2. every gesture id reaches its documented destination, and the quilt returns after each dialog (21006.0286ms)
+✖ 3. freeze check: a dialog opened over the quilt stays tappable, and the dock Portal key works again after it closes (2901.9034ms)
+✔ 3b. the Downloads menu is its own screen: the quilt steps aside while it is up and comes back tappable (5454.4053ms)
+✔ 4. the oval opens the ship view inside the metal frame above the dock, and the phone back button closes it (17355.2866ms)
+✔ 5. one shape without reduced motion runs the real glass and dive, and the quilt returns clean (15761.5544ms)
+✔ 6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it (22096.6793ms)
+✔ 7. a traced route sets its hash; back returns to the quilt, the bar Portal goes home, and back on the quilt stays in the app (5407.447ms)
+✖ 8. traced destinations open in the frame with the bar lit below it, Food and the oval in their cut, a line dives in and out (48741.5849ms)
+✖ 9. the rest exit goes home to the quilt, a Settings link is a real route, and the Continue chip sits above the bar (35546.1942ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 7
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 181169.2175
+
+✖ failing tests:
+
+test at tests\release-smoke.browser.test.mjs:78:1
+✖ 1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt (5009.1283ms)
+  AssertionError [ERR_ASSERTION]: quilt: customizeCoach is a physical target of at least 44px (40x44)
+      at assertDockKeys (file:///D:/myr5-work/r25-base/tests/release-smoke.browser.test.mjs:302:10)
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/release-smoke.browser.test.mjs:86:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\release-smoke.browser.test.mjs:181:1
+✖ 3. freeze check: a dialog opened over the quilt stays tappable, and the dock Portal key works again after it closes (2901.9034ms)
+  AssertionError [ERR_ASSERTION]: after the dialog closes: customizeCoach is a physical target of at least 44px (40x44)
+      at assertDockKeys (file:///D:/myr5-work/r25-base/tests/release-smoke.browser.test.mjs:302:10)
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/release-smoke.browser.test.mjs:208:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\release-smoke.browser.test.mjs:424:1
+✖ 8. traced destinations open in the frame with the bar lit below it, Food and the oval in their cut, a line dives in and out (48741.5849ms)
+  page.waitForFunction: Timeout 20000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\release-smoke.browser.test.mjs:483:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\release-smoke.browser.test.mjs:520:1
+✖ 9. the rest exit goes home to the quilt, a Settings link is a real route, and the Continue chip sits above the bar (35546.1942ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#visitRest')[22m
+  [2m    - locator resolved to <button disabled hidden="" id="visitRest">Rest room</button>[22m
+  [2m  - attempting click action[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 100ms[22m
+  [2m    56 × waiting for element to be visible, enabled and stable[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying click action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\release-smoke.browser.test.mjs:534:36) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#visitRest')", '    - locator resolved to <button disabled hidden="" id="visitRest">Rest room</button>', '  - attempting click action', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '    - waiting 20ms', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '      - waiting 100ms', '    56 × waiting for element to be visible, enabled and stable', '       - element is not visible', '     - retrying click action', '       - waiting 500ms' ]
+  }
+### tests/reward-tile-account-scoped.browser.test.mjs
+✖ built app opens an account-scoped reward pack and shows its earned cosmetic on the 64x64 tile (14630.7014ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14982.3581
+
+✖ failing tests:
+
+test at tests\reward-tile-account-scoped.browser.test.mjs:12:1
+✖ built app opens an account-scoped reward pack and shows its earned cosmetic on the 64x64 tile (14630.7014ms)
+  locator.waitFor: Timeout 10000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('.reward-pack-dialog') to be visible[22m
+  [2m    23 × locator resolved to hidden <dialog class="reward-pack-dialog" aria-labelledby="pack-title">…</dialog>[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\reward-tile-account-scoped.browser.test.mjs:34:16) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('.reward-pack-dialog') to be visible", '    23 × locator resolved to hidden <dialog class="reward-pack-dialog" aria-labelledby="pack-title">…</dialog>' ]
+  }
+### tests/set-transition.browser.test.mjs
+✖ a finished set goes into rest through the wormhole, keeps its full rest, and Next set comes back through it (35616.9231ms)
+✖ the rest exit leaves through the wormhole to the quilt (33114.5622ms)
+✖ reduced motion: a short fade in and out, no wormhole, rest still opens (33071.0133ms)
+✖ no portal: a short fade in and out, no wormhole, rest still opens (31130.5596ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133491.7888
+
+✖ failing tests:
+
+test at tests\set-transition.browser.test.mjs:61:1
+✖ a finished set goes into rest through the wormhole, keeps its full rest, and Next set comes back through it (35616.9231ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at finishManualSet (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:46:13)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:64:3) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\set-transition.browser.test.mjs:97:1
+✖ the rest exit leaves through the wormhole to the quilt (33114.5622ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at finishManualSet (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:46:13)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:100:3) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\set-transition.browser.test.mjs:111:2
+✖ reduced motion: a short fade in and out, no wormhole, rest still opens (33071.0133ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at finishManualSet (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:46:13)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:114:4) {
+    name: 'TimeoutError',
+    log: []
+  }
+
+test at tests\set-transition.browser.test.mjs:111:2
+✖ no portal: a short fade in and out, no wormhole, rest still opens (31130.5596ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at finishManualSet (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:46:13)
+      at async TestContext.<anonymous> (D:\myr5-work\r25-base\tests\set-transition.browser.test.mjs:114:4) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/ship-view.browser.test.mjs
+✔ an explicit owned ship choice loads that GLB instead of revealing a different reward (1910.4318ms)
+✔ choosing the starter hull overrides a previously downloaded owned ship (1279.2518ms)
+✔ signed out: the starter ship makes its entrance over a starter wonder once per session, then idles; no upgrade line, no reveal marked (5360.4795ms)
+✔ signed in without a ship, reduced motion: a still starter scene plus the upgrade line, no download button (1222.1588ms)
+✔ signed in, owns a ship, pack unavailable: starter scene with the upgrade line, and the download button routes to Ships & worlds (1480.4649ms)
+✔ the coach is framed whole (overlay stage) while the ship view is open, and gets its own stage back on close (1329.85ms)
+✔ open/close/#ship hash contract: close button, Escape, and the phone back button all close it and restore the coach (5505.2771ms)
+✔ an available ship bridge renders the ship over the coach instead of the fallback, and disposes on close (1334.3872ms)
+✖ first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive (9444.7066ms)
+✔ closing or changing account during real arrival cancels without marking seen or retaining coach (1819.5783ms)
+✔ account change while verifying bridge discards late assets and cannot start an arrival (1399.2886ms)
+✔ closing while the optional arrival module loads prevents a late scene and leaves reveal unseen (1197.3265ms)
+✔ the beam is hidden until the ship has flown in, charges, then opens (5082.4999ms)
+✔ the still ship opens the customizer on a tap or Enter, with an admission token set (1863.1729ms)
+✔ with WebGL blocked the ship view offers a plain "Open the customizer" button (1191.4758ms)
+✔ after close no ship or capsule animation frame is still running (6279.0844ms)
+✔ ship -> close -> food -> close through myr5Menus stays in the app (one owner pops history) (2165.049ms)
+✔ #customize enters the public War Room (1021.5038ms)
+✔ legacy customizer links enter the public War Room (1319.1639ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 18
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 52562.6948
+
+✖ failing tests:
+
+test at tests\ship-view.browser.test.mjs:216:1
+✖ first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive (9444.7066ms)
+  AssertionError [ERR_ASSERTION]: new unseen ship takes precedence over a previously customized ship
+  + actual - expected
+  
+  + 'supportive'
+  - 'direct'
+  
+      at file:///D:/myr5-work/r25-base/tests/ship-view.browser.test.mjs:243:9
+      at async withPage (file:///D:/myr5-work/r25-base/tests/ship-view.browser.test.mjs:34:256)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'supportive',
+    expected: 'direct',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+### tests/sound-dock.browser.test.mjs
+✖ the sound switch sits in the dock beside the phone key, clear of every other key, and still works (31614.3596ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31943.6511
+
+✖ failing tests:
+
+test at tests\sound-dock.browser.test.mjs:20:1
+✖ the sound switch sits in the dock beside the phone key, clear of every other key, and still works (31614.3596ms)
+  page.waitForFunction: Timeout 30000ms exceeded.
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\sound-dock.browser.test.mjs:33:14) {
+    name: 'TimeoutError',
+    log: []
+  }
+### tests/spotify-physical-controls.browser.test.mjs
+✖ physical Spotify controls stay usable on a transparent hand station (1064.3539ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1772.4538
+
+✖ failing tests:
+
+test at tests\spotify-physical-controls.browser.test.mjs:7:1
+✖ physical Spotify controls stay usable on a transparent hand station (1064.3539ms)
+  page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:61614/spotify-terminal.mjs
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\spotify-physical-controls.browser.test.mjs:22:14) {
+    log: []
+  }
+### tests/starter-assets.test.mjs
+✔ starter ship, six starter wonders and the still-room WebP fit their budgets; the old PNG is gone (4.1236ms)
+✖ W2-2O: the core list has no heavy scene assets; the Starter group holds every one of them (1977.1785ms)
+✔ starter ship GLB uses only core glTF plus WebP textures, so the plain GLTFLoader reads it (3.7238ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2081.9163
+
+✖ failing tests:
+
+test at tests\starter-assets.test.mjs:22:1
+✖ W2-2O: the core list has no heavy scene assets; the Starter group holds every one of them (1977.1785ms)
+  AssertionError [ERR_ASSERTION]: Starter is the portal scenes’ art plus the tracker
+  + actual - expected
+  
+    [
+      '/food/pyramid-scanner.glb',
+      '/pod/worlds/achievements.jpg',
+      '/pod/worlds/great-wall.webp',
+  +   '/pod/worlds/kenney-meteor-brown-tiny1.png',
+  +   '/pod/worlds/kenney-meteor-grey-tiny1.png',
+      '/pod/worlds/meditation-waterfall.png',
+      '/pod/worlds/quilt.webp',
+      '/pod/worlds/starter/colosseum-a.webp',
+      '/pod/worlds/starter/great-pyramid-of-giza-a.webp',
+      '/pod/worlds/starter/great-wall-of-china-a.webp',
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/starter-assets.test.mjs:29:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '/food/pyramid-scanner.glb', '/pod/worlds/achievements.jpg', '/pod/worlds/great-wall.webp', '/pod/worlds/kenney-meteor-brown-tiny1.png', '/pod/worlds/kenney-meteor-grey-tiny1.png', '/pod/worlds/meditation-waterfall.png', '/pod/worlds/quilt.webp', '/pod/worlds/starter/colosseum-a.webp', '/pod/worlds/starter/great-pyramid-of-giza-a.webp', '/pod/worlds/starter/great-wall-of-china-a.webp', '/pod/worlds/starter/machu-picchu-a.webp', '/pod/worlds/starter/mount-fuji-a.webp', '/pod/worlds/starter/supportive.glb', '/pod/worlds/starter/taj-mahal-a.webp' ],
+    expected: [ '/food/pyramid-scanner.glb', '/pod/worlds/achievements.jpg', '/pod/worlds/great-wall.webp', '/pod/worlds/meditation-waterfall.png', '/pod/worlds/quilt.webp', '/pod/worlds/starter/colosseum-a.webp', '/pod/worlds/starter/great-pyramid-of-giza-a.webp', '/pod/worlds/starter/great-wall-of-china-a.webp', '/pod/worlds/starter/machu-picchu-a.webp', '/pod/worlds/starter/mount-fuji-a.webp', '/pod/worlds/starter/supportive.glb', '/pod/worlds/starter/taj-mahal-a.webp' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+### tests/war-room-gala.browser.test.mjs
+✖ a guest dresses their Gala character from the War Room bays at 375×812, with no coach and no account write (4283.8796ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4604.9049
+
+✖ failing tests:
+
+test at tests\war-room-gala.browser.test.mjs:35:1
+✖ a guest dresses their Gala character from the War Room bays at 375×812, with no coach and no account write (4283.8796ms)
+  page.selectOption: Error: Element is not a <select> element
+  Call log:
+  [2m  - waiting for locator('[data-gala-weapon="type"]')[22m
+  [2m    - locator resolved to 20 elements. Proceeding with the first one: <button type="button" class="gala-option" aria-pressed="true" data-gala-weapon="type" aria-label="Plasma blade" data-weapon-type="rapier" data-option-value="rapier">…</button>[22m
+  [2m  - attempting select option action[22m
+  [2m    - waiting for element to be visible and enabled[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\r25-base\tests\war-room-gala.browser.test.mjs:53:13) {
+    log: [ `  - waiting for locator('[data-gala-weapon="type"]')`, '    - locator resolved to 20 elements. Proceeding with the first one: <button type="button" class="gala-option" aria-pressed="true" data-gala-weapon="type" aria-label="Plasma blade" data-weapon-type="rapier" data-option-value="rapier">…</button>', '  - attempting select option action', '    - waiting for element to be visible and enabled' ]
+  }
+### tests/weapon-evolution.test.mjs
+✔ all saved families and tiers have increasing presentation profiles (3.1605ms)
+✖ special attacks need an earned tier and a rest session (1.0909ms)
+✖ cooldown cannot be bypassed by switching family, tier, or rest phase (0.2291ms)
+✖ cooldown restores across reload and never shortens on a clock rollback (0.235ms)
+✖ special damage uses the same streak formula, capped by the special budget, at every workout level and never awards XP (0.4537ms)
+✖ serialized cooldown and another tab retain the longest active timer (0.2308ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 1
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.1367
+
+✖ failing tests:
+
+test at tests\weapon-evolution.test.mjs:41:1
+✖ special attacks need an earned tier and a rest session (1.0909ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/weapon-evolution.test.mjs:47:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\weapon-evolution.test.mjs:51:1
+✖ cooldown cannot be bypassed by switching family, tier, or rest phase (0.2291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/weapon-evolution.test.mjs:55:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\weapon-evolution.test.mjs:64:1
+✖ cooldown restores across reload and never shortens on a clock rollback (0.235ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== NaN
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/weapon-evolution.test.mjs:68:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: NaN,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\weapon-evolution.test.mjs:77:1
+✖ special damage uses the same streak formula, capped by the special budget, at every workout level and never awards XP (0.4537ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/weapon-evolution.test.mjs:85:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\weapon-evolution.test.mjs:97:1
+✖ serialized cooldown and another tab retain the longest active timer (0.2308ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2000 !== 0
+  
+      at TestContext.<anonymous> (file:///D:/myr5-work/r25-base/tests/weapon-evolution.test.mjs:102:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2000,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+DONE

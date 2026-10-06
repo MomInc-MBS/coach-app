@@ -1,0 +1,19 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36me2e v0.16.0[39m [90mD:\Repos\myr5-e2e[39m
+      [2mrun 01a11351-110b-77b6-9e50-5fda091a0422 · targets: mobile[22m
+      [2mmodel nvidia.chat/moonshotai/kimi-k3[22m
+
+   [31m×[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the War Room page is loaded with stations for pets, weapons, mirror and…" [2m30.28s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/customizer.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m201.71s[22m [2mai 0 tokens[22m
+   [31m× customize coach: war room loads and stations can be opened[39m [2m201.71s[22m [2mai 0 tokens[22m
+     [31m→ never reached war room (at /war-room/)[39m
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m34.80s · 1 model call failed[22m
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m30.22s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m263.52s[22m [2mai 0 tokens[22m
+   [31m× food can be opened via the Coach tools nav and shows the food state[39m [2m263.52s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/home-pod.e2e.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m42.85s[22m
+   [32m✓[39m fresh visitor sees coach activation gate [2m42.85s[22m
+   [31m× home pod shows brand, begin button and settings dialog[39m [2m0ms[22m
+     [31m→ worker process exited during this test[39m
+exit 124

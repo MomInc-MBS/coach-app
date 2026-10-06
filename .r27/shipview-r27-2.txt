@@ -1,0 +1,49 @@
+✔ an explicit owned ship choice loads that GLB instead of revealing a different reward (1418.8802ms)
+✔ choosing the starter hull overrides a previously downloaded owned ship (1040.1268ms)
+✔ signed out: the starter ship makes its entrance over a starter wonder once per session, then idles; no upgrade line, no reveal marked (5044.6182ms)
+✔ signed in without a ship, reduced motion: a still starter scene plus the upgrade line, no download button (979.3727ms)
+✔ signed in, owns a ship, pack unavailable: starter scene with the upgrade line, and the download button routes to Ships & worlds (1153.4761ms)
+✔ the coach is framed whole (overlay stage) while the ship view is open, and gets its own stage back on close (967.049ms)
+✔ open/close/#ship hash contract: close button, Escape, and the phone back button all close it and restore the coach (5170.6879ms)
+✔ an available ship bridge renders the ship over the coach instead of the fallback, and disposes on close (1037.364ms)
+✖ first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive (8953.0427ms)
+✔ closing or changing account during real arrival cancels without marking seen or retaining coach (1405.7981ms)
+✔ account change while verifying bridge discards late assets and cannot start an arrival (835.9344ms)
+✔ closing while the optional arrival module loads prevents a late scene and leaves reveal unseen (1045.0235ms)
+✔ the beam is hidden until the ship has flown in, charges, then opens (4832.6322ms)
+✔ the still ship opens the customizer on a tap or Enter, with an admission token set (1428.0996ms)
+✔ with WebGL blocked the ship view offers a plain "Open the customizer" button (945.8919ms)
+✔ after close no ship or capsule animation frame is still running (6057.5952ms)
+✔ ship -> close -> food -> close through myr5Menus stays in the app (one owner pops history) (1902.2853ms)
+✔ #customize enters the public War Room (871.5057ms)
+✔ legacy customizer links enter the public War Room (1500.8918ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 18
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 46900.105
+
+✖ failing tests:
+
+test at tests\ship-view.browser.test.mjs:216:1
+✖ first verified owned arrival completes the real beam/flash before enabling editor; subsequent view is passive (8953.0427ms)
+  AssertionError [ERR_ASSERTION]: new unseen ship takes precedence over a previously customized ship
+  + actual - expected
+  
+  + 'supportive'
+  - 'direct'
+  
+      at file:///D:/myr5-work/r27-body-save/tests/ship-view.browser.test.mjs:243:9
+      at async withPage (file:///D:/myr5-work/r27-body-save/tests/ship-view.browser.test.mjs:34:256)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'supportive',
+    expected: 'direct',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

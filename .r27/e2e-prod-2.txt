@@ -1,0 +1,43 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36me2e v0.16.0[39m [90mD:\Repos\myr5-e2e[39m
+      [2mrun 01a1137d-71fb-7e1c-91cf-4e33bf84f114 · targets: mobile[22m
+      [2mmodel nvidia.chat/moonshotai/kimi-k3[22m
+
+ [31m❯[39m [30m[103m mobile [49m[39m tests/home-pod.e2e.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m32.81s[22m
+   [32m✓[39m fresh visitor sees coach activation gate [2m1.16s[22m
+   [31m× home pod shows brand, begin button and settings dialog[39m [2m31.64s[22m
+     [31m→ expect.toBeVisible failed[39m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m32.81s[22m
+   [31m× movement library opens, paginates and shows a hologram[39m [2m32.81s[22m
+     [31m→ expect.toBeVisible failed[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/home-pod.e2e.ts[2m > [22mhome pod shows brand, begin button and settings dialog
+[31m[1mASSERTION_FAILED[22m: expect.toBeVisible failed[39m
+[31mlocator: getByRole("link", name: "MOM Inc training pod")[39m
+[31mexpected: visible[39m
+[31mobserved: no node (match count 0)[39m
+[36m [2m❯[22m [2mat[22m https://myr5.mominc.online/[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_home-pod.e2e.ts__home_20pod_20shows_20brand_2C_20begin_20button_20and_20settings_20dialog-9684935f\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[1m[41m FAIL [49m[22m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts[2m > [22mmovement library opens, paginates and shows a hologram
+[31m[1mASSERTION_FAILED[22m: expect.toBeVisible failed[39m
+[31mlocator: locator("dialog[open]").first()[39m
+[31mexpected: visible[39m
+[31mobserved: no node (match count 0)[39m
+[36m [2m❯[22m [2mat[22m https://myr5.mominc.online/[39m
+[36m [2m❯[22m [2mscreen[22m .e2e\artifacts\mobile\tests_movement-library.e2e.ts__movement_20library_20opens_2C_20paginates_20and_20shows_20a_20hologram-afdb2649\default\attempt-1\failure\screen.txt[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files  [22m[1m[31m2 failed[39m[22m[2m | [22m[1m[32m0 passed[39m[22m[90m (2)[39m
+[2m      Tests  [22m[1m[31m2 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (3)[39m
+[2m   Start at  [22m16:12:31
+[2m   Duration  [22m67.86s [2m(1m 8s)[22m
+[2m     Report  [22m.e2e\report.json
+
+exit 1

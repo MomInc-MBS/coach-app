@@ -1,0 +1,43 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36me2e v0.16.0[39m [90mD:\Repos\myr5-e2e[39m
+      [2mrun 01a11374-28c3-7467-896f-37763568a37b · targets: mobile[22m
+      [2mmodel nvidia.chat/moonshotai/kimi-k3[22m
+
+   [31m×[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the War Room page is loaded with stations for pets, weapons, mirror and…" [2m30.12s · 1 model call failed[22m
+   [31m×[39m [2mcustomize coach: war room loads and stations can be opened[22m[2m > [22m[2magent.assert[22m "the War Room page is loaded with stations for pets, weapons, mirror and…" [2m30.00s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/customizer.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m88.55s[22m [2mai 0 tokens[22m
+   [31m× customize coach: war room loads and stations can be opened[39m [2m88.55s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m30.21s · 1 model call failed[22m
+   [31m×[39m [2mfood can be opened via the Coach tools nav and shows the food state[22m[2m > [22m[2magent.assert[22m "a food-related dialog is open" [2m30.01s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/food-pyramid.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m109.32s[22m [2mai 0 tokens[22m
+   [31m× food can be opened via the Coach tools nav and shows the food state[39m [2m109.32s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/home-pod.e2e.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m32.71s[22m
+   [32m✓[39m fresh visitor sees coach activation gate [2m1.01s[22m
+   [31m× home pod shows brand, begin button and settings dialog[39m [2m31.70s[22m
+     [31m→ expect.toBeVisible failed[39m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.waitFor[22m "a wormhole portal transition is playing" [2m8.13s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.assert[22m "the page offers a way to install the MYR5 coach, with an "Install Coach…" [2m30.01s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.waitFor[22m "a wormhole portal transition is playing" [2m8.01s · 1 model call failed[22m
+   [31m×[39m [2minstall route reachable via the gate Get-started link[22m[2m > [22m[2magent.assert[22m "the page offers a way to install the MYR5 coach, with an "Install Coach…" [2m30.02s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/install-wormhole.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m83.36s[22m [2mai 0 tokens[22m
+   [31m× install route reachable via the gate Get-started link[39m [2m83.36s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+   [31m×[39m [2mmeditation route reaches a meditation state (status + scene-or-hub)[22m[2m > [22m[2magent.assert[22m "a breathing scene dialog (the still room) is open with guided breathing…" [2m30.28s · 1 model call failed[22m
+   [31m×[39m [2mmeditation route reaches a meditation state (status + scene-or-hub)[22m[2m > [22m[2magent.assert[22m "a breathing scene dialog (the still room) is open with guided breathing…" [2m30.01s · 1 model call failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/meditation.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m87.98s[22m [2mai 0 tokens[22m
+   [31m× meditation route reaches a meditation state (status + scene-or-hub)[39m [2m87.98s[22m [2mai 0 tokens[22m
+     [31m→ model call exceeded the remaining step timeout[39m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/movement-library.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m32.09s[22m
+   [31m× movement library opens, paginates and shows a hologram[39m [2m32.09s[22m
+     [31m→ expect.toBeVisible failed[39m
+   [31m×[39m [2magent wiring: open settings by instruction[22m[2m > [22m[2magent.act[22m "tap the "Open pod settings" button" [2m120.01s failed[22m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/provider-wiring.e2e.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m [2m131.62s[22m
+   [31m× agent wiring: open settings by instruction[39m [2m131.62s[22m
+     [31m→ agent.act exceeded its 120000 ms timeout[39m
+ [31m❯[39m [30m[103m mobile [49m[39m tests/settings.e2e.ts [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m | [22m[33m1 skipped[39m[2m)[22m
+   [31m× settings dialog shows workout, voice, materials, pod and about groups[39m [2m0ms[22m
+     [31m→ worker process exited during this test[39m
+   [2m[90m↓[39m[22m settings: camera manual mode, goal slider and coach sound[2m[90m [worker process exited before this test started][39m[22m
+exit 124
