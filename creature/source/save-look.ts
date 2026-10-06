@@ -9,7 +9,7 @@ import {ownedShipIds} from '../../modules/ships/ship-access.mjs';
 import {RECIPE_KEY} from './profile';
 import {normalizeStyleId,normalizeTextureId} from './creator/texture-policy.mjs';
 
-const ownedChoice=(c:MaterialChoice|undefined,coachId:string):c is MaterialChoice=>!!c&&!idLocked(c.textureId,coachId)&&!idLocked(c.colorId,coachId);
+const ownedChoice=(c:MaterialChoice|undefined,coachId:string):c is MaterialChoice=>!!c&&!idLocked(c.textureId,coachId)&&!idLocked(c.colorId,coachId,'color');
 export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 
 /** Locked material regions fall back to the last earned choice or original style. Body sources

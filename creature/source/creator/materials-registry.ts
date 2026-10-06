@@ -139,7 +139,12 @@ export function colorTriad(id: string, preview = false,coachId?:string): { prima
 
 /** True when a texture/colour/palette id is a registry item the player doesn't own yet (the UI shows just a lock).
  * Installed creature skins and unknown ids guard themselves and are never "locked" here. */
-export function isLocked(id: string,coachId?:string): boolean {
+export function isLocked(id: string,coachId?:string,kind?:'texture'|'color'): boolean {
+ if(kind==='color'){
+  if(HEX.test(id))return !hexOwned(id.toLowerCase(),coachId);
+  const c=findColor(id);if(c)return !isColorUnlocked(c,coachId);
+  const p=findPalette(id);return p?!isPaletteUnlocked(p,coachId):false;
+ }
  if(RETIRED_TEXTURE_IDS.includes(id))return true;
  const t = findTexture(id); if (t) return !isTextureUnlocked(t,coachId);
  if (HEX.test(id)) return !hexOwned(id.toLowerCase(),coachId);

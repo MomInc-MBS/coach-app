@@ -82,17 +82,18 @@ const previewing=()=>previewDraft!==null;
 function clearPreview(){previewDraft=null;}
 function shown():Design{return previewDraft??recipe;}
 const idLocked=(id:string)=>registryLocked(id,shown().body);
+const colorLocked=(id:string)=>registryLocked(id,shown().body,'color');
 function isLocked(design:Design):boolean{
  if(BODY_KEYS.some(key=>bodyLock(design[key])))return true;
  const ship=design.shipId??design.coach;if(ship!=='supportive'&&!ownedShipIds().includes(ship))return true;
- for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(registryLocked(mc.textureId,design.body)||registryLocked(mc.colorId,design.body)))return true;}
+ for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(registryLocked(mc.textureId,design.body)||registryLocked(mc.colorId,design.body,'color')))return true;}
  return false;
 }
 function previewMessage(design:Design):string{
  const body=bodyLock(design.body);if(body)return `Preview only · How to unlock ${PICKER_BODIES.find(b=>b.id===design.body)?.label||'this coach'}: ${body}.`;
  const choice=regionChoice(design.materials,selected);
- if(choice){for(const [id,kind] of [[choice.textureId,'adaptation'],[choice.colorId,'colour']] as const)if(idLocked(id)){
-  const texture=TEXTURES.find(t=>t.id===id),palette=PALETTES.find(p=>p.id===id),color=COLORS.find(c=>c.id===id);
+ if(choice){for(const [id,kind] of [[choice.textureId,'adaptation'],[choice.colorId,'colour']] as const)if(kind==='colour'?colorLocked(id):idLocked(id)){
+  const texture=kind==='adaptation'?TEXTURES.find(t=>t.id===id):undefined,palette=PALETTES.find(p=>p.id===id),color=COLORS.find(c=>c.id===id);
   const detail=texture?.id==='coach-64-bit'?'Open the 64-bit Pixel Finish in a texture pack and complete this coach’s boss skin milestone':texture?'Open a texture pack':palette?.unlockRule==='aura-milestone'?`Reach aura day ${palette.unlockAtDay}`:'Earn it through the battle pass';
   return `Preview only · How to unlock ${texture?.displayName||palette?.displayName||color?.displayName||kind}: ${detail}.`;
  }}return 'Preview only';
@@ -105,7 +106,7 @@ function pick(patch:Partial<MaterialChoice>){const base=shown();commit({...base,
 // per part. A part with no material of its own yet takes the texture's own colour (TextureDef.defaultColorId).
 function pickTexture(textureId:string){
  const base=shown(),texture=TEXTURES.find(t=>t.id===textureId);
- const defaultColor=texture&&!idLocked(texture.defaultColorId)?texture.defaultColorId:DEFAULT_MATERIAL.colorId;
+ const defaultColor=texture&&!colorLocked(texture.defaultColorId)?texture.defaultColorId:DEFAULT_MATERIAL.colorId;
  const patch=(r:Region):Partial<MaterialChoice>=>{const current=base.materials?.[r];return {...(!current?{colorId:defaultColor}:{}),textureId};};
  commit({...base,materials:Object.fromEntries(REGIONS.map(r=>[r,{...(base.materials?.[r]??DEFAULT_MATERIAL),...patch(r)}])) as Design['materials']});
 }
@@ -206,8 +207,8 @@ const colorSwatches=[
  ...COLORS.map(c=>({kind:'color' as const,id:c.id,name:c.displayName,background:c.primary})),
  ...PALETTES.map(p=>({kind:'palette' as const,id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`})),
 ];
-function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=idLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',s.name);b.style.background=s.background;if(locked)b.dataset.locked='';b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
-function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>idLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
+function swatchButton(s:{kind:'color'|'palette';id:string;name:string;background:string},onPick:()=>void){const locked=colorLocked(s.id),b=document.createElement('button');b.type='button';b.dataset.color=s.id;b.title=s.name;b.setAttribute('aria-label',s.name);b.style.background=s.background;if(locked)b.dataset.locked='';b.onclick=onPick;if(isGranted(s.kind,s.id,shown().body))sparkle(b,s.kind,cosmeticId(shown().body,s.id));return b;}
+function swatchGrid(grid:HTMLElement,onPick:(id:string)=>void){for(const s of unlockedFirst(colorSwatches,s=>colorLocked(s.id)))grid.append(swatchButton(s,()=>onPick(s.id)));}
 // R18 G3 colours; R20: one part toggle (Body/Head/Eyes) over a single colour grid, then a palette grid
 // that blends its colours across the selected part. Every colour def plus the free hexes no def starts with.
 const rowColours=[...FREE_COLOURS.map((h,n)=>({id:h,name:FREE_COLOUR_NAMES[n],hex:h})),...COLORS.filter(c=>!FREE_COLOURS.includes(c.primary.toLowerCase())).map(c=>({id:c.id,name:c.displayName,hex:c.primary}))]; // free hexes first, then the locked defs
@@ -223,10 +224,10 @@ for(const channel of COLOUR_CHANNELS){const b=document.createElement('button');b
  b.onkeydown=e=>{const n=COLOUR_CHANNELS.indexOf(channel),d=e.key==='ArrowRight'||e.key==='ArrowDown'?1:e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:0;if(!d)return;e.preventDefault();const next=COLOUR_CHANNELS[(n+d+COLOUR_CHANNELS.length)%COLOUR_CHANNELS.length];choosePart(next);(toggle.querySelector(`[data-part="${next.id}"]`) as HTMLElement).focus();};
  toggle.append(b);}
 const grid=document.createElement('div');grid.className='material-grid';grid.id='colourGrid';grid.setAttribute('role','group');grid.setAttribute('aria-label','Colours');
-for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(activeChannel,c.id));b.dataset.kind='color';grid.append(b);}
+for(const c of unlockedFirst(rowColours,c=>colorLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>setChannel(activeChannel,c.id));b.dataset.kind='color';grid.append(b);}
 const label=document.createElement('strong');label.textContent='Multicolor palettes';
 const palettes=document.createElement('div');palettes.className='material-grid';palettes.id='paletteGrid';palettes.setAttribute('role','group');palettes.setAttribute('aria-label','Palettes');
-for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>setChannel(activeChannel,p.id));b.dataset.kind='palette';palettes.append(b);}
+for(const p of unlockedFirst(PALETTES,p=>colorLocked(p.id))){const b=swatchButton({kind:'palette',id:p.id,name:p.displayName,background:`linear-gradient(90deg,${p.colors.join(',')})`},()=>setChannel(activeChannel,p.id));b.dataset.kind='palette';palettes.append(b);}
 const paletteHelp=document.createElement('p');paletteHelp.className='help';paletteHelp.textContent='Map palette colors to the selected texture?s dark, middle and light areas. Other parts keep their own colors.';
 colorRoot.append(toggle,grid,label,palettes,paletteHelp);}
 fillColours();
@@ -241,7 +242,7 @@ function fillShipRow(){
  shipPick.replaceChildren(...unlockedFirst(SHIP_CATALOG,c=>shipLocked(c.id)).map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;return o;}));
  shipRow.replaceChildren();const grid=document.createElement('div');grid.className='material-grid';grid.id='shipColourGrid';
  const original=document.createElement('button');original.type='button';original.dataset.ship='original';original.textContent='Orig.';original.title='Original ship colours';original.setAttribute('aria-label','Original ship colours');original.onclick=()=>saveShip({shipColor:null});grid.append(original);
- for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(idLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}
+ for(const c of unlockedFirst(rowColours,c=>colorLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(colorLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}
  shipRow.append(grid);syncShipRow();
 }
 function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach;const color=look.shipColor??null;for(const b of shipRow.querySelectorAll<HTMLButtonElement>('button')){b.setAttribute('aria-pressed',String(b.dataset.ship==='original'?color===null:b.dataset.hex===color));}queueMicrotask(()=>void previewShip());}

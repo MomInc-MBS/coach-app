@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {readFile} from 'node:fs/promises';
-const result=await build({stdin:{contents:`export * from './creature/source/creator/materials-registry';export {materialFor,surfaceSample,growMaterial} from './creature/source/creator/material-language';export {parseRecipe,fresh} from './creature/source/creator/design';export {STYLES as HAND_STYLES} from './handborne/source/app/catalog';export {parseDesign,designCode,randomize} from './handborne/source/app/recipe';export {isHandStyleUnlocked,assertHandStylesUnlocked,subscribeHandUnlocks} from './handborne/source/app/material-access';export * as THREE from 'three';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,format:'esm',platform:'neutral',write:false,target:'es2022'});
+const result=await build({stdin:{contents:`export * from './creature/source/creator/materials-registry';export {materialFor,surfaceSample,growMaterial} from './creature/source/creator/material-language';export {parseRecipe,fresh} from './creature/source/creator/design';export {keepOwned} from './creature/source/save-look';export {STYLES as HAND_STYLES} from './handborne/source/app/catalog';export {parseDesign,designCode,randomize} from './handborne/source/app/recipe';export {isHandStyleUnlocked,assertHandStylesUnlocked,subscribeHandUnlocks} from './handborne/source/app/material-access';export * as THREE from 'three';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,format:'esm',platform:'neutral',write:false,target:'es2022'});
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
 test('every Coach texture has the same stable material ID in the hand catalog, and added hand recipes round-trip',()=>{
  for(const texture of m.TEXTURES)assert(m.HAND_STYLES.some(s=>s.id===texture.familyId),texture.displayName);
@@ -38,8 +38,9 @@ test('all new textures and colors start locked, remain separate grants, and cann
   const palette=m.PALETTES.find(p=>p.id===t.defaultColorId);assert(palette);assert.equal(t.unlockRule,'battle-pass');assert.equal(palette.unlockRule,'battle-pass');
   assert.equal(m.isTextureUnlocked(t),false);assert.equal(m.isPaletteUnlocked(palette),false);assert.equal(m.isHandStyleUnlocked(t.familyId),false);
   const selection=Object.fromEntries(['nails','fingertips','fingers','palm','back_of_hand','wrist'].map(r=>[r,t.familyId]));assert.throws(()=>m.assertHandStylesUnlocked(selection),/locked/);
-  m.grantUnlock('texture',t.id,'myr5');assert(m.isTextureUnlocked(t));assert.equal(m.isPaletteUnlocked(palette),false);
-  m.grantUnlock('palette',palette.id,'myr5');assert(m.isPaletteUnlocked(palette));
+  m.grantUnlock('texture',t.id,'myr5');assert(m.isTextureUnlocked(t));assert.equal(m.isPaletteUnlocked(palette),false);assert.equal(m.isLocked(palette.id,'myr5','color'),true,'earning a texture cannot unlock its matching color');
+  const attempted={...m.fresh(),materials:{body:{textureId:t.id,colorId:palette.id,sparkle:0,metallic:0}}};assert.equal(m.keepOwned(attempted).materials,undefined,'unearned matching color cannot be saved');
+  m.grantUnlock('palette',palette.id,'myr5');assert(m.isPaletteUnlocked(palette));assert.equal(m.keepOwned(attempted).materials.body.colorId,palette.id);
  }
  const selection=Object.fromEntries(['nails','fingertips','fingers','palm','back_of_hand','wrist'].map(r=>[r,0]));
  for(let seed=0;seed<100;seed++)assert(Object.values(m.randomize(selection,[],seed)).every(id=>id<57));
