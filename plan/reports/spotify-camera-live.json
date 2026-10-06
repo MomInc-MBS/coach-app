@@ -1,0 +1,30 @@
+{
+  "version": "c5d5cc43-0f8c-412b-93a4-9e3a4bb0bf70",
+  "build": "f4cca8e32dfe0f24520f",
+  "checks": {
+    "release-build.mjs": {
+      "matchesBuild": true
+    },
+    "camera.mjs": {
+      "matchesBuild": true
+    },
+    "app-runtime.mjs": {
+      "matchesBuild": true
+    },
+    "spotify-terminal.mjs": {
+      "matchesBuild": true
+    },
+    "spotify-return.mjs": {
+      "matchesBuild": true
+    },
+    "health": {
+      "ok": true,
+      "app": "MYR5 Coach",
+      "reminders": {
+        "mode": "worker-cron",
+        "lastTickAgeS": 59,
+        "active": true
+      }
+    }
+  }
+}
