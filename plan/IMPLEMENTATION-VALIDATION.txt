@@ -48,3 +48,5 @@ Focused combined test run: 127/127 passed (reports/release24-final-focused-tests
 Final production build offline core was 8,023,416 / 8,388,608 bytes before the final status-copy rebuild; final values recorded below after rebuild. No new database migration is required.
 
 Final Release 24 build: 23f0772cce9a545e9149. Offline core 8,023,416 / 8,388,608 bytes. Final built camera handoff and editor dock smoke tests passed. Signed installed-skin browser rerun passed, including offline reload, account teardown and revoked-skin status; initial concurrent-load timeout required no product fix.
+
+Release 24 deployed to https://myr5.mominc.online. Worker version c27ce812-4425-45ad-84ac-c84d0bc27679; implementation commit a67ec7e. After propagation, live health returned 200, release API matched 2026-10-05-release-24-23f0772cce9a545e9149, and all ten sampled production assets matched the final build byte-for-byte. Authenticated Spotify login and physical phone camera tracking remain unverified.
