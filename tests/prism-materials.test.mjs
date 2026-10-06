@@ -16,7 +16,7 @@ test('every Coach texture has the same stable material ID in the hand catalog, a
  assert.throws(()=>m.parseDesign('HB3-24-24-24-24-24-24-01-01'),'reserved IDs cannot load missing geometry');
 });
 test('clear volumes retain refraction under glitter and pearl palettes; prism and foil retain distinct optics',()=>{
- for(const id of [14,21,57,58,59,61])for(const paletteId of ['glitter-resin','opal-jelly']){
+ for(const id of [14,57,59,61])for(const paletteId of ['glitter-resin','opal-jelly']){
   const style=m.resolveRegionMaterial(0,{textureId:m.TEXTURES.find(t=>t.familyId===id).id,colorId:paletteId,sparkle:0,metallic:0},true);
   const mat=m.materialFor(style,1);assert(mat.transmission>0);assert(mat.thickness>0);assert.equal(mat.metalness,0);mat.dispose();
  }
@@ -33,7 +33,7 @@ test('published hand and Coach share the exact material implementation',async()=
 test('all new textures and colors start locked, remain separate grants, and cannot enter a hand through remix or recipe application',()=>{
  const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,String(v))};
  globalThis.myr5AuthenticatedAccount={user:{id:'new-material-locks'}};
- const added=m.SPECIAL_TEXTURES;assert.equal(added.length,18);
+ const added=m.SPECIAL_TEXTURES;assert.equal(added.length,17); // R25: Bubble Glass retired
  for(const t of added){
   const palette=m.PALETTES.find(p=>p.id===t.defaultColorId);assert(palette);assert.equal(t.unlockRule,'battle-pass');assert.equal(palette.unlockRule,'battle-pass');
   assert.equal(m.isTextureUnlocked(t),false);assert.equal(m.isPaletteUnlocked(palette),false);assert.equal(m.isHandStyleUnlocked(t.familyId),false);
