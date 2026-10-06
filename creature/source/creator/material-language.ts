@@ -182,6 +182,25 @@ export function authoredUvScale(g:T.BufferGeometry,matrix:T.Matrix4){
  return T.MathUtils.clamp(Math.sqrt(worldArea/uvArea)*1.8/Math.max(1,span/2),.5,6);
 }
 
+// R25: a vertex can only carry relief that is coarser than the mesh. Point-sampling a finer pattern
+// (Fine Stripe has 40 strands per tile) at sparse roster vertices aliased into lumpy patches, so the
+// displacement fades out between a quarter and half of the pattern's finest wavelength; the bump and
+// colour maps still draw the full detail. Wavelength = finest axis, Schmitt-triggered against noise.
+const reliefWavelengths=new Map<number,number>();
+function reliefWavelength(id:number){
+ let w=reliefWavelengths.get(id);if(w!==undefined)return w;w=Infinity;const n=2048;
+ for(const axis of [0,1]){const h=new Float32Array(n);let lo=1,hi=0;for(let i=0;i<n;i++){h[i]=surfaceSample(id,axis?.37:i/n,axis?i/n:.37).height;lo=Math.min(lo,h[i]);hi=Math.max(hi,h[i]);}
+  const mid=(lo+hi)/2,band=(hi-lo)*.2;let side=0,crossings=0;for(const value of h){const next=value>mid+band?1:value<mid-band?-1:side;if(side&&next!==side)crossings++;side=next;}
+  if(crossings)w=Math.min(w,2/crossings);}
+ reliefWavelengths.set(id,w);return w;
+}
+function meanEdge(g:T.BufferGeometry,matrix:T.Matrix4){
+ const p=g.attributes.position,idx=g.index,count=idx?.count??p.count,stride=Math.max(1,Math.floor(count/3/4000))*3,a=new T.Vector3(),b=new T.Vector3();let sum=0,edges=0;
+ for(let j=0;j+2<count;j+=stride)for(let k=0;k<3;k++){a.fromBufferAttribute(p,idx?idx.getX(j+k):j+k).applyMatrix4(matrix);b.fromBufferAttribute(p,idx?idx.getX(j+(k+1)%3):j+(k+1)%3).applyMatrix4(matrix);sum+=a.distanceTo(b);edges++;}
+ return edges?sum/edges:0;
+}
+export function reliefResolve(id:number,uvEdge:number){const w=reliefWavelength(id);return 1-T.MathUtils.smoothstep(uvEdge,w/4,w/2);}
+
 export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1,coachRelief?:CoachReliefBudget){
  if(Array.isArray(mesh.material)||!mesh.geometry.attributes.position)return;
  // The higher-density authored-UV path is deliberately limited to known static meshes.
@@ -212,20 +231,22 @@ export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1,coachReli
  // This avoids faceting the source coach while making shallow height fields catch light.
  const authoredNormals=new Float32Array(g.attributes.normal.array as ArrayLike<number>);g.computeVertexNormals();const geometricBefore=new Float32Array(g.attributes.normal.array as ArrayLike<number>);g.attributes.normal.array.set(authoredNormals);g.attributes.normal.needsUpdate=true;
  const p=g.attributes.position,n=g.attributes.normal,uv=new Float32Array(p.count*2),colors=new Float32Array(p.count*3),worldPositions=new Float32Array(p.count*3),worldOffsets=new Float32Array(p.count*3);
- const sourceUv=coachRelief?g.attributes.uv:undefined,uvScale=sourceUv?authoredUvScale(g,mesh.matrixWorld):1,vertexKeys=coachRelief?new Array<string>(p.count):undefined;
+ const vertexKeys=coachRelief?new Array<string>(p.count):undefined;
  const coordinateUnit=Math.max(unit,meshWorldSpan(g,mesh.matrixWorld)/2);
+ const resolvable=reliefResolve(style.id,meanEdge(g,mesh.matrixWorld)*1.8/coordinateUnit);
  const normalMatrix=new T.Matrix3().getNormalMatrix(mesh.matrixWorld),inv=mesh.matrixWorld.clone().invert(),point=new T.Vector3(),normal=new T.Vector3();
  const id=style.id,relief=Math.min(unit*(builtinSurfaceProfile(id)?.relief??([0,8,20,21,22].includes(id)?.0018:id===13?.037:id===18?.018:.019)),meshWorldSpan(g,mesh.matrixWorld)*.015);
  const seamOffsets=coachRelief?new Map<string,{x:number;y:number;z:number;count:number}>():undefined,seamKey=(x:number,y:number,z:number)=>`${Math.round(x*1e5)},${Math.round(y*1e5)},${Math.round(z*1e5)}`;
  for(let i=0;i<p.count;i++){
   const localX=p.getX(i),localY=p.getY(i),localZ=p.getZ(i);point.set(localX,localY,localZ).applyMatrix4(mesh.matrixWorld);normal.fromBufferAttribute(n,i).applyMatrix3(normalMatrix).normalize();
   const x=point.x/coordinateUnit,y=point.y/coordinateUnit,z=point.z/coordinateUnit;
-  // Roster UVs avoid normal-threshold seams; original MYR5 keeps its proven object projection.
-  // Both coordinates are fixed on the mesh and remain periodic for the built-in surfaces.
-  const u=sourceUv?sourceUv.getX(i)*uvScale:(Math.abs(normal.z)>.45?x:z)*1.8+.5,v=sourceUv?sourceUv.getY(i)*uvScale:y*1.8+.5,s=surfaceSample(id,u,v);
+  // R25: every species uses Original MYR5's object projection. Authored (Tripo atlas) UVs are cut into
+  // islands with their own rotation and density, so directional patterns such as Fine Stripe turned
+  // into a patchwork across the belly. The projection is fixed on the mesh and periodic for the surfaces.
+  const u=(Math.abs(normal.z)>.45?x:z)*1.8+.5,v=y*1.8+.5,s=surfaceSample(id,u,v);
   uv[i*2]=u;uv[i*2+1]=v;worldPositions[i*3]=point.x;worldPositions[i*3+1]=point.y;worldPositions[i*3+2]=point.z;
   let edge=1;for(const [sx,sy,sz,r]of mesh.userData.eyeSockets??[])edge*=T.MathUtils.smoothstep(Math.hypot(point.x-sx,point.y-sy,point.z-sz),r*1.04,r*1.35);
-  const offset=(s.height-.5)*relief*amount*edge,dx=normal.x*offset,dy=normal.y*offset,dz=normal.z*offset;worldOffsets[i*3]=dx;worldOffsets[i*3+1]=dy;worldOffsets[i*3+2]=dz;
+  const offset=(s.height-.5)*relief*amount*edge*resolvable,dx=normal.x*offset,dy=normal.y*offset,dz=normal.z*offset;worldOffsets[i*3]=dx;worldOffsets[i*3+1]=dy;worldOffsets[i*3+2]=dz;
   if(seamOffsets){const key=seamKey(localX,localY,localZ);vertexKeys![i]=key;const group=seamOffsets.get(key)??{x:0,y:0,z:0,count:0};group.x+=dx;group.y+=dy;group.z+=dz;group.count++;seamOffsets.set(key,group);}
   const shade=.91+.09*Math.sin(x*3+y*4+z*2);colors.set([shade,shade,shade],i*3);
  }
