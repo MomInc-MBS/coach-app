@@ -1773,7 +1773,7 @@ async function openDirect(menu,current){
 // #131: the shapes that aren't full screen open INTO their cut, the quilt staying on as the wall; the rest dive until
 // the destination fills the frame. #124: the four lines and the X get the wormhole too, shorter (PORTAL.short): a line
 // has no area to cut, so a glowing slit along it opens into a lens-shaped window; the X opens the diamond between its arms.
-const SHAPED=new Set(['rect','oval','up','down','vdiamond']);
+const SHAPED=new Set(['rect','oval','up','down','vdiamond','hdiamond']);
 // A lens along a -> b: two sine arcs bulging `half` px either side (pointed at the ends), n+1 points a side.
 async function portalSequence(id,current){
  const rect=board?board.patternRect():fallbackRect(),face=board?.faceRect();
