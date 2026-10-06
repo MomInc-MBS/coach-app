@@ -1,0 +1,8 @@
+R25 tests/portal-peering.browser.test.mjs
+✖ #124 a line's glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then opens the War Room (37339.5971ms)
+✖ #124 a line's glowing slit opens into a lens and the X opens its diamond, both on the short wormhole; the X then opens the War Room (37339.5971ms)
+R25 tests/release-smoke.browser.test.mjs
+✖ 5. one shape without reduced motion runs the real glass and dive, and the quilt returns clean (34979.2941ms)
+✖ 5. one shape without reduced motion runs the real glass and dive, and the quilt returns clean (34979.2941ms)
+R25 tests/portal-effect-color.browser.test.mjs
+✔ ice 2D drawn effect restores its selected color and repaints existing and new trails (3779.4319ms)
