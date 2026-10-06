@@ -24,7 +24,7 @@ export type ColorDef = { id: string; displayName: string; unlockRule: UnlockRule
 // D32: a palette is a primary/secondary/accent triad (the same roles the tint uses). Aura
 // palettes carry unlockAtDay; battle-pass palettes carry `reward` = the slot that grants them
 // ('<bossId>:L<n>' or 'food:L<n>', read by battle-pass-rewards.mjs).
-export type PaletteDef = { id: string; displayName: string; tagline: string; unlockRule: 'aura-milestone' | 'battle-pass'; unlockAtDay?: number; reward?: string; colors: [string, string, string] };
+export type PaletteDef = { id: string; displayName: string; tagline: string; unlockRule: UnlockRule; unlockAtDay?: number; reward?: string; colors: [string, string, string]; finish?: 'matte' | 'brushed-metal' | 'polished-metal' | 'glitter' | 'pearl' | 'watercolor' | 'marbled' | 'glaze' };
 
 const isUnlocked = (kind: UnlockKind, item: { id: string; unlockRule: UnlockRule },coachId?:string) => item.unlockRule === 'default' || isGranted(kind, item.id,typeof coachId==='string'?coachId:undefined);
 // R18 G2: a single-colour def is free exactly when its primary is one of the 15 free hexes (battle-pass-rewards.mjs FREE_COLOURS).
@@ -100,7 +100,8 @@ const LEGACY_TEXTURES: TextureDef[] = LEGACY_STYLES.map(s => {
 });
 
 export const COACH_64_BIT_TEXTURE:TextureDef={id:'coach-64-bit',displayName:'64-bit Pixel Finish',unlockRule:'battle-pass',familyId:56,defaultColorId:'#7f7d78'};
-export const TEXTURES: TextureDef[] = [FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES,COACH_64_BIT_TEXTURE];
+export const SPECIAL_TEXTURES:TextureDef[]=[{id:'opal-jelly',displayName:'Opal Jelly',unlockRule:'default',familyId:57,defaultColorId:'opal-jelly'},{id:'bubble-glass',displayName:'Bubble Glass',unlockRule:'default',familyId:58,defaultColorId:'bubble-glass'},{id:'prism-crystal',displayName:'Prism Crystal',unlockRule:'default',familyId:59,defaultColorId:'prism-crystal'},{id:'holo-foil',displayName:'Holographic Foil',unlockRule:'default',familyId:60,defaultColorId:'holo-foil'},{id:'glitter-resin',displayName:'Glitter Resin',unlockRule:'default',familyId:61,defaultColorId:'glitter-resin'},{id:'galaxy-geode',displayName:'Galaxy Geode',unlockRule:'default',familyId:62,defaultColorId:'galaxy-geode'}];
+export const TEXTURES: TextureDef[] = [...SPECIAL_TEXTURES,FLAT_TEXTURE, CLAY_TEXTURE, ...LEGACY_TEXTURES, ...BATTLE_PASS_TEXTURES,COACH_64_BIT_TEXTURE];
 export const COLORS: ColorDef[] = [...SIMPLE_COLORS, ...LEGACY_COLORS];
 
 // --- Palettes: palettes.json next to this file (plan/muse/palettes.json cut to triads, plus the

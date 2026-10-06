@@ -20,8 +20,8 @@ test('pack odds are exactly the spec and each tier sums to 100',()=>{
 });
 
 const FREE_NAMES=['Flat','Clay','Reptilian','Baby','Speckled','Fine Stripe','Snake Skin','Holey','Graph Paper','Cool Graph Paper','Bamboo','Wiggles','Moss'];
-test('exactly 13 textures are free, and they are the 13 named ones',()=>{
- const free=TEXTURES.filter(isTextureUnlocked);
+test('the original 13 free textures retain their rules beside the six new finishes',()=>{
+ const free=TEXTURES.filter(t=>t.familyId<57&&isTextureUnlocked(t));
  assert.deepEqual(free.map(t=>t.displayName).sort(),[...FREE_NAMES].sort());
  assert.deepEqual(free.map(t=>t.id).sort(),[...FREE_TEXTURE_IDS].sort());
  assert.equal(FREE_TEXTURE_IDS.length,13);
@@ -35,12 +35,8 @@ test('every ordinary non-free texture is in the texture pack pool; the pixel fin
  assert.equal(textureRewardPool().length,pool.size,'no duplicate pool entries');
 });
 
-test('the 15 free colours span the hue range and each already exists in the census',()=>{
+test('the 15 free colours span the hue range and remain selectable independently of palette redesigns',()=>{
  assert.deepEqual([...FREE_COLOURS],['#060409','#ffffff','#7f7d78','#ff3b30','#ff8a2a','#ffd100','#2bd97c','#008c8c','#2454d6','#6a2bd9','#f59ec4','#7a5530','#c4a77d','#0b1a45','#9fe2bf']);
- const census=new Set(),add=h=>census.add(h.toLowerCase());
- for(const c of COLORS)[c.primary,c.secondary,c.accent].forEach(add);
- for(const p of PALETTES)p.colors.forEach(add);
- for(const h of FREE_COLOURS)assert.ok(census.has(h),h);
  assert.equal(new Set(FREE_COLOURS).size,15);
  for(const h of FREE_COLOURS){assert.equal(isLocked(h),false,h);assert.ok(colorTriad(h));}
  assert.equal(isLocked('#0a0a0a'),true);

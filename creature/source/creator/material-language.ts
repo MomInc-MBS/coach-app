@@ -2,10 +2,11 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {builtinSurfaceProfile,sampleBuiltinSurface} from './material-patterns';
 import {refineCoachGeometry,type CoachReliefBudget} from './material-refinement';
+import {samplePaletteTint,applyPaletteFinish} from './palette-finishes';
 
 // This material language is shared verbatim by Coach and Helping Hand. Maps are
 // ordinary glTF-compatible PBR textures, so the appearance also survives export.
-export const MATERIAL_REVISION='material-procedural-families-2026-10-01-r2';
+export const MATERIAL_REVISION='material-prism-glitter-2026-10-05-r1';
 export const MATERIAL_NOTES=[
  'Fine pores, palm folds and soft satin skin.',
  'Twisted roots, bark fissures and fresh leaf growth.',
@@ -88,7 +89,7 @@ function materialMaps(style:Style){
  const dark=new T.Color(style.secondary),base=new T.Color(style.primary),light=new T.Color(style.accent),color=new T.Color(),profile=builtinSurfaceProfile(style.id);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
   const s=surfaceSample(style.id,x/size,y/size),i=(y*size+x)*4;
-  const tint=s.tint; // Palette stops follow the existing texture tones, never a second pattern.
+  const tint=samplePaletteTint(style.paletteId,s.tint,x/size,y/size,style.id===30); // Palette stops follow the existing texture tones; watercolor/marbled add a spatial finish tint.
   color.copy(tint<.5?dark:base).lerp(tint<.5?base:light,tint<.5?tint*2:(tint-.5)*2);
   const roughnessMap=profile?clamp(.9+(s.rough-profile.roughness)*.75,0,1):s.rough;
   for(let k=0;k<3;k++){buffers[0][i+k]=Math.round([color.r,color.g,color.b][k]*255);buffers[1][i+k]=s.height*255;buffers[2][i+k]=roughnessMap*255;buffers[3][i+k]=s.glow*255;}
@@ -102,6 +103,7 @@ export function applyPaletteSurface(material:T.MeshStandardMaterial,palette:{pri
  if(!palette.paletteId)return;
  material.map=materialMaps({...palette,id:palette.id??30,emissive:'#000000',roughness:.55,metalness:0,detail:'palette'}).map;
  material.color.set('white');material.needsUpdate=true;
+ applyPaletteFinish(material as T.MeshPhysicalMaterial,palette.paletteId,palette);
 }
 export function materialFor(style:Style,unit:number,original?:T.MeshStandardMaterial){
  const tex=materialMaps(style),id=style.id;
@@ -117,24 +119,43 @@ export function materialFor(style:Style,unit:number,original?:T.MeshStandardMate
  if(id===20){mat.sheen=1;mat.sheenRoughness=.96;mat.sheenColor.set(style.accent);mat.metalness=0;}
  if(id===0||id===22){mat.sheen=.22;mat.sheenColor.set('#ffc9b1');}
  if(profile){mat.sheen=profile.sheen;mat.sheenRoughness=profile.sheenRoughness;mat.sheenColor.set(style.accent);mat.clearcoat=Math.max(mat.clearcoat,profile.clearcoat);mat.clearcoatRoughness=profile.clearcoatRoughness;}
- mat.flatShading=[13,14].includes(id);mat.userData.materialStyle=id;return mat;
+ if(id>=57&&id<=62){
+  mat.envMapIntensity=1.65;mat.iridescence=id===60?1:id===57?.85:.3;
+  mat.iridescenceThicknessRange=id===60?[100,750]:[140,480];
+  if([57,58,59,61].includes(id)){
+   mat.transmission=id===58?.97:id===59?.84:.88;mat.thickness=unit*(id===59?.32:.48);
+   mat.ior=id===59?1.8:id===58?1.46:1.38;mat.metalness=0;
+   mat.attenuationColor.set(style.primary);mat.attenuationDistance=unit*3.5;
+   mat.roughnessMap=null;mat.roughness=profile!.roughness;
+   mat.dispersion=id===59?.75:.2;
+  }
+  if(id===62){mat.emissive.set(style.accent);mat.emissiveMap=tex.glow;mat.emissiveIntensity=.65;}
+ }
+ mat.flatShading=[13,14,59].includes(id);mat.userData.materialStyle=id;
+ const optics={transmission:mat.transmission,thickness:mat.thickness,ior:mat.ior,roughness:mat.roughness,metalness:mat.metalness,iridescence:mat.iridescence,iridescenceThicknessRange:mat.iridescenceThicknessRange};
+ applyPaletteFinish(mat,style.paletteId,style);
+ // Color finishes coat a clear volume; they must not erase the chosen jelly/glass texture.
+ if(style.paletteId&&optics.transmission>0){Object.assign(mat,optics);mat.clearcoat=1;mat.clearcoatRoughness=.035;}
+ if(id===60){mat.metalness=.88;mat.iridescence=1;mat.iridescenceThicknessRange=[100,750];mat.roughness=.16;}
+ if(id===61||id===62)applySparkle(mat,.85);
+ return mat;
 }
 
-// Rank 4: continuous (0-1) view-dependent glint, independent of texture/colour. A shader
-// effect rather than a texture-per-level, per the brief. Uses only vViewPosition (declared
-// unconditionally in every MeshPhysicalMaterial fragment shader, flat-shaded or not) so it
-// never depends on chunks that vary by material feature flags.
-// ponytail: grain frequency is tied to view-space distance, not UV, so sparkle speckle size
-// drifts with camera distance - fine for a slider you're testing, revisit if art wants a
-// fixed on-surface grain size.
+// Sparkle flakes stay attached to the UV surface and flash as the viewing angle changes.
 export function applySparkle(mat:T.MeshPhysicalMaterial,sparkle:number){
- const amount=clamp(sparkle,0,1);if(amount<=0)return;
- mat.onBeforeCompile=shader=>{
+ const amount=clamp(sparkle,0,1);if(amount<=0||mat.userData.myr5FinishGlitter)return;
+ if(mat.userData.myr5Sparkle)return;mat.userData.myr5Sparkle=amount;
+ const previous=mat.onBeforeCompile;(mat as T.MeshPhysicalMaterial & {defines?:Record<string,string>}).defines={...(mat as T.MeshPhysicalMaterial & {defines?:Record<string,string>}).defines,USE_UV:''};
+ mat.onBeforeCompile=(shader,renderer)=>{
+  previous?.call(mat,shader,renderer);
   shader.uniforms.uSparkle={value:amount};
+  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vMyr5SparkleUv;').replace('#include <uv_vertex>','#include <uv_vertex>\nvMyr5SparkleUv=uv;');
   shader.fragmentShader=shader.fragmentShader
-   .replace('#include <common>','uniform float uSparkle;\n#include <common>')
-   .replace('#include <dithering_fragment>','float mySparkleGrain=fract(sin(dot(floor(vViewPosition*46.0),vec3(12.9898,78.233,37.719)))*43758.5453);\ngl_FragColor.rgb+=step(0.985,mySparkleGrain)*uSparkle*1.4;\n#include <dithering_fragment>');
+   .replace('#include <common>','uniform float uSparkle;\nvarying vec2 vMyr5SparkleUv;\n#include <common>')
+   .replace('#include <dithering_fragment>','float mySparkleGrain=fract(sin(dot(floor(vMyr5SparkleUv*83.0),vec2(12.9898,78.233)))*43758.5453);\nvec3 myFlakeNormal=normalize(normal+vec3(sin(mySparkleGrain*91.0),cos(mySparkleGrain*73.0),0.0)*.55);\nfloat myGlint=pow(max(dot(myFlakeNormal,normalize(vViewPosition)),0.0),42.0);\ngl_FragColor.rgb+=step(0.94,mySparkleGrain)*myGlint*uSparkle*2.2;\n#include <dithering_fragment>');
  };
+ const priorKey=mat.customProgramCacheKey.bind(mat);mat.customProgramCacheKey=()=>priorKey()+'|myr5-sparkle-v3|'+amount.toFixed(3);
+ mat.needsUpdate=true;
 }
 
 function meshWorldSpan(g:T.BufferGeometry,matrix:T.Matrix4){
@@ -164,7 +185,7 @@ export function sculptMaterial(mesh:T.Mesh,style:Style,unit=1,amount=1,coachReli
  // The higher-density authored-UV path is deliberately limited to known static meshes.
  // Keep animated, morph-target, interleaved and unsupported Float16 geometry on the
  // established path until their attributes can be refined without changing semantics.
- if(coachRelief&&(mesh.isSkinnedMesh||mesh.geometry.attributes.skinIndex||mesh.geometry.attributes.skinWeight||Object.values(mesh.geometry.morphAttributes).some(attributes=>attributes.length)||Object.values(mesh.geometry.attributes).some(attribute=>attribute.isInterleavedBufferAttribute||attribute.isFloat16BufferAttribute||((globalThis as any).Float16Array&&attribute.array instanceof (globalThis as any).Float16Array))))coachRelief=undefined;
+ if(coachRelief&&((mesh as T.SkinnedMesh).isSkinnedMesh||mesh.geometry.attributes.skinIndex||mesh.geometry.attributes.skinWeight||Object.values(mesh.geometry.morphAttributes).some(attributes=>attributes.length)||Object.values(mesh.geometry.attributes).some(attribute=>(attribute as T.InterleavedBufferAttribute).isInterleavedBufferAttribute||(attribute as T.BufferAttribute & {isFloat16BufferAttribute?:boolean}).isFloat16BufferAttribute||((globalThis as any).Float16Array&&attribute.array instanceof (globalThis as any).Float16Array))))coachRelief=undefined;
  const old=mesh.geometry;
  // Keep Original MYR5's established single-pass geometry, UVs and JS-double displacement path exact.
  if(!coachRelief){
@@ -235,7 +256,7 @@ export function growMaterial(group:T.Group,style:Style,region:string,unit=1,amou
  let seed=style.id*9173+region.length*419;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const id=style.id;if(hand&&id===20)return result;
  const baseCount=id===20?2100:[3,4].includes(id)?110:id===21?32:42;
- const count=Math.round(baseCount*(region==='head'||region==='palm'||region==='back_of_hand'?1:region==='body'?.8:.5));
+ const count=Math.round((id>=57&&id<=62?(id===61?180:id===58?55:36):baseCount)*(region==='head'||region==='palm'||region==='back_of_hand'?1:region==='body'?.8:.5));
  const batches:T.BufferGeometry[][]=[[],[],[]],normal=new T.Vector3(),point=new T.Vector3(),up=new T.Vector3(0,1,0);
  const span=bounds.getSize(new T.Vector3()),featureUnit=unit*T.MathUtils.clamp(Math.cbrt(Math.max(1e-6,span.x*span.y*span.z))/2.2,1,2.2);
  function add(g:T.BufferGeometry,pos:T.Vector3,q:T.Quaternion,scale:T.Vector3,material=0){g.applyMatrix4(new T.Matrix4().compose(pos,q,scale));if(!g.attributes.uv)g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));if(g.index){const expanded=g.toNonIndexed();g.dispose();g=expanded;}batches[material].push(g);}
@@ -249,6 +270,10 @@ export function growMaterial(group:T.Group,style:Style,region:string,unit=1,amou
   const q=new T.Quaternion().setFromUnitVectors(up,normal),s=featureUnit*amount*(.055+rand()*.075)*larger,center=point.clone(),size=new T.Vector3(s,s,s);
   const geometry=(g:T.BufferGeometry,offset=0,scale=size,mat=0)=>add(g,center.clone().addScaledVector(normal,offset+s*.12),q,scale,mat);
   switch(id){
+   case 57:geometry(new T.OctahedronGeometry(.55,1),-s*.3,new T.Vector3(s*.6,s*.2,s*.6),k%3);break;
+   case 58:geometry(new T.SphereGeometry(.55,10,7),-s*.4,new T.Vector3(s*.45,s*.65,s*.45),k%3);break;
+   case 59:case 62:geometry(new T.CylinderGeometry(0,.32,1.7,6),s*.42,size,k%3);break;
+   case 61:geometry(new T.OctahedronGeometry(.22),-s*.2,new T.Vector3(s,s*.18,s),k%3);break;
    case 1:{ // Roots and leaves have separate silhouettes, not generic spikes.
     const path=new T.CatmullRomCurve3([new T.Vector3(0,-.1,0),new T.Vector3(.18,.5,0),new T.Vector3(-.15,1.3,.1),new T.Vector3(.35,2,.1)]);
     geometry(new T.TubeGeometry(path,8,.14,5,false),0,size,2);geometry(new T.SphereGeometry(1,8,5),s*1.1,new T.Vector3(s*.55,s*.9,s*.12),1);break;}
@@ -276,6 +301,12 @@ export function growMaterial(group:T.Group,style:Style,region:string,unit=1,amou
   const mat=new T.MeshPhysicalMaterial({color:color[index],roughness:[14,16,21].includes(id)?.12:id===20?.95:style.roughness,metalness:style.metalness,clearcoat:[3,18,19,21].includes(id)?.7:0});
   if(index===1&&[5,8,9,11,12,15,17,19].includes(id)){mat.emissive.set(style.accent);mat.emissiveIntensity=1.2;}
   if([8,14,16].includes(id)){mat.transmission=.45;mat.thickness=unit*.15;mat.ior=1.35;mat.metalness=0;}
+  if(id>=57&&id<=62){mat.clearcoat=1;mat.clearcoatRoughness=.035;mat.roughness=.08;mat.iridescence=.9;mat.iridescenceThicknessRange=[100,650];
+   if(id===58){mat.transmission=.75;mat.thickness=unit*.04;mat.metalness=0;mat.ior=1.1;}
+   if(id===57||id===59){mat.transmission=.5;mat.thickness=unit*.08;mat.metalness=0;mat.ior=1.6;}
+   if(id===61){mat.metalness=.9;applySparkle(mat,1);}
+   if(id===62&&index===1){mat.emissive.set(style.accent);mat.emissiveIntensity=.5;}
+  }
   if(id===20){mat.sheen=1;mat.sheenColor.set(style.accent);}
   if(id===21){mat.color.set(index===1?style.accent:'#edffd3');mat.roughness=.12;mat.metalness=0;}
   if(id===18){mat.metalness=.87;mat.color.set(index===2?'#333d48':color[index]);}

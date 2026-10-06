@@ -97,7 +97,11 @@ export async function copySignedMaterialManifests({sourceDir,siteRoot,baseUrl,pu
 export async function assertMaterialTrustShipped(siteRoot){
  const manifests=await readdir(join(siteRoot,'materials')).catch(error=>{if(error?.code==='ENOENT')return [];throw error;});
  if(!manifests.length)return;
- for(const path of await readdir(siteRoot,{recursive:true}))if(/\.m?js$/.test(path)&&(await readFile(join(siteRoot,path),'utf8')).includes('__MYR5_MATERIAL_PUBLIC_JWK__'))throw new Error(`Signed material manifests ship in ${siteRoot}/materials, but ${path} has no material public key (__MYR5_MATERIAL_PUBLIC_JWK__ is undefined), so skins and textures would not load. Keep release-trust/public-build.json (or set MYR5_MATERIAL_PUBLIC_SIGNING_JWK) and pass materialRelease.defines to every bundle that imports modules/materials.`);
+ for(const entry of await readdir(siteRoot,{recursive:true,withFileTypes:true}))if(entry.isFile()&&/\.m?js$/.test(entry.name)){
+  const path=join(entry.parentPath,entry.name);
+  if(/(?:^|[\\/])(?:source|node_modules)[\\/]/.test(path))continue;
+  if((await readFile(path,'utf8')).includes('__MYR5_MATERIAL_PUBLIC_JWK__'))throw new Error(`Signed material manifests ship in ${siteRoot}/materials, but ${path} has no material public key (__MYR5_MATERIAL_PUBLIC_JWK__ is undefined), so skins and textures would not load. Keep release-trust/public-build.json (or set MYR5_MATERIAL_PUBLIC_SIGNING_JWK) and pass materialRelease.defines to every bundle that imports modules/materials.`);
+ }
 }
 
 async function stdinSecret(){if(process.stdin.isTTY)throw new Error('Provide the signing JWK through MYR5_MATERIAL_SIGNING_PRIVATE_JWK or stdin.');let text='';for await(const chunk of process.stdin)text+=chunk;if(!text.trim())throw new Error('Signing JWK input is empty.');return text.trim();}

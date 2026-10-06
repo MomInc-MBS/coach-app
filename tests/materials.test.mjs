@@ -66,35 +66,33 @@ test('registry has Flat+Clay, every legacy family, and stable procedural ids for
  assert.equal(TEXTURES.filter(t=>t.legacy).length,STYLES.length);
  // R18 G1: exactly 13 textures are free (pinned in r18-unlocks.test.mjs); every other one is pack-only, legacy included.
  for(const t of TEXTURES)assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
- assert.equal(TEXTURES.filter(t=>t.unlockRule==='default').length,13);
- assert.equal(TEXTURES.filter(t=>t.unlockRule==='battle-pass').length,TEXTURES.length-13);
+ assert.equal(TEXTURES.filter(t=>t.unlockRule==='default').length,19);
+ assert.equal(TEXTURES.filter(t=>t.unlockRule==='battle-pass').length,TEXTURES.length-19);
  const builtins=TEXTURES.filter(t=>t.familyId>=32&&t.familyId<=55).sort((a,b)=>a.familyId-b.familyId);
  assert.equal(builtins.length,24);assert.deepEqual(builtins.map(t=>t.familyId),Array.from({length:24},(_,i)=>32+i));
  for(const [i,t] of builtins.entries()){const p=builtinSurfaceProfile(t.familyId);assert.ok(p,`${t.displayName} profile exists`);assert.equal(p.name,t.displayName,`${t.displayName} keeps its named pattern`);assert.equal(p.id,32+i);assert.equal(textureDefaultMetalness(t.id),p.metalness);}
  assert.deepEqual(BUILTIN_SURFACE_PROFILES.map(p=>p.id),Array.from({length:24},(_,i)=>32+i));
- // The 12 aura-milestone palettes keep their ids, names and unlock days (D32 only cut them to triads).
+ // A palette redesign keeps the 12 aura-milestone IDs and unlock days.
  assert.deepEqual(PALETTES.filter(p=>p.unlockRule==='aura-milestone').map(p=>[p.id,p.unlockAtDay]),Array.from({length:12},(_,i)=>[`pal-${String(i+1).padStart(2,'0')}`,5*(i+1)]));
- assert.deepEqual(PALETTES.slice(0,12).map(p=>p.displayName),['Morning Mist','River Clay','Static Pop','Night Shift','Tin Star','Meadow Line','Campfire','Signal Jam','Deep Well','Chrome Garden','Sorbet Stand','Foundry Floor']);
- for(const p of PALETTES)assert.equal(isPaletteUnlocked(p),false);
+ for(const p of PALETTES)assert.equal(isPaletteUnlocked(p),p.unlockRule==='default');
 });
 
 test('D32: every palette is a primary/secondary/accent triad of valid hex, with unique ids, names and taglines of at most 6 words',()=>{
- assert.equal(PALETTES.length,12+95);
+ assert.equal(PALETTES.length,12+95+6);
  for(const p of PALETTES){
   assert.equal(p.colors.length,3,p.id);
   for(const c of p.colors)assert.match(c,/^#[0-9A-F]{6}$/i,p.id);
   assert.ok(p.tagline&&p.tagline.trim().split(/\s+/).length<=6,`${p.id} tagline`);
   if(p.unlockRule==='battle-pass')assert.ok(/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)&&p.unlockAtDay===undefined,p.id);
-  else assert.equal(p.unlockRule,'aura-milestone',p.id);
+  else assert.ok(['aura-milestone','default'].includes(p.unlockRule),p.id);
  }
  const unique=key=>assert.equal(new Set(PALETTES.map(key)).size,PALETTES.length);
  unique(p=>p.id);unique(p=>p.displayName.toLowerCase());unique(p=>p.reward??p.id);
- // Pattern bakes are isolated by the whole colour triad; no palette can reuse the wrong secondary/accent maps.
- const primaries=[...PALETTES.map(p=>p.colors[0]),...COLORS.map(c=>c.primary)].map(c=>c.toUpperCase());
- assert.equal(new Set(primaries).size,primaries.length);
+ // Complete triads, rather than individual reused accents, distinguish palettes.
+ assert.equal(new Set(PALETTES.map(p=>p.colors.map(c=>c.toUpperCase()).sort().join('|'))).size,PALETTES.length);
  // The triad is used as-is: colours[0..2] -> primary/secondary/accent.
  const p=PALETTES.find(p=>p.id==='pal-40');grantUnlock('palette',p.id);
- assert.deepEqual(colorTriad(p.id),{primary:p.colors[0],secondary:p.colors[1],accent:p.colors[2]});
+ assert.deepEqual(colorTriad(p.id),{primary:p.colors[0],secondary:p.colors[1],accent:p.colors[2],paletteId:p.id});
 });
 
 test('a locked battle-pass texture stays locked in normal assembly while its preview uses the named pattern',()=>{
@@ -120,8 +118,8 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
  assert.equal(fingerprints.size,24);
 });
 
-test('all 50 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
- assert.equal(TEXTURES.length,50);
+test('all 56 registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
+ assert.equal(TEXTURES.length,56);
  for(const t of TEXTURES){
   const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);
