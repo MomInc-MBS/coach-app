@@ -1,5 +1,6 @@
 // Small, gesture-unlocked sound layer shared by the pod, grimoire, and rooms.
 // Samples are optional: every cue has a local Web Audio fallback for offline play.
+import {seamlessLoopBuffer} from './loop-seam.mjs';
 export const SOUND_PREF_KEY='myr5.physicalSound.v1';
 const clamp=(n,a=0,b=1)=>Math.min(b,Math.max(a,n));
 const RATE={'main-control':38,mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,'pond-slosh':1100,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800,'electric':110,bloop:160,'signal':250,'whiteboard':450};
@@ -137,7 +138,7 @@ export class PhysicalSound{
  async loadSample(kind){
   this.sampleStatus.set(kind,'loading');
   try{const sources=this.manifest?.cues?.[kind]||this.manifest?.cues?.[SAMPLE[kind]];const paths=(Array.isArray(sources)?sources:[sources]).filter(path=>typeof path==='string'&&/^\/audio\/sfx\/[a-z0-9-]+\.mp3$/i.test(path)).slice(0,2);
-   const decoded=await Promise.all(paths.map(async path=>{const url=path.startsWith('/')?path:`/audio/sfx/${path}`;const response=await fetch(url);if(!response.ok)throw Error('Unavailable');const data=await response.arrayBuffer();if(data.byteLength>2_000_000)throw Error('Too large');const buffer=await this.context.decodeAudioData(data);if(buffer.duration>(['pod-hum','breeze','waterfall'].includes(kind)?30:5))throw Error('Too long');return buffer;}));
+   const decoded=await Promise.all(paths.map(async path=>{const url=path.startsWith('/')?path:`/audio/sfx/${path}`;const response=await fetch(url);if(!response.ok)throw Error('Unavailable');const data=await response.arrayBuffer();if(data.byteLength>2_000_000)throw Error('Too large');let buffer=await this.context.decodeAudioData(data);if(buffer.duration>(['pod-hum','breeze','waterfall'].includes(kind)?30:5))throw Error('Too long');if(kind==='waterfall')buffer=seamlessLoopBuffer(this.context,buffer);return buffer;}));
    if(!decoded.length)throw Error('Unavailable');this.samples.set(kind,decoded);this.sampleStatus.set(kind,'ready');if(['pod-hum','breeze','waterfall'].includes(kind))this.syncAmbience(true);
   }catch{this.sampleStatus.set(kind,'unavailable');this.sampleRetry.set(kind,Date.now()+15_000);}
  }

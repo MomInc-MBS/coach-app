@@ -41,7 +41,7 @@ export async function spotifyCallback(request,env,database) {
     config(env);await secret(env);
     if(request.method!=='GET')return json({error:'Method not allowed.'},405);
     const u=new URL(request.url),state=u.searchParams.get('state'),proof=cookieValue(request);
-    if(!state||!proof||!await validState(database,state,proof))return safeResult('expired',request);
+    if(!state||!proof||!await validState(database,state,proof))return safeResult(state&&!proof&&await stateExists(database,state)?'browser':'expired',request);
     const row=await database.prepare('DELETE FROM spotify_oauth_states WHERE state_hash=? AND cookie_hash=? AND expires_at>? RETURNING user_id,verifier_enc,data_epoch').bind(await hash(state),await hash(proof),Date.now()).first();
     if(!row)return safeResult('expired',request);
     if(u.searchParams.has('error'))return safeResult('denied',request);
@@ -49,6 +49,8 @@ export async function spotifyCallback(request,env,database) {
     const token=await postToken(env,{grant_type:'authorization_code',code,redirect_uri:env.SPOTIFY_REDIRECT_URI,code_verifier:await decrypt(env,row.verifier_enc)});
     if(!token.refresh_token)return safeResult('failed',request);
     const me=await fetch(`${API}/me`,{headers:{Authorization:`Bearer ${token.access_token}`},signal:AbortSignal.timeout(15000)});
+    // Development-mode apps answer 403 for any Spotify account not on the dashboard user allowlist.
+    if(me.status===403)return safeResult('notlisted',request);
     if(!me.ok)return safeResult('failed',request);
     const profile=await me.json();if(!profile.id)return safeResult('failed',request);
     await epochFencedBatch(database,{ownerId:row.user_id,expectedDataEpoch:row.data_epoch,now:Date.now(),statements:[database.prepare(`INSERT INTO spotify_connections(user_id,spotify_user_id,display_name,access_token_enc,refresh_token_enc,expires_at,scopes,data_epoch,updated_at) VALUES(?,?,?,?,?,?,?,?,?)
@@ -61,6 +63,11 @@ async function validState(database,state,proof){
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(state))return false;
   const row=await database.prepare('SELECT 1 AS ok FROM spotify_oauth_states WHERE state_hash=? AND cookie_hash=? AND expires_at>?').bind(await hash(state),await hash(proof),Date.now()).first();
   return !!row;
+}
+// A real state with no cookie means the return landed in a different browser jar (iOS Home Screen app vs Safari).
+async function stateExists(database,state){
+  if(!/^[A-Za-z0-9_-]{32,128}$/.test(state))return false;
+  return !!await database.prepare('SELECT 1 AS ok FROM spotify_oauth_states WHERE state_hash=? AND expires_at>?').bind(await hash(state),Date.now()).first();
 }
 async function connection(database,user){const proof=await inspectAccountDataEpoch(database,user);return database.prepare('SELECT * FROM spotify_connections WHERE user_id=? AND data_epoch=?').bind(user,proof.currentDataEpoch).first();}
 async function access(env,database,user){
