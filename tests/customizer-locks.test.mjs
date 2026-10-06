@@ -11,7 +11,7 @@ const result=await build({
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,loadRecipe,parseRecipe,fresh,RECIPE_KEY,isLocked,isTextureUnlocked,resolveRegionMaterial,grantUnlock,migrateEarnedTextureUnlocks,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
+const {saveRecipe,keepOwned,selectOwnedBody,loadRecipe,parseRecipe,fresh,RECIPE_KEY,isLocked,isTextureUnlocked,resolveRegionMaterial,grantUnlock,migrateEarnedTextureUnlocks,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
@@ -166,4 +166,16 @@ test('whole-creature framing from the back keeps every corner on screen',()=>{
   assert(frameRegion(camera,orbit,bounds,1.2,-1));assert(camera.position.z<orbit.target.z);
   for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=new T.Vector3(x,y,z).project(camera);assert(Math.abs(p.x)<1&&Math.abs(p.y)<1&&p.z<1);}
  }
+});
+
+
+test('changing an owned coach saves its body without copying another coach exclusive materials',()=>{
+ memory.clear();choosePerformancePaths(['chest','quads']);
+ const body='roster/06-ridge-triad--geometric_robot_3d_model1';
+ grantUnlock('texture','chest-plate-steel','myr5');
+ const previous={...fresh(),materials:{body:{textureId:'chest-plate-steel',colorId:'#ff3b30',sparkle:0,metallic:0}}};
+ const selected=selectOwnedBody(previous,body);assert.equal(selected.body,body);assert.equal(selected.materials,undefined);
+ saveRecipe(localStorage,selected,previous);assert.equal(loadRecipe(localStorage).body,body);
+ for(const key of ['headFrom','armsFrom','feetFrom'])assert.equal(selected[key],body);
+ assert.throws(()=>selectOwnedBody(previous,CHEST_BODY),/locked/);
 });

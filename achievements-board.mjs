@@ -46,23 +46,17 @@ export const ART_ROWS=[
  {id:'lume',track:null,color:'#ffc94a',boxes:[[39.35,75.95,15.34,8.8]]},
 ];
 export const ART_SLOTS=ART_ROWS.flatMap(row=>row.boxes.map((box,i)=>({id:`${row.id}-${i+1}`,row:row.id,color:row.color,box})));
-// Coaches go to the slots of their catalog track (easy to expert); rows that run short and the shared rows draw from the pool
-// (explicit starters first). Anything left over flows onto the next page, so every coach appears exactly once.
+// One constellation contains every coach once, with each workout group on its own art row.
 export function coachPages(coaches=BOSSES){
  const rank=id=>DIFFICULTIES.indexOf(COACH_REQUIREMENTS.find(r=>r.id===id)?.difficulty),queues=new Map(ART_ROWS.map(r=>[r.id,[]])),pool=[];
  for(const c of coaches){const track=COACH_REQUIREMENTS.find(r=>r.id===c.id)?.tracks?.[0],row=track&&ART_ROWS.find(r=>r.track===track);(row?queues.get(row.id):pool).push(c);}
- for(const q of queues.values())q.sort((a,b)=>rank(a.id)-rank(b.id));
- pool.sort((a,b)=>STARTER_COACH_IDS.includes(b.id)-STARTER_COACH_IDS.includes(a.id));
- const pages=[];
- while(pool.length||[...queues.values()].some(q=>q.length)){
-  const page=ART_SLOTS.map(slot=>({slot,coach:queues.get(slot.row).shift()||pool.shift()||null}));
-  // Keep preferred art rows, then use every spare target before adding a page.
-  const overflow=[...pool.splice(0),...ART_ROWS.flatMap(row=>queues.get(row.id).splice(0))];
-  for(const entry of page)if(!entry.coach)entry.coach=overflow.shift()||null;
-  pool.push(...overflow);
-  pages.push(page.filter(entry=>entry.coach));
+ const shared=ART_ROWS.filter(row=>!row.track);pool.forEach((coach,i)=>queues.get(shared[i%shared.length].id).push(coach));
+ const board=[];
+ for(const row of ART_ROWS){const entries=queues.get(row.id);entries.sort((a,b)=>rank(a.id)-rank(b.id));if(!entries.length)continue;
+  const left=Math.min(...row.boxes.map(b=>b[0])),right=Math.max(...row.boxes.map(b=>b[0]+b[2])),top=Math.min(...row.boxes.map(b=>b[1])),height=Math.max(...row.boxes.map(b=>b[3])),width=(right-left)/entries.length;
+  entries.forEach((coach,i)=>board.push({coach,slot:{id:`${row.id}-${i+1}`,row:row.id,color:row.color,box:[left+i*width,top,width*.93,height]}}));
  }
- return pages;
+ return board.length?[board]:[];
 }
 // All four ordered five-tier blocks are visible from each coach's zoom view.
 export function weaponTierSteps(group,difficulty,owned=0){
@@ -153,8 +147,7 @@ function build(){
  detail=element('section',null,'ach-detail');detail.hidden=true;
  const starter=element('div',null,'ach-starter'),offer=element('button','Download the Starter pack');offer.type='button';starter.append(element('p','The constellation art comes with the Starter pack.'),offer);
  const close=element('button','✕','ach-close');close.type='button';close.setAttribute('aria-label','Close');
- const turn=(label,glyph,dir)=>{const b=element('button',glyph,`ach-page ach-page-${dir>0?'next':'prev'}`);b.type='button';b.setAttribute('aria-label',label);b.onclick=()=>{page=(page+dir+pages.length)%pages.length;paint();};return b;};
- dialog.append(stage,head,detail,starter,turn('Previous page of coaches','‹',-1),turn('Next page of coaches','›',1),close);
+ dialog.append(stage,head,detail,starter,close);
  document.body.append(dialog);
  // W2-2O: the constellation is Starter-pack art. Without it (offline, not downloaded) the coaches glow on the plain
  // starfield and the pack is offered (achievements-board.css .no-art).
@@ -181,7 +174,7 @@ function paint(){
   const b=byId.get(coach.id),[x,y,w,h]=slot.box,btn=element('button',null,'ach-boss');btn.type='button';btn.dataset.state=b.state;btn.dataset.id=b.id;btn.dataset.golden=String(b.golden);
   btn.style.cssText=`left:${x}%;top:${y}%;width:${w}%;height:${h}%;--bx:${x};--by:${y};--bw:${w};--bh:${h};--glow:${slot.color};--d:${(x*7%3).toFixed(2)}s`;
   btn.setAttribute('aria-label',`${b.name}, ${b.golden?'unlocked, golden':b.state==='done'?'unlocked':'locked, tap to see requirements'}`);
-  btn.append(element('span',b.name,'ach-name'));
+
   btn.onclick=()=>zoom(b,slot,btn);
   bossesEl.append(btn);
  }

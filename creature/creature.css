@@ -37,3 +37,23 @@
 #shipColourRow{margin:12px 0}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
+
+/* One continuous species list; identity stays above the preview. */
+.coach-sprite-grid{max-height:none;overflow:visible;grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));grid-template-rows:none;grid-auto-columns:auto}
+.coach-choice{position:relative;min-width:0;border:2px solid #b9a5c9;border-radius:10px;padding:2px;background:#171123}
+.coach-choice>button[data-body]{width:100%;min-height:120px;display:flex;flex-direction:column;align-items:center;padding:6px 4px;gap:5px}
+.coach-choice canvas{width:82px;height:82px;object-fit:contain;image-rendering:pixelated}
+.coach-choice>button>span{font-size:.72rem;line-height:1.2;text-align:center;overflow-wrap:anywhere}
+.coach-choice[data-locked=true] canvas{filter:grayscale(.8);opacity:.55}
+.coach-choice-state{display:block;padding:3px 26px 4px 4px;font-size:.68rem;color:#b9a5c9}
+.coach-choice-lock{position:absolute;bottom:2px;right:2px;padding:3px;min-height:32px;min-width:32px;font-size:.85rem}
+.preview-readout{gap:6px;padding:6px 8px;min-height:44px;font-size:.85rem;text-align:center}
+#coachPathSymbol{flex:none;border:2px solid currentColor;border-radius:7px;padding:3px 6px}
+#coachDisplayName{overflow-wrap:anywhere;line-height:1.15}
+#coachUnlock{padding:4px;min-width:40px;min-height:40px;flex:none}
+.coach-requirement-dialog{max-width:min(92vw,480px);padding:24px;border:2px solid #d8b573;border-radius:16px;background:#25192f;color:#fff1d1}
+.coach-requirement-dialog p{margin:14px 0;line-height:1.5}.coach-requirement-dialog::backdrop{background:#08050dc9}
+#panel-body:has(.coach-choice) .field-grid>label:has(#body){display:none}
+
+.preview-bay .preview-strip{top:50px}
+@media(max-width:600px){.menu-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow-x:visible}.menu-tabs>button{min-width:0}}

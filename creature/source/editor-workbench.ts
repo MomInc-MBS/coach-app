@@ -1,3 +1,6 @@
+import {coachPresentation} from '../../coach-presentation.mjs';
+import {coachName} from '../../coach-names.mjs';
+import {coachRequirements} from '../../achievements-board.mjs';
 import {goldenCoach} from '../../performance-progress.mjs';
 import {PERFORMANCE_KEY,readPerformanceProgress} from '../../performance-progress.mjs';
 import {pathIntroCoachIds} from '../../performance-catalog.mjs';
@@ -14,10 +17,10 @@ import {TRACK_PLACEMENTS,bodyLockSection,sectionComplete} from './creator/track-
 import {isGranted,cosmeticId} from './creator/unlock-store';
 import {sparkle,isUnseen,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
-import {saveRecipe,keepOwned,BODY_KEYS} from './save-look';
+import {saveRecipe,keepOwned,selectOwnedBody,BODY_KEYS} from './save-look';
 import {loadProgress} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
-import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection,ownedShipIds} from '../../modules/ships/ship-access.mjs';
+import {acceptShipRevealComplete,coachEditorShips,ownedShipIds} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
 
@@ -127,13 +130,18 @@ function syncMomOnly(){
  const show=shown().body===MOM_APPROVED_BODY_ID;
  for(const id of MOM_ONLY_FIELD_IDS){const el=document.getElementById(id);if(el)el.style.display=show?'':'none';}
 }
+
+const coachRequirementDialog=document.createElement('dialog');coachRequirementDialog.className='coach-requirement-dialog';coachRequirementDialog.setAttribute('aria-labelledby','coachRequirementTitle');document.body.append(coachRequirementDialog);
+function showCoachRequirement(id:string){const info=coachRequirements(id);coachRequirementDialog.replaceChildren();const title=document.createElement('h2');title.id='coachRequirementTitle';title.textContent=coachName(id);const text=document.createElement('p');text.textContent=info.unlock;const close=document.createElement('button');close.type='button';close.textContent='Close';close.onclick=()=>coachRequirementDialog.close();coachRequirementDialog.append(title,text,close);if(!coachRequirementDialog.open)coachRequirementDialog.showModal();}
+function syncCoachIdentity(){const id=shown().body,locked=!!bodyLock(id),p=coachPresentation(id);$('coachDisplayName').textContent=coachName(id);$('coachPathSymbol').textContent=p.symbol;$('coachPathSymbol').title=p.track;$('coachUnlock').hidden=!locked;$('coachUnlock').onclick=()=>showCoachRequirement(id);}
+
 let cosmeticCoach='';
 function sync(){
  const look=shown();
  if(cosmeticCoach!==look.body){cosmeticCoach=look.body;fillTextures();fillColours();}
  for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
 
- syncMomOnly();
+ syncMomOnly();syncCoachIdentity();
  for(const button of bodyGrid.querySelectorAll<HTMLButtonElement>('[data-body]'))button.setAttribute('aria-pressed',String(button.dataset.body===look.body));
  syncShipRow();
  syncMaterials();
@@ -172,12 +180,16 @@ let spritePreviews:Awaited<ReturnType<typeof loadCoachSpritePreviews>>|null=null
 const bodyGrid=document.createElement('div');bodyGrid.className='material-grid coach-sprite-grid';bodyGrid.setAttribute('role','group');bodyGrid.setAttribute('aria-label','Creature shapes');
 function fillBodySprites(){if(!spritePreviews)return;bodyGrid.replaceChildren();for(const b of orderedBodies()){
  const sprite=spritePreviews.sprites.find(s=>s.id===b.id);if(!sprite)continue;
- const button=document.createElement('button');button.type='button';button.dataset.body=b.id;button.setAttribute('aria-label',b.label);button.setAttribute('aria-pressed',String(shown().body===b.id));
+ const locked=!!bodyLock(b.id),presentation=coachPresentation(b.id);
+ const card=document.createElement('div');card.className='coach-choice';card.dataset.locked=String(locked);
+ const button=document.createElement('button');button.type='button';button.dataset.body=b.id;button.setAttribute('aria-label',`${b.label}, ${locked?'locked preview':'available'}`);button.setAttribute('aria-pressed',String(shown().body===b.id));
  const source=spritePreviews.art(sprite),canvas=document.createElement('canvas');canvas.width=source.width;canvas.height=source.height;canvas.getContext('2d')!.drawImage(source,0,0);
- const caption=document.createElement('span');caption.textContent=b.label;button.append(canvas,caption);button.onclick=()=>{const select=$('body') as HTMLSelectElement;select.value=b.id;select.dispatchEvent(new Event('change',{bubbles:true}));};if(!bodyLock(b.id))sparkle(button,'body',b.id);bodyGrid.append(button);
+ const caption=document.createElement('span');caption.textContent=`${presentation.symbol} ${b.label}`;button.append(canvas,caption);button.onclick=()=>{const select=$('body') as HTMLSelectElement;select.value=b.id;select.dispatchEvent(new Event('change',{bubbles:true}));};if(!locked)sparkle(button,'body',b.id);card.append(button);
+ const state=document.createElement('span');state.className='coach-choice-state';state.textContent=locked?'Locked':'Available';card.append(state);
+ if(locked){const lock=document.createElement('button');lock.type='button';lock.className='coach-choice-lock';lock.textContent='\u{1f512}';lock.setAttribute('aria-label',`How to unlock ${b.label}`);lock.onclick=()=>showCoachRequirement(b.id);card.append(lock);}bodyGrid.append(card);
  }}
 function fillBodies(){$('body').replaceChildren();for(const b of orderedBodies()){
- const o=document.createElement('option');o.value=b.id;o.textContent=b.label;if(!bodyLock(b.id)&&isUnseen('body',b.id))o.dataset.sparkle=`body:${b.id}`;$('body').append(o);
+ const o=document.createElement('option');o.value=b.id;o.textContent=b.label+(bodyLock(b.id)?' (Locked)':'');if(!bodyLock(b.id)&&isUnseen('body',b.id))o.dataset.sparkle=`body:${b.id}`;$('body').append(o);
  }fillBodySprites();}
 options('eyeLayout',Object.entries(EYE_LAYOUTS).map(([key,value])=>[key,value.label]));options('pupil',PUPILS);
 for(const [id,min,max] of [['fingers',2,6],['toes',1,6]] as const)options(id,Array.from({length:max-min+1},(_,i)=>[i+min,String(i+min)]));
@@ -233,7 +245,7 @@ colorRoot.append(toggle,grid,label,palettes,paletteHelp);}
 fillColours();
 // The Ship tab edits the recipe's existing shipId/shipColor and mirrors it to the arrival scene.
 const shipRow=$('shipColourRow'),shipPick=$('shipPick') as HTMLSelectElement;
-const shipLocked=(id:string)=>!coachEditorShips().includes(id);
+const shipLocked=(id:string)=>id!=='supportive'&&!coachEditorShips().includes(id);
 function saveShip(patch:{shipId?:Design['coach'];shipColor?:string|null}){
  commit({...shown(),...patch});
 }
@@ -266,7 +278,7 @@ for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEve
   // let them diverge. A recipe saved before this change (with mismatched headFrom/armsFrom/feetFrom)
   // still loads and renders mixed (assemble.ts/parseRecipe are unchanged); picking a body here just
   // normalizes it going forward.
-  commit({...(section?shown():recipe),body:chosen,headFrom:chosen,armsFrom:chosen,feetFrom:chosen});return;}
+  commit(section?{...shown(),body:chosen,headFrom:chosen,armsFrom:chosen,feetFrom:chosen}:selectOwnedBody(recipe,chosen));return;}
  commit({...shown(),[id]:value});});
 for(const id of ['fur','iris','pupilSize','detail']){
  const input=$(id) as HTMLInputElement;
@@ -286,7 +298,7 @@ const SKIN_SETTINGS_PREFIX='myr5-editor-skins-v1/account/';let skinOwner:string|
 function persistSkinSettings(){if(skinOwner)localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify(Object.fromEntries(REGIONS.flatMap(region=>{const id=recipe.materials?.[region]?.textureId;return id?.startsWith('creature-')?[[region,id]]:[]}))));}
 function skinSettings(){if(!skinOwner)return{};try{const value=JSON.parse(localStorage.getItem(SKIN_SETTINGS_PREFIX+skinOwner)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 const editorOwner=()=>{const account=window.myr5AuthenticatedAccount;return typeof account==='string'?account:account?.user?.id;};
-function syncShipEditor(){const visible=canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);fillShipRow();}
+function syncShipEditor(){shipTab.hidden=false;shipTab.setAttribute('aria-hidden','false');shipTab.tabIndex=shipTab.getAttribute('aria-selected')==='true'?0:-1;fillShipRow();}
 // The Ship tab's preview: only while that tab is open, only from this account's verified local ship bytes (never a
 // download). The choice itself is saved either way; the preview just shows it.
 let shipPreview:ReturnType<typeof mountShipPreview>|null=null,shipPreviewOwner:string|null=null,shipPreviewEpoch=0;

@@ -11,6 +11,11 @@ import {normalizeStyleId,normalizeTextureId} from './creator/texture-policy.mjs'
 
 const ownedChoice=(c:MaterialChoice|undefined,coachId:string):c is MaterialChoice=>!!c&&!idLocked(c.textureId,coachId)&&!idLocked(c.colorId,coachId,'color');
 export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
+/** An earned body must not inherit another coach's exclusive material grants. */
+export function selectOwnedBody(design:Design,id:Design['body']):Design{
+ if(bodyLockSection(id,loadProgress()))throw Error('This coach is locked.');
+ return keepOwned({...design,body:id,headFrom:id,armsFrom:id,feetFrom:id},design);
+}
 
 /** Locked material regions fall back to the last earned choice or original style. Body sources
  * must pass the live performance access gate, including bodies present in an older saved recipe.

@@ -12,7 +12,7 @@ export function readHand(storage:Pick<Storage,'getItem'>):HandDesign {
   try{const value=storage.getItem(HAND_KEY);if(value)return parseDesign(value);}catch{}
   return {sections:{...DEFAULT_SELECTION},pose:'relaxed',nailShape:DEFAULT_NAIL_SHAPE};
 }
-export function createHandCompanion(host:HTMLDivElement,{storage=localStorage,onStatus=(_text:string)=>{}}={}){
+export function createHandCompanion(host:HTMLDivElement,{storage=localStorage,onStatus=(_text:string)=>{},cropWrist=false}={}){
   let disposed=false,revision=0,frame=0,rig:HandRig|null=null,hand:THREE.Group|null=null;
   let currentPose=getPose('relaxed'),transition:{from:ReturnType<typeof getPose>;to:ReturnType<typeof getPose>;start:number}|null=null;
   let gestureUntil=0,lastFrame=0,active=true;
@@ -22,6 +22,7 @@ export function createHandCompanion(host:HTMLDivElement,{storage=localStorage,on
   const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);
   const environment=new RoomEnvironment(),pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(environment,.04).texture;environment.dispose();pmrem.dispose();
   const camera=new THREE.PerspectiveCamera(34,1,.005,3);camera.position.set(.045,.08,.39);camera.lookAt(0,.035,0);
+  if(cropWrist){camera.position.set(.035,.10,.25);camera.lookAt(0,.085,0);renderer.domElement.setAttribute('aria-label','Your customized DJ hand');}
   scene.add(new THREE.HemisphereLight('#fff4e0','#655179',2));
   const key=new THREE.DirectionalLight('#fff2ce',3.6);key.position.set(.3,.3,.4);scene.add(key);
   const rim=new THREE.DirectionalLight('#d899ff',2.5);rim.position.set(-.3,.15,-.2);scene.add(rim);

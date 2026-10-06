@@ -12,11 +12,11 @@ test('achievements represents every actual coach exactly once, including starter
  for(const r of COACH_REQUIREMENTS){const requirement=coachRequirements(r.id);assert.equal(requirement.starter,false);if(!r.groups.includes('meditation')){assert.equal(requirement.difficulty,r.difficulty);assert.deepEqual(requirement.groups,r.groups);}}
 });
 
-test('original constellation art paginates every coach without empty targets before the last page',()=>{
+test('one constellation contains every coach without duplicate targets',()=>{
  assert.equal(ART_SLOTS.length,38);
  const pages=coachPages(),assigned=pages.flatMap(page=>page.map(entry=>entry.coach.id));
- assert.equal(pages.length,Math.ceil(COACHES.length/ART_SLOTS.length));
- assert(pages.slice(0,-1).every(page=>page.length===ART_SLOTS.length));
+ assert.equal(pages.length,1);
+ assert.equal(pages[0].length,COACHES.length);
  assert.deepEqual(new Set(assigned),new Set(COACHES.map(coach=>coach.id)));
  assert.equal(assigned.length,new Set(assigned).size);
  for(const page of pages)assert.equal(new Set(page.map(entry=>entry.slot.id)).size,page.length);

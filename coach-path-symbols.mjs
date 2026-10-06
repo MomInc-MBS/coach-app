@@ -1,0 +1,1 @@
+export const PATH_SYMBOLS=Object.freeze({chest:'\u{1f3cb}\ufe0f',quads:'\u{1f9b5}',glutes:'\u2197',arms:'\u{1f4aa}','arms-shoulders':'\u{1f4aa}',yoga:'\u{1f9d8}','martial-arts':'\u{1f94b}',cardio:'\u26a1',meditation:'\u{1f9d8}',original:'\u25c8'});
