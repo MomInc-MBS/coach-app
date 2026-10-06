@@ -1,0 +1,17 @@
+Coach-name provenance and naming direction
+
+The 65 retained-coach options are in coach-name-options.txt. The `person` field in coach-names.mjs records the fitness figure behind each display pun; full person names are kept out of display labels. References recur across related strength and movement tracks when a figure genuinely belongs to both fields.
+
+Primary-source anchors checked for the reference pool:
+- Bodybuilding / strength: Olympia identifies Jay Cutler and Ronnie Coleman as Mr. Olympia rivals and bodybuilding champions: https://mrolympia.com/2019-Honorary-Olympia-Weekend-Ambassador
+- Glutes / hip thrust: Bret Contreras's own hip-thrust guide and his published exercise-technique paper connect him directly to glute training and hip thrusts: https://bretcontreras.com/how-to-hip-thrust/ ; https://bretcontreras.com/wp-content/uploads/Barbell-Hip-Thrust.pdf
+- Pilates / core: Cassey Ho's official bio identifies her as a certified Pilates and group-fitness instructor: https://www.blogilates.com/about-cassey/
+- Yoga: Adriene Mishler's official site identifies her as an international yoga teacher: https://yogawithadriene.com/
+- Breathwork and yoga: Max Strom's own teacher-training page documents his yoga teaching and breath-initiated movement: https://maxstrom.com/breathe-to-heal/inner-axis/200hr-teacher-training/
+- Breathwork: Wim Hof Method's official breathing guide documents Hof's breath practice: https://www.wimhofmethod.com/breathing-exercises
+- Martial arts: UFC's athlete profile identifies Georges St-Pierre as a martial artist and records striking and grappling: https://www.ufc.com/athlete/georges-st-pierre
+- Cardio / sprinting: IOC Olympic Library's athlete material identifies Usain Bolt's sprint events and Olympic record: https://library.olympics.com/digitalCollection/DigitalCollectionAttachmentDownloadHandler.ashx?documentId=171702&parentDocumentId=171700&skipCopyright=true&skipWatermark=true
+
+The science-fiction naming cue follows Lucasfilm's documented use of compact designations and sound-play names: https://www.starwars.com/databank/r2-d2 ; https://www.starwars.com/news/buckets-list-extra-the-missing-agent-star-wars-resistance ; https://www.starwars.com/news/25-weird-star-wars-character-names
+
+Editorial check: a candidate should be short enough for a coach label, recognizable aloud as a figure fragment, and carry a workout/movement idea fused with a plausible technology or science-fiction idea. The annotation in coach-name-options.txt makes each reading inspectable; it is not a claim that every pun is self-explanatory without context.

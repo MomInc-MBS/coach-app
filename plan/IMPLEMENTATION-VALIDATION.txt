@@ -4,9 +4,10 @@ Baseline: Release 22, a914083
 
 Delegation
 Astra and authenticated Claude reviewed planning. Claude lower-tier work contributed names and editor/achievement drafts. Lower-tier coding agents completed the flight map/access, workout/rest/achievements, Spotify/path/editor and final asset/QA work. GPT-6-Luna polished 16 names. An already-loaded local model contributed the paper crawler proposal. NVIDIA Kimi requests timed out; no Kimi implementation is claimed.
+The subsequent fitness-only name correction was authored by GPT-6-Sol with two GPT-6-Luna agents contributing independent research/review and glute/cardio alternatives. It replaces the previous name set with integrated phonetic, workout and technology puns; restrained number jokes remain. Primary-source anchors are in name-research.txt.
 
 Outcome
-65 retained coaches; two names each in coach-name-options.txt.
+65 retained coaches; 130 distinct name options annotated with fitness provenance and workout/technology ideas in coach-name-options.txt. Stable IDs and mapped unlocks are unchanged by the name correction.
 250 XP levels across 25 continuous flight areas; compact main CRT has physical ten-level paging.
 Original achievement art/zoom restored, coach-specific performance requirements and weapon tiers.
 Two account-scoped initial workout paths; only original MYR5 and Blob 1 initially available.
@@ -17,7 +18,8 @@ Persistent pod terminals, physical controls, shared menu tilt.
 Spotify PKCE server connection, encrypted account tokens, playlists/Connect controls and native Jam links.
 
 Validation
-Production build passed. Offline core 8,010,430 / 8,388,608 bytes.
+Production build passed after the name correction. Offline core 8,004,709 / 8,388,608 bytes.
+Name correction checks: 49/49 focused coach-access, achievement, map and editor tests passed. Logs: reports/names-focused-tests.log and reports/names-production-build.log.
 Broad non-browser regression: 1,453 tests; 1,447 passed; six known failures reproduced in baseline (one palette shape assertion and five weapon-evolution tests).
 Focused browser tests cover 250-level map, early chrome, movement menu and standalone physical dock. Product-native phone QA verified map, original coach zoom, orange War Room options, Spotify terminal and compact hologram layout.
 Live authenticated Spotify login/playback was not tested in the local static preview.

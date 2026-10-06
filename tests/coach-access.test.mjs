@@ -2,7 +2,7 @@ import {test,describe,beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {STARTER_COACH_IDS,EXCLUDED_COACH_IDS,COACHES,COACH_REQUIREMENTS,PATH_INTRO_COACH_IDS,CHOOSABLE_TRACKS} from '../performance-catalog.mjs';
 import {chooseWorkoutPaths,readSelectedTracks,SELECTED_TRACKS_KEY} from '../chosen-styles.mjs';
-import {COACH_NAMES,COACH_NAME_META,WORKOUT_TERMS,SCIFI_TERMS,coachName,cycleCoachName,normalizePun} from '../coach-names.mjs';
+import {COACH_NAMES,COACH_NAME_META,coachName,cycleCoachName,normalizePun} from '../coach-names.mjs';
 import {PERFORMANCE_KEY,readPerformanceProgress,recordPerformanceSession,recordDailyActivity,coachAccess,mergeVerifiedPerformance,validPerformanceState,migratePerformanceAccess} from '../performance-progress.mjs';
 import {rosterModels} from '../creature/source/creator/roster.ts';
 
@@ -53,27 +53,29 @@ describe('coach names',()=>{
   assert.equal(COACHES.find(c=>c.id==='myr5').sourceLabel,'Original MYR5');
   assert.equal(COACHES.find(c=>c.id===BLOB1).sourceLabel,'Blob 1');
  });
- test('every name carries a person, a workout pun and a sci-fi term; all names are unique',()=>{
+ test('every name is unique, compact and annotated with fitness provenance and its two ideas',()=>{
   const seen=new Set();
   for(const [coachId,meta] of metas)for(const n of meta.names){
    const flat=normalizePun(n.name);
    assert.ok(n.person,`${n.name} lacks a person reference`);
-   assert.ok(WORKOUT_TERMS.includes(n.workout)&&flat.includes(normalizePun(n.workout)),`${n.name} lacks workout term ${n.workout}`);
-   assert.ok(SCIFI_TERMS.includes(n.scifi)&&flat.includes(normalizePun(n.scifi)),`${n.name} lacks sci-fi term ${n.scifi}`);
+   assert.ok(n.workout?.trim(),`${n.name} lacks a workout idea`);
+   assert.ok(n.scifi?.trim(),`${n.name} lacks a technology or science-fiction idea`);
+   assert.ok(!flat.includes(normalizePun(n.person)),`${n.name} shows the full famous name`);
+   assert.ok(n.name.length<=42,`${n.name} is too long for a coach label`);
    assert.ok(!/['’]/.test(n.name),`${n.name} has an apostrophe`);
    assert.ok(!seen.has(n.name),`${n.name} duplicated`);seen.add(n.name);
   }
-  assert.notEqual(new Set(metas.map(([,m])=>m.names[0].person)).size,0);
+  assert.equal(seen.size,metas.length*2);
   for(const [coachId,meta] of metas)assert.notEqual(meta.names[0].person,meta.names[1].person,`${coachId} pair repeats a person`);
  });
  test('names follow the mapped workout group',()=>{
   for(const c of COACH_REQUIREMENTS)assert.equal(COACH_NAME_META[c.id].track,c.tracks[0],c.id);
-  assert.deepEqual(COACH_NAMES[id('taper-tallstalk--humanoid_robot_3d_model1')][0],'Arm-nald Space-anegar');
+  assert.deepEqual(COACH_NAMES[id('taper-tallstalk--humanoid_robot_3d_model1')][0],'Arnoid Press');
   assert.equal(COACH_NAMES[id('monolith-tanka--boxy_humanoid_3d_model')][0],'Bruce L33 Kick');
-  assert.equal(COACH_NAMES[id('petal-wisp--fantasy_creature_3d_model4')][0],'Bendy Buddha Supreme');
+  assert.equal(COACH_NAMES[id('petal-wisp--fantasy_creature_3d_model4')][0],'Iyeng-Align Gyro');
  });
  test('original MYR5 and Blob 1 stay recognisable',()=>{
-  assert.deepEqual(COACH_NAMES.myr5,['MYR5 Rocky Rep-bot','MYR5 Atlas Lift Prime']);
+  for(const name of COACH_NAMES.myr5)assert.match(name,/^MYR5 /);
   for(const name of COACH_NAMES[BLOB1])assert.match(name,/^Blob 1 /);
  });
  test('cycleCoachName toggles between the two candidates',()=>{
