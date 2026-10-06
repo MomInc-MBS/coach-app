@@ -23,11 +23,11 @@ export const POND={
  drift:.014,driftHz:.045,                // free pads' slow wander about home
  spring:2.6,damping:2.2,pushR:.17,pushK:1.6,waveK:1.5,tilt:2.5, // pad physics: back home, finger push, ripple push, ripple tilt
  fish:14,koiLen:.24,koiAlpha:.72,swimHz:1.1,bend:.5, // koi shadows: count, length, darkness, tail beat, body undulation
- wanderSpeed:.06,attractSpeed:.11,schoolSpeed:.5,scatterSpeed:.4,maxForce:.7,arriveR:.14,
+ wanderSpeed:.06,attractSpeed:.17,schoolSpeed:.6,scatterSpeed:.4,maxForce:.9,arriveR:.14,
  jitter:2.4,margin:.12,sepR:.07,sepK:.6,
- attractR:.10,joinR:.065,leaveR:.18,gap:.075,trailStep:.012,trailCap:160, // only nearby fish notice the finger; stragglers leave the trail
+ attractR:.14,joinR:.085,leaveR:.22,gap:.075,trailStep:.012,trailCap:160, // stronger nearby attraction and a more persistent following school
  releaseMs:850,releaseSpeed:.52, // a short outward swim when the finger lifts
- idleMs:15000,scatterMs:4000,bigMs:16000,bigLen:1.3,bigAlpha:.62, // the idle show
+ idleMs:4000,scatterMs:4000,bigMs:16000,bigLen:1.3,bigAlpha:.62, // big fish starts at eight seconds total
  wave:{cols:64,damping:.982,press:.9,drag:.35,hold:.05,holdHz:1.6,gain:90}, // ripple height-field
  glass:{bend:.12,fringe:.3,rim:.55},     // refraction (face widths at full slope), dispersion, finger-lit rim glint
  lily:'#ffd3e4',lilyCore:'#ffcc33',shadow:[.01,.035,.03],

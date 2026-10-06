@@ -2,7 +2,7 @@
 // itself, never on the portal quilt. The popup lives inside #homeScreen, so it travels with the pod when the
 // portal hosts it in its full-screen workout dialog and is never left outside a modal (inert).
 export function podShown(doc=document){
- const home=doc.getElementById('homeScreen');if(!home||home.hidden||doc.body.dataset.screen==='rest')return false;
+ const home=doc.getElementById('homeScreen');if(!home||home.hidden||doc.hidden||doc.body.dataset.screen==='rest')return false;
  const host=home.closest('dialog');if(host)return host.open;
  return doc.getElementById('portalHome')?.hidden!==false;
 }
@@ -21,7 +21,9 @@ export function mountContinueWorkout({doc=document,unfinished,idle,label,onConti
   if(ticket!==run)return;
   row=next;
   if(!continueVisible({shown:podShown(doc),idle:idle(),row,dismissed})){hide();return;}
-  const text='Continue · '+label(row);if(card.querySelector('h2').textContent!==text)card.querySelector('h2').textContent=text;
+  const legacyManual=row.metadata?.control==='manual';
+  const text=(legacyManual?'Saved manual set · Start with camera · ':'Continue · ')+label(row);if(card.querySelector('h2').textContent!==text)card.querySelector('h2').textContent=text;
+  card.querySelector('[data-continue]').textContent=legacyManual?'Start with camera':'Continue';
   // Sit just above the bottom bar, whatever height it has on this phone.
   const bar=doc.getElementById('coachDock')?.getBoundingClientRect(),bottom=bar?.height?Math.max(16,innerHeight-bar.top+12)+'px':'';
   if(card.style.bottom!==bottom)card.style.bottom=bottom;
@@ -29,9 +31,11 @@ export function mountContinueWorkout({doc=document,unfinished,idle,label,onConti
  }
  const queue=()=>{queued||=setTimeout(()=>{queued=0;void refresh();});};
  const observer=new MutationObserver(queue);
+ const onVisibility=()=>{if(doc.hidden){run++;hide();}else queue();};
+ doc.addEventListener('visibilitychange',onVisibility);
  observer.observe(doc.body,{subtree:true,attributes:true,attributeFilter:['hidden','open','aria-current','data-screen','data-tracking']});
  card.querySelector('[data-dismiss]').onclick=()=>{dismissed=row?.id??null;hide();};
- card.querySelector('[data-continue]').onclick=()=>{const chosen=row;hide();if(chosen)onContinue(chosen);};
+ card.querySelector('[data-continue]').onclick=()=>{const chosen=row;hide();if(chosen&&idle()&&!doc.hidden)onContinue(chosen);};
  queue();
- return {refresh,dispose(){observer.disconnect();clearTimeout(queued);card.remove();}};
+ return {refresh,dispose(){observer.disconnect();doc.removeEventListener('visibilitychange',onVisibility);clearTimeout(queued);card.remove();}};
 }

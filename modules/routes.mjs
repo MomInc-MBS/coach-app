@@ -37,6 +37,11 @@ export const ROUTES={
  food:{label:'Food',dialog:'#mealsPanel',open:()=>typeof window.myr5Menus?.food==='function'?window.myr5Menus.food():panel('meals')},
  achievements:{label:'Achievements',dialog:'.ach-board',open:()=>window.myr5Menus?.achievements?.()},
  battlepass:{label:'Battle pass',dialog:'#battlePassPanel',open:()=>window.myr5Menus?.battlePass?.()},
+ // The existing opener owns workout shutdown, movement selection, and the hologram lifecycle.
+ // Direct taps are adopted by the dialog observer; go('library') uses that same opener once.
+ library:{label:'Movements',dialog:'#library',open(){$('openLibrary')?.click();return $('library');}},
+ spotify:{label:'Spotify DJ',dialog:'#spotifyPanel',open:()=>window.myr5Menus?.spotify?.()},
+ paths:{label:'Workout paths',dialog:'#coachPathPicker',open:()=>window.myr5Menus?.paths?.()},
  scoreboard:{label:'Scoreboard',dialog:'#accountPanel',open:()=>panel('account')},
  // #148 (Ian 2026-09-23): the customizer's one door is the oval: its ship arrives and the user taps it (ship-intro.mjs
  // opens /creature/index.html with the gate the editor checks). So #customize, the X and any link to it land on the arrival.
@@ -54,7 +59,7 @@ export const ROUTES={
  install:{label:'Install',dialog:'#installPanel',open:()=>panel('install')},
 };
 // Old ?panel= deep links (reminder pushes, update emails, recovery) open the same routes.
-export const PANEL_ROUTES={meals:'food',reminders:'reminders',account:'scoreboard',history:'history',install:'install'};
+export const PANEL_ROUTES={spotify:'spotify',meals:'food',reminders:'reminders',account:'scoreboard',history:'history',install:'install'};
 export function hashRoute(hash=location.hash){const id=hash.slice(1);return Object.hasOwn(ROUTES,id)?id:'';}
 
 let active=null,expectBack=false,guardArmed=false,guardHref='',hintTimer=0,routeGeneration=0;
@@ -116,11 +121,15 @@ function adopt(id,dialog){
   };
   dialog.addEventListener('close',entry.closeListener);
  }
+ window.myr5MenuLifecycle?.enter(dialog??id);
+ if(dialog)window.myr5MenuLifecycle?.closeInactive(dialog);
  paint();announce(entry);return entry;
 }
 function finish(entry,reason){
  if(entry.done)return;
  entry.done=true;entry.reason=reason;
+ window.myr5MenuLifecycle?.leave(entry.dialog??entry.id,reason);
+ window.dispatchEvent(new CustomEvent('myr5:route-leave',{detail:{id:entry.id,reason}}));
  if(entry.dialog&&entry.closeListener)entry.dialog.removeEventListener('close',entry.closeListener);
  if(active===entry)active=null;
  const {dialog}=entry;
@@ -138,7 +147,7 @@ function finish(entry,reason){
 
 // Any direct dialog route gets the same hardware surround and tilt as a room opened from the quilt.
 // Portal-origin routes carry {portal:true}, so their shaped-cut presentation stays intact.
-const HOUSING_ROUTES=new Set(['food','achievements','reminders','scoreboard','meditate','settings','ship','select','history','install']);
+const HOUSING_ROUTES=new Set(['food','achievements','battlepass','library','spotify','paths','reminders','scoreboard','meditate','settings','ship','select','history','install']);
 export function go(id,{deepLink=false,fromHash=false,portal=false}={}){
  const route=ROUTES[id];if(!route)return undefined;
  if(route.nav){

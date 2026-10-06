@@ -48,5 +48,11 @@ test('War Room keeps its account and leaderboard controls without portal appeara
  // R20 (Ian 2 Oct): the War Room wears the shared housing and dock, which reads the saved metal/strip look (never edits it).
  assert.ok(requested.includes('/modules/portal/standalone-housing.mjs'),'War Room mounts the shared metal housing');
  assert.equal(await page.locator('#coachDock [data-route="portal"]').count(),1,'War Room has the app dock');
+ await page.waitForFunction(()=>document.getElementById('coachDock')?.classList.contains('ship-control-deck'));
+ const physical=await page.locator('#coachDock').evaluate(dock=>{const key=dock.querySelector('a.dock-control'),dial=dock.querySelector('a.dock-portal');return{metal:getComputedStyle(dock).backgroundImage,button:getComputedStyle(key).overflow,dial:getComputedStyle(dial).borderTopWidth};});
+ assert.match(physical.metal,/linear-gradient/);assert.equal(physical.button,'visible');assert.equal(physical.dial,'3px','standalone anchor receives the shared physical dial');
+ await page.mouse.move(10,150);await page.waitForTimeout(180);const left=await page.locator('.war-room').evaluate(el=>el.style.getPropertyValue('--editor-peer-x'));
+ await page.mouse.move(380,150);await page.waitForTimeout(180);const right=await page.locator('.war-room').evaluate(el=>el.style.getPropertyValue('--editor-peer-x'));
+ assert.ok(parseFloat(left)<0&&parseFloat(right)>0,`the standalone housing still follows pointer/phone tilt: ${JSON.stringify({left,right})}`);
  assert.deepEqual(pageErrors,[],'the source page mounts with no null-node or runtime errors');
 });

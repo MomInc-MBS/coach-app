@@ -90,7 +90,7 @@ export class PhysicalSound{
    case 'electric':return v(.22,x=>{this.noiseBurst(x,.18,.025,2200,1400);this.tone(x,110,.18,.008,'sine',100);});
    case 'bloop':return v(.2,x=>this.tone(x,260,.16,.045,'sine',95));
    case 'signal':return v(.32,x=>{this.tone(x,660,.07,.018,'sine',660);this.tone(x,880,.07,.012,'sine',880,.17);});
-   case 'whiteboard':return v(.85,x=>{this.noiseBurst(x,.34,.1,850,350);for(let i=0;i<4;i++)this.noiseBurst(x,.085,.07,2300,1600,.4+i*.09);});
+   case 'whiteboard':return v(.85,x=>{this.noiseBurst(x,.26,.035,1300,900);for(let i=0;i<4;i++){this.tone(x,1900+i*210,.09,.055,'sine',3300-i*190,.10+i*.16);this.noiseBurst(x,.07,.018,3200,1700,.11+i*.16);}});
    case 'crt':return v(.16,x=>{this.tone(x,90,.13,.12,'sine',54);this.noiseBurst(x,.08,.045,2000,400);});
    case 'ice':return v(.5,x=>{this.noiseBurst(x,.17,.16,5500,1700);this.tone(x,980*pitch(),.32,.08,'sine',460,.025);this.noiseBurst(x,.08,.045,4500,1000,.16);});
    case 'jelly':return v(.46,x=>{this.noiseBurst(x,.28,.16,350,130);this.tone(x,180*pitch(),.32,.16,'sine',65);this.tone(x,95,.16,.075,'sine',45,.1);});
@@ -113,7 +113,7 @@ export class PhysicalSound{
   const now=this.now(),previous=this.last.get(kind)??-Infinity;if(now-previous<RATE[kind])return;this.last.set(kind,now);
   const context=this.context,epoch=this.epoch;if(!context)return;
   const start=()=>{if(this.context!==context||this.epoch!==epoch||this.now()-now>250||context.state!=='running'||this.document?.hidden||this.muted)return;
-   const variants=this.samples.get(kind);if(variants?.length)this.playSample(kind,variants[Math.floor(Math.random()*variants.length)]);else this.synth(kind);
+   const variants=kind==='whiteboard'?null:this.samples.get(kind);if(variants?.length)this.playSample(kind,variants[Math.floor(Math.random()*variants.length)]);else this.synth(kind);
   };
   if(context.state==='running')start();else void context.resume().then(()=>{this.syncAmbience();start();}).catch(()=>{});
   if(this.manifest&&SAMPLE[kind]&&this.sampleStatus.get(kind)!=='loading'&&this.sampleStatus.get(kind)!=='ready'&&Date.now()>=(this.sampleRetry.get(kind)||0))void this.loadSample(kind);

@@ -1,3 +1,5 @@
+import {initSpotifyTerminal} from './spotify-terminal.mjs';
+import {mountCoachPathPicker} from './coach-path-picker.mjs';
 import {recordDailyActivity,readPerformanceProgress,localDay,mergeVerifiedPerformance} from './performance-progress.mjs';
 import {createPerformanceAccountSync} from './performance-account-sync.mjs';
 import {cosmeticLevel} from './progression-rules.mjs';
@@ -34,6 +36,7 @@ import {createPackGrantCache} from './packs/pack-grant-cache.mjs';
 import {subscribePush,staleSubscription} from './push-subscribe.mjs';
 const accountTransitions=authTransitions();
 mountLaunch();
+initSpotifyTerminal({request:authFetch,getAccount:()=>account});
 mountRemindersComputer();
 mountCreatureSkinRewardReveal();
 mountRewardPacks();
@@ -49,6 +52,10 @@ const $=id=>document.getElementById(id),keys=['myr5-recipe-v1','myr5-motion-v1',
 let account=null,revision=0,registration=null,installPrompt=null,reminderSnapshot=null,deviceBusy=false,packGrantCache=null;
 window.addEventListener('myr5:login-ready',()=>{queueMicrotask(()=>{if(account===null && !accountTransitionBusy){void refresh().catch(()=>{});} });});
 let localHistoryRepository=null,guestHistoryChoice=null,accountTransitionBusy=false;
+mountCoachPathPicker({getAccount:()=>account,savePaths:async(paths,expected)=>{
+ if(accountTransitionBusy||account?.user?.id!==expected.user.id||account?.dataEpoch!==expected.dataEpoch)throw Error('Account changed. Refresh and try again.');
+ return api('/api/performance/paths','POST',{paths},{'X-Target-Account':expected.user.id,'X-Expected-Data-Epoch':String(expected.dataEpoch)});
+},onChosen:()=>{void refresh();}});
 let expansionMounted=false;
 async function mountVerifiedExpansion(value){
  if(expansionMounted||!hasPackGrant(value,'mom-paper-tear')||!window.myr5WorkoutOwner)return;
@@ -151,9 +158,6 @@ $('notificationSwitch').onclick=async()=>{
 $('testPush').onclick=async()=>{try{const reg=registration||await navigator.serviceWorker?.getRegistration(),sub=await reg?.pushManager?.getSubscription();if(!sub)throw Error('Turn reminders on for this device first.');await api('/api/push/test','POST',{endpoint:sub.endpoint});set('pushStatus','The notification service accepted the test. Check your phone.');}catch(e){set('pushStatus',e.message);}};
 async function workouts(){return scoreboard.refresh();}
 async function localHistory(){try{localHistoryRepository??=await openLocalCoach();const scope=localHistoryRepository.forOwner(localHistoryRepository.guestOwnerId),items=(await scope.listWorkouts()).filter(item=>item.status==='completed').sort((a,b)=>(b.completedAt??0)-(a.completedAt??0)),list=$('localHistoryList');list.replaceChildren();set('localHistoryStatus',items.length?`${items.length} completed workout${items.length===1?'':'s'} on this device.`:'No completed workouts on this device yet.');for(const item of items){const row=document.createElement('article'),title=document.createElement('strong'),detail=document.createElement('p');row.className='entry';title.textContent=item.metadata?.name||item.mode;detail.textContent=`${item.completion?.value??0} · ${new Date(item.completedAt).toLocaleString()}`;row.append(title,detail);list.append(row);}if(!guestHistoryChoice){const host=document.createElement('section');$('historyPanel').append(host);const adapter=createImportAccountAdapter({repository:scope,request:authFetch,transitions:accountTransitions,getAccount:()=>account});guestHistoryChoice=mountGuestHistoryChoice({host,adapter,getAccount:()=>account,transitions:accountTransitions});}await guestHistoryChoice.render();}catch(error){set('localHistoryStatus',error.message);}}
-async function goals(){try{const {items}=await api('/api/goals');const list=$('goalList');list.replaceChildren();if(!items.length){list.textContent='No goals yet.';return;}for(const item of items){const row=document.createElement('article');row.className='goal-entry';row.dataset.status=item.status;const title=document.createElement('h4');title.textContent=item.title;row.append(title);if(item.note){const note=document.createElement('p');note.textContent=item.note;row.append(note);}const actions=document.createElement('div');actions.className='actions';if(item.status==='active')actions.append(button('Complete',async()=>{await updateGoal(item,{status:'completed'});}));if(item.status==='completed')actions.append(button('Reopen',async()=>{await updateGoal(item,{status:'active'});}));if(item.status!=='archived')actions.append(button('Archive',async()=>{await updateGoal(item,{status:'archived'});}));row.append(actions);list.append(row);}}catch(e){set('goalStatus',e.message);}}
-async function updateGoal(item,data){try{await api('/api/goals/'+item.id,'PATCH',data);set('goalStatus','Goal saved.');await goals();}catch(e){set('goalStatus','Could not save goal: '+e.message);}}
-$('goalForm').onsubmit=async e=>{e.preventDefault();const form=e.target,submit=form.querySelector('[type=submit]');submit.disabled=true;try{await api('/api/goals','POST',Object.fromEntries(new FormData(form)));form.reset();set('goalStatus','Goal saved.');await goals();}catch(err){set('goalStatus','Could not save goal: '+err.message);}finally{submit.disabled=false;}};
 $('saveProfile').onclick = async () => {
   try {
     const ticket = accountTransitions.capture();
@@ -262,7 +266,7 @@ window.myr5Menus={...window.myr5Menus,food:()=>{
  if(document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true')return null; // #40: no meals over a workout
  if(!$('mealsPanel').open)document.querySelector('[data-panel="meals"]')?.click();return $('mealsPanel');
 }};
- for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){$('mealsPanel').classList.toggle('pyramid-mode',!pyramidBroken);void mountPyramid();await meals();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();await goals();}});
+ for(const button of document.querySelectorAll('[data-panel]'))button.addEventListener('click',async()=>{if(button.dataset.panel==='history')await localHistory();if(button.dataset.panel==='meals'){$('mealsPanel').classList.toggle('pyramid-mode',!pyramidBroken);void mountPyramid();await meals();}if(button.dataset.panel==='reminders')await liveReminders.sync();if(button.dataset.panel==='account'){await refresh();await workouts();}});
  window.addEventListener('myr5:local-history-refresh',localHistory);window.addEventListener('pagehide',()=>{guestHistoryChoice?.close();localHistoryRepository?.close();},{once:true});
 const coachDayTimer=setInterval(()=>{if(!document.hidden)refresh();},60000);window.addEventListener('pagehide',()=>clearInterval(coachDayTimer));
 window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});

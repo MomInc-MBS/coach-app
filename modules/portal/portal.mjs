@@ -16,6 +16,7 @@ import {readLook,saveLook,applyLookVars,stripSeq,LOOK_DEFAULTS} from './portal-l
 import {recognizeShape,nearestShape,SHAPES} from './portal-shapes.mjs';
 import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
+import {mountPodChrome} from '../pod-chrome.mjs';
 import {paletteFor,paletteOptions} from './portal-tunnel-palettes.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
@@ -58,7 +59,7 @@ const TAPPABLE_IDS=Object.keys(SHAPES).filter(id=>!['x','cross','line'].includes
 // it once it has rendered. A grimoire's flat picture is its poster, laid out at its GLB face's width/height (FACE, measured)
 // with its guides drawn in its shape frame. WAIT (ms): how long a poster, then a 3D board, may take before it counts as failed,
 // and how long the first mount waits for 3D before the portal comes up flat (3D then takes over when it has drawn).
-export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','cogs','jelly','wood','pond']);
+export const PRODUCTION_PORTALS=Object.freeze(['quilt','ice','grass','jelly','wood','pond']);
 const FACE={ice:.5903,grass:.5625,cogs:.5715,jelly:.5892,wood:.5847,pond:.5625},WAIT={poster:6000,threeD:20000,mount:4000};
 // trace (R7): the flat poster keeps the board's own touch effect in 2D (ice cracks, flowers, weld, jelly gash, embers).
 const grimoire=(label,effect)=>({label,flat:async host=>{const flat=await createQuiltBoard2D(host,{src:`/pod/worlds/boards/${effect.id}-poster.webp`,ratio:FACE[effect.id],frame:frameOf(effect,GLB),background:effect.background,guide:effect.guide,waitMs:WAIT.poster,trace:effect.trace2d,tint:effect.keepColors?null:boardTint(effect.id),tintSelected:hasBoardTint(effect.id),tintTarget:effect.id==='grass'||effect.keepColors?'trace':effect.id==='cogs'?'cogs':'poster',...(effect.id==='cogs'?{backplateTint:cogsBackplateTint(),backplateTintSelected:hasCogsBackplateTint()}: {})});if(effect.id==='cogs')flat.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return flat;},create:host=>{if(effect.id==='cogs')effect.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());return createGlbBoard(host,{effect});}});
@@ -89,8 +90,8 @@ const materialLoads=new Map();
 // Sandboxed frames and private-mode Safari throw on localStorage access; never let that kill mountPortal.
 const store={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 function initialBoardId(){
- const p=new URLSearchParams(location.search).get('board');if(p&&BOARDS[p])return p;
- const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored])return stored;
+ const p=new URLSearchParams(location.search).get('board');if(p&&PRODUCTION_PORTALS.includes(p))return p;
+ const stored=store.get(BOARD_KEY);if(stored&&PRODUCTION_PORTALS.includes(stored))return stored;
  return 'quilt';
 }
 
@@ -255,7 +256,7 @@ export function setCogsBackplateTint(hex,selected=true){
 // one's build can start. A load superseded while queued does nothing.
 let loadQueue=Promise.resolve();
 function loadBoard(id){
- if(!BOARDS[id])id='quilt';
+ if(!PRODUCTION_PORTALS.includes(id)&&id!=='__stub__')id='quilt';
  wantedBoard=id;delete art[id];losses[id]=0; // a pick (or a cold start) gives its 3D another go
  const load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,load):null);
  loadQueue=run.catch(()=>{});return run;
@@ -343,7 +344,7 @@ function syncEnergy(){const on=boardShown||!!framed;energyAnims.forEach(a=>on?a.
 // load, return to the portal and cross-tab/bfcache changes; a board pick made elsewhere loads once (an uncached one falls back).
 const restSeq=()=>stripSeq(readLook().strip);
  function applyLook(){const look=readLook();applyLookVars(document.documentElement,look);document.documentElement.style.setProperty('--portal-strip-glow',`${look.strip}40`);menuSheet?.querySelectorAll('[data-look]').forEach(input=>{input.value=look[input.dataset.look];});if(aura?.el){const seq=stripSeq(look.strip);aura.el.style.setProperty('--aura',look.strip);aura.el.style.setProperty('--aura-edge',`color-mix(in srgb,${look.strip} 45%,#fff)`);aura.el.style.setProperty('--aura-seq',[...seq,seq[0]].join(','));}if(!phase)energize(restSeq());}
-function syncLook(){applyLook();const stored=store.get(BOARD_KEY);if(stored&&BOARDS[stored]&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
+function syncLook(){applyLook();const stored=store.get(BOARD_KEY);if(stored&&PRODUCTION_PORTALS.includes(stored)&&stored!==wantedBoard&&!busy)loadBoard(stored).catch(()=>{});}
 function buildDom(){
  portalHome=document.createElement('div');portalHome.id='portalHome';
  portalHome.hidden=true;portalHome.setAttribute('role','dialog');portalHome.setAttribute('aria-label','Quilt portal');portalHome.setAttribute('aria-modal','true');
@@ -378,10 +379,11 @@ function buildDom(){
  const exitBtn=portalHome.querySelector('#portalExitButton');
  settingsBtn=portalHome.querySelector('#portalSettingsButton');
  settingsBtn.onclick=()=>openMenu();
+ mountPodChrome(settingsBtn,{signal:lifecycle.signal});
  if(bar)exitBtn.remove(); // the centre mechanical key returns to the pod when the dock is present
  else exitBtn.onclick=()=>setVisible(false);
  const armie=()=>[...document.querySelectorAll('.armie-inbox-launcher')].filter(el=>el.getClientRects().length);
- const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...new Set([...(bar?bar.querySelectorAll('button'):[menuBtn]),settingsBtn,...armie(),...(exitBtn.isConnected?[exitBtn]:[])])],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
+ const trap=e=>{if(e.key==='Escape'){e.preventDefault();setVisible(false);}else if(e.key==='Tab'){const buttons=[...new Set([...(bar?bar.querySelectorAll('button'):[menuBtn]),settingsBtn,document.getElementById('spotifyNowPlayingOpen'),...armie(),...(exitBtn.isConnected?[exitBtn]:[])])],index=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(index+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();}};
  portalHome.addEventListener('keydown',trap);
  bar?.addEventListener('keydown',e=>{if(boardShown&&!bar.closest('dialog'))trap(e);},{signal:lifecycle.signal});
  document.addEventListener('keydown',e=>{if(boardShown&&e.target.classList?.contains('armie-inbox-launcher'))trap(e);},{signal:lifecycle.signal});
@@ -451,9 +453,9 @@ function backgroundBlocked(block){
 }
 function openMenu(){
  portalSound('menu');
- const {face}=restFace();setVisible(false);menuChosen=false;menuSheet.showModal();
+ const returnToQuilt=boardShown,{face}=restFace();setVisible(false);menuChosen=false;menuSheet.showModal();
  if(face&&frameOn(face,windowLook('line-up',MENUS['line-up'],face)))frameDialog(menuSheet);
- menuSheet.addEventListener('close',()=>{if(framed?.dialog===menuSheet)frameOff();if(!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
+ menuSheet.addEventListener('close',()=>{if(framed?.dialog===menuSheet)frameOff();if(returnToQuilt&&!menuChosen&&!lifecycle.signal.aborted)setVisible(true);},{once:true});
 }
 
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
@@ -918,7 +920,11 @@ const PEER_DEPTH=[
  ['dialog.ship-view',{scene:true,layers:[['.ship-view-bg',16],['.ship-view-coach',5]]}],
  // The constellation's bosses (7.5-90% of the art's height) span the cut: its top row along the inverted triangle's top.
  ['.ach-board',{scene:true,layers:[['.ach-stage',10],['.ach-stars',-4]],cards:'.ach-detail',fit:{sel:'.ach-stage',band:[.075,.9]}}],
- ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
+   ['#battlePassPanel',{move:2,strength:.6,chip:true,layers:[['.pass-map-shell',8]]}],
+   ['#library',{move:2,strength:.6,chip:true,layers:[['#holoStage',8],['.movement-cards',4]]}],
+   ['#spotifyPanel',{move:2,strength:.6,chip:true}],
+ ['#coachPathPicker',{move:2,strength:.6,chip:true}],
+   ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
 const peer={dialog:null,cfg:null,els:[],depths:[],flatEls:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null,watch:null};

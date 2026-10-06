@@ -1,0 +1,33 @@
+Coach cosmos implementation validation
+Working branch: codex/coach-cosmos-1005
+Baseline: Release 22, a914083
+
+Delegation
+Astra and authenticated Claude reviewed planning. Claude lower-tier work contributed names and editor/achievement drafts. Lower-tier coding agents completed the flight map/access, workout/rest/achievements, Spotify/path/editor and final asset/QA work. GPT-6-Luna polished 16 names. An already-loaded local model contributed the paper crawler proposal. NVIDIA Kimi requests timed out; no Kimi implementation is claimed.
+
+Outcome
+65 retained coaches; two names each in coach-name-options.txt.
+250 XP levels across 25 continuous flight areas; compact main CRT has physical ten-level paging.
+Original achievement art/zoom restored, coach-specific performance requirements and weapon tiers.
+Two account-scoped initial workout paths; only original MYR5 and Blob 1 initially available.
+Orange War Room option previews, merged clothing groups, separate Ship editor tab, modest additional zoom.
+Camera/manual XP controls and session/menu resource cleanup; real automatic preparation recovery.
+Timed fish/food/classroom cameos, whiteboard squeak, removed goal-entry and Gear grimoire choices.
+Persistent pod terminals, physical controls, shared menu tilt.
+Spotify PKCE server connection, encrypted account tokens, playlists/Connect controls and native Jam links.
+
+Validation
+Production build passed. Offline core 8,010,430 / 8,388,608 bytes.
+Broad non-browser regression: 1,453 tests; 1,447 passed; six known failures reproduced in baseline (one palette shape assertion and five weapon-evolution tests).
+Focused browser tests cover 250-level map, early chrome, movement menu and standalone physical dock. Product-native phone QA verified map, original coach zoom, orange War Room options, Spotify terminal and compact hologram layout.
+Live authenticated Spotify login/playback was not tested in the local static preview.
+
+Release state
+Changes are implemented in the isolated working branch; production traffic was not changed.
+Public Spotify Client ID and callback are configured; user confirmed callback registration.
+Spotify encryption binding was staged as Worker version e76dc546-19ca-4541-9ac6-53ca28fce2de; not traffic-deployed.
+Remote migration inspection found only 0025_spotify_connection.sql and 0026_workout_paths.sql pending. New tables must be applied with the code release. 0022 was already applied remotely and is now also in the journal.
+Native Spotify Jam creation remains in Spotify; Coach accepts its invitation link. Tempo unavailable from this API stays idle rather than inventing a beat.
+
+External asset generator
+D:/MYR5 Roster/tools/publish_roster.py was corrected to preserve central names/exclusions and the current roster source path. No asset regeneration was run.

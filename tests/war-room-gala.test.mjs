@@ -32,10 +32,10 @@ test('the room bays map onto the existing Gala creator sections only',async()=>{
  assert.deepEqual(mirror,['body','skin','face','hair','facial'],'mirror: alien physical changes');
  for(const id of [...mirror,...clothes,'pet'])assert.ok(ids.includes(id),id+' is a Gala creator section');
  assert.equal(new Set([...mirror,...clothes,'pet']).size,mirror.length+clothes.length+1,'no section sits in two bays');
- assert.match(bay,/section==='pets'\)body\.replaceChildren\(\.\.\.sections\(\['pet'\]\),/);
+ assert.match(bay,/section==='pets'\)body\.replaceChildren\(\.\.\.editor\.parts\(\['pet'\]\),/);
  assert.match(bay,/coaches\.picker\('pet',load\)/);
  assert.match(bay,/coaches\.picker\('body',load\)/);
- assert.match(bay,/section==='weapons'\)body\.replaceChildren\(weaponForm\(\)\)/);
+ assert.match(bay,/section==='weapons'\)body\.replaceChildren\(editor\.weapons\(\)\)/);
  assert.match(bay,/IDLE_WALK_MS=10000/);
 });
 

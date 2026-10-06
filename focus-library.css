@@ -43,5 +43,35 @@
 /* The reminders-moved notice (launch.mjs): one compact row at the top, above the pod's update banner (pod.css, top:128px). */
 .reminders-moved{top:max(12px,env(safe-area-inset-top));bottom:auto;flex-wrap:nowrap;padding:10px}.reminders-moved [data-on]{flex:1;text-align:left}
 .training-rewards{padding:10px 12px;margin:8px 0 12px;border:1px solid #729b9a;background:#14282dcc;color:#e5fff6}.training-rewards p{margin:0;font-size:1rem}.training-reward-weapons{display:flex;gap:20px;flex-wrap:wrap}.training-reward-weapons>div{display:flex;align-items:center;gap:8px;min-width:130px;font-size:.875rem}.training-reward-weapons canvas{width:30px;height:54px;image-rendering:pixelated}.training-rewards small{font-size:.875rem;color:#bcd7d3}
-.library-kind{display:flex;gap:12px;align-items:center;margin:12px 0}.library-kind select{min-height:44px;max-width:100%;font:inherit}.movement-card .card-select{height:auto;display:flex;flex-direction:column}.movement-level{display:block;padding:8px 10px;color:#fff;font-size:14px}.movement-targets,.movement-xp{margin:8px 10px;font-size:12px;line-height:1.45;color:#ddd;overflow-wrap:anywhere}.movement-xp{color:#b8efda}#holoUnlockTargets{font-size:13px;line-height:1.5;padding:0 12px}#libraryEmpty{padding:18px;line-height:1.5}
+.library-kind{display:flex;gap:12px;align-items:center;margin:12px 0}.library-kind select{min-height:44px;max-width:100%;font:inherit}.movement-card .card-select{height:auto;display:flex;flex-direction:column}.movement-level{display:block;padding:8px 10px;color:#fff;font-size:14px}#libraryEmpty{padding:18px;line-height:1.5}
 #library .movement-card .card-select{display:flex;flex-direction:column;aspect-ratio:auto;height:auto}#library .card-select img{height:auto;aspect-ratio:1}#library[data-preview=true] .library-kind{display:none}.library-kind select{padding:12px;color:#eefcf9;background:#21332f;border:1px solid #9ac7b9;border-radius:8px}
+
+/* Full-height hologram terminal: guidance is etched on the glass, below the figure. */
+#library[data-preview=true]{overflow:hidden}
+#library[data-preview=true] .glass-shell{height:100dvh;min-height:0;overflow:hidden;box-sizing:border-box;padding:10px 12px}
+#library[data-preview=true] #hologramPanel{display:flex;flex-direction:column;min-height:0;height:100%;gap:6px}
+#library[data-preview=true] .holo-heading{flex:none;min-height:44px;gap:8px}
+#library[data-preview=true] .holo-heading h2{font-size:clamp(15px,4vw,19px);line-height:1.2}
+#library[data-preview=true] #holoStage{position:relative;flex:1 1 auto;min-height:0;max-height:none;width:100%;border-radius:14px}
+#library[data-preview=true] #holoStage canvas{z-index:1}
+#library[data-preview=true] #holoStage .holo-setup{position:absolute;z-index:3;left:8px;right:8px;bottom:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;padding:8px 10px;background:linear-gradient(90deg,#081e29ef,#0b2931e8);border:1px solid #7beed57d;border-radius:5px;box-shadow:0 0 16px #2bdac229;color:#bfffe9;font:11px/1.25 ui-monospace,SFMono-Regular,Consolas,monospace;pointer-events:none}
+#library[data-preview=true] #holoStage .holo-setup-block+.holo-setup-block{margin:0;padding:0;border:0}
+#library[data-preview=true] #holoStage .holo-setup h3{margin:0 0 3px;color:#58eac9;font:700 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em}
+#library[data-preview=true] #holoStage .holo-setup p{margin:2px 0;color:#c9f8ef}
+#library[data-preview=true] #holoStage .holo-setup .holo-position{font-size:11px;line-height:1.25;color:#f0fff7}
+#library[data-preview=true] #holoStage .holo-joints{gap:3px;margin:2px 0 3px;padding:0}
+#library[data-preview=true] #holoStage .holo-joints li{padding:2px 4px;border:1px solid #73eac288;border-radius:2px;background:#07372e;color:#e0fff2;font:10px/1.15 ui-monospace,SFMono-Regular,Consolas,monospace}
+#library[data-preview=true] #holoStage .holo-no-feet{grid-column:1/-1;margin:0;padding:2px 0 0;border-top:1px solid #5ab8a966;font-size:10px;color:#91ebd1}
+#library[data-preview=true] #useHologram{flex:none;min-height:52px;font-size:18px}
+@media(min-width:720px){#library[data-preview=true] #hologramPanel{display:flex}#library[data-preview=true] #holoStage{grid-column:auto;grid-row:auto;min-height:0;max-height:none}#library[data-preview=true] #useHologram{grid-column:auto;grid-row:auto}}
+@media(max-height:700px){#library[data-preview=true] .glass-shell{padding:6px 10px}#library[data-preview=true] #hologramPanel{gap:4px}#library[data-preview=true] #useHologram{min-height:48px}#library[data-preview=true] #holoStage .holo-setup{padding:5px 7px;bottom:6px}#library[data-preview=true] #holoStage .holo-no-feet{display:none}}
+/* The shared portal housing stops above its hardware dock. Keep the terminal inside
+   that face and let only the movement card grid scroll on short phones. */
+#library[data-route]{overflow:hidden}
+#library[data-route] .glass-shell{box-sizing:border-box;height:100%;min-height:0}
+#library[data-route][data-preview=false] .movement-cards{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
+#library[data-route][data-preview=true] .glass-shell{height:100%;min-height:0}
+#library[data-route][data-preview=true] #hologramPanel{height:100%;min-height:0}
+
+/* Shared metal terminals leave room for Back and Begin on phone holograms. */
+#library.portal-framed.has-pod-chrome .glass-shell{padding-top:54px!important;padding-bottom:38px!important}

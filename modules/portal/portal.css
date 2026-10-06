@@ -277,6 +277,36 @@ dialog.portal-framed.portal-fullscreen #coachDock{left:0!important;right:0!impor
 
 
 #coachDock.coach-dock button>span{pointer-events:none}
+
+/* One recessed ship console follows every route. Existing buttons keep their IDs and handlers. */
+#coachDock.coach-dock.ship-control-deck{border-top:3px solid #b8a890;background:radial-gradient(circle at 12px 9px,#d4c3a9 0 2px,#292832 3px 5px,transparent 6px),radial-gradient(circle at calc(100% - 12px) 9px,#d4c3a9 0 2px,#292832 3px 5px,transparent 6px),repeating-linear-gradient(90deg,#ffffff08 0 1px,transparent 1px 5px),linear-gradient(180deg,#48545a,#252f38 38%,#171e27);box-shadow:inset 0 2px #e5d8bd72,inset 0 7px 8px #1117229c,0 -4px 18px #070b11a8}
+#coachDock.coach-dock.ship-control-deck:after{content:'';position:absolute;left:8px;right:8px;top:9px;height:1px;background:linear-gradient(90deg,transparent,#d5c9ad80 15%,#d5c9ad80 85%,transparent);pointer-events:none}
+#coachDock.coach-dock.ship-control-deck :is(button,a).dock-control{filter:none;overflow:visible}
+#coachDock.coach-dock.ship-control-deck .dock-control>span{position:relative;box-sizing:border-box;width:35px;height:35px;border:2px solid #c6b9a0;border-top-color:#f1e3c7;border-bottom-color:#665e56;border-radius:4px;clip-path:none;background:linear-gradient(145deg,#bcc8c2,#81918f 43%,#4b5c60);box-shadow:inset 0 1px #fff9,inset -2px -3px #22343b88,0 3px 0 #182127,0 5px 5px #000a;color:#243640}
+#coachDock.coach-dock.ship-control-deck .dock-control>span:after{content:'';position:absolute;right:2px;top:2px;width:4px;height:4px;border-radius:50%;background:#263d40;box-shadow:0 0 0 1px #e5e1cb77}
+#coachDock.coach-dock.ship-control-deck .dock-control[aria-current=page]>span:after{background:#ffd07c;box-shadow:0 0 6px #ffce78,0 0 0 1px #ffeed3}
+#coachDock.coach-dock.ship-control-deck .dock-control>span svg{width:21px;height:21px;filter:drop-shadow(0 1px #f2ffed77)}
+#coachDock.coach-dock.ship-control-deck .dock-control:active>span,#coachDock.coach-dock.ship-control-deck .dock-control[aria-current=page]>span{transform:translateY(3px);box-shadow:inset 1px 3px 4px #1e2d34ad,0 1px 0 #182127;color:#17282a}
+#coachDock.coach-dock.ship-control-deck .dock-control:focus-visible{outline:3px solid #ffe19a;outline-offset:2px}
+#coachDock.coach-dock.ship-control-deck .dock-settings>span{border-radius:50%;background:radial-gradient(circle,#d6ddcf 0 24%,#8fa69e 25% 49%,#526d70 50% 67%,#b4bfb6 69%);box-shadow:inset 0 1px #fff9,0 3px #29363a,0 0 0 2px #132128}
+#coachDock.coach-dock.ship-control-deck .dock-scoreboard>span{border-radius:5px 5px 10px 10px;background:linear-gradient(90deg,#596b72 0 20%,#becac3 22% 72%,#596b72 75%);}
+#coachDock.coach-dock.ship-control-deck .dock-food>span{height:31px;border-radius:3px 3px 9px 9px;background:linear-gradient(#ffe0a9,#c69458 48%,#845837);color:#493322}
+#coachDock.coach-dock.ship-control-deck .dock-achievements>span{border-radius:3px;clip-path:polygon(0 0,100% 0,100% 71%,50% 100%,0 71%);background:linear-gradient(140deg,#ffe8ac,#b98b44 67%,#765223);color:#533e25}
+#coachDock.coach-dock.ship-control-deck .dock-pod>span{width:29px;border-radius:12px;background:linear-gradient(90deg,#496c70,#b8d1bd 35%,#6d9d92 65%,#35585d);color:#183b3c}
+#coachDock.coach-dock.ship-control-deck .dock-settings:after,#coachDock.coach-dock.ship-control-deck .dock-scoreboard:after,#coachDock.coach-dock.ship-control-deck .dock-food:after,#coachDock.coach-dock.ship-control-deck .dock-achievements:after,#coachDock.coach-dock.ship-control-deck .dock-pod:after{position:absolute;top:calc(100% + 4px);left:50%;translate:-50% 0;color:#c5d5cb;font:700 7px/1 ui-monospace,Consolas,monospace;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px #071118;pointer-events:none}
+#coachDock.coach-dock.ship-control-deck .dock-settings:after{content:'COACH'}#coachDock.coach-dock.ship-control-deck .dock-scoreboard:after{content:'SCORES'}#coachDock.coach-dock.ship-control-deck .dock-food:after{content:'FOOD'}#coachDock.coach-dock.ship-control-deck .dock-achievements:after{content:'BADGES'}#coachDock.coach-dock.ship-control-deck .dock-pod:after{content:'COMMS'}
+#coachDock.coach-dock.ship-control-deck :is(button,a).dock-portal{border:3px solid #9eb7b1;border-top-color:#e1eed6;border-bottom-color:#445b5b;border-radius:50%!important;background:radial-gradient(circle at 50% 40%,#1a4545 0 46%,#0b212a 47% 58%,transparent 59%),repeating-conic-gradient(#b6c6b3 0deg 8deg,#51666a 8deg 15deg);box-shadow:0 0 0 3px #17262b,0 4px 0 3px #0a141b,inset 0 0 11px #85f9ce7e,0 0 12px #85f9ce50;color:#d7ffe6;text-shadow:0 0 5px #71ebb0}
+#coachDock.coach-dock.ship-control-deck :is(button,a).dock-portal:before{display:none}
+#coachDock.coach-dock.ship-control-deck :is(button,a).dock-portal:active,#coachDock.coach-dock.ship-control-deck :is(button,a).dock-portal[aria-current=page]{transform:translateY(3px);box-shadow:0 0 0 3px #17262b,0 1px 0 3px #0a141b,inset 0 0 15px #a4ffe7,0 0 18px #88ffd2}
+#coachDock.coach-dock.ship-control-deck .dock-portal svg{width:20px;height:20px}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control{box-sizing:border-box;width:42px;height:43px;padding:15px 2px 2px;border:2px solid #afbbad;border-top-color:#e8e9d4;border-bottom-color:#566963;border-radius:4px!important;background:linear-gradient(145deg,#adbcb4,#526c6b 65%,#365154);box-shadow:inset 0 1px #fff9,inset 0 -2px #2a4747,0 3px #142324;color:#173f3a;font:700 8px ui-monospace,Consolas,monospace}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control:before{content:'';display:block;position:absolute;left:8px;top:5px;width:23px;height:8px;border:1px solid #172b2d;border-radius:2px;background:linear-gradient(90deg,#23383a 0 45%,#e4cfaa 48% 85%,#788c88 88%);box-shadow:inset 0 1px 2px #0008}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control[data-on=false]:before{background:linear-gradient(90deg,#e4cfaa 0 40%,#758c89 43%,#23383a 48%)}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control[data-on=true]{color:#f8e3ab;text-shadow:0 0 5px #ffe19a}
+#coachDock.coach-dock.ship-control-deck .dock-sound .cb-label{color:#c5d5cb}
+/* The logo in the ship header is the single brand mark in a framed workout view. */
+.portal-frame>b{display:none}
+@media(orientation:landscape) and (max-height:500px){#coachDock.coach-dock.ship-control-deck .dock-control:after{display:none}}
 .portal-menu{background:#000a0f!important;border-color:#ffffff22!important;position:relative}
 .portal-menu::backdrop{background:#000a0fcc!important}
 .portal-menu header h2{color:#ff8800!important;font-family:monospace!important;text-shadow:0 0 4px #ff8800!important}
@@ -284,3 +314,10 @@ dialog.portal-framed.portal-fullscreen #coachDock{left:0!important;right:0!impor
 .portal-menu::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background-image:repeating-linear-gradient(#000 0 1.5px,transparent 1.5px 3px);opacity:.22;animation:crt-roll 9s linear infinite;pointer-events:none;z-index:1}
 .portal-menu::after{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,#ffffff2e 0%,#ffffff12 12%,transparent 30%),radial-gradient(ellipse 60% 40% at 24% 10%,#ffffff26,transparent 55%),radial-gradient(ellipse 75% 70% at 50% 50%,transparent 42%,#000000b3 100%);pointer-events:none;z-index:2}
 @keyframes crt-roll{to{background-position-y:12px}}
+
+/* Keep seven physical controls on one rail before and after scene loading. */
+#coachDock.coach-dock.ship-control-deck{display:flex;justify-content:space-between;align-items:center;gap:3px}
+#coachDock.coach-dock.ship-control-deck .dock-control,#coachDock.coach-dock.ship-control-deck .dock-sound{flex:0 0 40px;min-width:0;width:40px}
+#coachDock.coach-dock.ship-control-deck .dock-portal{position:relative!important;left:auto!important;top:auto!important;translate:none!important;flex:0 0 56px;width:56px;min-width:56px}
+#coachDock.ship-control-deck .dock-settings{order:1}#coachDock.ship-control-deck .dock-food{order:2}#coachDock.ship-control-deck .dock-scoreboard{order:3}#coachDock.ship-control-deck .dock-portal{order:4}#coachDock.ship-control-deck .dock-achievements{order:5}#coachDock.ship-control-deck .dock-pod{order:6}#coachDock.ship-control-deck .dock-sound{order:7}
+#coachDock.ship-control-deck .dock-live{position:absolute}

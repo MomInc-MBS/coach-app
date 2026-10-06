@@ -1,0 +1,259 @@
+myr5
+  1. MYR5 Rocky Rep-bot
+  2. MYR5 Atlas Lift Prime
+
+roster/01-seed-pearo--3d_character_model
+  1. Jack Kornfield Mindful Cosmos
+  2. Pema Chodron Zen Android
+
+roster/01-seed-pearo--cute_alien_figure_3d_model
+  1. Robin Williams Alien Namaste
+  2. David Bow-ie Pose Stardust
+
+roster/01-seed-pearo--blank_toy_figure_3d_model
+  1. Run-DMC Sprint Matrix
+  2. Tom Cruise-Control Sprint Droid
+
+roster/02-taper-tallstalk--3d_humanoid_figure
+  1. Michael Jordan Leg-Day Space Jam
+  2. Cyber Cher Squat
+
+roster/02-taper-tallstalk--humanoid_robot_3d_model1
+  1. Arm-nald Space-anegar
+  2. Lou Ferrig-Delt-no Nova
+
+roster/02-taper-tallstalk--white_humanoid_doll_3d_model
+  1. Julius Squat-sar Starship
+  2. Napoleon Lunge-aparte Laser
+
+roster/03-pearl-orb-ring--abstract_humanoid_3d_model
+  1. Dolly Part-on-the-Hinge Droid
+  2. Bridge-Miley Cyrus Cyber
+
+roster/03-pearl-orb-ring--circle_center
+  1. Neil Arm-strong Hip-Thrust Moon
+  2. Glute-us Maximus Mech
+
+roster/03-pearl-orb-ring--ringed_humanoid_3d_model
+  1. Jane Fonda Cardio Cosmos
+  2. Richard Sweat-mons Spacesuit
+
+roster/03-pearl-orb-ring--robot_3d_model
+  1. Eliud Kipchoge Marathon Rocket
+  2. Mo Farah Far-Jog Cyborg
+
+roster/03-pearl-orb-ring--stylized_3d_character1
+  1. Marilyn Mon-row Hip-Hinge Satellite
+  2. Sir Glute-A-Lot Android
+
+roster/03-pearl-orb-ring--stylized_humanoid_figure_3d_model
+  1. Houdini Deadlift Cosmic Escape
+  2. Mae West Bridge Wormhole
+
+roster/04-crest-wedge--robot_creature_3d_model
+  1. Pec-asso Space Studio
+  2. Da Vinci Press-tige Quantum
+
+roster/04-crest-wedge--stylized_3d_character
+  1. Hugh Jackman Bench Mutant
+  2. Gal-actic Gadot Press
+
+roster/05-slope-bobble--clay_humanoid_figure_3d_model
+  1. Conor McGregor Spar-Gregor Ion
+  2. Floyd Mayweather Jab-Bot
+
+roster/06-ridge-triad--geometric_robot_3d_model1
+  1. Sylvester Stall-Press-one Cosmo
+  2. Vin Diesel Push-el Voyager
+
+roster/06-ridge-triad--robot_3d_model1
+  1. Roger Bannister Mile Warp
+  2. Pheidippides Marathon Mecha
+
+roster/07-bulb-sphereling--cute_robot_3d_model
+  1. Steve Prefontaine Run Starship
+  2. Paula Radcliffe Run Rover
+
+roster/07-bulb-sphereling--humanoid_robot_3d_model
+  1. Usain Bolt Sprint Hyperdrive
+  2. Carl Lewis Lightspeed Sprint
+
+roster/08-shard-asym--geometric_robot_3d_model
+  1. Jason Stat-Ham Bench-Bot
+  2. Mr. T-Push-Up Pulsar
+
+roster/08-shard-asym--robot_3d_model4
+  1. Eugen Sand-OW! Dumbbell Droid
+  2. Steve Reeve-Raise Hyperdrive
+
+roster/08-shard-asym--fantasy_creature_3d_model2
+  1. Ronda Rousey Armbar Rover
+  2. Pat Morita Crane-Kick Plasma
+
+roster/08-shard-asym--stylized_action_figure_3d_model
+  1. Joan of Arc Warrior Laser
+  2. Isaac Newton Tree Pose Gravity
+
+roster/09-monolith-tanka--3d_robot_model
+  1. Chris Pratt-Pushup Star-Lord
+  2. Terry Crews Pec-Crew Starship
+
+roster/09-monolith-tanka--boxy_humanoid_3d_model
+  1. Bruce L33 Kick
+  2. Jackie Chop-Chan Cosmos
+
+roster/09-monolith-tanka--mini_robot_3d_model
+  1. Sun Tzu Stance Starship
+  2. Miyamoto Musashi Stance Cyber
+
+roster/09-monolith-tanka--robot_3d_model3
+  1. Donnie Yen-Punch Warp
+  2. Steven Seagal Spar-Gal Android
+
+roster/09-monolith-tanka--white_horned_robot_3d_model
+  1. Mark Wahl-Bench Orbit
+  2. Zac Effort Push Neutron
+
+roster/10-petal-wisp--stylized_creature_3d_model
+  1. Joseph Pilates Laser-Core
+  2. BKS Iyengar Lunar Stretch
+
+roster/10-petal-wisp--ghost_character_3d_model
+  1. Gandhi Namaste Nebula
+  2. Snoop Downward Dogg Nova
+
+roster/10-petal-wisp--fantasy_creature_3d_model4
+  1. Bendy Buddha Supreme
+  2. Madon-Asana Orbit
+
+roster/11-anvil-cask--clay-style_robot_3d_model
+  1. Mike Tyson Punch-Out Mech
+  2. Muhammad Ali-en Jab
+
+roster/12-seedpod-snailslug--stylized_slug_3d_model
+  1. Sadhguru Mindful Moonbase
+  2. Maharishi Mantra Moonbase
+
+roster/12-seedpod-snailslug--stylized_worm_3d_model
+  1. Ram Dass Breath Cosmos
+  2. Confucius Say Zen Droid
+
+roster/13-fan-split--stylized_3d_character2
+  1. Cristiano Squat-aldo Rocket
+  2. Lionel Lunge-ssi Galaxy
+
+roster/13-fan-split--stylized_toy_3d_model
+  1. Michelle Yeoh Kick Multiverse
+  2. Sugar Ray Laser Jab
+
+roster/14-chisel-spire--cone_head_3d_model
+  1. Van Damme Kick Quantum
+  2. Jet Li Kick Starfighter
+
+roster/14-chisel-spire--low_poly_robot_3d_model
+  1. Socrates Mantra Mech
+  2. Mother Teresa Breath Terraform
+
+roster/15-orbital-coili--robot_character_3d_model
+  1. Tom Platz Squat-Platz Orbiter
+  2. Squat-rick Swayze Spaceship
+
+roster/16-spade-arch--pyramid_head_figure_3d_model
+  1. Franco Colum-Bench Starship
+  2. Cleo-Pec-tra Cyber
+
+roster/16-spade-arch--stylized_humanoid_3d_model
+  1. Dolph Pec-gren Ion
+  2. Chuck Nor-ribs Push-Up Planet
+
+roster/17-shellcap-manyarm--3d_character_figurine
+  1. Zyzz Zero-Gravity Shrug
+  2. Flex Wheeler Flex-Wheel Cosmic
+
+roster/17-shellcap-manyarm--mushroom_creature_3d_model
+  1. Hulk Hoga-Overhead Orbit
+  2. Chris Hemsworkout Starfarer
+
+roster/17-shellcap-manyarm--mushroom_robot_3d_model
+  1. Kai Greene-Lateral Laser
+  2. Phil Heath-Reactor Press Plasma
+
+roster/18-quad-all--dragon_creature_3d_model
+  1. Deep-ak Breath Nebula
+  2. Om-prah Mantra Mothership
+
+roster/18-quad-all--fantasy_creature_3d_model1
+  1. Dalai Zen-Llama Starship
+  2. Eckhart Tolle Zen Void
+
+roster/18-quad-all--fantasy_creature_3d_model3
+  1. Wim Hof Breath Cryopod
+  2. Jon Kabat-Zinn Mindful Quantum
+
+roster/18-quad-all--four-legged_robot_3d_model
+  1. Marcus Aurelius Zen Orbit
+  2. Lao Tzu Zen Teleporter
+
+roster/18-quad-all--quadruped_robot_3d_model1
+  1. Thich Nhat Hanh Breath Warp
+  2. Morgan Freeman Mindful Galaxy
+
+roster/18-quad-all--quadruped_robot_3d_model
+  1. Keanu Reeves Breath Matrix
+  2. Andy Puddicombe Mindful Spaceship
+
+roster/18-quad-all--robotic_dog_3d_model
+  1. Bob Ross Happy Mantra Planet
+  2. Mr. Rogers Zen Hologram
+
+roster/18-quad-all--wooden_four-legged_robot_3d_model
+  1. Genghis Squat-Khan Warp
+  2. Spartacus Leg-Press Rover
+
+roster/19-genie-multi--fantasy_creature_3d_model
+  1. Gwyneth Pose-trow Photon
+  2. Sting Tree Pose Starman
+
+roster/19-genie-multi--multi-armed_humanoid_3d_model1
+  1. Dwayne Shoulder-Rock-et
+  2. Ronnie Cole-Train Raise Cyborg
+
+roster/19-genie-multi--multi-armed_humanoid_3d_model
+  1. Frank Zane Zero-G Press
+  2. Jay Cutler Shrug-Droid
+
+roster/19-genie-multi--stylized_octopus_3d_model
+  1. Ringo Starr Octo-Stretch Cyborg
+  2. Benedict Cumber-Bend Portal
+
+roster/20-lume--robotic_figure_3d_model
+  1. Flo-Jo Sprint Laser
+  2. Jesse Owens Sprint Satellite
+
+roster/22-curve--stylized_alien_3d_model
+  1. Katy Purry Cat-Cow Cosmic
+  2. Lady Gaga-Stretch Galaxy
+
+roster/22-curve--stylized_cartoon_figure_3d_model
+  1. Frank Squat-ra Lunar
+  2. Elvis Pres-Squat Hoverbot
+
+roster/23-blob-texture-bodies--blob_creature_3d_model
+  1. Blob 1 · Jack LaLanne Lotus Nova
+  2. Blob 1 · Steve Jobs Zen Hologram
+
+roster/23-blob-texture-bodies--cute_blob_creature_3d_model
+  1. Tyra Bands Glute Planet
+  2. Venus Williams Hinge Orbit
+
+roster/23-blob-texture-bodies--honeycomb_humanoid_3d_model
+  1. Kim Glute-dashian Galaxy
+  2. J-Lo Hip-Thrust Orbit
+
+roster/23-blob-texture-bodies--patchwork_plush_figure_3d_model
+  1. Joe Weider Warp-Raise
+  2. Serena Williams Serve-Press Solar
+
+roster/23-blob-texture-bodies--sand_creature_3d_model
+  1. Bret Contreras Thrust-Bot
+  2. Nicki Minaj Bridge Jetpack

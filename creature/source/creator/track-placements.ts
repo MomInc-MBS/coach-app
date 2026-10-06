@@ -18,11 +18,13 @@
 // Monolith · Tanka 4, Four-legged 8) are not in this roster at all -- see design.ts
 // REJECTED_BODY_IDS, reused below as the "no rejected id present" guard.
 //
-// unlockRule: 'section-complete' (Ian, 23 Sept, #102) -- see sectionComplete() at the end. renderRecipe
+// unlockRule follows central coach performance access. sectionComplete() remains board metadata. renderRecipe
 // is still a placeholder: the production pixel-art recipe is a later rank (handoff §9 step 2).
 import {REJECTED_BODY_IDS} from './design';
 import {ROWS as BOARD_ROWS,TRACKS,LEVELS_PER_BOSS} from '../../../battle-pass-rewards.mjs';
 import {coachAccess} from '../../../performance-progress.mjs';
+import {STARTER_COACH_IDS,EXCLUDED_COACH_IDS} from '../../../performance-catalog.mjs';
+import {coachRequirements} from '../../../achievements-board.mjs';
 export {REJECTED_BODY_IDS};
 
 export const TRACK_IDS = ['chest', 'quads', 'glutes', 'arms', 'yoga', 'martial-arts', 'cardio', 'meditation'] as const;
@@ -37,7 +39,7 @@ export type TrackPlacement = {
  bossOf?: TrackId; // starting-boss assignment per 06-workout-bosses-and-meditation-pets.png, if any
  sourceAsset: string; // GLB path, relative to the repo root
  license: string;
- unlockRule: 'section-complete'; // unlocks when one of its sections is complete (sectionComplete below)
+ unlockRule: 'performance-milestone';
  renderRecipe: 'tbd'; // placeholder -- production sprite recipe not authorized yet
 };
 
@@ -118,7 +120,7 @@ const ROWS: readonly Row[] = [
 export const TRACK_PLACEMENTS: readonly TrackPlacement[] = ROWS.map(
  ([stableId, displayName, tracks, petEligible, mountEligible, bossOf]) => ({
   stableId, displayName, tracks, petEligible, mountEligible, bossOf,
-  sourceAsset: glb(stableId), license: LICENSE, unlockRule: 'section-complete', renderRecipe: 'tbd',
+  sourceAsset: glb(stableId), license: LICENSE, unlockRule: 'performance-milestone', renderRecipe: 'tbd',
  }),
 );
 
@@ -132,21 +134,10 @@ export function sectionComplete(track:TrackId,state:Record<string,number>){
 }
 /** Section names as the board shows them, in dial order (TRACK_IDS). */
 export const SECTION_NAMES=Object.fromEntries(TRACK_IDS.map(t=>[t,TRACKS[rowOf(t)!.track!].name])) as Record<TrackId,string>;
-// #138 (D45; owner answers D47): what a new user may use before completing any section -- the ONE
-// table to edit. Unplaced bodies (the Starter group) are always usable; everything else previews locked.
-export const NEW_USER_BODIES=Object.freeze({
- meditation:['roster/23-blob-texture-bodies--blob_creature_3d_model'] as readonly string[], // Blob 1, Ian's "bulbous one"
- paths:2, // the user's first N picked paths (battle-pass.mjs selectedTracks() order, meditation left out)...
- perPath:1, // ...and the first N bodies of each (ROWS order above)
-});
-function newUserBody(id:string,tracks:Iterable<string>){
- const paths=[...tracks].map(t=>(TRACKS as Record<string,{catalog:string}|undefined>)[t]?.catalog).filter(t=>t&&t!=='meditation').slice(0,NEW_USER_BODIES.paths);
- return NEW_USER_BODIES.meditation.includes(id)||paths.some(t=>TRACK_PLACEMENTS.filter(p=>p.tracks.includes(t as TrackId)).slice(0,NEW_USER_BODIES.perPath).some(p=>p.stableId===id));
-}
-/** What to complete to unlock a body ("Chest", "Chest or Martial Arts"), or null for a starter body
- * (Original MYR5 and unplaced roster bodies), a new-user body for `tracks` (battle-pass.mjs
- * selectedTracks(), D25 ids) or one with a completed section. */
-export function bodyLockSection(id:string,state:Record<string,number>,tracks:Iterable<string>=[]):string|null{
- const placement=TRACK_PLACEMENTS.find(p=>p.stableId===id);
- return !placement||coachAccess(id)?null:placement.tracks.map(t=>SECTION_NAMES[t]+' performance milestone').join(' or ');
+/** Display the central performance requirement. Old board-progress arguments remain for callers,
+ * but board sections and previously saved recipes never authorize a coach body. */
+export function bodyLockSection(id:string,_state:Record<string,number>,_tracks:Iterable<string>=[]):string|null{
+ if(REJECTED_BODY_IDS.has(id)||EXCLUDED_COACH_IDS.includes(id))return 'Unavailable coach';
+ if(STARTER_COACH_IDS.includes(id)||coachAccess(id))return null;
+ return coachRequirements(id)?.unlock||'Coach performance milestone required';
 }

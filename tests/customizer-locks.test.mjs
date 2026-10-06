@@ -7,15 +7,16 @@ import {build} from 'esbuild';
 const memory=new Map();
 globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k),clear:()=>memory.clear()};
 const result=await build({
- stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
+ stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export {choosePerformancePaths,recordPerformanceSession} from './performance-progress.mjs';export {coachRequirements} from './achievements-board.mjs';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,isLocked,resolveRegionMaterial,grantUnlock,grandfatherSwappedTextures,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,frameRegion,T}=m;
+const {saveRecipe,keepOwned,loadRecipe,fresh,RECIPE_KEY,isLocked,resolveRegionMaterial,grantUnlock,grandfatherSwappedTextures,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
-const STARTER_BODY='roster/21-flyer--winged_humanoid_3d_model'; // Flyer 1, no placement
+const STARTER_BODY='roster/23-blob-texture-bodies--blob_creature_3d_model'; // Blob 1
+const EXCLUDED_BODY='roster/21-flyer--winged_humanoid_3d_model'; // formerly selectable Flyer 1
 const row=(id,n,levels)=>Object.fromEntries(Array.from({length:n},(_,i)=>[`${id}-${i+1}`,levels]));
 const owned={...fresh(),materials:{body:{textureId:'flat',colorId:'#2454d6',sparkle:0,metallic:0}}};
 
@@ -78,7 +79,7 @@ test('#140 grandfather: a coach saved with a newly locked texture keeps it, once
  assert.deepEqual(saveRecipe(localStorage,before,before).materials,before.materials,'the save guard keeps it');
  grandfatherSwappedTextures({...fresh(),materials:{body:{...magma,textureId:'legacy-14'}}});
  assert.equal(isLocked('legacy-14'),true,'one-time: a later recipe grants nothing');
- assert.deepEqual(JSON.parse(localStorage.getItem('myr5-unlocks-v1')).texture,['legacy-15']);
+ assert.ok([...memory.keys()].some(key=>key.startsWith('myr5-unlocks-v2/')&&JSON.parse(memory.get(key)).texture?.some(id=>id.endsWith(':legacy-15'))),'the earned legacy finish stays scoped to its coach');
 });
 
 test('sectionComplete: every boss in the section row fully beaten (sample board progress)',()=>{
@@ -90,32 +91,48 @@ test('sectionComplete: every boss in the section row fully beaten (sample board 
  assert.equal(sectionComplete('quads',row('strider',6,5)),false);
 });
 
-test('body locks: starter bodies never lock, a section body unlocks with its section, the dual body with either',()=>{
+test('body locks use performance ownership and the central requirement, not completed board sections',()=>{
+ memory.clear();
  assert.equal(bodyLockSection('myr5',{}),null);assert.equal(bodyLockSection(STARTER_BODY,{}),null);
- assert.equal(bodyLockSection(CHEST_BODY,{}),'Chest');
- assert.equal(bodyLockSection(CHEST_BODY,row('strider',6,5)),null);
- assert.equal(bodyLockSection(DUAL_BODY,{}),'Chest or Martial Arts');
- assert.equal(bodyLockSection(DUAL_BODY,row('cap',3,5)),null);
- assert.ok(TRACK_PLACEMENTS.every(p=>p.unlockRule==='section-complete'));
+ assert.equal(bodyLockSection(EXCLUDED_BODY,{}),'Unavailable coach');
+ assert.equal(bodyLockSection(CHEST_BODY,{}),coachRequirements(CHEST_BODY).unlock);
+ assert.equal(bodyLockSection(CHEST_BODY,row('strider',6,5)),coachRequirements(CHEST_BODY).unlock);
+ assert.equal(bodyLockSection(DUAL_BODY,row('cap',3,5)),coachRequirements(DUAL_BODY).unlock);
+ recordPerformanceSession({id:'chest-proof',group:'chest',kind:'reps',difficulty:coachRequirements(CHEST_BODY).difficulty,value:15});
+ assert.equal(bodyLockSection(CHEST_BODY,{}),null,'real workout proof grants access');
+ assert.ok(TRACK_PLACEMENTS.every(p=>p.unlockRule==='performance-milestone'));
 });
 
 test('#138 save guard: a new user\'s allowed body saves, a locked one is rejected',()=>{
- memory.clear();localStorage.setItem('myr5-selected-tracks-v1',JSON.stringify(['chest','quads']));
+ memory.clear();choosePerformancePaths(['chest','quads']);
  const ridge='roster/06-ridge-triad--geometric_robot_3d_model1',shard='roster/08-shard-asym--geometric_robot_3d_model';
  const as=id=>({...fresh(),body:id,headFrom:id,armsFrom:id,feetFrom:id});
  assert.equal(saveRecipe(localStorage,as(ridge),fresh()).body,ridge,'first Chest body: allowed');
  assert.equal(saveRecipe(localStorage,as(shard),as(ridge)).body,ridge,'second Chest body: locked, falls back to the last owned body');
 });
 
-test('a grandfathered saved body still loads and stays saved; a new locked pick is rejected',()=>{
+test('a saved unearned body cannot grandfather access, while non-body look data survives',()=>{
  memory.clear();
  const old={...fresh(),body:CHEST_BODY,headFrom:CHEST_BODY,armsFrom:CHEST_BODY,feetFrom:CHEST_BODY};
  localStorage.setItem(RECIPE_KEY,JSON.stringify(old));
  const loaded=loadRecipe(localStorage);assert.equal(loaded.body,CHEST_BODY);
  const grandfathered=new Set([loaded.body,loaded.headFrom,loaded.armsFrom,loaded.feetFrom]);
- assert.equal(saveRecipe(localStorage,{...loaded,fur:1.2},loaded,grandfathered).body,CHEST_BODY);
+ const saved=saveRecipe(localStorage,{...loaded,fur:1.2},loaded,grandfathered);
+ assert.equal(saved.body,'myr5');assert.equal(saved.fur,1.2);
+ for(const key of ['headFrom','armsFrom','feetFrom'])assert.equal(saved[key],'myr5');
  const quads='roster/22-curve--stylized_cartoon_figure_3d_model';
- assert.equal(saveRecipe(localStorage,{...loaded,body:quads,headFrom:quads,armsFrom:quads,feetFrom:quads},loaded,grandfathered).body,CHEST_BODY,'falls back to the last owned body');
+ assert.equal(saveRecipe(localStorage,{...loaded,body:quads,headFrom:quads,armsFrom:quads,feetFrom:quads},loaded,grandfathered).body,'myr5','an unearned lastOwned body cannot be reused');
+ assert.equal(saveRecipe(localStorage,{...loaded,body:EXCLUDED_BODY},loaded,new Set([EXCLUDED_BODY])).body,'myr5','excluded saved IDs cannot be selected');
+});
+
+test('ship save guard rejects unearned selection and stale last-owned ship',()=>{
+ memory.clear();
+ const forced={...fresh(),shipId:'direct',shipColor:'#ff3b30'};
+ const saved=saveRecipe(localStorage,forced,{...fresh(),shipId:'analytical'});
+ assert.equal(saved.shipId,'supportive');
+ assert.equal(saved.shipColor,'#ff3b30','ship colour is independent of ship access');
+ assert.equal(JSON.parse(localStorage.getItem(RECIPE_KEY)).shipId,'supportive');
+ assert.equal(saveRecipe(localStorage,{...fresh(),shipId:'supportive'},forced).shipId,'supportive');
 });
 
 test('whole-creature framing from the back keeps every corner on screen',()=>{

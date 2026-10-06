@@ -19,7 +19,7 @@ function serve(appSource){
   if(appSource&&path==='/app-runtime.mjs'){res.setHeader('Content-Type','text/javascript');res.end(appSource);return;}
   if(path==='/api/account'||path==='/api/breathing/start'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/account'?account:{id:'housing-ticket',startedAt:Date.now(),durationMs:180000,targetAccountId:account.user.id,dataEpoch:1}));return;}
   if(path.startsWith('/api/')){res.writeHead(path==='/api/auth/config'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/auth/config'?{enabled:false}:{error:'Sign in'}));return;}
-  try{const root=path.startsWith('/modules/portal/')||path==='/meditation.css'?source:built,file=resolve(root,'.'+(path==='/'?'/pose.html':path));if(!file.startsWith(root+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
+  try{const root=path.startsWith('/modules/portal/')||path==='/modules/pod-chrome.mjs'||path==='/meditation.css'||path==='/focus-library.css'?source:built,file=resolve(root,'.'+(path==='/'?'/pose.html':path));if(!file.startsWith(root+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
  });
 }
 async function openApp(browser,base,reducedMotion,viewport,initialRoute=''){
@@ -50,6 +50,44 @@ test.before(async()=>{
  await mkdir(FRAMES_DIR,{recursive:true});
 });
 test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r));});
+
+test('pod starts with cheap grimoire and DJ controls, then swaps to the real grimoire without opening the quilt',{timeout:90000},async()=>{
+ const {context,page}=await openApp(browser,base,'reduce',{width:375,height:812},'pod');try{
+  await page.waitForFunction(()=>document.querySelector('#podPersistentChrome #podGrimoireLazyOpen')&&document.querySelector('#spotifyNowPlayingOpen'));
+ assert.equal(await page.locator('#podPersistentChrome').count(),1);
+ assert.equal(await page.locator('#portalHome').count(),0,'heavy portal remains lazy on the initial pod');
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='warning'||message.type()==='error')errors.push(message.text());});
+  await page.locator('#podGrimoireLazyOpen').click();
+  try{await page.waitForFunction(()=>document.querySelector('#portalMenu')?.open&&document.querySelector('#podPersistentChrome #portalSettingsButton'),null,{timeout:8000});}catch{throw Error(JSON.stringify({errors,state:await page.evaluate(()=>({portalHome:!!document.getElementById('portalHome'),menu:document.getElementById('portalMenu')?.open,stub:!!document.getElementById('podGrimoireLazyOpen'),real:!!document.querySelector('#podPersistentChrome #portalSettingsButton'),chrome:document.getElementById('podPersistentChrome')?.outerHTML.slice(0,450)}))}));}
+  assert.equal(await page.locator('#podPersistentChrome').count(),1,'real button replaces the stub in the same chrome');
+  assert.equal(await page.locator('#podGrimoireLazyOpen').count(),0);
+  assert.equal(await page.locator('#portalHome').evaluate(el=>el.hidden),true,'opening grimoire does not expose the quilt');
+  await page.locator('#portalMenu [data-menu-close]').click();
+  await page.waitForFunction(()=>!document.getElementById('portalMenu')?.open);
+  assert.equal(await page.locator('#portalHome').evaluate(el=>el.hidden),true,'closing direct grimoire returns to the pod');
+ }finally{await context.close();}
+});
+
+test('movement library adopts shared housing and tilt while its hologram guidance and Begin fit on a phone',{timeout:90000},async()=>{
+ const {context,page}=await openApp(browser,base,'no-preference',{width:375,height:667});try{
+  await page.evaluate(()=>window.myr5Routes.go('pod'));
+  await page.locator('#openLibrary').click();
+  await page.waitForFunction(()=>document.querySelector('#library.portal-framed.portal-fullscreen')?.open&&window.myr5Routes.current()==='library');
+  await page.locator('#movementCards .card-select:visible').first().click();
+  await page.waitForFunction(()=>document.getElementById('library')?.dataset.preview==='true');
+  await page.waitForFunction(()=>{const d=document.getElementById('library'),begin=document.getElementById('useHologram');return d&&begin&&d.scrollHeight-d.clientHeight<=2&&begin.getBoundingClientRect().bottom<=d.getBoundingClientRect().bottom+2;});
+  const layout=await page.evaluate(()=>{const d=document.getElementById('library'),stage=document.getElementById('holoStage'),setup=stage.querySelector('.holo-setup'),begin=document.getElementById('useHologram'),shell=d.querySelector('.glass-shell'),panel=document.getElementById('hologramPanel');const r=e=>e.getBoundingClientRect();return{dialog:r(d).toJSON(),shell:r(shell).toJSON(),panel:r(panel).toJSON(),stage:r(stage).toJSON(),setup:r(setup).toJSON(),begin:r(begin).toJSON(),styles:Object.fromEntries([shell,panel,stage].map((el,i)=>[i,{height:getComputedStyle(el).height,minHeight:getComputedStyle(el).minHeight,flex:getComputedStyle(el).flex,overflow:getComputedStyle(el).overflow}])),outerOverflow:d.scrollHeight-d.clientHeight,stageOverflow:stage.scrollHeight-stage.clientHeight,framed:d.classList.contains('portal-framed'),route:d.dataset.route};});
+  assert.equal(layout.route,'library');assert.equal(layout.framed,true);
+  assert.ok(layout.outerOverflow<=2,JSON.stringify(layout));
+  assert.ok(layout.stage.height>100&&layout.setup.bottom<=layout.stage.bottom+2,JSON.stringify(layout));
+  assert.ok(layout.begin.bottom<=layout.dialog.bottom+2&&layout.begin.top>=layout.dialog.top,JSON.stringify(layout));
+  await page.mouse.move(30,250);await page.waitForTimeout(200);const left=await page.locator('#holoStage').evaluate(el=>getComputedStyle(el).translate);
+  await page.mouse.move(340,300);await page.waitForTimeout(300);const right=await page.locator('#holoStage').evaluate(el=>getComputedStyle(el).translate);
+  assert.notEqual(left,right,'shared peer owner moves the hologram layer');
+  await page.locator('#coachDock [data-route="portal"]').click();
+  await page.waitForFunction(()=>!document.getElementById('library')?.open);
+ }finally{await context.close();}
+});
 
 test('abandoned direct housing requests cannot reopen after Home or supersede a newer route',{timeout:60000},async()=>{
  const {context,page}=await openApp(browser,base,'reduce',{width:375,height:812});try{

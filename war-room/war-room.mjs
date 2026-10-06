@@ -4,6 +4,7 @@ import {equipmentProgress} from '../pod/rest-arena.mjs';
 import {authTransitions} from '../auth-transition.mjs';
 import {createWarRoomApi} from './account-api.mjs';
 const css=document.createElement('link');css.rel='stylesheet';css.href='/war-room/war-room.css';document.head.append(css);
+const bayCss=document.createElement('link');bayCss.rel='stylesheet';bayCss.href='/war-room/gala-bay.css';document.head.append(bayCss);
 const $=id=>document.getElementById(id);
 const CHECKS=[['djscratch','DJ Scratch'],['gala','Gala'],['lilboyfriend','Lil Boyfriend'],['corgi','Corgi'],['hand','Helping Hand'],['armie','Coach Armie']];
 const transitions=authTransitions(),{api}=createWarRoomApi({request:authFetch,transitions}),accountContext=createStandaloneAccountContext({transitions});
@@ -37,10 +38,20 @@ function mountCharacterBay(){
  const host=$('warRoomGalaHost'),status=$('characterBayStatus');
  if(!host||!status)return;
  const tell=text=>{status.textContent=text;};
- let bay=null,module=null;
- const open=()=>{module??=import('/war-room/gala-bay.js');module.then(({mountGalaBay})=>{bay?.dispose();bay=mountGalaBay(host,{tell});window.warRoomGala=bay;tell('Tap the room or your character.');}).catch(()=>tell('Bay unavailable on this device.'));};
- addEventListener('pagehide',()=>{bay?.dispose();bay=null;});
+ let bay=null,module=null,generation=0;
+ const close=()=>{generation++;bay?.dispose();bay=null;window.warRoomGala=null;};
+ const open=()=>{
+  if(document.hidden||!host.isConnected||bay)return;
+  const run=++generation;
+  module??=import('/war-room/gala-bay.js');
+  module.then(({mountGalaBay})=>{
+   if(run!==generation||document.hidden||!host.isConnected)return;
+   bay=mountGalaBay(host,{tell});window.warRoomGala=bay;tell('Tap the room or your character.');
+  }).catch(()=>{if(run===generation)tell('Bay unavailable on this device.');});
+ };
+ addEventListener('pagehide',close);
  addEventListener('pageshow',event=>{if(event.persisted)open();});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)close();else open();});
  open();
 }
 mountCharacterBay();

@@ -49,14 +49,14 @@ test('W2-2O: the portal scenes’ code (renderer, GLTF loader, ship view, pyrami
   await writeFile(join(root,'pose.html'),'<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js"}}</script><script src="/app-runtime.mjs"></script>');
   await writeFile(join(root,'app-runtime.mjs'),"import('./modules/portal/portal-entry.mjs');import('./modules/ships/ship-view.mjs');import('./food/pyramid-scanner.mjs')");
   await writeFile(join(root,'modules/ships/ship-view.mjs'),"const ship='/pod/worlds/starter/supportive.glb'");
-  await writeFile(join(root,'food/pyramid-scanner.mjs'),"fetch('/food/pyramid-scanner.glb')");
+  await writeFile(join(root,'food/pyramid-scanner.mjs'),"fetch('/food/pyramid-scanner.glb');img.src='/food/drgf-paper-character.png'");
   await writeFile(join(root,'modules/portal/portal-entry.mjs'),"import './portal.mjs'");
   await writeFile(join(root,'modules/portal/portal.mjs'),"import 'three';const texture='/pod/worlds/quilt.webp'");
-  for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp','pod/worlds/starter/supportive.glb','food/pyramid-scanner.glb'])await writeFile(join(root,name),'fixture');
+  for(const name of ['vendor/three/three.module.js','vendor/three/GLTFLoader.js','pod/worlds/quilt.webp','pod/worlds/starter/supportive.glb','food/pyramid-scanner.glb','food/drgf-paper-character.png'])await writeFile(join(root,name),'fixture');
   const {core,optional}=await offlineInventory(root);
  // GLTFLoader is shared by the hologram, the ships and the Food pyramid, so it can't sit in one optional group (release 5 review #6).
   for(const url of ['/modules/portal/portal-entry.mjs','/modules/portal/portal.mjs','/vendor/three/three.module.js','/vendor/three/GLTFLoader.js','/modules/ships/ship-view.mjs','/food/pyramid-scanner.mjs'])assert(core.some(a=>a.url===url),url);
-  assert.deepEqual(optional.map(a=>[a.url,a.group]),[['/food/pyramid-scanner.glb','starter'],['/pod/worlds/quilt.webp','starter'],['/pod/worlds/starter/supportive.glb','starter']]);
+  assert.deepEqual(optional.map(a=>[a.url,a.group]),[['/food/drgf-paper-character.png','food'],['/food/pyramid-scanner.glb','starter'],['/pod/worlds/quilt.webp','starter'],['/pod/worlds/starter/supportive.glb','starter']]);
  }finally{await rm(root,{recursive:true,force:true});}
 });
 

@@ -30,7 +30,7 @@ test('storage read/write, missing channel and postMessage failures fail closed',
 const launch=await readFile(new URL('../launch.mjs',import.meta.url),'utf8');
 const refreshSource=launch.split('\n').find(line=>line.startsWith('async function refresh('));
 function refreshHarness(transitions,api){
- const applied=[],context={account:null,revision:0,accountTransitionBusy:false,accountTransitions:transitions,packGrantCache:{confirm(){},deactivate(){},active(){return null;}},optionalReadiness:{refresh:async()=>false},api,applyCoachAccount:v=>applied.push(v.user.id),$:()=>({replaceChildren(){}}),set(){},publishProgress(){},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},scoreboard:{clear(){}},clearCoachAccount(){},liveReminders:{update(){},render(){}}};
+ const applied=[],context={account:null,revision:0,accountTransitionBusy:false,accountTransitions:transitions,packGrantCache:{confirm(){},deactivate(){},active(){return null;}},optionalReadiness:{refresh:async()=>false},api,mergeVerifiedPerformance(){},applyCoachAccount:v=>applied.push(v.user.id),$:()=>({replaceChildren(){}}),set(){},publishProgress(){},syncDeviceSwitch:async()=>{},flushSets:async()=>{},window:{},navigator:{onLine:true},scoreboard:{clear(){}},clearCoachAccount(){},liveReminders:{update(){},render(){}}};
  vm.createContext(context);vm.runInContext(refreshSource+';this.refresh=refresh;',context);return {context,applied};
 }
 const account=id=>({user:{id,provider:'chatgpt',email:id},dataEpoch:1,revision:0,push:{},progress:{}});

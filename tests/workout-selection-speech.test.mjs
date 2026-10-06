@@ -43,7 +43,7 @@ test('camera Begin announces the selected exercise before camera setup',async()=
  assert.ok(begin.includes('voice.say'));
  for(const [mode,movement] of Object.entries(MOVEMENTS)){
   const spoken=[],state={phase:'idle'},elements={trainingView:{scrollIntoView(){}},detail:{}};
-  await vm.runInNewContext(`(async()=>{${begin}})()`,{generation:0,release(){},state,controls(){},resetMovement(){},$:id=>elements[id],status(){},voice:{say:(text,options)=>spoken.push([text,options?.key])},MOVEMENTS,session:{mode}});
+  await vm.runInNewContext(`(async()=>{${begin}})()`,{generation:0,release(){},state,controls(){},resetMovement(){},freezeSettings(){},$:id=>elements[id],status(){},voice:{say:(text,options)=>spoken.push([text,options?.key])},MOVEMENTS,session:{mode}});
   assert.equal(state.phase,'camera');assert.deepEqual(spoken,[[movement.name+' selected.','movement'],['Get into position.','setup']],mode);
  }
 });

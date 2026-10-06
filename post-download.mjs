@@ -20,7 +20,6 @@ const GROUPS=[
  ['starter','Starter: portal, pyramid, ship and worlds','The offline workout tracker, the quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
  ['grimoire-ice','Crystal grimoire portal','Crystal board art and its reflective color-matched wormhole.'],
  ['grimoire-grass','Grass grimoire portal','Grass and flower art with its dirt, roots and bugs wormhole.'],
- ['grimoire-cogs','Cogs grimoire portal','Mechanical board parts and their pipe and steam wormhole.'],
  ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
  ['grimoire-wood','Wood grimoire portal','Wood board art and its ember, bark and charcoal wormhole.'],
  ['grimoire-pond','Pond grimoire portal','Pond poster art and its murky water, lily and koi wormhole.'],

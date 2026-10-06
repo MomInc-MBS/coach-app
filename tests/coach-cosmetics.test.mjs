@@ -10,6 +10,7 @@ const bundled=await build({stdin:{contents:"export * from './creature/source/cre
 const mod=await import('data:text/javascript;base64,'+Buffer.from(bundled.outputFiles[0].text).toString('base64'));
 const avatarContext={window:{}};vm.runInNewContext(await readFile(new URL('../pod/gala-avatar.js',import.meta.url),'utf8'),avatarContext);globalThis.GalaAvatar=avatarContext.window.GalaAvatar;
 const {performanceOwner,readPerformanceProgress,PERFORMANCE_KEY,unlockedCoachIds}=await import('../performance-progress.mjs');
+const {COACHES,EXCLUDED_COACH_IDS}=await import('../performance-catalog.mjs');
 
 class Element{
  constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.attributes={};}
@@ -46,16 +47,20 @@ test('the mirror skin helper uses the same palette and shade as regular Gala ava
  assert.notEqual(A.skinColor({...A.defaultLook,parts:{...A.defaultLook.parts,skin:10}}),'#b18fc8');
 });
 
-test('all owned coaches have selectable 64-bit characters immediately, including quadrupeds, and mirror colors redraw them',async()=>{
+test('approved 64-bit coaches follow ownership, including quadrupeds, and mirror colors redraw them',async()=>{
  memory.clear();const room=await mod.loadWarRoomCoaches(doc),picker=room.picker('body',()=>{});
  const buttons=picker.children.filter(child=>child.dataset?.coachSprite);
- assert.equal(new Set(buttons.map(button=>button.dataset.coachSprite)).size,67);
+ assert.equal(new Set(buttons.map(button=>button.dataset.coachSprite)).size,COACHES.length);
+ assert.ok(EXCLUDED_COACH_IDS.every(id=>!buttons.some(button=>button.dataset.coachSprite===id)),'rejected legacy sprites remain hidden from the picker');
  const original=buttons.find(button=>button.dataset.coachSprite==='myr5');assert(!original.disabled);original.onclick();assert(room.hasBody);
  const one=new Canvas(),two=new Canvas(),A=globalThis.GalaAvatar;
  room.draw(()=>assert.fail('Selected coach should render its shape'),one,{...A.defaultLook,parts:{...A.defaultLook.parts,skin:0}});
  room.draw(()=>assert.fail('Selected coach should render its shape'),two,{...A.defaultLook,parts:{...A.defaultLook.parts,skin:1}});
  assert.notDeepEqual([...one.pixels.slice(0,3)],[...two.pixels.slice(0,3)]);
- const quad=buttons.find(button=>manifest.sprites.find(sprite=>sprite.id===button.dataset.coachSprite)?.kind==='pet'&&!button.disabled);assert(quad);quad.onclick();assert(room.hasBody);
+ const quad=buttons.find(button=>manifest.sprites.find(sprite=>sprite.id===button.dataset.coachSprite)?.kind==='pet');assert(quad);assert(quad.disabled,'unearned quadruped starts locked');
+ const state=readPerformanceProgress();state.coaches.push(quad.dataset.coachSprite);localStorage.setItem(`${PERFORMANCE_KEY}/${performanceOwner()}`,JSON.stringify(state));
+ const earnedRoom=await mod.loadWarRoomCoaches(doc),earnedButton=earnedRoom.picker('body',()=>{}).children.find(button=>button.dataset?.coachSprite===quad.dataset.coachSprite);
+ assert.equal(earnedButton.disabled,false,'an earned quadruped becomes selectable');earnedButton.onclick();assert(earnedRoom.hasBody);
 });
 
 test('golden coach sprite variants are selectable separately and remain scoped to their owner',async()=>{

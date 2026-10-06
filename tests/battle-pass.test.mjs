@@ -19,7 +19,6 @@ const nobody={onboarding:{data:{profile:{exercises:[]}}}};
 const steps=obj=>Object.fromEntries(Object.entries(obj).map(([t,s])=>[t,{steps:s}])); // circuit.mjs track ids
 const row=(progress,id)=>BOSSES.filter(b=>b.row===id).map(b=>progress[b.id]);
 const fresh=()=>{memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'battle-pass-test'}};};
-const ALL_TRACKS=['chest','quads','glutes','arms-shoulders','yoga','martial-arts','cardio'];
 const allSteps=n=>steps({chest:n,legs:n,hips:n,shoulders:n,yoga:n,'martial-arts':n,cardio:n,meditation:n,food:n});
 
 test('pack ladder retains fixed weapons, pet, boss looks and ship placement',()=>{
@@ -60,7 +59,7 @@ test('legacy food reward definitions remain readable without minting new step-ba
 const {recordPerformanceSession,recordDailyActivity,readPerformanceProgress}=await import('../performance-progress.mjs');
 const {COACH_REQUIREMENTS}=await import('../performance-catalog.mjs');
 test('cosmetic pass grants packs from XP once, never performance items from circuit steps',()=>{
- fresh();setSelectedTracks(ALL_TRACKS);
+ fresh();setSelectedTracks(['chest','quads']);
  const old=syncBattlePass({tracks:allSteps(99999)});assert.equal(old.granted.length,0);
  recordPerformanceSession({id:'saved-hold',mode:'horse',kind:'hold',difficulty:'easy',activeSeconds:15,continuousSeconds:15,xpBase:1,earnedCoachCount:0,day:'2026-10-04'});
  recordDailyActivity('meditation',{id:'med',day:'2026-10-04'});recordDailyActivity('food',{id:'food',day:'2026-10-04'});
@@ -70,7 +69,7 @@ test('cosmetic pass grants packs from XP once, never performance items from circ
  for(const kind of ['weapon','ship','boss-unlock'])assert.equal(ledger.grantedIds(kind).length,0);
 });
 test('achievement board mirrors earned coaches and golden variants independently of selected paths',()=>{
- fresh();setSelectedTracks([]);
+ fresh();setSelectedTracks(['glutes','cardio']);
  assert.deepEqual(Object.keys(loadProgress()),BOSSES.map(b=>b.id));
  recordPerformanceSession({id:'earned-coach',mode:'pushup',kind:'hold',difficulty:'easy',value:300,activeSeconds:300,continuousSeconds:300,xpBase:1,earnedCoachCount:0});
  assert.ok(readPerformanceProgress().coaches.some(id=>COACH_REQUIREMENTS.some(c=>c.id===id&&c.groups.includes('chest'))));
@@ -78,9 +77,13 @@ test('achievement board mirrors earned coaches and golden variants independently
  recordPerformanceSession({id:'earned-gold',mode:'pushup',kind:'hold',difficulty:'easy',value:600,activeSeconds:600,continuousSeconds:600,xpBase:1,earnedCoachCount:0});
  assert.ok(Object.values(loadProgress()).some(n=>n===5));
 });
-test('selected paths remain onboarding navigation preferences rather than unlock currency',()=>{
+test('exactly two owner-scoped paths grant only their introductory coaches, never step-based rewards',()=>{
  fresh();assert.deepEqual([...selectedTracks(nobody)],['meditation']);
- assert.deepEqual(setSelectedTracks(['glutes','nope','glutes']),['glutes']);
- assert.deepEqual([...selectedTracks(nobody)],['meditation','glutes']);
+ assert.throws(()=>setSelectedTracks(['glutes','nope','glutes']),/Exactly 2/);
+ assert.deepEqual(setSelectedTracks(['glutes','cardio']),['glutes','cardio']);
+ assert.deepEqual([...selectedTracks(nobody)],['meditation','glutes','cardio']);
+ assert.equal(readPerformanceProgress().paths.length,2);
  assert.equal(loadProgress({tracks:allSteps(99999)})['strider-1'],0);
+ globalThis.myr5AuthenticatedAccount={user:{id:'other-path-owner'}};
+ assert.deepEqual([...selectedTracks(nobody)],['meditation'],'another account does not inherit the paths');
 });

@@ -12,11 +12,10 @@ import {isGranted,cosmeticId} from './creator/unlock-store';
 import {sparkle,sparkleOption,watchSelect} from '../../unlock-seen.mjs';
 import {noteUnlocked} from '../../unlock-pending.mjs';
 import {saveRecipe,keepOwned,BODY_KEYS} from './save-look';
-import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
+import {loadProgress} from '../../battle-pass.mjs';
 import {texturePreviewDataURL} from './creator/swatches';
 import {acceptShipRevealComplete,coachEditorShips,canShowCoachEditorShipSection,ownedShipIds} from '../../modules/ships/ship-access.mjs';
 import {createInstalledCreatureSkinSource} from '../../modules/materials/installed-creature-skins.mjs';
-import {productionMaterialTrust} from '../../modules/materials/material-config.mjs';
 import {SHIP_GATE,SHIP_GATE_TOKEN,SHIP_HISTORY_ADMISSION} from '../../modules/ships/ship-scene-domain.mjs';
 
 import {localVerifiedBridge} from '../../modules/ships/verified-ship-assets.mjs';
@@ -53,13 +52,9 @@ const MOM_ONLY_FIELD_IDS=['fingersField','toesField','furField','digitsHelp'];
 let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='body',ready=false,activeRange:string|null=null;
 let settings=motionSettings(null),initialError='';
 try{recipe=zeroFinish(loadRecipe(localStorage));settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
-let saved=recipe; // the last recipe written to storage: the owned look saveRecipe() falls back to
-// #102: bodies already saved stay usable even if their section is locked (only new picks lock).
-const appearanceOwner=(()=>{try{return localStorage.getItem('myr5-coach-owner');}catch{return null;}})();
-const grandfathered=new Set<string>((window.myr5AuthenticatedAccount?appearanceOwner===window.myr5AuthenticatedAccount.user.id:!appearanceOwner)?BODY_KEYS.map(key=>recipe[key]):[]);
-recipe=saved=keepOwned(recipe,undefined,grandfathered);
-// #138: the new-user allowance (first bodies of the user's picked paths) lives inside the same lock.
-let progress=loadProgress(),tracks=selectedTracks(),bodyLock=(id:string)=>grandfathered.has(id)?null:bodyLockSection(id,progress,tracks);
+let saved=recipe; // last owned look written to storage; locked imports remain preview-only.
+recipe=saved=keepOwned(recipe);
+let progress=loadProgress(),bodyLock=(id:string)=>bodyLockSection(id,progress);
 const unlockedFirst=<T,>(items:readonly T[],locked:(x:T)=>boolean):T[]=>[...items.filter(x=>!locked(x)),...items.filter(locked)];
 // Body unlocks are derived from section completion, so record them here: first use snapshots, later ones sparkle.
 const noteBodyUnlocks=()=>{const state=loadProgress();noteUnlocked('body',TRACK_PLACEMENTS.filter(p=>p.tracks.some(t=>sectionComplete(t,state))).map(p=>p.stableId));};
@@ -85,7 +80,8 @@ function clearPreview(){previewDraft=null;}
 function shown():Design{return previewDraft??recipe;}
 const idLocked=(id:string)=>registryLocked(id,shown().body);
 function isLocked(design:Design):boolean{
- if(bodyLock(design.body))return true;
+ if(BODY_KEYS.some(key=>bodyLock(design[key])))return true;
+ const ship=design.shipId??design.coach;if(ship!=='supportive'&&!ownedShipIds().includes(ship))return true;
  for(const r of REGIONS){const mc=regionChoice(design.materials,r);if(mc&&(registryLocked(mc.textureId,design.body)||registryLocked(mc.colorId,design.body)))return true;}
  return false;
 }
@@ -140,7 +136,7 @@ const queue=new LatestPreview<{recipe:Design;message:string;preview:boolean}>(as
 });
 function render(message:string,persist=false){
  ready=false;($('exportGLB') as HTMLButtonElement).disabled=true;
- if(persist)try{persistSkinSettings();const owned=saveRecipe(localStorage,recipe,saved,grandfathered);message=owned===recipe?'Saved on this device':'Locked looks stay in preview until you unlock them';recipe=saved=owned;persistRecipeShip();window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
+ if(persist)try{persistSkinSettings();const owned=saveRecipe(localStorage,recipe,saved);message=owned===recipe?'Saved on this device':'Locked looks stay in preview until you unlock them';recipe=saved=owned;persistRecipeShip();window.dispatchEvent(new CustomEvent('myr5:recipe',{detail:recipe}));}catch{message='Storage unavailable. Download your recipe in Files to keep this design.';}
  sync();const look=shown();lastShown=JSON.stringify(look);
  tell('Updating preview…');queue.request({recipe:look,message,preview:previewing()});
 }
@@ -206,14 +202,9 @@ for(const p of unlockedFirst(PALETTES,p=>idLocked(p.id))){const b=swatchButton({
 const paletteHelp=document.createElement('p');paletteHelp.className='help';paletteHelp.textContent='Map palette colors to the selected texture?s dark, middle and light areas. Other parts keep their own colors.';
 colorRoot.append(toggle,grid,label,palettes,paletteHelp);}
 fillColours();
-// R21: the coach's ship, picked and tinted here in Species. Saved in the recipe (shipId, shipColor); owned ships also mirror to the
-// Ship tab's per-account key so the arrival scene's recolour event keeps working.
+// The Ship tab edits the recipe's existing shipId/shipColor and mirrors it to the arrival scene.
 const shipRow=$('shipColourRow'),shipPick=$('shipPick') as HTMLSelectElement;
-const speciesShipDescription=document.createElement('p');speciesShipDescription.id='speciesShipDescription';speciesShipDescription.className='help';
-const speciesShipPreview=document.createElement('div');speciesShipPreview.id='speciesShipPreview';speciesShipPreview.style.cssText='position:relative;height:180px;margin:8px 0;border-radius:8px;background:#0b0714';
-speciesShipPreview.innerHTML='<p id="speciesShipPreviewStatus" class="help" role="status" style="position:absolute;inset:auto 8px 6px;margin:0;text-align:center"></p><button id="speciesShipPreviewRetry" type="button" hidden style="position:absolute;top:8px;right:8px">Try again</button>';
-shipRow.before(speciesShipDescription,speciesShipPreview);
-const shipLocked=(id:string)=>id!=='supportive'&&!ownedShipIds().includes(id);
+const shipLocked=(id:string)=>!coachEditorShips().includes(id);
 function saveShip(patch:{shipId?:Design['coach'];shipColor?:string|null}){
  commit({...shown(),...patch});
 }
@@ -225,12 +216,12 @@ function fillShipRow(){
  for(const c of unlockedFirst(rowColours,c=>idLocked(c.id))){const b=swatchButton({kind:'color',id:c.id,name:c.name,background:c.hex},()=>{if(idLocked(c.id)){tell('Locked for your ship too');return;}saveShip({shipColor:c.hex});});b.dataset.hex=c.hex;grid.append(b);}
  shipRow.append(grid);syncShipRow();
 }
-function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach;const color=look.shipColor??null;for(const b of shipRow.querySelectorAll<HTMLButtonElement>('button')){b.setAttribute('aria-pressed',String(b.dataset.ship==='original'?color===null:b.dataset.hex===color));}const description=document.getElementById('speciesShipDescription');if(description)description.textContent=shipDetails(shipPick.value).description;queueMicrotask(()=>void previewShip());}
+function syncShipRow(){const look=shown();shipPick.value=look.shipId??look.coach;const color=look.shipColor??null;for(const b of shipRow.querySelectorAll<HTMLButtonElement>('button')){b.setAttribute('aria-pressed',String(b.dataset.ship==='original'?color===null:b.dataset.hex===color));}queueMicrotask(()=>void previewShip());}
 shipPick.onchange=()=>{if(shipLocked(shipPick.value)){tell('That ship is locked');syncShipRow();return;}saveShip({shipId:shipPick.value as Design['coach']});};
 fillShipRow();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
- window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe,undefined,grandfathered);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
- window.addEventListener('myr5:account-cleared',()=>{grandfathered.clear();undo=[];redo=[];clearPreview();recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
+ window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
+ window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];clearPreview();recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
  window.addEventListener('myr5:login-ready',()=>void standaloneAccount.refresh());
  window.addEventListener('focus',()=>{if(!standaloneAccount.account)void standaloneAccount.refresh();});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
@@ -254,34 +245,29 @@ for(const id of ['fur','iris','pupilSize','detail']){
 }
 const tabs=[...document.querySelectorAll<HTMLButtonElement>('[data-menu]')];
 const skinTab=document.createElement('button');skinTab.type='button';skinTab.id='tab-skin';skinTab.setAttribute('role','tab');skinTab.setAttribute('aria-controls','panel-skin');skinTab.setAttribute('aria-selected','false');skinTab.tabIndex=-1;skinTab.dataset.menu='skin';skinTab.textContent='Skins';skinTab.hidden=true;
-const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><div><small>INSTALLED REWARDS</small><h2>Creature skins</h2></div></div><label>Owned and installed skin<select id="skinChoice"></select></label><p class="help">Only this account’s unlocked skins with verified offline files appear here. A skin covers every part of your coach, like an Adaptation in Species.</p>';
+const skinPanel=document.createElement('div');skinPanel.id='panel-skin';skinPanel.setAttribute('role','tabpanel');skinPanel.setAttribute('aria-labelledby','tab-skin');skinPanel.tabIndex=0;skinPanel.hidden=true;skinPanel.innerHTML='<div class="panel-heading"><h2>Creature skins</h2></div><label>Installed skin<select id="skinChoice"></select></label>';
 // #146: Skins and Ship sit after the option tabs, just above Files (Ian's "Downloads" tab).
 const filesTab=$('tab-files') as HTMLButtonElement;filesTab.before(skinTab);document.querySelector('.console-scroll')?.append(skinPanel);tabs.splice(tabs.indexOf(filesTab),0,skinTab);
-const shipTab=document.createElement('button');shipTab.type='button';shipTab.id='tab-ship';shipTab.setAttribute('role','tab');shipTab.setAttribute('aria-controls','panel-ship');shipTab.setAttribute('aria-selected','false');shipTab.tabIndex=-1;shipTab.dataset.menu='ship';shipTab.textContent='Ship';shipTab.hidden=true;
-const shipPanel=document.createElement('div');shipPanel.id='panel-ship';shipPanel.setAttribute('role','tabpanel');shipPanel.setAttribute('aria-labelledby','tab-ship');shipPanel.tabIndex=0;shipPanel.hidden=true;shipPanel.innerHTML='<div class="panel-heading"><div><small>YOUR ARRIVAL</small><h2>Ship</h2></div></div><div class="field-grid"><label>Owned ship<select id="shipChoice"></select></label></div><p id="shipDescription" class="help"></p><div id="shipPreview" style="position:relative;height:180px;margin:8px 0;border-radius:8px;background:#0b0714"><p id="shipPreviewStatus" class="help" role="status" style="position:absolute;inset:auto 8px 6px;margin:0;text-align:center"></p><button id="shipPreviewRetry" type="button" hidden style="position:absolute;top:8px;right:8px">Try again</button></div><div id="shipSwatches" class="material-grid" aria-label="Ship colours"></div><p class="help">Your ship takes any colour your coach has unlocked. It is saved separately from the coach recipe.</p>';
-filesTab.before(shipTab);document.querySelector('.console-scroll')?.append(shipPanel);tabs.splice(tabs.indexOf(filesTab),0,shipTab);
+const shipTab=$('tab-ship') as HTMLButtonElement;
+const shipPanel=$('panel-ship') as HTMLElement;
 const SHIP_SETTINGS_KEY='myr5-ship-customization-v1';
 const SKIN_SETTINGS_PREFIX='myr5-editor-skins-v1/account/';let skinOwner:string|null=null;
 // Persist from the current recipe for every edit, including Undo and Redo.
 function persistSkinSettings(){if(skinOwner)localStorage.setItem(SKIN_SETTINGS_PREFIX+skinOwner,JSON.stringify(Object.fromEntries(REGIONS.flatMap(region=>{const id=recipe.materials?.[region]?.textureId;return id?.startsWith('creature-')?[[region,id]]:[]}))));}
 function skinSettings(){if(!skinOwner)return{};try{const value=JSON.parse(localStorage.getItem(SKIN_SETTINGS_PREFIX+skinOwner)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return{}}}
 const editorOwner=()=>{const account=window.myr5AuthenticatedAccount;return typeof account==='string'?account:account?.user?.id;};
-function shipSettings(){try{const owner=editorOwner();if(!owner)return{};const value=JSON.parse(localStorage.getItem(`${SHIP_SETTINGS_KEY}/${owner}`)||'{}');return value&&typeof value==='object'?value:{}}catch{return{}}}
-
-function syncShipEditor(){const owned=productionMaterialTrust()?coachEditorShips():[],visible=owned.length>0&&canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);const select=document.getElementById('shipChoice') as HTMLSelectElement;if(!select)return;const current=shipSettings();select.replaceChildren(...owned.map(id=>{const option=document.createElement('option');option.value=id;option.textContent=shipDetails(id).name;sparkleOption(option,'ship','ship-'+id);return option}));const selected=owned.includes(current.ship)?current.ship:owned[0]||'';select.value=selected;for(const b of document.querySelectorAll<HTMLButtonElement>('#shipSwatches [data-color]'))b.setAttribute('aria-pressed',String(b.dataset.color===current.colorId));void previewShip();}
-// #147: the ship takes one of the coach's unlocked colours/palettes; `tint` stays its primary hex, so the ship scene reads it unchanged.
-function persistShipEditor(colorId?:string){const ownerId=editorOwner(),owned=coachEditorShips(),ship=($('shipChoice') as HTMLSelectElement).value,current=shipSettings();colorId??=current.colorId;const tint=colorId?colorTriad(colorId)?.primary:/^#[0-9a-f]{6}$/i.test(current.tint||'')?current.tint:'#ffffff';if(!ownerId||shipTab.hidden||!owned.includes(ship)||!tint||!/^#[0-9a-f]{6}$/i.test(tint))return;const choice={ownerId,ship,tint,colorId};try{localStorage.setItem(`${SHIP_SETTINGS_KEY}/${ownerId}`,JSON.stringify(choice));window.dispatchEvent(new CustomEvent('myr5:ship-customization',{detail:choice}));commit({...shown(),shipId:ship as Design['coach'],shipColor:tint==='#ffffff'?null:tint});}catch{tell('Ship tint changed for this visit. Storage is unavailable.');}}
+function syncShipEditor(){const visible=canShowCoachEditorShipSection();shipTab.hidden=!visible;shipTab.tabIndex=-1;shipTab.setAttribute('aria-hidden',String(!visible));if(!visible&&shipTab.getAttribute('aria-selected')==='true')openMenu(document.getElementById('tab-body') as HTMLButtonElement);fillShipRow();}
 // The Ship tab's preview: only while that tab is open, only from this account's verified local ship bytes (never a
 // download). The choice itself is saved either way; the preview just shows it.
-let shipPreview:ReturnType<typeof mountShipPreview>|null=null,shipPreviewOwner:string|null=null,shipPreviewPanel='',shipPreviewEpoch=0;
-function closeShipPreview(){++shipPreviewEpoch;shipPreview?.dispose();shipPreview=null;shipPreviewOwner=null;shipPreviewPanel='';}
+let shipPreview:ReturnType<typeof mountShipPreview>|null=null,shipPreviewOwner:string|null=null,shipPreviewEpoch=0;
+function closeShipPreview(){++shipPreviewEpoch;shipPreview?.dispose();shipPreview=null;shipPreviewOwner=null;}
 async function previewShip(){
- const species=$('tab-body').getAttribute('aria-selected')==='true',active=species||(!shipTab.hidden&&shipTab.getAttribute('aria-selected')==='true');
- const panel=species?'speciesShipPreview':'shipPreview',owner=editorOwner()||null,ship=species?shown().shipId??shown().coach:($('shipChoice') as HTMLSelectElement).value,status=$(panel+'Status'),retry=$(panel+'Retry');
- const description=document.getElementById(species?'speciesShipDescription':'shipDescription');if(description)description.textContent=shipDetails(ship).description;
+ const active=!shipTab.hidden&&shipTab.getAttribute("aria-selected")==="true";
+ const owner=editorOwner()||null,ship=shipPick.value,status=$('shipPreviewStatus'),retry=$('shipPreviewRetry') as HTMLButtonElement;
+ const description=document.getElementById('shipDescription');if(description&&ship)description.textContent=shipDetails(ship).description;
  retry.hidden=true;
  // Leaving the tab (or the account) frees the preview: the bridge holds every owned ship's bytes.
- if(shipPreviewOwner!==owner||shipPreviewPanel!==panel||!active||!ship||(shipPreview&&!shipPreview.ids().includes(ship)))closeShipPreview();
+ if(shipPreviewOwner!==owner||!active||!ship||(shipPreview&&!shipPreview.ids().includes(ship)))closeShipPreview();
  const run=++shipPreviewEpoch;
  if(!active||!ship){status.textContent='';return;}
  status.textContent='Loading your ship…';
@@ -289,17 +275,15 @@ async function previewShip(){
   if(!shipPreview){
    const bridge=ship==='supportive'?{ownedShipIds:()=>['supportive'],getShipUrl:()=>'/pod/worlds/starter/supportive.glb'}:await localVerifiedBridge().catch(()=>null);
    if(run!==shipPreviewEpoch||(editorOwner()||null)!==owner){bridge?.dispose?.();return;}
-   if(!bridge){status.textContent='Choice saved. The 3D preview needs Ships & worlds on this phone (Files → Downloads).';return;}
-   shipPreview=mountShipPreview($(panel),bridge);shipPreviewOwner=owner;shipPreviewPanel=panel;
+   if(!bridge){status.textContent='3D model unavailable on this phone.';return;}
+   shipPreview=mountShipPreview($('shipPreview'),bridge);shipPreviewOwner=owner;
   }
-  if(!shipPreview.ids().includes(ship)){status.textContent='Choice saved. This ship’s model is not on this phone yet.';return;}
-  if(await shipPreview.show(ship,shipSettings().tint)&&run===shipPreviewEpoch)status.textContent='';
- }catch{if(run!==shipPreviewEpoch)return;status.textContent='The ship preview could not load.';retry.hidden=false;}
+  if(!shipPreview.ids().includes(ship)){status.textContent='3D model unavailable on this phone.';return;}
+  if(await shipPreview.show(ship,shown().shipColor??'#ffffff')&&run===shipPreviewEpoch)status.textContent='';
+ }catch{if(run!==shipPreviewEpoch)return;status.textContent='Ship preview unavailable.';retry.hidden=false;}
 }
 $('shipPreviewRetry').onclick=()=>{closeShipPreview();void previewShip();};
-$('speciesShipPreviewRetry').onclick=()=>{closeShipPreview();void previewShip();};
-swatchGrid($('shipSwatches'),id=>{if(idLocked(id)){tell('Locked for your ship too');return;}persistShipEditor(id);syncShipEditor();});
-syncShipEditor();watchSelect($('shipChoice') as HTMLSelectElement);watchSelect($('skinChoice') as HTMLSelectElement);$('shipChoice').addEventListener('change',()=>{persistShipEditor();void previewShip();});window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});
+syncShipEditor();watchSelect(shipPick);watchSelect($('skinChoice') as HTMLSelectElement);window.addEventListener('myr5:ship-scene-ready',event=>{if(acceptShipRevealComplete(event))syncShipEditor()});window.addEventListener('myr5:account-ready',syncShipEditor);window.addEventListener('myr5:account-cleared',syncShipEditor);window.addEventListener('storage',event=>{if(event.key?.startsWith(SHIP_SETTINGS_KEY+'/')||event.key==='myr5-ship-reveal-seen-v1')syncShipEditor()});document.addEventListener('visibilitychange',()=>{if(document.hidden)closeShipPreview();else if(shipTab.getAttribute('aria-selected')==='true')void previewShip();});
 let skinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,pendingSkinSource:ReturnType<typeof createInstalledCreatureSkinSource>|null=null,skinEpoch=0,skinChoices:{id:string;displayName:string}[]=[];
 function syncSkinChoice(){const choice=$('skinChoice') as HTMLSelectElement,current=recipe.materials?.[selected]?.textureId||'';choice.value=skinChoices.some(s=>s.id===current)?current:'';}
 function renderSkinChoices(){const select=$('skinChoice') as HTMLSelectElement;select.replaceChildren(...skinChoices.map(skin=>{const option=document.createElement('option');option.value=skin.id;option.textContent=skin.displayName;sparkleOption(option,'creature-skin',skin.id);return option}));select.value='';syncSkinChoice();}
@@ -335,7 +319,7 @@ const zoom=$('zoom') as HTMLInputElement,setZoom=(z:number)=>{zoom.value=String(
 $('pauseMotion').onclick=()=>{if(!viewer)return;viewer.setPaused(!viewer.paused);$('pauseMotion').textContent=viewer.paused?'Play motion':'Pause motion';$('pauseMotion').setAttribute('aria-pressed',String(viewer.paused));};
 function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced||systemMotion.matches});}
 systemMotion.addEventListener('change',applyMotion);
-window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=importCreature(event.newValue);for(const key of BODY_KEYS)grandfathered.add(recipe[key]);undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
+window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=keepOwned(importCreature(event.newValue));undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;},250);
 window.addEventListener('pagehide',()=>{standaloneAccount.dispose();closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 // D34 post-download: listen for body download state from service worker

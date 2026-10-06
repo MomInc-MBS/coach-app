@@ -43,6 +43,31 @@ test('one tracked workout can finish early or at thirty reps with no preparation
  assert.equal(result.value,8);assert.equal(f.phase,'rest');assert.equal(f.consume({mode:'squat',kind:'reps',count:9},1200),null);
  assert.equal(f.progress.completedSets,0,'only the successful persistence path may increment the count');
 });
+test('preparation recovery expires without camera frames and the next tracker starts at zero',()=>{
+ const w=new PerformanceWorkout({mode:'squat',kind:'reps'});
+ w.update({kind:'reps',count:3},1000);
+ assert.equal(w.stage,'preparation-rest');
+ assert.equal(w.advancePreparationRecovery(30999),false);
+ assert.equal(w.advancePreparationRecovery(31000),true);
+ assert.equal(w.stage,'preparation-slow');
+ w.rebaseTracking();
+ assert.equal(w.raw,0);
+ assert.equal(w.baseline,0);
+ w.update({kind:'reps',count:1},32000);
+ assert.equal(w.value,0,'a fast first rep is not accepted for slow preparation');
+ w.update({kind:'reps',count:2},36000);
+ assert.equal(w.value,1);
+});
+test('ending a working set requires actual earned performance',()=>{
+ const reps=new SetFlow();reps.start('squat',30,30,{performance:true,kind:'reps'});reps.workout.stage='working';
+ assert.equal(reps.finishWorking({mode:'squat',kind:'reps',count:0},1000),null);
+ assert.equal(reps.phase,'set');
+ assert.equal(reps.finishWorking({mode:'squat',kind:'reps',count:1},1100)?.earned,true);
+ const timed=new SetFlow();timed.start('high-horse',600,30,{performance:true,kind:'hold'});
+ assert.equal(timed.finishWorking({mode:'high-horse',kind:'hold',totalHold:0,hold:0},1000),null);
+ assert.equal(timed.phase,'set');
+ assert.equal(timed.finishWorking({mode:'high-horse',kind:'hold',totalHold:15,hold:15},16000)?.earned,true);
+});
 test('sprint has five active fifteen-second intervals, five recoveries, and no unattended credit',()=>{
  const w=new PerformanceWorkout({mode:'jogging',kind:'steps',cardio:'sprint'});
  for(let t=0;t<10;t++)w.update({kind:'steps',count:0},t*1000);assert.equal(w.activeSeconds,0);
@@ -70,6 +95,13 @@ test('warming up increases rest-strike damage and preparation taps never award X
  const f=new SetFlow(null,{now:0});f.start('squat',30,30,{performance:true,kind:'reps'});f.workout.stage='preparation-rest';f.workout.nextStage='preparation-slow';
  assert.equal(f.preparationTap(1000).damage,2);f.workout.nextStage='working';assert.equal(f.preparationTap(2000).damage,4);assert.equal(f.xp,0);
  f.workout.stage='working';assert.equal(f.preparationTap(3000),null);f.workout.value=8;f.workout.xpBase=9;f.finishWorking({count:8,mode:'squat',kind:'reps'},3100);assert.equal(f.tap(4000).damage,6);
+});
+test('preparation uses the real rest attack and Helping Hand chain',()=>{
+ const f=new SetFlow(null,{now:0});f.start('squat',30,30,{performance:true,kind:'reps'});f.workout.stage='preparation-rest';
+ assert.equal(f.preparationTap(1000,true).assisted,false);
+ assert.equal(f.preparationTap(1200,true).assisted,false);
+ assert.equal(f.preparationTap(1400,true).assisted,true);
+ assert.equal(f.phase,'set');assert.equal(f.xp,0);
 });
 
 test('switching hold difficulty keeps active XP time but never transfers continuous achievements',()=>{

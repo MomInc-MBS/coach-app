@@ -1,11 +1,94 @@
-/* Real coach performance achievements over the original constellation backdrop. */
-.ach-board{box-sizing:border-box;position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));border:0;background:linear-gradient(#05030cef,#05030cf5),url('/pod/worlds/achievements.jpg') center/cover;color:#f7f4ff;overflow:hidden;font:16px/1.5 var(--font,system-ui)}
-.ach-board[open]{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:18px}
+﻿/* Achievements / battle-pass board, styled after Skyrim's skill constellations: dim stars until earned,
+   a slow camera glide into the chosen boss, thin all-caps text with a hairline rule. */
+@font-face{font-family:'Barlow Condensed';src:url('/handborne/fonts/barlow-400.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+.ach-board{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#05030c;color:#fff;overflow:hidden;font:16px/1.4 'Barlow Condensed',var(--font,system-ui);letter-spacing:.04em}
+.ach-board[open]{display:grid;place-items:center}
 .ach-board::backdrop{background:#000}
-.ach-head{padding-right:70px}.ach-head h1{margin:0;font-size:26px}.ach-count{color:#d6c2ff;margin:4px 0}.ach-intro{font-size:14px;margin:5px 0;color:#cbc8d4}
-.ach-close{position:absolute;right:18px;top:24px;min-height:44px;border:1px solid #a79bb9;border-radius:8px;background:#211c2c;color:#fff;padding:0 12px}
-.ach-tabs{display:flex;gap:8px;overflow-x:auto;min-width:0;padding-bottom:3px}.ach-tabs button{flex:0 0 auto;min-height:44px;padding:8px 14px;border:1px solid #7b6e94;border-radius:9px;background:#181121;color:#fff;font:inherit}.ach-tabs button[aria-selected=true]{background:#463168;border-color:#ccabff}
-.ach-catalog{overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;align-content:start;padding:2px 3px 12px;min-height:0}
-.ach-card{border:1px solid #74608b;border-radius:14px;padding:16px;background:#100d1ce8;overflow-wrap:anywhere}.ach-card h2{font-size:19px;margin:0 0 5px}.ach-card p{font-size:14px;margin:9px 0}.ach-card strong{color:#d5bfff}.ach-card .ach-status{font-weight:700;color:#bcb3ca}.ach-card[data-state=done]{border-color:#9ccebb}.ach-card[data-state=done] .ach-status{color:#a8f0cb}.ach-card[data-golden=true]{border-color:#ffe29e}.ach-card[data-golden=true] .ach-status{color:#ffe29e}
-.portal-framed.ach-board,.portal-framed .ach-board{padding-bottom:calc(24px + var(--myr5-bar,64px) + env(safe-area-inset-bottom))}
-@media(max-width:480px){.ach-board{padding-left:12px;padding-right:12px;gap:12px}.ach-head{padding-right:64px}.ach-head h1{font-size:22px}.ach-count{font-size:13px}.ach-close{right:12px}.ach-tabs button{padding:7px 11px;font-size:14px}.ach-card{padding:14px}}
+.ach-stage{position:relative;aspect-ratio:1141/2000;height:min(100dvh,calc(100vw * 2000 / 1141))}
+/* Art, bosses and the three star layers each carry their own zoom transform (parallax factor per layer). */
+.ach-parallax{transition:transform .9s cubic-bezier(.22,.61,.36,1);will-change:transform}
+.ach-art{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
+.ach-stars{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .5s}
+.ach-stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px #fff;opacity:0;animation:ach-star 3s ease-in-out infinite alternate;animation-delay:var(--d)}
+.ach-bosses{position:absolute;inset:0}
+.ach-boss{position:absolute;margin:0;padding:0;border:0;background:none;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ach-boss:focus-visible{outline:2px solid var(--glow);outline-offset:4px}
+/* Beaten bosses: the same slice of the art screened over itself, once blurred (bloom) and once sharp, feathered so no rectangle shows. */
+.ach-boss[data-state=done]::before,.ach-boss[data-state=done]::after{content:'';position:absolute;inset:0;pointer-events:none;background:url(/pod/worlds/achievements.jpg) no-repeat;background-size:calc(10000% / var(--bw)) auto;background-position:calc(var(--bx) / (100 - var(--bw)) * 100%) calc(var(--by) / (100 - var(--bh)) * 100%);mix-blend-mode:screen;-webkit-mask:radial-gradient(ellipse at center,#000 45%,transparent 74%);mask:radial-gradient(ellipse at center,#000 45%,transparent 74%);animation:ach-twinkle 2.6s ease-in-out infinite alternate;animation-delay:var(--d)}
+.ach-boss[data-state=done]::before{filter:blur(10px) brightness(1.7) saturate(1.4)}
+.ach-boss[data-state=done]::after{filter:brightness(1.35) saturate(1.2)}
+.ach-boss[data-state=locked]{background:radial-gradient(ellipse at center,#03020ce8 40%,#03020c99 60%,transparent 78%)}
+.ach-boss.selected{background:radial-gradient(ellipse at center,#ffffff38 12%,transparent 68%);animation:ach-pulse 1.4s ease-in-out infinite alternate}
+.ach-head{position:absolute;top:max(14px,env(safe-area-inset-top));left:18px;right:72px;text-transform:uppercase;text-shadow:0 0 10px #000,0 1px 2px #000;transition:opacity .4s}
+.ach-head h1{margin:0;font-size:22px;font-weight:400;letter-spacing:.2em}
+.ach-head p{margin:2px 0 0;font-size:14px;letter-spacing:.14em;color:#cfc8e6}
+.ach-head::after{content:'';display:block;height:1px;margin-top:8px;background:linear-gradient(90deg,#fffc,transparent)}
+.ach-board.zoomed .ach-head{opacity:0}
+/* Zoomed: dim the far/mid star layers so the detail card stays legible; near debris keeps flying over it. */
+.ach-board.zoomed [data-depth=far],.ach-board.zoomed [data-depth=mid]{opacity:.5}
+.ach-detail{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;max-height:62%;padding:34px 24px calc(24px + env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;text-align:center;background:linear-gradient(#0000,#05030cd9 24%,#05030cf5);animation:ach-rise .5s ease}
+.ach-detail[hidden]{display:none}
+.ach-detail h2{margin:0;font-size:36px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 0 18px var(--glow),0 0 2px #fff}
+.ach-detail hr{width:min(320px,80%);height:1px;border:0;margin:10px auto 12px;background:linear-gradient(90deg,transparent,#fff,transparent)}
+.ach-detail .ach-status{margin:0 0 16px;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#d9d2ee}
+.ach-detail ol{list-style:none;margin:0 auto;padding:0;display:grid;gap:8px;width:min(360px,100%);text-align:left}
+.ach-detail li{display:grid;grid-template-columns:18px 70px 1fr;gap:10px;align-items:baseline;font-size:17px}
+/* \2726 (a CSS numeric escape, not the raw UTF-8 bytes) so the glyph can't mojibake if this file
+   is ever served/read without an explicit UTF-8 charset — the escape is pure ASCII in the source. */
+.ach-detail li::before{content:'\2726';color:#5e5878;font-size:12px}
+.ach-detail li[data-step=done]::before{color:#fff;text-shadow:0 0 8px var(--glow),0 0 14px var(--glow)}
+.ach-detail li[data-step=next]::before{color:var(--glow);animation:ach-twinkle 1.2s ease-in-out infinite alternate}
+.ach-detail li[data-step=todo]{color:#8f89a8}
+.ach-detail li i{font-style:normal}
+.ach-detail li b{font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:#e9e3ff}
+.ach-back{margin-top:18px;min-height:44px;padding:0 6px;border:0;border-bottom:1px solid #fff9;background:none;color:#fff;font:400 17px/1 'Barlow Condensed',var(--font,system-ui);letter-spacing:.2em;text-transform:uppercase}
+.ach-close{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff55;background:#05030ccc;color:#fff;font-size:18px}
+@keyframes ach-twinkle{from{opacity:.5}to{opacity:1}}
+@keyframes ach-pulse{from{opacity:.45}to{opacity:1}}
+@keyframes ach-star{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1.3)}}
+@keyframes ach-rise{from{transform:translateY(24px);opacity:0}}
+@media (prefers-reduced-motion:no-preference){
+/* The locked intake theme turns off every animation; the board twinkles for everyone. */
+html[data-public-state] .ach-board .ach-stars i{animation:ach-star 3s ease-in-out infinite alternate!important}
+html[data-public-state] .ach-board .ach-boss.selected{animation:ach-pulse 1.4s ease-in-out infinite alternate!important}
+html[data-public-state] .ach-board .ach-detail{animation:ach-rise .5s ease!important}
+html[data-public-state] .ach-board .ach-parallax{transition:transform .9s cubic-bezier(.22,.61,.36,1)!important}
+}
+/* Reduced motion: no drift/debris flight, no rAF loop (gated in JS); dots sit at .8 opacity, same as before. */
+@media (prefers-reduced-motion:reduce){.ach-board .ach-parallax{transition:none!important}.ach-board *,.ach-board ::before,.ach-board ::after{animation:none!important}.ach-stars i,.ach-stars[data-depth]{opacity:.8}}
+/* W2-2O: without the Starter pack's art (offline, not downloaded): the bosses outlined on the starfield, and the pack offered. */
+.ach-starter{display:none}
+.ach-board.no-art .ach-art{visibility:hidden}
+.ach-board.no-art .ach-boss:not([data-state=locked]){box-shadow:0 0 14px var(--glow),inset 0 0 0 1px var(--glow)}
+.ach-board.no-art:not(.zoomed) .ach-starter{position:absolute;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#05030ccc;text-align:center}
+/* Framed fullscreen (portal): the dock rides inside the dialog, so the offer sits above it, not under it. */
+.portal-framed.ach-board.no-art:not(.zoomed) .ach-starter,.portal-framed .ach-board.no-art:not(.zoomed) .ach-starter{bottom:calc(max(16px,env(safe-area-inset-bottom)) + var(--myr5-bar))}
+.ach-starter p{margin:0;font-size:15px;letter-spacing:.08em;color:#d9d2ee}
+.ach-starter button{min-height:44px;padding:0 18px;border:1px solid #fff9;border-radius:22px;background:#ffffff1f;color:#fff;font:inherit;font-size:15px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+/* Coach captions, page buttons and the zoomed detail (requirements, exercises, weapon tier milestones). */
+.ach-name{position:absolute;left:-10%;width:120%;top:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;pointer-events:none;text-align:center;font-size:clamp(5px,1.6vw,8px);line-height:1.05;letter-spacing:.03em;text-transform:uppercase;color:#fff;text-shadow:0 0 3px #000,0 0 6px #000}
+.ach-board.zoomed .ach-name{opacity:0}
+.ach-boss[data-golden=true] .ach-name{color:#ffe29e}
+.ach-page{position:absolute;top:50%;z-index:2;width:44px;height:88px;margin-top:-44px;border:1px solid #ffffff55;background:#05030ccc;color:#fff;font:400 34px/1 'Barlow Condensed',var(--font,system-ui);transition:opacity .4s}
+.ach-page[hidden]{display:none}.ach-page-prev{left:0;border-radius:0 22px 22px 0}.ach-page-next{right:0;border-radius:22px 0 0 22px}
+.ach-board.zoomed .ach-page{opacity:0;pointer-events:none}
+.ach-detail{text-align:left}.ach-detail h2,.ach-detail .ach-status{text-align:center}
+.ach-detail p{margin:6px auto;max-width:520px;font-size:16px;letter-spacing:.04em}.ach-detail strong{font-weight:400;color:#e9e3ff;letter-spacing:.12em;text-transform:uppercase}
+.ach-detail h3{margin:16px auto 6px;max-width:520px;font-size:18px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:#e9e3ff}
+.ach-detail h4{margin:10px auto 4px;max-width:520px;font-size:16px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:#cfc8e6}
+.ach-detail ul{margin:0 auto;padding-left:20px;max-width:520px;font-size:15px}
+.ach-detail ol{width:min(520px,100%);gap:4px}.ach-detail li{grid-template-columns:18px 64px 1fr;font-size:15px}
+.ach-detail ul li{display:list-item}.ach-detail ul li::before{content:none}
+.ach-weapons{max-width:520px;margin:0 auto}
+.ach-tier-block{padding:2px 9px 9px;border-left:1px solid #ffffff30}
+.ach-tier-block[data-current=true]{border-color:var(--glow);background:linear-gradient(90deg,#ffffff12,transparent)}
+.ach-tier-block h5{margin:8px 0 6px;font-size:15px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:#cfc8e6}
+.ach-detail .ach-tier-block li{grid-template-columns:14px 58px 1fr;gap:6px;font-size:14px;line-height:1.25}
+.ach-back{display:block;margin:18px auto 0}
+/* Framed fullscreen (portal): ~50px persistent top chrome above, the dock below; the detail scrolls between them. */
+.portal-framed.ach-board .ach-head,.portal-framed .ach-board .ach-head{top:calc(54px + env(safe-area-inset-top))}
+.portal-framed.ach-board .ach-close,.portal-framed .ach-board .ach-close{top:calc(54px + env(safe-area-inset-top))}
+.portal-framed.ach-board .ach-detail,.portal-framed .ach-board .ach-detail{bottom:var(--myr5-bar,64px);max-height:calc(100% - var(--myr5-bar,64px) - 104px - env(safe-area-inset-top));padding-bottom:24px}
+.portal-framed.ach-board.has-pod-chrome .ach-detail{padding-bottom:24px}
+.portal-framed.ach-board .ach-page,.portal-framed .ach-board .ach-page{margin-top:-44px}
+@media (max-width:420px){.ach-detail{padding-left:14px;padding-right:14px}.ach-detail h2{font-size:29px}.ach-detail p{font-size:15px}}

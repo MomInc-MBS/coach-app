@@ -5,18 +5,26 @@ import type {Design,Region,MaterialChoice} from './creator/design';
 import {isLocked as idLocked} from './creator/materials-registry';
 import {bodyLockSection} from './creator/track-placements';
 import {loadProgress,selectedTracks} from '../../battle-pass.mjs';
+import {ownedShipIds} from '../../modules/ships/ship-access.mjs';
 import {RECIPE_KEY} from './profile';
 
 const ownedChoice=(c:MaterialChoice|undefined,coachId:string):c is MaterialChoice=>!!c&&!idLocked(c.textureId,coachId)&&!idLocked(c.colorId,coachId);
 export const BODY_KEYS=['body','headFrom','armsFrom','feetFrom'] as const;
 
-/** Locked material regions fall back to `lastOwned`'s choice for that region (or the original style);
- * locked bodies to `lastOwned`'s body (or Original MYR5). `grandfathered` bodies were already saved
- * before their section locked, so they stay usable. Returns `d` itself when nothing is locked. */
-export function keepOwned(d:Design,lastOwned?:Design,grandfathered:ReadonlySet<string>=new Set(),progress:Record<string,number>=loadProgress(),tracks:Iterable<string>=selectedTracks()):Design{
- const bodyOk=(id?:string):id is string=>!!id&&(grandfathered.has(id)||!bodyLockSection(id,progress,tracks));
+/** Locked material regions fall back to the last earned choice or original style. Body sources
+ * must pass the live performance access gate, including bodies present in an older saved recipe.
+ * The legacy grandfathered argument is accepted only to keep existing editor callers compatible. */
+export function keepOwned(d:Design,lastOwned?:Design,_grandfathered:ReadonlySet<string>=new Set(),progress:Record<string,number>=loadProgress(),tracks:Iterable<string>=selectedTracks()):Design{
+ const bodyOk=(id?:string):id is string=>!!id&&!bodyLockSection(id,progress,tracks);
  let next=d;
  for(const key of BODY_KEYS)if(!bodyOk(next[key])){const fallback=lastOwned?.[key];next={...next,[key]:bodyOk(fallback)?fallback:'myr5'};}
+ const ownedShips=new Set(ownedShipIds());
+ const shipOk=(id:Design['shipId']):id is NonNullable<Design['shipId']>=>!!id&&(id==='supportive'||ownedShips.has(id));
+ const chosenShip=next.shipId??next.coach;
+ if(!shipOk(chosenShip)){
+  const fallback=lastOwned?.shipId??lastOwned?.coach;
+  next={...next,shipId:shipOk(fallback)?fallback:'supportive'};
+ }
  if(d.materials&&!Object.values(d.materials).every(choice=>ownedChoice(choice,next.body))){
   const materials:Design['materials']={};
   for(const [region,choice] of Object.entries(d.materials) as [Region,MaterialChoice][]){const keep=ownedChoice(choice,next.body)?choice:lastOwned?.materials?.[region];if(ownedChoice(keep,next.body))materials[region]=keep;}
@@ -25,6 +33,6 @@ export function keepOwned(d:Design,lastOwned?:Design,grandfathered:ReadonlySet<s
  return next;
 }
 
-export function saveRecipe(storage:Storage,next:Design,lastOwned?:Design,grandfathered?:ReadonlySet<string>){
- const owned=keepOwned(next,lastOwned,grandfathered);storage.setItem(RECIPE_KEY,JSON.stringify(owned));return owned;
+export function saveRecipe(storage:Storage,next:Design,lastOwned?:Design,_grandfathered?:ReadonlySet<string>){
+ const owned=keepOwned(next,lastOwned);storage.setItem(RECIPE_KEY,JSON.stringify(owned));return owned;
 }

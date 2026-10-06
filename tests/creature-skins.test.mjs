@@ -14,6 +14,8 @@ import { acceptShipRevealComplete, canShowCoachEditorShipSection, coachEditorShi
 import * as unlockLedger from '../unlock-ledger.mjs';
 import { bossRewards, CREATURE_SKIN_REWARDS, SHIP_DEFINITIONS, TRACKS } from '../battle-pass-rewards.mjs';
 import { LEDGER_KINDS } from '../unlock-ledger.mjs';
+import {chooseWorkoutPaths} from '../chosen-styles.mjs';
+import {PERFORMANCE_KEY,performanceOwner} from '../performance-progress.mjs';
 
 const root = process.cwd();
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -92,24 +94,28 @@ test('track packets combine both additive collections; ships stay in a separate 
   } finally { await rm(temp, { recursive: true, force: true }); }
 });
 
-test('starter selection is the three chosen styles plus meditation; other tracks remain separately requestable',()=>{
+test('starter selection is exactly two owner-scoped paths plus meditation; other tracks remain separately requestable',()=>{
   const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage'), values=new Map();
   Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,String(v))}});
   try {
-    values.set('myr5-selected-tracks-v1',JSON.stringify(['chest','arms-shoulders','cardio']));
     const account={user:{id:'starter-test'},onboarding:{data:{profile:{exercises:['squat']}}}};
-    assert.deepEqual(starterPostDownloadSectionIds(account),['track-meditation','track-chest','track-arms','track-cardio']);
+    assert.deepEqual(starterPostDownloadSectionIds(account),[],'onboarding exercises do not silently choose paths');
+    assert.deepEqual(chooseWorkoutPaths(['chest','arms-shoulders'],{account,storage:globalThis.localStorage}),['chest','arms-shoulders']);
+    assert.deepEqual(starterPostDownloadSectionIds(account),['track-meditation','track-chest','track-arms']);
     assert.deepEqual(POST_DOWNLOAD_SECTIONS.filter(x=>x.track).map(x=>x.id).sort(),['track-arms','track-cardio','track-chest','track-glutes','track-martial-arts','track-meditation','track-quads','track-yoga']);
     assert.ok(POST_DOWNLOAD_SECTIONS.some(x=>x.id==='coach-ships-biomes'));
     assert.deepEqual([...fullPostDownloadSectionIds()].sort(),['coach-ships-biomes','track-arms','track-cardio','track-chest','track-glutes','track-martial-arts','track-meditation','track-quads','track-yoga']);
     const choices=postDownloadChoices(account,new Set(fullPostDownloadSectionIds()));
-    assert.deepEqual(choices.starter,['track-meditation','track-chest','track-arms','track-cardio']);
-    assert.deepEqual([...choices.individual].sort(),['coach-ships-biomes','track-glutes','track-martial-arts','track-quads','track-yoga']);
+    assert.deepEqual(choices.starter,['track-meditation','track-chest','track-arms']);
+    assert.deepEqual([...choices.individual].sort(),['coach-ships-biomes','track-cardio','track-glutes','track-martial-arts','track-quads','track-yoga']);
     assert.deepEqual([...choices.all].sort(),[...fullPostDownloadSectionIds()].sort());
-    const partial=postDownloadChoices(account,new Set(['track-meditation','track-chest','track-arms','coach-ships-biomes']));
+    const partial=postDownloadChoices(account,new Set(['track-meditation','track-chest','coach-ships-biomes']));
     assert.deepEqual(partial.starter,[],'starter is withheld rather than silently omitting a selected track packet');
     assert.deepEqual(postDownloadChoices(null,new Set(fullPostDownloadSectionIds())),{starter:[],individual:[],all:[]},'anonymous users only see the unchanged legacy full download');
-    for(const selection of [[],['chest'],['chest','cardio','quads','glutes']]){values.set('myr5-selected-tracks-v1',JSON.stringify(selection));assert.deepEqual(starterPostDownloadSectionIds(account),[],'starter needs exactly three chosen workouts, never silently fills or omits choices');}
+    assert.deepEqual(starterPostDownloadSectionIds({user:{id:'other-starter'}}),[],'another owner sees no selected paths');
+    const scopedKey=`${PERFORMANCE_KEY}/${performanceOwner(globalThis.localStorage,account)}`;
+    values.delete(scopedKey);
+    for(const selection of [[],['chest'],['chest','cardio','quads','glutes']]){values.set('myr5-selected-tracks-v1',JSON.stringify(selection));assert.deepEqual(starterPostDownloadSectionIds(account),[],'legacy global selections never count as owner-scoped path choices');}
   } finally { if(old)Object.defineProperty(globalThis,'localStorage',old);else delete globalThis.localStorage; }
 });
 

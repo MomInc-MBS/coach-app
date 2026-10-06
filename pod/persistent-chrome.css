@@ -1,0 +1,64 @@
+.pod-persistent-chrome{position:fixed;inset:max(7px,env(safe-area-inset-top)) 18px auto;z-index:2147483000;display:flex;justify-content:space-between;align-items:start;gap:12px;pointer-events:none;height:46px}
+.pod-persistent-chrome>button{pointer-events:auto!important;margin:0!important;position:relative!important;inset:auto!important;min-height:42px;max-width:45%;border-radius:4px;font:700 10px/1.2 monospace;letter-spacing:.1em;cursor:pointer}
+.pod-persistent-chrome .metal-grimoire-key{padding:10px 16px;color:#28231f!important;border:1px solid #514b41!important;background:linear-gradient(145deg,#bbb7a8,#80796b 48%,#b5ad99)!important;text-shadow:0 1px #e9e3ce;box-shadow:inset 0 1px #e8e3d0,inset 0 -3px #4c463d,0 3px 4px #0008!important}
+.pod-persistent-chrome .metal-grimoire-key:before,.pod-persistent-chrome .metal-grimoire-key:after{content:'+';position:absolute;top:4px;color:#514b41;font:9px monospace}.metal-grimoire-key:before{left:4px}.metal-grimoire-key:after{right:4px}
+.pod-now-playing{display:grid;gap:3px;padding:6px 9px;color:#ffb568;border:3px ridge #857563;background:repeating-linear-gradient(0deg,#24170f 0 2px,#170e09 2px 4px);text-align:left;box-shadow:inset 0 0 12px #000,0 2px 4px #0009;text-shadow:0 0 6px #ff8b37}
+.pod-now-playing small{font-size:8px;color:#cb8c56}.pod-now-playing span{display:block;max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.has-pod-chrome>.ach-head{top:65px}.has-pod-chrome>.ach-close{top:65px}.has-pod-chrome>.ach-detail{padding-bottom:calc(24px + var(--myr5-bar,64px) + env(safe-area-inset-bottom))}
+.has-pod-chrome>header,.has-pod-chrome>.pass-header{margin-top:50px}
+.pod-header-actions{display:none!important}.deck-strip>span{display:none!important}.deck-strip{justify-content:flex-end!important}.containment-pod .coach-line{visibility:hidden}
+@media(max-width:480px){.pod-persistent-chrome{left:13px;right:13px}.pod-persistent-chrome .metal-grimoire-key{padding:10px}.pod-now-playing span{max-width:112px}}
+
+/* The stamped image is the brand. The small route caption and a second wordmark crowded the cockpit. */
+.ship-header .mom-brand>span,.ship-header .ship-location{display:none!important}
+.ship-header .mom-brand{gap:0;flex:none}.ship-header .mom-brand img{width:43px;height:43px;object-fit:contain;filter:drop-shadow(0 0 8px #e3a9f866)}
+.ship-header #openSettings.ship-settings-toggle{box-sizing:border-box;display:grid;grid-template-columns:27px minmax(0,1fr);align-items:center;gap:7px;width:132px;min-width:132px;min-height:48px;margin-left:auto;padding:5px 7px;border:2px solid #b5a0a3;border-top-color:#e4d4c8;border-bottom-color:#62545c;border-radius:5px;background:linear-gradient(135deg,#756d70,#38343d);box-shadow:inset 0 1px #fff8,inset 0 -3px #161a23,0 3px 0 #1b1720,0 5px 8px #0008;color:#c8fbd7;text-align:left;cursor:pointer}
+.ship-settings-handle{position:relative;display:block;width:25px;height:33px;border:2px solid #1b2226;border-radius:4px;background:linear-gradient(90deg,#191f25,#3b464d);box-shadow:inset 1px 2px 5px #000a,0 1px #c6b8af}
+.ship-settings-handle:before{content:'';position:absolute;left:3px;top:4px;width:15px;height:12px;border:1px solid #eee1cb;border-radius:2px;background:repeating-linear-gradient(90deg,#d4c8b7 0 3px,#918880 3px 4px);box-shadow:0 2px 2px #0009;transition:translate .12s}
+.ship-settings-screen{position:relative;display:grid;align-content:center;gap:2px;min-width:0;height:32px;padding:0 5px;border:2px inset #777569;border-radius:3px;background:repeating-linear-gradient(0deg,#1b382a 0 2px,#102719 2px 4px);box-shadow:inset 1px 2px 6px #000b,0 0 7px #89e8a837;color:#b7ffce;text-shadow:0 0 5px #65eb95;font:700 9px/1.1 ui-monospace,Consolas,monospace;letter-spacing:.09em;overflow:hidden}
+.ship-settings-screen small{font-size:6px;color:#82b995}.ship-settings-screen strong{font-size:9px}
+.ship-header #openSettings.ship-settings-toggle[aria-expanded=true] .ship-settings-handle:before{translate:0 10px;background:repeating-linear-gradient(90deg,#f6d19a 0 3px,#b98e5b 3px 4px)}
+.ship-header #openSettings.ship-settings-toggle[aria-expanded=true] .ship-settings-screen{color:#ffe7b6;text-shadow:0 0 6px #ffc66a;background:repeating-linear-gradient(0deg,#453322 0 2px,#2a211a 2px 4px)}
+.ship-header #openSettings.ship-settings-toggle:focus-visible{outline:3px solid #ffe49b;outline-offset:3px}
+.ship-header .pod-tilt-request{box-sizing:border-box;min-height:40px;padding:5px 9px;border:2px solid #aaa3a1;border-top-color:#e2d9c6;border-bottom-color:#615d62;border-radius:4px;background:linear-gradient(#6f7775,#414b4b);box-shadow:inset 0 1px #fff7,0 3px #222b30;color:#eaf4da;font:700 9px ui-monospace,Consolas,monospace;letter-spacing:.04em;text-shadow:0 1px #1d2b2a}
+/* The floating grimoire and DJ terminals sit below the header plate while the pod is in view. */
+body>.pod-persistent-chrome,#portalWorkoutHome>.pod-persistent-chrome{top:calc(78px + env(safe-area-inset-top));left:18px;right:18px}
+@media(max-height:720px) and (orientation:portrait){body>.pod-persistent-chrome,#portalWorkoutHome>.pod-persistent-chrome{top:calc(66px + env(safe-area-inset-top))}}
+@media(max-width:480px){.ship-header #openSettings.ship-settings-toggle{width:119px;min-width:119px}.ship-settings-screen{padding:0 3px}body>.pod-persistent-chrome,#portalWorkoutHome>.pod-persistent-chrome{left:13px;right:13px}}
+
+/* Physical dock controls are available before the portal scene loads. */
+#coachDock.coach-dock.ship-control-deck{border-top:3px solid #b8a890;background:radial-gradient(circle at 12px 9px,#d4c3a9 0 2px,#292832 3px 5px,transparent 6px),radial-gradient(circle at calc(100% - 12px) 9px,#d4c3a9 0 2px,#292832 3px 5px,transparent 6px),repeating-linear-gradient(90deg,#ffffff08 0 1px,transparent 1px 5px),linear-gradient(180deg,#48545a,#252f38 38%,#171e27);box-shadow:inset 0 2px #e5d8bd72,inset 0 7px 8px #1117229c,0 -4px 18px #070b11a8}
+#coachDock.coach-dock.ship-control-deck:after{content:'';position:absolute;left:8px;right:8px;top:9px;height:1px;background:linear-gradient(90deg,transparent,#d5c9ad80 15%,#d5c9ad80 85%,transparent);pointer-events:none}
+#coachDock.coach-dock.ship-control-deck button.dock-control{filter:none;overflow:visible}
+#coachDock.coach-dock.ship-control-deck .dock-control>span{position:relative;box-sizing:border-box;width:35px;height:35px;border:2px solid #c6b9a0;border-top-color:#f1e3c7;border-bottom-color:#665e56;border-radius:4px;clip-path:none;background:linear-gradient(145deg,#bcc8c2,#81918f 43%,#4b5c60);box-shadow:inset 0 1px #fff9,inset -2px -3px #22343b88,0 3px 0 #182127,0 5px 5px #000a;color:#243640}
+#coachDock.coach-dock.ship-control-deck .dock-control>span:after{content:'';position:absolute;right:2px;top:2px;width:4px;height:4px;border-radius:50%;background:#263d40;box-shadow:0 0 0 1px #e5e1cb77}
+#coachDock.coach-dock.ship-control-deck .dock-control[aria-current=page]>span:after{background:#ffd07c;box-shadow:0 0 6px #ffce78,0 0 0 1px #ffeed3}
+#coachDock.coach-dock.ship-control-deck .dock-control>span svg{width:21px;height:21px;filter:drop-shadow(0 1px #f2ffed77)}
+#coachDock.coach-dock.ship-control-deck .dock-control:active>span,#coachDock.coach-dock.ship-control-deck .dock-control[aria-current=page]>span{transform:translateY(3px);box-shadow:inset 1px 3px 4px #1e2d34ad,0 1px 0 #182127;color:#17282a}
+#coachDock.coach-dock.ship-control-deck .dock-control:focus-visible{outline:3px solid #ffe19a;outline-offset:2px}
+#coachDock.coach-dock.ship-control-deck .dock-settings>span{border-radius:50%;background:radial-gradient(circle,#d6ddcf 0 24%,#8fa69e 25% 49%,#526d70 50% 67%,#b4bfb6 69%);box-shadow:inset 0 1px #fff9,0 3px #29363a,0 0 0 2px #132128}
+#coachDock.coach-dock.ship-control-deck .dock-scoreboard>span{border-radius:5px 5px 10px 10px;background:linear-gradient(90deg,#596b72 0 20%,#becac3 22% 72%,#596b72 75%);}
+#coachDock.coach-dock.ship-control-deck .dock-food>span{height:31px;border-radius:3px 3px 9px 9px;background:linear-gradient(#ffe0a9,#c69458 48%,#845837);color:#493322}
+#coachDock.coach-dock.ship-control-deck .dock-achievements>span{border-radius:3px;clip-path:polygon(0 0,100% 0,100% 71%,50% 100%,0 71%);background:linear-gradient(140deg,#ffe8ac,#b98b44 67%,#765223);color:#533e25}
+#coachDock.coach-dock.ship-control-deck .dock-pod>span{width:29px;border-radius:12px;background:linear-gradient(90deg,#496c70,#b8d1bd 35%,#6d9d92 65%,#35585d);color:#183b3c}
+#coachDock.coach-dock.ship-control-deck .dock-settings:after,#coachDock.coach-dock.ship-control-deck .dock-scoreboard:after,#coachDock.coach-dock.ship-control-deck .dock-food:after,#coachDock.coach-dock.ship-control-deck .dock-achievements:after,#coachDock.coach-dock.ship-control-deck .dock-pod:after{position:absolute;top:calc(100% + 4px);left:50%;translate:-50% 0;color:#c5d5cb;font:700 7px/1 ui-monospace,Consolas,monospace;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px #071118;pointer-events:none}
+#coachDock.coach-dock.ship-control-deck .dock-settings:after{content:'COACH'}#coachDock.coach-dock.ship-control-deck .dock-scoreboard:after{content:'SCORES'}#coachDock.coach-dock.ship-control-deck .dock-food:after{content:'FOOD'}#coachDock.coach-dock.ship-control-deck .dock-achievements:after{content:'BADGES'}#coachDock.coach-dock.ship-control-deck .dock-pod:after{content:'COMMS'}
+#coachDock.coach-dock.ship-control-deck button.dock-portal{border:3px solid #9eb7b1;border-top-color:#e1eed6;border-bottom-color:#445b5b;border-radius:50%!important;background:radial-gradient(circle at 50% 40%,#1a4545 0 46%,#0b212a 47% 58%,transparent 59%),repeating-conic-gradient(#b6c6b3 0deg 8deg,#51666a 8deg 15deg);box-shadow:0 0 0 3px #17262b,0 4px 0 3px #0a141b,inset 0 0 11px #85f9ce7e,0 0 12px #85f9ce50;color:#d7ffe6;text-shadow:0 0 5px #71ebb0}
+#coachDock.coach-dock.ship-control-deck button.dock-portal:before{display:none}
+#coachDock.coach-dock.ship-control-deck button.dock-portal:active,#coachDock.coach-dock.ship-control-deck button.dock-portal[aria-current=page]{transform:translateY(3px);box-shadow:0 0 0 3px #17262b,0 1px 0 3px #0a141b,inset 0 0 15px #a4ffe7,0 0 18px #88ffd2}
+#coachDock.coach-dock.ship-control-deck .dock-portal svg{width:20px;height:20px}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control{box-sizing:border-box;width:42px;height:43px;padding:15px 2px 2px;border:2px solid #afbbad;border-top-color:#e8e9d4;border-bottom-color:#566963;border-radius:4px!important;background:linear-gradient(145deg,#adbcb4,#526c6b 65%,#365154);box-shadow:inset 0 1px #fff9,inset 0 -2px #2a4747,0 3px #142324;color:#173f3a;font:700 8px ui-monospace,Consolas,monospace}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control:before{content:'';display:block;position:absolute;left:8px;top:5px;width:23px;height:8px;border:1px solid #172b2d;border-radius:2px;background:linear-gradient(90deg,#23383a 0 45%,#e4cfaa 48% 85%,#788c88 88%);box-shadow:inset 0 1px 2px #0008}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control[data-on=false]:before{background:linear-gradient(90deg,#e4cfaa 0 40%,#758c89 43%,#23383a 48%)}
+#coachDock.coach-dock.ship-control-deck .dock-sound button.dock-control[data-on=true]{color:#f8e3ab;text-shadow:0 0 5px #ffe19a}
+#coachDock.coach-dock.ship-control-deck .dock-sound .cb-label{color:#c5d5cb}
+
+/* Keep seven physical controls on one rail before and after scene loading. */
+#coachDock.coach-dock.ship-control-deck{display:flex;justify-content:space-between;align-items:center;gap:3px}
+#coachDock.coach-dock.ship-control-deck .dock-control,#coachDock.coach-dock.ship-control-deck .dock-sound{flex:0 0 40px;min-width:0;width:40px}
+#coachDock.coach-dock.ship-control-deck .dock-portal{position:relative!important;left:auto!important;top:auto!important;translate:none!important;flex:0 0 56px;width:56px;min-width:56px}
+#coachDock.ship-control-deck .dock-settings{order:1}#coachDock.ship-control-deck .dock-food{order:2}#coachDock.ship-control-deck .dock-scoreboard{order:3}#coachDock.ship-control-deck .dock-portal{order:4}#coachDock.ship-control-deck .dock-achievements{order:5}#coachDock.ship-control-deck .dock-pod{order:6}#coachDock.ship-control-deck .dock-sound{order:7}
+#coachDock.ship-control-deck .dock-live{position:absolute}
+
+#homeScreen .deck-strip{justify-content:center!important}
+body>#podPersistentChrome .pod-now-playing{width:112px;min-width:112px;max-width:112px}

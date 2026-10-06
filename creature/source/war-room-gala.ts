@@ -9,6 +9,7 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {mountCage,cagePacketReady,cageStyle,SECTIONS,type CageSection,type CageViewer} from './cage';
 import {GALA_KEY,loadGala} from '../../pod/identity.mjs';
 import {loadWarRoomCoaches} from './war-room-coaches';
+import {createGalaEditor} from '../../war-room/gala-editor.js';
 
 type Look={schema:string;version:number;name:string;dye:number;parts:Record<string,number>;weapon?:{type:string;tier:number}};
 type Section={id:string;label:string;note:string;names:string[];choices:number[]};
@@ -104,17 +105,21 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   open=section;panel.hidden=false;panel.dataset.galaBay=section;
   const title={pets:'Animal cages · Pet',weapons:'Weapon rack · Weapon',mirror:'Mirror · Alien features',clothing:'Centre station · Clothes'}[section];
   heading.textContent=title;
-  if(section==='pets')body.replaceChildren(...sections(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));
-  else if(section==='weapons')body.replaceChildren(weaponForm());
-  else if(section==='mirror')body.replaceChildren(...sections(coaches?.hasBody?['skin']:MIRROR),...(coaches?[coaches.picker('body',load)]:[]));
+  const editor=createGalaEditor({document:doc,avatar:A,weapons:W,look:saved,
+   previewDraw:coaches?.hasBody?(canvas:HTMLCanvasElement,previewLook:Look,options:any)=>coaches!.draw(A.draw,canvas,previewLook,options):A.draw,
+   onPart:(id:string,value:number,label:string)=>{touch();save({...saved,parts:{...saved.parts,[id]:value}},`${(A.sections as Section[]).find(item=>item.id===id)?.label||label}: ${label}.`);},
+   onDye:(value:number)=>{touch();save({...saved,dye:value},`Silk ${value+1}.`);},
+   onWeapon:(value:{type:string;tier:number})=>{touch();const previous=saved.weapon||{type:'rapier',tier:0};if((value.type!==previous.type||value.tier!==previous.tier)&&!W.unlocked(value))value={type:value.type,tier:0};save({...saved,weapon:value},W.name(value)+'.');},
+   locked:(value:{type:string;tier:number})=>!W.unlocked(value)
+  });
+  if(section==='pets')body.replaceChildren(...editor.parts(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));
+  else if(section==='weapons')body.replaceChildren(editor.weapons());
+  else if(section==='mirror')body.replaceChildren(...editor.parts(coaches?.hasBody?['skin']:MIRROR),...(coaches?[coaches.picker('body',load)]:[]));
   else if(coaches?.hasBody){
    body.replaceChildren(el('p','Coach characters do not wear Gala clothes. Change their colour at the mirror.','help'));
   }
   else{
-   const dye=el('label','Silk colour'),select=el('select');select.dataset.galaPart='dye';
-   A.dyes.forEach((_:string,i:number)=>{const option=el('option',`Silk ${i+1}`);option.value=String(i);select.append(option);});select.value=String(saved.dye);
-   select.onchange=()=>{touch();save({...saved,dye:Number(select.value)},`Silk ${Number(select.value)+1}.`);};dye.append(select);
-   body.replaceChildren(...sections(CLOTHES),dye);
+   body.replaceChildren(...editor.parts(CLOTHES),editor.dye());
   }
   if(keep?.galaPart)(body.querySelector(`[data-gala-part="${keep.galaPart}"]`) as HTMLElement|null)?.focus();
   if(keep?.galaWeapon)(body.querySelector(`[data-gala-weapon="${keep.galaWeapon}"]`) as HTMLElement|null)?.focus();

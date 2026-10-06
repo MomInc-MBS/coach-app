@@ -14,6 +14,7 @@ export async function mountStandaloneHousing({content=document.querySelector('.e
  const loadCss=href=>new Promise((resolve,reject)=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=href;link.onload=()=>resolve(link);link.onerror=()=>reject(Error(`Could not load ${href}`));doc.head.append(link);});
  const links=await Promise.all(['/modules/portal/portal.css','/modules/portal/standalone-housing.css'].map(loadCss));
  if(leftEarly){links.forEach(link=>link.remove());view?.removeEventListener('pagehide',beforeReady);return ()=>{};}
+ doc.getElementById('coachDock')?.classList.add('ship-control-deck');
  let chrome=doc.getElementById('portalChrome');if(!chrome){chrome=doc.createElement('div');chrome.id='portalChrome';chrome.setAttribute('popover','manual');chrome.setAttribute('aria-hidden','true');doc.body.append(chrome);}
  chrome.classList.add('portal-standalone');chrome.innerHTML=frameMarkup();
  const face=()=>{const rail=15;for(const [key,value] of Object.entries({left:rail,top:rail,width:Math.max(1,innerWidth-2*rail),height:Math.max(1,innerHeight-2*rail-(doc.getElementById('coachDock')?.getBoundingClientRect().height||0))}))chrome.style.setProperty('--face-'+key,value+'px');};

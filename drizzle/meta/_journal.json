@@ -155,6 +155,27 @@
       "when": 1790700000000,
       "tag": "0021_armie_letter_deliveries",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1790700000001,
+      "tag": "0022_performance_progression",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791244800000,
+      "tag": "0025_spotify_connection",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1791244800001,
+      "tag": "0026_workout_paths",
+      "breakpoints": true
     }
   ]
 }

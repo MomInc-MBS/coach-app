@@ -32,7 +32,7 @@ async function open(viewport,reducedMotion='reduce'){
 test('the supplied ship art has a real transparent central window over an opaque nebula',async()=>{
  const page=await browser.newPage();try{await page.goto(base+'/__review');const assets=await page.evaluate(async()=>{
   const sample=async url=>{const img=new Image();img.src=url;await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);const data=ctx.getImageData(0,0,c.width,c.height).data;let clear=0,solid=0;const alpha={};for(let i=3;i<data.length;i+=4){if(data[i]===0)clear++;if(data[i]>=250)solid++;alpha[data[i]]=(alpha[data[i]]||0)+1;}return{width:c.width,height:c.height,center:data[4*(Math.floor(c.height/2)*c.width+Math.floor(c.width/2))+3],clear:clear/(c.width*c.height),solid:solid/(c.width*c.height),alpha:Object.entries(alpha).sort((a,b)=>b[1]-a[1]).slice(0,5)};};
-  return{ship:await sample('/pod/assets/ship-interior-cutout.png'),nebula:await sample('/pod/assets/nebula.png')};
+  return{ship:await sample('/pod/assets/ship-interior-cutout.png'),nebula:await sample('/pod/assets/nebula.webp')};
  });assert.equal(assets.ship.center,0);assert.ok(assets.ship.clear>.25&&assets.ship.solid>.15,'transparent viewport and opaque ship structure coexist: '+JSON.stringify(assets));assert.equal(assets.nebula.solid,1);assert.equal(assets.nebula.width,assets.nebula.height);
  }finally{await page.close();}
 });

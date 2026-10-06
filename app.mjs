@@ -23,18 +23,35 @@ import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
 import {mountRoutes,hashRoute} from './modules/routes.mjs';
+import {mountMenuLifecycle} from './menu-lifecycle.mjs';
 import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
 import {mountPhysicalSoundUI} from './audio/sound-ui.mjs';
+import {mountPodChrome} from './modules/pod-chrome.mjs';
+import {ensurePortalMounted} from './modules/portal/portal-entry.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
 mountRoutes();
+window.myr5MenuLifecycle=mountMenuLifecycle();
 mountBattlePass();
 mountPhysicalSoundUI();
+const lazyGrimoire=document.createElement('button');
+lazyGrimoire.type='button';lazyGrimoire.id='podGrimoireLazyOpen';lazyGrimoire.textContent='GRIMOIRE';
+lazyGrimoire.setAttribute('aria-label','Open grimoire settings');
+let grimoireOpening=false;
+lazyGrimoire.addEventListener('click',async()=>{
+ if(grimoireOpening)return;grimoireOpening=true;
+ try{await ensurePortalMounted();document.getElementById('portalSettingsButton')?.click();}
+ catch(error){console.warn('Grimoire settings unavailable',error);}
+ finally{grimoireOpening=false;}
+});
+mountPodChrome(lazyGrimoire);
 let phoneOrientation=mountPhoneOrientation();
 window.addEventListener('pagehide',()=>{phoneOrientation?.();phoneOrientation=null;});
 window.addEventListener('pageshow',event=>{if(event.persisted&&!phoneOrientation)phoneOrientation=mountPhoneOrientation();});
 const $=id=>document.getElementById(id),v=$('v'),c=$('c'),g=c.getContext('2d');
+$('camera').querySelector('option[value="manual"]')?.remove();
+if($('camera').value==='manual')$('camera').value='user';
 const poseFrames=new PoseFrameScheduler(v);
-const schedulePose=run=>poseFrames.schedule(()=>{if(run===generation)void loop(run);});
+const schedulePose=run=>poseFrames.schedule(()=>{if(run===generation&&state.phase==='tracking')void loop(run);});
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 mountCoachVoiceSettings({voice,settings:$('settings'),testButton:$('testVoice')});
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -73,17 +90,22 @@ async function toCpu(run,reason){
   tracker=cpu;state.delegate='CPU';
 }
 function closeProbe(){try{probe?.tracker?.close();}catch{}probe=null;}
+const ACTIVE_PHASES=new Set(['camera','model','tracking','preparation-rest','manual-starting','manual']);
+const FROZEN_SETTINGS=['movement','goal','duration','restDuration','camera'];
+let frozenSettings=null;
+const freezeSettings=()=>{frozenSettings=Object.fromEntries(FROZEN_SETTINGS.map(id=>[id,$(id).value]));};
+const releaseOwner=()=>{pod?.workoutOwner?.stop();};
 let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
 const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
 const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{void stop();voice.say('Stopped.',{interrupt:true});},
-  // Manual correction: the same session count the counter, cues and pod.consume read on the next frame.
-  onAdjust:delta=>{if(state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
+  // Downward correction can remove a false camera rep without creating free XP.
+  onAdjust:delta=>{if(delta>=0||state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy&&state.phase!=='tracking';$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('widest').disabled=!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -103,6 +125,7 @@ async function showLensInfo(track){
   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
+  frozenSettings=null;
   poseFrames.stop();cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}closeProbe();draw=null;
   stream?.getTracks().forEach(t=>t.stop());stream=null;v.pause();v.srcObject=null;g.clearRect(0,0,c.width,c.height);
   state.camera=null;state.delegate=null;state.rate=0;
@@ -135,22 +158,30 @@ function renderMotion(m){
   pod?.render(rawMotion);
   const instruction=pod?.flow?.workout?.instruction;if(instruction)$('status').textContent=typeof instruction==='string'?instruction:instruction.message||instruction.text||'';
   const tools=document.querySelector('.workout-performance-controls'),workout=pod?.flow?.workout;
-  if(tools){const cameraStage=document.getElementById('cameraWorkout');if(state.phase==='tracking'&&cameraStage&&tools.parentElement!==cameraStage)cameraStage.append(tools);else if(state.phase!=='tracking'&&tools.parentElement===cameraStage)document.getElementById('battlePassOpen').after(tools);tools.hidden=!['tracking','manual'].includes(state.phase);for(const button of tools.querySelectorAll('button')){const label=button.textContent;button.hidden=label==='Finish working set'?workout?.stage?.startsWith('preparation-'):label==='Break hold'?workout?.kind!=='hold'||workout.paused:label==='Resume hold'||label==='More recovery'?workout?.kind!=='hold'||!workout.paused:false;}const variation=tools.querySelector('[data-hold-variation]');if(variation){variation.hidden=workout?.kind!=='hold';if(workout?.kind==='hold')variation.querySelector('select').value=workout.difficulty;}const recovery=tools.querySelector('[data-hold-recovery]');if(recovery){recovery.hidden=!workout?.paused;recovery.textContent=`Recovery · ${Math.ceil(Math.max(0,(workout?.recoveryUntil-Date.now())/1000))}s. Resume whenever ready.`;}}
+  if(tools){const cameraStage=document.getElementById('cameraWorkout');if(state.phase==='tracking'&&cameraStage&&tools.parentElement!==cameraStage)cameraStage.append(tools);else if(state.phase!=='tracking'&&tools.parentElement===cameraStage)document.getElementById('battlePassOpen').after(tools);tools.hidden=!['tracking','manual'].includes(state.phase);for(const button of tools.querySelectorAll('button')){const label=button.textContent;button.hidden=label==='Finish working set'?workout?.stage?.startsWith('preparation-'):label==='Break hold'?workout?.kind!=='hold'||workout.paused:label==='Resume hold'||label==='More recovery'?workout?.kind!=='hold'||!workout.paused:false;}const variation=tools.querySelector('[data-hold-variation]');if(variation){variation.hidden=true;variation.querySelector('select').disabled=true;}const recovery=tools.querySelector('[data-hold-recovery]');if(recovery){recovery.hidden=!workout?.paused;recovery.textContent=`Recovery · ${Math.ceil(Math.max(0,(workout?.recoveryUntil-Date.now())/1000))}s. Resume whenever ready.`;}}
 }
-function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true}={}){
-  const unfinished=interrupt&&['camera','model','tracking'].includes(state.phase);
+function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true,home=true}={}){
+  if(state.phase==='manual'||state.phase==='manual-starting')return pauseManualWhenReady({home});
+  const unfinished=interrupt&&['camera','model','tracking','preparation-rest'].includes(state.phase);
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
   // #19/#56: a set cut short by STOP also goes home; the pod offers it back with its Continue popup.
-  if(unfinished)workoutTransition=Promise.resolve(pod?.interruptCurrent(state.motion)).then(()=>window.myr5Routes?.home?.()).catch(error=>{status(error.message);throw error;});
+  if(unfinished)workoutTransition=Promise.resolve().then(()=>pod?.interruptCurrent(state.motion)).catch(error=>{status(error.message);}).finally(()=>{releaseOwner();if(home)window.myr5Routes?.home?.();});
   return workoutTransition;
 }
+for(const type of ['input','change'])document.addEventListener(type,event=>{
+  if(!ACTIVE_PHASES.has(state.phase)||!frozenSettings||!FROZEN_SETTINGS.includes(event.target?.id))return;
+  event.stopImmediatePropagation();event.target.value=frozenSettings[event.target.id];
+},true);
+window.addEventListener('myr5:route-leave',()=>{if(ACTIVE_PHASES.has(state.phase))void stop('Workout stopped. Your progress is saved.',{home:false});});
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
 async function start(){
-  if(['camera','model','tracking'].includes(state.phase))stop('Switching workout input…');
-  try{await workoutTransition;}catch{return;}
-  if($('camera').value==='manual')return startManual();
-  const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();
+  if(document.hidden)return;
+  if(ACTIVE_PHASES.has(state.phase))stop('Switching workout input…');
+  try{await Promise.all([workoutTransition,cameraStartTransition]);}catch{return;}
+  if(document.hidden)return;
+  if($('camera').value==='manual')$('camera').value='user';
+  const run=++generation;release();state.phase='camera';controls(true);state.error=null;resetMovement();freezeSettings();
   $('trainingView').scrollIntoView({block:'start',behavior:'auto'});
   state.frames=0;state.poses=0;state.inferenceMs=0;status('Opening camera…');voice.say(MOVEMENTS[session.mode].name+' selected.',{key:'movement',interrupt:true});voice.say('Get into position.',{key:'setup'});$('detail').textContent='Waiting for video';
   let settleCameraStart;
@@ -187,12 +218,12 @@ async function start(){
     status(MOVEMENTS[session.mode].hint);voice.say(MOVEMENTS[session.mode].hint,{interrupt:true});loop(run);
   }catch(error){
     if(run!==generation){await pod.interruptCurrent(state.motion).catch(()=>{});return;}
-    generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});state.phase='error';state.error=error.message;
+    generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});releaseOwner();state.phase='error';state.error=error.message;
     status(error.name==='NotAllowedError'?'Allow camera access for this site, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
   }finally{settleCameraStart();}
 }
 async function loop(run){
-  if(run!==generation||!tracker)return;
+  if(run!==generation||state.phase!=='tracking'||!tracker)return;
   try{
     const now=performance.now();
     if(v.readyState>=2&&v.currentTime!==lastTime){
@@ -223,12 +254,13 @@ async function loop(run){
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
       if(await pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
+      if(state.phase==='preparation-rest')return;
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
       if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s (${state.delegate}) · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
       if(state.motion.complete){renderMotion(state.motion);stop('Round complete. Camera and tracker stopped.');voice.say('Round complete. Well done.',{interrupt:true});return;}
     }
-    schedulePose(run);
-  }catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
+    if(state.phase==='tracking')schedulePose(run);
+  }catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});releaseOwner();voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
 }
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
 $('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
@@ -248,8 +280,20 @@ $('widest').addEventListener('click',async()=>{
 });
  const workoutReady=openGuestWorkoutAdapter({exerciseKeys:Object.keys(MOVEMENTS)}).then(adapter=>{workouts.ownerId=adapter.ownerId;if(disposed)adapter.close();return adapter;});
  const workouts={paused:(...args)=>workoutReady.then(value=>value.paused(...args)),start:(...args)=>workoutReady.then(value=>value.start(...args)),update:(...args)=>workoutReady.then(value=>value.update(...args)),pause:(...args)=>workoutReady.then(value=>value.pause(...args)),complete:(...args)=>workoutReady.then(value=>value.complete(...args)),interrupt:(...args)=>workoutReady.then(value=>value.interrupt(...args)),unfinished:(...args)=>workoutReady.then(value=>value.unfinished(...args)),close(){disposed=true;void workoutReady.then(value=>value.close(),()=>{});}};
- window.addEventListener('pagehide',()=>{if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady().finally(()=>workouts.close());else{const stopped=stop();void Promise.allSettled([stopped,cameraStartTransition]).then(()=>workouts.close());}});document.addEventListener('visibilitychange',()=>{if(!document.hidden||state.phase==='idle')return;if(state.phase==='manual'||state.phase==='manual-starting')void pauseManualWhenReady();else void stop('Paused while the page was hidden. Tap Start for a new session.');});
+ window.addEventListener('pagehide',()=>{const stopped=ACTIVE_PHASES.has(state.phase)?stop('Workout stopped.',{home:false}):workoutTransition;void Promise.allSettled([stopped,cameraStartTransition]).then(()=>{releaseOwner();workouts.close();});});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&ACTIVE_PHASES.has(state.phase))void stop('Paused while the page was hidden. Tap Begin to start a new session.',{home:false});});
  pod=initPod({voice,movements:MOVEMENTS,workouts,onStop:()=>{if(state.phase==='manual'){generation++;release();controls(false);state.phase='idle';manual=null;}else stop('Set ended. Your camera is off.',{interrupt:false});},onNext:async next=>{await library.introduce(next?.mode);if(next)pod.setGoal(next.goal);}});
+ window.addEventListener('myr5:preparation-rest-start',()=>{
+  if(state.phase!=='tracking')return;
+  state.phase='preparation-rest';poseFrames.stop();cameraWorkout.setActive(false);
+  $('previewLabel').textContent='RECOVERY';
+ });
+ window.addEventListener('myr5:preparation-rest-end',()=>{
+  if(state.phase!=='preparation-rest'||document.hidden||!tracker)return;
+  cues.reset();session=new MovementSession(session.mode);state.motion=session.snapshot();pod.rebaseTracking();
+  lastTime=-1;frames=0;timing=0;windowStart=performance.now();lastUi=0;
+  state.phase='tracking';cameraWorkout.setActive(true);$('previewLabel').textContent='TRACKING';renderMotion(state.motion);schedulePose(generation);
+ });
 async function repairWorkoutRewards(){const owner=performanceOwner();try{const adapter=await workoutReady,rows=await adapter.listPerformanceWorkouts();if(disposed||performanceOwner()!==owner)return;const repaired=reconcilePerformanceWorkouts(rows,{owner});if(repaired.failed.length)status('Your workout is saved. Rewards will retry when progress storage is available.');}catch(error){if(!disposed)console.warn('Workout reward repair is waiting:',error.message);}}
 void repairWorkoutRewards();for(const event of ['myr5:local-history-refresh','myr5:account-ready','storage'])window.addEventListener(event,()=>void repairWorkoutRewards());
 // P13D: optional pack UI may bind this actual owner after user intent; packs are not imported at startup.
@@ -262,15 +306,13 @@ window.myr5CreatePackControl=async options=>{
 resetMovement();
 initHardware();
 soundSwitch();
- const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.'),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+ const library=initLibrary({movements:MOVEMENTS,voice,onOpen:()=>stop('Workout stopped for the library. Your results are kept.',{home:false}),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
 // #19: today's newest paused/interrupted workout is offered by a Continue popup on the pod page (never the quilt).
-// Manual resumes through beginSet's pausedLocal check, which only fires when the camera picker is set to
-// 'manual'; a paused/interrupted camera row just restarts the movement through the normal BEGIN flow.
+// A saved manual row can start a new camera session without deleting its old local record.
 mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,onContinue:row=>{
  if(!MOVEMENTS[row.mode])return;
- if((row.metadata?.control||'camera')==='manual')$('camera').value='manual';
  $('movement').value=row.mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
  $('start').click();
 }});
@@ -369,7 +411,7 @@ async function pauseManualUi(){try{manualSnapshot();manual?.clock.pause();await 
 function pauseManualWhenReady(){return manualStartGate.pause(()=>state.phase==='manual'?pauseManualUi():null);}
 const workoutTools=document.createElement('div');workoutTools.className='workout-performance-controls';workoutTools.hidden=true;
 const recoveryStatus=document.createElement('p');recoveryStatus.dataset.holdRecovery='';recoveryStatus.setAttribute('role','status');recoveryStatus.hidden=true;workoutTools.append(recoveryStatus);
-const holdVariationLabel=document.createElement('label');holdVariationLabel.textContent='Hold difficulty ';holdVariationLabel.dataset.holdVariation='';const holdVariation=document.createElement('select');holdVariation.setAttribute('aria-label','Hold difficulty');for(const [value,label] of [['easy','Easy'],['medium','Medium'],['hard','Hard'],['expert','Expert']]){const option=document.createElement('option');option.value=value;option.textContent=label;holdVariation.append(option);}holdVariation.onchange=()=>{pod?.switchDifficulty?.(holdVariation.value);status('Use the selected hold variation. Active XP time continues; uninterrupted time restarts.');};holdVariationLabel.append(holdVariation);workoutTools.append(holdVariationLabel);
+const holdVariationLabel=document.createElement('label');holdVariationLabel.textContent='Hold difficulty ';holdVariationLabel.dataset.holdVariation='';const holdVariation=document.createElement('select');holdVariation.setAttribute('aria-label','Hold difficulty');for(const [value,label] of [['easy','Easy'],['medium','Medium'],['hard','Hard'],['expert','Expert']]){const option=document.createElement('option');option.value=value;option.textContent=label;holdVariation.append(option);}holdVariation.onchange=()=>{if(ACTIVE_PHASES.has(state.phase))return;pod?.switchDifficulty?.(holdVariation.value);};holdVariationLabel.append(holdVariation);workoutTools.append(holdVariationLabel);
 for(const [label,action] of [['Finish working set',async()=>{try{if(state.phase==='manual')manualSnapshot();await pod?.finishWorking?.(state.motion,Date.now());}catch(error){status(error.message);}}],['Break hold',()=>{pod?.breakHold?.();manual?.clock.pause();status('Hold paused. Shake out, then resume when ready.');}],['Resume hold',()=>{pod?.resumeHold?.();manual?.clock.resume();}],['More recovery',()=>pod?.extendHoldRecovery?.()]]){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=action;workoutTools.append(button);}
 const cardioLabel=document.createElement('label');cardioLabel.textContent='Cardio ';const cardioStyle=document.createElement('select');cardioStyle.setAttribute('aria-label','Cardio style');for(const [value,label] of [['gentle','Gentle cardio'],['sprint','Sprint intervals']]){const option=document.createElement('option');option.value=value;option.textContent=label;cardioStyle.append(option);}cardioStyle.onchange=()=>pod?.setCardioStyle?.(cardioStyle.value);cardioLabel.append(cardioStyle);$('battlePassOpen').after(workoutTools);$('roundControl').append(cardioLabel);
 $('primary').addEventListener('pointerdown',event=>{if(state.phase==='manual'){event.preventDefault();void activateManual();}});

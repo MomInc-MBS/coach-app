@@ -3,7 +3,7 @@ import { productionMaterialTrust } from './material-config.mjs';
 
 // Metadata is intentionally small and core-safe. Track bundles combine both skin collections;
 // the source manifests/chunk bytes stay on the post-download host and require a real signature.
-import { selectedTracks } from '../../battle-pass.mjs';
+import { readSelectedTracks } from '../../chosen-styles.mjs';
 
 export const POST_DOWNLOAD_SECTIONS = Object.freeze([
   ...['chest','quads','glutes','arms','yoga','martial-arts','cardio','meditation'].map(track => Object.freeze({ id:`track-${track}`, track, title:track==='arms'?'Arms & Shoulders':track[0].toUpperCase()+track.slice(1), kind:'creature-skins', path:`/materials/track-${track}/chunk-manifest.json`, version:'1.0.0' })),
@@ -12,8 +12,10 @@ export const POST_DOWNLOAD_SECTIONS = Object.freeze([
 
 const TRACK_PACKET_ALIAS=Object.freeze({'arms-shoulders':'arms'});
 export function starterPostDownloadSectionIds(account=globalThis.myr5AuthenticatedAccount){
-  const tracks=[...new Set([...selectedTracks(account)].map(track=>TRACK_PACKET_ALIAS[track]??track))];
-  return Object.freeze(tracks.length===4&&tracks.includes('meditation')?tracks.map(track=>`track-${track}`):[]);
+  const picked=readSelectedTracks({account});
+  if(picked.length!==2)return Object.freeze([]);
+  const tracks=[...new Set(['meditation',...picked].map(track=>TRACK_PACKET_ALIAS[track]??track))];
+  return Object.freeze(tracks.map(track=>`track-${track}`));
 }
 export function fullPostDownloadSectionIds(){ return Object.freeze(POST_DOWNLOAD_SECTIONS.map(section=>section.id)); }
 

@@ -1,10 +1,10 @@
 export function mountCameraWorkout({video,counter,onStop,onAdjust=()=>{}}){
  const stage=document.createElement('section');stage.id='cameraWorkout';stage.hidden=true;stage.setAttribute('aria-label','Camera workout');
  const stop=document.createElement('button');stop.type='button';stop.className='camera-workout-counter';stop.setAttribute('aria-label','Stop workout');stop.title='Tap the counter to stop';stage.append(stop);
- // One status line (why counting is paused) and a manual ±1 for rep exercises, under the counter.
+ // One status line and a downward correction for false camera reps, under the counter.
  const statusLine=document.createElement('p');statusLine.className='camera-workout-status';statusLine.setAttribute('role','status');statusLine.hidden=true;
  const adjust=document.createElement('div');adjust.className='camera-workout-adjust';adjust.hidden=true;
- for(const [delta,text,label] of [[-1,'−1','Remove one rep'],[1,'+1','Add one rep']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.addEventListener('click',()=>onAdjust(delta));adjust.append(button);}
+ for(const [delta,text,label] of [[-1,'−1','Remove one rep']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.addEventListener('click',()=>onAdjust(delta));adjust.append(button);}
  stage.append(statusLine,adjust);
  // The AR coach is the one exception to camera-only mode (D24): a pointer-events:none layer above the
  // video and counter, so a fast knee/ankle can still register on the video underneath.

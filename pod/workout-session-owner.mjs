@@ -18,10 +18,12 @@ export class WorkoutSessionOwner {
   snapshot() { return { phase: this.phase, revision: this.revision, transitioning: !!this.lease }; }
   canStart() { return this.phase === 'idle' && !this.lease; }
   start() { if (!this.canStart()) return false; this.phase = 'active'; this.revision++; this.persist(); return true; }
-  stop() { if (this.phase !== 'idle') { this.phase = 'idle'; this.revision++; this.persist(); } }
+  // Idempotent release for every stop path (also drops a stale idle lease).
+  stop() { this.lease = null; if (this.phase !== 'idle') { this.phase = 'idle'; this.revision++; this.persist(); } }
   async complete(payload) {
     if (this.phase !== 'active') return { saved: false, reason: 'no active workout' };
-    const result = await this.saveProgress?.(payload);
+    let result;
+    try { result = await this.saveProgress?.(payload); } catch (error) { return { saved: false, reason: error?.message || 'workout progress was not saved' }; }
     if (!result?.local) return { saved: false, reason: result?.reason || 'workout progress was not saved' };
     this.phase = 'idle'; this.revision++;
     const acknowledged=this.persist();

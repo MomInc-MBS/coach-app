@@ -1,3 +1,4 @@
+import {COACHES} from '../../performance-catalog.mjs';
 import {goldenCoach,performanceOwner,coachAccess} from '../../performance-progress.mjs';
 import {BODIES,parseRecipe,fresh} from './creator/design';
 import {resolveRegionMaterial,regionChoice} from './creator/materials-registry';
@@ -8,7 +9,7 @@ type Sprite={id:string;family:string;kind:'body'|'pet';sheet:string;frame:number
 type Selection={body:string|null;pet:string|null;goldenBody:boolean};
 export async function loadWarRoomCoaches(doc:Document){
  const response=await fetch('/pod/gala-coaches/manifest.json');if(!response.ok)throw Error('Coach sprites are unavailable.');
- const manifest=await response.json(),sprites:Sprite[]=manifest.sprites;
+ const manifest=await response.json(),sprites:Sprite[]=manifest.sprites.filter((sprite:Sprite)=>COACHES.some((coach:any)=>coach.id===sprite.id));
  const sheets=new Map<string,{image:HTMLImageElement;mask:HTMLImageElement}>();
  const image=async(name:string)=>{const img=new Image();img.src='/pod/gala-coaches/'+name;await img.decode();return img;};
  await Promise.all(Object.entries(manifest.sheets).map(async([id,s]:[string,any])=>{const [art,mask]=await Promise.all([image(s.image),image(s.mask)]);sheets.set(id,{image:art,mask});}));

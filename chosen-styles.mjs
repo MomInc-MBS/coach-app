@@ -1,21 +1,19 @@
-// The user's selected paths (D25 track ids). Nothing in the app stores them yet: the oval
-// section picker (D25/PLAN §3a) isn't built, and onboarding only stores movements
-// (account.onboarding.data.profile.exercises), which battle-pass.mjs uses as the fallback.
-// This is the smallest store for an explicit pick — one localStorage key, no DOM. The oval
-// screen should write here (setSelectedTracks) instead of growing its own storage.
-// Meditation is never stored: it is always available (D9) and added by selectedTracks().
+// The user's two chosen workout paths. They live in the owner's performance progress
+// (owner-scoped storage, never a global key), so another account on the same device never sees them
+// and the server can persist and derive them from the same record.
+import {CHOOSABLE_TRACKS,normalizePaths} from './performance-catalog.mjs';
+import {readPerformanceProgress,choosePerformancePaths} from './performance-progress.mjs';
+export {CHOOSABLE_TRACKS};
+/** Legacy global key. Nothing reads or writes it any more: it leaked paths between accounts. */
 export const SELECTED_TRACKS_KEY='myr5-selected-tracks-v1';
-export const CHOOSABLE_TRACKS=Object.freeze(['chest','quads','glutes','arms-shoulders','yoga','martial-arts','cardio']);
 
-const clean=ids=>[...new Set((Array.isArray(ids)?ids:[]).filter(id=>CHOOSABLE_TRACKS.includes(id)))];
-
-/** Stored pick, validated; [] when nothing was chosen or storage is unavailable. */
-export function readSelectedTracks(){
- try{return clean(JSON.parse(localStorage.getItem(SELECTED_TRACKS_KEY)||'[]'));}catch{return [];}
+/** Chosen path ids (canonical, arms-shoulders for arms) for options.owner/storage/account; [] until chosen. */
+export const readSelectedTracks=(options={})=>readPerformanceProgress(options).paths;
+/** One-time choice of exactly 2 paths. Grants each path's introductory coach and persists both.
+ * Repeating the same pair is a no-op; a different pair throws unless options.reset is true. */
+export function chooseWorkoutPaths(trackIds,options={}){
+ const picked=normalizePaths(trackIds);
+ if(picked.length!==2)throw RangeError('Exactly 2 workout paths must be selected.');
+ return choosePerformancePaths(picked,options).paths;
 }
-/** Saves the pick (unknown ids and duplicates dropped); returns what was stored. */
-export function setSelectedTracks(ids){
- const picked=clean(ids);
- try{localStorage.setItem(SELECTED_TRACKS_KEY,JSON.stringify(picked));}catch{/* no storage: pick lasts this page only via the fallback */}
- return picked;
-}
+export const setSelectedTracks=chooseWorkoutPaths;

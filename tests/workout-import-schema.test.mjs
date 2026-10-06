@@ -29,6 +29,7 @@ before(async()=>{
  await db.prepare("INSERT INTO workouts(id,user_id,mode,goal,started_at,completed_at,value) VALUES('legacy-fraction','legacy','squat',5,1000,10000.5,5)").run();
  statements=(await readFile(new URL('drizzle/0019_workout_import_trust.sql',product),'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean);
  await db.batch(statements.map(s=>db.prepare(s)));
+ await db.prepare('CREATE TABLE workout_path_choices (user_id TEXT PRIMARY KEY,data_epoch INTEGER NOT NULL,paths TEXT NOT NULL,created_at INTEGER NOT NULL)').run();
  [workerModule,routeModule,combatModule,scoreboardModule]=await Promise.all(['worker.mjs','workout-route.mjs','combat.mjs','scoreboard.mjs'].map(async name=>import(await patchedURL(name))));
 });
 after(()=>mf?.dispose());

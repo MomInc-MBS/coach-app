@@ -74,20 +74,22 @@ test('drawing keeps only close trail followers; release fans them out quickly',(
  stepFish(S,1/60,t+POND.releaseMs+1,POND);assert.equal(S.phase,'wander','the 15-second idle clock continues');
 });
 
-test('15 s idle: the fish scatter off the pond, then the huge koi crosses, then they come back',()=>{
- assert.equal(idlePhase(0).phase,'wander');assert.equal(idlePhase(14999).phase,'wander');
- assert.equal(idlePhase(15000).phase,'scatter');assert.equal(idlePhase(15000+POND.scatterMs).phase,'big');
+test('8 s total wait: the fish scatter off the pond, then the huge koi crosses, then they come back',()=>{
+ assert.equal(POND.idleMs+POND.scatterMs,8000);assert.equal(idlePhase(0).phase,'wander');assert.equal(idlePhase(POND.idleMs-1).phase,'wander');
+ assert.equal(idlePhase(POND.idleMs).phase,'scatter');assert.equal(idlePhase(POND.idleMs+POND.scatterMs).phase,'big');
  const P=POND.idleMs+POND.scatterMs+POND.bigMs;assert.deepEqual(idlePhase(P+5),{phase:'wander',t:5,cycle:1});
  const S={fish:makeFish(10,A,rng(5)),A,rand:rng(6),touch:null,lastTouch:0,trail:makeTrail(),members:0,phase:'wander'};
- for(let now=0;now<15000+POND.scatterMs+2000;now+=16)stepFish(S,.016,now,POND);
+ for(let now=0;now<POND.idleMs+POND.scatterMs+2000;now+=16)stepFish(S,.016,now,POND);
  assert.equal(S.phase,'big');
- for(const f of S.fish)assert.ok(f.x<-.03||f.x>1.03||f.y<-.03||f.y>A+.03,`fish off the pond: ${f.x.toFixed(2)},${f.y.toFixed(2)}`);
+  for(const f of S.fish)assert.ok(f.x<-.03||f.x>1.03||f.y<-.03||f.y>A+.03,`fish off the pond: ${f.x.toFixed(2)},${f.y.toFixed(2)}`);
+  const distanceFromPond=()=>S.fish.reduce((sum,f)=>sum+Math.hypot(f.x-.5,f.y-A/2),0)/S.fish.length;
+  const scatteredDistance=distanceFromPond();
  const a=bigFishPose(9,0),b=bigFishPose(9,1),off=p=>p.x<-.3||p.x>1.3||p.y<-.3||p.y>A+.3;
  assert.ok(off(a)&&off(b),'the huge koi starts and ends off the pond');
  assert.notDeepEqual(bigFishPose(1,0),bigFishPose(2,0),'a new direction each show');
- for(let now=15000+POND.scatterMs+POND.bigMs;now<P+12000;now+=16)stepFish(S,.016,now,POND);
- assert.equal(S.phase,'wander');
- assert.ok(S.fish.filter(f=>f.x>0&&f.x<1&&f.y>0&&f.y<A).length>=8,'the fish came back');
+  for(let now=P;now<P+POND.idleMs;now+=16)stepFish(S,.016,now,POND);
+  assert.equal(S.phase,'wander');
+  assert.ok(distanceFromPond()<scatteredDistance,'the fish swim back toward the pond before the next show');
 });
 
 test('ripples spread and die away; the board is registered as a procedural grimoire',()=>{

@@ -1,15 +1,15 @@
 // Fixed glass library with spoken proposals and a hologram before every start.
 import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,focusFor} from './exercise-library.mjs';
 import {movementSetup} from './movement-setup.mjs';
-import {mountWeaponRewards} from './weapon-rewards.mjs';
 import {WORKOUT_KINDS,workoutKind,workoutChoices,workoutLevel} from './workout-levels.mjs';
 const $=id=>document.getElementById(id);
 export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs',kind='reps';
  const kindLabel=document.createElement('label');kindLabel.className='library-kind';kindLabel.textContent='Training type';const kindSelect=document.createElement('select');kindSelect.id='libraryKind';for(const item of WORKOUT_KINDS){const o=document.createElement('option');o.value=item.id;o.textContent=item.name;kindSelect.append(o);}kindLabel.append(kindSelect);$('libraryFocus').closest('label').before(kindLabel);kindSelect.value=kind;kindSelect.onchange=()=>{kind=kindSelect.value;page=0;paginate();};
- const rewards=mountWeaponRewards($('libraryFocus').closest('label'),()=>filter,()=>kind);
+ // The setup is terminal text on the hologram glass, never a separate panel.
+ const setupPanel=$('hologramPanel').querySelector('.holo-setup');$('holoStage').append(setupPanel);
  for(const g of FOCUS_GROUPS){const o=document.createElement('option');o.value=g.id;o.textContent=g.name;$('libraryFocus').append(o);}
- $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();rewards.paint();});
+ $('libraryFocus').addEventListener('change',()=>{filter=$('libraryFocus').value;page=0;paginate();});
  const speak=(text,options={})=>voice.say(text,options);
  function cancelIntro(){introGeneration++;introducing=false;clearTimeout(introTimer);resolveWait?.();resolveWait=null;voice.cancel();$('introCue').hidden=true;}
  function releaseViewer(){viewerGeneration++;viewer?.dispose();viewer=null;}
@@ -21,9 +21,9 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   const button=document.createElement('button');button.className='card-select';button.dataset.movement=id;button.setAttribute('aria-pressed','false');
   button.setAttribute('aria-label',`${level.label} ${m.name}, ${level.kind}`);button.title=m.name;
   const poster=document.createElement('img');poster.src=`/models/previews/${id}.png`;poster.alt='';poster.width=512;poster.height=512;poster.loading='lazy';poster.decoding='async';button.append(poster);
-  const title=document.createElement('strong');title.className='movement-level';title.textContent=`${level.label} \u00b7 ${m.name}`;const targets=document.createElement('p');targets.className='movement-targets';targets.textContent=level.unlock;const xp=document.createElement('p');xp.className='movement-xp';xp.textContent=level.xp;button.append(title);button.addEventListener('click',()=>{cancelIntro();showModel(id);});card.append(button,targets,xp);$('movementCards').append(card);
+  const title=document.createElement('strong');title.className='movement-level';title.textContent=`${level.label} \u00b7 ${m.name}`;button.append(title);button.addEventListener('click',()=>{cancelIntro();showModel(id);});card.append(button);$('movementCards').append(card);
  }
- function paginate(){rewards.paint();const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter&&c.dataset.kind===kind);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;let empty=document.getElementById('libraryEmpty');if(!empty){empty=document.createElement('p');empty.id='libraryEmpty';empty.setAttribute('role','status');$('movementCards').after(empty);}empty.textContent=`No ${WORKOUT_KINDS.find(k=>k.id===kind).name.toLowerCase()} in this focus. Choose another focus or training type.`;empty.hidden=cards.length>0;}
+ function paginate(){const cards=[...$('movementCards').children].filter(c=>c.dataset.group===filter&&c.dataset.kind===kind);const pages=Math.max(1,Math.ceil(cards.length/4));page=Math.max(0,Math.min(page,pages-1));for(const card of $('movementCards').children)card.hidden=true;cards.slice(page*4,page*4+4).forEach(c=>c.hidden=false);$('pageNumber').textContent=(page+1)+' / '+pages;$('previousPage').disabled=page===0;$('nextPage').disabled=page===pages-1;$('libraryPages').hidden=pages===1;let empty=document.getElementById('libraryEmpty');if(!empty){empty=document.createElement('p');empty.id='libraryEmpty';empty.setAttribute('role','status');$('movementCards').after(empty);}empty.textContent=`No ${WORKOUT_KINDS.find(k=>k.id===kind).name.toLowerCase()} in this focus. Choose another focus or training type.`;empty.hidden=cards.length>0;}
  $('previousPage').addEventListener('click',()=>{page--;paginate();});$('nextPage').addEventListener('click',()=>{page++;paginate();});
  $('libraryFocus').value=filter;paginate();
  async function showModel(id){
@@ -32,8 +32,8 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
   $('holoCameraPosition').textContent=setup.position;$('holoCameraPlacement').textContent=setup.placement;
   $('holoFrameNote').textContent=setup.framing;
   $('holoVisibleJoints').replaceChildren(...setup.joints.map(name=>{const li=document.createElement('li');li.textContent=name;return li;}));
-  $('holoStage').setAttribute('aria-label',`${movements[id].name} example. ${setup.position}. Drag to rotate.`);
-  dialog.dataset.preview='true';stopHands();releaseViewer();const run=viewerGeneration;selection(id);onSelect(id);$('movementCards').hidden=true;$('libraryPages').hidden=true;$('startFromLibrary').hidden=true;$('gestureArea').hidden=true;$('hologramPanel').hidden=false;$('holoName').textContent=`${workoutLevel(id).label} \u00b7 ${movements[id].name}`;let targets=document.getElementById('holoUnlockTargets');if(!targets){targets=document.createElement('p');targets.id='holoUnlockTargets';$('holoName').after(targets);}targets.textContent=workoutLevel(id).unlock+' \u00b7 '+workoutLevel(id).xp;$('holoStatus').hidden=false;$('holoStatus').textContent='Loading hologram…';$('holoPlay').textContent='Pause animation';$('useHologram').disabled=false;$('useHologram').textContent='Begin';dialog.scrollTop=0;
+  $('holoStage').setAttribute('aria-label',`${movements[id].name} example. Camera: ${setup.position}. ${setup.placement}. Keep ${setup.joints.join(', ')} visible. ${setup.framing}. Drag to rotate.`);
+  dialog.dataset.preview='true';stopHands();releaseViewer();const run=viewerGeneration;selection(id);onSelect(id);$('movementCards').hidden=true;$('libraryPages').hidden=true;$('startFromLibrary').hidden=true;$('gestureArea').hidden=true;$('hologramPanel').hidden=false;$('holoName').textContent=`${workoutLevel(id).label} \u00b7 ${movements[id].name}`;$('holoStatus').hidden=false;$('holoStatus').textContent='Loading hologram…';$('holoPlay').textContent='Pause animation';$('useHologram').disabled=false;$('useHologram').textContent='Begin';dialog.scrollTop=0;
   $('backLibrary').focus();
   try{const {createHologram}=await import('./hologram.mjs');if(run!==viewerGeneration||!dialog.open)return false;
    const instance=await createHologram($('holoStage'),id);if(run!==viewerGeneration||!dialog.open){instance.dispose();return false;}viewer=instance;$('holoStatus').hidden=true;$('useHologram').disabled=false;return true;

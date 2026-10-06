@@ -30,6 +30,8 @@
 		"CLERK_FRONTEND_URL": "https://clerk.mominc.online",
 		"CLERK_AUTHORIZED_PARTIES": "https://myr5.mominc.online",
 		"RELEASE_ORIGIN": "https://myr5.mominc.online",
+		"SPOTIFY_CLIENT_ID": "9eb27ceb2aed4ee59517d5b0854a8b79",
+		"SPOTIFY_REDIRECT_URI": "https://myr5.mominc.online/api/spotify/callback",
 		"RELEASE_EMAIL_FROM": "dispatch@mominc.online",
 		"VAPID_SUBJECT": "https://myr5.mominc.online"
 	},

@@ -51,7 +51,7 @@ const breathing=await readFile(new URL('../breathing.mjs',import.meta.url),'utf8
 function breathingHarness(transitions,api){
  const els=new Map(),el=key=>{if(!els.has(key))els.set(key,{dataset:{},hidden:false,textContent:'',querySelector:selector=>el(selector),querySelectorAll:()=>[],setAttribute(){},focus(){},append(){}});return els.get(key);},pause={},controls={dataset:{},classList:{add(){},remove(){},toggle(){},contains(){return false;}},querySelector:el},dialog={open:true,append(){},classList:{remove(){},toggle(){},contains(){return false;}},addEventListener(){},close(){}},scene={dataset:{},hidden:false,append(){},dispatchEvent(){},querySelector(selector){return selector.includes('data-breathing-stop')?el('[data-breath-exit]'):null;}};let tick,completeNext=false,callbacks=0;
  class Clock{constructor(durationMs=180000){this.durationMs=durationMs;this.elapsed=0;}sample(){if(completeNext)this.elapsed=this.durationMs;}get complete(){return this.elapsed>=this.durationMs;}}
- const context={Event,setTimeout,clearTimeout,createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,...breathingModes,countBreaths:breathingModes.totalBreaths,document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
+ const context={Event,setTimeout,clearTimeout,createAccountSessionActions,authTransitions:()=>transitions,BreathingSession:Clock,BREATHING_MS:180000,...breathingModes,countBreaths:breathingModes.totalBreaths,localDay:()=> '2026-10-05',recordDailyActivity(){},document:{createElement:()=>controls,hidden:false},window:{addEventListener(){}},setInterval:fn=>{tick=fn;return 1;},clearInterval(){},performance:{now:()=>1}};
  const mount=vm.runInNewContext(breathing.replace(/^import .*;\s*$/mg,'').replace(/^export /mg,'')+';mountBreathing;',context);
  mount({dialog,scene,pause,api,getAccount:()=>account(),transitions,onComplete:()=>callbacks++});
  return {modes:el('[data-breath-modes]'),runView:el('[data-breath-run]'),status:el('[data-status]'),start:()=>el('[data-begin]').onclick(),exit:()=>el('[data-breath-exit]').onclick(),finish(){completeNext=true;tick();},callbacks:()=>callbacks};
@@ -67,5 +67,5 @@ test('breathing exit is immediate mid-session: back to mode choice, nothing save
  await h.start();assert.equal(h.runView.hidden,false);assert.equal(h.modes.hidden,true);
  h.exit();assert.equal(h.runView.hidden,true);assert.equal(h.modes.hidden,false);
  h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,0);assert.equal(h.callbacks(),0);
- await h.start();h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,1);assert.equal(h.callbacks(),1);assert.match(h.status.textContent,/Breathing complete/);
+ await h.start();h.finish();await new Promise(resolve=>setImmediate(resolve));assert.equal(completes.length,1);assert.equal(h.callbacks(),1);assert.match(h.status.textContent,/Meditation complete/);
 });

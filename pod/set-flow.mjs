@@ -75,7 +75,7 @@ export class SetFlow {
   this.tapDamageToday+=Math.min(damage,this.restBossId?this.coachHealth:damage);this.damage+=damage;this.onRestDamage?.(now);
   return {hits:this.hits,damage,totalDamage:this.damage,blocked:damage===0,assisted,charge:withHand?this.hits%3:0,bossAttack:this.hits%BOSS_ATTACK_EVERY_HITS===0};
  }
- preparationTap(now=Date.now()){if(this.phase!=='set'||this.workout?.stage!=='preparation-rest')return null;this.phase='rest';try{return this.tap(now);}finally{this.phase='set';}}
+ preparationTap(now=Date.now(),withHand=false){if(this.phase!=='set'||this.workout?.stage!=='preparation-rest')return null;this.phase='rest';try{return this.tap(now,withHand);}finally{this.phase='set';}}
  special(weapon,{now=Date.now(),progress,catalog}={}){this.touchRest(now);this.resetIfNewDay(now);const level=this.kitLevel??1;if(this.phase==='rest'){this.beforeRestAttack?.(now);if(this.restBossId&&this.coachHealth<=0)return {ok:false,reason:'boss-defeated'};}
  if(level<SPECIAL_LEVEL)return {ok:false,reason:'level',unlockLevel:SPECIAL_LEVEL}; // D17: specials unlock at L3
  if(this.tapDamageToday>=dailyCap(level))return {ok:false,reason:'daily-cap'}; // both checked before activate() so a refused special never burns its cooldown

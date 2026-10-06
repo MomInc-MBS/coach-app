@@ -38,7 +38,8 @@ export function mountHomeCharacter(){
  const storage=event=>{if(event.key===GALA_KEY)load();};
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',sync);
- host.querySelector('button').addEventListener('click',attack);
+ const entry=host.querySelector('button');entry.setAttribute('aria-label','Open your character in the War Room');
+ entry.addEventListener('click',()=>{location.href='/war-room/index.html';});
  load();
  window.addEventListener('pagehide',()=>{disposed=true;sync();observer.disconnect();intersection.disconnect();window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:account-progress',load);window.removeEventListener('storage',storage);document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',sync);},{once:true});
 }

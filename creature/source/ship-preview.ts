@@ -33,12 +33,16 @@ export function mountShipPreview(host:HTMLElement,bridge:ShipBridge){
  function tint(color:string){if(shown)applyShipTint(shown,color==='#ffffff'?null:color);}
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
  function tick(now:number){
-  if(disposed)return;raf=requestAnimationFrame(tick);
-  const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h||!shown)return; // hidden panel: no drawing
-  if(canvas.width!==Math.round(w*renderer.getPixelRatio())||canvas.height!==Math.round(h*renderer.getPixelRatio())){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-  turn.rotation.y=reduced()?-.32:now/2400;renderer.render(scene,camera);
+  raf=0;if(disposed||document.hidden)return;
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  if(w&&h&&shown){
+   if(canvas.width!==Math.round(w*renderer.getPixelRatio())||canvas.height!==Math.round(h*renderer.getPixelRatio())){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+   turn.rotation.y=reduced()?-.32:now/2400;renderer.render(scene,camera);
+  }
+  raf=requestAnimationFrame(tick);
  }
- raf=requestAnimationFrame(tick);
+ const resume=()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;return;}if(!disposed&&!raf)raf=requestAnimationFrame(tick);};
+ document.addEventListener('visibilitychange',resume);resume();
  return {
   /** Resolves true once `id` is on screen; false if a later show() or dispose() overtook it. Throws if its bytes fail. */
   async show(id:string,color='#ffffff'){
@@ -47,6 +51,6 @@ export function mountShipPreview(host:HTMLElement,bridge:ShipBridge){
   },
   tint:(color:string)=>tint(/^#[0-9a-f]{6}$/i.test(color)?color:'#ffffff'),
   ids:()=>bridge.ownedShipIds(),
-  dispose(){if(disposed)return;disposed=true;++epoch;cancelAnimationFrame(raf);for(const model of models.values())model.then(disposeModel,()=>{});models.clear();renderer.dispose();renderer.forceContextLoss();canvas.remove();bridge.dispose?.();},
+  dispose(){if(disposed)return;disposed=true;++epoch;document.removeEventListener('visibilitychange',resume);cancelAnimationFrame(raf);for(const model of models.values())model.then(disposeModel,()=>{});models.clear();renderer.dispose();renderer.forceContextLoss();canvas.remove();bridge.dispose?.();},
  };
 }
