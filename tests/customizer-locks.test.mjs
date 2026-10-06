@@ -179,3 +179,49 @@ test('changing an owned coach saves its body without copying another coach exclu
  for(const key of ['headFrom','armsFrom','feetFrom'])assert.equal(selected[key],body);
  assert.throws(()=>selectOwnedBody(previous,CHEST_BODY),/locked/);
 });
+
+// R25 items 5-7: Original MYR5, Jelly and Bubble Glass leave the catalogue; saves and grants move to the kept twin.
+test('removed textures migrate: Jelly -> Opal Jelly, Bubble Glass -> Glitter Resin, Original MYR5 -> Clay',async()=>{
+ memory.clear();
+ const ids=TEXTURES.map(t=>t.id);for(const gone of ['legacy-0','legacy-21','bubble-glass'])assert.ok(!ids.includes(gone),`${gone} left the picker`);
+ const {textureRewardPool}=await import('data:text/javascript;base64,'+Buffer.from((await build({stdin:{contents:"export {textureRewardPool} from './battle-pass-rewards.mjs';",resolveDir:process.cwd(),loader:'js'},bundle:true,format:'esm',platform:'neutral',write:false,target:'es2022'})).outputFiles[0].text).toString('base64'));
+ const pool=textureRewardPool().map(t=>t.id);for(const gone of ['legacy-0','legacy-21','bubble-glass'])assert.ok(!pool.includes(gone),`${gone} is never awarded`);
+ assert.ok(pool.includes('opal-jelly')&&pool.includes('glitter-resin'));
+ // An owned grant of a removed texture is a grant of its twin, on the same coach only.
+ grantUnlock('texture','legacy-21','myr5');grantUnlock('texture','bubble-glass','myr5');
+ assert.equal(isLocked('opal-jelly','myr5'),false);assert.equal(isLocked('glitter-resin','myr5'),false);
+ assert.equal(isLocked('opal-jelly',STARTER_BODY),true,'grants stay scoped to their coach');
+ assert.equal(isLocked('legacy-21','myr5'),true,'the removed id itself is never pickable again');
+ const stored=JSON.parse([...memory.entries()].find(([k])=>k.startsWith('myr5-unlocks-v2/'))[1]).texture;
+ assert.deepEqual(stored.sort(),['coach:myr5:glitter-resin','coach:myr5:opal-jelly'],'storage holds the twins');
+ // Saved selections migrate when read and when saved.
+ const choice=t=>({textureId:t,colorId:'#2454d6',sparkle:0,metallic:0});
+ const old={...fresh(),materials:{body:choice('legacy-21'),head:choice('bubble-glass'),arms:choice('legacy-0')}};
+ const parsed=parseRecipe(JSON.stringify(old));
+ assert.deepEqual([parsed.materials.body.textureId,parsed.materials.head.textureId,parsed.materials.arms.textureId],['opal-jelly','glitter-resin','clay']);
+ const saved=saveRecipe(localStorage,old,old);
+ assert.deepEqual([saved.materials.body.textureId,saved.materials.head.textureId,saved.materials.arms.textureId],['opal-jelly','glitter-resin','clay'],'an owned twin survives the save guard');
+ // Without a grant, the twin is not handed out for free: the save guard drops it like any locked look.
+ memory.clear();
+ const unowned=saveRecipe(localStorage,old,owned);
+ assert.equal(unowned.materials.body.textureId,'clay');assert.equal(unowned.materials.arms.textureId,'clay');
+});
+
+// R25 item 9: four new eye styles are free starter choices, accepted by the editor and the account validator.
+test('anime, squinty, bloodshot and blind eyes load, save unlocked and pass the account recipe check',async()=>{
+ memory.clear();
+ const {validRecipe}=await import('../onboarding-domain.mjs');
+ for(const eye of ['anime','squinty','bloodshot','blind']){
+  const recipe=parseRecipe(JSON.stringify({...fresh(),eye}));
+  assert.equal(recipe.eye,eye);
+  assert.equal(saveRecipe(localStorage,recipe,recipe).eye,eye,`${eye} needs no unlock`);
+  assert.equal(validRecipe(recipe),true,`${eye} passes the account validator`);
+ }
+ assert.throws(()=>parseRecipe(JSON.stringify({...fresh(),eye:'laser'})));
+ // Eye extras layer over any style and survive load and save; anything but true is dropped.
+ const extras=parseRecipe(JSON.stringify({...fresh(),eye:'bloodshot',blackSclera:true,colourPupil:true}));
+ assert.deepEqual([extras.eye,extras.blackSclera,extras.colourPupil],['bloodshot',true,true]);
+ assert.equal(saveRecipe(localStorage,extras,extras).blackSclera,true);assert.equal(validRecipe(extras),true);
+ const junk=parseRecipe(JSON.stringify({...fresh(),blackSclera:'yes',colourPupil:1}));
+ assert.equal('blackSclera' in junk||'colourPupil' in junk,false);
+});

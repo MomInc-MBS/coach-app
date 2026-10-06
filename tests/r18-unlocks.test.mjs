@@ -59,7 +59,8 @@ test('three channels: body colour reaches body, arms, feet and collar; head and 
  assert.equal(regionChoice(materials,'head').colorId,'#2d5aa0');assert.equal(regionChoice(materials,'eye').colorId,'#ffffff');
  assert.equal(regionChoice({arms:mc('#a23b4a','flat')},'arms').colorId,'#a23b4a','a lone region keeps its own colour');
  assert.equal(regionChoice({body:mc('#a23b4a'),arms:mc('default-sapphire','clay')},'arms').textureId,'clay','textures stay per region');
- assert.deepEqual(COLOUR_CHANNELS.map(c=>c.id),['body','head','eyes']);
+ assert.deepEqual(COLOUR_CHANNELS.map(c=>[c.id,c.label]),[['body','Full body'],['eyes','Eyes']]);
+ assert.ok(COLOUR_CHANNELS[0].regions.includes('head')&&COLOUR_CHANNELS[0].regions.includes('body'),'Full body colours the head too');
  for(const r of m.REGIONS)assert.ok(COLOUR_SOURCE[r]);
  const src=readFileSync('creature/source/creator/assemble.ts','utf8');
  assert.match(src,/resolveRegionMaterial\(d\.styles\[region\],regionChoice\(d\.materials,region\),preview,d\.body\)/,'assemble resolves every region through the channel colour');

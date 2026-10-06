@@ -10,9 +10,11 @@ export function deformMesh(o:THREE.Mesh,region:Region,d:Design){
  }
  if(region==='eye'&&/Iris|Pupil|Glint|glint/.test(o.name)){
   const factor=d.iris*(o.name==='Pupil'?d.pupilSize:1);
-  o.scale.x*=factor;o.scale.y*=factor;
-  o.position.x=position.x*factor+.04*(1-factor);
-  o.position.y=position.y*factor+2.1475*(1-factor);
+  // R25 anime eyes: a tall iris and pupil with oversized highlights.
+  const glint=/glint/i.test(o.name),fx=factor*(d.eye==='anime'?glint?1.7:1.2:1),fy=factor*(d.eye==='anime'?glint?1.7:1.45:1);
+  o.scale.x*=fx;o.scale.y*=fy;
+  o.position.x=position.x*fx+.04*(1-fx);
+  o.position.y=position.y*fy+2.1475*(1-fy);
  }
 }
 

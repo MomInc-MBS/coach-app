@@ -17,14 +17,26 @@ export function prepareEyeMesh(o:THREE.Mesh){
   const small=o.name!=='Glint';o.geometry.dispose();o.geometry=new THREE.CircleGeometry(small?.024:.063,32);o.geometry.scale(1,small?.028/.024:.081/.063,1);o.position.y-=.4725;
  }
 }
+// R25 bloodshot eyes: branching red veins that run from the rim of the white toward the iris. Built flat
+// in the eye's own frame, then wrapped onto the globe by conformEyeMesh like the iris and glints.
+export function bloodshotVeins(){
+ const vertices:number[]=[];let seed=11;const rand=()=>(seed=seed*16807%2147483647)/2147483647;
+ const strip=(path:[number,number][],width:number)=>{for(let i=0;i+1<path.length;i++){
+  const [ax,ay]=path[i],[bx,by]=path[i+1],l=Math.hypot(bx-ax,by-ay)||1,wa=width*(1-i/path.length),wb=width*(1-(i+1)/path.length);
+  const nx=-(by-ay)/l,ny=(bx-ax)/l;vertices.push(ax-nx*wa,ay-ny*wa,1.15,bx+nx*wb,by+ny*wb,1.15,ax+nx*wa,ay+ny*wa,1.15,ax-nx*wa,ay-ny*wa,1.15,bx-nx*wb,by-ny*wb,1.15,bx+nx*wb,by+ny*wb,1.15);}};
+ const walk=(angle:number,from:number,to:number,steps:number):[number,number][]=>Array.from({length:steps+1},(_,i)=>{const r=from+(to-from)*i/steps;angle+=(rand()-.5)*.22;return [.04+Math.cos(angle)*r,2.1475+Math.sin(angle)*r];});
+ for(let k=0;k<13;k++){const angle=k/13*Math.PI*2+rand()*.35,main=walk(angle,.6,.4+rand()*.06,7);strip(main,.011);
+  const at=2+Math.floor(rand()*3),[x,y]=main[at],r=Math.hypot(x-.04,y-2.1475);strip(walk(Math.atan2(y-2.1475,x-.04)+(rand()<.5?-.35:.35),r,r-.09,3),.006);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));return g;
+}
 // A geometric mask keeps eye markings on the globe and inside the eyelid.
 // Actual surface geometry also preserves occlusion in GLB and OBJ exports.
 export function conformEyeMesh(o:THREE.Mesh){
- if(!/^(Iris|Pupil|Glint|Small.glint)/.test(o.name))return;
+ if(!/^(Iris|Pupil|Glint|Small.glint|Eye vein)/.test(o.name))return;
  let entry=originals.get(o);
  if(!entry||entry.projected!==o.geometry){entry?.source.dispose();entry={source:subdivideSurface(o.geometry),projected:o.geometry};originals.set(o,entry);}
  const geometry=entry.source.clone();const positions=geometry.getAttribute('position');const point=new THREE.Vector3();o.updateMatrix();const inverse=o.matrix.clone().invert();const localNormalMatrix=new THREE.Matrix3().setFromMatrix4(o.matrix).transpose();const normal=new THREE.Vector3();const normals=new Float32Array(positions.count*3);
- const radius=o.name==='Pupil'?.609:/glint/i.test(o.name)?.611:o.name==='Iris'?.606:.6075;
+ const radius=o.name==='Pupil'?.609:/glint/i.test(o.name)?.611:o.name==='Iris'?.606:o.name==='Eye vein'?.6058:.6075;
  for(let i=0;i<positions.count;i++){
   point.fromBufferAttribute(positions,i).applyMatrix4(o.matrix);
   let x=point.x-EYE_CENTER.x,y=point.y-EYE_CENTER.y;const distance=Math.hypot(x,y),limit=.595;

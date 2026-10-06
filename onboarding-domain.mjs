@@ -1,6 +1,7 @@
 import {SITE_QUESTIONS} from './onboarding-questions.mjs';
 import {OFFICE_REQUIRED_FIELDS,withOfficeDefaults} from './office-domain.mjs?v=office-short-v1';
 import {QUICK_REQUIRED_FIELDS,withQuickDefaults} from './quick-setup.mjs';
+import {EYE_STYLE_IDS} from './eye-styles.mjs';
 export {SITE_QUESTIONS};
 export const WEBSITE='https://mominc.online';
 export const COACH_APP='https://myr5.mominc.online';
@@ -30,7 +31,7 @@ const validText=(v,max=600)=>typeof v==='string'&&v.trim().length>0&&v.length<=m
 // without it, and recipes that only ever used it on some regions, both stay valid.
 const validMaterialChoice=v=>object(v)&&typeof v.textureId==='string'&&typeof v.colorId==='string'&&Number.isFinite(v.sparkle)&&v.sparkle>=0&&v.sparkle<=1&&Number.isFinite(v.metallic)&&v.metallic>=0&&v.metallic<=1;
 const validMaterials=m=>m===undefined||(object(m)&&Object.entries(m).every(([k,v])=>['head','eye','collar','body','arms','feet'].includes(k)&&validMaterialChoice(v)));
-export function validRecipe(r){return object(r)&&r.version===1&&object(r.styles)&&['head','eye','collar','body','arms','feet'].every(k=>Number.isInteger(r.styles[k])&&r.styles[k]>=0&&r.styles[k]<23)&&COACHES.includes(r.coach)&&['open','sleepy','wide'].includes(r.eye)&&Number.isFinite(r.fur)&&r.fur>=.65&&r.fur<=1.4&&Number.isFinite(r.iris)&&r.iris>=.7&&r.iris<=1.25&&['round','vertical','horizontal','oval','diamond','star','heart','cross'].includes(r.pupil??'round')&&Number.isFinite(r.pupilSize??1)&&(r.pupilSize??1)>=.6&&(r.pupilSize??1)<=1.15&&Number.isFinite(r.detail??1)&&(r.detail??1)>=.5&&(r.detail??1)<=1.5&&Number.isInteger(r.fingers??4)&&(r.fingers??4)>=2&&(r.fingers??4)<=6&&Number.isInteger(r.toes??3)&&(r.toes??3)>=1&&(r.toes??3)<=6&&['single','horizontal','vertical','frontBack','triangle','around','spider','square'].includes(r.eyeLayout??'single')&&validMaterials(r.materials);}
+export function validRecipe(r){return object(r)&&r.version===1&&object(r.styles)&&['head','eye','collar','body','arms','feet'].every(k=>Number.isInteger(r.styles[k])&&r.styles[k]>=0&&r.styles[k]<23)&&COACHES.includes(r.coach)&&EYE_STYLE_IDS.includes(r.eye)&&Number.isFinite(r.fur)&&r.fur>=.65&&r.fur<=1.4&&Number.isFinite(r.iris)&&r.iris>=.7&&r.iris<=1.25&&['round','vertical','horizontal','oval','diamond','star','heart','cross'].includes(r.pupil??'round')&&Number.isFinite(r.pupilSize??1)&&(r.pupilSize??1)>=.6&&(r.pupilSize??1)<=1.15&&Number.isFinite(r.detail??1)&&(r.detail??1)>=.5&&(r.detail??1)<=1.5&&Number.isInteger(r.fingers??4)&&(r.fingers??4)>=2&&(r.fingers??4)<=6&&Number.isInteger(r.toes??3)&&(r.toes??3)>=1&&(r.toes??3)<=6&&['single','horizontal','vertical','frontBack','triangle','around','spider','square'].includes(r.eyeLayout??'single')&&validMaterials(r.materials);}
 export function missingFields(v){
  const missing=[];if(!object(v))return ['Complete your coach setup'];if(!['games','office'].includes(v.entryRoute??'games'))return ['Choose games or the office form'];const office=v.entryRoute==='office',quick=v.setupMode==='quick';
  if(quick){if(v.profile!=null&&!object(v.profile)||v.answers!=null&&!object(v.answers)||v.appearance!=null&&!object(v.appearance))return ['Choose a valid coach profile'];v=withQuickDefaults(v);}
