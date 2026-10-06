@@ -21,7 +21,8 @@ async function readAccount(signal){
 async function hydrate(){
  if(disposed)return;
  const run=++generation;controller?.abort();controller=new AbortController();const {signal}=controller;
- clearAccount();
+ // R27: no clear before a re-check (focus, visibilitychange, another reader's ready). That blink made every earned
+ // body read as locked, so a pick in it stayed an unsaved preview. Failure, sign-out and pagehide still clear.
  try{
   const ticket=transitions.capture();
   const first=await readAccount(signal);if(!current(run))return;
@@ -41,7 +42,7 @@ function invalidate(){++generation;controller?.abort();controller=null;clearAcco
 const unsubscribe=transitions.subscribe(invalidate);
 window.addEventListener('myr5:account-ready',event=>{
  if(publishing&&event.detail===account)return;
- ++generation;controller?.abort();controller=null;clearAccount();void hydrate();
+ void hydrate();
 });
 window.addEventListener('myr5:account-cleared',()=>{
  if(publishing)return;

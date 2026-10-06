@@ -60,7 +60,11 @@ let recipe:Design=fresh(),undo:Design[]=[],redo:Design[]=[],selected:Region='bod
 let settings=motionSettings(null),initialError='';
 try{recipe=zeroFinish(loadRecipe(localStorage));settings=motionSettings(localStorage.getItem(MOTION_KEY));}catch{initialError='Your saved coach could not be read. Load a recipe in Files to restore it.';}
 let saved=recipe; // last owned look written to storage; locked imports remain preview-only.
-recipe=saved=keepOwned(recipe);
+// R27: ownership is per account. Until the verified account is known (cold start, slow or offline account check,
+// the bridge's re-check) every earned body reads as locked, so filtering then turned the saved coach into MYR5 in
+// memory and the next edit saved that. Show the stored look as the portal does; account-ready applies ownership.
+const ownedLook=(d:Design)=>(window as any).myr5AuthenticatedAccount?keepOwned(d):d;
+recipe=saved=ownedLook(recipe);
 let progress=loadProgress(),bodyLock=(id:string)=>bodyLockSection(id,progress);
 const unlockedFirst=<T,>(items:readonly T[],locked:(x:T)=>boolean):T[]=>[...items.filter(x=>!locked(x)),...items.filter(locked)];
 // Body unlocks are derived from section completion, so record them here: first use snapshots, later ones sparkle.
@@ -263,10 +267,13 @@ shipPick.onchange=()=>{if(shipLocked(shipPick.value)){const name=SHIP_CATALOG.fi
 fillShipRow();
 function refreshLists(){progress=loadProgress();fillBodies();fillTextures();fillColours();fillShipRow();sync();}window.addEventListener('myr5:battle-pass',refreshLists);
 window.addEventListener('storage',event=>{if(event.key?.startsWith(PERFORMANCE_KEY+'/')||event.key?.startsWith('myr5-unlocks-v2/'))refreshLists();});
- window.addEventListener('myr5:account-ready',()=>{recipe=saved=keepOwned(recipe);cosmeticCoach='';refreshLists();render('Account cosmetics connected');});
+ // A pick made while ownership was unknown stayed a preview; once it is owned, save it.
+ function saveOwnedDraft(){if(!previewDraft||isLocked(previewDraft))return false;const next=previewDraft;clearPreview();commit(next);return true;}
+ window.addEventListener('myr5:account-ready',()=>{recipe=saved=ownedLook(recipe);cosmeticCoach='';refreshLists();if(!saveOwnedDraft())render('Account cosmetics connected');});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)saveOwnedDraft();});
  // R26: account-bridge clears before every re-verify (focus, visibilitychange), so a clear is often a blink, not a
- // sign-out. Keep the saved look: ownership is re-applied on account-ready, and commit() keeps any locked edit a preview.
- window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];clearPreview();cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
+ // sign-out. Keep the saved look and any pending pick: account-ready re-applies ownership and saves an owned pick.
+ window.addEventListener('myr5:account-cleared',()=>{undo=[];redo=[];cosmeticCoach='';refreshLists();render('Account changed. Showing current ownership.');});
  window.addEventListener('myr5:login-ready',()=>void standaloneAccount.refresh());
  window.addEventListener('focus',()=>{if(!standaloneAccount.account)void standaloneAccount.refresh();});
 $('materialClear').onclick=()=>{const base=shown(),materials={...base.materials};for(const r of activeChannel.regions)delete materials[r];commit({...base,materials:Object.keys(materials).length?materials:undefined});};
@@ -366,7 +373,7 @@ const zoom=$('zoom') as HTMLInputElement,setZoom=(z:number)=>{zoom.value=String(
 $('pauseMotion').onclick=()=>{if(!viewer)return;viewer.setPaused(!viewer.paused);$('pauseMotion').textContent=viewer.paused?'Play motion':'Pause motion';$('pauseMotion').setAttribute('aria-pressed',String(viewer.paused));};
 function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced||systemMotion.matches});}
 systemMotion.addEventListener('change',applyMotion);
-window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=keepOwned(importCreature(event.newValue));undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
+window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=ownedLook(importCreature(event.newValue));undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;},250);
 window.addEventListener('pagehide',()=>{standaloneAccount.dispose();closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 // D34 post-download: listen for body download state from service worker
