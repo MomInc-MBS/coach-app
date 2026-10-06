@@ -27,9 +27,9 @@ const RAW_PALETTE_DATA = {
     { id: 'gold', label: 'Gold', colors: ['#FFF9C4', '#FFF59D', '#FFF176', '#FFEE58'], core: '#FFEE58' }
   ],
   grass: [
-    { id: 'meadow', label: 'Meadow Greens', colors: ['#70A64D', '#326B3D', '#F3D66B', '#F09BB8'], core: '#7AC85B' },
-    { id: 'wildflowers', label: 'Wildflowers', colors: ['#6E9F45', '#28593A', '#E87AAE', '#9B72D2'], core: '#72BF55' },
-    { id: 'daisies', label: 'Daisies', colors: ['#76A84D', '#315F3A', '#FFFDF2', '#F4D64E'], core: '#80C75B' }
+    { id: 'meadow', label: 'Meadow Greens', colors: ['#70A64D', '#326B3D', '#8CC25A', '#4E8A3F'], accents: ['#F3D66B', '#F09BB8'], core: '#7AC85B' },
+    { id: 'wildflowers', label: 'Wildflowers', colors: ['#6E9F45', '#28593A', '#86B84F', '#3F7A44'], accents: ['#E87AAE', '#9B72D2'], core: '#72BF55' },
+    { id: 'daisies', label: 'Daisies', colors: ['#76A84D', '#315F3A', '#8FC95F', '#4A8742'], accents: ['#FFFDF2', '#F4D64E'], core: '#80C75B' }
   ],
   jelly: [
     { id: 'candy', label: 'Candy', colors: ['#F48FB1', '#CE93D8', '#90CAF9', '#80CBC4'], core: '#CE93D8' },
@@ -58,6 +58,8 @@ function isValidPaletteEntry(entry) {
   if (!Array.isArray(entry.colors) || entry.colors.length < 3 || entry.colors.length > 6) return false;
   if (!entry.colors.every(isValidHexColor)) return false;
   if (!isValidHexColor(entry.core)) return false;
+  // Optional flower glints kept out of the ring colours (a Grass wormhole without its material must still read green).
+  if (entry.accents !== undefined && !(Array.isArray(entry.accents) && entry.accents.length === 2 && entry.accents.every(isValidHexColor))) return false;
   return true;
 }
 
@@ -67,6 +69,7 @@ function clonePaletteEntry(entry) {
     id: entry.id,
     label: entry.label,
     colors: [...entry.colors],
+    ...(entry.accents ? { accents: [...entry.accents] } : {}),
     core: entry.core
   };
 }

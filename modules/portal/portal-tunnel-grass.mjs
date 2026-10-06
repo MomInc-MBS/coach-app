@@ -8,7 +8,7 @@ vec3 material(float a,float v,float z,float r,float aa,vec3 base){
  c=mix(c,mix(seq(0.),seq(1.)*1.18,q.y),blade);
  float f=gH(id+7.3),d=length((q-vec2(0.,.5))*vec2(1.,.8));
  float bloom=(1.-smoothstep(.07,.2,d))*step(.9,f)*aa,tw=.6+.4*sin(v*5.+f*40.);
- vec3 pet=f>.95?seq(3.):seq(2.);
+ vec3 pet=f>.95?acc(1.):acc(0.);
  c=mix(c,pet*tw+base*.5,bloom)+pet*bloom*.35*tw;
  return c;
 }`;

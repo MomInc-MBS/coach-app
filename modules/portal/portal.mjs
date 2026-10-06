@@ -392,7 +392,7 @@ function buildDom(){
  // would be hidden along with it while open (e.g. mid-fade during the "all" portal reveal).
  menuSheet=document.createElement('dialog');menuSheet.id='portalMenu';menuSheet.className='portal-menu';menuSheet.setAttribute('aria-labelledby','portalMenuTitle');
  // The board picker row only earns its place once a second board ships; one option is nothing to pick from.
- const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board"><span class="portal-board-label">Board</span>${boardChipsHtml()}</div>`;
+ const boardRow=PRODUCTION_PORTALS.length<2?'':`<div class="portal-board-chips" role="group" aria-label="Board">${boardChipsHtml()}</div>`;
  menuSheet.innerHTML=`<header><h2 id="portalMenuTitle">GRIMOIRE SETTINGS</h2><button type="button" data-menu-close>Back to portal</button></header>${lookControlsHtml()}${boardTintControlsHtml()}${boardRow}<div data-palette-row>${paletteSelectHtml()}</div><details class="portal-full-menu"><summary>Full menu</summary><div class="portal-menu-grid">${menuButtonsHtml()}</div></details><p id="portalMenuStatus" role="status"></p>`;
  menuSheet.querySelector('[data-menu-close]').onclick=()=>menuSheet.close();
  menuSheet.querySelectorAll('[data-look]').forEach(input=>input.oninput=()=>{saveLook(input.dataset.look,input.value);applyLook();});
@@ -1466,6 +1466,7 @@ const tunnelFragment=(material='')=>`#version 300 es
 precision highp float;
 uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;uniform sampler2D uPeek;uniform float uPeekOn;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
+vec3 acc(float i){return uSeq[int(uN)+int(mod(i,2.))];} // accent colours sit after the ring colours
 ${material}
 vec3 tunnel(vec2 p,float fz){
  float aa=1.-smoothstep(.25,.9,fz); // fade ring detail that gets finer than a pixel
@@ -1591,7 +1592,7 @@ async function startTunnel(ph,poly,color,all){
  gl.bindTexture(gl.TEXTURE_2D,t.texture);
  const tex=lensMap((ph.fullscreen?poly:bleedPts(poly,-GLASS.rimInset)).map(([x,y])=>[x-left,y-top]),w,h);
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,tex.mw,tex.mh,0,gl.RGBA,gl.UNSIGNED_BYTE,tex.data);
- const flat=new Float32Array(30);seq.forEach((c,i)=>flat.set(rgb(c),3*i));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
+ const flat=new Float32Array(30);seq.forEach((c,i)=>flat.set(rgb(c),3*i));(palette?.accents||[seq[0],seq[0]]).forEach((c,i)=>flat.set(rgb(c),3*(seq.length+i)));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
  gl.uniform3fv(u.uTint,rgb(boardTint(capturedBoardId)));
  gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(core).map(v=>v*.5+.5));
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
