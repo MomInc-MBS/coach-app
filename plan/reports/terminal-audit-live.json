@@ -1,0 +1,62 @@
+{
+  "build": "e71ff0b29616774c78b7",
+  "releaseId": "2026-10-05-release-24-e71ff0b29616774c78b7",
+  "health": 200,
+  "assets": [
+    {
+      "path": "release-build.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "app-runtime.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "launch-runtime.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "modules/pod-chrome.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "pod/persistent-chrome.css",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "app.css",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "spotify-terminal.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "modules/portal/portal.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "flight-scroll.mjs",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "creature/assets/editor.js",
+      "status": 200,
+      "matches": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-CXtHIiHD.js",
+      "status": 200,
+      "matches": true
+    }
+  ]
+}
