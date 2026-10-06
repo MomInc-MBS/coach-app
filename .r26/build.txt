@@ -1,0 +1,52 @@
+
+> myr5-coach@1.0.0 build
+> node scripts/build.mjs
+
+[36mvite v8.0.13 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...
+/handborne/fonts/barlow-500.ttf referenced in /handborne/fonts/barlow-500.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/barlow-600.ttf referenced in /handborne/fonts/barlow-600.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/bowlby.ttf referenced in /handborne/fonts/bowlby.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/vt323.ttf referenced in /handborne/fonts/vt323.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/anton.ttf referenced in /handborne/fonts/anton.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/barlow-700.ttf referenced in /handborne/fonts/barlow-700.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+
+/handborne/fonts/barlow-400.ttf referenced in /handborne/fonts/barlow-400.ttf didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 2019 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/embedded/hand-entry.html                       0.58 kB │ gzip:   0.36 kB
+dist/embedded/assets/hand-entry-BUSUnr2n.css      214.45 kB │ gzip:  33.07 kB
+dist/embedded/assets/OBJExporter-B9Ihq6IJ.js        2.04 kB │ gzip:   0.84 kB
+dist/embedded/assets/fflate.module-BTK1vOXE.js      8.77 kB │ gzip:   4.44 kB
+dist/embedded/assets/GLTFExporter-CTLEcnaA.js      34.60 kB │ gzip:  10.17 kB
+dist/embedded/assets/hand-entry-B9VM-Sgb.js     1,071.14 kB │ gzip: 301.71 kB
+
+[32m✓ built in 593ms[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+Hand editor and companion ready.
+Hand customizer shares current Coach materials.
+[36mvite v8.0.13 [32mbuilding ssr environment for production...[36m[39m
+
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+[2Ktransforming...✓ 103 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/index.js  220.57 kB │ gzip: 67.47 kB
+
+[32m✓ built in 64ms[39m
+Packed nutrition bytes removed: 1493870
+Model bytes saved: 58977716
+Offline Coach: 253 files, 7.7 MiB (8055982 of 8388608 B). Post-download package: 346 entries, 229.7 MiB (groups, files/MiB: coach 132/29.2, games 13/0.6, bodies-starter 20/19.3, bodies-arms 7/4.2, bodies-cardio 5/4.8, bodies-glutes 4/4.0, bodies-chest 5/4.6, bodies-martial-arts 8/5.5, bodies-yoga 7/7.0, bodies-meditation 11/9.3, bodies-quads 3/2.4, food 3/3.1, starter 18/18.4, hand 78/78.9, meditation 1/0.0, grimoire-cogs 5/1.2, grimoire-grass 4/0.3, grimoire-ice 3/0.6, grimoire-jelly 3/0.4, grimoire-pond 2/0.0, grimoire-wood 3/0.5, room-scoreboard 4/0.3, room-reminders 3/9.5, room-cage 3/1.0, voices 1/24.8).
+Workers limits: 1878 / 20000 files; largest 15621960 / 26214400 bytes (dist\client\handborne\models\family-20.glb); 266585665 total bytes.
+Coach build ready.

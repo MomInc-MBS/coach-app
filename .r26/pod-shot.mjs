@@ -1,0 +1,18 @@
+import {chromium} from 'playwright';import {completeCoach} from '../tests/onboarding-fixture.mjs';
+const base=process.argv[2]||'https://myr5-coach-staging.mominc-coach.workers.dev',tag=process.argv[3]||'staging',out='D:/myr5-work/r26-body-save/.r26/';
+const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--enable-unsafe-swiftshader']});
+const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],serviceWorkers:'block'});
+await context.addInitScript(()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(key){return String(key).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,key);};});
+const page=await context.newPage();page.on('pageerror',e=>console.log('pageerror',e.message));
+const loaded=[];page.on('response',r=>{if(r.url().includes('coach-sprites'))loaded.push(r.status());});
+await page.goto(base+'/privacy.html');
+await page.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();localStorage.setItem('myr5-downloads-seen','1');const {performanceOwner}=await import('/performance-progress.mjs');localStorage.setItem('myr5-war-room-coaches-v2/'+encodeURIComponent(performanceOwner()),JSON.stringify({body:'myr5',pet:null,goldenBody:false}));},completeCoach());
+await page.goto(base+'/pose.html');
+await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5Routes,null,{timeout:60000});
+await page.evaluate(()=>{document.querySelector('.app-update-banner [data-later]')?.click();window.myr5Routes.go('pod');});
+await page.waitForFunction(()=>location.hash==='#pod'&&document.querySelector('#homeCharacter:not([hidden])'),null,{timeout:30000});
+await page.waitForTimeout(5000);
+console.log({coachSprites:loaded,build:await page.evaluate(async()=>(await import('/release-build.mjs')).BUILD_ID),char:await page.locator('#homeCharacter').boundingBox()});
+await page.screenshot({path:out+tag+'-pod.png'});
+const sel=await page.evaluate(()=>Object.entries(localStorage).filter(([k])=>k.startsWith('myr5-war-room-coaches')));console.log(sel);const b=await page.locator('#homeCharacter canvas').boundingBox();await page.screenshot({path:out+tag+'-pod-coach-zoom.png',clip:b});
+await browser.close();

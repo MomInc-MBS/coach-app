@@ -1,0 +1,54 @@
+
+ ⛅️ wrangler 4.92.0
+───────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.jsonc configuration:[0m
+
+  
+    - "env.staging" environment configuration
+      - The following vars exist at the top level, but not on "env.staging.vars".
+        This is probably not what you want, since "vars" configuration is not inherited by environments.
+        Please add these vars to "env.staging.vars":
+        - CLERK_PUBLISHABLE_KEY
+        - CLERK_FRONTEND_URL
+        - CLERK_AUTHORIZED_PARTIES
+        - RELEASE_ORIGIN
+        - SPOTIFY_CLIENT_ID
+        - SPOTIFY_REDIRECT_URI
+        - RELEASE_EMAIL_FROM
+        - VAPID_SUBJECT
+
+
+🌀 Building list of assets...
+✨ Read 1889 files from the assets directory D:\myr5-work\r26-body-save\dist\client
+🌀 Starting asset upload...
+🌀 Found 13 new or modified static assets to upload. Proceeding with upload...
++ /release-build.mjs
++ /index.html
++ /war-room/coach-sprites.js
++ /creature/assets/editor.js
++ /source.json
++ /release-info.mjs
++ /sw.js
++ /war-room/gala-bay.js
++ /app-runtime.mjs
++ /pod/home-character.mjs
++ /modules/portal/portal.mjs
++ /launch-runtime.mjs
++ /source.json.gz
+Uploaded 4 of 13 assets
+Uploaded 8 of 13 assets
+Uploaded 13 of 13 assets
+✨ Success! Uploaded 13 files (1823 already uploaded) (3.04 sec)
+
+Total Upload: 264.23 KiB / gzip: 73.35 KiB
+Worker Startup Time: 13 ms
+Your Worker has access to the following bindings:
+Binding                                               Resource                  
+env.DB (myr5-coach-staging)                           D1 Database               
+env.ASSETS                                            Assets                    
+env.WORKOUT_IMPORTS_ENABLED ("true")                  Environment Variable      
+
+Uploaded myr5-coach-staging (9.09 sec)
+Deployed myr5-coach-staging triggers (0.82 sec)
+  https://myr5-coach-staging.mominc-coach.workers.dev
+Current Version ID: 2b60ab1a-1ae5-41c6-bb00-fddbc4130a0c
