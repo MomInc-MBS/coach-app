@@ -39,10 +39,14 @@ test('terminals follow the pod and cutaway frames and hide for fullscreen dialog
       hidden: nav.hidden, frameHidden: nav.parentElement?.getAttribute('aria-hidden')};
   });
   assert.deepEqual(await location(), {parent: 'ship-header', hidden: false, frameHidden: null});
+  assert.equal(await page.locator('#portalSettingsButton').isVisible(),false);
+  assert.equal(await page.locator('#spotifyNowPlayingOpen').isVisible(),true);
 
   await page.evaluate(() => {document.getElementById('portalHome').hidden = false;});
   await page.waitForFunction(() => document.querySelector('#portalHome > #podPersistentChrome'));
   assert.deepEqual(await location(), {parent: 'portalHome', hidden: false, frameHidden: null});
+  assert.equal(await page.locator('#portalSettingsButton').isVisible(),true);
+  assert.equal(await page.evaluate(()=>{const key=document.getElementById('portalSettingsButton').getBoundingClientRect(),frame=document.querySelector('#portalBoardHost>.portal-frame').getBoundingClientRect();return Math.abs(key.top+key.height/2-frame.top)<4;}),true,'buttons are centred on the metal frame top edge');
   assert.equal(await page.evaluate(()=>{
     const key=document.getElementById('portalSettingsButton'),r=key.getBoundingClientRect();
     return r.width>=100&&r.height>=44&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===key;
@@ -72,4 +76,6 @@ test('terminals follow the pod and cutaway frames and hide for fullscreen dialog
   await page.evaluate(() => document.getElementById('fullscreen').removeAttribute('open'));
   await page.waitForFunction(() => document.getElementById('podPersistentChrome').parentElement.matches('.ship-header'));
   assert.deepEqual(await location(), {parent: 'ship-header', hidden: false, frameHidden: null});
+  assert.equal(await page.locator('#portalSettingsButton').isVisible(),false);
+  assert.equal(await page.locator('#spotifyNowPlayingOpen').isVisible(),true);
 });

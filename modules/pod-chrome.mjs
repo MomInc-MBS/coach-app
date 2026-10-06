@@ -6,11 +6,12 @@ export function mountPodChrome(grimoireButton,{signal}={}){
   const current=nav.querySelector('.metal-grimoire-key');
   if(current!==grimoireButton){
    grimoireButton.classList.add('metal-grimoire-key');
+   grimoireButton.hidden=!nav.classList.contains('frame-mounted');
    current?.replaceWith(grimoireButton);
    // A lazy pod key stays available if the heavyweight portal is later disposed.
    const fallback=nav._lazyGrimoireButton;
    if(fallback&&signal)signal.addEventListener('abort',()=>{
-    if(nav.isConnected&&grimoireButton.parentNode===nav)grimoireButton.replaceWith(fallback);
+    if(nav.isConnected&&grimoireButton.parentNode===nav){fallback.hidden=grimoireButton.hidden;grimoireButton.replaceWith(fallback);}
    },{once:true});
   }
   return nav;
@@ -56,6 +57,8 @@ export function mountPodChrome(grimoireButton,{signal}={}){
   // Hide those keys until returning to the Grimoire rather than draw dead buttons.
   nav.hidden=!!active&&(!cutaway||active.matches(':modal'));
   nav.classList.toggle('frame-mounted',!!frame);
+  const grimoireKey=nav.querySelector('.metal-grimoire-key');
+  if(grimoireKey)grimoireKey.hidden=!frame;
   if(frame){frame.removeAttribute('aria-hidden');housing?.removeAttribute('aria-hidden');}
   if(nav.parentNode!==owner)owner.append(nav);
   for(const dialog of dialogs)if(dialog.classList.contains('has-pod-chrome'))dialog.classList.remove('has-pod-chrome');
