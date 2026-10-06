@@ -11,3 +11,9 @@ test('portal transitions select board palettes and optional materials while reta
  const css=await readFile(new URL('../modules/portal/portal.css',import.meta.url),'utf8');
  assert.match(css,/portal-palette select/,'palette choice remains a native accessible select');
 });
+
+test('Grimoire settings board chips have no visible Board title but keep the group aria-label',async()=>{
+ const src=await readFile(new URL('../modules/portal/portal.mjs',import.meta.url),'utf8');
+ assert.doesNotMatch(src,/portal-board-label/);
+ assert.match(src,/class="portal-board-chips" role="group" aria-label="Board">\$\{boardChipsHtml\(\)\}/);
+});

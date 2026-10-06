@@ -20,3 +20,11 @@ test('returned presets cannot mutate the shared catalogue',()=>{
  const options=paletteOptions('wood');try{options.pop();}catch{}
  assert.equal(JSON.stringify(PALETTES),before);
 });
+
+test('Grass wormhole ring colours are all green; flower colours ride as separate accents', async () => {
+  const {paletteOptions}=await import('../modules/portal/portal-tunnel-palettes.mjs');
+  for (const p of paletteOptions('grass')) {
+    for (const c of p.colors) {const [r,g,b]=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));assert.ok(g>r&&g>b,`${p.id} ${c} is green`);}
+    assert.equal(p.accents.length,2);
+  }
+});
