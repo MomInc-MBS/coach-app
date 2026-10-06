@@ -27,7 +27,7 @@ test('PKCE callback is cookie-bound, single use, epoch-bound, and tokens stay se
   assert.equal(started.status,200);const {url}=await started.json();const auth=new URL(url);assert.equal(auth.searchParams.get('code_challenge_method'),'S256');assert.equal(auth.searchParams.get('scope').includes('user-read-currently-playing'),true);
   const cookie=started.headers.get('Set-Cookie');assert.match(cookie,/HttpOnly/);assert.match(cookie,/SameSite=Lax/);assert.match(cookie,/Secure/);
   const callback=`/api/spotify/callback?state=${auth.searchParams.get('state')}&code=test-code`;
-  let result=await spotifyCallback(req(callback),env,database);assert.match(result.headers.get('Location'),/spotify=expired/);assert.equal(database.sqlite.prepare('SELECT count(*) AS n FROM spotify_oauth_states').get().n,1);
+  let result=await spotifyCallback(req(callback),env,database);assert.match(result.headers.get('Location'),/spotify=browser/);assert.equal(database.sqlite.prepare('SELECT count(*) AS n FROM spotify_oauth_states').get().n,1);
   const oldFetch=globalThis.fetch;let exchanges=0;globalThis.fetch=async(url,options)=>{if(String(url).endsWith('/api/token')){exchanges++;const form=new URLSearchParams(options.body);if(form.get('grant_type')==='refresh_token'){assert.equal(form.get('refresh_token'),'refresh-secret');return Response.json({access_token:'new-access-secret',expires_in:3600});}assert.equal(form.get('code_verifier')?.length>30,true);return Response.json({access_token:'access-secret',refresh_token:'refresh-secret',expires_in:3600,scope:'user-read-currently-playing'});}if(String(url).endsWith('/me'))return Response.json({id:'spotify-user',display_name:'DJ'});if(String(url).endsWith('/me/player')){assert.equal(options.headers.Authorization,'Bearer new-access-secret');return Response.json({is_playing:true,progress_ms:1000,item:{name:'A song',duration_ms:120000,artists:[{name:'Singer'}]}});}throw Error(String(url));};
   try{
     result=await spotifyCallback(req(callback,'GET',{headers:{Cookie:cookie.split(';')[0]}}),env,database);assert.match(result.headers.get('Location'),/spotify=connected/);assert.equal(exchanges,1);
@@ -48,4 +48,10 @@ test('a deleted account epoch cannot relink through a pending callback',async()=
   const stale=await spotifyApi(req('/api/spotify/connect','POST',{headers:writeHeaders()}),env,database,'owner-a');assert.equal(stale.status,409);
   const oldFetch=globalThis.fetch;globalThis.fetch=async url=>String(url).endsWith('/api/token')?Response.json({access_token:'access-secret',refresh_token:'refresh-secret',expires_in:3600}):Response.json({id:'spotify-user'});
   try{const result=await spotifyCallback(req(`/api/spotify/callback?state=${state}&code=code`,'GET',{headers:{Cookie:cookie}}),env,database);assert.match(result.headers.get('Location'),/spotify=failed/);assert.equal(database.sqlite.prepare('SELECT count(*) AS n FROM spotify_connections').get().n,0);}finally{globalThis.fetch=oldFetch;database.sqlite.close();}
+});
+test('a Spotify account missing from the dev-mode allowlist gets a specific result',async()=>{
+  const database=db(),started=await spotifyApi(req('/api/spotify/connect','POST',{headers:writeHeaders()}),env,database,'owner-a');
+  const {url}=await started.json(),state=new URL(url).searchParams.get('state'),cookie=started.headers.get('Set-Cookie').split(';')[0];
+  const oldFetch=globalThis.fetch;globalThis.fetch=async url=>String(url).endsWith('/api/token')?Response.json({access_token:'a',refresh_token:'r',expires_in:3600}):new Response('{}',{status:403});
+  try{const result=await spotifyCallback(req(`/api/spotify/callback?state=${state}&code=code`,'GET',{headers:{Cookie:cookie}}),env,database);assert.match(result.headers.get('Location'),/spotify=notlisted/);}finally{globalThis.fetch=oldFetch;database.sqlite.close();}
 });
