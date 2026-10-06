@@ -1,0 +1,16 @@
+# MYR5 Coach
+
+> MYR5 is a free web app that turns bodyweight workouts into a game with a 3D alien coach. Your phone's camera counts reps and holds on the device; video frames are not uploaded. It installs from the browser as an app (PWA), with no store, headset, console or equipment needed. For ages 13 and up. Made by MYR5, an independent app.
+
+The app interface is drawn in the browser with JavaScript, so this file and the pages below describe it in plain text.
+
+## Facts
+- [What MYR5 is](https://myr5.mominc.online/about): one-page fact sheet: who it's for, price, platforms, exercises, privacy, limits. Last checked 2026-10-06.
+- [Privacy](https://myr5.mominc.online/privacy): what is stored, where, and how to export or delete it.
+- Price: free, no paid features. Ages: 13+, not directed to children under 13. Contact: ianmyersrocks97@gmail.com
+
+## Exercises the camera can follow
+57 bodyweight movements in 10 groups: push-up progressions, squats and split squats, hip hinges and glute bridges, planks and side planks, arm raises and presses, tree pose and balance holds, yoga poses (Mountain, Chair, Warrior I and II, Goddess), horse and front stances, slow shadowboxing, and marches, jogging in place and jumping jacks. Counts and holds are estimates from on-device pose tracking, not medical or professional assessment.
+
+## Optional
+- [MOM Inc. and the MBS show](https://mominc.online/llms.txt): the satirical site the alien coaches also appear on. MOM Inc. is a fictional company; MYR5 is a real, working app and is not operated by MOM Inc.

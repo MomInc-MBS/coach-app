@@ -44,6 +44,8 @@ await mkdir('dist/client',{recursive:true});
 await rm('dist/client/materials',{recursive:true,force:true});
 for(const entry of await readdir('.',{withFileTypes:true})){if(entry.isFile()&&/\.(html|css|mjs|webmanifest)$/.test(entry.name))await cp(entry.name,`dist/client/${entry.name}`);}
 await cp('workout-tracks.js','dist/client/workout-tracks.js');
+// Crawler files (robots/sitemap/llms) are served as static assets; never precached.
+for(const file of ['robots.txt','sitemap.xml','llms.txt'])await cp(file,`dist/client/${file}`);
 console.log('Packed nutrition bytes removed:',await packNutrition());
 for(const folder of ['pod','creature','models','icons','handborne','arcade','modules','packs','war-room','food','vendor','reward-assets','audio'])await cp(folder,`dist/client/${folder}`,{recursive:true,filter:(p)=>!/[\\/]source[\\/].*node_modules(?:[\\/]|$)/.test(p)});
 // Legacy Coach 512 URL is aliased by the Worker and service worker.

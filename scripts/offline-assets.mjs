@@ -34,7 +34,7 @@ const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/|food\/drgf-paper-charact
 const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:audio|icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
-const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs']);
+const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs','about.html']);
 
 async function identify(root,path){
  const hash=createHash('sha256');
