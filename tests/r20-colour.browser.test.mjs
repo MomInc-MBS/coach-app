@@ -5,10 +5,10 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {chromium} from 'playwright';
 
-// R20 lane COLOUR (built dist/client, 375x812): a Body/Head/Eyes radiogroup over one wrapped colour grid, then
+// R20 lane COLOUR (built dist/client, 375x812): a Full body/Eyes radiogroup (R25) over one wrapped colour grid, then
 // a palette grid. A swatch colours only the toggled part; a palette blends all colors on only the selected part; unlocked entries come first.
 const TYPES={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp'};
-test('customizer colour tab: part toggle + grouped colour grid; Head swatch changes only the head',{timeout:180000},async()=>{
+test('customizer colour tab: Full body/Eyes toggle + grouped colour grid; Full body colours body and head together',{timeout:180000},async()=>{
  const root=resolve('dist/client');
  const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://local').pathname;try{const body=await readFile(resolve(root,'.'+path));res.setHeader('Content-Type',TYPES[extname(path)]||'application/octet-stream');res.end(body);}catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
@@ -35,7 +35,7 @@ test('customizer colour tab: part toggle + grouped colour grid; Head swatch chan
    size:(()=>{const r=document.querySelector('#colourGrid button').getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];})(),
    lockedFirst:[...document.querySelectorAll('#colorSwatches .material-grid')].every(g=>{let seen=false;for(const b of g.children){if(b.hasAttribute('data-locked'))seen=true;else if(seen)return false;}return true;}),
   }));
-  assert.deepEqual(layout.toggle,[['Body','true'],['Head','false'],['Eyes','false']]);
+  assert.deepEqual(layout.toggle,[['Full body','true'],['Eyes','false']]);
   assert.deepEqual(layout.grids,['colourGrid','paletteGrid']);
   assert.equal(layout.rows,0,'old per-part columns are gone');
   assert.equal(layout.lockedText,0,'locked swatches carry only the lock icon');
@@ -44,21 +44,20 @@ test('customizer colour tab: part toggle + grouped colour grid; Head swatch chan
   assert.deepEqual(layout.size,[44,44]);
   assert.ok(layout.lockedFirst,'unlocked first in both grids');
   await shot('body');
-  // Head + swatch: only the head colour changes; the grid marks it on Head, not on Body.
+  // Full body + swatch: body, limbs, collar and head change together; the eyes keep their colour.
   const before=await page.evaluate(()=>window.myr5Companion.recipe.materials);
-  await page.click('#colorSwatches [data-part="head"]');
-  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('#colorSwatches [role=radio]')].map(b=>b.getAttribute('aria-checked'))),['false','true','false']);
+  assert.equal(await page.locator('#colorSwatches [data-part="head"]').count(),0,'no separate Head tab');
   await page.click('#colourGrid [data-color="#ff3b30"]');
   await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.head?.colorId==='#ff3b30'&&window.myr5Companion?.ready===true,null,{timeout:60000});
   const after=await page.evaluate(()=>window.myr5Companion.recipe.materials);
-  for(const r of ['body','arms','feet','collar','eye'])assert.equal(after?.[r]?.colorId,before?.[r]?.colorId,r+' untouched');
+  for(const r of ['body','arms','feet','collar','head'])assert.equal(after?.[r]?.colorId,'#ff3b30',r+' takes the Full body colour');
+  assert.equal(after?.eye?.colorId,before?.eye?.colorId,'eyes untouched');
   assert.equal(await page.getAttribute('#colourGrid [data-color="#ff3b30"]','aria-pressed'),'true');
-  assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#colorSwatches [data-part="head"] i')).backgroundColor),'rgb(255, 59, 48)','head dot shows the head colour');
-  await shot('head');
-  await page.click('#colorSwatches [data-part="body"]');
-  assert.equal(await page.getAttribute('#colourGrid [data-color="#ff3b30"]','aria-pressed'),'false','Body does not show the head colour as pressed');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#colorSwatches [data-part="body"] i')).backgroundColor),'rgb(255, 59, 48)','Full body dot shows the colour');
+  await shot('full-body');
   // Eyes + swatch, then Reset clears only the toggled part. (Palette ownership is covered in r18-unlocks.test.mjs.)
   await page.click('#colorSwatches [data-part="eyes"]');
+  assert.equal(await page.getAttribute('#colourGrid [data-color="#ff3b30"]','aria-pressed'),'false','Eyes do not show the body colour as pressed');
   await page.click('#colourGrid [data-color="#2bd97c"]');
   await page.waitForFunction(()=>window.myr5Companion?.recipe?.materials?.eye?.colorId==='#2bd97c'&&window.myr5Companion?.ready===true,null,{timeout:60000});
   assert.equal(await page.evaluate(()=>window.myr5Companion.recipe.materials.head.colorId),'#ff3b30','head kept');

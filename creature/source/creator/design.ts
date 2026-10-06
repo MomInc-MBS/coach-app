@@ -9,7 +9,9 @@ export const REGIONS=['head','eye','collar','body','arms','feet'] as const;
 export type Region=typeof REGIONS[number];
 // R18 G3: three colour channels. The region whose saved colour each region renders with: body colour -> body, arms, feet, collar.
 export const COLOUR_SOURCE:Record<Region,Region>={body:'body',arms:'body',feet:'body',collar:'body',head:'head',eye:'eye'};
-export const COLOUR_CHANNELS=[{id:'body',label:'Body',regions:['body','arms','feet','collar']},{id:'head',label:'Head',regions:['head']},{id:'eyes',label:'Eyes',regions:['eye']}] as const;
+// R25: the picker offers two parts. "Full body" writes the body and head colours together; older saves
+// with a separate head colour still render it until the next Full body pick.
+export const COLOUR_CHANNELS=[{id:'body',label:'Full body',regions:['body','arms','feet','collar','head']},{id:'eyes',label:'Eyes',regions:['eye']}] as const;
 export const LABELS:Record<Region,string>={head:'Crown & scales',eye:'Eyes & pupils',collar:'Shaggy collar',body:'Body',arms:'Arms & hands',feet:'Legs & feet'};
 export const STYLES=[{...HAND_STYLES[0],name:'Original MYR5',primary:'#7946aa',secondary:'#351344',accent:'#b373d4',roughness:.62},...HAND_STYLES.slice(1)];
 export const PICKER_STYLES=STYLES.filter(style=>![8,11,22].includes(style.id));
