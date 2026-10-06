@@ -120,7 +120,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
    ['up','#mealsPanel',null],
    ['down','.ach-board',null],
    ['vdiamond','#accountPanel',null],
-   ['hdiamond','#accountPanel',null], // same destination as vdiamond, hidden from the Menu sheet grid
+   ['hdiamond','#spotifyPanel',null], // R25: Spotify DJ, in the sideways diamond's cut
    ['line-lr','.meditation-panel','.meditation-panel [data-meditation-close]'],
    ['line-rl','#remindersPanel','#remindersPanel [data-close]'],
    ['line-down','#settings','#closeSettings'],

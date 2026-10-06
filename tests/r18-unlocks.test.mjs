@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const memory=new Map();
 globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k),clear:()=>memory.clear()};
 globalThis.myr5AuthenticatedAccount={user:{id:'r18-unlocks'}};
-const result=await build({stdin:{contents:"export * from './creature/source/creator/materials-registry';export {COLOUR_CHANNELS,COLOUR_SOURCE,REGIONS} from './creature/source/creator/design';",resolveDir:process.cwd(),loader:'ts'},bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022'});
+const result=await build({stdin:{contents:"export * from './creature/source/creator/materials-registry';export {COLOUR_CHANNELS,COLOUR_SOURCE,REGIONS,parseRecipe,fresh} from './creature/source/creator/design';",resolveDir:process.cwd(),loader:'ts'},bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022'});
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
 const {TEXTURES,COLORS,PALETTES,FREE_COLOURS,isTextureUnlocked,isColorUnlocked,isLocked,regionChoice,colorTriad,resolveRegionMaterial,COLOUR_SOURCE,COLOUR_CHANNELS}=m;
 const {PACK_ODDS}=await import('../reward-packs.mjs');
@@ -52,11 +52,11 @@ test('every non-free colour and palette is in the colour pack pool',()=>{
  for(const item of pool)assert.ok(item.kind==='palette'?PALETTES.some(p=>p.id===item.id):COLORS.some(c=>c.id===item.id),`${item.id} exists`);
 });
 
-test('three channels: body colour reaches body, arms, feet and collar; head and eyes keep their own',()=>{
+test('two channels (R25): body colour reaches body, arms, feet, collar and head; eyes keep their own',()=>{
  const mc=(colorId,textureId='flat')=>({textureId,colorId,sparkle:0,metallic:0});
  const materials={body:mc('#a23b4a'),arms:mc('default-sapphire'),feet:mc('default-sapphire'),collar:mc('default-sapphire'),head:mc('#2d5aa0'),eye:mc('#ffffff')};
  for(const r of ['body','arms','feet','collar'])assert.equal(regionChoice(materials,r).colorId,'#a23b4a',r);
- assert.equal(regionChoice(materials,'head').colorId,'#2d5aa0');assert.equal(regionChoice(materials,'eye').colorId,'#ffffff');
+ assert.equal(regionChoice(materials,'head').colorId,'#a23b4a','an old separate head colour is ignored');assert.equal(regionChoice(materials,'eye').colorId,'#ffffff');
  assert.equal(regionChoice({arms:mc('#a23b4a','flat')},'arms').colorId,'#a23b4a','a lone region keeps its own colour');
  assert.equal(regionChoice({body:mc('#a23b4a'),arms:mc('default-sapphire','clay')},'arms').textureId,'clay','textures stay per region');
  assert.deepEqual(COLOUR_CHANNELS.map(c=>[c.id,c.label]),[['body','Full body'],['eyes','Eyes']]);
@@ -64,6 +64,16 @@ test('three channels: body colour reaches body, arms, feet and collar; head and 
  for(const r of m.REGIONS)assert.ok(COLOUR_SOURCE[r]);
  const src=readFileSync('creature/source/creator/assemble.ts','utf8');
  assert.match(src,/resolveRegionMaterial\(d\.styles\[region\],regionChoice\(d\.materials,region\),preview,d\.body\)/,'assemble resolves every region through the channel colour');
+});
+
+test('R25: an old recipe with body red and head blue renders and loads the head red',()=>{
+ const mc=colorId=>({textureId:'clay',colorId,sparkle:0,metallic:0});
+ const old={...m.fresh(),materials:{body:mc('#ff3b30'),head:mc('#2d5aa0'),eye:mc('#ffffff')}};
+ assert.equal(regionChoice(old.materials,'head').colorId,'#ff3b30','renders red');
+ const loaded=m.parseRecipe(JSON.stringify(old));
+ assert.equal(loaded.materials.head.colorId,'#ff3b30','normalised red on load, so it is never saved blue again');
+ assert.equal(loaded.materials.head.textureId,'clay','the head keeps its own texture');
+ assert.equal(loaded.materials.eye.colorId,'#ffffff','eyes keep their own colour');
 });
 
 test('an owned palette keeps all three colors together on its selected part; base colors stay distinct',()=>{
@@ -75,9 +85,10 @@ test('an owned palette keeps all three colors together on its selected part; bas
  m.grantUnlock('palette',p.id);
  const triad=colorTriad(p.id);
  assert.equal(triad.paletteId,p.id);assert.deepEqual([triad.primary,triad.secondary,triad.accent],p.colors);
- const materials={body:{textureId:'flat',colorId:'#7f7d78'},head:{textureId:'clay',colorId:p.id},eye:{textureId:'flat',colorId:'#ffffff'}};
+ // R25: a palette goes on the Full body (head included); the eyes keep their own colour.
+ const materials={body:{textureId:'flat',colorId:p.id},head:{textureId:'clay',colorId:'#7f7d78'},eye:{textureId:'flat',colorId:'#ffffff'}};
  assert.equal(resolveRegionMaterial(0,regionChoice(materials,'head')).paletteId,p.id);
- assert.equal(resolveRegionMaterial(0,regionChoice(materials,'body')).paletteId,undefined);
+ assert.equal(resolveRegionMaterial(0,regionChoice(materials,'body')).paletteId,p.id);
  assert.equal(resolveRegionMaterial(0,regionChoice(materials,'eye')).paletteId,undefined);
  assert.equal(colorTriad('#7f7d78').paletteId,undefined);
  assert.equal(colorTriad(p.id,false,'other-coach'),undefined,'palette ownership is still coach-specific');

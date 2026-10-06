@@ -1464,9 +1464,9 @@ export function lensMap(poly,w,h,px=GLASS.mapPx,bevel=GLASS.bevel){
 const TUNNEL_VS='#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.-1.,0,1);}';
 const tunnelFragment=(material='')=>`#version 300 es
 precision highp float;
-uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[10],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;uniform sampler2D uPeek;uniform float uPeekOn;out vec4 o;
+uniform vec2 uRes,uC,uLP;uniform float uR,uT,uSpin,uSweep,uLens,uBevel,uPr,uFringe,uMag,uN;uniform vec3 uSeq[12],uCore,uTint;uniform float uBlur;uniform sampler2D uMap;uniform sampler2D uPeek;uniform float uPeekOn;out vec4 o;
 vec3 seq(float i){return uSeq[int(mod(i,uN))];}
-vec3 acc(float i){return uSeq[int(uN)+int(mod(i,2.))];} // accent colours sit after the ring colours
+vec3 acc(float i){return uSeq[int(uN)+int(mod(i,2.))];} // accent colours sit after the ring colours (up to 10), so uSeq has 12 slots
 ${material}
 vec3 tunnel(vec2 p,float fz){
  float aa=1.-smoothstep(.25,.9,fz); // fade ring detail that gets finer than a pixel
@@ -1592,7 +1592,7 @@ async function startTunnel(ph,poly,color,all){
  gl.bindTexture(gl.TEXTURE_2D,t.texture);
  const tex=lensMap((ph.fullscreen?poly:bleedPts(poly,-GLASS.rimInset)).map(([x,y])=>[x-left,y-top]),w,h);
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,tex.mw,tex.mh,0,gl.RGBA,gl.UNSIGNED_BYTE,tex.data);
- const flat=new Float32Array(30);seq.forEach((c,i)=>flat.set(rgb(c),3*i));(palette?.accents||[seq[0],seq[0]]).forEach((c,i)=>flat.set(rgb(c),3*(seq.length+i)));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
+ const flat=new Float32Array(36);seq.forEach((c,i)=>flat.set(rgb(c),3*i));(palette?.accents||[seq[0],seq[0]]).forEach((c,i)=>flat.set(rgb(c),3*(seq.length+i)));gl.uniform3fv(u.uSeq,flat);gl.uniform1f(u.uN,seq.length);
  gl.uniform3fv(u.uTint,rgb(boardTint(capturedBoardId)));
  gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(core).map(v=>v*.5+.5));
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));

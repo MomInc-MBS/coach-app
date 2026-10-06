@@ -1,20 +1,9 @@
 import {BUILD_ID} from './release-build.mjs';
-export const RELEASE=Object.freeze({id:'2026-10-05-release-24-'+BUILD_ID,title:'Release 24: Workout startup and constellation flight',date:'2026-10-05',url:'https://myr5.mominc.online/repair-coach',notes:[
- "Workout Begin and Continue recover from stalled draft checks. Closing a workout releases its session heartbeat and camera resources.",
- "Chosen workout paths apply to the movement library and physical controls. Earned coaches keep their unlocked movements available.",
- "Coach selectors show names and pixel sprites, put available choices first, and show unlock requirements in the selected preview.",
- "Touch and hold the flight map to steer and fire continuously. Unlocks connect across an open, branching constellation, with a matching compact terminal preview.",
- "Grimoire and Spotify controls move with the metal frame and stay off full-screen destinations. The hub matches your selected metal; the flat diamond opens Spotify.",
- "Dr. Girlfriend crosses behind the pyramid as a transparent cutout. The DJ hand floats over a small controller at the bottom of your playlists.",
- "Texture choices show miniature swatches. Clay, Graph Paper, Fine Stripe, Holey and Speckled are free; other textures require packs. Baby and Flat are retired.",
- "The coach preview has gentle atmospheric lighting, and its bottom controls match the pod, including the Sound switch.",
- "Coaches use the revised fitness-inspired names. Start with MYR5 and Blob 1, then choose two workout paths to unlock their introductory coaches. Flyer and Quad 10 are removed.",
- "Achievements restore the constellation view and coach zoom, with each coach's performance requirements and sequential weapon unlocks.",
- "The XP terminal pages through solar-system areas. Open it to fly your chosen pixel ship through 250 levels, revisit past unlocks and fire at asteroids. Future scenery stays fogged until unlocked.",
- "The War Room uses orange CRT styling with visual customization previews and combined clothing categories. Tap the pod character to open it.",
- "The pod has persistent metal-mounted Grimoire and Now Playing terminals, simplified labels and physical portal controls. Menus share the phone movement effect.",
- "Connect Spotify for playlists and playback controls, with native Spotify Jam invitation links and a compact DJ terminal. The hand follows available song tempo or idles when tempo is unavailable.",
- "Workout instructions fit on the hologram screen with Begin underneath. Leaving a workout or menu releases its resources, and camera workouts prevent manual rep changes from granting XP.",
- "Pond's big fish arrives after eight seconds and follows more strongly. Gear Grimoire and whiteboard goal entry are removed. The classroom adds light flicker, a paper crawler and squeaky marker audio.",
- "Coach surface details are more visible on larger models. The recovery room returns automatically during preparation recovery without a manual workout-credit button."
+export const RELEASE=Object.freeze({id:'2026-10-06-release-25-'+BUILD_ID,title:'Release 25: Notebook fixes',date:'2026-10-06',url:'https://myr5.mominc.online/repair-coach',notes:[
+ "Customizer: Fine Stripe bellies are no longer patchy. Original MYR5, Jelly and Bubble Glass textures are retired; saved choices move to Flat, Opal Jelly and Glitter Resin.",
+ "Colour tabs are Full body and Eyes. New anime, squinty, bloodshot and blind eye styles are free to try.",
+ "The ship viewer sits above the colours and stays pinned while they scroll.",
+ "The sideways diamond opens the Spotify DJ terminal in its cut. The rushing water sound loops seamlessly.",
+ "Spotify on iPhone explains why a sign in did not finish (terms page, different browser, test list) and reopens the DJ terminal so you can try again.",
+ "Grimoire settings drop the Board title, and the Grass wormhole keeps its green palette."
 ]});

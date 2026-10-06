@@ -173,8 +173,8 @@ globalThis.addEventListener?.('myr5:recipe', event => migrateEarnedTextureUnlock
  * always falls back to Flat/its default colour rather than ever throwing or loading nothing.
  * `preview` lets a locked texture/colour paint (editor preview only; save-look.ts guards saves).
  */
-/** G3: the material choice a region really renders with. Body colour drives body, arms, feet and collar;
- * head and eyes have their own. Old saves map body<-body region, head<-head, eyes<-eye. */
+/** G3: the material choice a region really renders with. Body colour drives body, arms, feet, collar and (R25)
+ * the head; eyes have their own. An old save's separate head colour is ignored. */
 export function regionChoice(materials: Partial<Record<Region, MaterialChoice>> | undefined, region: Region): MaterialChoice | undefined {
  const own = materials?.[region], source = materials?.[COLOUR_SOURCE[region]];
  return own && source && source !== own ? { ...own, colorId: source.colorId } : own;

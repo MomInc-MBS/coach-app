@@ -62,10 +62,9 @@ test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r)
 const SHAPED=[
  ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#pyramidScanner canvas'],
  ['down','.ach-board','down-achievements','.ach-close','.ach-head h1','.ach-boss'],
- // Records peers into the 3D classroom; its whiteboard opens the full panel. Ian 26 Sept: the sideways diamond opens the
- // same tall diamond (the flat trace still reaches it).
+ // Records peers into the 3D classroom; its whiteboard opens the full panel. R25: the sideways diamond opens Spotify DJ in
+ // its own cut instead (portal-dj-diamond.browser.test.mjs).
  ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],
- ['hdiamond','#accountPanel','hdiamond-opens-vdiamond','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],
  ['oval','dialog.ship-view','oval-ship','.ship-view-close','.ship-scene-status','.ship-scene-canvas'],
 ];
 // The four corners (inside any rounding) and middle of its box, or of each line of a heading's text, reach the element
@@ -103,7 +102,6 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
  const {context,page}=await openApp(browser,base);
  try{
   await page.evaluate(()=>localStorage.setItem('myr5.tiltPermission','granted'));
-  let tallDiamond=null;
   for(const [id,sel,frame,close,title,scene] of SHAPED){
    await page.evaluate(id=>{window.run=window.myr5Portal.open(id);},id);
    await page.waitForFunction(sel=>document.querySelector(sel)?.open&&document.querySelector(sel).classList.contains('portal-shaped'),sel,{timeout:30000});
@@ -127,15 +125,13 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    const middle=await page.evaluate(()=>{const p=document.querySelector('.portal-aura').style;return [parseFloat(p.getPropertyValue('--cx')),parseFloat(p.getPropertyValue('--cy'))];});
    assert.equal(await reaches(page,sel,middle),true,`${id}: the menu is reachable through the middle of the cut`);
    assert.equal(await tappable(page,scene),true,`${id}: the scene's own objects still take a tap`);
-   if(id==='vdiamond'||id==='hdiamond'){
+   if(id==='vdiamond'){
     await page.waitForFunction(()=>document.querySelector('#accountPanel[data-room="ready"] .classroom-canvas'),null,{timeout:30000});
     assert.equal(await page.evaluate(()=>{
      const d=document.getElementById('accountPanel');
      return d.classList.contains('classroom-panel')&&d.querySelectorAll('.classroom-desk').length===2&&!!d.querySelector('[data-room-board]');
     }),true,'the 3D classroom, two desks and tappable whiteboard sit in the diamond');
     assert.equal(await page.evaluate(()=>{const board=document.querySelector('#accountPanel [data-room-board]'),r=board.getBoundingClientRect();return !!document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('[data-room-board]');}),true,'the whiteboard center is tappable through the cut');
-    if(id==='vdiamond')tallDiamond=await auraPath(page);
-    else assert.equal(await auraPath(page),tallDiamond,'the sideways diamond opens the tall one');
    }
    if(id==='oval'){
     await page.waitForFunction(()=>document.querySelector('.ship-view-stage .ship-scene[data-phase=ready]')&&!document.querySelector('.ship-scene-flash:popover-open'),null,{timeout:30000});
