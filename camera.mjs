@@ -6,14 +6,29 @@ export function cameraConstraints(choice='environment',fps=30){
   return {audio:false,video:{...source,width:{ideal:640},height:{ideal:480},frameRate:{ideal:fps,max:30},resizeMode:'none'}};
 }
 export async function listCameras(){return (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'&&d.deviceId).map(d=>({id:d.deviceId,label:d.label}));}
-export async function openCamera(choice='environment',fps=30,devices=navigator.mediaDevices){
+export async function openCamera(choice='environment',fps=30,devices=navigator.mediaDevices,{signal,timeoutMs=20000}={}){
+  let cancelled=false,timer,onAbort;
+  const cancelledError=()=>new DOMException('Camera startup cancelled.','AbortError');
+  const acquisition=(async()=>{
   let resolved=choice;
   if(!choice.startsWith('device:')){
     // Once permission exposes device labels, select the requested camera exactly.
     // An ideal facing preference alone can otherwise return a different camera.
     try{const pattern=choice==='user'?/(front|user|selfie)/i:/(back|rear|environment)/i;const match=(await devices.enumerateDevices()).find(d=>d.kind==='videoinput'&&d.deviceId&&pattern.test(d.label));if(match)resolved=deviceChoice(match.deviceId);}catch{}
   }
-  return devices.getUserMedia(cameraConstraints(resolved,fps));
+  if(cancelled||signal?.aborted)throw cancelledError();
+  const incoming=await devices.getUserMedia(cameraConstraints(resolved,fps));
+  if(cancelled||signal?.aborted){incoming.getTracks().forEach(track=>track.stop());throw cancelledError();}
+  return incoming;
+  })();
+  const cancellation=new Promise((_,reject)=>{
+    onAbort=()=>{cancelled=true;reject(cancelledError());};
+    signal?.addEventListener('abort',onAbort,{once:true});
+    if(signal?.aborted)onAbort();
+    timer=setTimeout(()=>{cancelled=true;reject(new Error('Camera permission is still pending. Allow camera access in your browser, then tap Begin again.'));},timeoutMs);
+  });
+  try{return await Promise.race([acquisition,cancellation]);}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',onAbort);}
 }
 export function findUltrawide(cameras){return cameras.find(d=>!/(front|user|facetime|selfie)/i.test(d.label)&&/(ultra[\s-]?wide|ultrawide|0[.,][56]\s*[x×])/i.test(d.label));}
 export function cameraFacing(track,choice){const settings=track.getSettings();return settings.facingMode||(/(front|user|selfie)/i.test(track.label)||choice==='user'?'user':'environment');}

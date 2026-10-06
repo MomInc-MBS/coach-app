@@ -1,6 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cameraConstraints,findUltrawide,widestZoom,cameraReport,openCamera} from '../camera.mjs';
+test('Stop cancels a pending camera permission prompt and closes a late stream',async()=>{
+  let resolve,stops=0;const controller=new AbortController();
+  const devices={getUserMedia:()=>new Promise(r=>{resolve=r;})};
+  const pending=openCamera('device:rear',30,devices,{signal:controller.signal});
+  controller.abort();await assert.rejects(pending,{name:'AbortError'});
+  resolve({getTracks:()=>[{stop:()=>stops++}]});await new Promise(r=>setTimeout(r,0));assert.equal(stops,1);
+  devices.getUserMedia=async()=> 'retry-stream';assert.equal(await openCamera('device:rear',30,devices),'retry-stream');
+});
+test('a permission prompt that never settles gives a retry message',async()=>{
+  await assert.rejects(openCamera('device:rear',30,{getUserMedia:()=>new Promise(()=>{})},{timeoutMs:5}),/Allow camera access/);
+});
+test('cancellation during device discovery does not open the camera later',async()=>{
+  let resolve,calls=0;const controller=new AbortController();
+  const pending=openCamera('environment',30,{enumerateDevices:()=>new Promise(r=>{resolve=r;}),getUserMedia:()=>{calls++;}},{signal:controller.signal});
+  controller.abort();await assert.rejects(pending,{name:'AbortError'});resolve([]);await new Promise(r=>setTimeout(r,0));assert.equal(calls,0);
+});
 test('an explicitly selected physical camera is exact, with no conflicting facing preference',()=>{const c=cameraConstraints('device:rear-wide-id');assert.deepEqual(c.video.deviceId,{exact:'rear-wide-id'});assert.equal(c.video.facingMode,undefined);assert.equal(c.video.resizeMode,'none');assert.equal(c.audio,false);});
 test('ultrawide detection uses labels, never guesses from camera numbering',()=>{assert.equal(findUltrawide([{id:'0',label:'camera2 0, facing back'},{id:'2',label:'camera2 2, facing back'}]),undefined);assert.equal(findUltrawide([{id:'front',label:'front ultrawide'},{id:'rear',label:'Back Ultra Wide Camera'}]).id,'rear');});
 test('widest view uses the advertised minimum and confirms the applied setting',async()=>{let zoom=1;const track={getCapabilities:()=>({zoom:{min:.6,max:8}}),getSettings:()=>({zoom}),applyConstraints:async c=>{zoom=c.advanced[0].zoom;}};const result=await widestZoom(track);assert.equal(zoom,.6);assert.equal(result.applied,true);});

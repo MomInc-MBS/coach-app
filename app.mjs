@@ -96,7 +96,7 @@ const FROZEN_SETTINGS=['movement','goal','duration','restDuration','camera'];
 let frozenSettings=null;
 const freezeSettings=()=>{frozenSettings=Object.fromEntries(FROZEN_SETTINGS.map(id=>[id,$(id).value]));};
 const releaseOwner=()=>{pod?.workoutOwner?.stop();};
-let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve();
+let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve(),cameraAcquisition=null;
 const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
@@ -115,8 +115,8 @@ async function refreshLenses(){
   return cameras;
 }
 async function showLensInfo(track){
-  let cameras=[];try{cameras=await refreshLenses();}catch{}
-  const zoom=await widestZoom(track);if(!stream||!stream.getTracks().includes(track))return;
+  let cameras=[];try{cameras=await timeout(refreshLenses(),3000,'Camera list unavailable.');}catch{}
+  const zoom=await timeout(widestZoom(track),3000,'Zoom unavailable.').catch(()=>({supported:false,applied:false}));if(!stream||!stream.getTracks().includes(track))return;
   const report=cameraReport(track,cameras,zoom);
   const actualId=track.getSettings().deviceId;if(cameras.some(d=>d.id===actualId))$('camera').value=deviceChoice(actualId);
   $('lensInfo').textContent=report.label+' · '+(zoom.applied?`widest exposed zoom ${zoom.zoom}×`:zoom.supported?'Wider zoom could not be applied.':'This lens exposes no zoom control.')+' Follow the camera cue for your exercise.';
@@ -126,6 +126,7 @@ async function showLensInfo(track){
   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
+  cameraAcquisition?.abort();cameraAcquisition=null;
   frozenSettings=null;
   poseFrames.stop();cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}closeProbe();draw=null;
   stream?.getTracks().forEach(t=>t.stop());stream=null;v.pause();v.srcObject=null;g.clearRect(0,0,c.width,c.height);
@@ -195,7 +196,8 @@ async function start(){
     if(run!==generation){await pod.interruptCurrent(state.motion);return;}
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Open this HTTPS site in a browser that supports camera access.');
     const selected=$('camera').value;
-    const incoming=await openCamera(selected);
+    cameraAcquisition=new AbortController();
+    const incoming=await openCamera(selected,30,navigator.mediaDevices,{signal:cameraAcquisition.signal});
     if(run!==generation){incoming.getTracks().forEach(t=>t.stop());return;}
     stream=incoming;v.srcObject=stream;v.muted=true;
     await timeout(v.play(),10000,'The camera opened but sent no video. Select the other camera and retry.');
