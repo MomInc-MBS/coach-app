@@ -29,6 +29,12 @@ test('customizer R25: texture removals, new eye styles, ship viewer above its co
    await page.waitForFunction(s=>window.myr5Companion?.recipe?.eye===s&&window.myr5Companion.ready===true,style,{timeout:90000});
   }
   assert.equal(JSON.parse(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1'))).eye,'blind','saved without a lock');
+  // Eye extras combine with the chosen style.
+  await page.selectOption('#eye','anime');await page.waitForFunction(()=>window.myr5Companion?.recipe?.eye==='anime'&&window.myr5Companion.ready,null,{timeout:90000});
+  for(const id of ['blackSclera','colourPupil']){await page.check('#'+id);await page.waitForFunction(k=>window.myr5Companion?.recipe?.[k]===true&&window.myr5Companion.ready,id,{timeout:90000});}
+  const saved=JSON.parse(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')));
+  assert.deepEqual([saved.eye,saved.blackSclera,saved.colourPupil],['anime',true,true]);
+  await page.uncheck('#blackSclera');await page.waitForFunction(()=>!('blackSclera' in window.myr5Companion.recipe)&&window.myr5Companion.ready,null,{timeout:90000});
   // Ship: the viewer comes before the colour row and stays pinned at the top while the colours scroll.
   await page.click('#tab-ship');
   const order=await page.evaluate(()=>{const p=document.getElementById('shipPreview'),c=document.getElementById('shipColourRow');return !!(p.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);});

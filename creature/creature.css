@@ -35,6 +35,8 @@
 .texture-grid button>span{min-height:25px;font-size:.74rem}
 .texture-grid .texture-tile-lock{position:absolute;top:4px;right:5px;font-size:12px;font-style:normal}
 #shipColourRow{margin:12px 0}
+/* R25: eye extras layer over any eye style. */
+.eye-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}.check-field{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 10px;border:1px solid #705478;border-radius:9px;background:#291d33;font-size:.875rem}.check-field input{width:20px;height:20px;accent-color:var(--gold);flex:none}
 /* R25: the ship viewer sits above its controls and stays pinned while the colours scroll under it. */
 #shipPreview{position:sticky;top:-10px;z-index:2;height:150px;margin:0 0 8px;border-radius:8px;background:#0b0714;box-shadow:0 6px 10px -6px #000c}
 @media(max-height:860px){#shipPreview{height:120px}}

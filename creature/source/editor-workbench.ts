@@ -140,6 +140,7 @@ function sync(){
  if(cosmeticCoach!==look.body){cosmeticCoach=look.body;fillTextures();fillColours();}
  for(const key of ['body','eyeLayout','fingers','toes','eye','pupil','fur','iris','pupilSize','detail']){const input=$(key) as HTMLInputElement;input.value=String(look[key as keyof Design]);const out=document.getElementById(key+'Value');if(out)out.textContent=Number(input.value).toFixed(2);}
 
+ for(const key of ['blackSclera','colourPupil'] as const)($(key) as HTMLInputElement).checked=look[key]===true;
  syncMomOnly();syncCoachIdentity();
  for(const button of bodyGrid.querySelectorAll<HTMLButtonElement>('[data-body]'))button.setAttribute('aria-pressed',String(button.dataset.body===look.body));
  syncShipRow();
@@ -280,6 +281,7 @@ for(const id of ['body','eyeLayout','fingers','toes','eye','pupil'])$(id).addEve
   // normalizes it going forward.
   commit(section?{...shown(),body:chosen,headFrom:chosen,armsFrom:chosen,feetFrom:chosen}:selectOwnedBody(recipe,chosen));return;}
  commit({...shown(),[id]:value});});
+for(const id of ['blackSclera','colourPupil'] as const)$(id).addEventListener('change',()=>{const next={...shown()};if(($(id) as HTMLInputElement).checked)next[id]=true;else delete next[id];commit(next);});
 for(const id of ['fur','iris','pupilSize','detail']){
  const input=$(id) as HTMLInputElement;
  input.addEventListener('input',()=>commit({...shown(),[id]:Number(input.value)},id));

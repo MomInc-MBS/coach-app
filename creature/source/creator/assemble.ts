@@ -127,6 +127,9 @@ export async function assembleCreature(d:Design,assetBase:string,resolveInstalle
     if(style.paletteId&&!fixed&&(region==='eye'&&o.name==='Iris'||region!=='eye'&&style.id===0))applyPaletteSurface(m,style);
     // R25: bloodshot whites blush pink; blind eyes are milky, with no pupil or iris fibres.
     if(region==='eye'&&d.eye==='bloodshot'&&name==='Eye ivory')m.color.lerp(new THREE.Color('#ff9c9c'),.28);
+    // R25 eye extras, on top of any style: black whites, and a centre in a light shade of the Eyes colour.
+    if(region==='eye'&&d.blackSclera&&name==='Eye ivory'){m.color.set('#09080c');m.roughness=.16;}
+    if(region==='eye'&&d.colourPupil&&o.name==='Pupil')m.color.set(style.id!==0?style.accent:STYLES[0].accent);
     if(region==='eye'&&d.eye==='blind'){if(o.name==='Pupil'||/^Iris.fiber/.test(o.name))o.visible=false;if(o.name==='Iris'){m.map=null;m.color.set('#dfe7ea');m.roughness=.3;m.needsUpdate=true;}}
    });
   }

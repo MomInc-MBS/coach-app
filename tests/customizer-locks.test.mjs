@@ -218,4 +218,10 @@ test('anime, squinty, bloodshot and blind eyes load, save unlocked and pass the 
   assert.equal(validRecipe(recipe),true,`${eye} passes the account validator`);
  }
  assert.throws(()=>parseRecipe(JSON.stringify({...fresh(),eye:'laser'})));
+ // Eye extras layer over any style and survive load and save; anything but true is dropped.
+ const extras=parseRecipe(JSON.stringify({...fresh(),eye:'bloodshot',blackSclera:true,colourPupil:true}));
+ assert.deepEqual([extras.eye,extras.blackSclera,extras.colourPupil],['bloodshot',true,true]);
+ assert.equal(saveRecipe(localStorage,extras,extras).blackSclera,true);assert.equal(validRecipe(extras),true);
+ const junk=parseRecipe(JSON.stringify({...fresh(),blackSclera:'yes',colourPupil:1}));
+ assert.equal('blackSclera' in junk||'colourPupil' in junk,false);
 });
