@@ -105,7 +105,7 @@ export const TEXTURE_SWAP=Object.freeze({
  'arms-rope':['legacy-14','Crystal','Clear eyes. Sharp facets.'], // Arms L3
  'arms-leather':['legacy-8','Spectral','Here in spirit. Also in body.'], // Arms L5
  'yoga-cork':['legacy-20','Fluffy','Maximum floof. Minimum mercy.'], // Yoga L1
- 'yoga-woven-mat':['legacy-21','Jelly','Wobbles. Never falls.'], // Yoga L3
+ 'yoga-woven-mat':['legacy-21','Jelly','Wobbles. Never falls.'], // Yoga L3 (R25: Jelly is retired; the id only keeps this slot's earned pack id stable)
  'cardio-terry-cloth':['legacy-16','Glacial','Cool under pressure. Very cool.'], // Cardio L3
 });
 // --- item-catalog.json `bosses` (unlock lines reused for every board boss of that family) ---

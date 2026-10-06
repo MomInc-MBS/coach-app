@@ -1,11 +1,16 @@
 // Cosmetic ownership follows the account/guest and the coach wearing the item.
 import { markPending,markPendingMany } from '../../../unlock-pending.mjs';
 import { performanceOwner } from '../../../performance-progress.mjs';
+import { replacementTextureId } from './texture-policy.mjs';
 export type UnlockKind = 'texture' | 'color' | 'palette';
 const KEY = 'myr5-unlocks-v2';
 type Store = Record<UnlockKind, string[]>;
 const empty = (): Store => ({ texture: [], color: [], palette: [] });
 export const cosmeticId = (coachId: string, id: string) => `coach:${encodeURIComponent(coachId)}:${id}`;
+// R25: a grant of a removed texture is a grant of its kept twin (Jelly -> Opal Jelly, Bubble Glass ->
+// Glitter Resin). Reads translate old entries, and the next write stores the twin in their place.
+const keptId = (kind: string, id: string) => kind === 'texture' ? replacementTextureId(id) : id;
+const keptScoped = (kind: string, scoped: string) => { const m = /^(coach:[^:]*:)(.*)$/.exec(scoped); return m ? m[1] + keptId(kind, m[2]) : scoped; };
 export function currentCosmeticCoach(): string {
  try { return JSON.parse(localStorage.getItem('myr5-recipe-v1') || '{}').body || 'myr5'; } catch { return 'myr5'; }
 }
@@ -13,14 +18,14 @@ const ownerKey = () => `${KEY}/${encodeURIComponent(performanceOwner())}`;
 function read(): Store {
  try {
   const d = JSON.parse(localStorage.getItem(ownerKey()) || '{}');
-  return Object.fromEntries(['texture','color','palette'].map(kind => [kind, Array.isArray(d[kind]) ? d[kind].filter((id: unknown) => typeof id === 'string') : []])) as Store;
+  return Object.fromEntries(['texture','color','palette'].map(kind => [kind, Array.isArray(d[kind]) ? [...new Set<string>(d[kind].filter((id: unknown) => typeof id === 'string').map((id: string) => keptScoped(kind, id)))] : []])) as Store;
  } catch { return empty(); }
 }
 function write(store: Store) { try { localStorage.setItem(ownerKey(), JSON.stringify(store)); return true; } catch { return false; } }
-export const isGranted = (kind: UnlockKind, id: string, coachId = currentCosmeticCoach()) => read()[kind]?.includes(cosmeticId(coachId,id)) ?? false;
+export const isGranted = (kind: UnlockKind, id: string, coachId = currentCosmeticCoach()) => read()[kind]?.includes(cosmeticId(coachId,keptId(kind,id))) ?? false;
 export function grantUnlock(kind: UnlockKind, id: string, coachId = currentCosmeticCoach()) {
  if (!['texture','color','palette'].includes(kind) || typeof id !== 'string' || !id || typeof coachId !== 'string' || !coachId) return false;
- const s = read(), scoped = cosmeticId(coachId,id);
+ const s = read(), scoped = cosmeticId(coachId,keptId(kind,id));
  if (s[kind].includes(scoped)) return false;
  s[kind].push(scoped); if (!write(s)) return false;
  markPending(kind,scoped); return true;
@@ -48,6 +53,6 @@ export const ownerGrantedIds=(kind:UnlockKind)=>read()[kind]||[];
 export function grantUnlocks(items:{kind:UnlockKind;id:string;coachId:string}[]){
  const data=read(),sets=Object.fromEntries(['texture','color','palette'].map(kind=>[kind,new Set(data[kind as UnlockKind])])) as Record<UnlockKind,Set<string>>;
  const added:{kind:UnlockKind;id:string}[]=[];
- for(const item of items){if(!sets[item.kind]||typeof item.id!=='string'||!item.id||typeof item.coachId!=='string'||!item.coachId)continue;const id=cosmeticId(item.coachId,item.id);if(sets[item.kind].has(id))continue;sets[item.kind].add(id);data[item.kind].push(id);added.push({kind:item.kind,id});}
+ for(const item of items){if(!sets[item.kind]||typeof item.id!=='string'||!item.id||typeof item.coachId!=='string'||!item.coachId)continue;const id=cosmeticId(item.coachId,keptId(item.kind,item.id));if(sets[item.kind].has(id))continue;sets[item.kind].add(id);data[item.kind].push(id);added.push({kind:item.kind,id});}
  if(!added.length||!write(data))return 0;markPendingMany(added);return added.length;
 }

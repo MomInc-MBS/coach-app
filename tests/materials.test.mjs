@@ -61,10 +61,11 @@ test('parseRecipe accepts a valid optional materials override and rejects malfor
  ]) assert.throws(()=>parseRecipe(JSON.stringify(bad)));
 });
 
-test('registry keeps Clay and the 24 named patterns while retiring Flat and Baby',()=>{
+test('registry keeps Clay and the 24 named patterns while retiring Flat, Baby, Original MYR5, Jelly and Bubble Glass',()=>{
  assert.equal(isTextureUnlocked(FLAT_TEXTURE),false);
- assert.equal(TEXTURES.some(t=>t.id==='flat'||t.id==='legacy-22'),false);
- assert.equal(TEXTURES.filter(t=>t.legacy).length,STYLES.length-1);
+ assert.equal(TEXTURES.some(t=>['flat','legacy-22','legacy-0','legacy-21','bubble-glass'].includes(t.id)),false);
+ assert.ok(TEXTURES.some(t=>t.id==='opal-jelly')&&TEXTURES.some(t=>t.id==='glitter-resin'),'the kept twins stay');
+ assert.equal(TEXTURES.filter(t=>t.legacy).length,STYLES.length-3);
  // Only the five requested finishes are free; every other selectable texture is pack-only.
  for(const t of TEXTURES)assert.equal(isTextureUnlocked(t),t.unlockRule==='default');
  assert.equal(TEXTURES.filter(t=>t.unlockRule==='default').length,5);
@@ -84,7 +85,7 @@ test('D32: every palette is a primary/secondary/accent triad of valid hex, with 
   assert.equal(p.colors.length,3,p.id);
   for(const c of p.colors)assert.match(c,/^#[0-9A-F]{6}$/i,p.id);
   assert.ok(p.tagline&&p.tagline.trim().split(/\s+/).length<=6,`${p.id} tagline`);
-  if(p.unlockRule==='battle-pass')assert.ok((/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)||TEXTURES.some(t=>t.familyId>=57&&t.defaultColorId===p.id))&&p.unlockAtDay===undefined,p.id);
+  if(p.unlockRule==='battle-pass')assert.ok((/^([a-z]+-\d|food):L[1-5]$/.test(p.reward)||TEXTURES.some(t=>t.familyId>=57&&t.defaultColorId===p.id)||p.id==='bubble-glass')&&p.unlockAtDay===undefined,p.id); // R25: the Bubble Glass colour outlives its texture
   else assert.equal(p.unlockRule,'aura-milestone',p.id);
  }
  const unique=key=>assert.equal(new Set(PALETTES.map(key)).size,PALETTES.length);
@@ -119,8 +120,8 @@ test('all 24 named surfaces return distinguishable phone-scale height/roughness 
  assert.equal(fingerprints.size,24);
 });
 
-test('all 66 selectable registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
- assert.equal(TEXTURES.length,66);
+test('all 63 selectable registry choices resolve in preview; saved zero metalness and unlock checks remain intact',()=>{
+ assert.equal(TEXTURES.length,63);
  for(const t of TEXTURES){
   const preview=resolveRegionMaterial(0,{textureId:t.id,colorId:'#7f7d78',sparkle:0,metallic:0},true);
   assert.equal(preview.id,t.familyId,`${t.displayName} preview family`);
