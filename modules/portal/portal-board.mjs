@@ -35,6 +35,49 @@ export function quiltSurfaceLayout(width,height){
  const face={left:(w-fw)/2,top:h-fh,width:fw,height:fh};
  return {face,pattern:{left:face.left+fw*PATTERN.left,top:face.top+fh*PATTERN.top,width:fw*(PATTERN.right-PATTERN.left),height:fh*(PATTERN.bottom-PATTERN.top)}};
 }
+// Vault secret (quilt): two-step fold. Pure reducer: ev {type:'down'|'move'|'up'|'tick'|'cancel',id,x,y,face,w,h} (client px).
+// Step 1: two fingers in the face's bottom-left/bottom-right quadrants drag up (>=35% of face height, <=2.5 s) -> lower half folds up.
+// Step 2 (<=8 s later): one finger in the folded half's upper band, one in its lower band drag right (>=40% of face width).
+// p (0-1) is the live fold progress; release at p>=.6 completes, else falls back. Touches within 24 px of a screen edge (40 px left in step 2) are ignored.
+export const QUILT_SECRET={edge:24,edgeLeft2:40,min1:.35,min2:.4,done:.6,ms1:2500,ms2:8000};
+export const quiltSecretInit=()=>({phase:'idle',pts:{},pair:null,p:0,claimed:[],until:0});
+export function quiltSecret(s,ev,now){
+ const Q=QUILT_SECRET;s={...s,pts:{...s.pts}};
+ if(s.phase==='folded1'&&now>s.until)s={...s,phase:'idle',pair:null,p:0}; // window over: the quilt unfolds
+ const base=s.phase==='fold2'||s.phase==='folded1'?'folded1':'idle',{x,y,face:f}=ev,id=String(ev.id);
+ if(ev.type==='cancel'){return {...s,phase:s.phase==='done'?'done':base,pts:{},pair:null,p:s.phase==='done'?1:0};}
+ if(s.phase==='done'||!f)return s;
+ if(ev.type==='down'){
+  if(x<(base==='folded1'?Q.edgeLeft2:Q.edge)||x>ev.w-Q.edge||y<Q.edge||y>ev.h-Q.edge)return s;
+  s.pts[id]={x0:x,y0:y,x,y};
+  if(!s.pair&&(s.phase==='idle'||s.phase==='folded1')){
+   const zone=q=>{if(q.x0<f.left||q.x0>f.left+f.width)return null;const v=(q.y0-f.top)/f.height,l=q.x0<f.left+f.width/2;
+    return s.phase==='idle'?(v>.5&&v<=1?(l?'L':'R'):null):(v>=0&&v<.25?'U':v>=.25&&v<=.5?'D':null);};
+   const ids=Object.keys(s.pts),z=ids.map(k=>zone(s.pts[k])),want=s.phase==='idle'?['L','R']:['U','D'],a=z.indexOf(want[0]),b=z.indexOf(want[1]);
+   if(a>=0&&b>=0)s={...s,phase:s.phase==='idle'?'fold1':'fold2',pair:{a:ids[a],b:ids[b],t0:now},p:0,claimed:[ids[a],ids[b]]};
+  }
+  return s;
+ }
+ if(ev.type==='move'){
+  const q=s.pts[id];if(!q)return s;s.pts[id]={...q,x,y};
+  if(s.pair&&(id===s.pair.a||id===s.pair.b)){
+   const A=s.pts[s.pair.a],B=s.pts[s.pair.b];
+   s.p=s.phase==='fold1'?Math.max(0,Math.min(1,Math.min(A.y0-A.y,B.y0-B.y)/(Q.min1*f.height/Q.done))):Math.max(0,Math.min(1,Math.min(A.x-A.x0,B.x-B.x0)/(Q.min2*f.width/Q.done)));
+  }
+  return s;
+ }
+ if(ev.type==='up'){
+  delete s.pts[id];
+  if(s.pair&&(id===s.pair.a||id===s.pair.b)){
+   const ok=s.p>=Q.done&&(s.phase==='fold2'||now-s.pair.t0<=Q.ms1);delete s.pts[s.pair.a];delete s.pts[s.pair.b];
+   s=ok?(s.phase==='fold1'?{...s,phase:'folded1',until:now+Q.ms2,pair:null,p:1}:{...s,phase:'done',pair:null,p:1}):{...s,phase:base,pair:null,p:0};
+  }
+ }
+ return s;
+}
+// Rigid hinge bend of a point d along a flap (and z0 above it) folded by th about a hinge of radius R: [along, up]. th=pi lays the flap back over the stay half.
+export function quiltBend(d,z0,th,R){const a=Math.min(d/R,th),r=d-R*a;return [R*Math.sin(a)+r*Math.cos(a)-z0*Math.sin(a),R*(1-Math.cos(a))+r*Math.sin(a)+z0*Math.cos(a)];}
+
 export function quiltSourceToSurface(u,v,width,height){
  const {face}=quiltSurfaceLayout(width,height);return [face.left+u*face.width,face.top+v*face.height];
 }
@@ -238,9 +281,11 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 portalCutUv;\nvarying vec2 vPortalCutUv;')
    .replace('#include <begin_vertex>','#include <begin_vertex>\nvPortalCutUv=portalCutUv;');
   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vPortalCutUv;\nuniform sampler2D uPortalCutMask;\nuniform float uPortalCutSide;')
+   .replace('#include <map_fragment>','#include <map_fragment>\nif(!gl_FrontFacing){vec2 q=vPortalCutUv;float bind=step(q.x,.022)+step(.978,q.x)+step(q.y,.015)+step(.985,q.y);diffuseColor.rgb=mix(vec3(.145,.1,.075)*(.93+.07*sin(q.x*700.)*sin(q.y*700.)),vec3(.04,.035,.045),min(bind,1.));}')
+   .replace('#include <opaque_fragment>','if(!gl_FrontFacing)outgoingLight=max(outgoingLight,diffuseColor.rgb*.6);\n#include <opaque_fragment>')
    .replace('#include <alphatest_fragment>','float portalCutCoverage=1.0;if(abs(uPortalCutSide)>.5){portalCutCoverage=texture2D(uPortalCutMask,vPortalCutUv).r;if(uPortalCutSide>.5&&portalCutCoverage<.5)discard;if(uPortalCutSide<-.5&&portalCutCoverage>=.5)discard;}\n#include <alphatest_fragment>');
  };
- material.customProgramCacheKey=()=> 'portal-quilt-cut-mask-v1';
+ material.customProgramCacheKey=()=> 'portal-quilt-cut-mask-v2';
  const segX=knobs.segX,segY=Math.round(segX*IMAGE_H/IMAGE_W);
  // Source-pattern anchor vertices stay in the topology.  layout() moves them to the
  // current pattern boundary, so resizing or rotation never interpolates across a stitch edge.
@@ -262,6 +307,11 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
 
  let width=1,height=1,surface=quiltSurfaceLayout(1,1),paused=false,awakeUntil=0,last=0,frameMs=0;
  const pointers=new Map();
+
+ // Vault secret: fold state (see quiltSecret). vis = on-screen fold progress of step 1/2 (follows the fingers, eases otherwise).
+ let qs=quiltSecretInit(),slide=0,slid=false,wasFolded=false,hing={x:0,y:0};const vis=[0,0],seen=new Set(),claimedIds=new Set(),R1=3,R2=10;
+ const shadowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.shadowColor='#140a1e';g.shadowBlur=22;g.shadowOffsetX=1000;g.fillStyle='#000';g.fillRect(-1000-60,-40+24,1000+60+128+60,128+60-24+40);return new THREE.CanvasTexture(c);})();
+ const shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false,opacity:0}));shadow.visible=false;shadow.frustumCulled=false;scene.add(shadow);
  // Untransformed size (the observer's contentRect, else clientWidth): the portal can be re-shown mid-dive, scaled.
  function layout(box={width:host.clientWidth,height:host.clientHeight}){
   width=Math.max(1,box.width);height=Math.max(1,box.height);
@@ -274,12 +324,42 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
    uv[2*n]=u;uv[2*n+1]=1-v;cutUv[2*n]=u;cutUv[2*n+1]=v;
   }
   pos.set(rest);prev.set(rest);
+  {let by=1/0,bx=1/0;for(let j=0;j<rows;j++){const y=rest[3*j*cols+1];if(Math.abs(y+face.top+face.height/2)<by){by=Math.abs(y+face.top+face.height/2);hing.y=y;}}for(let i=0;i<cols;i++){const x=rest[3*i];if(Math.abs(x-face.left-face.width/2)<bx){bx=Math.abs(x-face.left-face.width/2);hing.x=x;}}} // hinge lines sit on the nearest grid row/column to the face centre
   const dist=(ids,k,a=ids[2*k],b=ids[2*k+1])=>Math.hypot(rest[3*a]-rest[3*b],rest[3*a+1]-rest[3*b+1]);
   for(let k=0;k<stretchLen.length;k++)stretchLen[k]=dist(stretchIds,k);for(let k=0;k<bendLen.length;k++)bendLen[k]=dist(bendIds,k);
   renderer.setSize(width,height,false);camera.aspect=width/height;
   // World units are CSS pixels on the z=0 plane: x right, y up (screen y negated).
   camera.position.set(width/2,-height/2,(height/2)/Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));camera.near=camera.position.z/10;camera.far=camera.position.z*10;camera.lookAt(width/2,-height/2,0);camera.updateProjectionMatrix();
   geometry.attributes.position.needsUpdate=true;geometry.attributes.uv.needsUpdate=true;geometry.attributes.portalCutUv.needsUpdate=true;geometry.computeVertexNormals();wake();
+ }
+
+ const folded=()=>vis[0]>0||vis[1]>0||slide>0,qBusy=()=>qs.phase!=='idle'||folded()&&!(slid&&qs.phase==='done');
+ function applyFold(){
+  const a1=vis[0]*Math.PI,a2=vis[1]*Math.PI,f=surface.face,ox=slide*(width-hing.x+60);
+  for(let n=0;n<count;n++){const p=3*n;let x=rest[p],y=rest[p+1],z=0;
+   if(a1>0&&y<hing.y-.01){const b=quiltBend(hing.y-y,0,a1,R1);y=hing.y-b[0];z=b[1];}
+   if(a2>0&&x<hing.x-.01){const b=quiltBend(hing.x-x,z,a2,R2);x=hing.x-b[0];z=b[1];}
+   pos[p]=prev[p]=x+ox;pos[p+1]=prev[p+1]=y;pos[p+2]=prev[p+2]=z;}
+  // soft shadow on the half under the lifted flap: a gradient plane, hard at the hinge, fading toward the flap's far end
+  const two=a2>.01,a=two?a2:a1,R=two?R2:R1,far=two?hing.x-f.left:hing.y+f.top+f.height,ext=-quiltBend(far,two?R1*2:0,a,R)[0],ok=a>.01&&ext>1&&!slide;
+  shadow.visible=ok;if(!ok)return;
+  shadow.material.opacity=.55*Math.sin(a);const L=ext/.8125;
+  if(two){shadow.rotation.z=-Math.PI/2;shadow.scale.set(-f.top-hing.y,L,1);shadow.position.set(hing.x+L/2,(hing.y-f.top)/2,7.5);} // stay half = top-right quarter: y from face top to the hinge
+  else{shadow.rotation.z=0;shadow.scale.set(f.width,L,1);shadow.position.set(f.left+f.width/2,hing.y+L/2,1);}
+ }
+ function qAnim(dt,now){
+  qs=quiltSecret(qs,{type:'tick'},now);const ph=qs.phase,t=[ph==='idle'?0:ph==='fold1'?qs.p:1,ph==='fold2'?qs.p:ph==='done'?1:0];
+  for(let i=0;i<2;i++){const live=ph===(i?'fold2':'fold1');vis[i]=reduced||live&&Math.abs(t[i]-vis[i])<.5?t[i]:vis[i]+Math.sign(t[i]-vis[i])*Math.min(Math.abs(t[i]-vis[i]),dt*(live?6:3.2));}
+  if(ph==='done'&&vis[1]>=.999){slide=reduced?1:Math.min(1,slide+dt/.7);if(slide>=1&&!slid){slid=true;dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'quilt'}}));}}
+  else if(ph!=='done')slide=0;
+ }
+ function qEv(ev){
+  qs=quiltSecret(qs,{...ev,face:quiltRect(),w:innerWidth,h:innerHeight},performance.now());qs.claimed.forEach(i=>claimedIds.add(i));
+  if(qs.pair){pointers.delete(+qs.pair.a);pointers.delete(+qs.pair.b);}wake();
+ }
+ function resetSecret(){
+  const was=wasFolded||qs.phase!=='idle'||folded();qs=quiltSecretInit();vis[0]=vis[1]=slide=0;slid=false;seen.clear();claimedIds.clear();shadow.visible=false;wasFolded=false;
+  if(was&&!disposed){pos.set(rest);prev.set(rest);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();renderer.render(scene,camera);}
  }
  function solve(ids,lengths,alpha){
   for(let k=0;k<lengths.length;k++){
@@ -309,8 +389,8 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  function tick(now){
   frame=0;if(disposed||paused)return;
   const dt=Math.min(1/30,Math.max(1/240,(now-last)/1000));last=now;
-  if(!document.hidden){const t=performance.now();if(!reduced)step(dt);if(cutting?.fall.live)cutting.fall.pose(now);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();renderer.render(scene,camera);frameMs=frameMs*.9+(performance.now()-t)*.1;}
-  if(pointers.size||now<awakeUntil||cutting?.fall.live)frame=requestAnimationFrame(tick);
+  if(!document.hidden){const t=performance.now();qAnim(dt,now);if(folded()){applyFold();wasFolded=true;}else{if(wasFolded){wasFolded=false;shadow.visible=false;pos.set(rest);prev.set(rest);}if(!reduced)step(dt);}if(cutting?.fall.live)cutting.fall.pose(now);geometry.attributes.position.needsUpdate=true;geometry.computeVertexNormals();renderer.render(scene,camera);frameMs=frameMs*.9+(performance.now()-t)*.1;}
+  if(pointers.size||now<awakeUntil||cutting?.fall.live||qBusy())frame=requestAnimationFrame(tick);
  }
  const local=(x,y)=>clientToBoardLocal(x,y,host.getBoundingClientRect(),width,height);
  // Hidden (display:none) reads as 0x0: keep the last layout rather than shrink the renderer and reset the cloth, only to
@@ -333,6 +413,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   return cutting.fall.done;
  }
  function heal(){
+  resetSecret();
   if(!cutting)return;
   cutting.fall.end();cutSide.value=0;pieceSide.value=0;cutMaskUniform.value=null;cutMask?.dispose();cutMask=null;cutting=null;
   if(!disposed){geometry.computeVertexNormals();renderer.render(scene,camera);} // healed frame on the canvas now, even while paused
@@ -345,11 +426,18 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   // Stitched-shape area in client pixels; the portal normalises traces against it.
   patternRect:()=>patternRectOf(host),
   quiltRect,
-  press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
-  claims(){return false;}, // L4 fills this (quilt fold secret)
-  release(id){pointers.delete(id);wake();},
+  press(id,clientX,clientY){const k=String(id),first=!seen.has(id);if(first)claimedIds.delete(k);seen.add(id);qEv({type:first?'down':'move',id,x:clientX,y:clientY});if(qs.pair&&(k===qs.pair.a||k===qs.pair.b))return;if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
+  claims:id=>claimedIds.has(String(id)),
+  release(id){seen.delete(id);qEv({type:'up',id});pointers.delete(id);wake();},
+  // test/preview: drive a fold step through the real reducer (p 0-1 of the gesture; release=true lifts the fingers). Step 2 needs step 1 done first.
+  secretDebug:{state:()=>qs,vis:()=>[...vis,slide],
+   fold(step,p,release=true){const f=quiltRect(),A=9001,B=9002,s=step===1,pts=s?[[.25,.85],[.75,.85]]:[[.3,.1],[.3,.35]],Q=QUILT_SECRET,d=p*(s?Q.min1*f.height:Q.min2*f.width)/Q.done;
+    const at=(k,dx,dy)=>[f.left+f.width*pts[k][0]+dx,f.top+f.height*pts[k][1]+dy];
+    for(const [k,id] of [[0,A],[1,B]]){seen.add(id);claimedIds.delete(String(id));qEv({type:'down',id,x:at(k,0,0)[0],y:at(k,0,0)[1]});}
+    for(const [k,id] of [[0,A],[1,B]])qEv({type:'move',id,x:at(k,s?0:d,s?-d:0)[0],y:at(k,s?0:d,s?-d:0)[1]});
+    if(release)for(const id of [A,B]){seen.delete(id);qEv({type:'up',id});}}},
   frameMs:()=>frameMs,
-  pause(){paused=true;pointers.clear();cancelAnimationFrame(frame);frame=0;},
+  pause(){paused=true;pointers.clear();if(qs.pair)qEv({type:'cancel'});cancelAnimationFrame(frame);frame=0;},
   resume(){paused=false;wake();},
   dispose(){cutting?.fall.end();cutMask?.dispose();cutMask=null;pieceMat.dispose();disposed=true;cancelAnimationFrame(frame);observer.disconnect();geometry.dispose();material.dispose();texture.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
