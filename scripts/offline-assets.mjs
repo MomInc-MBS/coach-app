@@ -20,6 +20,8 @@ const CORE_ENTRIES=['/pose.html','/index.html','/onboarding.html','/signin.html'
 // R9-OFFLINE: the pinned pose tracker (vendor/mediapipe, scripts/mediapipe.mjs) is Starter too, so camera workouts run offline.
 export const STARTER=/^\/(?:pod\/worlds\/|food\/pyramid-scanner\.glb$|vendor\/mediapipe\/)/;
 export const BOARDS=/^\/pod\/worlds\/boards\//;
+// Achievement Vault: lazy code and art, never core (the hall's roster GLBs are fetched on demand).
+export const VAULT=/^\/(?:modules\/vault\/|pod\/worlds\/vault\/)/;
 const TUNNELS=/^\/modules\/portal\/portal-tunnel-(?:ice|grass|cogs|jelly|wood|pond)\.mjs$/;
 export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|modules\/rooms\/classroom\.(?:mjs|css))$/;
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.(?:glb|webp)|modules\/rooms\/reminders-computer\.css)$/;
@@ -46,7 +48,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
- if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url)||CAGE_ROOM.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||VAULT.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url)||CAGE_ROOM.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -98,6 +100,7 @@ export async function offlineInventory(root,template='sw.js'){
   for(const entry of await readdir(join(root,path),{withFileTypes:true})){
    if(entry.name.startsWith('.')||entry.name==='source')continue;
    const name=path+'/'+entry.name;
+   if(VAULT.test('/'+name+'/'))continue; // online-only lazy vault: in neither inventory
    if(entry.isDirectory())await walk(name);
    // ponytail: the no-SIMD tracker (Safari before 16.4) is served online only, never downloaded; add it to Starter if those phones matter.
    else if(entry.isFile()&&runtime.test(entry.name)&&!entry.name.includes('nosimd'))assets.push(await identify(root,name));
