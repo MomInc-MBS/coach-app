@@ -21,20 +21,20 @@ const srv=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://l
  await fs.mkdir(path.join(root,'.vault/shots'),{recursive:true});
  const cdp=await ctx.newCDPSession(p);
  const touch=(type,pts)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:pts});
- const at={x:187,y:420,id:1};
+ const at={x:80,y:650,id:1};
  // fake clock: the effect reads performance.now(), so pin it to press+target and let swiftshader render at its own pace
  const pin=async(ms)=>p.evaluate(m=>{window.__pin=window.__t0+m;board.resume();},ms);
  await touch('touchStart',[at]);await p.evaluate(()=>{window.__t0=performance.now();});
  const at_=async(sec,n)=>{await pin(sec*1000);await sleep(1500);await shot(n);};
- await at_(2,'2s');await at_(4,'4s');await at_(5,'5s');await at_(5.9,'boil');await at_(6.5,'door-rising');await at_(7.1,'door-up');await at_(9,'door-calm');
+ await at_(2,'2s');await at_(4,'4s');await at_(5,'5s');await at_(6,'6s');await at_(6.4,'boil');await at_(6.7,'door-rising');await at_(7.1,'door-up');await at_(9,'door-calm');
  console.log('state',JSON.stringify(await p.evaluate(()=>({secrets,errors}))));
  await touch('touchEnd',[]);
  // lift early: hold 3 s, lift, look 0.3 s later and 1.5 s later
  await p.evaluate(()=>{window.secrets=0;});
  await p.reload();await p.waitForFunction(()=>window.ready);
  await touch('touchStart',[at]);await p.evaluate(()=>{window.__t0=performance.now();});
- await pin(3500);await sleep(1500);await shot('lift-before');
- await touch('touchEnd',[]);await p.evaluate(()=>{window.__t0=window.__pin;});await pin(450);await sleep(1500);await shot('lift-subsiding');await pin(1500);await sleep(1500);await shot('lift-after');
+ await pin(6600);await sleep(1500);await shot('lift-before');
+ await touch('touchEnd',[]);await p.evaluate(()=>{window.__t0=window.__pin;});await pin(450);await sleep(1500);await shot('lift-subsiding');await pin(900);await sleep(1500);await shot('lift-after');
  console.log('early-lift',JSON.stringify(await p.evaluate(()=>({secrets,errors}))));
  await b.close();srv.close();
 });
