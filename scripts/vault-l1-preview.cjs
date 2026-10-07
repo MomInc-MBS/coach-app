@@ -26,8 +26,8 @@ if(process.argv.includes('--shots'))(async()=>{
  const adv=async ms=>{for(;ms>0;ms-=200)await pg.evaluate(m=>advance(m),Math.min(200,ms));},start=async()=>{await pg.evaluate(()=>pond.forceBig());await adv(1800);};
  // 1) full hold: shots at 0 / .7 / 1.4 / 2.0 s of hold, then the splash
  await start();await shot('0-big');let [x,y]=await pg.evaluate(()=>bigXY());await pg.mouse.move(x,y);await pg.mouse.down();await adv(34);
- for(const [t,n] of [[0,'0'],[700,'0.7'],[700,'1.4'],[560,'1.96']]){await adv(t);await shot('hold-'+n);console.log('hold',n,await dbg());}
- for(const [t,n] of [[100,'splash-a'],[250,'splash-b'],[400,'splash-c'],[600,'splash-d']]){await adv(t);await shot(n);console.log(n,await dbg());}
+ for(const [t,n] of [[0,'0'],[700,'0.7'],[700,'1.4'],[400,'1.8']]){await adv(t);await shot('hold-'+n);console.log('hold',n,await dbg());}
+ for(const [t,n] of [[100,'splash-a'],[250,'splash-b'],[250,'splash-c'],[400,'splash-d'],[500,'splash-e']]){await adv(t);await shot(n);console.log(n,await dbg());}
  await pg.mouse.up();await adv(1500);console.log('after splash',await dbg(),'secrets',await pg.evaluate(()=>[secrets,secretBoard]));await shot('after');
  // 2) early lift -> bored
  await start();[x,y]=await pg.evaluate(()=>bigXY());await pg.mouse.move(x,y);await pg.mouse.down();await adv(1100);await pg.mouse.up();

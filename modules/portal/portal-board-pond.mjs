@@ -224,9 +224,11 @@ void main(){
  gl_Position=projectionMatrix*modelViewMatrix*w;
 }`;
 const FISH_FS=`uniform sampler2D uKoi;uniform vec3 uShadow;uniform float uFade;varying vec2 vUv;varying float vA;varying float vC;
-void main(){float t=texture2D(uKoi,vUv).a,a=mix(t,smoothstep(.22,.6,t),vC)*vA*uFade;if(a<.004)discard;
+void main(){float t=texture2D(uKoi,vUv).a,a=mix(t,smoothstep(.14,.42,t),vC)*vA*uFade;if(a<.004)discard;
  float p=sin(vUv.x*11.0+1.0)*.5+sin(vUv.x*4.0+vUv.y*9.0)*.5; // the risen koi: crisp edge, orange with cream patches
- vec3 koi=mix(vec3(.95,.42,.12),vec3(.98,.92,.82),smoothstep(.15,.4,p));gl_FragColor=vec4(mix(uShadow,koi,vC),a);}`;
+ vec3 koi=mix(vec3(.95,.42,.12),vec3(.98,.92,.82),smoothstep(.15,.4,p));
+ koi*=.7+.3*(1.0-abs(vUv.y-.5)*1.8);koi=mix(koi,vec3(.04,.03,.03),max(smoothstep(.03,.015,length(vec2(vUv.x-.8,abs(vUv.y-.5)-.1))),0.0)*step(.6,vC));
+ gl_FragColor=vec4(mix(uShadow,koi,vC),a);}`;
 
 // --- Procedural low-poly meshes --------------------------------------------------------------------------
 function padGeometry(THREE,rand){
@@ -266,7 +268,7 @@ function koiTexture(THREE){
 
 // --- The effect -------------------------------------------------------------------------------------------
 let S=null; // one portal board at a time
-const DROPS=56;
+const DROPS=72;
 const reducedMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
 
@@ -306,9 +308,10 @@ function init({THREE,scene,mesh,uniforms,toWorld,wake}){
  const fishMesh=new THREE.InstancedMesh(fishGeo,fishMat,n+2);fishMesh.frustumCulled=false;fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);fishMesh.renderOrder=1;scene.add(fishMesh);
 
  const dropPos=new Float32Array(DROPS*3),dropGeo=new THREE.BufferGeometry();dropGeo.setAttribute('position',new THREE.BufferAttribute(dropPos,3));
- const dropTex=dropTexture(THREE),dropMat=new THREE.PointsMaterial({color:0xe8fbff,map:dropTex,size:13,sizeAttenuation:false,transparent:true,depthWrite:false}),dropMesh=new THREE.Points(dropGeo,dropMat);dropMesh.frustumCulled=false;dropMesh.visible=false;dropMesh.renderOrder=3;scene.add(dropMesh);
+ const dropTex=dropTexture(THREE),dropMat=new THREE.PointsMaterial({color:0xe8fbff,map:dropTex,size:15,sizeAttenuation:false,transparent:true,depthWrite:false}),dropMesh=new THREE.Points(dropGeo,dropMat);dropMesh.frustumCulled=false;dropMesh.visible=false;dropMesh.renderOrder=3;scene.add(dropMesh);
+ const foam=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:dropTex,transparent:true,depthWrite:false,opacity:0}));foam.visible=false;foam.renderOrder=4;scene.add(foam);
  const fishS={fish:makeFish(n,A,rng(5)),A,rand:rng(9),touch:null,lastTouch:performance.now(),trail:makeTrail(K.trailCap),members:0,phase:'wander'};
- S={dropTex,sec:{st:'idle',id:null},an:null,drops:[],dropPos,dropGeo,dropMat,dropMesh,THREE,K,A,toWorld,wake,uniforms,reduced,waves,waveTex,data,pads,lilies,padMesh,lilyMesh,coreMesh,fishMesh,fishMat,aFish,koi,fishS,
+ S={foam,dropTex,sec:{st:'idle',id:null},an:null,drops:[],dropPos,dropGeo,dropMat,dropMesh,THREE,K,A,toWorld,wake,uniforms,reduced,waves,waveTex,data,pads,lilies,padMesh,lilyMesh,coreMesh,fishMesh,fishMat,aFish,koi,fishS,
   pointers:new Map(),lilyColor:new THREE.Color(K.lily),m:new THREE.Matrix4(),q:new THREE.Quaternion(),e:new THREE.Euler(),v:new THREE.Vector3(),sc:new THREE.Vector3(),
   born:performance.now(),lead:null,slope:[0,0],big:{x:0,y:0,a:0},bigSeed:Math.floor(Math.random()*1e6),fade:1,fadeTo:1,cutPoly:null,lastNow:performance.now(),dirty:true};
  setLilyColor(K.lily);
@@ -338,9 +341,9 @@ function place(dt,now){
  arr[4*n+3]=arr[4*n+7]=0;arr[4*n+5]=0;
  if(b){
   e.set(0,-b.pitch,-b.a,'ZYX');q.setFromEuler(e);e.order='XYZ';v.set(ox+b.x*px,oy-b.y*px,b.z*px+.4);sc.set(b.s*px,b.s*px,b.s*px);m.compose(v,q,sc);fishMesh.setMatrixAt(n,m);
-  arr[4*n]=now/1000*TAU*.35*(1+3*b.e);arr[4*n+1]=b.alpha;arr[4*n+2]=bend*.7;arr[4*n+3]=b.mix;
+  arr[4*n]=now/1000*TAU*.35*(1+6*b.e);arr[4*n+1]=b.alpha;arr[4*n+2]=bend*(.7+.8*b.e);arr[4*n+3]=b.mix;
   fishMesh.setMatrixAt(n+1,put(b.sx,b.sy,.35,0,0,-b.sa,b.ss*px));arr[4*n+4]=arr[4*n];arr[4*n+5]=b.sAlpha;arr[4*n+6]=bend*.7;
- }else if(idle){const b=bigFishPose(S.bigSeed+idle.cycle,idle.t/K.bigMs,A,K.bigLen,S.big),fadeIn=Math.min(1,idle.t/1500,(K.bigMs-idle.t)/1500);fishMesh.setMatrixAt(n,put(b.x,b.y,.4,0,0,-b.a,K.bigLen*px));arr[4*n]=now/1000*TAU*.35;arr[4*n+1]=K.bigAlpha*Math.max(0,fadeIn);arr[4*n+2]=bend*.7;}
+ }else if(idle){const b=bigFishPose(S.bigSeed+idle.cycle,idle.t/K.bigMs,A,K.bigLen,S.big),fadeIn=Math.min(1,idle.t/1500,(K.bigMs-idle.t)/1500);fishMesh.setMatrixAt(n,put(b.x,b.y,.4,0,0,-b.a,K.bigLen*px));arr[4*n]=now/1000*TAU*.35;arr[4*n+1]=.8*Math.max(0,fadeIn)*(.92+.08*Math.sin(now/300));arr[4*n+2]=bend*.7;arr[4*n+3]=.6;}
  else arr[4*n+1]=0;
  fishMesh.instanceMatrix.needsUpdate=true;aFish.needsUpdate=true;
  S.fishMat.uniforms.uFace.value.set(ox,-oy,px,px*A);S.fishMat.uniforms.uRefract.value=K.glass.bend*px*2;
@@ -395,38 +398,44 @@ function step(dt,now){
 // --- Secret animation: rise (held), splash (done), bored (lifted early) --------------------------------------
 const wrapA=d=>d-TAU*Math.round(d/TAU),ease=p=>p*p*(3-2*p);
 function startSecret(now){ // a hold landed on the big koi: freeze its pose and take it over from the idle show
- const b=S.big,K=S.K;S.an={x:b.x,y:b.y,a:b.a,a0:b.a,x0:b.x,y0:b.y,pitch:0,z:0,s:K.bigLen,alpha:K.bigAlpha,mix:0,e:0,sx:b.x,sy:b.y,sa:b.a,ss:K.bigLen,sAlpha:K.bigAlpha*.8,bt:0};S.wake?.();
+ const b=S.big,K=S.K;S.an={x:b.x,y:b.y,a:b.a,a0:b.a,x0:b.x,y0:b.y,pitch:0,z:0,s:K.bigLen,alpha:.8,mix:.6,e:0,sx:b.x,sy:b.y,sa:b.a,ss:K.bigLen,sAlpha:K.bigAlpha*.8,bt:0};S.wake?.();
 }
 function startBored(){S.an.bt=.001;S.an.tgt=Math.hypot(S.an.x-.5,S.an.y-S.A/2)>.05?Math.atan2(S.an.y-S.A/2,S.an.x-.5):S.an.a+Math.PI/2;S.wake?.();}
 function startSplash(now){
  const c={x:.5,y:S.A/2};S.an=null;S.sec={...S.sec,st:'done'};S.splashT=now;S.splashFired=false;S.ringN=0;S.drops=[];
- for(let i=0;i<DROPS;i++){const ang=Math.random()*TAU,vh=2.2+Math.random()*1.8;S.drops.push({x:c.x+Math.cos(ang)*.04,y:c.y+Math.sin(ang)*.03,cx:Math.cos(ang),cy:Math.sin(ang),vr:.3+Math.random()*1.1,vh,life:2*vh/6});}
- S.dropMesh.visible=true;disturb(S.waves,.5,.5,3);S.dirty=true;S.wake?.();
+ for(let i=0;i<DROPS;i++){const ang=Math.random()*TAU,up=i%2===0; // even: a spray column; odd: a crown arcing out
+  S.drops.push({x:c.x+Math.cos(ang)*.03,y:c.y+Math.sin(ang)*.02,cx:Math.cos(ang),cy:Math.sin(ang),vr:up?.04+Math.random()*.2:.35+Math.random()*1.0,vh:up?4.2+Math.random()*2.2:2.4+Math.random()*1.8,landed:false});}
+ for(const d of S.drops)d.life=2*d.vh/6;
+ for(const p of S.pads){const dx=p.x-c.x,dy=p.y-c.y,d=Math.hypot(dx,dy)||1,k=.5*Math.max(0,1-d/1.3);p.vx+=dx/d*k;p.vy+=dy/d*k;} // pads ride the wave outward
+ S.dropMesh.visible=true;S.foam.visible=true;disturb(S.waves,.5,.5,6);S.dirty=true;S.wake?.();
 }
 function secretStep(dt,now){
  const sec=S.sec,an=S.an,K=S.K;
  if(sec.st==='hold'){
   const ns=pondSecret(sec,{type:'tick'},now);S.sec=ns;if(ns.st==='done')return startSplash(now);
-  const p=Math.min(1,(now-sec.t0)/SECRET.riseMs),e=ease(p);
-  an.e=e;an.x=an.x0+(.5-an.x0)*e;an.y=an.y0+(S.A/2-an.y0)*e;an.a=an.a0+wrapA(-Math.PI/2-an.a0)*e*.7;an.pitch=e*1.15;an.z=e*.5;an.s=K.bigLen*(1+e*.55);an.alpha=K.bigAlpha+(.95-K.bigAlpha)*e;an.mix=e*.85;an.ss=K.bigLen*(1-e*.55);an.sAlpha=K.bigAlpha*.8*(1-e*.75);
+  const p=Math.min(1,(now-sec.t0)/SECRET.riseMs),e=ease(p),ep=ease(Math.min(1,p*1.5)); // steers to the middle a little ahead of the growth
+  an.e=e;an.x=an.x0+(.5-an.x0)*ep;an.y=an.y0+(S.A/2-an.y0)*ep;an.a=an.a0+wrapA(-Math.PI/2-an.a0)*ep;an.pitch=e*.55;an.z=e*.56;an.s=K.bigLen*(1+e*.4);an.alpha=.8+.2*e;an.mix=.6+.4*e;an.ss=K.bigLen*(1-e*.55);an.sAlpha=K.bigAlpha*.8*(1-e*.75);
  }else if(sec.st==='bored'&&an&&!an.bt)startBored();
  if(sec.st==='bored'&&an&&an.bt){ // turns away, levels out, swims off the face
   an.bt+=dt;const k=Math.min(1,dt*3.5),f=Math.exp(-dt*5);
-  an.a+=wrapA(an.tgt-an.a)*k;an.pitch*=f;an.z*=f;an.s+=(K.bigLen-an.s)*Math.min(1,dt*3);an.mix*=f;an.alpha+=(K.bigAlpha-an.alpha)*k;an.e*=f;an.sAlpha*=Math.exp(-dt*6);
+  an.a+=wrapA(an.tgt-an.a)*k;an.pitch*=f;an.z*=f;an.s+=(K.bigLen-an.s)*Math.min(1,dt*3);an.mix+=(.6-an.mix)*k;an.alpha+=(.8-an.alpha)*k;an.e*=f;an.sAlpha*=Math.exp(-dt*6);
   const sp=Math.min(.55,.1+an.bt*.5);an.x+=Math.cos(an.a)*sp*dt;an.y+=Math.sin(an.a)*sp*dt;an.sx=an.x;an.sy=an.y;an.sa=an.a;an.ss=an.s;
   if(Math.hypot(an.x-.5,an.y-S.A/2)>Math.hypot(.5,S.A/2)+K.bigLen*.6||an.bt>9)endSecret(now);
  }
- if(sec.st==='done'&&!an){ // splash: ripple bursts, then droplets, then the vault hears about it
-  const t=now-S.splashT,rings=[[120,.5,.5,2],[250,.38,.45,1.6],[250,.62,.55,1.6],[420,.5,.5,1.4]];
+ if(sec.st==='done'&&!an){ // splash: rings across the face, foam flash, spray column + crown that fall back with tiny ripples
+  const t=now-S.splashT,rings=[[130,.5,.5,5],[300,.5,.5,4],[480,.5,.5,3.2],[680,.5,.5,2.4],[200,.4,.42,2.5],[260,.6,.58,2.5]];
   while(S.ringN<rings.length&&t>=rings[S.ringN][0]){const r=rings[S.ringN++];disturb(S.waves,r[1],r[2],r[3]);S.dirty=true;}
-  const [wx,wy]=S.toWorld(0,0),[x1]=S.toWorld(1,0),px=x1-wx,ts=t/1000;let live=0;
-  S.drops.forEach((d,i)=>{const h=d.vh*ts-3*ts*ts,ok=ts<d.life;live+=ok;S.dropPos[3*i]=wx+(d.x+d.cx*d.vr*ts)*px;S.dropPos[3*i+1]=wy-(d.y+d.cy*d.vr*ts*.6-Math.max(0,h)*.35)*px;S.dropPos[3*i+2]=ok?4:-9999;});
-  S.dropGeo.attributes.position.needsUpdate=true;S.dropMat.opacity=Math.min(1,Math.max(0,(1500-t)/500));
-  if(!S.splashFired&&t>=1000){S.splashFired=true;typeof window!=='undefined'&&window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'pond'}}));}
-  if(t>=1500)endSecret(now);
+  const [wx,wy]=S.toWorld(0,0),[x1]=S.toWorld(1,0),px=x1-wx,ts=t/1000;
+  S.drops.forEach((d,i)=>{const h=d.vh*ts-3*ts*ts,ok=ts<d.life,gx=d.x+d.cx*d.vr*ts,gy=d.y+d.cy*d.vr*ts*.6;
+   if(!ok&&!d.landed){d.landed=true;disturb(S.waves,Math.min(.97,Math.max(.03,gx)),Math.min(.97,Math.max(.03,gy/S.A)),.7);S.dirty=true;}
+   S.dropPos[3*i]=wx+gx*px;S.dropPos[3*i+1]=wy-(gy-Math.max(0,h)*.35)*px;S.dropPos[3*i+2]=ok?4:-9999;});
+  S.dropGeo.attributes.position.needsUpdate=true;S.dropMat.opacity=Math.min(1,Math.max(0,(1900-t)/500));
+  const f=Math.max(0,1-t/420),fs=(.35+Math.min(1,t/420)*1.5)*px;S.foam.position.set(wx+.5*px,wy-S.A/2*px,4.5);S.foam.scale.set(fs,fs,1);S.foam.material.opacity=f*.85;
+  if(!S.splashFired&&t>=1300){S.splashFired=true;typeof window!=='undefined'&&window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'pond'}}));}
+  if(t>=1900)endSecret(now);
  }
 }
-function endSecret(now){S.an=null;S.sec={st:'idle',id:null};S.dropMesh.visible=false;S.fishS.lastTouch=now;S.wake?.();}
+function endSecret(now){S.an=null;S.sec={st:'idle',id:null};S.dropMesh.visible=false;S.foam.visible=false;S.fishS.lastTouch=now;S.wake?.();}
 const toPondXY=(u,v)=>({x:u,y:v*POND.aspect});
 function press(id,u,v){
  if(!S)return;const p=toPondXY(u,v),now=performance.now(),was=S.sec.st;
@@ -458,7 +467,7 @@ function heal(){if(!S)return;S.cutPoly=null;for(const p of S.pads)p.hidden=false
 function dispose(){
  if(!S)return;
  for(const m of [S.padMesh,S.lilyMesh,S.coreMesh,S.fishMesh]){m.removeFromParent();m.geometry.dispose();m.material.dispose();m.dispose?.();}
- S.dropMesh.removeFromParent();S.dropGeo.dispose();S.dropMat.dispose();S.dropTex.dispose();
+ S.foam.removeFromParent();S.foam.geometry.dispose();S.foam.material.dispose();S.dropMesh.removeFromParent();S.dropGeo.dispose();S.dropMat.dispose();S.dropTex.dispose();
  S.koi.dispose();S.waveTex.dispose();S=null;
 }
 
