@@ -32,7 +32,7 @@ export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false
  const ctx=canvas.getContext('2d');if(!ctx)return {start(){},stop(){},startFiring(){},stopFiring(){},fire(){},aim(){},setShip(){},resize(){}};
  let running=false,raf=0,w=1,h=1,last=0,time=0,style=ship,aimX=.5,aimY=.72,x=.5,y=.72,firing=false,shotClock=0;
  const clampX=(xVal)=>{if(w<100)return xVal;const maxR=9,minX=(maxR/w)+0.08,maxX=1-minX;return Math.max(minX,Math.min(maxX,xVal));};
- const asteroids=Array.from({length:9},(_,i)=>({x:((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
+ const asteroids=Array.from({length:9},(_,i)=>({x:.12+.76*((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
  const lasers=[];const blasts=[];
  // Kenney Space Shooter Remastered, CC0: https://kenney.nl/assets/space-shooter-remastered
  const meteors=['/pod/worlds/kenney-meteor-grey-tiny1.png','/pod/worlds/kenney-meteor-brown-tiny1.png'].map(src=>{const img=new Image();img.src=src;img.onload=()=>{if(!running)draw();};return img;});
