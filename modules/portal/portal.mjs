@@ -459,6 +459,9 @@ function openMenu(){
 }
 
 // Every hide/show path heals the board (idempotent), so it always comes back whole.
+// Vault telemetry: raw-served file, so no import (the app bundle's vault store listens); the store listens for these.
+const vaultSend=detail=>{try{dispatchEvent(new CustomEvent('myr5:vault-bump',{detail}));}catch{/* no window */}};
+let visibleSince=0;const grimFlush=()=>{if(visibleSince){vaultSend({counter:'grim-time',ms:Date.now()-visibleSince});visibleSince=0;}};
 function setVisible(v){
  visibilityRun++;
  // Routes can put the quilt back while its destination's reverse dive is still awaiting its
@@ -466,11 +469,11 @@ function setVisible(v){
  // until the old animation resolves. A forward phase has no backT0, so showing the quilt does
  // not interrupt a newly-started portal sequence.
  if(v&&phase?.backT0){endPhase();portalHome.style.transformOrigin='';}
- if(!v){hideVaultDoor(false);sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
+ if(!v){hideVaultDoor(false);sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;grimFlush();}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
- if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();}
+ if(v){if(!boardShown)focusBefore=document.activeElement;motion(portalHome,'');portalHome.style.opacity='';portalHome.style.clipPath='';board?.resume();backgroundBlocked(true);menuBtn.focus();maybeStartHint();if(!document.hidden&&!visibleSince)visibleSince=Date.now();}
  else{endPhase();board?.pause();backgroundBlocked(false);if(focusBefore?.isConnected)focusBefore.focus();}
  boardShown=v;frameOff();if(v)applyLook();syncEnergy();
  portalSound('scene',{visible:v});
@@ -1749,7 +1752,7 @@ function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.le
 async function runShape(id){
  if(busy||!boardShown||!MENUS[id])return;
  const run=++sequence;busy=true;scheduleIdle();
- try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);}
+ try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);vaultSend({counter:'shape-opened',key:id});}
  finally{if(run===sequence){busy=false;scheduleIdle();}}
 }
 // Lines are open strokes with no enclosed area; portalWindow() gives them (and the X) a window to cut (#124).
@@ -1965,6 +1968,7 @@ export async function mountPortal({visible=false}={}){
  for(const type of ['storage','pageshow'])addEventListener(type,syncLook,{signal:lifecycle.signal});
  if(menuBtn!==portalHome.querySelector('#portalExitButton'))menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
+ addEventListener('pagehide',grimFlush,{signal:lifecycle.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)grimFlush();else if(boardShown&&!visibleSince)visibleSince=Date.now();},{signal:lifecycle.signal});
  addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;import('../vault/vault-store.mjs').then(m=>m.markSecret(id)).catch(()=>{});showVaultDoor();},{signal:lifecycle.signal});
  menuBtn.addEventListener('click',e=>{if(vaultDoor){e.stopImmediatePropagation();hideVaultDoor();}},{capture:true,signal:lifecycle.signal});
  await loadBoard(initialBoardId());

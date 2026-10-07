@@ -12,8 +12,8 @@ const ctr=name=>store.read().counters[name]||0;
 
 test('bump twice on the same day counts once; a new day counts again',()=>{
  memory.clear();
- store.bump('library-open',1,{day:'2026-10-01'});store.bump('library-open',1,{day:'2026-10-01'});assert.equal(ctr('library-open'),1);
- store.bump('library-open',1,{day:'2026-10-02'});assert.equal(ctr('library-open'),2);
+ store.bump('dj-session',1,{day:'2026-10-01'});store.bump('dj-session',1,{day:'2026-10-01'});assert.equal(ctr('dj-session'),1);
+ store.bump('dj-session',1,{day:'2026-10-02'});assert.equal(ctr('dj-session'),2);
 });
 test('keyed and max counters',()=>{
  memory.clear();

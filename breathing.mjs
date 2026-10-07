@@ -89,7 +89,7 @@ export function mountBreathing({dialog,scene,pause,api,onComplete,onSessionCompl
   finally{if(current===run)saving=false;}
  }
  async function startSession(id){
-  reset({keepPose:true});duration=id==='wim-hof'?GUIDED_ROUND_MS:BREATHING_MS;bar.max=duration;script=buildScript(id);held=!!BREATHING_MODES[id]?.seatedOnly;seated.hidden=!held;seated.classList.remove('fading');totalBreaths=countBreaths(script);reveal(0);if(held)seated.querySelector('button').focus();modesEl.hidden=true;runEl.hidden=false;statusEl.textContent='Starting…';sessionClock&&(sessionClock.textContent=formatTime(duration));renderPhase(0);
+  reset({keepPose:true});duration=id==='wim-hof'?GUIDED_ROUND_MS:BREATHING_MS;bar.max=duration;script=buildScript(id);held=!!BREATHING_MODES[id]?.seatedOnly;seated.hidden=!held;seated.classList.remove('fading');totalBreaths=countBreaths(script);reveal(0);if(held)seated.querySelector('button').focus();modesEl.hidden=true;runEl.hidden=false;statusEl.textContent='Starting…';sessionClock&&(sessionClock.textContent=formatTime(duration));renderPhase(0);void import('./modules/vault/vault-store.mjs').then(m=>m.bump('breath-mode',1,{key:id})).catch(()=>{});
   const current=run;
   try{
    const value=await actions.startBreathing(getAccount?.());

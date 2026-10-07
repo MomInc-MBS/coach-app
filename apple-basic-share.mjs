@@ -20,7 +20,7 @@ export function mountAppleBasicShare(settings,{url=APPLE_BASIC_SHARE_URL,nav=glo
  const wrap=document.createElement('div');wrap.className='settings-share';
  const button=document.createElement('button');button.type='button';button.textContent='Share Apple basic';
  const status=document.createElement('p');status.setAttribute('role','status');
- button.onclick=async()=>{button.disabled=true;status.textContent=MESSAGES[await shareAppleBasic(url,nav)];button.disabled=false;};
+ button.onclick=async()=>{button.disabled=true;const result=await shareAppleBasic(url,nav);if(['shared','copied'].includes(result))void import('./modules/vault/vault-store.mjs').then(m=>m.bump('share')).catch(()=>{});status.textContent=MESSAGES[result];button.disabled=false;};
  wrap.append(button,status);settings.append(wrap);
  return wrap;
 }

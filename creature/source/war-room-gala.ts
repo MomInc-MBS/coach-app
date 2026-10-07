@@ -11,6 +11,8 @@ import {GALA_KEY,loadGala} from '../../pod/identity.mjs';
 import {PERFORMANCE_KEY} from '../../performance-progress.mjs';
 import {loadWarRoomCoaches} from './war-room-coaches';
 import {createGalaEditor} from '../../war-room/gala-editor.js';
+// The war-room page never loads the vault store (it needs the app bundle): queue for the app to drain (the store's drainPending).
+const vaultQueue=(counter:string,key?:string)=>{try{const k='myr5-vault-pending',q=JSON.parse(localStorage.getItem(k)||'[]');q.push([counter,1,key]);localStorage.setItem(k,JSON.stringify(q.slice(-50)));}catch{}};
 
 type Look={schema:string;version:number;name:string;dye:number;parts:Record<string,number>;weapon?:{type:string;tier:number}};
 type Section={id:string;label:string;note:string;names:string[];choices:number[]};
@@ -108,9 +110,9 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   heading.textContent=title;
   const editor=createGalaEditor({document:doc,avatar:A,weapons:W,look:saved,
    previewDraw:coaches?.hasBody?(canvas:HTMLCanvasElement,previewLook:Look,options:any)=>coaches!.draw(A.draw,canvas,previewLook,options):A.draw,
-   onPart:(id:string,value:number,label:string)=>{touch();save({...saved,parts:{...saved.parts,[id]:value}},`${(A.sections as Section[]).find(item=>item.id===id)?.label||label}: ${label}.`);},
-   onDye:(value:number)=>{touch();save({...saved,dye:value},`Silk ${value+1}.`);},
-   onWeapon:(value:{type:string;tier:number})=>{touch();const previous=saved.weapon||{type:'rapier',tier:0};if((value.type!==previous.type||value.tier!==previous.tier)&&!W.unlocked(value))value={type:value.type,tier:0};save({...saved,weapon:value},W.name(value)+'.');},
+   onPart:(id:string,value:number,label:string)=>{touch();vaultQueue('gala-part');vaultQueue('gala-slot',id);save({...saved,parts:{...saved.parts,[id]:value}},`${(A.sections as Section[]).find(item=>item.id===id)?.label||label}: ${label}.`);},
+   onDye:(value:number)=>{touch();vaultQueue('gala-slot','dye');save({...saved,dye:value},`Silk ${value+1}.`);},
+   onWeapon:(value:{type:string;tier:number})=>{touch();vaultQueue('gala-slot','weapon');const previous=saved.weapon||{type:'rapier',tier:0};if((value.type!==previous.type||value.tier!==previous.tier)&&!W.unlocked(value))value={type:value.type,tier:0};save({...saved,weapon:value},W.name(value)+'.');},
    locked:(value:{type:string;tier:number})=>!W.unlocked(value)
   });
   if(section==='pets')body.replaceChildren(...editor.parts(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));

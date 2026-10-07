@@ -334,7 +334,7 @@ function place(dt,now){
   if(p.lily){lilyMesh.setMatrixAt(li,put(p.x,p.y,2.4+i*.03,tx,ty,p.rot+p.seed,r*.6));coreMesh.setMatrixAt(li,m);li++;}
  });
  padMesh.instanceMatrix.needsUpdate=lilyMesh.instanceMatrix.needsUpdate=coreMesh.instanceMatrix.needsUpdate=true;
- const fish=S.fishS.fish,ph=S.fishS.phase,arr=aFish.array,bend=S.reduced?0:K.bend;
+ const fish=S.fishS.fish,ph=S.fishS.phase,arr=aFish.array,bend=S.reduced?0:K.bend;if(ph==='big'&&!S.bigSent){S.bigSent=1;dispatchEvent(new CustomEvent('myr5:vault-bump',{detail:{counter:'pond-fish'}}));}
  fish.forEach((f,i)=>{fishMesh.setMatrixAt(i,put(f.x,f.y,.6+i*.01,0,0,-f.a,K.koiLen*px));arr[4*i]=f.phase;arr[4*i+1]=K.koiAlpha;arr[4*i+2]=bend;});
  // The huge koi: only while the fish are away.
  const n=fish.length,idle=ph==='big'&&S.sec.st==='idle'?idlePhase(now-S.fishS.lastTouch,K):null,b=S.an;

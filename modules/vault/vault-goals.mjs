@@ -12,7 +12,7 @@ export const VAULT_GOALS=Object.freeze({
 });
 // How a counter counts (bump): 'day' = +n at most once per local day (default), 'max' = best value seen,
 // 'keyed' = distinct keys (one per Armie letter id, gala slot, breathing mode, portal shape).
-export const COUNTER_MODES=Object.freeze({'arcade-score':'max','armie-ignored':'keyed','gala-slot':'keyed','breath-mode':'keyed','shape-opened':'keyed'});
+export const COUNTER_MODES=Object.freeze({'arcade-score':'max','armie-ignored':'keyed','gala-slot':'keyed','breath-mode':'keyed','shape-opened':'keyed','library-open':'keyed'});
 export const SECRET_BOARDS=Object.freeze(['pond','wood','ice','quilt','grass','jelly']);
 export const COACH_CATEGORIES=Object.freeze({meditation:'Meditation',yoga:'Yoga',cardio:'Cardio',quads:'Quads',glutes:'Glutes',chest:'Chest',arms:'Arms','martial-arts':'Martial arts'});
 const num=x=>Number.isFinite(x)?x:0;

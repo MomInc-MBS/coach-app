@@ -38,7 +38,7 @@ export function mountMealScanner(){
     }else if(data.type==='error')error(data.text);
     else if(data.type==='result'){
      stopClock();$('scanProgress').hidden=true;
-     const best=data.items[0],unsure=!!(best&&data.uncertain);
+     const best=data.items[0],unsure=!!(best&&data.uncertain);if(best)void import('./modules/vault/vault-store.mjs').then(m=>m.bump('food-scan')).catch(()=>{});
      phase('result',data.uncertain?'CHECK THE MATCHES':'SCAN COMPLETE',best?`${best.label} · ${(best.score*100).toFixed(1)}% match score`:'No clear food match');
      stage.hidden=true;
      // #3/#37: a real guess with a question mark keeps the pyramid full size — the sheet, retry and candidates
