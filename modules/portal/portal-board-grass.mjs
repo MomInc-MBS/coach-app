@@ -156,7 +156,7 @@ async function init({THREE:T,scene,mesh,material,uniforms,toWorld,faceZ,wake}){
  let petal=null;
  tmpl.traverse(n=>{if(!n.isMesh)return;n.material.metalness=0; // Kenney ships metalness 1: black without an env map
   const c=n.material.color;if(n.material.name==='colorRed'||(c.r>.5&&c.g<.3&&c.b<.3))petal=n.material;});
- S={scene,toWorld,faceZ,uniforms,tmpl,petal,lawn:makeBlades(T,uniforms,mesh.isMesh?mesh.parent:mesh),warm,wake,reduced,faceW,aspect:faceW/faceH,
+ S={blocks:mesh.isMesh?[mesh]:mesh.children.filter(c=>c.isMesh),scene,toWorld,faceZ,uniforms,tmpl,petal,lawn:makeBlades(T,uniforms,mesh.isMesh?mesh.parent:mesh),warm,wake,reduced,faceW,aspect:faceW/faceH,
   flowerScale:faceW*FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowerScaleRatio:FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowers:[],pool:[],lastPlanted:new Map(),springIdx:0,timer:0,petalTint:null};
  S.ob=buildSecret(T,scene);secReset();
  window.myr5GrassSecret={autoWalk,state:()=>S?.sec,claims:id=>claims(id),freeze};
@@ -259,7 +259,7 @@ function dispose(){
  S.tmpl.traverse(n=>{n.geometry?.dispose();if(n.material)for(const m of [n.material].flat())m.dispose();});
  const {im}=S.lawn;im.removeFromParent();im.geometry.dispose();im.material.dispose();im.dispose();
  S.scene.remove(S.warm);
- if(S.fx)secDropFx();for(const o of [S.ob.shade,S.ob.alien,S.ob.tuft,S.ob.ufo])S.scene.remove(o);for(const d of S.ob.dis)d.dispose();delete window.myr5GrassSecret;
+ if(S.fx)secDropFx();for(const o of [S.ob.shade,S.ob.alien,S.ob.tuft,S.ob.ufo,S.ob.beam])S.scene.remove(o);for(const d of S.ob.dis)d.dispose();delete window.myr5GrassSecret;
  S=null;
 }
 
@@ -275,26 +275,28 @@ function buildSecret(T,scene){
  const disc=(r,col,op)=>new T.Mesh(geo(new T.PlaneGeometry(r*2,r*2)),mat(new T.MeshBasicMaterial({map:radial(col),transparent:true,opacity:op,depthWrite:false})));
  // alien: the top of a MYR5 alien's head, a purple cone (MOM purple #7a2fc4) with a pale nub, half hidden by a grass tuft until it walks
  const coneG=geo(new T.ConeGeometry(.03,.075,20));coneG.translate(0,.0375,0);
- const cone=new T.Mesh(coneG,lam(0x7a2fc4,{emissive:0x2a0d4a})),nub=new T.Mesh(geo(new T.SphereGeometry(.006,10,8)),mat(new T.MeshBasicMaterial({color:0xc9a0ff})));nub.position.y=.076;
- const alien=new T.Group();alien.add(cone,nub);
- const tuft=new T.Group(),shade=disc(.085,'rgba(0,0,0,.9)',.7);tuft.add(blob(.034,1.1,.4,lam(0x2f7a24,{emissive:0x0c2a08})));
+ const cone=new T.Mesh(coneG,lam(0xa45cff,{emissive:0x5a24a8})),rim=new T.Mesh(coneG,mat(new T.MeshBasicMaterial({color:0xe4ccff,side:T.BackSide}))),nub=new T.Mesh(geo(new T.SphereGeometry(.006,10,8)),mat(new T.MeshBasicMaterial({color:0xc9a0ff})));nub.position.y=.076;
+ rim.scale.set(1.28,1.1,1.28);rim.position.y=-.004;const alien=new T.Group();alien.add(rim,cone,nub);
+ const tuft=new T.Group(),shade=disc(.12,'rgba(0,0,0,.95)',.8);tuft.add(blob(.034,1.1,.4,lam(0x2f7a24,{emissive:0x0c2a08})));
  // ufo: squashed sphere + glass dome + gold ring, tilted sideways, its lower side buried in a dirt mound
  const ufoTilt=new T.Group(),saucer=blob(.07,1,.32,lam(0xc4ccd6,{emissive:0x3a424c})),ring=new T.Mesh(geo(new T.TorusGeometry(.07,.005,6,28)),lam(0xffd36e,{emissive:0x6a4a10})),dome=new T.Mesh(geo(new T.SphereGeometry(.034,16,10,0,Math.PI*2,0,Math.PI/2)),lam(0xbfe6ff,{emissive:0x2a5a7a,transparent:true,opacity:.8}));
  ring.rotation.x=Math.PI/2;dome.position.y=.008;ufoTilt.add(saucer,ring,dome);ufoTilt.rotation.z=-.9;
  const mound=blob(.045,1.2,.4,lam(0x6b4526)),dirt=disc(.12,'rgba(70,44,24,1)',.85);mound.position.set(-.03,.048,.02);
  const ufo=new T.Group();ufo.add(dirt,ufoTilt,mound);
- for(const o of [shade,alien,tuft,ufo])scene.add(o);
- return {alien,tuft,shade,ufo,ufoTilt,dis};
+ const bc=document.createElement('canvas');bc.width=8;bc.height=64;{const g=bc.getContext('2d'),r=g.createLinearGradient(0,0,0,64);r.addColorStop(0,'rgba(255,236,170,.95)');r.addColorStop(1,'rgba(176,108,255,0)');g.fillStyle=r;g.fillRect(0,0,8,64);}
+ const bt=new T.CanvasTexture(bc);dis.push(bt);const beam=new T.Mesh(geo(new T.PlaneGeometry(1,1)),mat(new T.MeshBasicMaterial({map:bt,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0})));beam.visible=false;
+ for(const o of [shade,alien,tuft,ufo,beam])scene.add(o);
+ return {alien,tuft,shade,ufo,ufoTilt,beam,dis};
 }
-// ground crack + split: lazily built when the ship has gone. Both halves are a turf-green sheet laid over the lawn (shared jagged bolt edge),
-// they slide apart across the face and reveal a dark riveted metal plate (stands in for the vault door poster).
+// ground crack + split, built into the living lawn: the real blades near the bolt bend away from it, dirt shows in the line, then the
+// blades/flowers of each side (plus a dark ground sheet each, standing in for the hidden block) slide apart and reveal a gunmetal/gold/purple
+// plate (stands in for the vault door poster).
 function buildCrack(){
  const T=THREE,{W,hw,start,ship}=secGeom(),main=crackPath(ship,start),edge=[[1,hw],...main,[0,0]],clampP=p=>[Math.min(1,Math.max(0,p[0])),Math.min(hw,Math.max(0,p[1]))];
  const polyA=[...edge,[1,0]],polyB=[...edge,[0,hw]],cw=384,ch=Math.round(cw*hw),dis=[];
  const cvs=()=>{const c=document.createElement('canvas');c.width=cw;c.height=ch;return c;},path=(g,pts)=>{g.beginPath();pts.forEach(([x,y],i)=>g[i?'lineTo':'moveTo'](x*cw,y*cw));};
  const tex=c=>{const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;dis.push(t);return t;};
- const turf=poly=>{const c=cvs(),g=c.getContext('2d');g.save();path(g,poly);g.closePath();g.clip();g.fillStyle='#1b4318';g.fillRect(0,0,cw,ch);g.lineWidth=2;
-  for(let i=0;i<2200;i++){const [h,s,l]=bladeHSL(),x=Math.random()*cw,y=Math.random()*ch,a=-Math.PI/2+(Math.random()-.5)*1.6;g.strokeStyle=`hsl(${h*360} ${s*100}% ${l*100}%)`;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*10,y+Math.sin(a)*10);g.stroke();}
+ const ground=poly=>{const c=cvs(),g=c.getContext('2d');g.save();path(g,poly);g.closePath();g.clip();g.fillStyle='#24132f';g.fillRect(0,0,cw,ch);
   g.lineJoin='miter';path(g,edge);g.strokeStyle='#2e1b0e';g.lineWidth=cw*.045;g.stroke();g.strokeStyle='#6b4a2a';g.lineWidth=cw*.016;g.stroke();g.restore();return tex(c);};
  const plate=(()=>{const c=cvs(),g=c.getContext('2d'),gr=g.createLinearGradient(0,0,cw,ch);gr.addColorStop(0,'#1d2026');gr.addColorStop(.5,'#2b2f38');gr.addColorStop(1,'#16181d');g.fillStyle=gr;g.fillRect(0,0,cw,ch); // dark gunmetal
   g.strokeStyle='rgba(255,255,255,.04)';for(let y=0;y<ch;y+=3){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}
@@ -304,23 +306,37 @@ function buildCrack(){
   g.shadowColor='#b06cff';g.shadowBlur=18;g.strokeStyle='#ffd36e';g.lineWidth=4;g.beginPath();g.arc(cw/2,ch/2,cw*.18,0,7);g.stroke();return tex(c);})();
  const shape=(poly,t)=>{const sh=new T.Shape();poly.forEach(([x,y],i)=>sh[i?'lineTo':'moveTo'](x-.5,hw/2-y));const g=new T.ShapeGeometry(sh),p=g.attributes.position,uv=g.attributes.uv;dis.push(g);
   for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)+.5,1-(hw/2-p.getY(i))/hw);
-  const m=new T.MeshBasicMaterial({map:t,transparent:true,opacity:0});dis.push(m);const o=new T.Mesh(g,m);o.scale.setScalar(W);return o;};
- const A=shape(polyA,turf(polyA)),B=shape(polyB,turf(polyB)),P=new T.Mesh(new T.PlaneGeometry(1,hw),new T.MeshBasicMaterial({map:plate}));dis.push(P.geometry,P.material);P.scale.setScalar(W);P.visible=false;
+  const m=new T.MeshBasicMaterial({map:t});dis.push(m);const o=new T.Mesh(g,m);o.scale.setScalar(W);return o;};
+ const A=shape(polyA,ground(polyA)),B=shape(polyB,ground(polyB)),P=new T.Mesh(new T.PlaneGeometry(1,hw),new T.MeshBasicMaterial({map:plate}));dis.push(P.geometry,P.material);P.scale.setScalar(W);P.visible=false;
  const gc=cvs(),glow=new T.CanvasTexture(gc),G=new T.Mesh(new T.PlaneGeometry(1,hw),new T.MeshBasicMaterial({map:glow,transparent:true,depthWrite:false}));dis.push(glow,G.geometry,G.material);G.scale.setScalar(W);
  const branches=[2,5,8].map(i=>{const a=main[i],d=i%2?1:-1;return [a,clampP([a[0]+.06*d,a[1]+.05]),clampP([a[0]+.1*d,a[1]+.045*d+.09]),clampP([a[0]+.13*d,a[1]+.14])];});
  const cx=S.toWorld(.5,.5),ctr=(o,z)=>o.position.set(cx[0],cx[1],S.faceZ+W*z);
- ctr(A,.06);ctr(B,.06);ctr(P,.05);ctr(G,.08);for(const o of [A,B,P,G])S.scene.add(o);
+ ctr(A,-.0045);ctr(B,-.0045);ctr(P,-.0052);ctr(G,.08);for(const o of [A,B,P,G])S.scene.add(o);
  const mean=p=>p.reduce((a,q)=>[a[0]+q[0]/p.length,a[1]+q[1]/p.length],[0,0]),ca=mean(polyA),cb=mean(polyB),dx=ca[0]-cb[0],dy=-(ca[1]-cb[1]),dl=Math.hypot(dx,dy)||1;
- S.fx={A,B,P,G,main,branches,gc,glow,cw,ch,cx,dir:[dx/dl,dy/dl],dis,drawn:-1};
+ // every blade/flower: which side of the bolt and how far from it (face-width units)
+ const uvA=polyA.map(([x,y])=>[x,y*S.aspect]),dseg=(p,a,b)=>{const vx=b[0]-a[0],vy=b[1]-a[1],k=clamp01(((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy||1));return Math.hypot(p[0]-a[0]-vx*k,p[1]-a[1]-vy*k);};
+ const ru=S.lawn.rootUV,n=ru.length/2,bs=new Int8Array(n),bd=new Float32Array(n);
+ for(let i=0;i<n;i++){const p=[ru[2*i],ru[2*i+1]/S.aspect];bs[i]=pointInPolygon(ru[2*i],ru[2*i+1],uvA)?1:-1;let d=9;for(let k=1;k<main.length;k++)d=Math.min(d,dseg(p,main[k-1],main[k]));bd[i]=d;}
+ for(const f of S.flowers)f.side=pointInPolygon(f.u,f.v,uvA)?1:-1;
+ for(const m of S.blocks)m.visible=false; // the ground sheets stand in for the block
+ S.fx={A,B,P,G,main,branches,gc,glow,cw,ch,cx,dir:[dx/dl,dy/dl],dis,drawn:-1,bs,bd};
 }
 function drawCrack(prog){
  const F=S.fx;if(F.drawn===prog)return;F.drawn=prog;const g=F.gc.getContext('2d'),{cw,ch}=F;g.clearRect(0,0,cw,ch);if(prog<=0){F.glow.needsUpdate=true;return;}
  const seg=(pts,k)=>{g.beginPath();let tot=0;for(let i=1;i<pts.length;i++)tot+=d2(pts[i-1],pts[i]);let rem=tot*k;g.moveTo(pts[0][0]*cw,pts[0][1]*cw);for(let i=1;i<pts.length&&rem>0;i++){const l=d2(pts[i-1],pts[i]),f=Math.min(1,rem/l);g.lineTo((pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f)*cw,(pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f)*cw);rem-=l;}g.stroke();};
  g.lineJoin='miter';g.lineCap='round';g.miterLimit=3;
- for(const [w,col,blur] of [[cw*.03,'#2a1206',0],[cw*.016,'#ff8a1f',cw*.04],[cw*.006,'#fff3c2',0]]){g.lineWidth=w;g.strokeStyle=col;g.shadowColor='#ff9a2a';g.shadowBlur=blur;seg(F.main,prog);if(prog>.35)for(const b of F.branches)seg(b,Math.min(1,(prog-.35)/.5));}
+ for(const [w,col,blur] of [[cw*.045,'#1c0f06',0],[cw*.026,'#4a2f19',0],[cw*.016,'#ff8a1f',cw*.04],[cw*.006,'#fff3c2',0]]){g.lineWidth=w;g.strokeStyle=col;g.shadowColor='#ff9a2a';g.shadowBlur=blur;seg(F.main,prog);if(prog>.35)for(const b of F.branches)seg(b,Math.min(1,(prog-.35)/.5));} // dirt bed, then the glow
  F.glow.needsUpdate=true;
 }
-function secDropFx(){const F=S.fx;S.fx=null;for(const o of [F.A,F.B,F.P,F.G])S.scene.remove(o);for(const d of F.dis)d.dispose();}
+// slide each real blade along the bolt's cross direction: crack-time parting (blades near the line lean away) + split-time pull-apart
+function moveLawn(part,sp){
+ const F=S.fx,{im,rest}=S.lawn,m=im.instanceMatrix.array,fw=S.uniforms.uFaceSize.value.x,[dx,dy]=F.dir,pa=part*.06*fw,mv=sp*.7*fw;
+ for(let i=0;i<F.bs.length;i++){const k=Math.max(0,1-F.bd[i]/.09),o=F.bs[i]*(k*k*pa+mv);m[16*i+12]=rest[16*i+12]+dx*o;m[16*i+13]=rest[16*i+13]+dy*o;}
+ im.instanceMatrix.needsUpdate=true;
+}
+function secDropFx(){const F=S.fx;S.fx=null;for(const o of [F.A,F.B,F.P,F.G])S.scene.remove(o);for(const d of F.dis)d.dispose();
+ const {im,rest}=S.lawn,m=im.instanceMatrix.array;for(let i=0;i<F.bs.length;i++){m[16*i+12]=rest[16*i+12];m[16*i+13]=rest[16*i+13];}im.instanceMatrix.needsUpdate=true;im.visible=true;
+ for(const b of S.blocks)b.visible=true;resize();}
 // per-frame: tick the reducer, then pose everything from it. Returns true while anything is moving.
 function secStep(dt,now){
  if(S.sec.phase==='done'&&S.fired&&!S.vis)return false;
@@ -332,17 +348,21 @@ function secStep(dt,now){
  let vis=false;
  if(S.vis){const k=(now-S.vis.t0)/350;vis=k<2.4;if(k<1){ap=S.vis.from||ap;asc=1-ease(k);}else asc=ease((k-1)/1.4);if(!vis)S.vis=null;}
  S.apos=ap;const bob=ph==='walk'?Math.abs(Math.sin(now*.012))*.01:0,{alien,tuft,shade,ufo,ufoTilt}=S.ob,em=S.emerge;
- alien.visible=ph==='idle'||ph==='walk'||ph==='board'||vis;alien.rotation.z=ph==='walk'?Math.sin(now*.012)*.14:0;set(alien,[ap[0],ap[1]+(1-em)*.02-bob],.016,asc);
- tuft.visible=alien.visible&&em<1;set(tuft,[sec.start[0],sec.start[1]+.005],.03,1-em);shade.visible=ph==='idle'||ph==='walk'||vis;set(shade,sec.start,.006);
+ alien.visible=ph==='idle'||ph==='walk'||ph==='board'||vis;alien.rotation.z=ph==='walk'?Math.sin(now*.012)*.14:0;set(alien,[ap[0],ap[1]+(1-em)*.02-bob],.03,asc);
+ tuft.visible=alien.visible&&em<1;set(tuft,[sec.start[0],sec.start[1]+.005],.036,1-em);shade.visible=ph==='idle'||ph==='walk'||vis;set(shade,sec.start,.02);
  let up=sec.ship,usc=1,tilt=-.9,fk=0;const spent=ph==='crack'||ph==='split'||ph==='done';
- if(ph==='fly'){fk=ease(t/SECRET.flyMs);up=[sec.ship[0]+fk*fk*.9,sec.ship[1]-fk*fk*1.6];usc=1-.8*fk;tilt=-.9*(1-Math.min(1,fk*3));}
+ if(ph==='fly'){fk=ease(t/SECRET.flyMs);up=[sec.ship[0]+Math.sin(t*.018)*.014*(1-fk),sec.ship[1]-fk*fk*2.2];usc=1-.85*fk;tilt=-.9*(1-Math.min(1,fk*4))+Math.sin(t*.014)*.08*(1-fk);} // straight up, small wobble
  ufo.visible=!spent;ufoTilt.rotation.z=tilt;set(ufo,up,.016+fk*.3,usc);
+ {const b=S.ob.beam;b.visible=ph==='fly'&&fk<.97;if(b.visible){const h=Math.max(.1,sec.ship[1]-up[1]+.08),[bx,by]=wp(up[0],up[1]+h/2);b.position.set(bx,by,S.faceZ+W*.05);b.scale.set(W*.1*usc,W*h,1);b.material.opacity=.75*Math.sin(Math.PI*Math.min(1,fk*1.1+.05));}}
  let anim=ph==='walk'||ph==='board'||ph==='fly'||vis;
  if(spent){
-  if(!S.fx)buildCrack();for(const f of S.flowers)f.obj.visible=false; // the lawn sheet covers them
- const F=S.fx,k=ph==='crack'?t/SECRET.crackMs:1,sk=ph==='split'?t/SECRET.splitMs:ph==='done'?1:0,sp=ease(sk);
-  drawCrack(Math.round(ease(Math.min(1,k*1.15))*40)/40);F.G.material.opacity=1-clamp01(sk*3);F.G.visible=sk<.34;F.P.visible=sk>0;
-  for(const [o,sg] of [[F.A,1],[F.B,-1]]){o.material.opacity=ph==='crack'?clamp01(t/450):1-clamp01((sk-.62)/.38);o.visible=ph!=='done';o.position.set(F.cx[0]+F.dir[0]*sg*sp*W*.7,F.cx[1]+F.dir[1]*sg*sp*W*.7,S.faceZ+W*.06);o.rotation.z=sg*sp*.07;}
+  if(!S.fx)buildCrack();
+  const F=S.fx,k=ph==='crack'?t/SECRET.crackMs:1,sk=ph==='split'?t/SECRET.splitMs:ph==='done'?1:0,sp=ease(sk),prog=Math.round(ease(Math.min(1,k*1.15))*40)/40;
+  drawCrack(prog);F.G.material.opacity=1-clamp01(sk*3);F.G.visible=sk<.34;F.P.visible=sk>0;
+  const sig=prog+'|'+sp.toFixed(3);if(F.sig!==sig){F.sig=sig;moveLawn(prog,sp);}
+  const gone=sk>=.85;S.lawn.im.visible=!gone;
+  for(const [o,sg] of [[F.A,1],[F.B,-1]]){o.visible=!gone;o.position.set(F.cx[0]+F.dir[0]*sg*sp*W*.7,F.cx[1]+F.dir[1]*sg*sp*W*.7,S.faceZ-W*.0045);}
+  for(const f of S.flowers){const [x,y]=S.toWorld(f.u,f.v);f.obj.visible=!gone;f.obj.position.set(x+F.dir[0]*f.side*sp*W*.7,y+F.dir[1]*f.side*sp*W*.7,S.faceZ+W*FLOWER_LIFT);}
   anim=ph!=='done';
   if(ph==='done'&&!S.fired){S.fired=true;window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'grass'}}));}
  }

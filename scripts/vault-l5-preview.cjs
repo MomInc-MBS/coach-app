@@ -43,7 +43,7 @@ async function shoot(){
  await page.mouse.move(...start);await page.mouse.down();await dragTo(0,1,40);await wait(120);
  await page.mouse.up();
  const tt=Date.now();await page.waitForFunction("window.myr5GrassSecret.state().phase==='done'",null,{timeout:40000});console.log('real run reached done in',Date.now()-tt,'ms after lift; fired',await page.evaluate('window.secretFired'));
- const poses=[['board',.5],['fly',.35],['fly',.75],['crack',.45],['crack',1],['split',.3],['split',.6],['done',0]];
+ const poses=[['board',.5],['fly',.3],['fly',.7],['crack',.45],['crack',1],['split',.3],['split',.6],['done',0]];
  for(const [ph,k] of poses){await page.evaluate(`myr5GrassSecret.freeze('${ph}',${k})`);await wait(500);await shot(`07-${ph}-${k}`);}
  await wait(400);const fired=await page.evaluate('[window.secretFired,window.secretDetail]'),errs=await page.evaluate('window.errors');
  console.log('portal-secret fired:',JSON.stringify(fired),'| page errors:',JSON.stringify(errs),'| console:',JSON.stringify(logs.slice(0,5)));
