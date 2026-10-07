@@ -67,9 +67,15 @@ function drawCrt(c,w,h,view,t=0){
  const v=c.createRadialGradient(w/2,h/2,h*.35,w/2,h/2,w*.62);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.7)');c.fillStyle=v;c.fillRect(0,0,w,h);
 }
 function doorwayTexture(){
- const c=ctxOf(512,512),g=c.createRadialGradient(256,256,10,256,256,300);g.addColorStop(0,'#d9a8ff');g.addColorStop(.25,'#9b4be0');g.addColorStop(.6,'#4a1a8a');g.addColorStop(1,'#12041f');c.fillStyle=g;c.fillRect(0,0,512,512);
- c.strokeStyle='rgba(255,235,255,.25)';c.lineWidth=2;for(let r=36;r<300;r+=34){c.beginPath();c.arc(256,256,r,0,TAU);c.stroke();}
- c.font='bold 30px ui-monospace,Menlo,Consolas,monospace';c.textAlign='center';c.fillStyle=GOLD;c.shadowColor=GOLD;c.shadowBlur=14;c.fillText('TAP TO ENTER',256,264);
+ // dark gunmetal wall, gold trim, faint purple glow, one small USB-A port (~8% of the door width) in the centre
+ const c=ctxOf(512,512);c.fillStyle='#1d1f29';c.fillRect(0,0,512,512);
+ c.strokeStyle='#0c0d13';c.lineWidth=3;for(let i=0;i<=512;i+=128){c.beginPath();c.moveTo(i,0);c.lineTo(i,512);c.moveTo(0,i);c.lineTo(512,i);c.stroke();}
+ c.strokeStyle=GOLD;c.globalAlpha=.7;c.lineWidth=3;c.strokeRect(14,14,484,484);c.globalAlpha=1;
+ c.fillStyle=GOLD;for(const [x,y] of [[30,30],[482,30],[30,482],[482,482]]){c.beginPath();c.arc(x,y,5,0,TAU);c.fill();}
+ const g=c.createRadialGradient(256,256,4,256,256,230);g.addColorStop(0,'rgba(154,75,224,.55)');g.addColorStop(1,'rgba(122,47,196,0)');c.fillStyle=g;c.fillRect(0,0,512,512);
+ c.fillStyle='#ffd36e';c.fillRect(230,242,52,28);c.fillStyle='#07040f';c.fillRect(234,246,44,20);
+ const p=c.createLinearGradient(0,246,0,266);p.addColorStop(0,'#d9a8ff');p.addColorStop(1,'#7a2fc4');c.fillStyle=p;c.shadowColor='#b66cff';c.shadowBlur=16;c.fillRect(236,248,40,16);c.shadowBlur=0;
+ c.fillStyle='#07040f';c.fillRect(240,254,32,5);
  return tex(c);
 }
 let envTex=null;
@@ -130,8 +136,12 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const at=(u,v,z=0)=>new THREE.Vector3(u-.5,.5-v,z),wallMat=metal('#2a1d3c',.5,.6);
  const mk=(geo,mat,parent,p,shadow=true)=>{const m=new THREE.Mesh(geo,mat);if(p)m.position.copy(p);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m;};
  // wall + casing + doorway (static)
- const wall=new THREE.Mesh(new THREE.PlaneGeometry(6,8),new THREE.MeshStandardMaterial({color:'#241338',roughness:.9,metalness:.1}));wall.position.z=-.22;root.add(wall);
- const cas=metal('#3a2a50',.8,.45),jamb=metal('#1c1228',.6,.6),CW=1.34,HOLE=1.02;
+ const starTex=(()=>{const c=ctxOf(768,1024),g=c.createLinearGradient(0,0,0,1024);g.addColorStop(0,'#07040f');g.addColorStop(.5,'#1a0b30');g.addColorStop(1,'#0a0614');c.fillStyle=g;c.fillRect(0,0,768,1024);
+  const n=c.createRadialGradient(560,300,0,560,300,320);n.addColorStop(0,'rgba(122,47,196,.35)');n.addColorStop(1,'rgba(122,47,196,0)');c.fillStyle=n;c.fillRect(0,0,768,1024);
+  for(let i=0;i<420;i++){const r=Math.random(),x=Math.random()*768,y=Math.random()*1024;c.fillStyle=r>.9?'#ffd36e':r>.7?'#d9b8ff':'#ffffff';c.globalAlpha=.25+Math.random()*.6;c.fillRect(x,y,r>.95?2.4:1.3,r>.95?2.4:1.3);}
+  return tex(c);})();
+ const wall=new THREE.Mesh(new THREE.PlaneGeometry(6,8),new THREE.MeshBasicMaterial({map:starTex,toneMapped:false}));wall.position.z=-.22;root.add(wall);
+ const cas=metal('#3a3c4a',.9,.38),jamb=metal('#15131c',.7,.5),CW=1.34,HOLE=1.02;
  [[0,(CW+HOLE)/4,CW,(CW-HOLE)/2],[0,-(CW+HOLE)/4,CW,(CW-HOLE)/2]].forEach(([x,y,w,h])=>mk(new THREE.BoxGeometry(w,h,.24),cas,root,new THREE.Vector3(x,y,-.1)));
  [[-(CW+HOLE)/4,0],[(CW+HOLE)/4,0]].forEach(([x,y])=>mk(new THREE.BoxGeometry((CW-HOLE)/2,HOLE,.24),cas,root,new THREE.Vector3(x,y,-.1)));
  for(const [x,y,w,h] of [[0,.5,HOLE,.02],[0,-.5,HOLE,.02],[-.5,0,.02,HOLE],[.5,0,.02,HOLE]])mk(new THREE.BoxGeometry(w,h,.2),jamb,root,new THREE.Vector3(x,y,-.12),false);
@@ -139,10 +149,10 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const screenMat=new THREE.MeshBasicMaterial({map:doorwayTexture(),toneMapped:false}),doorway=new THREE.Mesh(new THREE.PlaneGeometry(HOLE,HOLE),screenMat);doorway.position.z=-.2;root.add(doorway);
  // the door slab: Ian's painted art, cropped square, duotoned to MOM purple/gold
  const doorGltf=await load(DOOR_GLB).catch(()=>null),art=doorGltf?.scene.getObjectByProperty('isMesh',true)?.material.map?.clone();
- const side=metal('#241833',.7,.5),back=metal('#4a3668',.8,.4);
+ const side=metal('#2c2e3a',.9,.4),back=metal('#4a4d5e',.9,.35);
  const front=new THREE.MeshStandardMaterial({color:'#fff',metalness:.35,roughness:.55,envMap:studioEnv(),envMapIntensity:.7,map:art||null});
  if(art){art.repeat.set(1,-1024/IMG_H);art.offset.set(0,(Y0+1024)/IMG_H);art.wrapS=art.wrapT=THREE.ClampToEdgeWrapping;art.needsUpdate=true;}
- front.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n{float l=clamp(dot(diffuseColor.rgb,vec3(.2126,.7152,.0722))*1.9,0.,1.);vec3 w=vec3(.07,.045,.11),p=vec3(.48,.18,.77),g=vec3(1.,.83,.43);vec3 d=l<.5?mix(w,p,l*2.):mix(p,g,(l-.5)*2.);diffuseColor.rgb=mix(diffuseColor.rgb*vec3(.5,.42,.62),d*1.25,.85);}');};
+ front.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n{float l=clamp(dot(diffuseColor.rgb,vec3(.2126,.7152,.0722))*1.9,0.,1.);vec3 w=vec3(.05,.052,.075),p=vec3(.5,.2,.85),g=vec3(1.,.83,.43);vec3 d=l<.5?mix(w,p,l*2.):mix(p,g,(l-.5)*2.);diffuseColor.rgb=mix(diffuseColor.rgb*vec3(.4,.4,.5),d*1.25,.85);}');};
  front.customProgramCacheKey=()=>'vault-duotone';
  const slab=new THREE.Mesh(new THREE.BoxGeometry(1,1,SLAB),[side,side,side,side,front,back]);slab.position.z=-SLAB/2;slab.castShadow=slab.receiveShadow=true;face.add(slab);
  const trimMat=metal(GOLD,.9,.32);for(const [x,y,w,h] of [[0,.49,1,.02],[0,-.49,1,.02],[-.49,0,.02,1],[.49,0,.02,1]])mk(new THREE.BoxGeometry(w,h,.016),trimMat,face,new THREE.Vector3(x,y,.006),false);
@@ -153,7 +163,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  // kit parts from the old door layout, cropped to the square, kept clear of the new controls
  const [layout,kit]=await Promise.all([fetch(LAYOUT).then(r=>r.json()),load(KIT_GLB)]).catch(e=>{console.warn('vault door kit',e);return [null,null];});
  const mats=new Map(),matFor=(src,kind)=>{const k=src.material.uuid+kind;let m=mats.get(k);if(!m){m=src.material.clone();m.envMap=studioEnv();m.envMapIntensity=1.1;m.metalness=.9;m.roughness=.34;m.map=src.material.map;
-  m.color.set(kind==='pipe'||kind==='plate'?'#b79bff':kind==='light'?'#ffffff':'#ffd9a0');if(kind==='light'){m.emissive.set(GOLD);m.emissiveMap=m.map;m.emissiveIntensity=0;}mats.set(k,m);}return m;};
+  m.color.set(kind==='plate'?'#8a8da2':kind==='pipe'?'#c9a8ff':kind==='light'?'#ffffff':'#ffd9a0');if(kind==='pipe'){m.emissive.set(PURPLE);m.emissiveMap=m.map;m.emissiveIntensity=.9;}if(kind==='light'){m.emissive.set(GOLD);m.emissiveMap=m.map;m.emissiveIntensity=0;}mats.set(k,m);}return m;};
  let topZ=.03;
  if(layout&&kit){
   const list=[],keep=new Map();
@@ -194,7 +204,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  mk(new THREE.BoxGeometry(.012,L.knob.r*.8,.012),metal('#1a1022',.4,.6),knob,new THREE.Vector3(0,L.knob.r*.5,.058),false);
  for(let k=0;k<12;k++){const a=k*Math.PI/6;mk(new THREE.BoxGeometry(.008,.02,.008),metal(GOLD,.9,.3),face,at(L.knob.u+Math.sin(a)*L.knob.r*1.4,L.knob.v-Math.cos(a)*L.knob.r*1.4,.03),false).rotation.z=-a;}
  // pistons (body + rod), bolts (latch bars), tubes, pulleys + cables + weights, lamps + halos
- const bodyGeo=new THREE.CylinderGeometry(1,1,1,12).rotateZ(Math.PI/2),pm=metal('#c9a850',.9,.3),rod=metal('#e8e2f0',.95,.2);
+ const bodyGeo=new THREE.CylinderGeometry(1,1,1,12).rotateZ(Math.PI/2),pm=metal('#ffd36e',.95,.28),rod=metal('#e8e2f0',.95,.2);
  for(const [u,v,s] of PISTONS){const body=mk(bodyGeo,pm,face,at(u,v,.03));body.scale.set(.1,.022,.022);const r=mk(bodyGeo,rod,face,at(u,v,.03));r.scale.set(.06,.009,.009);parts.pistons.push({r,u,s,base:u+s*.08});}
  for(const [u,v,s] of BOLTS){const b=mk(new THREE.BoxGeometry(.14,.03,.02),metal('#8b7fa0',.9,.3),face,at(u-s*.02,v,.026));parts.bolts.push({b,u:u-s*.02,s});}
  for(const u of [.035,.965])mk(new THREE.CylinderGeometry(.011,.011,.84,10),metal(PURPLE,.7,.35),face,at(u,.5,.022));
@@ -221,7 +231,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  }
  const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
  const pick=(cx,cy)=>{const r=canvas.getBoundingClientRect();ndc.set((cx-r.left)/r.width*2-1,-((cy-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);
-  if(S.open>.6){const h=ray.intersectObject(doorway)[0];return h?{screen:true}:{wall:true};}
+  if(S.open>.6){const h=ray.intersectObject(doorway)[0];return h&&Math.hypot(h.uv.x-.5,h.uv.y-.5)*HOLE<.14?{screen:true}:{wall:true};}
   const h=ray.intersectObject(hit)[0];return h?{u:h.uv.x,v:1-h.uv.y}:{wall:true};};
  // --- weld (compact: hot trail + sparks on the glow layer, cooling bead on the paint layer)
  const spark=(u,v,n)=>{for(let i=0;i<n&&S.sparks.length<KNOBS.sparkMax;i++){const a=Math.random()*TAU,sp=(KNOBS.sparkSpeedMinPx+Math.random()*(KNOBS.sparkSpeedMaxPx-KNOBS.sparkSpeedMinPx))*S.scale;S.sparks.push({x:u*512,y:v*512,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,born:performance.now(),life:KNOBS.sparkLifeMin+Math.random()*(KNOBS.sparkLifeMax-KNOBS.sparkLifeMin),floor:Math.random()<KNOBS.sparkBounce?v*512+(30+Math.random()*80)*S.scale:Infinity});}};
@@ -276,9 +286,15 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  function openDoor(){if(S.opening||S.target)return;S.opening=true;S.target=1;S.t0=performance.now();S.from=S.open;
   window.dispatchEvent(new CustomEvent('myr5:vault-door-open'));import('./vault-hall.mjs').catch(()=>{}); // warm the hall while the door swings
   import('./vault-store.mjs').then(m=>m.bump?.('door-open')).catch(()=>{});onOpen?.(api);wake();}
- function closeDoor(){S.target=0;S.t0=performance.now();S.from=S.open;S.opening=false;S.fly={last:null,total:0};S.progress=0;wake();}
- function enter(){const done=import('./vault-hall.mjs').then(m=>{if(!m.enterHall)throw Error('no hall');return m.enterHall({host,door:api,goals:S.goals,read:S.read});}).catch(()=>{S.view={head:'ERROR',lines:['THE HALL IS NOT','BUILT YET.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;wake();});
-  onEnter?.(api);return done;}
+ function closeDoor(){S.dolly=null;S.veil?.remove();S.veil=null;S.target=0;S.t0=performance.now();S.from=S.open;S.opening=false;S.fly={last:null,total:0};S.progress=0;wake();}
+ function enter(){
+  if(S.dolly)return;S.dolly={t0:performance.now()};
+  const veil=document.createElement('div');veil.style.cssText='position:absolute;inset:0;background:radial-gradient(circle,#d9a8ff,#7a2fc4 55%,#2a0d4a);opacity:0;pointer-events:none';host.append(veil);S.veil=veil;wake();onEnter?.(api);
+ }
+ function finishDolly(){
+  import('./vault-hall.mjs').then(m=>{if(!m.enterHall)throw Error('no hall');return m.enterHall({host,door:api,goals:S.goals,read:S.read});})
+   .catch(()=>{S.dolly=null;S.veil?.remove();S.veil=null;S.view={head:'ERROR',lines:['THE HALL IS NOT','BUILT YET.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;wake();});
+ }
  // --- on-demand loop
  let frame=0,awakeUntil=0,last=0;
  function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive){last=performance.now();frame=requestAnimationFrame(tick);}}
@@ -292,6 +308,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   // door swing (ease in-out)
   if(S.open!==S.target){const k=Math.min(1,(now-S.t0)/SWING_MS),e=k*k*(3-2*k);S.open=S.from+(S.target-S.from)*e;if(k>=1){S.open=S.target;if(!S.target)S.opening=false;}busy=true;}
   pivot.rotation.y=-S.open*SWING;camera.position.set(-.2*S.open,.12,S.base*(1+.2*S.open));camera.lookAt(-.2*S.open,.12,0);
+  if(S.dolly){const k=Math.min(1,(now-S.dolly.t0)/1000),e=k*k*(3-2*k),z0=S.base*1.2;camera.position.set(-.2*S.open*(1-e),.12*(1-e),z0+(-.1-z0)*e);camera.lookAt(0,0,-.2);if(S.veil)S.veil.style.opacity=Math.max(0,Math.min(1,(k-.55)/.4));if(k<1)busy=true;if(k>=1&&!S.dolly.done){S.dolly.done=true;finishDolly();}}
   // knob follows the finger
   S.knobG.rotation.z=-S.knob.total;
   // train, valves, pipes, lights, lamps
