@@ -22,7 +22,7 @@ test('ship follows a press and fires repeatedly only while held',()=>{
   scene.stopFiring();const afterRelease=laserOrigins;
   for(let index=33;index<=64;index++){const frame=frames.shift();assert.ok(frame);frame(base+index*16);}
   assert.equal(laserOrigins,afterRelease);
-  scene.resetScore();scene.aim(76,90);scene.fire();
+  scene.resetScore();scene.aim(106,90);scene.fire();
   for(let index=65;index<=80;index++)frames.shift()(base+index*16);
   assert.ok(scores.some(state=>state.hits>0&&state.multiplier>1),'a real laser collision awards points');
   const earned=scores.at(-1).score;

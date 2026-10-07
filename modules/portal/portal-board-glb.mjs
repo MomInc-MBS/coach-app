@@ -260,6 +260,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   return cutting.fall.done;
  }
  function heal(){
+  effect.healSecret?.(); // ice secret (L3): restore the shattered crystal (cut() heals first too)
   if(effect.presectioned){effect.heal?.();if(!disposed&&renderer)renderer.render(scene,camera);return;}
   if(!cutting)return;
   cutting.fall.end();for(const mesh of meshObjs){mesh.material.userData.portalCutSideUniform.value=0;const piece=pieceMats.get(mesh.material);if(piece?.userData.portalCutSideUniform)piece.userData.portalCutSideUniform.value=0;}portalCutMask.value?.dispose();portalCutMask.value=null;cutting=null;effect.heal?.();
@@ -267,6 +268,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   if(preservedAspect)computeFit();
   if(!disposed)renderer.render(scene,camera); // healed frame on the canvas now, even while paused
  }
+ const claimed=new Map();
  return {
   canvas,
   background:effect.background||'#17111e',
@@ -291,7 +293,9 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
    else{pointers.set(id,{u:cu,v:cv,t0:performance.now()});effect.press?.(id,cu,cv);}
    wake();
   },
-  release(id){const p=pointers.get(id);if(p){effect.release?.(id,p.u,p.v);pointers.delete(id);}wake();},
+  // claims(id): asked BEFORE effect.release forgets the pointer; a released id keeps its answer until portal reads it once.
+  claims(id){if(claimed.has(id)){const c=claimed.get(id);claimed.delete(id);return c;}return !!effect.claims?.(id);},
+  release(id){const p=pointers.get(id);if(p){claimed.set(id,!!effect.claims?.(id));effect.release?.(id,p.u,p.v);pointers.delete(id);}wake();},
   frameMs:()=>frameMs,
   ink:effect.ink, // false: the effect draws its own trace trail, portal.mjs skips its glowing ink line
   pause(){for(const [id,p] of pointers)effect.release?.(id,p.u,p.v);pointers.clear();cancelAnimationFrame(frame);frame=0;},

@@ -31,7 +31,8 @@ export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false
  const publish=()=>onScore(points.read());publish();
  const ctx=canvas.getContext('2d');if(!ctx)return {start(){},stop(){},startFiring(){},stopFiring(){},fire(){},aim(){},setShip(){},resize(){}};
  let running=false,raf=0,w=1,h=1,last=0,time=0,style=ship,aimX=.5,aimY=.72,x=.5,y=.72,firing=false,shotClock=0;
- const asteroids=Array.from({length:9},(_,i)=>({x:((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
+ const clampX=(xVal)=>{if(w<100)return xVal;const maxR=9,minX=(maxR/w)+0.08,maxX=1-minX;return Math.max(minX,Math.min(maxX,xVal));};
+ const asteroids=Array.from({length:9},(_,i)=>({x:.12+.76*((i*37+19)%97)/100,y:((i*29+8)%103)/100,r:3+i%4*2,s:.000035+i%5*.000016,hit:0}));
  const lasers=[];const blasts=[];
  // Kenney Space Shooter Remastered, CC0: https://kenney.nl/assets/space-shooter-remastered
  const meteors=['/pod/worlds/kenney-meteor-grey-tiny1.png','/pod/worlds/kenney-meteor-brown-tiny1.png'].map(src=>{const img=new Image();img.src=src;img.onload=()=>{if(!running)draw();};return img;});
@@ -45,8 +46,8 @@ export function mountLevelMapScene(canvas,{ship='supportive',reducedMotion=false
  function frame(now){if(!running)return;const dt=Math.min(40,Math.max(0,now-last));last=now;time+=dt;
   x+=(aimX-x)*Math.min(1,dt*.04);y+=(aimY-y)*Math.min(1,dt*.04);
   if(firing){shotClock+=dt;while(shotClock>=125){lasers.push({x,y:y-.04});shotClock-=125;}}
-  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}if(!reducedMotion){a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=(a.x+.37)%1;points.miss();publish();}}}
-  for(let i=lasers.length-1;i>=0;i--){const l=lasers[i];l.y-=dt*.0016;if(l.y<-.1){lasers.splice(i,1);continue;}const hit=asteroids.find(a=>a.hit<=0&&Math.abs(a.x-l.x)*w<a.r+5&&Math.abs(a.y-l.y)*h<a.r+10);if(hit){hit.hit=700;blasts.push({x:hit.x,y:hit.y,age:0});hit.y=-.08;hit.x=(hit.x+.37)%1;lasers.splice(i,1);points.hit();publish();}}
+  for(const a of asteroids){if(a.hit>0){a.hit-=dt;continue;}if(!reducedMotion){a.y+=a.s*dt;if(a.y>1.05){a.y=-.08;a.x=clampX((a.x+.37)%1);points.miss();publish();}}}
+  for(let i=lasers.length-1;i>=0;i--){const l=lasers[i];l.y-=dt*.0016;if(l.y<-.1){lasers.splice(i,1);continue;}const hit=asteroids.find(a=>a.hit<=0&&Math.abs(a.x-l.x)*w<a.r+5&&Math.abs(a.y-l.y)*h<a.r+10);if(hit){hit.hit=700;blasts.push({x:hit.x,y:hit.y,age:0});hit.y=-.08;hit.x=clampX((hit.x+.37)%1);lasers.splice(i,1);points.hit();publish();}}
   for(let i=blasts.length-1;i>=0;i--){blasts[i].age+=dt;if(blasts[i].age>380)blasts.splice(i,1);}
   draw();raf=requestAnimationFrame(frame);
  }

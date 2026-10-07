@@ -1,0 +1,23 @@
+**Bug 1 – `iceClaims` ignores the hold‑time requirement**  
+```javascript
+export const iceClaims=S=>!!S&&(S.shattered||S.taps.length+(S.down&&S.moved<SECRET.drift?1:0)>=SECRET.claimFrom);
+```
+*The function treats a long press (held > 600 ms) as a valid upcoming tap because it only checks `S.down && S.moved < drift`.  A proper claim must also ensure the press would satisfy the tap condition (`now‑S.pressAt ≤ SECRET.gap`).*
+
+**Bug 2 – Only the most recent crack is kept alive**  
+```javascript
+else if(S.cur)S.cur.keep=true; // a tap in the chain: its crack stays
+```
+*On a successful tap the code marks just `S.cur` (the crack from the current press) with `keep=true`.  Earlier cracks from the same chain keep `keep=false` and are allowed to fade via `crackAlpha`, so they disappear before the 10‑tap chain is finished.  All cracks contributed by taps in the chain should be kept.*
+
+**Bug 3 – Drag distance is measured in world units, not screen pixels**  
+```javascript
+tapState=iceSecret(tapState,{type:'move',dist:Math.hypot(...S.toWorld(u,v).map((q,i)=>q-S.toWorld(p.u,p.v)[i]))},performance.now()); // screen px
+```
+*The comment says “screen px”, but the distance is computed with `S.toWorld`, converting pointer movement to world coordinates.  Because the board is scaled, this makes the 12‑px drift threshold incorrectly scaled, causing premature resets (or missed resets) of the tap chain.*
+
+**Bug 4 – Artificially forward‑shifts the clock in `step`**  
+```javascript
+now=Math.max(now,performance.now()); // rAF's timestamp is the frame start, before a crack born in a slow frame (negative age = dead on arrival)
+```
+*Replacing the incoming RAF timestamp with the larger of it and `performance.now()` can jump the clock forward during a frame.  This inflates measured gaps between presses, making the 600 ms tap‑window appear shorter than it really is and can incorrectly break a valid tap chain.*
