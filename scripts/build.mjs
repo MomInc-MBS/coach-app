@@ -38,8 +38,8 @@ await bundleEditor({entryPoints:['./creature/source/war-room-coaches.ts'],bundle
 await bundleEditor({entryPoints:['./weapon-training.mjs'],bundle:true,format:'iife',globalName:'MYR5Training',target:'es2022',minify:true,outfile:'workout-tracks.js'});
 await bundleEditor({entryPoints:['./local-coach/browser-runtime.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'local-coach-runtime.mjs'});
 const releaseBuild=await prepareReleaseBuild();
-await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs'],plugins:[vendoredThree],define:materialRelease.defines});
-await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['three','three/addons/loaders/GLTFLoader.js','./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','./modules/rooms/classroom.mjs'],define:materialRelease.defines});
+await bundleEditor({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'app-runtime.mjs',external:['https://*','./local-coach-runtime.mjs','./creature/assets/phone.js','./modules/portal/portal-entry.mjs','./modules/ships/ship-view.mjs','./modules/ships/ship-intro.mjs','./modules/vault/vault-store.mjs'],plugins:[vendoredThree],define:materialRelease.defines});
+await bundleEditor({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:'launch-runtime.mjs',external:['three','three/addons/loaders/GLTFLoader.js','./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','./modules/rooms/classroom.mjs','./modules/vault/vault-store.mjs'],define:materialRelease.defines});
 await build({configFile:false,plugins:[sites()],build:{outDir:'dist/server',ssr:'server/cloudflare.mjs',target:'es2022',minify:true,rollupOptions:{output:{entryFileNames:'index.js',inlineDynamicImports:true}},ssrEmitAssets:false},ssr:{noExternal:true}});
 await mkdir('dist/client',{recursive:true});
 await rm('dist/client/materials',{recursive:true,force:true});
@@ -58,6 +58,9 @@ if(materialRelease.configured){
  await writeFile(configPath,config);
 }
 await assertMaterialTrustShipped('dist/client');
+// Achievement Vault: its raw modules reach .ts sources (unlock-store) that production strips, so bundle them in place (lazy, never core:
+// offline-assets VAULT). Splitting shares one store between door/hall; app-runtime/launch-runtime keep the store external so it is not inlined.
+await bundleEditor({entryPoints:['modules/vault/vault-store.mjs','modules/vault/vault-door.mjs','modules/vault/vault-hall.mjs'],bundle:true,splitting:true,format:'esm',target:'es2022',minify:true,outdir:'dist/client/modules/vault',allowOverwrite:true,outExtension:{'.js':'.mjs'},external:['three','three/*','../portal/*'],chunkNames:'chunk-[hash]'});
 // Authoring projects remain in the published source repository, not the app bundle.
 for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,
