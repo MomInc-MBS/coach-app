@@ -5,9 +5,12 @@
 // notch) and lily flowers float on top: anchor lilies rest on every vertex/base/apex/line end of every traceable
 // template (and along each template so the shapes read). All pads move aside around the finger and ripples, then
 // ease home; free ones also drift. Under the surface, blurred dark koi shadows wander (boids); a held finger slowly draws them
-// in, arriving face first under it; drawing leads them as a snaking school that grows as more join. 15 s with no
-// touch: the fish scatter off the pond, one huge koi shadow drifts slowly across in a random direction, then they
-// come back. Reduced motion: still water, still fish. AGPL-3.0-or-later.
+// in, arriving face first under it; drawing leads them as a snaking school that grows as more join. 8 s with no
+// touch (idleMs 4 s wander + scatterMs 4 s): the fish scatter off the pond, one huge koi shadow drifts slowly across in a
+// random direction for bigMs 16 s, then they come back. SECRET (Achievement Vault): press and hold on the huge koi; it
+// pitches up toward the surface, grows and warms to koi colour over <= 2 s (its shadow shrinks on the bed), then bursts into
+// ripples + droplets and dispatches 'myr5:portal-secret' {board:'pond'}. Lift early and it gets bored: turns and swims off
+// the face (no award). pondSecret is the pure reducer. Reduced motion: still water, still fish. AGPL-3.0-or-later.
 import {SHAPES,fromFrame} from './portal-shapes.mjs';
 import {pointInPolygon} from './portal-cut.mjs';
 
@@ -37,6 +40,19 @@ export const POND={
 // Seedable PRNG (mulberry32): the layout is the same every visit, and tests can drive the fish.
 export function rng(seed=1){let a=seed>>>0;return()=>{a=a+0x6D2B79F5>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 const TAU=Math.PI*2;
+// Secret reducer. s={st:'idle'|'hold'|'done'|'bored',id,t0,x0,y0}. ev (pond space): {type:'down',id,x,y,phase,big:{x,y}},
+// {type:'move',id,x,y}, {type:'up',id}, {type:'tick'}, {type:'reset'}. Held >= riseMs => done; early lift or > drift => bored.
+export const SECRET={riseMs:2000,drift:.07,hit:.35}; // drift 24 px ~ .07 face widths on a 345 px face
+export function pondSecret(s,ev,now,K=POND,C=SECRET){
+ s=s||{st:'idle',id:null};
+ if(ev.type==='reset')return {st:'idle',id:null};
+ if(ev.type==='down')return s.st==='idle'&&ev.phase==='big'&&Math.hypot(ev.x-ev.big.x,ev.y-ev.big.y)<=K.bigLen*C.hit?{st:'hold',id:ev.id,t0:now,x0:ev.x,y0:ev.y}:s;
+ if(s.st!=='hold')return ev.type==='up'&&ev.id===s.id?{...s,id:null}:s;
+ if(ev.type==='tick')return now-s.t0>=C.riseMs?{...s,st:'done'}:s;
+ if(ev.id!==s.id)return s;
+ if(ev.type==='move')return Math.hypot(ev.x-s.x0,ev.y-s.y0)>C.drift?{...s,st:'bored'}:s;
+ return {...s,st:now-s.t0>=C.riseMs?'done':'bored',id:null}; // up
+}
 // Template point -> pond space (x right, y down, both in face widths: y = v * aspect).
 const toPond=(tx,ty,frame,A)=>{const [u,v]=fromFrame(tx,ty,frame);return [u,v*A];};
 // Every vertex / base / apex / line end of every template: the oval's four extremes, every other polyline's points.
@@ -197,18 +213,22 @@ const WATER_FRAGMENT=`{
 }`;
 // Koi shadows: a segmented strip (head at +x) whose tail sways (phase travels head->tail), shifted by the same water
 // slope as the bed (the refraction), drawn as a dark blurred silhouette under the pads.
-const FISH_VS=`attribute vec4 aFish;uniform sampler2D uWave;uniform vec4 uFace;uniform float uRefract;varying vec2 vUv;varying float vA;
+const FISH_VS=`attribute vec4 aFish;uniform sampler2D uWave;uniform vec4 uFace;uniform float uRefract;varying vec2 vUv;varying float vA;varying float vC;
 void main(){
  vec3 p=position;float t=0.5-p.x;
  p.y+=sin(aFish.x-t*4.5)*aFish.z*t*t*.32;p.x+=(cos(aFish.x-t*4.5)-1.0)*aFish.z*t*.03;
  vec4 w=instanceMatrix*vec4(p,1.0);
  vec2 uv=vec2((w.x-uFace.x)/uFace.z,(-w.y-uFace.y)/uFace.w);
  vec2 g=(texture2D(uWave,clamp(uv,0.0,1.0)).rg-0.5)*2.0;w.xy+=vec2(g.x,-g.y)*uRefract;
- vA=aFish.y;vUv=vec2(position.x+0.5,position.y/.5+0.5);
+ vA=aFish.y;vC=aFish.w;vUv=vec2(position.x+0.5,position.y/.5+0.5);
  gl_Position=projectionMatrix*modelViewMatrix*w;
 }`;
-const FISH_FS=`uniform sampler2D uKoi;uniform vec3 uShadow;uniform float uFade;varying vec2 vUv;varying float vA;
-void main(){float a=texture2D(uKoi,vUv).a*vA*uFade;if(a<.004)discard;gl_FragColor=vec4(uShadow,a);}`;
+const FISH_FS=`uniform sampler2D uKoi;uniform vec3 uShadow;uniform float uFade;varying vec2 vUv;varying float vA;varying float vC;
+void main(){float t=texture2D(uKoi,vUv).a,a=mix(t,smoothstep(.14,.42,t),vC)*vA*uFade;if(a<.004)discard;
+ float p=sin(vUv.x*11.0+1.0)*.5+sin(vUv.x*4.0+vUv.y*9.0)*.5; // the risen koi: crisp edge, orange with cream patches
+ vec3 koi=mix(vec3(.95,.42,.12),vec3(.98,.92,.82),smoothstep(.15,.4,p));
+ koi*=.7+.3*(1.0-abs(vUv.y-.5)*1.8);koi=mix(koi,vec3(.04,.03,.03),max(smoothstep(.03,.015,length(vec2(vUv.x-.8,abs(vUv.y-.5)-.1))),0.0)*step(.6,vC));
+ gl_FragColor=vec4(mix(uShadow,koi,vC),a);}`;
 
 // --- Procedural low-poly meshes --------------------------------------------------------------------------
 function padGeometry(THREE,rand){
@@ -248,9 +268,11 @@ function koiTexture(THREE){
 
 // --- The effect -------------------------------------------------------------------------------------------
 let S=null; // one portal board at a time
+const DROPS=72;
 const reducedMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const validTint=hex=>typeof hex==='string'&&/^#[0-9a-f]{6}$/i.test(hex);
 
+function dropTexture(THREE){const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d'),g=x.createRadialGradient(16,16,2,16,16,15);g.addColorStop(0,'#fff');g.addColorStop(.6,'rgba(255,255,255,.85)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);}
 function build(THREE){
  const A=POND.aspect,geo=new THREE.PlaneGeometry(1,A,16,28);
  return new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x0b2626,roughness:.2,metalness:0}));
@@ -278,15 +300,18 @@ function init({THREE,scene,mesh,uniforms,toWorld,wake}){
  const coreMesh=new THREE.InstancedMesh(coreGeometry(THREE),new THREE.MeshStandardMaterial({color:K.lilyCore,flatShading:true,roughness:.5,emissive:0x332200}),lilies.length);
  for(const m of [padMesh,lilyMesh,coreMesh]){m.frustumCulled=false;m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(m);}
 
- // Koi shadows (+1: the huge one), one instanced strip.
- const n=K.fish,fishGeo=new THREE.PlaneGeometry(1,.5,12,1),aFish=new THREE.InstancedBufferAttribute(new Float32Array((n+1)*4),4);
+ // Koi shadows (+2: the huge one and its bed shadow while it rises), one instanced strip.
+ const n=K.fish,fishGeo=new THREE.PlaneGeometry(1,.5,12,1),aFish=new THREE.InstancedBufferAttribute(new Float32Array((n+2)*4),4);
  aFish.setUsage(THREE.DynamicDrawUsage);fishGeo.setAttribute('aFish',aFish);
  const koi=koiTexture(THREE),fishMat=new THREE.ShaderMaterial({vertexShader:FISH_VS,fragmentShader:FISH_FS,transparent:true,depthWrite:false,
   uniforms:{uKoi:{value:koi},uWave:uniforms.uWave,uFace:{value:new THREE.Vector4(0,0,1,1)},uRefract:{value:0},uShadow:{value:new THREE.Vector3(...K.shadow)},uFade:{value:1}}});
- const fishMesh=new THREE.InstancedMesh(fishGeo,fishMat,n+1);fishMesh.frustumCulled=false;fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);fishMesh.renderOrder=1;scene.add(fishMesh);
+ const fishMesh=new THREE.InstancedMesh(fishGeo,fishMat,n+2);fishMesh.frustumCulled=false;fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);fishMesh.renderOrder=1;scene.add(fishMesh);
 
+ const dropPos=new Float32Array(DROPS*3),dropGeo=new THREE.BufferGeometry();dropGeo.setAttribute('position',new THREE.BufferAttribute(dropPos,3));
+ const dropTex=dropTexture(THREE),dropMat=new THREE.PointsMaterial({color:0xe8fbff,map:dropTex,size:15,sizeAttenuation:false,transparent:true,depthWrite:false}),dropMesh=new THREE.Points(dropGeo,dropMat);dropMesh.frustumCulled=false;dropMesh.visible=false;dropMesh.renderOrder=3;scene.add(dropMesh);
+ const foam=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:dropTex,transparent:true,depthWrite:false,opacity:0}));foam.visible=false;foam.renderOrder=4;scene.add(foam);
  const fishS={fish:makeFish(n,A,rng(5)),A,rand:rng(9),touch:null,lastTouch:performance.now(),trail:makeTrail(K.trailCap),members:0,phase:'wander'};
- S={THREE,K,A,toWorld,wake,uniforms,reduced,waves,waveTex,data,pads,lilies,padMesh,lilyMesh,coreMesh,fishMesh,fishMat,aFish,koi,fishS,
+ S={foam,dropTex,sec:{st:'idle',id:null},an:null,drops:[],dropPos,dropGeo,dropMat,dropMesh,THREE,K,A,toWorld,wake,uniforms,reduced,waves,waveTex,data,pads,lilies,padMesh,lilyMesh,coreMesh,fishMesh,fishMat,aFish,koi,fishS,
   pointers:new Map(),lilyColor:new THREE.Color(K.lily),m:new THREE.Matrix4(),q:new THREE.Quaternion(),e:new THREE.Euler(),v:new THREE.Vector3(),sc:new THREE.Vector3(),
   born:performance.now(),lead:null,slope:[0,0],big:{x:0,y:0,a:0},bigSeed:Math.floor(Math.random()*1e6),fade:1,fadeTo:1,cutPoly:null,lastNow:performance.now(),dirty:true};
  setLilyColor(K.lily);
@@ -312,8 +337,13 @@ function place(dt,now){
  const fish=S.fishS.fish,ph=S.fishS.phase,arr=aFish.array,bend=S.reduced?0:K.bend;
  fish.forEach((f,i)=>{fishMesh.setMatrixAt(i,put(f.x,f.y,.6+i*.01,0,0,-f.a,K.koiLen*px));arr[4*i]=f.phase;arr[4*i+1]=K.koiAlpha;arr[4*i+2]=bend;});
  // The huge koi: only while the fish are away.
- const n=fish.length,idle=ph==='big'?idlePhase(now-S.fishS.lastTouch,K):null;
- if(idle){const b=bigFishPose(S.bigSeed+idle.cycle,idle.t/K.bigMs,A,K.bigLen,S.big),fadeIn=Math.min(1,idle.t/1500,(K.bigMs-idle.t)/1500);fishMesh.setMatrixAt(n,put(b.x,b.y,.4,0,0,-b.a,K.bigLen*px));arr[4*n]=now/1000*TAU*.35;arr[4*n+1]=K.bigAlpha*Math.max(0,fadeIn);arr[4*n+2]=bend*.7;}
+ const n=fish.length,idle=ph==='big'&&S.sec.st==='idle'?idlePhase(now-S.fishS.lastTouch,K):null,b=S.an;
+ arr[4*n+3]=arr[4*n+7]=0;arr[4*n+5]=0;
+ if(b){
+  e.set(0,-b.pitch,-b.a,'ZYX');q.setFromEuler(e);e.order='XYZ';v.set(ox+b.x*px,oy-b.y*px,b.z*px+.4);sc.set(b.s*px,b.s*px,b.s*px);m.compose(v,q,sc);fishMesh.setMatrixAt(n,m);
+  arr[4*n]=now/1000*TAU*.35*(1+6*b.e);arr[4*n+1]=b.alpha;arr[4*n+2]=bend*(.7+.8*b.e);arr[4*n+3]=b.mix;
+  fishMesh.setMatrixAt(n+1,put(b.sx,b.sy,.35,0,0,-b.sa,b.ss*px));arr[4*n+4]=arr[4*n];arr[4*n+5]=b.sAlpha;arr[4*n+6]=bend*.7;
+ }else if(idle){const b=bigFishPose(S.bigSeed+idle.cycle,idle.t/K.bigMs,A,K.bigLen,S.big),fadeIn=Math.min(1,idle.t/1500,(K.bigMs-idle.t)/1500);fishMesh.setMatrixAt(n,put(b.x,b.y,.4,0,0,-b.a,K.bigLen*px));arr[4*n]=now/1000*TAU*.35;arr[4*n+1]=.8*Math.max(0,fadeIn)*(.92+.08*Math.sin(now/300));arr[4*n+2]=bend*.7;arr[4*n+3]=.6;}
  else arr[4*n+1]=0;
  fishMesh.instanceMatrix.needsUpdate=true;aFish.needsUpdate=true;
  S.fishMat.uniforms.uFace.value.set(ox,-oy,px,px*A);S.fishMat.uniforms.uRefract.value=K.glass.bend*px*2;
@@ -360,26 +390,73 @@ function step(dt,now){
  const t=now/1000,fin=S.lead;
  S.fade+=(S.fadeTo-S.fade)*Math.min(1,dt*4);S.fishMat.uniforms.uFade.value=S.fade;
  if(fin)S.uniforms.uFinger.value.set(fin.x,fin.y/S.A,1,0);else S.uniforms.uFinger.value.z=Math.max(0,S.uniforms.uFinger.value.z-dt*2);
- if(S.reduced){place(dt,now);return Math.abs(S.fade-S.fadeTo)>.01;}
- stepWater(t);stepPads(S,dt,t);stepFish(S.fishS,dt,now,S.K);place(dt,now);
+ if(S.reduced){secretStep(dt,now);place(dt,now);return Math.abs(S.fade-S.fadeTo)>.01||S.sec.st!=='idle';}
+ stepWater(t);stepPads(S,dt,t);stepFish(S.fishS,dt,now,S.K);secretStep(dt,now);place(dt,now);
  return true; // the koi never stop swimming
 }
 
+// --- Secret animation: rise (held), splash (done), bored (lifted early) --------------------------------------
+const wrapA=d=>d-TAU*Math.round(d/TAU),ease=p=>p*p*(3-2*p);
+function startSecret(now){ // a hold landed on the big koi: freeze its pose and take it over from the idle show
+ const b=S.big,K=S.K;S.an={x:b.x,y:b.y,a:b.a,a0:b.a,x0:b.x,y0:b.y,pitch:0,z:0,s:K.bigLen,alpha:.8,mix:.6,e:0,sx:b.x,sy:b.y,sa:b.a,ss:K.bigLen,sAlpha:K.bigAlpha*.8,bt:0};S.wake?.();
+}
+function startBored(){S.an.bt=.001;S.an.tgt=Math.hypot(S.an.x-.5,S.an.y-S.A/2)>.05?Math.atan2(S.an.y-S.A/2,S.an.x-.5):S.an.a+Math.PI/2;S.wake?.();}
+function startSplash(now){
+ const c={x:.5,y:S.A/2};S.an=null;S.sec={...S.sec,st:'done'};S.splashT=now;S.splashFired=false;S.ringN=0;S.drops=[];
+ for(let i=0;i<DROPS;i++){const ang=Math.random()*TAU,up=i%2===0; // even: a spray column; odd: a crown arcing out
+  S.drops.push({x:c.x+Math.cos(ang)*.03,y:c.y+Math.sin(ang)*.02,cx:Math.cos(ang),cy:Math.sin(ang),vr:up?.04+Math.random()*.2:.35+Math.random()*1.0,vh:up?4.2+Math.random()*2.2:2.4+Math.random()*1.8,landed:false});}
+ for(const d of S.drops)d.life=2*d.vh/6;
+ for(const p of S.pads){const dx=p.x-c.x,dy=p.y-c.y,d=Math.hypot(dx,dy)||1,k=.5*Math.max(0,1-d/1.3);p.vx+=dx/d*k;p.vy+=dy/d*k;} // pads ride the wave outward
+ S.dropMesh.visible=true;S.foam.visible=true;disturb(S.waves,.5,.5,6);S.dirty=true;S.wake?.();
+}
+function secretStep(dt,now){
+ const sec=S.sec,an=S.an,K=S.K;
+ if(sec.st==='hold'){
+  const ns=pondSecret(sec,{type:'tick'},now);S.sec=ns;if(ns.st==='done')return startSplash(now);
+  const p=Math.min(1,(now-sec.t0)/SECRET.riseMs),e=ease(p),ep=ease(Math.min(1,p*1.5)); // steers to the middle a little ahead of the growth
+  an.e=e;an.x=an.x0+(.5-an.x0)*ep;an.y=an.y0+(S.A/2-an.y0)*ep;an.a=an.a0+wrapA(-Math.PI/2-an.a0)*ep;an.pitch=e*.55;an.z=e*.56;an.s=K.bigLen*(1+e*.4);an.alpha=.8+.2*e;an.mix=.6+.4*e;an.ss=K.bigLen*(1-e*.55);an.sAlpha=K.bigAlpha*.8*(1-e*.75);
+ }else if(sec.st==='bored'&&an&&!an.bt)startBored();
+ if(sec.st==='bored'&&an&&an.bt){ // turns away, levels out, swims off the face
+  an.bt+=dt;const k=Math.min(1,dt*3.5),f=Math.exp(-dt*5);
+  an.a+=wrapA(an.tgt-an.a)*k;an.pitch*=f;an.z*=f;an.s+=(K.bigLen-an.s)*Math.min(1,dt*3);an.mix+=(.6-an.mix)*k;an.alpha+=(.8-an.alpha)*k;an.e*=f;an.sAlpha*=Math.exp(-dt*6);
+  const sp=Math.min(.55,.1+an.bt*.5);an.x+=Math.cos(an.a)*sp*dt;an.y+=Math.sin(an.a)*sp*dt;an.sx=an.x;an.sy=an.y;an.sa=an.a;an.ss=an.s;
+  if(Math.hypot(an.x-.5,an.y-S.A/2)>Math.hypot(.5,S.A/2)+K.bigLen*.6||an.bt>9)endSecret(now);
+ }
+ if(sec.st==='done'&&!an){ // splash: rings across the face, foam flash, spray column + crown that fall back with tiny ripples
+  const t=now-S.splashT,rings=[[130,.5,.5,5],[300,.5,.5,4],[480,.5,.5,3.2],[680,.5,.5,2.4],[200,.4,.42,2.5],[260,.6,.58,2.5]];
+  while(S.ringN<rings.length&&t>=rings[S.ringN][0]){const r=rings[S.ringN++];disturb(S.waves,r[1],r[2],r[3]);S.dirty=true;}
+  const [wx,wy]=S.toWorld(0,0),[x1]=S.toWorld(1,0),px=x1-wx,ts=t/1000;
+  S.drops.forEach((d,i)=>{const h=d.vh*ts-3*ts*ts,ok=ts<d.life,gx=d.x+d.cx*d.vr*ts,gy=d.y+d.cy*d.vr*ts*.6;
+   if(!ok&&!d.landed){d.landed=true;disturb(S.waves,Math.min(.97,Math.max(.03,gx)),Math.min(.97,Math.max(.03,gy/S.A)),.7);S.dirty=true;}
+   S.dropPos[3*i]=wx+gx*px;S.dropPos[3*i+1]=wy-(gy-Math.max(0,h)*.35)*px;S.dropPos[3*i+2]=ok?4:-9999;});
+  S.dropGeo.attributes.position.needsUpdate=true;S.dropMat.opacity=Math.min(1,Math.max(0,(1900-t)/500));
+  const f=Math.max(0,1-t/420),fs=(.35+Math.min(1,t/420)*1.5)*px;S.foam.position.set(wx+.5*px,wy-S.A/2*px,4.5);S.foam.scale.set(fs,fs,1);S.foam.material.opacity=f*.85;
+  if(!S.splashFired&&t>=1300){S.splashFired=true;typeof window!=='undefined'&&window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'pond'}}));}
+  if(t>=1900)endSecret(now);
+ }
+}
+function endSecret(now){S.an=null;S.sec={st:'idle',id:null};S.dropMesh.visible=false;S.foam.visible=false;S.fishS.lastTouch=now;S.wake?.();}
 const toPondXY=(u,v)=>({x:u,y:v*POND.aspect});
 function press(id,u,v){
- if(!S)return;const p=toPondXY(u,v);S.lead={...p,moved:true};S.pointers.set(id,S.lead);
+ if(!S)return;const p=toPondXY(u,v),now=performance.now(),was=S.sec.st;
+ S.sec=pondSecret(S.sec,{type:'down',id,x:p.x,y:p.y,phase:S.fishS.phase,big:S.big},now);if(was==='idle'&&S.sec.st==='hold')startSecret(now);
+ S.lead={...p,moved:true};S.pointers.set(id,S.lead);
  if(!S.reduced)disturb(S.waves,u,v,S.K.wave.press);
- fishTouch(S.fishS,p.x,p.y,performance.now());S.dirty=true;
+ if(S.sec.id!==id)fishTouch(S.fishS,p.x,p.y,now); // a claimed hold leaves the fish show alone
+ S.dirty=true;
 }
 function move(id,u,v){
  if(!S)return;const f=S.pointers.get(id),p=toPondXY(u,v);if(!f)return press(id,u,v);
  f.moved=f.moved||Math.hypot(p.x-f.x,p.y-f.y)>.002;f.x=p.x;f.y=p.y;
- fishTouch(S.fishS,p.x,p.y,performance.now());
+ S.sec=pondSecret(S.sec,{type:'move',id,x:p.x,y:p.y},performance.now());
+ if(S.sec.id!==id)fishTouch(S.fishS,p.x,p.y,performance.now());
 }
 function release(id){
- if(!S)return;S.pointers.delete(id);const last=S.lead=[...S.pointers.values()].at(-1)||null;
- if(last)fishTouch(S.fishS,last.x,last.y,performance.now());else fishRelease(S.fishS,performance.now());
+ if(!S)return;const mine=S.sec.id===id,now=performance.now();S.pointers.delete(id);const last=S.lead=[...S.pointers.values()].at(-1)||null;
+ if(mine){S.sec=pondSecret(S.sec,{type:'up',id},now);if(S.sec.st==='done'&&S.an)startSplash(now);return;}
+ if(last)fishTouch(S.fishS,last.x,last.y,now);else fishRelease(S.fishS,now);
 }
+const claims=id=>!!S&&S.sec.id===id; // read by the board wrapper before release forgets the pointer
 // The cut: pads inside the shape sink away with the water; the koi dive (fade) until it heals.
 function cut(polyUv){
  if(!S)return;S.cutPoly=polyUv;
@@ -390,6 +467,7 @@ function heal(){if(!S)return;S.cutPoly=null;for(const p of S.pads)p.hidden=false
 function dispose(){
  if(!S)return;
  for(const m of [S.padMesh,S.lilyMesh,S.coreMesh,S.fishMesh]){m.removeFromParent();m.geometry.dispose();m.material.dispose();m.dispose?.();}
+ S.foam.removeFromParent();S.foam.geometry.dispose();S.foam.material.dispose();S.dropMesh.removeFromParent();S.dropGeo.dispose();S.dropMat.dispose();S.dropTex.dispose();
  S.koi.dispose();S.waveTex.dispose();S=null;
 }
 
@@ -401,6 +479,7 @@ export const pond={
  fragmentDecls:WATER_DECLS,
  vertexDisplace:'/* pond: flat water; the ripples live in the fragment */',
  fragment:WATER_FRAGMENT,
- init,step,press,move,release,cut,heal,dispose,setTint,
- debug:()=>S&&{phase:S.fishS.phase,since:performance.now()-S.fishS.lastTouch,born:S.born,members:S.fishS.members,fish:S.fishS.fish.map(f=>[f.x,f.y,f.a]),pads:S.pads.length,lilies:S.lilies.length,anchors:S.pads.filter(p=>p.anchor).length},
+ init,step,press,move,release,claims,cut,heal,dispose,setTint,
+ forceBig(){if(!S)return;const K=S.K,now=performance.now();S.sec={st:'idle',id:null};S.an=null;S.fishS.touch=null;S.fishS.lastTouch=now-(K.idleMs+K.scatterMs+K.bigMs*.5);S.wake?.();}, // test/preview: big koi mid-crossing now
+ debug:()=>S&&{sec:S.sec.st,big:S.big,an:S.an&&{...S.an},phase:S.fishS.phase,since:performance.now()-S.fishS.lastTouch,born:S.born,members:S.fishS.members,fish:S.fishS.fish.map(f=>[f.x,f.y,f.a]),pads:S.pads.length,lilies:S.lilies.length,anchors:S.pads.filter(p=>p.anchor).length},
 };
