@@ -1,0 +1,116 @@
+
+ ⛅️ wrangler 4.92.0
+───────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.jsonc configuration:[0m
+
+  
+    - "env.staging" environment configuration
+      - The following vars exist at the top level, but not on "env.staging.vars".
+        This is probably not what you want, since "vars" configuration is not inherited by environments.
+        Please add these vars to "env.staging.vars":
+        - CLERK_PUBLISHABLE_KEY
+        - CLERK_FRONTEND_URL
+        - CLERK_AUTHORIZED_PARTIES
+        - RELEASE_ORIGIN
+        - SPOTIFY_CLIENT_ID
+        - SPOTIFY_REDIRECT_URI
+        - RELEASE_EMAIL_FROM
+        - VAPID_SUBJECT
+
+
+🌀 Building list of assets...
+✨ Read 1933 files from the assets directory D:\myr5-work\achievement-vault\dist\client
+🌀 Starting asset upload...
+🌀 Found 75 new or modified static assets to upload. Proceeding with upload...
++ /release-build.mjs
++ /modules/vault/chunk-LP6XP7RC.js
++ /modules/vault/chunk-SHAVEAEB.mjs
++ /arcade/tub-flight/style.css
++ /audio/standalone-sound.mjs
++ /armie-inbox-ui.mjs
++ /progression-rules.mjs
++ /modules/vault/chunk-6Q5OYQNP.mjs
++ /modules/vault/chunk-RUPRZGJ2.mjs
++ /modules/vault/chunk-RAYOX7X4.mjs
++ /audio/page-music.mjs
++ /breathing.mjs
++ /modules/vault/vault-hall.mjs
++ /modules/portal/portal-board-glb.mjs
++ /modules/portal/portal-board-wood.mjs
++ /modules/vault/chunk-B2GQQDEZ.mjs
++ /modules/portal/portal-board.mjs
++ /app.mjs
++ /drop-pod-opening.mjs
++ /audio/music/hey-man-idk.m4a
++ /modules/portal/portal.mjs
++ /audio/music/guarded-gate.m4a
++ /audio/music/main-theme-one.m4a
++ /war-room/gala-bay.js
++ /app-runtime.mjs
++ /modules/vault/chunk-LMCOP775.js
++ /modules/vault/chunk-KYFEOZMI.mjs
++ /modules/vault/chunk-G4DOKE6W.mjs
++ /arcade/tub-flight/engine.mjs
++ /modules/vault/vault-store.js
++ /meal-scanner.mjs
++ /arcade/tub-flight/game.mjs
++ /reward-packs.mjs
++ /modules/rooms/classroom.mjs
++ /menu.mjs
++ /reward-pack-ui.mjs
++ /modules/vault/vault-hall.js
++ /modules/portal/portal-board-ice.mjs
++ /post-download.mjs
++ /modules/vault/vault-door.js
++ /modules/vault/chunk-GKJUMOIP.js
++ /modules/portal/portal-board-pond.mjs
++ /modules/vault/chunk-WXYCW2MB.mjs
++ /pod/worlds/vault/door-poster.webp
++ /modules/vault/chunk-XJYOCMRU.js
++ /modules/vault/chunk-TM77YKEH.mjs
++ /audio/music/laboratory-violence.m4a
++ /war-room/coach-sprites.js
++ /launch-runtime.mjs
++ /source.json.gz
++ /modules/vault/chunk-LBEHIDSJ.mjs
++ /modules/vault/chunk-JSXFLCCL.js
++ /apple-basic-share.mjs
++ /audio/music/manifest.json
++ /modules/vault/vault-store.mjs
++ /level-map-scene.mjs
++ /modules/vault/chunk-2OZ54BVG.js
++ /modules/vault/chunk-GIH36KMG.js
++ /modules/vault/vault-goals.mjs
++ /scoreboard.mjs
++ /spotify-terminal.mjs
++ /modules/routes.mjs
++ /index.html
++ /modules/portal/portal-board-jelly.mjs
++ /modules/vault/vault-door.mjs
++ /modules/portal/portal-board-grass.mjs
++ /launch.mjs
++ /modules/portal/portal.css
++ /sw.js
++ /modules/vault/chunk-DX52XIQ3.mjs
++ /audio/music/sick-with-science.m4a
++ /app.css
++ /audio/music/daemon-time.m4a
++ /creature/assets/editor.js
++ /source.json
+Uploaded 25 of 75 assets
+Uploaded 50 of 75 assets
+Uploaded 75 of 75 assets
+✨ Success! Uploaded 75 files (1801 already uploaded) (2.92 sec)
+
+Total Upload: 264.25 KiB / gzip: 73.34 KiB
+Worker Startup Time: 12 ms
+Your Worker has access to the following bindings:
+Binding                                               Resource                  
+env.DB (myr5-coach-staging)                           D1 Database               
+env.ASSETS                                            Assets                    
+env.WORKOUT_IMPORTS_ENABLED ("true")                  Environment Variable      
+
+Uploaded myr5-coach-staging (9.60 sec)
+Deployed myr5-coach-staging triggers (0.81 sec)
+  https://myr5-coach-staging.mominc-coach.workers.dev
+Current Version ID: a105391a-e4a9-4470-aab9-be25cf60b4c4

@@ -1,0 +1,1968 @@
+{
+  "url": "https://myr5-coach-staging.mominc-coach.workers.dev",
+  "build_id": "0d6a79403467e0fd8813",
+  "remoteBuild": "0d6a79403467e0fd8813",
+  "checked": [
+    {
+      "path": "about.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "account-readiness-client.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "account-session-actions.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "account-workout-sync.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "achievements-board.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "achievements-board.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "achievements.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "app-runtime.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "app-updates.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "app.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "app.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "apple-basic-share-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "apple-basic-share.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "arcade/tub-flight/engine.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "arcade/tub-flight/game.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "arcade/tub-flight/index.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "arcade/tub-flight/style.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "armie-inbox-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "armie-inbox.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "armie-letters-client.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "armie-letters.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "armie-notify-gate.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/loop-seam.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/music/manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/page-music.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/physical-sound.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/sfx/credits.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/sfx/manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/sound-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "audio/standalone-sound.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "auth-client.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "auth-paths.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "auth-transition.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "battle-pass-page.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "battle-pass-page.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "battle-pass-rewards.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "battle-pass.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "breathing-modes.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "breathing.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "camera-workout.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "camera-workout.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "camera.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "chosen-styles.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "circuit-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "circuit.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-hit.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-hub.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-hub.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-names.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-net.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-overlay.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-path-picker.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-path-picker.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-path-symbols.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-presentation.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-profile.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach-voice-settings.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "coach.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "combat-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "combat.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/assets/account-bridge.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/assets/editor.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/assets/phone.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/cinematics.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/cinematics.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/creature.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/index.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/models/roster/manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature/phone.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "creature-skin-reward-reveal.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "daily-guide.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "demo-poses.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "device-notifications.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "drop-pod-opening.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "exercise-demo.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "exercise-gestures.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "exercise-library.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "eye-styles.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "flight-score.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "flight-scroll.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "flip-display.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "flip-display.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "focus-library.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "food/nutrition-fdc.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "food/pyramid-scanner.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "food/pyramid-tiles.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "food-live.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "food-worker.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "gala-handoff.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "gesture-controls.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "guest-history-choice.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hand-companion.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hand-companion.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hand-controls.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hand-gesture.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/fflate.module-BTK1vOXE.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-Bjf-hL3X.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-BPp4xJdL.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-CB_VHvVn.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-CkiDkgTb.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-CTLEcnaA.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/GLTFExporter-DtrwThpg.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-B9VM-Sgb.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-BrVOFL10.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-BUSUnr2n.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-CXtHIiHD.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-DaalXrhL.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-DdX_dztK.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-DRhQ8PUp.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/hand-entry-DzeSxrpI.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-B9Ihq6IJ.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-BmfG4hV3.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-BW87md1x.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-B_MT_HIW.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-Dc1_MNpb.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/assets/OBJExporter-DThty9Vw.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/companion.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/index.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/unlock-bridge.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "handborne/unlocks.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hardware-launch.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "hologram.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "install-context.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "install-transfer.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "install.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "install.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "install.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "launch-bootstrap.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "launch-runtime.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "launch-shell.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "launch.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "launch.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "level-map-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "level-map-scene.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "local-coach-runtime.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "locked-public.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/coach-ships-biomes/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-arms/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-cardio/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-chest/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-glutes/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-martial-arts/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-meditation/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-quads/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "materials/track-yoga/chunk-manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "meal-nutrition.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "meal-scanner.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "meditation-backgrounds.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "meditation.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "meditation.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "menu-lifecycle.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "menu.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "menu.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/chunk-delivery.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/installed-creature-skins.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/liquid-runtime.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/material-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/material-controller.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/material-pack-entry.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/post-download-controller.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/post-download-sections.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/post-download-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/materials/verified-bundle.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/new/expansion-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/new/expansion-entry.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/new/expansion.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/phone-orientation.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/pod-chrome.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/cracked-glass-core.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/peer.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-apertures.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-cogs.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-glb.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-grass.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-ice.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-jelly.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-pond.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board-wood.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-board.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-cut.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-entry.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-look.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-mechanical-layout.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-peek.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-shapes.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-cogs.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-grass.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-ice.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-jelly.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-palettes.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-pond.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal-tunnel-wood.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/portal.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/standalone-housing.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/portal/standalone-housing.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/rooms/classroom.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/rooms/classroom.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/rooms/paper-crawler.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/rooms/reminders-computer.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/rooms/reminders-computer.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/routes.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-access.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-catalog.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-intro.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-scene-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-scene.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-section-controller.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-view-bridge.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-view.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/ship-view.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/ships/verified-ship-assets.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-2OZ54BVG.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-6Q5OYQNP.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-B2GQQDEZ.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-DX52XIQ3.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-G4DOKE6W.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-GIH36KMG.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-GKJUMOIP.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-JSXFLCCL.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-KYFEOZMI.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-LBEHIDSJ.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-LMCOP775.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-LP6XP7RC.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-RAYOX7X4.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-RUPRZGJ2.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-SHAVEAEB.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-TM77YKEH.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-WXYCW2MB.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/chunk-XJYOCMRU.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-door.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-door.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-goals.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-hall.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-hall.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-store.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "modules/vault/vault-store.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "movement-engine.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "movement-rules.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "movement-setup.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "nutrition-data.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "nutrition.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "office-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "office-form.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "office-quick-form.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "office.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "offline-install.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding-form.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding-questions.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "onboarding.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/browser-asset-store.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/catalog-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/catalog-keys.generated.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/catalog-state.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/catalog-trust.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/fixtures.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/http-fixture-adapter.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/isolated-pack-control.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-entitlements.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-grant-cache.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-host-adapter.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-host-config.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-license-surface.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/pack-lifecycle.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "packs/workout-idle-adapter.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pending-coach.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "performance-account-sync.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "performance-catalog.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "performance-import-codec.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "performance-progress.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "performance-reconcile.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "personal-tracker.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "personal-tracker.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pet-choice.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "player-level.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pocket-hardware.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/continue-workout.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/control-board.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/dj-identity.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/encouragement.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/gala-avatar.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/gala-coaches/manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/gala-performer.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/gala-weapons.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/hardware.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/hardware.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/home-character.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/home-character.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/identity.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/performance-workout.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/persistent-chrome.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/pod.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/pod.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/rest-arena.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/rest-arena.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/retro-rooms.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/rooms/cage/draco_wasm_wrapper.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/set-flow.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/set-transition.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/ship-backdrop.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/ship-interior.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-abilities.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-animator.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-evolution.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-review.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-review.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/weapon-review.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/whiteboard.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/workout-session-owner.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/worlds/boards/cogs/door-layout.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pose-classifier.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pose-frame.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pose-recorder.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pose-samples.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pose.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "post-download.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "privacy.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "progression-guide.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "progression-rules.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "public-access.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "public-entry.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "push-subscribe.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "quick-setup-form.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "quick-setup.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "receive-coach.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "recover.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "recovery-page.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "release-build.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "release-info.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reminder-controls.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reminder-live.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reminder-plan.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reminder-settings.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "rest-boss-rewards.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reward-pack-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "reward-packs.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "robot-audio.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "scoreboard-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "scoreboard.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "scoreboard.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "settings-crt.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "settings-crt.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "settings-frame.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "signin.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "signin.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "signin.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "source.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "spotify-domain.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "spotify-return.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "spotify-terminal.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "spotify-terminal.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "standalone-account-context.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "streak-forgiveness.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "unlock-ledger.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "unlock-pending.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "unlock-seen.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "update-policy.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "update-session.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/mediapipe/0.10.14/vision_bundle.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/mediapipe/0.10.14/wasm/vision_wasm_internal.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/mediapipe/0.10.14/wasm/vision_wasm_nosimd_internal.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/three/GLTFLoader.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/three/meshopt_decoder.module.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "vendor/three/three.module.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "voice/manifest.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/account-api.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/coach-sprites.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/gala-bay.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/gala-bay.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/gala-editor.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/gala-option-previews.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/index.html",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/war-room.css",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "war-room/war-room.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "weapon-rewards.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "weapon-training.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "workout-import-codec.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "workout-levels.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "workout-route-ui.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "workout-route.mjs",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "workout-tracks.js",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/worlds/boards/cogs/door-layout.json",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/worlds/boards/cogs/door.glb",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/worlds/boards/cogs/parts-kit.glb",
+      "status": 200,
+      "match": true
+    },
+    {
+      "path": "pod/worlds/boards/cogs-poster.webp",
+      "status": 200,
+      "match": true
+    }
+  ],
+  "api": {
+    "health": {
+      "status": 200,
+      "body": "{\"ok\":true,\"app\":\"MYR5 Coach\",\"reminders\":{\"mode\":\"worker-cron\",\"lastTickAgeS\":null,\"active\":false}}"
+    }
+  }
+}
