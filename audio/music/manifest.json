@@ -1,0 +1,91 @@
+{
+ "version": 1,
+ "sampleRate": 44100,
+ "bars": 8,
+ "tracks": {
+  "hey-man-idk": {
+   "url": "/audio/music/hey-man-idk.m4a",
+   "bpm": 105.25,
+   "bars": 8,
+   "beats": 32,
+   "frames": 804506,
+   "loopStart": 0,
+   "loopEnd": 18.242766,
+   "duration": 18.242766,
+   "sourceStart": 0.61,
+   "tailFolded": 0.06,
+   "bytes": 260040,
+   "decodedFrames": 804506
+  },
+  "guarded-gate": {
+   "url": "/audio/music/guarded-gate.m4a",
+   "bpm": 120.0,
+   "bars": 8,
+   "beats": 32,
+   "frames": 705600,
+   "loopStart": 0,
+   "loopEnd": 16.0,
+   "duration": 16.0,
+   "sourceStart": 0.02,
+   "tailFolded": 0.06,
+   "bytes": 228716,
+   "decodedFrames": 705600
+  },
+  "daemon-time": {
+   "url": "/audio/music/daemon-time.m4a",
+   "bpm": 90.16,
+   "bars": 8,
+   "beats": 32,
+   "frames": 939140,
+   "loopStart": 0,
+   "loopEnd": 21.295692,
+   "duration": 21.295692,
+   "sourceStart": 0.64,
+   "tailFolded": 0.06,
+   "bytes": 310247,
+   "decodedFrames": 939140
+  },
+  "sick-with-science": {
+   "url": "/audio/music/sick-with-science.m4a",
+   "bpm": 140.5,
+   "bars": 8,
+   "beats": 32,
+   "frames": 602648,
+   "loopStart": 0,
+   "loopEnd": 13.665488,
+   "duration": 13.665488,
+   "sourceStart": 0.02,
+   "tailFolded": 0.212,
+   "bytes": 194523,
+   "decodedFrames": 602648
+  },
+  "laboratory-violence": {
+   "url": "/audio/music/laboratory-violence.m4a",
+   "bpm": 120.0,
+   "bars": 8,
+   "beats": 32,
+   "frames": 705600,
+   "loopStart": 0,
+   "loopEnd": 16.0,
+   "duration": 16.0,
+   "sourceStart": 0.01,
+   "tailFolded": 0.511,
+   "bytes": 229213,
+   "decodedFrames": 705600
+  },
+  "main-theme-one": {
+   "url": "/audio/music/main-theme-one.m4a",
+   "bpm": 120.0,
+   "bars": 8,
+   "beats": 32,
+   "frames": 705600,
+   "loopStart": 0,
+   "loopEnd": 16.0,
+   "duration": 16.0,
+   "sourceStart": 2.02,
+   "tailFolded": 0.06,
+   "bytes": 240960,
+   "decodedFrames": 705600
+  }
+ }
+}
