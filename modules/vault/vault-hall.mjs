@@ -7,7 +7,7 @@ export const GAP=6, ROOT='/creature/models/roster/', TOP=1.55;
 const RANK={easy:0,medium:1,hard:2,expert:3};
 export const pickCoaches=(n,reqs)=>{const top=[...reqs].sort((a,b)=>(RANK[b.difficulty]??0)-(RANK[a.difficulty]??0)).slice(0,n);return top.reverse().map(c=>c.id);};
 export const coachPath=id=>ROOT+String(id).replace(/^roster\//,'')+'.glb';
-export const statueZ=i=>-GAP*(i+1),STOP=3.2; // route value at which you stand in front of statue i
+export const statueZ=i=>-GAP*(i+1),STOP=4.8; // route value at which you stand in front of statue i
 export const stopAt=i=>-statueZ(i)-STOP;
 export const nearestStatue=(route,n,max=1.6)=>{let b=-1,d=max;for(let i=0;i<n;i++){const e=Math.abs(stopAt(i)-route);if(e<d){b=i;d=e;}}return b;};
 // <=5 resident: 1 behind, current, 3 ahead.
@@ -49,7 +49,7 @@ void main(){float f=pow(1.-abs(dot(normalize(vN),normalize(vV))),2.2);
  float fl=.88+.12*sin(uT*37.+uSeed)*step(.9,h1(floor(uT*6.)+uSeed));
  float a=(.2+f*.95)*scan*fine*fl*uBoost+band*.9;
  gl_FragColor=vec4(base*(1.+band*2.)*a*1.4,a);}`;
-const BEAM_F=`uniform vec3 uC;uniform float uT;varying vec2 vU;void main(){float a=pow(1.-vU.y,1.6)*.22*(.8+.2*sin(vU.y*30.-uT*4.));gl_FragColor=vec4(uC*a*2.,a);}`;
+const BEAM_F=`uniform vec3 uC;uniform float uT;varying vec2 vU;void main(){float a=pow(1.-vU.y,2.2)*.05*(.8+.2*sin(vU.y*30.-uT*4.));gl_FragColor=vec4(uC,a);}`;
 const BEAM_V=`varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
 // Inside of a fibre-optic data cable: strands along the walk direction, data packets, glyph flecks.
 const CABLE_V=`varying vec2 vU;varying float vD;void main(){vU=uv;vec4 mv=modelViewMatrix*vec4(position,1.);vD=-mv.z;gl_Position=projectionMatrix*mv;}`;
@@ -68,9 +68,9 @@ export async function enterHall(host=document.body){
  const THREE=await import('three'),{GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js'),{MeshoptDecoder}=await import('three/addons/libs/meshopt_decoder.module.js');
  const goalsMod=await import('./vault-goals.mjs'),{GOALS}=goalsMod,store=await import('./vault-store.mjs').catch(()=>({}));
  const rewardPacks=await import('../../reward-packs.mjs').catch(()=>null),{COACH_REQUIREMENTS}=await import('../../performance-catalog.mjs');
- const N=GOALS.length,limit=stopAt(N-1)+2,state=()=>safe(()=>store.read(),{});
+ const N=GOALS.length,limit=stopAt(N-1)+2,state=()=>safe(()=>store.state(),{});
  // L0's statueCoaches(goals) wins when present (ids or {id}); otherwise highest-unlock-level coaches, working down.
- const FILES=(safe(()=>goalsMod.statueCoaches(GOALS),null)||pickCoaches(N,COACH_REQUIREMENTS)).map(c=>coachPath(c.id||c));
+ const FILES=(safe(()=>goalsMod.statueCoaches(GOALS),null)||pickCoaches(N,COACH_REQUIREMENTS)).map(c=>coachPath(c.coachId||c.id||c));
  const el=document.createElement('div');el.className='vh';
  el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button><div class="vh-pos"></div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div>`;
  host.append(el);const $=s=>el.querySelector(s),canvas=$('canvas'),card=$('.vh-card'),pur=$('.vh-pur'),pos=$('.vh-pos');
@@ -133,10 +133,13 @@ export async function enterHall(host=document.body){
  // Walk state (ported from lilboyfriend).
  let fixT=-1,route=0,target=0,vel=0,held=0,cur=-1,insp=-1,blend=0,nextI=-1,started=performance.now(),last=started,raf=0,reached=false;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),move=d=>{target=clamp(target+d,0,limit);};
- const showCard=i=>{const g=GOALS[i],m=cardModel(g,state(),safe(()=>rewardPacks.unopenedPacks(),[]));card.hidden=false;
-  card.innerHTML=`<div class="t ${m.tier}">${m.tier} &middot; ${m.earned?'unlocked':'locked'}${i===nextI?' &middot; next':''}</div>`+(m.earned?`<h3>${esc(m.title)}</h3>${m.date?`<small>Earned ${m.date}</small>`:''}${m.pack?'<button data-pack>Open pack</button>':''}`:`<div class="c">${esc(m.clue)}</div>`+(m.progress?`<div class="vh-bar"><i style="width:${100*m.progress.have/m.progress.need}%"></i></div><small>${m.progress.have} / ${m.progress.need}</small>`:''));};
+ const packId=g=>`reward-pack:${g.tier}:vault-${g.id}`;
+ let rsum=null;import('../../reward-pack-ui.mjs').then(m=>{rsum=m.rewardSummary;if(insp>=0)showCard(insp);},()=>{});
+ const showCard=i=>{const g=GOALS[i],m=cardModel(g,state(),safe(()=>rewardPacks.unopenedPacks(),[]));card.hidden=false;const got=m.earned&&safe(()=>rewardPacks.openedPack(packId(g)),null),list=got&&rsum?got.rewards.map(r=>{const q=rsum({reward:r,category:r.category});return `<div class="c">${esc(q.title)} <small style="display:inline">${esc(q.detail)}</small></div>`;}).join(''):'';
+  card.innerHTML=`<div class="t ${m.tier}">${m.tier} &middot; ${m.earned?'unlocked':'locked'}${i===nextI?' &middot; next':''}</div>`+(m.earned?`<h3>${esc(m.title)}</h3>${m.date?`<small>Earned ${m.date}</small>`:''}${list||(m.pack?'<button data-pack>Open pack</button>':'')}`:`<div class="c">${esc(m.clue)}</div>`+(m.progress?`<div class="vh-bar"><i style="width:${100*m.progress.have/m.progress.need}%"></i></div><small>${m.progress.have} / ${m.progress.need}</small>`:''));};
  const refresh=()=>{nextI=firstUnearned(GOALS,state());statues.forEach(s=>{setEarn(s,true);s.halo.visible=s.i===nextI;});const n=statues[nextI];pulse.visible=!!n;nextLight.intensity=n?6:0;if(n){nextLight.position.set(n.grp.position.x*.6,1.8,n.grp.position.z+1.4);pulse.position.set(n.grp.position.x,.06,n.grp.position.z);}if(insp>=0)showCard(insp);};
- card.addEventListener('click',e=>{if(e.target.matches('[data-pack]'))document.querySelector('.reward-pack-launch')?.click();});
+ card.addEventListener('click',async e=>{const b=e.target.closest?.('[data-pack]');if(!b||!rewardPacks)return;const g=GOALS[insp];if(!g)return;b.disabled=true;
+  const opened=await rewardPacks.openRewardPackExclusive(rewardPacks.packItem(g.tier,packId(g)));if(!opened){b.disabled=false;b.textContent='Try again';return;}showCard(insp);});
  // Input: drag up/down walks, wheel, keys, held arrows, tap a statue to walk to it.
  let drag=null;const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
  canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,y:e.clientY,x:e.clientX,moved:0};canvas.setPointerCapture(e.pointerId);});
@@ -167,11 +170,11 @@ export async function enterHall(host=document.body){
   if(!reached&&route>=limit-2.2){reached=true;window.dispatchEvent(new CustomEvent('myr5:vault-hall-end'));}
   camera.fov=60+inv*60;camera.updateProjectionMatrix();
   camera.position.set(0,1.55+inv*7,-route+inv*18);look.set(0,1.55-inv*6,camera.position.z-20);
-  if(insp>=0&&blend>.01){const s=statues[insp].grp.position;camera.position.x=s.x*.35*blend;look.lerp(new THREE.Vector3(s.x,1.1,s.z),blend);}
+  if(insp>=0&&blend>.01){const s=statues[insp].grp.position;camera.position.x=s.x*.35*blend;look.lerp(new THREE.Vector3(s.x,.65,s.z),blend);}
   camera.lookAt(look);
   for(const s of statues){if(s.model)s.model.rotation.y=Math.sin(t*.6+s.i)*.2;
    if(s.anim>=0){s.anim+=dt/.6;s.mat.uniforms.uEarn.value=Math.min(1,s.anim);if(s.anim>=1)s.anim=-1;}
-   s.mat.uniforms.uBoost.value=s.i===nextI?1.5+.7*Math.sin(t*3.2):1;}
+   s.mat.uniforms.uBoost.value=(s.earned?1:1.5)+(s.i===nextI?1+.7*Math.sin(t*3.2):0);}
   for(const a of atoms){a.g.rotation.y+=dt*.15;for(const r of a.rings){const u=r.userData,p=t*u.sp+u.ph;u.e.position.set(Math.cos(p)*u.rr,Math.sin(p)*u.rr,0);}}
   if(nextI>=0){nextLight.intensity=5+Math.sin(t*3)*2;nextM.opacity=.45+.25*Math.sin(t*3);const ph=(t%1.4)/1.4;pulse.scale.setScalar(1+ph*.9);pulseM.opacity=(1-ph)*.95;}
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
@@ -179,7 +182,7 @@ export async function enterHall(host=document.body){
  live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
   statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
- window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),earned:statues.filter(s=>s.earned).map(s=>s.i)}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
+ if(/[?&]debug/.test(location.search)||localStorage.myr5Debug)window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),earned:statues.filter(s=>s.earned).map(s=>s.i)}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
  statues.forEach(s=>setEarn(s,false));stream(0);refresh();raf=requestAnimationFrame(frame);
  return {exit:exitHall};
 }
