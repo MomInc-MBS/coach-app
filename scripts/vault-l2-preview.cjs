@@ -34,10 +34,10 @@ async function shots(){
  console.log('heat',JSON.stringify(await page.evaluate('myr5Wood.state().heat')));
  console.log('claimed during scrub',await page.evaluate('myr5Wood.state().rs.claimId'));
  await page.evaluate('board.release(1)');console.log('claims after lift',await page.evaluate('(board.claims||wood.claims)(1)'),await page.evaluate('myr5Wood.state().stage'));
- await wait(250);await snap('2-fire-start');await wait(1800);await snap('3-fire');await wait(1500);await snap('4-fire-full');
- await page.mouse.click(260,520);await wait(150);await snap('5-steam');
+ for(const [n,p] of [['2-fire-start',.25],['3-fire',.6],['4-fire-full',1]]){await page.evaluate(`myr5Wood.pose('fire',${p})`);await wait(n==='4-fire-full'?3500:2500);await snap(n);}
+ await page.mouse.click(260,520);await wait(500);await page.evaluate('myr5Wood.adv(200)');await wait(1500);await snap('5-steam');
  // Software GL runs ~3 fps, so freeze time (debug hook) to photograph each stage.
- for(const [n,st,p] of [['6-ash','ash',1],['7-crumble-a','crumble',.3],['8-crumble-b','crumble',.55],['9-crumble-c','crumble',.8],['10-gone','crumble',1]]){await page.evaluate(`myr5Wood.pose('${st}',${p})`);await wait(900);await snap(n);}
+ for(const [n,st,p] of [['6-ash','ash',1],['7-crumble-a','crumble',.3],['8-crumble-b','crumble',.55],['9-crumble-c','crumble',.8],['10-gone','crumble',1]]){await page.evaluate(`myr5Wood.pose('${st}',${p})`);await wait(2200);await snap(n);}
  console.log('secrets',JSON.stringify(await page.evaluate('secrets')),'errors',JSON.stringify(await page.evaluate('errors')),'console',JSON.stringify(logs.slice(0,8)));
  await browser.close();
 }
