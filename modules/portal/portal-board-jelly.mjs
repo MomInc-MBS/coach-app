@@ -195,7 +195,7 @@ function makeFx(THREE,scene,mesh,face,toWorld,boneZ){
  g.add(door);door.visible=false;scene.add(g);
  const sizes=()=>{const[x0,y0]=toWorld(0,0),[x1,y1]=toWorld(1,1);return{fw:x1-x0,fh:y0-y1,cx:(x0+x1)/2,cy:(y0+y1)/2-.03*(y0-y1)};};
  let doorP=0,lastT=0;
- return{bones:bones.length,get doorP(){return doorP;},
+ return{bones:bones.length,get doorP(){return doorP;},reset(){doorP=0;},
   update(h,calm,time){ // h seconds held, calm 0..1 post-done fade, time seconds (any clock)
    const{fw,fh,cx,cy}=sizes(),[fu,fv]=S.fin,boil=ease(clamp01(h-HOLD.boil)),dmax=Math.max(.6,...bub.map(b=>Math.hypot(b.u-fu,(b.v-fv)*face.h/face.w))),keep=1-calm,Z=3,k=fw/300;
    bub.forEach((b,i)=>{
@@ -251,8 +251,8 @@ async function init({THREE,mesh,material,uniforms,scene,face,toWorld,wake}){
  uniforms.uTrailTint.value={r:1,g:1,b:1,isColor:true};writeLinearTint(uniforms.uTrailTint.value,selectedTint||'#ffffff');uniforms.uTrailTintMix.value=selectedTint?1:0;
  S={uniforms,toWorld,faceW:face.w,aspect:face.h/face.w,rippleVecs:uniforms.uRipple.value,nextSlot:0,lastSpawn:new Map(),
     reduced,trail:[],heads:new Map(),epoch:null,wake,sec:{},fin:[.5,.5],fxLast:0,calmAt:0,
-    fx:THREE.InstancedMesh&&typeof document!=='undefined'?makeFx(THREE,scene,mesh,face,toWorld,uniforms.uBoneZ.value):{update(){},dispose(){}}};trail3d=S;
- globalThis.myr5JellyFF=ms=>{S&&secret({type:'skip',ms});S?.wake();};myr5JellyFF.held=()=>S&&held(S.sec,performance.now())/1000; // debug: fast-forward the hold / read it
+    fx:THREE.InstancedMesh&&typeof document!=='undefined'?makeFx(THREE,scene,mesh,face,toWorld,uniforms.uBoneZ.value):{update(){},reset(){},dispose(){}}};trail3d=S;
+ globalThis.myr5JellyFF=ms=>{S&&secret({type:'skip',ms});S?.wake();};myr5JellyFF.held=()=>S&&held(S.sec,performance.now())/1000;myr5JellyFF.door=()=>S?.fx.doorP; // debug: fast-forward the hold / read it
 }
 function press(id,u,v){
  const[x,y]=S.toWorld(u,v);if(S.sec.id==null||S.sec.up!=null){S.fin=[u,v];}secret({type:'down',id,x,y});
@@ -292,6 +292,8 @@ function setJellyTint(hex,selected=true){
  if(trail3d){writeLinearTint(trail3d.uniforms.uTrailTint.value,selectedTint||'#ffffff');trail3d.uniforms.uTrailTintMix.value=selectedTint?1:0;trail3d.wake?.();}
  if(trail2d){trail2d.tint=selectedTint;trail2d.wake?.();}
 }
+// Back to a fresh block after the secret (portal.mjs / the glb host call this through heal): door, flaps and bubbles gone, hold forgotten.
+function healSecret(){if(!S)return;S.sec={};S.calmAt=0;S.fx.reset();S.fx.update(0,0,performance.now()/1000);S.wake?.();}
 function dispose(){S?.fx.dispose();delete globalThis.myr5JellyFF;if(S===trail3d)trail3d=null;S=null;}
 
 // R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth) as a translucent lime
@@ -337,5 +339,5 @@ export const jelly={
  fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\nuniform vec3 uTrailTint;\nuniform float uTrailTintMix;\n`, // fragment only (portal-board-glb.mjs)
  vertexDisplace:VERTEX_DISPLACE,
  fragment:FRAGMENT,
- init,press,move,release,claims,step,dispose,setTint:setJellyTint,tintTarget:'trace',trace2d:jellyGash,
+ init,press,move,release,claims,step,healSecret,dispose,setTint:setJellyTint,tintTarget:'trace',trace2d:jellyGash,
 };

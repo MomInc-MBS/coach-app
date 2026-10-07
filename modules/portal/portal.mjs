@@ -447,7 +447,7 @@ function backgroundBlocked(block){
  // toast (app-updates.mjs) is a non-dialog element sitting over the portal's own controls; it's exempt too, or its
  // "Got it" tap falls through to whatever is underneath (portal.css raises it above the Menu button while up).
  const liveDialog=el=>el.tagName==='DIALOG'&&(el.open||getComputedStyle(el).display==='none');
- const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner')||el.classList.contains('coach-dock')||el.classList.contains('armie-inbox-launcher');
+ const exempt=el=>el===portalHome||el===menuSheet||liveDialog(el)||el.classList.contains('app-update-banner')||el.classList.contains('coach-dock')||el.classList.contains('armie-inbox-launcher')||el.classList.contains('reward-pack-launch'); // the reward-pack chip must stay tappable over the grimoire
  if(block){for(const el of document.body.children)if(!exempt(el)&&!backgroundInert.has(el)){backgroundInert.set(el,el.inert);el.inert=true;}}
  else{for(const [el,inert]of backgroundInert)el.inert=inert;backgroundInert.clear();}
 }
@@ -469,7 +469,7 @@ function setVisible(v){
  // until the old animation resolves. A forward phase has no backT0, so showing the quilt does
  // not interrupt a newly-started portal sequence.
  if(v&&phase?.backT0){endPhase();portalHome.style.transformOrigin='';}
- if(!v){hideVaultDoor(false);sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;grimFlush();}
+ if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;grimFlush();}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
@@ -1749,11 +1749,12 @@ function arriveFromCore(dialog,core,ms){
 
 function fallbackRect(){const r=overlay.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}
 
+const musicHold=hold=>window.dispatchEvent(new CustomEvent('myr5:music-hold',{detail:{hold}})); // page music: silent through the trace + tunnel, destination track fades in after
 async function runShape(id){
  if(busy||!boardShown||!MENUS[id])return;
- const run=++sequence;busy=true;scheduleIdle();
+ const run=++sequence;busy=true;scheduleIdle();musicHold(true);
  try{await portalSequence(id,()=>run===sequence&&!lifecycle.signal.aborted);vaultSend({counter:'shape-opened',key:id});}
- finally{if(run===sequence){busy=false;scheduleIdle();}}
+ finally{musicHold(false);if(run===sequence){busy=false;scheduleIdle();}}
 }
 // Lines are open strokes with no enclosed area; portalWindow() gives them (and the X) a window to cut (#124).
 const LINE_IDS=new Set(['line-lr','line-rl','line-down']);
@@ -1865,23 +1866,13 @@ async function openInHole(id,menu,pts,face,current){
  if(current()&&framed?.dialog===dialog&&!framed.expanded){quietPhase();board?.pause();}
 }
 
-// Vault door poster (L0): a board secret ends here. The board pauses, a metal door fades in over it; tap opens the
-// vault route, Escape or the portal key dismisses and heals. pod/worlds/vault/door-poster.webp (L7) paints over the CSS door.
-let vaultDoor=null;
-const vaultKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();hideVaultDoor();}};
-function hideVaultDoor(heal=true){
- if(!vaultDoor)return;
- vaultDoor.remove();vaultDoor=null;document.removeEventListener('keydown',vaultKey,true);
- if(heal&&board){board.heal();if(boardShown)board.resume();}
-}
+// Vault secret: a finished board secret goes straight to the vault route and its 3D safe door (Ian 7 Oct: no flat door poster).
+// setVisible(false) hides the portal; every later show heals the board (glb host -> effect.healSecret) so the secret never lingers.
 function goVault(){const r=window.myr5Routes;return r?r.go('vault'):import('../routes.mjs').then(m=>m.mountRoutes().go('vault'));}
 function showVaultDoor(){
- if(vaultDoor||!boardShown||!board)return;
- pointers.clear();clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];lastTap=null;board.pause();
- vaultDoor=document.createElement('button');vaultDoor.type='button';vaultDoor.id='portalVaultDoor';vaultDoor.setAttribute('aria-label','Vault door. Tap to open the vault.');
- vaultDoor.innerHTML='<span class="vault-slab"><img src="/pod/mom-inc-engrave.png" alt=""><i></i></span>';
- vaultDoor.onclick=()=>{hideVaultDoor(false);setVisible(false);void goVault();};
- portalHome.append(vaultDoor);document.addEventListener('keydown',vaultKey,true);vaultDoor.focus({preventScroll:true});
+ if(!boardShown||!board)return;
+ pointers.clear();clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];lastTap=null;
+ setVisible(false);void goVault();
 }
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}
 function endPointer(e,cancel){ if(cancel) lastTap=null;
@@ -1970,7 +1961,6 @@ export async function mountPortal({visible=false}={}){
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  addEventListener('pagehide',grimFlush,{signal:lifecycle.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)grimFlush();else if(boardShown&&!visibleSince)visibleSince=Date.now();},{signal:lifecycle.signal});
  addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;import('../vault/vault-store.mjs').then(m=>m.markSecret(id)).catch(()=>{});showVaultDoor();},{signal:lifecycle.signal});
- menuBtn.addEventListener('click',e=>{if(vaultDoor){e.stopImmediatePropagation();hideVaultDoor();}},{capture:true,signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
  wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL('',{activate:false});}); // compile/cache only; never switch a live phase's program

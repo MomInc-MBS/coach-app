@@ -42,13 +42,11 @@ test('grass secret end to end through portal.mjs: line -> ship -> crack -> door 
  await page.mouse.move(...a);await page.mouse.down();
  for(let i=1,n=Math.ceil(len/14);i<=n;i++){await page.mouse.move(a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n);await page.waitForTimeout(40);}
  await page.mouse.up();
- await page.waitForSelector('#portalVaultDoor',{timeout:90000});
- await page.screenshot({path:'.vault/shots/l5-portal-door.png'});
- assert.equal(await page.evaluate(()=>window.myr5GrassSecret.state().phase),'done');
+ await page.waitForFunction(()=>window.__went.length===1,null,{timeout:90000}); // straight to the vault: no door poster
+ assert.equal(await page.locator('#portalVaultDoor').count(),0);
  assert.equal((await page.evaluate(()=>window.__labels)).includes('Almost: Workout'),false,'the claimed line never reached shape recognition');
- assert.deepEqual(await page.evaluate(()=>window.__went),[],'no shape opened');
- await page.click('#portalVaultDoor');
- await page.waitForFunction(()=>window.__went.length===1);
- assert.deepEqual(await page.evaluate(()=>window.__went),['vault']);
+ assert.deepEqual(await page.evaluate(()=>window.__went),['vault'],'only the vault opened, no shape');
+ await page.evaluate(()=>window.portal.show()); // back to the grimoire: the secret is healed
+ assert.equal(await page.evaluate(()=>window.myr5GrassSecret.state().phase),'idle','grass secret healed on return');
  assert.deepEqual(page.errors,[]);
 }));

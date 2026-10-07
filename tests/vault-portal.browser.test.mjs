@@ -69,22 +69,14 @@ test('a claimed trace never reaches shape recognition or the "Almost" flash; an 
   await page.close();
  }
 }));
-test('myr5:portal-secret marks the board, shows the door poster; tap goes to vault; Escape dismisses and heals',async()=>withPortal(async(browser,url)=>{
- await mkdir('.vault/shots',{recursive:true});
+test('myr5:portal-secret marks the board and goes straight to the vault (no door poster); the portal heals when shown again',async()=>withPortal(async(browser,url)=>{
  const page=await boot(browser,url);
  await page.evaluate(()=>window.portal.secret('pond'));
- await page.waitForSelector('#portalVaultDoor');
- if(process.env.VAULT_DEBUG)console.log(await page.evaluate(()=>import('/modules/vault/vault-store.mjs').then(()=>'ok',e=>String(e))));
- await page.waitForFunction(()=>Object.keys(localStorage).some(k=>k.startsWith('myr5-vault-v1/')&&JSON.parse(localStorage.getItem(k)).secrets.pond),null,{timeout:15000});
- await page.screenshot({path:'.vault/shots/l0-door-poster.png'});
- await page.keyboard.press('Escape');
- assert.equal(await page.locator('#portalVaultDoor').count(),0);
- assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),false,'Escape dismisses the door, not the portal');
- await page.evaluate(()=>window.portal.secret('pond'));await page.waitForSelector('#portalVaultDoor');
- await page.click('#portalVaultDoor');
  await page.waitForFunction(()=>window.__went.length===1);
  assert.deepEqual(await page.evaluate(()=>window.__went),['vault']);
- assert.equal(await page.locator('#portalVaultDoor').count(),0);
+ assert.equal(await page.locator('#portalVaultDoor').count(),0,'no flat door poster');
+ await page.waitForFunction(()=>Object.keys(localStorage).some(k=>k.startsWith('myr5-vault-v1/')&&JSON.parse(localStorage.getItem(k)).secrets.pond),null,{timeout:15000});
+ assert.equal(await page.evaluate(()=>document.getElementById('portalHome').hidden),true,'the portal steps aside for the vault route');
  assert.deepEqual(page.errors,[]);
 }));
 test('?vault=1 opens the vault route on boot',async()=>withPortal(async(browser,url)=>{

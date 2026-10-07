@@ -428,5 +428,5 @@ export const grass={
  uniforms:{uHalfDepth:{value:0},uSpring:{value:Array.from({length:6},()=>new THREE.Vector4(0,0,0,0))},uBreeze:{value:1}},
  uniformDecls:'uniform float uHalfDepth;\nuniform vec4 uSpring[6];\nuniform float uBreeze;\n',
  vertexDisplace:VERTEX_DISPLACE,
-  init,press,move,release,claims,resize,step,cut,heal,dispose,setTint:setPetalTint,trace2d:grassFlowers,
+  init,press,move,release,claims,resize,step,cut,heal,healSecret:heal,dispose,setTint:setPetalTint,trace2d:grassFlowers,
 };

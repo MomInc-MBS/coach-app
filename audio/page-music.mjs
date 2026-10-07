@@ -5,18 +5,18 @@
 import {physicalSound} from './physical-sound.mjs';
 
 export const ROUTE_TRACK={pod:'main-theme-one',workout:null,select:null,battlepass:'hey-man-idk',achievements:'guarded-gate',vault:'guarded-gate',
- customize:'daemon-time',customizeCoach:'daemon-time','war-room':'daemon-time',food:'sick-with-science',portal:'main-theme-one',settings:'main-theme-one',scoreboard:'laboratory-violence',meditate:null};
+ customize:'daemon-time',customizeCoach:'daemon-time','war-room':'daemon-time',food:'sick-with-science',portal:null,settings:'main-theme-one',scoreboard:'laboratory-violence',meditate:null};
 export const TRACK_LEVEL={'main-theme-one':.35};
 export const TRACK_FADE={'main-theme-one':5};
-export const FADE_IN=3,DUCK_LEVEL=.3,DUCK_DOWN=.12,DUCK_UP=1.2;
+export const FADE_IN=3,FADE_OUT=1.2,DUCK_LEVEL=.3,DUCK_DOWN=.12,DUCK_UP=1.2;
 // The pod and its menus share the grimoire song; hey-man-idk is only the XP Flight (battle pass) screen; workout/select stay silent (camera / pickers).
 // Pod + menus share the grimoire song; hey-man-idk is XP Flight (battle pass) only; workout/select are silent.
 // Track for a scene. undefined = keep whatever plays (history, install...), null = silence (workout camera, meditation).
-export function trackForRoute(id,{portalUp=false,quiet=false,pathname='',scene=null}={}){
- if(quiet)return null;
+export function trackForRoute(id,{portalUp=false,quiet=false,pathname='',scene=null,hold=false}={}){
+ if(quiet||hold)return null; // hold = a portal trace/tunnel is running: only the bed/sfx sound
  if(scene==='battlepass')return 'hey-man-idk'; // XP Flight dialog opens over any page
  if(/^\/(?:creature|war-room)\//.test(pathname))return 'daemon-time';
- if(!id)return portalUp?ROUTE_TRACK.portal:ROUTE_TRACK.pod;
+ if(!id)return portalUp?null:ROUTE_TRACK.pod; // the grimoire is silent
  return ROUTE_TRACK[id];
 }
 // Fade-in schedule for a track starting at t0 (gain 0 -> level).
@@ -31,7 +31,7 @@ const MIX_KINDS=['ice','crackle','water'];
 const BED_BOARD_GAIN=.5;
 
 export function createPageMusic({sound=physicalSound,documentRef=globalThis.document,windowRef=globalThis.window,fetchRef=(...a)=>globalThis.fetch(...a),pathname=globalThis.location?.pathname||''}={}){
- let scene=null,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
+ let scene=null,hold=false,holdTimer=0,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
  const buffers=new Map(),log=[];
  const warn=e=>{if(!warned){warned=true;console.warn('page music:',e?.message||e);}};
  const note=(what,param,v0,v1,t0,t1)=>{log.push({what,v0,v1,t0,t1});if(log.length>60)log.shift();};
@@ -117,7 +117,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
    const plan=rampPlan(name,ctx.currentTime),dur=plan.end-plan.start;
    const entry=startSource(buffer,m,0,plan.to,dur);
    Object.assign(entry,{name,m,buffer,level:plan.to});cur=entry;cut=null;
-   if(prev){fadeOut(prev,dur);}
+   if(prev){fadeOut(prev,FADE_OUT);}
    void startBed(bedKinds(prev?.name),dur);
   }catch(e){warn(e);}
  }
@@ -147,7 +147,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
  const quiet=()=>{const d=documentRef?.body?.dataset||{};return d.tracking==='true'||d.cameraWorkout==='true';};
  function sync(){
   const id=windowRef?.myr5Routes?.current?.()||'',portalUp=documentRef?.getElementById?.('portalHome')?.hidden===false;
-  const t=trackForRoute(id,{portalUp,quiet:quiet(),pathname,scene});
+  const t=trackForRoute(id,{portalUp,quiet:quiet(),pathname,scene,hold});
   if(t!==undefined)setTrack(t);
  }
  const unlock=()=>{if(armed)return;armed=true;documentRef.removeEventListener('pointerdown',unlock,true);documentRef.removeEventListener('keydown',unlock,true);ensure();sync();if(want!==undefined)setTrack(want);};
@@ -159,6 +159,8 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
   windowRef.addEventListener('myr5:response',e=>{if(!duck)return;const p=duckPlan(e.detail?.state==='speaking');ramp(duck.gain,'duck',p.to,ctx.currentTime,p.seconds);});
   windowRef.addEventListener('myr5:route',sync);
   windowRef.addEventListener('myr5:music-scene',e=>{scene=e.detail?.scene||null;sync();});
+  // portal.mjs holds the music for the whole trace + tunnel and releases it once the destination is shown (15 s safety).
+  windowRef.addEventListener('myr5:music-hold',e=>{hold=!!e.detail?.hold;clearTimeout(holdTimer);if(hold)holdTimer=setTimeout(()=>{hold=false;sync();},15000);sync();});
   windowRef.addEventListener('myr5:music-cut',()=>cutNow());
   windowRef.addEventListener('myr5:music-resume',()=>resumeNow());
   new MutationObserver(sync).observe(documentRef.body||documentRef.documentElement,{attributes:true,attributeFilter:['data-tracking','data-camera-workout']});

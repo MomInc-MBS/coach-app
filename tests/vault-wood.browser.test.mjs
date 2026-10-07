@@ -54,7 +54,6 @@ test('wood: scrub claims the pointer, fire, one tap -> ash -> crumble -> door po
  await page.screenshot({path:'.vault/shots/l2-e2e-fire.png'});
  await page.mouse.click(f.x+f.w*.5,f.y+f.h*.5); // the extinguishing tap
  await page.waitForFunction(()=>window.myr5Wood.state().stage==='ash',null,{timeout:10000});
- await page.waitForSelector('#portalVaultDoor',{timeout:40000});
  await page.waitForFunction(()=>Object.keys(localStorage).some(k=>k.startsWith('myr5-vault-v1/')&&JSON.parse(localStorage.getItem(k)).secrets.wood),null,{timeout:15000});
  await page.screenshot({path:'.vault/shots/l2-e2e-door.png'});
  assert.deepEqual(page.errors,[]);

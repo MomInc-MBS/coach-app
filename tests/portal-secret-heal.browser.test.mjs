@@ -1,5 +1,4 @@
-// Achievement Vault L0: claims(id) precedence in portal.mjs endPointer, the myr5:portal-secret door poster, ?vault=1.
-// Drives the test-only stub board (window.__portalTestStubBoard): no WebGL needed. Serves the source tree.
+// R31: a board's secret is healed when the portal is shown again (jelly door/flaps, pond splash). Real GLB boards, software GL.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -29,28 +28,35 @@ async function withPortal(run){
   await run(browser,'http://127.0.0.1:'+server.address().port+'/__portal__');
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
-async function bootPond(browser,url){
+async function boot(browser,url,board){
  const page=await browser.newPage({viewport:{width:375,height:812},hasTouch:true});
  page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));
  await page.addInitScript(()=>{window.__went=[];window.myr5Routes={go:id=>window.__went.push(id)};});
  await page.goto(url);
- await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();await window.portal.board('pond');window.portal.show();window.pondFx=(await import('/modules/portal/portal-board-pond.mjs')).pond;});
- await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false&&window.pondFx.debug());
+ await page.evaluate(async b=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();await window.portal.board(b);window.portal.show();window.pondFx=(await import('/modules/portal/portal-board-pond.mjs')).pond;},board);
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  return page;
 }
-const bigXY=page=>page.evaluate(()=>{const r=window.portal.current().faceRect(),b=window.pondFx.debug().big;return [r.left+b.x*r.width,r.top+b.y*r.width];});
-
-test('pond: holding the big koi 2 s opens the door poster; lifting early does not (end to end through portal.mjs)',async()=>withPortal(async(browser,url)=>{
- await mkdir('.vault/shots',{recursive:true});
- const page=await bootPond(browser,url);
- await page.evaluate(()=>window.pondFx.forceBig());await page.waitForTimeout(1800);
- let [x,y]=await bigXY(page);await page.mouse.move(x,y);await page.mouse.down();await page.waitForTimeout(900);await page.mouse.up();
- await page.waitForTimeout(1500);
- assert.equal(await page.locator('#portalVaultDoor').count(),0,'early lift: no secret');
- await page.evaluate(()=>window.pondFx.forceBig());await page.waitForTimeout(1800);
- [x,y]=await bigXY(page);await page.mouse.move(x,y);await page.mouse.down();
+test('jelly: after the secret the door and flaps are gone when the portal is shown again',async()=>withPortal(async(browser,url)=>{
+ const page=await boot(browser,url,'jelly');
+ await page.waitForFunction(()=>window.myr5JellyFF,null,{timeout:90000});
+ const f=await page.evaluate(()=>{const r=window.portal.current().faceRect();return {x:r.left+r.width/2,y:r.top+r.height/2};});
+ await page.mouse.move(f.x,f.y);await page.mouse.down();await page.evaluate(()=>myr5JellyFF(8000));
+ await page.waitForFunction(()=>window.__went.includes('vault'),null,{timeout:30000});
  await page.mouse.up();
- await page.waitForFunction(()=>Object.keys(localStorage).some(k=>k.startsWith('myr5-vault-v1/')&&JSON.parse(localStorage.getItem(k)).secrets.pond),null,{timeout:15000});
- await page.screenshot({path:'.vault/shots/l1-e2e-door.png'});
+ assert.equal(await page.evaluate(()=>myr5JellyFF.door()),0,'door sunk on hide');
+ await page.evaluate(()=>window.portal.show());await page.waitForTimeout(300);
+ assert.equal(await page.evaluate(()=>myr5JellyFF.door()),0,'no door after returning');
+ assert.equal(await page.evaluate(()=>myr5JellyFF.held()),0,'hold forgotten: a second secret is possible');
+ assert.deepEqual(page.errors,[]);
+}));
+test('pond: after the secret the splash is over and the pond is idle when the portal is shown again',async()=>withPortal(async(browser,url)=>{
+ const page=await boot(browser,url,'pond');
+ await page.waitForFunction(()=>window.pondFx.debug(),null,{timeout:90000});
+ await page.evaluate(()=>window.portal.secret('pond')); // same event the board fires; the portal hides at once
+ await page.waitForFunction(()=>window.__went.includes('vault'));
+ await page.evaluate(()=>window.portal.show());await page.waitForTimeout(300);
+ const d=await page.evaluate(()=>window.pondFx.debug());
+ assert.equal(d.sec,'idle');assert.equal(d.an,null);
  assert.deepEqual(page.errors,[]);
 }));

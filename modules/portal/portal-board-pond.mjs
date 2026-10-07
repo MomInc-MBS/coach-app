@@ -436,6 +436,8 @@ function secretStep(dt,now){
  }
 }
 function endSecret(now){S.an=null;S.sec={st:'idle',id:null};S.dropMesh.visible=false;S.foam.visible=false;S.fishS.lastTouch=now;S.wake?.();}
+// Back to a calm pond after the secret (the board was paused mid-splash when the vault opened): foam, spray and the held koi gone.
+function healSecret(){if(S&&(S.an||S.sec.st!=='idle'))endSecret(performance.now());}
 const toPondXY=(u,v)=>({x:u,y:v*POND.aspect});
 function press(id,u,v){
  if(!S)return;const p=toPondXY(u,v),now=performance.now(),was=S.sec.st;
@@ -479,7 +481,7 @@ export const pond={
  fragmentDecls:WATER_DECLS,
  vertexDisplace:'/* pond: flat water; the ripples live in the fragment */',
  fragment:WATER_FRAGMENT,
- init,step,press,move,release,claims,cut,heal,dispose,setTint,
+ init,step,press,move,release,claims,cut,heal,healSecret,dispose,setTint,
  forceBig(){if(!S)return;const K=S.K,now=performance.now();S.sec={st:'idle',id:null};S.an=null;S.fishS.touch=null;S.fishS.lastTouch=now-(K.idleMs+K.scatterMs+K.bigMs*.5);S.wake?.();}, // test/preview: big koi mid-crossing now
  debug:()=>S&&{sec:S.sec.st,big:S.big,an:S.an&&{...S.an},phase:S.fishS.phase,since:performance.now()-S.fishS.lastTouch,born:S.born,members:S.fishS.members,fish:S.fishS.fish.map(f=>[f.x,f.y,f.a]),pads:S.pads.length,lilies:S.lilies.length,anchors:S.pads.filter(p=>p.anchor).length},
 };
