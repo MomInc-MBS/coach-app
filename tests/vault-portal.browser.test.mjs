@@ -113,17 +113,17 @@ test('createGlbBoard forwards claims(id): asked before effect.release, answer su
  assert.deepEqual(page.errors,[]);
 }));
 
-test('route stub: openVault shows the earned count and clues; routes.mjs has the vault route',async()=>withPortal(async(browser,url)=>{
+test('vault route: openVault mounts the real door and the CRT shows GOAL 01/NN with a clue',async()=>withPortal(async(browser,url)=>{
  const page=await browser.newPage({viewport:{width:375,height:812}});page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));
  await page.goto(url);
  const out=await page.evaluate(async()=>{
   const {ROUTES}=await import('/modules/routes.mjs');
   const m=await import('/modules/vault/vault-store.mjs');m.markSecret('pond');
   const {openVault}=await import('/modules/vault/vault-door.mjs'),d=await openVault();
-  return {route:ROUTES.vault.dialog,open:d.open,id:d.id,heading:d.querySelector('h2').textContent,items:d.querySelectorAll('li').length,first:d.querySelector('li').textContent};
+  const i=d._vault.info();return {route:ROUTES.vault.dialog,open:d.open,id:d.id,canvas:!!d.querySelector('canvas'),head:i.view.head,lines:i.view.lines,goals:d._vault.goals().length};
  });
  await page.screenshot({path:'.vault/shots/l0-vault-stub.png'});
  assert.deepEqual([out.route,out.open,out.id],['#vaultPanel',true,'vaultPanel']);
- assert.match(out.heading,/^Vault 1 \/ \d+$/);assert.ok(out.items>=30);assert.match(out.first,/^clue:/);
+ assert.ok(out.canvas);assert.match(out.head,/^GOAL 01\/\d+ /);assert.ok(out.goals>=30);assert.ok(out.lines.length>0);
  assert.deepEqual(page.errors,[]);
 }));
