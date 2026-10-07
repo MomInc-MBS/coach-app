@@ -63,7 +63,8 @@ void main(){float S=64.,cx=vU.x*S,id=floor(cx),fx=fract(cx)-.5,hs=h2(vec2(id,1.)
  vec2 cell=vec2(id,floor(z*1.7));float fl=step(.975,h2(cell))*(.5+.5*sin(uT*3.+h2(cell)*40.))*(1.-smoothstep(.1,.3,abs(fx)));
  col+=vec3(1.,.85,.5)*fl*.6;float a=clamp(max(max(col.r,col.g),col.b),0.,1.)*(1.-smoothstep(12.,70.,vD));
  gl_FragColor=vec4(col,a);}`;
-export async function enterHall(host=document.body){
+export async function enterHall(arg=document.body){
+ const host=arg?.host||(arg instanceof Element?arg:document.body); // the door passes {host,door,goals,read}
  exitHall();
  const THREE=await import('three'),{GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js'),{MeshoptDecoder}=await import('three/addons/libs/meshopt_decoder.module.js');
  const goalsMod=await import('./vault-goals.mjs'),{GOALS}=goalsMod,store=await import('./vault-store.mjs').catch(()=>({}));
