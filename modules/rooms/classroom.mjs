@@ -9,7 +9,7 @@ export function mountClassroom(panel,{host=panel.querySelector('[data-room-host]
  panel.dataset.room='loading';delete panel.dataset.roomView;
  const stage=host.querySelector('.classroom-stage'),desksLayer=host.querySelector('.classroom-desks'),boardButton=host.querySelector('.classroom-board'),note=host.querySelector('.classroom-note');
  let disposed=false,renderer=null,scene=null,camera=null,resizeObserver=null,raf=0,slots=[],three=null;
- let crawler=null,hemisphere=null,sunlight=null,origin=performance.now(),stopAnimation=()=>{};
+ let scary=false,crawler=null,hemisphere=null,sunlight=null,origin=performance.now(),stopAnimation=()=>{};
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  function showBoard(){if(disposed||panel.dataset.roomView==='board')return;cancelAnimationFrame(raf);raf=0;panel.dispatchEvent(new CustomEvent('myr5:classroom-board',{bubbles:true}));panel.dataset.roomView='board';panel.scrollTop=0;(panel.querySelector('#accountContent:not([hidden]) h3, #signIn')||panel).focus?.({preventScroll:true});}
  function setDesks(nodes){if(disposed)return;desksLayer.replaceChildren();slots=[];for(const node of nodes.slice(0,2)){const slot=document.createElement('div');slot.className='classroom-desk';slot.append(node);desksLayer.append(slot);slots.push(slot);}place();}
@@ -37,12 +37,13 @@ export function mountClassroom(panel,{host=panel.querySelector('[data-room-host]
    function animate(now){raf=0;if(disposed||document.hidden||!panel.open||panel.dataset.roomView==='board')return;const elapsed=now-origin,phase=elapsed%15000,on=!reduced.matches&&elapsed>=15000&&phase<4200;
     const flicker=on?(phase<450?(.12+.11*Math.abs(Math.sin(phase*.065))):phase<3600?.13:Math.min(1,.13+(phase-3600)/600)):1;
     hemisphere.intensity=2.2*flicker;sunlight.intensity=2.4*flicker;stage.classList.toggle('classroom-dim',on);
+    if(on!==scary){scary=on;window.dispatchEvent(new CustomEvent(on?'myr5:music-cut':'myr5:music-resume'));}
     crawler.root.visible=on;if(on){crawler.root.position.set(-.8+phase/4200*1.6,.18,.48);crawler.pose(phase/1000);}
     renderer.render(scene,camera);if(!reduced.matches)raf=requestAnimationFrame(animate);
    }
-   const visible=()=>{cancelAnimationFrame(raf);raf=0;if(!disposed&&!document.hidden&&panel.open&&panel.dataset.roomView!=='board')raf=requestAnimationFrame(animate);};
+   const visible=()=>{cancelAnimationFrame(raf);raf=0;if(scary&&(document.hidden||!panel.open||panel.dataset.roomView==='board')){scary=false;window.dispatchEvent(new CustomEvent('myr5:music-resume'));}if(!disposed&&!document.hidden&&panel.open&&panel.dataset.roomView!=='board')raf=requestAnimationFrame(animate);};
    const roomView=new MutationObserver(visible);roomView.observe(panel,{attributes:true,attributeFilter:['data-room-view','open']});
-   stopAnimation=()=>{roomView.disconnect();document.removeEventListener('visibilitychange',visible);cancelAnimationFrame(raf);raf=0;};
+   stopAnimation=()=>{if(scary){scary=false;window.dispatchEvent(new CustomEvent('myr5:music-resume'));}roomView.disconnect();document.removeEventListener('visibilitychange',visible);cancelAnimationFrame(raf);raf=0;};
    document.addEventListener('visibilitychange',visible);panel.addEventListener('close',stopAnimation,{once:true});visible();
    resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);resize();panel.dataset.room='ready';note.hidden=true;stage.querySelector('.classroom-fallback').hidden=true;
    panel.dispatchEvent(new CustomEvent('room-ready',{bubbles:true,detail:controller}));

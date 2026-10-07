@@ -1,6 +1,8 @@
 import {mountPhysicalSoundUI} from './sound-ui.mjs';
 import {physicalSound} from './physical-sound.mjs';
+import {mountPageMusic} from './page-music.mjs';
 mountPhysicalSoundUI();
+mountPageMusic(); // /creature/ and /war-room/ play the customizer song; framed pages leave music to the parent
 function mountDockSound(){
  if(!location.pathname.startsWith('/creature/'))return;
  const dock=document.getElementById('coachDock');if(!dock||dock.querySelector('.dock-sound'))return;
