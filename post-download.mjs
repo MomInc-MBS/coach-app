@@ -29,6 +29,7 @@ const GROUPS=[
  ['coach','Your coach','The regular coach models, the customizer and exercise demos.'],
  ['bodies','Extra coach bodies','More body shapes for the customizer, by workout section. A body you pick also downloads by itself.'],
  ['hand','Helping Hand','Your hand companion and all its looks.'],
+ ['drop-pods','Reward drop pods','The 3D drop pods that land when you open a reward pack.'],
  ['voices','Voices','Your coach’s spoken lines.'],
  ['food','Food scanner','The food scanner model and the food list.'],
  ['meditation','Meditation & backgrounds','Meditation, rest and board backgrounds.'],

@@ -73,25 +73,37 @@ export function mountRewardPacks(){
   presented.add(id);show(id);
  }
  function hide(){if(overlay.open)overlay.close();}
- function show(id){
+ function select(id){
   current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);
   overlay.querySelector('h2').textContent=`${current.tier} pack`;tile.setAttribute('aria-label',`${current.tier} pack tile`);drawTierTile(tile.getContext('2d'),current.tier);
   result.textContent=`${PACK_SIZES[current.tier]} coach cosmetic${PACK_SIZES[current.tier]===1?'':'s'} inside. Tap to open.`;open.hidden=false;close.textContent='Later';
-  launch.hidden=true;overlay.showModal();open.focus();
  }
+ let pods=null;const preload=()=>pods??=import('./drop-pod-opening.mjs').catch(()=>null);
+ function show(id){select(id);preload();launch.hidden=true;overlay.showModal();open.focus();}
  launch.onclick=()=>{const id=available()[0];if(id)show(id);};close.onclick=hide;overlay.addEventListener('close',()=>{current=null;update();});
- open.onclick=async()=>{
-  if(!current)return;const pending=current;open.disabled=true;let opened;try{opened=await openRewardPackExclusive(pending);}finally{open.disabled=false;}if(current!==pending)return;if(!opened){result.textContent='Could not save this pack. Try again.';return;}
+ // What an opened pack unlocked, as the plain items the reveal card (and the dialog's own result area) list.
+ const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category});return {title:item.title,detail:`${item.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`,colors:item.colors};});
+ function render(opened){
   const summary=rewardSummary(opened);drawTierTile(tile.getContext('2d'),current.tier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
   overlay.classList.remove('opened');void tile.offsetWidth;overlay.classList.add('opened');
   result.replaceChildren();
   if(!summary.rewards.length)result.textContent='All cosmetics for your unlocked coaches are collected.';
-  for(const reward of summary.rewards){
-   const itemSummary=rewardSummary({reward,category:reward.category});
-   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${itemSummary.title} unlocked!`;kind.textContent=`${itemSummary.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`;result.append(title,kind);
-   if(itemSummary.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of itemSummary.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
+  for(const item of unlocked(opened)){
+   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${item.title} unlocked!`;kind.textContent=item.detail;result.append(title,kind);
+   if(item.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of item.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
   }
   open.hidden=true;close.textContent='Done';close.focus();
+ }
+ // Open pack starts the full-screen drop-pod sequence; the pack is opened when the pod is tapped, and Open another moves to the next waiting pack.
+ const sequence=pending=>({tier:pending.tier,hasNext:()=>available().some(id=>id!==pending.id),onExit:hide,
+  open:async()=>{const opened=await openRewardPackExclusive(pending);if(!opened)return null;if(current===pending)render(opened);return unlocked(opened);},
+  onNext:()=>{const id=available().find(id=>id!==pending.id);if(!id)return null;select(id);return sequence(current);}});
+ open.onclick=async()=>{
+  if(!current)return;const pending=current,module=await preload();if(current!==pending)return;
+  if(module){module.playDropPod(sequence(pending));return;}
+  // The sequence module could not load (offline without the update): fall back to the plain tile.
+  open.disabled=true;let opened;try{opened=await openRewardPackExclusive(pending);}finally{open.disabled=false;}if(current!==pending)return;if(!opened){result.textContent='Could not save this pack. Try again.';return;}
+  render(opened);
  };
  const onGrant=event=>{if(event.detail?.granted?.some(item=>item.kind==='reward-pack')){update();present();}};
  const onReady=event=>{grantDailyPack({account:event.detail});update();present();};

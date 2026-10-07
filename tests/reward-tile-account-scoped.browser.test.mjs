@@ -36,6 +36,7 @@ test('built app opens an account-scoped reward pack and shows its earned cosmeti
   assert.deepEqual(await canvas.evaluate(el=>[el.width,el.height]),[64,64],'reward art uses a 64×64 canvas');
   await page.evaluate(()=>{Math.random=()=>0;});
   await dialog.locator('[data-open]').click();
+  await page.locator('.drop-pod.ready .drop-pod-hit').click({timeout:15000});
   await page.waitForFunction(()=>document.querySelector('.reward-pack-result strong')?.textContent);
   const opened=await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-opened-reward-packs-v1/reward-browser-owner'))['reward-pack:uncommon:browser-regression']);
   const category={'color':'Colour palette','64-bit':'64-bit boss skin','texture':'Texture'}[opened.category];
