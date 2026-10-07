@@ -20,9 +20,13 @@ const CSS=`
 .reward-pack-actions{display:flex;gap:9px;justify-content:center}.reward-pack-actions button{min-height:44px;border:2px solid var(--pack);border-radius:12px;background:var(--pack);color:#15101c;font:800 15px system-ui;padding:8px 18px;cursor:pointer}.reward-pack-actions button.secondary{background:transparent;color:#fff7df}
 .reward-pack-actions button:focus-visible,.reward-pack-launch:focus-visible{outline:3px solid white;outline-offset:3px}
 @keyframes pack-flip{0%{transform:scale(1)}40%{transform:scale(1.12) rotateY(90deg);filter:brightness(2)}100%{transform:scale(1)}}
-@media(prefers-reduced-motion:reduce){.reward-pack-dialog.opened .reward-pack-tile{animation:none}}
+.reward-pack-launch[data-tier=secret],.reward-pack-dialog[data-tier=secret] .reward-pack-card{border-color:transparent;background:linear-gradient(#21182f,#21182f) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%;animation:pack-iri 5s linear infinite}
+.reward-pack-dialog[data-tier=secret] .reward-pack-card{background:radial-gradient(circle at 50% 30%,#3a2160,#13101e 73%) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%}
+.reward-pack-launch[data-tier=secret] canvas,.reward-pack-dialog[data-tier=secret] .reward-pack-tile{animation:pack-hue 6s linear infinite}
+@keyframes pack-iri{to{background-position:0 0,-300% 0}}@keyframes pack-hue{50%{filter:hue-rotate(60deg) drop-shadow(0 10px 8px #000a)}}
+@media(prefers-reduced-motion:reduce){.reward-pack-dialog.opened .reward-pack-tile,.reward-pack-launch[data-tier=secret],.reward-pack-dialog[data-tier=secret] .reward-pack-card,.reward-pack-launch[data-tier=secret] canvas,.reward-pack-dialog[data-tier=secret] .reward-pack-tile{animation:none}}
 `;
-export const TIER_COLORS=Object.freeze({uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36'});
+export const TIER_COLORS=Object.freeze({uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36',secret:'#b388ff'});
 export const tierOf=id=>{const tier=String(id).startsWith('reward-pack:')?String(id).split(':')[1]:'uncommon';return Object.hasOwn(TIER_COLORS,tier)?tier:'uncommon';};
 const CATEGORY={color:'Colour palette','64-bit':'64-bit pixel finish',texture:'Texture'};
 // What the tile says about an opened pack: the actual item, what kind it is, and its colours when it is a palette.
@@ -49,6 +53,8 @@ export function drawTierTile(ctx,tier,{colors=[],opened=false}={}){
   glyph.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='#')px(x,y);}));
  }
  rect(4,4,56,2,shade(base,110));rect(4,4,2,56,shade(base,110));
+ // Secret: an iridescent bevel, cyan/violet/magenta/gold pixels round the frame (CSS hue-rotates it on screen).
+ if(tier==='secret'){const hues=['#3ff5ff','#b388ff','#ff4bd8','#ffd36a'];for(let i=0;i<14;i++){const c=hues[i%4],o=2+i*4;rect(o,2,4,2,c);rect(60,o,2,4,c);rect(62-o-4,60,4,2,hues[(i+2)%4]);rect(2,62-o-4,2,4,hues[(i+2)%4]);}}
 }
 export function mountRewardPacks(){
  const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
@@ -59,7 +65,7 @@ export function mountRewardPacks(){
  function update(){
   const ids=available(),count=ids.length;
   launch.hidden=!count||overlay.open;if(launch.hidden)return;
-  const tier=tierOf(ids[0]);launch.style.setProperty('--pack',TIER_COLORS[tier]);drawTierTile(launch.querySelector('canvas').getContext('2d'),tier);
+  const tier=tierOf(ids[0]);launch.style.setProperty('--pack',TIER_COLORS[tier]);launch.dataset.tier=tier;drawTierTile(launch.querySelector('canvas').getContext('2d'),tier);
   launch.querySelector('span').textContent=`${count} reward pack${count===1?'':'s'}`;
   const bar=document.getElementById('coachDock')?.getBoundingClientRect();launch.style.bottom=bar?.height?Math.max(18,innerHeight-bar.top+12)+'px':'';
  }
@@ -74,7 +80,7 @@ export function mountRewardPacks(){
  }
  function hide(){if(overlay.open)overlay.close();}
  function select(id){
-  current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);
+  current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);overlay.dataset.tier=current.tier;
   overlay.querySelector('h2').textContent=`${current.tier} pack`;tile.setAttribute('aria-label',`${current.tier} pack tile`);drawTierTile(tile.getContext('2d'),current.tier);
   result.textContent=`${PACK_SIZES[current.tier]} coach cosmetic${PACK_SIZES[current.tier]===1?'':'s'} inside. Tap to open.`;open.hidden=false;close.textContent='Later';
  }

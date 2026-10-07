@@ -16,7 +16,9 @@ export function advance(phase,event){
 export const TIERS=Object.freeze({
  uncommon:{color:'#76e356',sky:1.0,fall:2.1,settle:1.3,shake:.34,dust:1,sparks:1,rocks:10,rumble:0},
  rare:{color:'#4bafff',sky:1.0,fall:2.4,settle:1.5,shake:.52,dust:1.3,sparks:1.4,rocks:14,rumble:.03},
- legendary:{color:'#ff9c36',sky:1.8,fall:3.0,settle:1.5,shake:.85,dust:1.8,sparks:2.4,rocks:22,rumble:.07,gold:true,aftershock:.45}
+ legendary:{color:'#ff9c36',sky:1.8,fall:3.0,settle:1.5,shake:.85,dust:1.8,sparks:2.4,rocks:22,rumble:.07,gold:true,big:true,aftershock:.45},
+ // Secret (from secret achievements): the longest build-up and biggest hit, a holographic kettlebell pod and holo sparks.
+ secret:{color:'#b388ff',sky:2.4,fall:3.4,settle:1.7,shake:1,dust:2,sparks:3,rocks:26,rumble:.1,holo:true,big:true,aftershock:.55}
 });
 export const promptAt=tier=>{const c=TIERS[tier]||TIERS.uncommon;return c.sky+c.fall+c.settle;};
 
@@ -53,13 +55,17 @@ dialog.drop-pod::backdrop{background:#02030a}
 .drop-pod[data-tier=legendary] .drop-pod-card{overflow:visible;isolation:isolate}
 .drop-pod[data-tier=legendary] .drop-pod-card strong{background:linear-gradient(100deg,#fff7df 20%,#ffd36a 45%,#fff 50%,#ffd36a 55%,#fff7df 80%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:dp-shimmer 2.6s linear infinite}
 @keyframes dp-spin{to{transform:rotate(1turn)}}@keyframes dp-shimmer{to{background-position:-250% 0}}
+.drop-pod[data-tier=secret] .drop-pod-card{border-color:transparent;background:radial-gradient(circle at 50% 20%,#3a2160,#0d0b1c 75%) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%;animation:dp-iri 4s linear infinite;box-shadow:0 0 50px #b388ff88,0 0 90px #3ff5ff33,0 18px 40px #000b}
+.drop-pod[data-tier=secret] .drop-pod-card .eyebrow{font:900 30px/1 system-ui;letter-spacing:.32em;margin:2px 0 4px;background:linear-gradient(100deg,#3ff5ff,#b388ff 30%,#ff4bd8 55%,#ffd36a 80%,#3ff5ff);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:dp-shimmer 3s linear infinite;filter:drop-shadow(0 0 10px #b388ffaa)}
+.drop-pod[data-tier=secret] .drop-pod-caption{background:linear-gradient(90deg,#3ff5ff,#ff4bd8,#ffd36a,#3ff5ff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 8px #b388ff)}
+@keyframes dp-iri{to{background-position:0 0,-300% 0}}
 .drop-pod-actions{position:absolute;left:0;right:0;bottom:calc(5% + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s .5s}
 .drop-pod[data-phase=reveal] .drop-pod-actions{opacity:1;pointer-events:auto}
 .drop-pod-actions button{min-height:48px;min-width:120px;border:2px solid var(--pack);border-radius:14px;background:var(--pack);color:#15101c;font:800 15px system-ui;padding:8px 20px;cursor:pointer}
 .drop-pod-actions button.secondary{background:#0009;color:#fff7df}
 .drop-pod button:focus-visible{outline:3px solid #fff;outline-offset:3px}.drop-pod .drop-pod-hit:focus-visible{outline:none}
 .drop-pod-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media(prefers-reduced-motion:reduce){.drop-pod-flash.go,.drop-pod-flash.pop{animation-duration:.15s}.drop-pod-card{transition:opacity .2s;transform:translate(-50%,0) scale(1)}.drop-pod[data-tier=legendary] .drop-pod-card::before,.drop-pod[data-tier=legendary] .drop-pod-card strong{animation:none}.drop-pod-hit::after,.drop-pod.ready .drop-pod-prompt{animation:none}}
+@media(prefers-reduced-motion:reduce){.drop-pod-flash.go,.drop-pod-flash.pop{animation-duration:.15s}.drop-pod-card{transition:opacity .2s;transform:translate(-50%,0) scale(1)}.drop-pod[data-tier=legendary] .drop-pod-card::before,.drop-pod[data-tier=legendary] .drop-pod-card strong,.drop-pod[data-tier=secret] .drop-pod-card,.drop-pod[data-tier=secret] .drop-pod-card .eyebrow{animation:none}.drop-pod-hit::after,.drop-pod.ready .drop-pod-prompt{animation:none}}
 `;
 
 const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)),lerp=(a,b,k)=>a+(b-a)*k,smooth=k=>k*k*(3-2*k);
@@ -128,15 +134,44 @@ class Pool{
  }
 }
 
+// The GLBs are untextured, so the pod's look is set here: dark metal in the tier colour with a glowing fresnel rim so it
+// reads at night (Legendary gold); Secret is a hologram (iridescent rim, rising scanlines, ~75% opacity, flicker).
+function tierMaterial(THREE,name){
+ const c=new THREE.Color(TIERS[name]?.color||TIERS.uncommon.color),gold=name==='legendary';
+ const m=new THREE.MeshStandardMaterial({color:gold?new THREE.Color(0xb07818):c.clone().multiplyScalar(.13),metalness:gold?.85:.7,roughness:gold?.3:.35,emissive:c,emissiveIntensity:.02});
+ m.onBeforeCompile=sh=>{sh.uniforms.uRim={value:c.clone().multiplyScalar(gold?.9:.6)};
+  sh.fragmentShader='uniform vec3 uRim;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=uRim*pow(1.-abs(dot(normalize(vNormal),normalize(vViewPosition))),2.2);');};
+ return m;
+}
+const HOLO_VERT=`uniform float uTime;varying vec3 vN;varying vec3 vV;varying float vY;
+void main(){vec3 p=position;float g=step(.93,fract(sin(floor(uTime*9.)*91.7)*4375.5));p.x+=g*.03*sin(position.y*60.+uTime*80.);
+vec4 mv=modelViewMatrix*vec4(p,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);vY=(modelMatrix*vec4(p,1.)).y;gl_Position=projectionMatrix*mv;}`;
+const HOLO_FRAG=`uniform float uTime;uniform float uOpacity;uniform float uRimOnly;varying vec3 vN;varying vec3 vV;varying float vY;
+vec3 iri(float h){h=fract(h)*3.;vec3 a=vec3(.25,.95,1.),b=vec3(1.,.3,.85),c=vec3(1.,.82,.35);return h<1.?mix(a,b,h):h<2.?mix(b,c,h-1.):mix(c,a,h-2.);}
+void main(){float f=1.-abs(dot(normalize(vN),normalize(vV)));float rim=pow(f,1.6);
+vec3 hue=iri(f*1.3+vY*.25+uTime*.12);
+float scan=smoothstep(.55,1.,sin((vY*22.-uTime*3.)*3.1416)*.5+.5);
+float fine=.85+.15*sin((vY*140.-uTime*9.)*3.1416);
+float flick=.9+.06*sin(uTime*31.)+.04*sin(uTime*17.3);float g=step(.95,fract(sin(floor(uTime*9.)*91.7)*4375.5));flick*=1.-.35*g;
+vec3 col=(mix(vec3(.16,.05,.4),hue,.45+.55*rim)*(.7+.8*rim)+hue*scan*.55)*fine*flick;
+float a=uRimOnly>.5?rim*flick:uOpacity*(.85+.15*rim+.15*scan)*flick;
+gl_FragColor=vec4(col,a);
+#include <colorspace_fragment>
+}`;
+function holoMaterials(THREE,uTime){
+ const mk=(rimOnly,extra)=>new THREE.ShaderMaterial({vertexShader:HOLO_VERT,fragmentShader:HOLO_FRAG,uniforms:{uTime,uOpacity:{value:.75},uRimOnly:{value:rimOnly}},transparent:true,...extra});
+ return {body:mk(0,{depthWrite:true}),glow:mk(1,{depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.BackSide})};
+}
 function loadGlb(THREE,tier){
  return (async()=>{
   try{
    const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
    const gltf=await Promise.race([new GLTFLoader().loadAsync(new URL(`./pods/drop-pod-${tier}.glb`,import.meta.url).href),new Promise((_,no)=>setTimeout(no,7000))]);
    const model=gltf.scene,box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),mid=box.getCenter(new THREE.Vector3());
-   if(!(size.y>0))return null;
-   const k=2.4/size.y;model.scale.setScalar(k);model.position.set(-mid.x*k,-box.min.y*k,-mid.z*k);
-   const holder=new THREE.Group();holder.add(model);return holder;
+   const big=Math.max(size.x,size.y,size.z);if(!(big>0))return null;
+   // Normalise by the largest side so a pod modelled lying down keeps its pose; base sits on y=0.
+   const k=2.4/big;model.scale.setScalar(k);model.position.set(-mid.x*k,-box.min.y*k,-mid.z*k);
+   const holder=new THREE.Group();holder.add(model);holder.userData={top:size.y*k,radius:Math.min(size.x,size.z)*k*.5};return holder;
   }catch{return null;}
  })();
 }
@@ -228,6 +263,9 @@ function makeStars(THREE,uniforms){
 
 function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
  const tier=TIERS[tierName]||TIERS.uncommon,color=new THREE.Color(tier.color),gold=new THREE.Color(0xffd36a),white=new THREE.Color(0xfff1c8),hot=new THREE.Color(0xff8a3a);
+ // Spark colour: gold flecks for Legendary, holographic cyan/violet/magenta/gold for Secret, else white-to-tier.
+ const holoHues=[0x3ff5ff,0xb388ff,0xff4bd8,0xffd36a].map(h=>new THREE.Color(h));
+ const sparkCol=(mix=.9)=>tier.holo?holoHues[(Math.random()*4)|0]:tier.gold&&Math.random()<.6?gold:white.clone().lerp(color,Math.random()*mix);
  const scene=new THREE.Scene(),aspect0=Math.max(.3,innerWidth/innerHeight);
  const camera=new THREE.PerspectiveCamera(50,aspect0,.1,400);
  const uniforms={uScale:{value:1},uTime:{value:0},uDpr:{value:renderer.getPixelRatio()}};
@@ -249,7 +287,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
  // sky dressing
  const stars=makeStars(THREE,uniforms),starGroup=new THREE.Group();for(const l of stars)starGroup.add(l.pts);scene.add(starGroup);
  const nebTex=own(glowTexture(THREE,'255,255,255',[[0,.55],[.35,.28],[.7,.08],[1,0]]));
- const nebula=[[-22,26,-85,110,color,.5],[30,48,-95,95,new THREE.Color(0x5a3cff),.38],[0,60,-80,120,new THREE.Color(0x2fd0c0),.18]].map(([x,y,z,s,col,o])=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:nebTex,color:col,transparent:true,opacity:o,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));sp.position.set(x,y,z);sp.scale.set(s,s*.7,1);sp.renderOrder=-2;scene.add(sp);return {sp,o};});
+ const nebula=(tier.holo?[[-24,24,-85,135,color,.75],[30,44,-95,120,new THREE.Color(0x2fe0ff),.55],[2,62,-80,140,new THREE.Color(0xff4bd8),.32],[-40,52,-90,90,new THREE.Color(0x3ff5ff),.3]]:[[-22,26,-85,110,color,.5],[30,48,-95,95,new THREE.Color(0x5a3cff),.38],[0,60,-80,120,new THREE.Color(0x2fd0c0),.18]]).map(([x,y,z,s,col,o])=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:nebTex,color:col,transparent:true,opacity:o,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));sp.position.set(x,y,z);sp.scale.set(s,s*.7,1);sp.renderOrder=-2;scene.add(sp);return {sp,o};});
  const moonTex=own(glowTexture(THREE,'200,220,255',[[0,1],[.18,.95],[.22,.35],[.6,.08],[1,0]]));
  const moonSp=new THREE.Sprite(new THREE.SpriteMaterial({map:moonTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));moonSp.position.set(-30,34,-85);moonSp.scale.setScalar(30);scene.add(moonSp);
  const terrain=buildTerrain(THREE,tier);scene.add(terrain.group);
@@ -260,7 +298,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
  for(const [pool,order] of [[smoke,1],[dust,2],[steam,3],[fire,4],[sparks,5],[embers,6]]){pool.points.renderOrder=order;scene.add(pool.points);}
  // pod
  const podRoot=new THREE.Group(),podVisual=new THREE.Group();podRoot.add(podVisual);scene.add(podRoot);
- let parts=null,glbMode=false;
+ let parts=null,glbMode=false,hatchY=2.1,coreScale=1;
  const fallback=buildFallbackPod(THREE,tier);podVisual.add(fallback);parts=fallback.userData;
  const hatchGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glow,color:new THREE.Color(1,1,1).lerp(color,.4),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));hatchGlow.scale.setScalar(2.4);scene.add(hatchGlow);
  const heat=new THREE.Sprite(new THREE.SpriteMaterial({map:glow,color:hot.clone().lerp(color,.25),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));scene.add(heat);
@@ -273,7 +311,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
  const ringGeo=new THREE.RingGeometry(.9,1,72),shock=[0,1].map(()=>{const m=new THREE.Mesh(ringGeo,ringMat.clone());m.rotation.x=-Math.PI/2;m.position.y=.12;m.visible=false;scene.add(m);return {m,t0:0};});
  // rocks
  const rockGeo=new THREE.DodecahedronGeometry(1,0),rockMat=new THREE.MeshStandardMaterial({color:0x4a3828,roughness:1,flatShading:true}),rocks=[];
- for(let i=0;i<tier.rocks;i++){const m=new THREE.Mesh(rockGeo,rockMat),s=rnd(.07,.2)*(tier.gold?1.3:1);m.scale.set(s,s*rnd(.6,1),s*rnd(.8,1.1));m.visible=false;scene.add(m);rocks.push({m,v:new THREE.Vector3(),s,bounce:0});}
+ for(let i=0;i<tier.rocks;i++){const m=new THREE.Mesh(rockGeo,rockMat),s=rnd(.07,.2)*(tier.big?1.3:1);m.scale.set(s,s*rnd(.6,1),s*rnd(.8,1.1));m.visible=false;scene.add(m);rocks.push({m,v:new THREE.Vector3(),s,bounce:0});}
 
  // timeline
  const T_FALL=tier.sky,T_LAND=tier.sky+tier.fall,T_PROMPT=T_LAND+tier.settle;
@@ -285,7 +323,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
  const lookY=new THREE.Vector3(),camBase=new THREE.Vector3(),tmp=new THREE.Vector3(),hatchPos=new THREE.Vector3();
  const fit=()=>Math.max(1,.46/Math.max(.2,camera.aspect));
  const sh=(tt,s)=>Math.sin(tt*41+s)*.6+Math.sin(tt*27.3+s*2.3)*.4;
- const hatchWorld=out=>parts?.core?podRoot.localToWorld(out.set(0,glbMode?2.4:2.1,0).applyMatrix4(podVisual.matrix)):out.set(0,2.1,0);
+ const hatchWorld=out=>parts?.core?podRoot.localToWorld(out.set(0,hatchY,0).applyMatrix4(podVisual.matrix)):out.set(0,2.1,0);
  podRoot.position.copy(START);podRoot.visible=false;
 
  function setUniformsSize(){uniforms.uScale.value=innerHeight*renderer.getPixelRatio()/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));uniforms.uDpr.value=renderer.getPixelRatio();}
@@ -297,12 +335,12 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   if(!silent){
    onEvent('impact');addShake(t,tier.shake,4.2);if(tier.aftershock)addShake(t+.5,tier.aftershock,5);
    impactLight.intensity=140;
-   shock[0].m.visible=true;shock[0].t0=t;shock[1].m.visible=!!tier.gold;shock[1].t0=t+.16;
+   shock[0].m.visible=true;shock[0].t0=t;shock[1].m.visible=!!tier.big;shock[1].t0=t+.16;
    const nd=Math.round(95*tier.dust);
-   for(let i=0;i<nd;i++){const a=Math.random()*6.28,sp=rnd(2,6.5)*(tier.gold?1.2:1);dust.emit(Math.cos(a)*.8,.25,Math.sin(a)*.8,Math.cos(a)*sp,rnd(.4,2.6),Math.sin(a)*sp,rnd(1.6,2.8),rnd(.7,1.2),rnd(2.4,4)*(tier.gold?1.25:1),new THREE.Color().setRGB(.47,.37,.3).lerp(color,.05).multiplyScalar(rnd(.8,1.15)),.62);}
+   for(let i=0;i<nd;i++){const a=Math.random()*6.28,sp=rnd(2,6.5)*(tier.big?1.2:1);dust.emit(Math.cos(a)*.8,.25,Math.sin(a)*.8,Math.cos(a)*sp,rnd(.4,2.6),Math.sin(a)*sp,rnd(1.6,2.8),rnd(.7,1.2),rnd(2.4,4)*(tier.big?1.25:1),new THREE.Color().setRGB(.47,.37,.3).lerp(color,.05).multiplyScalar(rnd(.8,1.15)),.62);}
    for(let i=0;i<40*tier.dust;i++){dust.emit(rnd(-.5,.5),.3,rnd(-.5,.5),rnd(-.8,.8),rnd(3,7.5),rnd(-.8,.8),rnd(1.4,2.4),rnd(.7,1),rnd(2,3.4),new THREE.Color().setRGB(.5,.4,.33).multiplyScalar(rnd(.8,1.1)),.55);}
    const ns=Math.round(70*tier.sparks);
-   for(let i=0;i<ns;i++){const a=Math.random()*6.28,sp=rnd(4,12),c=tier.gold&&Math.random()<.6?gold:white.clone().lerp(color,Math.random()*.9);sparks.emit(Math.cos(a)*.5,.4,Math.sin(a)*.5,Math.cos(a)*sp,rnd(3,10),Math.sin(a)*sp,rnd(.6,1.5),rnd(.1,.2),.02,c,1);}
+   for(let i=0;i<ns;i++){const a=Math.random()*6.28,sp=rnd(4,12),c=sparkCol();sparks.emit(Math.cos(a)*.5,.4,Math.sin(a)*.5,Math.cos(a)*sp,rnd(3,10),Math.sin(a)*sp,rnd(.6,1.5),rnd(.1,.2),.02,c,1);}
    for(const r of rocks){r.m.visible=true;const a=Math.random()*6.28,sp=rnd(4.5,10);r.m.position.set(Math.cos(a)*1.5,.4,Math.sin(a)*1.5);r.v.set(Math.cos(a)*sp,rnd(4,9),Math.sin(a)*sp);r.bounce=0;}
   }else for(const r of rocks){const a=Math.random()*6.28,d=rnd(MOUND_R*.9,MOUND_R+3.5);r.m.visible=true;r.m.position.set(Math.cos(a)*d,r.s*.5,Math.sin(a)*d);r.bounce=9;}
   terrain.mound.userData.t0=t;
@@ -313,9 +351,9 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   popped=true;pop0=t;onEvent('pop');const quiet=silent;silent=false;
   hatchWorld(hatchPos);
   if(!quiet){
-   addShake(t,tier.gold?.4:.26,6);
+   addShake(t,tier.big?.4:.26,6);
    for(let i=0;i<80;i++){const a=Math.random()*6.28,sp=rnd(.3,2.2);steam.emit(hatchPos.x+Math.cos(a)*.3,hatchPos.y,hatchPos.z+Math.sin(a)*.3,Math.cos(a)*sp,rnd(3.5,8),Math.sin(a)*sp,rnd(1.6,3),rnd(.6,1),rnd(2.5,4.5),new THREE.Color(.9,.93,1),.55);}
-   const ns=Math.round(60*tier.sparks);for(let i=0;i<ns;i++){const a=Math.random()*6.28,sp=rnd(1,5);sparks.emit(hatchPos.x,hatchPos.y,hatchPos.z,Math.cos(a)*sp,rnd(4,11),Math.sin(a)*sp,rnd(.8,1.8),rnd(.08,.16),.02,tier.gold&&Math.random()<.6?gold:white.clone().lerp(color,.8*Math.random()),1);}
+   const ns=Math.round(60*tier.sparks);for(let i=0;i<ns;i++){const a=Math.random()*6.28,sp=rnd(1,5);sparks.emit(hatchPos.x,hatchPos.y,hatchPos.z,Math.cos(a)*sp,rnd(4,11),Math.sin(a)*sp,rnd(.8,1.8),rnd(.08,.16),.02,sparkCol(.8),1);}
   }
  }
 
@@ -325,7 +363,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
    const k=i/n,x=lerp(a.x,b.x,k)-dirFall.x*1.1,y=lerp(a.y,b.y,k)-dirFall.y*1.1,z=lerp(a.z,b.z,k)-dirFall.z*1.1,c=Math.random()<.45?white.clone().lerp(hot,Math.random()*.6):color.clone().lerp(white,Math.random()*.4);
    fire.emit(x,y,z,-dirFall.x*rnd(.5,3)+rnd(-.4,.4),-dirFall.y*rnd(.5,3)+rnd(-.4,.4),-dirFall.z*rnd(.5,3)+rnd(-.4,.4),rnd(.45,.95),rnd(.5,.85)*(1+speedK*.4),.08,c,.95);
    if(Math.random()<.5)smoke.emit(x,y,z,rnd(-.4,.4),rnd(-.2,.5),rnd(-.4,.4),rnd(1.2,1.9),rnd(.5,.8),rnd(1.4,2.2),new THREE.Color(.2,.18,.24).lerp(color,.12),.3);
-   if(Math.random()<.18)sparks.emit(x,y,z,rnd(-2,2)-dirFall.x*3,rnd(-2,2)-dirFall.y*3,rnd(-2,2)-dirFall.z*3,rnd(.3,.8),rnd(.09,.15),.02,tier.gold?gold:white,1);
+   if(Math.random()<.18)sparks.emit(x,y,z,rnd(-2,2)-dirFall.x*3,rnd(-2,2)-dirFall.y*3,rnd(-2,2)-dirFall.z*3,rnd(.3,.8),rnd(.09,.15),.02,tier.holo?sparkCol():tier.gold?gold:white,1);
   }
  }
 
@@ -395,7 +433,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   hatchWorld(hatchPos);
   if(parts?.hinge){parts.hinge.rotation.z=popped?2.05*(1-Math.exp(-9*pu)*Math.cos(15*pu)):0;}
   if(parts?.core)parts.core.visible=glbMode?popped:true;
-  if(glbMode&&parts?.core)parts.core.scale.setScalar(popped?clamp(pu*4):.001);
+  if(glbMode&&parts?.core)parts.core.scale.setScalar(popped?clamp(pu*4)*coreScale:.001);
   if(popped){
    const k=clamp(pu/.5),grow=1-Math.pow(1-k,3);
    beam.visible=beam2.visible=true;beam.position.copy(hatchPos);beam2.position.copy(hatchPos);
@@ -404,8 +442,8 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
    beamMat.uniforms.uOpacity.value=.5*grow*flick;beamMat2.uniforms.uOpacity.value=.6*grow*flick;
    hatchLight.position.copy(hatchPos).add(tmp.set(0,.6,.8));hatchLight.intensity=(55+25*flick)*grow;
    hatchGlow.position.copy(hatchPos);hatchGlow.material.opacity=.9*grow*flick;hatchGlow.scale.setScalar(2.4+.4*Math.sin(t*14)+(1-grow)*1.5);
-   emberAcc+=dt*(tier.gold?90:55);
-   while(emberAcc>1){emberAcc--;const a=Math.random()*6.28,r=rnd(0,.4);embers.emit(hatchPos.x+Math.cos(a)*r,hatchPos.y+.1,hatchPos.z+Math.sin(a)*r,rnd(-.3,.3),rnd(2.2,5.5),rnd(-.3,.3),rnd(1.4,2.6),rnd(.08,.18),.02,tier.gold&&Math.random()<.65?gold:white.clone().lerp(color,.7),1);}
+   emberAcc+=dt*(tier.big?90:55);
+   while(emberAcc>1){emberAcc--;const a=Math.random()*6.28,r=rnd(0,.4);embers.emit(hatchPos.x+Math.cos(a)*r,hatchPos.y+.1,hatchPos.z+Math.sin(a)*r,rnd(-.3,.3),rnd(2.2,5.5),rnd(-.3,.3),rnd(1.4,2.6),rnd(.08,.18),.02,tier.holo||tier.gold?sparkCol(.7):white.clone().lerp(color,.7),1);}
   }
   // steam: continuous, loops forever once landed
   if(landed&&!(tapT!==null&&!popped))steamTick(dt,(popped?44:30)*clamp((t-landT)/.9)*(silent?1:1));
@@ -424,8 +462,8 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   fov=50-amp*5;if(Math.abs(fov-camera.fov)>.01){camera.fov=fov;camera.updateProjectionMatrix();setUniformsSize();}
   // sky motion: stars drift, layers parallax against the camera's pan
   starGroup.rotation.y=t*.006;for(const [i,l] of stars.entries()){l.pts.position.y=(lk-1.5)*(i+1)*.6;l.pts.rotation.y=t*.004*(i+1);}
-  for(const n of nebula){n.sp.material.opacity=n.o*(1+(tier.gold?.35:.12)*Math.sin(t*.6+n.o*9))*(1+(!landed?.0:0));}
-  if(tier.gold&&!landed&&t>T_FALL){nebula[0].sp.material.opacity=nebula[0].o*(1.4+.4*Math.sin(t*9));}
+  for(const n of nebula){n.sp.material.opacity=n.o*(1+(tier.big?.35:.12)*Math.sin(t*.6+n.o*9))*(1+(!landed?.0:0));}
+  if(tier.big&&!landed&&t>T_FALL){nebula[0].sp.material.opacity=nebula[0].o*(1.4+.4*Math.sin(t*9));}
   // ---- particles
   for(const pool of [fire,sparks,smoke,dust,steam,embers])pool.update(dt);
   renderer.render(scene,camera);
@@ -442,18 +480,21 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   skipToOpen(){fast=true;if(!popped)silent=true;if(popped){pop0=Math.min(pop0,t-2);fast=false;}},
   get popped(){return popped;},
   // Where the pod is on screen in CSS px (for the tap target): centre and pixels per world unit.
-  podScreen(){tmp.set(0,.9,0).add(podRoot.position).project(camera);const d=camera.position.distanceTo(podRoot.position);return {x:(tmp.x*.5+.5)*innerWidth,y:(-tmp.y*.5+.5)*innerHeight,k:innerHeight/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))/d};},
+  podScreen(){tmp.set(0,(hatchY-END.y)/2,0).add(podRoot.position).project(camera);const d=camera.position.distanceTo(podRoot.position);return {x:(tmp.x*.5+.5)*innerWidth,y:(-tmp.y*.5+.5)*innerHeight,k:innerHeight/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))/d};},
   get silent(){return silent;},
   useModel(model){
-   if(landed||tapT!==null||!parts)return;
+   if(tapT!==null||glbMode||!parts)return;
+   if(tier.holo){const h=holoMaterials(THREE,uniforms.uTime),shells=[];model.traverse(o=>{if(o.isMesh){o.material=h.body;o.renderOrder=7;const s=new THREE.Mesh(o.geometry,h.glow);s.scale.setScalar(1.025);s.renderOrder=8;shells.push([o,s]);}});for(const [o,s] of shells)o.add(s);}
+   else{const m=tierMaterial(THREE,tierName);model.traverse(o=>{if(o.isMesh)o.material=m;});}
    const core=parts.core;glbMode=true;podVisual.remove(fallback);podVisual.add(model);
-   const c=core.clone();c.material=core.material.clone();model.add(c);c.position.y=2.4*.985;c.rotation.x=-Math.PI/2;
+   // Faked hatch: a small glowing disc sunk into the top (the light, beam and sprite sell the opening).
+   const c=core.clone();c.material=core.material.clone();model.add(c);hatchY=model.userData.top*.96;coreScale=clamp(model.userData.radius*.45/.42,.25,.8);c.position.y=hatchY;c.rotation.x=-Math.PI/2;
    parts={core:c,glow:null,nozzle:null,hinge:null};
    // A mesh/node named "lid" or "hatch" is the real lid: hinge it on its lower -x edge; otherwise the glowing disc fakes the opening.
    let lid=null;model.traverse(o=>{if(!lid&&/^(lid|hatch)/i.test(o.name))lid=o;});
    if(lid){
     podRoot.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(lid).applyMatrix4(podVisual.matrixWorld.clone().invert());
-    if(!box.isEmpty()){const hinge=new THREE.Group();hinge.position.set(box.min.x,box.min.y,(box.min.z+box.max.z)/2);podVisual.add(hinge);hinge.updateMatrixWorld(true);hinge.attach(lid);parts.hinge=hinge;c.position.set((box.min.x+box.max.x)/2,box.min.y,(box.min.z+box.max.z)/2);c.scale.setScalar(1);}
+    if(!box.isEmpty()){const hinge=new THREE.Group();hinge.position.set(box.min.x,box.min.y,(box.min.z+box.max.z)/2);podVisual.add(hinge);hinge.updateMatrixWorld(true);hinge.attach(lid);parts.hinge=hinge;c.position.set((box.min.x+box.max.x)/2,box.min.y,(box.min.z+box.max.z)/2);}
    }
   },
   dispose(){
@@ -483,7 +524,7 @@ export async function playDropPod(config){
  const $=sel=>dlg.querySelector(sel),flash=$('.drop-pod-flash');
  let phase=startPhase({reduced}),world=null,renderer=null,raf=0,disposed=false,gen=0,fullscreenTried=false,items=null,pending=null,THREE=null;
  const go=event=>{phase=advance(phase,event);dlg.dataset.phase=phase;};
- const setTier=name=>{const t=TIERS[name]?name:'uncommon';dlg.dataset.tier=t;dlg.style.setProperty('--pack',TIERS[t].color);};
+ const setTier=name=>{const t=TIERS[name]?name:'uncommon';dlg.dataset.tier=t;dlg.style.setProperty('--pack',TIERS[t].color);$('.drop-pod-caption').textContent=t==='secret'?'Secret transmission':'Incoming drop pod';};
  setTier(tier);dlg.dataset.phase=phase;
  dlg.tabIndex=-1;dlg.showModal();dlg.focus({preventScroll:true});
  // Fullscreen where allowed (not iOS Safari); the fixed 100vw x 100dvh dialog is the fallback.
@@ -499,7 +540,7 @@ export async function playDropPod(config){
  dlg.addEventListener('cancel',event=>{event.preventDefault();exit();});
 
  function showItems(list){
-  const wrap=$('[data-items]');wrap.replaceChildren();$('[data-eyebrow]').textContent=`${dlg.dataset.tier} pack opened`;
+  const wrap=$('[data-items]');wrap.replaceChildren();$('[data-eyebrow]').textContent=dlg.dataset.tier==='secret'?'SECRET':`${dlg.dataset.tier} pack opened`;
   if(!list.length){const s=document.createElement('strong');s.textContent='Collection complete';const d=document.createElement('small');d.textContent='All cosmetics for your unlocked coaches are collected.';const item=document.createElement('div');item.className='drop-pod-item';item.append(s,d);wrap.append(item);}
   for(const entry of list){
    const item=document.createElement('div');item.className='drop-pod-item';const s=document.createElement('strong');s.textContent=`${entry.title} unlocked!`;const d=document.createElement('small');d.textContent=entry.detail||'';item.append(s,d);
@@ -541,7 +582,7 @@ export async function playDropPod(config){
  function frame(){
   if(disposed)return;raf=requestAnimationFrame(frame);
   world.update();
-  {const ps=world.podScreen(),hit=$('[data-hit]');hit.style.left=ps.x+'px';hit.style.top=ps.y+'px';hit.style.width=Math.min(innerWidth*.8,2.5*ps.k)+'px';hit.style.height=Math.min(innerHeight*.5,3.1*ps.k)+'px';}
+  {const ps=world.podScreen(),hit=$('[data-hit]');hit.style.left=ps.x+'px';hit.style.top=ps.y+'px';hit.style.width=Math.min(innerWidth*.8,2.5*ps.k)+'px';hit.style.height=Math.min(innerHeight*.5,2.6*ps.k)+'px';}
   if(phase==='sky'&&world.t>=world.tier.sky)go('fall');
   if(world.landed&&(phase==='sky'||phase==='drop'))go('land');
   if(phase==='landed'&&world.promptReady&&!dlg.classList.contains('ready')){dlg.classList.add('ready');$('[data-hit]').focus({preventScroll:true});}

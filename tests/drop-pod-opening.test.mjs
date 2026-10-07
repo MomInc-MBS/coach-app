@@ -25,10 +25,11 @@ test('skip always lands on the reveal; reduced motion starts with the pod landed
  assert.equal(startPhase({reduced:true}),'landed');
 });
 
-test('each tier reaches the Tap prompt in 4-6 s, Legendary a bit longer and with the bigger impact',()=>{
- for(const tier of Object.keys(TIERS)){const s=promptAt(tier);assert(s>=4&&s<=6.5,`${tier} prompt at ${s}s`);}
- assert(promptAt('legendary')>promptAt('rare')&&promptAt('rare')>promptAt('uncommon'));
- assert(TIERS.legendary.shake>TIERS.rare.shake&&TIERS.rare.shake>TIERS.uncommon.shake);
- assert.deepEqual(Object.fromEntries(Object.entries(TIERS).map(([k,v])=>[k,v.color])),{uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36'});
+test('each tier reaches the Tap prompt in 4-6 s, Legendary a bit longer, Secret longest, with the bigger impacts',()=>{
+ for(const tier of Object.keys(TIERS)){const s=promptAt(tier);assert(s>=4&&s<=(tier==='secret'?8:6.5),`${tier} prompt at ${s}s`);}
+ assert(promptAt('secret')>promptAt('legendary')&&promptAt('legendary')>promptAt('rare')&&promptAt('rare')>promptAt('uncommon'));
+ assert(TIERS.secret.shake>TIERS.legendary.shake&&TIERS.legendary.shake>TIERS.rare.shake&&TIERS.rare.shake>TIERS.uncommon.shake);
+ assert(TIERS.secret.sky>TIERS.legendary.sky&&TIERS.secret.sparks>TIERS.legendary.sparks);
+ assert.deepEqual(Object.fromEntries(Object.entries(TIERS).map(([k,v])=>[k,v.color])),{uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36',secret:'#b388ff'});
  assert.equal(promptAt('bogus'),promptAt('uncommon'));
 });

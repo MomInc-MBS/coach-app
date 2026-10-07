@@ -8,8 +8,8 @@ const {grantDailyPack,openRewardPack,rollCategory,openedPack,unopenedPacks,PACK_
 const ledger=await import('../unlock-ledger.mjs');
 const store=await import('../creature/source/creator/unlock-store.ts');
 
-test('exact category boundaries for all three tiers',()=>{
- for(const [tier,low,middle] of [['uncommon',90,97],['rare',80,95],['legendary',70,90]]){
+test('exact category boundaries for every tier',()=>{
+ for(const [tier,low,middle] of [['uncommon',90,97],['rare',80,95],['legendary',70,90],['secret',60,80]]){
   assert.equal(rollCategory(tier,()=>0),'color');
   assert.equal(rollCategory(tier,()=>(low-.001)/100),'color');
   assert.equal(rollCategory(tier,()=>low/100),'64-bit');
@@ -110,6 +110,20 @@ test('guest packs and opened rolls survive reload without crossing into accounts
  assert.deepEqual(openRewardPack(item,{random:()=>.99}),result);
  globalThis.myr5AuthenticatedAccount={user:{id:'reward-test'}};
  assert(!ledger.isGranted('reward-pack',item.id));assert.equal(openedPack(item.id),null);
+});
+
+test('every tier odds sum to 100 and Secret doubles the Legendary texture chance',async()=>{
+ const {PACK_ODDS}=await import('../reward-packs.mjs');
+ assert.deepEqual(Object.keys(PACK_ODDS),Object.keys(PACK_SIZES));
+ for(const [tier,odds] of Object.entries(PACK_ODDS))assert.equal(odds.color+odds['64-bit']+odds.texture,100,tier);
+ assert.equal(PACK_ODDS.secret.texture,2*PACK_ODDS.legendary.texture);
+});
+
+test('a secret pack (vault-style id) opens with 3 items',()=>{
+ memory.clear();const item=packItem('secret','reward-pack:secret:vault-hidden-1');assert.equal(item.name,'Secret Pack');
+ assert(ledger.grantUnlock('reward-pack',item.id));
+ const result=openRewardPack(item,{random:()=>0});assert.equal(result.tier,'secret');assert.equal(result.rewards.length,3);
+ assert.deepEqual(openRewardPack(item,{random:()=>.99}),result);
 });
 
 test('category exhaustion awards another unowned category instead of a duplicate',()=>{
