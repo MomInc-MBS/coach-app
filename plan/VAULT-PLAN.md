@@ -69,6 +69,9 @@ Vault packs reuse the existing tiers (`rare` / `legendary`) so `reward-pack-ui.m
 - Door scene: a `createGlbBoard`-style effect (reuse its wake/`awakeUntil` on-demand render loop, shadow setup `portal-board-glb.mjs` :188-200 with the 512 map below 500 px) — **never a free-running RAF**. Shadows only while a finger is down or the door is moving.
 - Statues: one GLB per achievement from `creature/models/roster/*.glb` (70 files, ~0.4–1.3 MB each; choose the **smaller** file of each pair, ≤ 40 statues ≈ 30 MB total, fetched on demand and left to the browser cache). Keep ≤ 5 loaded (3 ahead, 1 behind, current), dispose the rest; locked = same mesh with one shared dark atomic-glass material, earned = original materials. Roster `manifest.json` maps achievement → model.
 
+**Ian update (7 Oct):** not every coach becomes a statue. Use exactly one statue per programmed achievement. Pick the coaches with the HIGHEST unlock level (latest to unlock, per `performance-catalog.mjs COACH_REQUIREMENTS` difficulty/level) and work down until every achievement has one. The hardest achievement (last in the hall) wears the highest-level coach. There must be an **"Unlocked everything"** achievement (all coaches + all textures + all colours) as the final statue.
+Hall look (Ian): the inside of a data/internet cable; statues are digital holograms (inside MOM Inc's brain), PURPLE while locked and ORANGE once earned. The vault overall is sci-fi/space, purple + gold.
+
 ## 5. Lanes
 | Lane | What | Worker | Files |
 |---|---|---|---|
