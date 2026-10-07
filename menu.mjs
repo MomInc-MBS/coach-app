@@ -45,7 +45,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
  async function introduce(id=movement()){
   if(id==='jumping')id='jumping-jack';
   if(!canUse(id))return false;
-  onOpen();cancelIntro();stopHands();selection(id);onSelect(id);if(!dialog.open)dialog.showModal();introducing=true;
+  void import('./modules/vault/vault-store.mjs').then(m=>m.bump('library-open',1,{key:id})).catch(()=>{});onOpen();cancelIntro();stopHands();selection(id);onSelect(id);if(!dialog.open)dialog.showModal();introducing=true;
   await showModel(id);
  }
  function gesture(event){

@@ -217,7 +217,7 @@ async function start(){
     if(run!==generation)return;
     created??=await loadTracker('CPU',run);
     if(run!==generation)return;
-    tracker=created;draw=new api.DrawingUtils(g);state.delegate=delegate;state.phase='tracking';
+    tracker=created;draw=new api.DrawingUtils(g);state.delegate=delegate;state.phase='tracking';void import('./modules/vault/vault-store.mjs').then(m=>m.bump('ar-session')).catch(()=>{});
     gpuSeen=false;blindSince=performance.now();
     controls(true);
     lastTime=-1;frames=0;timing=0;windowStart=performance.now();lastUi=0;

@@ -124,6 +124,7 @@ function adopt(id,dialog){
   };
   dialog.addEventListener('close',entry.closeListener);
  }
+ if(id==='history')import('./vault/vault-store.mjs').then(m=>m.bump('history-open')).catch(()=>{});
  window.myr5MenuLifecycle?.enter(dialog??id);
  if(dialog)window.myr5MenuLifecycle?.closeInactive(dialog);
  paint();announce(entry);return entry;
@@ -239,6 +240,7 @@ function portalButton(event){
 
 export function mountRoutes(){
  if(window.myr5Routes)return window.myr5Routes;
+ import('./vault/vault-store.mjs').catch(()=>{}); // loads the store so it hears myr5:vault-bump from raw-served files (portal, pond)
  let seen='';
  addEventListener('popstate',event=>{seen=location.href;sync(event);});
  addEventListener('hashchange',()=>{const href=location.href,handled=href===seen;seen='';if(!handled)sync({type:'hashchange',state:history.state});});
