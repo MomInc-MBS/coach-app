@@ -1,0 +1,67 @@
+
+ ⛅️ wrangler 4.92.0
+───────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.jsonc configuration:[0m
+
+  
+    - "env.staging" environment configuration
+      - The following vars exist at the top level, but not on "env.staging.vars".
+        This is probably not what you want, since "vars" configuration is not inherited by environments.
+        Please add these vars to "env.staging.vars":
+        - CLERK_PUBLISHABLE_KEY
+        - CLERK_FRONTEND_URL
+        - CLERK_AUTHORIZED_PARTIES
+        - RELEASE_ORIGIN
+        - SPOTIFY_CLIENT_ID
+        - SPOTIFY_REDIRECT_URI
+        - RELEASE_EMAIL_FROM
+        - VAPID_SUBJECT
+
+
+🌀 Building list of assets...
+✨ Read 1897 files from the assets directory D:\myr5-work\drop-pods\dist\client
+🌀 Starting asset upload...
+🌀 Found 26 new or modified static assets to upload. Proceeding with upload...
++ /pods/.gitkeep
++ /drop-harness.html
++ /reward-pack-ui.mjs
++ /workout-tracks.js
++ /sw.js
++ /pods/drop-pod-secret.glb
++ /war-room/gala-bay.js
++ /creature/assets/editor.js
++ /source.json.gz
++ /release-build.mjs
++ /creature/assets/account-bridge.js
++ /index.html
++ /drop-pod-opening.mjs
++ /pods/drop-pod-uncommon.glb
++ /pods/drop-pod-rare.glb
++ /creature/assets/phone.js
++ /local-coach-runtime.mjs
++ /source.json
++ /release-info.mjs
++ /progression-rules.mjs
++ /post-download.mjs
++ /handborne/unlock-bridge.mjs
++ /pods/drop-pod-legendary.glb
++ /war-room/coach-sprites.js
++ /launch-runtime.mjs
++ /app-runtime.mjs
+Uploaded 9 of 26 assets
+Uploaded 17 of 26 assets
+Uploaded 26 of 26 assets
+✨ Success! Uploaded 26 files (1817 already uploaded) (6.23 sec)
+
+Total Upload: 264.25 KiB / gzip: 73.34 KiB
+Worker Startup Time: 9 ms
+Your Worker has access to the following bindings:
+Binding                                               Resource                  
+env.DB (myr5-coach-staging)                           D1 Database               
+env.ASSETS                                            Assets                    
+env.WORKOUT_IMPORTS_ENABLED ("true")                  Environment Variable      
+
+Uploaded myr5-coach-staging (29.37 sec)
+Deployed myr5-coach-staging triggers (0.76 sec)
+  https://myr5-coach-staging.mominc-coach.workers.dev
+Current Version ID: e64dc876-8ff3-4c98-8074-e5434ec9050f
