@@ -281,7 +281,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 portalCutUv;\nvarying vec2 vPortalCutUv;')
    .replace('#include <begin_vertex>','#include <begin_vertex>\nvPortalCutUv=portalCutUv;');
   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vPortalCutUv;\nuniform sampler2D uPortalCutMask;\nuniform float uPortalCutSide;')
-   .replace('#include <map_fragment>','#include <map_fragment>\nif(!gl_FrontFacing){vec2 q=vPortalCutUv;float bind=step(q.x,.022)+step(.978,q.x)+step(q.y,.015)+step(.985,q.y);diffuseColor.rgb=mix(vec3(.145,.1,.075)*(.93+.07*sin(q.x*700.)*sin(q.y*700.)),vec3(.04,.035,.045),min(bind,1.));}')
+   .replace('#include <map_fragment>','#include <map_fragment>\nif(!gl_FrontFacing){vec2 q=vPortalCutUv;float bind=step(q.x,.022)+step(.978,q.x)+step(q.y,.015)+step(.985,q.y);float lum=dot(diffuseColor.rgb,vec3(.3,.59,.11));vec3 back=mix(vec3(lum),diffuseColor.rgb,.4)*vec3(.62,.58,.55);vec2 cell=fract(q*vec2(12.,19.5));float edge=min(min(cell.x,1.-cell.x),min(cell.y,1.-cell.y)),puff=sin(cell.x*3.14159)*sin(cell.y*3.14159);float stitch=(1.-smoothstep(.015,.05,edge))*step(.35,fract((q.x+q.y)*150.));back*=.72+.38*puff;back=mix(back,back*.3,(1.-smoothstep(.0,.09,edge))*.55);back=mix(back,vec3(.62,.55,.46),stitch*.8);diffuseColor.rgb=mix(back,vec3(.04,.035,.045),min(bind,1.));}')
    .replace('#include <opaque_fragment>','if(!gl_FrontFacing)outgoingLight=max(outgoingLight,diffuseColor.rgb*.6);\n#include <opaque_fragment>')
    .replace('#include <alphatest_fragment>','float portalCutCoverage=1.0;if(abs(uPortalCutSide)>.5){portalCutCoverage=texture2D(uPortalCutMask,vPortalCutUv).r;if(uPortalCutSide>.5&&portalCutCoverage<.5)discard;if(uPortalCutSide<-.5&&portalCutCoverage>=.5)discard;}\n#include <alphatest_fragment>');
  };
@@ -310,7 +310,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
 
  // Vault secret: fold state (see quiltSecret). vis = on-screen fold progress of step 1/2 (follows the fingers, eases otherwise).
  let qs=quiltSecretInit(),slide=0,slid=false,wasFolded=false,hing={x:0,y:0};const vis=[0,0],seen=new Set(),claimedIds=new Set(),R1=3,R2=10;
- const shadowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.shadowColor='#140a1e';g.shadowBlur=22;g.shadowOffsetX=1000;g.fillStyle='#000';g.fillRect(-1000-60,-40+24,1000+60+128+60,128+60-24+40);return new THREE.CanvasTexture(c);})();
+ const shadowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.shadowColor='#140a1e';g.shadowBlur=22;g.shadowOffsetX=1000;g.fillStyle='#000';g.fillRect(-1000-60,24,1000+60+128+60,200);return new THREE.CanvasTexture(c);})();
  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false,opacity:0}));shadow.visible=false;shadow.frustumCulled=false;scene.add(shadow);
  // Untransformed size (the observer's contentRect, else clientWidth): the portal can be re-shown mid-dive, scaled.
  function layout(box={width:host.clientWidth,height:host.clientHeight}){
@@ -339,11 +339,11 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   for(let n=0;n<count;n++){const p=3*n;let x=rest[p],y=rest[p+1],z=0;
    if(a1>0&&y<hing.y-.01){const b=quiltBend(hing.y-y,0,a1,R1);y=hing.y-b[0];z=b[1];}
    if(a2>0&&x<hing.x-.01){const b=quiltBend(hing.x-x,z,a2,R2);x=hing.x-b[0];z=b[1];}
-   pos[p]=prev[p]=x+ox;pos[p+1]=prev[p+1]=y;pos[p+2]=prev[p+2]=z;}
+   pos[p]=prev[p]=x+ox;pos[p+1]=prev[p+1]=y;pos[p+2]=prev[p+2]=z*1.5;} // z stretched 1.5x so a lifted flap shows real perspective
   // soft shadow on the half under the lifted flap: a gradient plane, hard at the hinge, fading toward the flap's far end
   const two=a2>.01,a=two?a2:a1,R=two?R2:R1,far=two?hing.x-f.left:hing.y+f.top+f.height,ext=-quiltBend(far,two?R1*2:0,a,R)[0],ok=a>.01&&ext>1&&!slide;
   shadow.visible=ok;if(!ok)return;
-  shadow.material.opacity=.55*Math.sin(a);const L=ext/.8125;
+  shadow.material.opacity=.7*Math.sin(a);const L=(ext*1.15+24)/.8125;
   if(two){shadow.rotation.z=-Math.PI/2;shadow.scale.set(-f.top-hing.y,L,1);shadow.position.set(hing.x+L/2,(hing.y-f.top)/2,7.5);} // stay half = top-right quarter: y from face top to the hinge
   else{shadow.rotation.z=0;shadow.scale.set(f.width,L,1);shadow.position.set(f.left+f.width/2,hing.y+L/2,1);}
  }
@@ -430,7 +430,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   claims:id=>claimedIds.has(String(id)),
   release(id){seen.delete(id);qEv({type:'up',id});pointers.delete(id);wake();},
   // test/preview: drive a fold step through the real reducer (p 0-1 of the gesture; release=true lifts the fingers). Step 2 needs step 1 done first.
-  secretDebug:{state:()=>qs,vis:()=>[...vis,slide],
+  secretDebug:{cancel:()=>qEv({type:'cancel'}),state:()=>qs,vis:()=>[...vis,slide],
    fold(step,p,release=true){const f=quiltRect(),A=9001,B=9002,s=step===1,pts=s?[[.25,.85],[.75,.85]]:[[.3,.1],[.3,.35]],Q=QUILT_SECRET,d=p*(s?Q.min1*f.height:Q.min2*f.width)/Q.done;
     const at=(k,dx,dy)=>[f.left+f.width*pts[k][0]+dx,f.top+f.height*pts[k][1]+dy];
     for(const [k,id] of [[0,A],[1,B]]){seen.add(id);claimedIds.delete(String(id));qEv({type:'down',id,x:at(k,0,0)[0],y:at(k,0,0)[1]});}

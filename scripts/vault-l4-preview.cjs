@@ -12,7 +12,7 @@ host.onpointerdown=e=>{host.setPointerCapture(e.pointerId);b.press(e.pointerId,e
 window.ready=true;}catch(e){errors.push(e.stack);window.ready=true;}
 </script></body></html>`;
 const portalHtml=`<!doctype html><style>body{margin:0}</style><button id="background">Coach</button><nav class="coach-dock"></nav>${map}`;
-const srv=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://local');if(url.pathname==='/'||url.pathname==='/portal'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(url.pathname==='/'?html:portalHtml);return;}try{const file=path.resolve(root,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(root+path.sep))throw Error('outside root');const data=await fs.readFile(file);res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.json':'application/json','.glb':'model/gltf-binary','.webp':'image/webp','.png':'image/png','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(data);}catch{res.writeHead(404);res.end();}}).listen(port,'127.0.0.1',async()=>{
+const srv=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://local');if(url.pathname==='/'||url.pathname==='/portal'){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(url.pathname==='/'?html:portalHtml);return;}try{const file=path.resolve(root,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(root+path.sep))throw Error('outside root');let data=await fs.readFile(file);if(file.endsWith('.ts'))data=(await require('esbuild').transform(data.toString(),{loader:'ts'})).code;res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.json':'application/json','.glb':'model/gltf-binary','.webp':'image/webp','.png':'image/png','.ts':'text/javascript','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(data);}catch{res.writeHead(404);res.end();}}).listen(port,'127.0.0.1',async()=>{
  console.log('Quilt preview http://127.0.0.1:'+port);
  if(!process.argv.includes('--shoot'))return;
  const {chromium}=require('playwright'),b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
@@ -38,6 +38,15 @@ const srv=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://l
  await p.evaluate(()=>{window.__slow=true;});await touch('touchEnd',[]);await sleep(500);await shot('4-step2-done');console.log('done2',JSON.stringify(await state()));
  await shot('5-slide-off-a');await shot('5-slide-off-b');await p.evaluate(()=>{window.__slow=false;});await sleep(1200);await shot('5-slide-off-end');console.log('slid',JSON.stringify(await state()));
  await p.evaluate(()=>board.heal());await sleep(300);await shot('6-healed');console.log('healed',JSON.stringify(await state()));
+ await ctx.close();
+
+ // ---- fold angles via the debug hook (real reducer): step 1 and 2 held at 30, 90, 150 degrees
+ [ctx,p]=await open('http://127.0.0.1:'+port+'/',()=>window.ready);
+ await p.evaluate(()=>{});const hold=async(step,deg,name)=>{await p.evaluate(([s,d])=>board.secretDebug.fold(s,d/180,false),[step,deg]);await sleep(900);await p.screenshot({path:path.join(root,'.vault/shots/l4-'+name+'.png')});await p.evaluate(()=>board.secretDebug.cancel());};
+ for(const d of [30,90,120,150]){await hold(1,d,'a1-step1-'+d);await sleep(700);}
+ await p.evaluate(()=>board.secretDebug.fold(1,1,true));await sleep(1200);
+ for(const d of [30,90,120,150]){await hold(2,d,'a2-step2-'+d);await sleep(700);}
+ await p.evaluate(()=>{window.__slow=true;board.secretDebug.fold(2,1,true);});for(let k=0;k<6;k++){await sleep(350);console.log('bundle',k,JSON.stringify(await p.evaluate(()=>board.secretDebug.vis())));await p.screenshot({path:path.join(root,'.vault/shots/l4-a3-bundle'+k+'.png')});}
  await ctx.close();
  // ---- full portal: secret -> door poster
  [ctx,p]=await open('http://127.0.0.1:'+port+'/portal',()=>true);
