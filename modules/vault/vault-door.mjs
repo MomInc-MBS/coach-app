@@ -327,10 +327,10 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive){last=performance.now();frame=requestAnimationFrame(tick);}}
  const reduced=matchMedia?.('(prefers-reduced-motion: reduce)');
  function tick(now){
-  frame=0;if(!S.alive)return;const dt=Math.min(.05,(now-last)/1000||.016);last=now;let busy=S.drag.size>0;
+  frame=0;if(!S.alive)return;const rdt=Math.min(.5,(now-last)/1000||.016),dt=Math.min(.05,rdt);last=now;let busy=S.drag.size>0;
   renderer.shadowMap.enabled=true;
   // flywheel: follows the finger; unfinished turns spring back
-  if(!S.drag.size&&!S.opening&&S.open<.02&&Math.abs(S.fly.total)>.01){S.fly={last:null,total:S.fly.total*Math.exp(-dt*5)};S.progress=Math.abs(S.fly.total)/TAU;busy=true;}
+  if(!S.drag.size&&!S.opening&&S.open<.02&&Math.abs(S.fly.total)>.01){S.fly={last:null,total:S.fly.total*Math.exp(-rdt*5)};S.progress=Math.abs(S.fly.total)/TAU;busy=true;}
   S.flyG.rotation.z=-S.fly.total;
   // door swing (ease in-out)
   if(S.open!==S.target){const k=Math.min(1,(now-S.t0)/SWING_MS),e=k*k*(3-2*k);S.open=S.from+(S.target-S.from)*e;if(k>=1){S.open=S.target;if(!S.target)S.opening=false;}busy=true;}
