@@ -73,7 +73,7 @@ if(typeof window!=='undefined'&&window.__portalTestStubBoard===true)
   background:'#000',
   faceRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
   patternRect:()=>({left:0,top:0,width:host.clientWidth||1,height:host.clientHeight||1}),
-  cut:()=>Promise.resolve(),heal(){},press(){},release(){},pause(){},resume(){},dispose(){},
+  cut:()=>Promise.resolve(),heal(){},press(){},release(){},claims:id=>!!window.__portalTestClaims?.(id),pause(){},resume(){},dispose(){},
  })};
 const BOARD_KEY='myr5.portalBoard';
 const portalSound=(kind,extra={})=>window.dispatchEvent(new CustomEvent('myr5:portal-sound',{detail:{kind,board:boardId,...extra}}));
@@ -466,7 +466,7 @@ function setVisible(v){
  // until the old animation resolves. A forward phase has no backT0, so showing the quilt does
  // not interrupt a newly-started portal sequence.
  if(v&&phase?.backT0){endPhase();portalHome.style.transformOrigin='';}
- if(!v){sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
+ if(!v){hideVaultDoor(false);sequence++;busy=false;clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];fading.length=0;pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();outlineFlash=null;objectsLayer.replaceChildren();cancelAnimationFrame(rafId);rafId=0;}
  board?.heal();
  portalHome.hidden=!v;
  if(boardBtn)boardBtn.hidden=v;
@@ -1862,10 +1862,29 @@ async function openInHole(id,menu,pts,face,current){
  if(current()&&framed?.dialog===dialog&&!framed.expanded){quietPhase();board?.pause();}
 }
 
+// Vault door poster (L0): a board secret ends here. The board pauses, a metal door fades in over it; tap opens the
+// vault route, Escape or the portal key dismisses and heals. pod/worlds/vault/door-poster.webp (L7) paints over the CSS door.
+let vaultDoor=null;
+const vaultKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();hideVaultDoor();}};
+function hideVaultDoor(heal=true){
+ if(!vaultDoor)return;
+ vaultDoor.remove();vaultDoor=null;document.removeEventListener('keydown',vaultKey,true);
+ if(heal&&board){board.heal();if(boardShown)board.resume();}
+}
+function goVault(){const r=window.myr5Routes;return r?r.go('vault'):import('../routes.mjs').then(m=>m.mountRoutes().go('vault'));}
+function showVaultDoor(){
+ if(vaultDoor||!boardShown||!board)return;
+ pointers.clear();clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];lastTap=null;board.pause();
+ vaultDoor=document.createElement('button');vaultDoor.type='button';vaultDoor.id='portalVaultDoor';vaultDoor.setAttribute('aria-label','Vault door. Tap to open the vault.');
+ vaultDoor.innerHTML='<span class="vault-slab"><img src="/pod/mom-inc-engrave.png" alt=""><i></i></span>';
+ vaultDoor.onclick=()=>{hideVaultDoor(false);setVisible(false);void goVault();};
+ portalHome.append(vaultDoor);document.addEventListener('keydown',vaultKey,true);vaultDoor.focus({preventScroll:true});
+}
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}
 function endPointer(e,cancel){ if(cancel) lastTap=null;
  const p=pointers.get(e.pointerId);if(!p)return;
  pointers.delete(e.pointerId);board.release(e.pointerId);
+ const claimed=!!board.claims?.(e.pointerId); // vault secrets: asked after release (the glb wrapper answered before its effect forgot the pointer)
  // #105: the just-released stroke keeps fading (light-painting), independent of whether it matches.
  if(p.pts.length>1)fading.push({pts:p.pts,releasedAt:performance.now()});
  scheduleIdle();kickRender();
@@ -1882,11 +1901,14 @@ function endPointer(e,cancel){ if(cancel) lastTap=null;
   lastTap=isDouble?null:tap;
   if(isDouble){
    const id=nearestTapShape(tap.x,tap.y);
-   if(MENUS[id]){buzz(12);runShape(id);}
+   if(MENUS[id]){buzz(12);runShape(id);return;} // an outline double-tap opens its shape before any secret may claim it
   }
+  if(claimed)lastTap=null;
   return;
  }
  lastTap=null;
+ if(claimed)return; // a claimed stroke is a secret gesture: no shape recognition, no "Almost"
+
  pendingStrokes.push(p.norm);pendingTrailPts.push(p.pts);
  clearTimeout(finalizeTimer);
  finalizeTimer=setTimeout(()=>{
@@ -1943,6 +1965,8 @@ export async function mountPortal({visible=false}={}){
  for(const type of ['storage','pageshow'])addEventListener(type,syncLook,{signal:lifecycle.signal});
  if(menuBtn!==portalHome.querySelector('#portalExitButton'))menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
+ addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;import('../vault/vault-store.mjs').then(m=>m.markSecret(id)).catch(()=>{});showVaultDoor();},{signal:lifecycle.signal});
+ menuBtn.addEventListener('click',e=>{if(vaultDoor){e.stopImmediatePropagation();hideVaultDoor();}},{capture:true,signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
  wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL('',{activate:false});}); // compile/cache only; never switch a live phase's program
@@ -1961,6 +1985,7 @@ export async function mountPortal({visible=false}={}){
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
   dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();gl3?.dispose();base?.dispose();gl3=base=board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  secret:id=>window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:id||boardId}})), // debug/test: same event the boards fire
   show:()=>setVisible(true),
   hide:()=>setVisible(false),
   open:id=>runShape(id),
@@ -1984,5 +2009,6 @@ export async function mountPortal({visible=false}={}){
   playWormhole, // #149: Meditation's early-stop smack exits through it (meditation.mjs throughWormhole)
  };
  if(window.__portalTrailProbe===true)window.myr5Portal.trailProbe=trailProbe;
+ if(new URLSearchParams(location.search).has('vault'))void goVault(); // ?vault=1 boot, like ?board=
  return window.myr5Portal;
 }
