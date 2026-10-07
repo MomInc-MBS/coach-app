@@ -47,7 +47,7 @@ void main(){float f=pow(1.-abs(dot(normalize(vN),normalize(vV))),2.2);
  vec3 base=mix(mix(uP,uPr,f),mix(uO,uOr,f),on);
  float scan=.55+.45*sin(vY*95.-uT*3.2),fine=.85+.15*sin(vY*420.+uT*9.);
  float fl=.88+.12*sin(uT*37.+uSeed)*step(.9,h1(floor(uT*6.)+uSeed));
- float a=(.2+f*.95)*scan*fine*fl*uBoost+band*.9;
+ float a=(.2+f*.95)*scan*fine*fl*uBoost*(1.+on*1.2)+band*.9; // earned orange reads brighter than the purple locked ghost
  gl_FragColor=vec4(base*(1.+band*2.)*a*1.4,a);}`;
 const BEAM_F=`uniform vec3 uC;uniform float uT;varying vec2 vU;void main(){float a=pow(1.-vU.y,2.2)*.05*(.8+.2*sin(vU.y*30.-uT*4.));gl_FragColor=vec4(uC,a);}`;
 const BEAM_V=`varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
@@ -168,7 +168,7 @@ export async function enterHall(arg=document.body){
   blend+=((insp>=0?1:0)-blend)*(1-Math.exp(-dt*6));
   const c=Math.max(0,Math.round((route+STOP-GAP)/GAP));if(c!==cur){cur=c;stream(clamp(cur,0,N-1));}
   pos.textContent=`${clamp(Math.floor((route+STOP+.01)/GAP),0,N)} / ${N}`;
-  if(!reached&&route>=limit-2.2){reached=true;window.dispatchEvent(new CustomEvent('myr5:vault-hall-end'));}
+  if(!reached&&route>=limit-2.2){reached=true;window.dispatchEvent(new CustomEvent('myr5:vault-hall-end'));store.bump?.('hall-end');}
   camera.fov=60+inv*60;camera.updateProjectionMatrix();
   camera.position.set(0,1.55+inv*7,-route+inv*18);look.set(0,1.55-inv*6,camera.position.z-20);
   if(insp>=0&&blend>.01){const s=statues[insp].grp.position;camera.position.x=s.x*.35*blend;look.lerp(new THREE.Vector3(s.x,.65,s.z),blend);}

@@ -1,0 +1,35 @@
+// Integration e2e on the BUILT app: node scripts/vault-int-e2e.cjs  (serves dist/client, 375x812 touch). Shots -> .vault/shots/int-*.png
+const {chromium}=require('../node_modules/playwright'),http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../dist/client'),shots=path.resolve(__dirname,'../.vault/shots/');
+const T={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp','.m4a':'audio/mp4','.glb':'model/gltf-binary'};
+const srv=http.createServer((req,res)=>{const p=new URL(req.url,'http://l').pathname;if(p.startsWith('/api/')){res.writeHead(p==='/api/auth/config'?200:401,{'Content-Type':'application/json'});return res.end(JSON.stringify(p==='/api/auth/config'?{enabled:false}:{error:'x'}));}
+ const f=path.resolve(root,'.'+(p==='/'?'/pose.html':p));if(!f.startsWith(root)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);return res.end();}res.writeHead(200,{'Content-Type':T[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res);});
+(async()=>{await new Promise(r=>srv.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+srv.address().port;
+ const b=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+ const ctx=await b.newContext({viewport:{width:375,height:812},hasTouch:true,deviceScaleFactor:2,serviceWorkers:'block',reducedMotion:'reduce'});
+ await ctx.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{configurable:true,value:true});localStorage.myr5Debug='1';});
+ await ctx.addInitScript(()=>{const get=Storage.prototype.getItem,d=new Date(),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;Storage.prototype.getItem=function(k){return String(k).startsWith('myr5-how-to-play-day-v1/')?day:get.call(this,k);};});
+ const seedP=await ctx.newPage();await seedP.goto(base+'/onboarding.html');
+ const {completeCoach}=await import('../tests/onboarding-fixture.mjs');
+ await seedP.evaluate(async intake=>{const {openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();},completeCoach());await seedP.close();
+ const p=await ctx.newPage(),errs=[];p.on('console',m=>{if(m.type()==='error')errs.push(m.text());});p.on('pageerror',e=>errs.push('pageerror '+e.message));
+ const shot=async n=>{await p.waitForTimeout(900);await p.screenshot({path:shots+'/int-'+n+'.png'});console.log('shot',n);};
+ const step=async(n,f)=>{try{await f();console.log('OK  ',n);}catch(e){console.log('FAIL',n,e.message.split('\n')[0]);}};
+ await p.goto(base+'/pose.html');await p.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&!!document.querySelector('.coach-dock'),null,{timeout:60000});
+ await p.evaluate(()=>window.myr5Menus.portal());await p.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);await shot('01-portal');
+ await step('pond secret',async()=>{await p.evaluate(()=>myr5Portal.secret('pond'));await p.waitForSelector('#portalVaultDoor',{timeout:8000});await shot('02-door-poster');});
+ await step('tap poster -> vault route',async()=>{await p.click('#portalVaultDoor');await p.waitForFunction(()=>document.getElementById('vaultPanel')?.open&&document.getElementById('vaultPanel')._vault,null,{timeout:30000});await p.waitForTimeout(1500);await shot('03-vault-door');
+  console.log(JSON.stringify(await p.evaluate(()=>{const i=document.getElementById('vaultPanel')._vault.info();return {head:i.view.head,lines:i.view.lines,foot:i.view.foot};})));});
+ const info=()=>p.evaluate(()=>document.getElementById('vaultPanel')._vault.info()),P=(u,v)=>p.evaluate(([u,v])=>document.getElementById('vaultPanel')._vault.project(u,v),[u,v]);
+ const drag=async(pts,hold)=>{const a=await P(...pts[0]);await p.mouse.move(a.x,a.y);await p.mouse.down();for(const q of pts.slice(1)){const c=await P(...q);await p.mouse.move(c.x,c.y,{steps:3});}if(!hold)await p.mouse.up();};
+ const ring=(c,R,a0,a1,n)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [c[0]+Math.sin(a)*R,c[1]-Math.cos(a)*R];});
+ await step('knob detent',async()=>{const a=(await info()).view.id;await drag(ring([.5,.455],.07,0,Math.PI/6+.12,4));const c=(await info()).view.id;assert.notEqual(a,c);console.log(a,'->',c);await shot('04-knob');});
+ await step('flywheel opens',async()=>{await drag(ring([.5,.72],.12,0,Math.PI*2.05,40));await p.waitForTimeout(2500);assert.equal((await info()).open,1);await shot('05-open');});
+ await step('usb port -> hall',async()=>{const sc=await p.evaluate(()=>document.getElementById('vaultPanel')._vault.projectWorld(0,0,-.2));await p.mouse.click(sc.x,sc.y);await p.waitForFunction(()=>window.myr5Hall,null,{timeout:60000});await p.waitForTimeout(4000);await shot('06-hall');});
+ await step('statue 1 card',async()=>{await p.evaluate(()=>myr5Hall.go(6*1-4.8));await p.waitForTimeout(6000);console.log(JSON.stringify(await p.evaluate(()=>myr5Hall.debug())));await shot('07-statue1-card');});
+ await step('earn + sweep',async()=>{const id=await p.evaluate(async()=>{const g=await import('/modules/vault/vault-goals.mjs');return g.GOALS[0].id;});await p.evaluate(id=>myr5Vault.earn(id),id);await p.waitForTimeout(300);await shot('08a-sweep');await p.waitForTimeout(2000);await shot('08-earned');});
+ await step('open pack',async()=>{await p.waitForSelector('[data-pack]',{timeout:5000});await p.click('[data-pack]');await p.waitForTimeout(1500);await shot('09-pack');});
+ await step('hall end + secrets',async()=>{await p.evaluate(()=>myr5Hall.jump(6*50));await p.waitForTimeout(2500);await shot('10-hall-end');for(const id of ['wood','quilt','ice'])await p.evaluate(id=>myr5Portal.secret(id),id);await p.waitForTimeout(500);});
+ console.log('hall-end counter',await p.evaluate(()=>JSON.stringify(myr5Vault.state?.())));
+ console.log(JSON.stringify(errs));console.log('console errors',JSON.stringify(errs.filter(e=>!/Failed to load resource/.test(e))),'(raw',errs.length,')');
+ await b.close();srv.close();})();
