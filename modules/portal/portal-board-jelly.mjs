@@ -252,7 +252,7 @@ async function init({THREE,mesh,material,uniforms,scene,face,toWorld,wake}){
  S={uniforms,toWorld,faceW:face.w,aspect:face.h/face.w,rippleVecs:uniforms.uRipple.value,nextSlot:0,lastSpawn:new Map(),
     reduced,trail:[],heads:new Map(),epoch:null,wake,sec:{},fin:[.5,.5],fxLast:0,calmAt:0,
     fx:THREE.InstancedMesh&&typeof document!=='undefined'?makeFx(THREE,scene,mesh,face,toWorld,uniforms.uBoneZ.value):{update(){},dispose(){}}};trail3d=S;
- globalThis.myr5JellyFF=ms=>{S&&secret({type:'skip',ms});S?.wake();}; // debug: fast-forward the hold
+ globalThis.myr5JellyFF=ms=>{S&&secret({type:'skip',ms});S?.wake();};myr5JellyFF.held=()=>S&&held(S.sec,performance.now())/1000; // debug: fast-forward the hold / read it
 }
 function press(id,u,v){
  const[x,y]=S.toWorld(u,v);if(S.sec.id==null||S.sec.up!=null){S.fin=[u,v];}secret({type:'down',id,x,y});
