@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),port=Number(process.env.VAULT_L4_PORT)||
 const map='<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js","three/addons/libs/meshopt_decoder.module.js":"/vendor/three/meshopt_decoder.module.js"}}</script>';
 const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{margin:0;background:#17111e}#board{width:100vw;height:100vh;position:relative;touch-action:none}</style>${map}</head><body><div id="board"></div><script type="module">
 import {createQuiltBoardGL,QUILT_SECRET} from '/modules/portal/portal-board.mjs';
-QUILT_SECRET.ms2=120000;QUILT_SECRET.ms1=60000;window.errors=[];window.secrets=0;addEventListener('error',e=>errors.push(e.message));addEventListener('myr5:portal-secret',e=>secrets++);
+const raf=requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>window.__slow?setTimeout(()=>raf(cb),120):raf(cb);QUILT_SECRET.ms2=120000;QUILT_SECRET.ms1=60000;window.errors=[];window.secrets=0;addEventListener('error',e=>errors.push(e.message));addEventListener('myr5:portal-secret',e=>secrets++);
 const host=document.querySelector('#board');
 try{const b=window.board=await createQuiltBoardGL(host);window.claimed={};
 host.onpointerdown=e=>{host.setPointerCapture(e.pointerId);b.press(e.pointerId,e.clientX,e.clientY);};host.onpointermove=e=>{if(host.hasPointerCapture(e.pointerId))b.press(e.pointerId,e.clientX,e.clientY);};host.onpointerup=host.onpointercancel=e=>{b.release(e.pointerId);claimed[e.pointerId]=b.claims(e.pointerId);};
@@ -35,8 +35,8 @@ const srv=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://l
  await drag(S2,face.width*.3,0,8,true);await sleep(600);await shot('3a-step2-early');
  await touch('touchEnd',[]);await sleep(900);console.log('fell back 2',JSON.stringify(await state()));
  await drag(S2,face.width*.52,0,10,true);await sleep(600);await shot('3-step2-middrag');console.log('mid2',JSON.stringify(await state()));
- await touch('touchEnd',[]);await sleep(350);await shot('4-step2-done');console.log('done2',JSON.stringify(await state()));
- await sleep(150);await shot('5-slide-off-a');await sleep(100);await shot('5-slide-off-b');await sleep(1200);await shot('5-slide-off-end');console.log('slid',JSON.stringify(await state()));
+ await p.evaluate(()=>{window.__slow=true;});await touch('touchEnd',[]);await sleep(500);await shot('4-step2-done');console.log('done2',JSON.stringify(await state()));
+ await shot('5-slide-off-a');await shot('5-slide-off-b');await p.evaluate(()=>{window.__slow=false;});await sleep(1200);await shot('5-slide-off-end');console.log('slid',JSON.stringify(await state()));
  await p.evaluate(()=>board.heal());await sleep(300);await shot('6-healed');console.log('healed',JSON.stringify(await state()));
  await ctx.close();
  // ---- full portal: secret -> door poster
