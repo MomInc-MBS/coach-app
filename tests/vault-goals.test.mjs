@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {GOALS,VAULT_GOALS,COUNTER_MODES,newlyEarned} from '../modules/vault/vault-goals.mjs';
+import {COACH_REQUIREMENTS} from '../performance-catalog.mjs';
+import {statueCoaches,GOALS,VAULT_GOALS,COUNTER_MODES,newlyEarned} from '../modules/vault/vault-goals.mjs';
 
 test('table: unique ids, valid tiers, placeholder clues, tunables present',()=>{
  assert.equal(new Set(GOALS.map(g=>g.id)).size,GOALS.length);
  for(const g of GOALS){assert.ok(['rare','legendary'].includes(g.tier),g.id);assert.equal(g.clue,'clue:'+g.id);assert.ok(g.title);}
  assert.ok(VAULT_GOALS.grimMinutes.length===3&&COUNTER_MODES['armie-ignored']==='keyed');
- assert.equal(GOALS.at(-1).id,'everything');
+ assert.equal(GOALS.at(-1).id,'unlocked-everything');
 });
 test('every test() and progress() is total on empty / garbage state',()=>{
  for(const v of [undefined,null,{},{counters:null,snap:5},{snap:{catsHave:null}}])for(const g of GOALS){assert.equal(g.test(v),false,g.id);if(g.progress){const p=g.progress(v);assert.deepEqual(p,{have:0,need:p.need});assert.ok(p.need>=1);}}
@@ -24,7 +25,15 @@ test('secrets, all-six and collection goals',()=>{
  assert.equal(GOALS.find(x=>x.id==='all-six').test({secrets:six}),true);
  assert.equal(GOALS.find(x=>x.id==='coach-yoga').test({snap:{catsHave:{yoga:1}}}),true);
  const snap={coachesHave:63,coachesNeed:63,texturedCoaches:63,coloursHave:156,coloursNeed:156,texturesHave:58,texturesNeed:58};
- assert.deepEqual(newlyEarned({snap}).filter(id=>['all-coaches','all-colours','texture-every-coach','everything'].includes(id)).sort(),['all-coaches','all-colours','everything','texture-every-coach']);
- assert.equal(newlyEarned({snap},{everything:1}).includes('everything'),false);
- assert.equal(GOALS.find(x=>x.id==='everything').test({snap:{...snap,texturesHave:57}}),false);
+ assert.deepEqual(newlyEarned({snap}).filter(id=>['all-coaches','all-colours','texture-every-coach','unlocked-everything'].includes(id)).sort(),['all-coaches','all-colours','texture-every-coach','unlocked-everything']);
+ assert.equal(newlyEarned({snap},{'unlocked-everything':1}).includes('unlocked-everything'),false);
+ assert.equal(GOALS.find(x=>x.id==='unlocked-everything').test({snap:{...snap,texturesHave:57}}),false);
+});
+test('statueCoaches: one distinct coach per goal, hardest goal gets the highest-level coach',()=>{
+ const s=statueCoaches(),rank={easy:0,medium:1,hard:2,expert:3},by=Object.fromEntries(COACH_REQUIREMENTS.map(c=>[c.id,c]));
+ assert.equal(s.length,GOALS.length);assert.equal(new Set(s.map(x=>x.coachId)).size,GOALS.length);
+ assert.deepEqual(s.map(x=>x.goalId),GOALS.map(g=>g.id));
+ const r=s.map(x=>rank[by[x.coachId].difficulty]);assert.deepEqual(r,[...r].sort((a,b)=>a-b),'non-decreasing difficulty down the hall');
+ assert.equal(r.at(-1),Math.max(...COACH_REQUIREMENTS.map(c=>rank[c.difficulty])));
+ assert.equal(GOALS.at(-1).id,'unlocked-everything');
 });

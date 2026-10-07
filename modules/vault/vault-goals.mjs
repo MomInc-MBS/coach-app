@@ -1,3 +1,4 @@
+import {COACH_REQUIREMENTS} from '../../performance-catalog.mjs';
 // Achievement Vault: the achievement table (hall order = array order, easy -> hard) and its tunable thresholds.
 // Pure. Every test(v) / progress(v) is total: an empty or missing state never throws.
 // v = vault-store's view of the world: {counters:{name:n}, time:{name:ms}, secrets:{board:ts}, snap:{...collection snapshot}}.
@@ -63,8 +64,15 @@ export const GOALS=Object.freeze([
  ratio('all-coaches','legendary','Full Roster','coachesHave','coachesNeed'),
  ratio('texture-every-coach','legendary','Dressed to Impress','texturedCoaches','coachesNeed'),
  ratio('all-colours','legendary','Every Colour','coloursHave','coloursNeed'),
- goal('everything','legendary','The Whole Collection',all),
+ goal('unlocked-everything','legendary','Unlocked Everything',all),
 ]);
 export const goalById=id=>GOALS.find(g=>g.id===id);
 /** Ids whose test passes in v and are not already earned (earned: {id:ts}). */
 export const newlyEarned=(v,earned={})=>GOALS.filter(g=>!earned[g.id]&&g.test(v)).map(g=>g.id);
+const RANK={easy:0,medium:1,hard:2,expert:3};
+/** One statue coach per goal (hall order): the HIGHEST-level coaches (difficulty, then later in the catalog = later unlock), hardest goal gets the highest. -> [{goalId,coachId}] */
+export function statueCoaches(goals=GOALS){
+ const ranked=COACH_REQUIREMENTS.map((c,i)=>[c,i]).sort((a,b)=>(RANK[a[0].difficulty]??0)-(RANK[b[0].difficulty]??0)||a[1]-b[1]).map(([c])=>c.id);
+ const top=ranked.slice(-goals.length);
+ return goals.map((g,i)=>({goalId:g.id,coachId:top[i+top.length-goals.length]??top[i]}));
+}
