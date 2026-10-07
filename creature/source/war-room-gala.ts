@@ -108,9 +108,9 @@ export function mountGalaBay(host:HTMLElement,{tell}:{tell:(text:string)=>void})
   heading.textContent=title;
   const editor=createGalaEditor({document:doc,avatar:A,weapons:W,look:saved,
    previewDraw:coaches?.hasBody?(canvas:HTMLCanvasElement,previewLook:Look,options:any)=>coaches!.draw(A.draw,canvas,previewLook,options):A.draw,
-   onPart:(id:string,value:number,label:string)=>{touch();save({...saved,parts:{...saved.parts,[id]:value}},`${(A.sections as Section[]).find(item=>item.id===id)?.label||label}: ${label}.`);},
-   onDye:(value:number)=>{touch();save({...saved,dye:value},`Silk ${value+1}.`);},
-   onWeapon:(value:{type:string;tier:number})=>{touch();const previous=saved.weapon||{type:'rapier',tier:0};if((value.type!==previous.type||value.tier!==previous.tier)&&!W.unlocked(value))value={type:value.type,tier:0};save({...saved,weapon:value},W.name(value)+'.');},
+   onPart:(id:string,value:number,label:string)=>{touch();void import('../../modules/vault/vault-store.mjs').then(m=>m.bump('gala-part')).catch(()=>{});void import('../../modules/vault/vault-store.mjs').then(m=>m.bump('gala-slot',1,{key:id})).catch(()=>{});save({...saved,parts:{...saved.parts,[id]:value}},`${(A.sections as Section[]).find(item=>item.id===id)?.label||label}: ${label}.`);},
+   onDye:(value:number)=>{touch();void import('../../modules/vault/vault-store.mjs').then(m=>m.bump('gala-slot',1,{key:'dye'})).catch(()=>{});save({...saved,dye:value},`Silk ${value+1}.`);},
+   onWeapon:(value:{type:string;tier:number})=>{touch();void import('../../modules/vault/vault-store.mjs').then(m=>m.bump('gala-slot',1,{key:'weapon'})).catch(()=>{});const previous=saved.weapon||{type:'rapier',tier:0};if((value.type!==previous.type||value.tier!==previous.tier)&&!W.unlocked(value))value={type:value.type,tier:0};save({...saved,weapon:value},W.name(value)+'.');},
    locked:(value:{type:string;tier:number})=>!W.unlocked(value)
   });
   if(section==='pets')body.replaceChildren(...editor.parts(['pet']),...(coaches?[coaches.picker('pet',load)]:[]));

@@ -73,11 +73,11 @@ export function mountArmieInboxUI({root = document.body} = {}) {
    if (showNotice) void store.markIosNoticeSeen(); // shown once, never again
    dialog.querySelector('[data-push]')?.addEventListener('click', event => { event.currentTarget.parentElement.remove(); void maybeRequestArmiePushPermission(); }, {once: true});
    for (const li of dialog.querySelectorAll('li[data-id]')) {
-    li.addEventListener('click', async () => { await store.markRead(li.dataset.id); li.dataset.read = '1'; await refreshBadge(); }, {once: true});
+    li.addEventListener('click', async () => { await store.markRead(li.dataset.id); void import('./modules/vault/vault-store.mjs').then(m=>m.bump('armie-read')).catch(()=>{}); li.dataset.read = '1'; await refreshBadge(); }, {once: true});
    }
   }
 
-  launcher.addEventListener('click', async () => { if (launcher.hidden || launcher.inert) return; await render(); dialog.showModal(); await refreshBadge(); });
+  launcher.addEventListener('click', async () => { if (launcher.hidden || launcher.inert) return; await render(); dialog.showModal(); await refreshBadge(); const now=Date.now(),day24h=24*60*60000;const letters=await store.listLetters();for(const l of letters){if(l.read===0&&now-l.firedAt>day24h)void import('./modules/vault/vault-store.mjs').then(m=>m.bump('armie-ignored',1,{key:l.letterId})).catch(()=>{});} });
   window.addEventListener('myr5:armie-inbox-updated', () => void refreshBadge());
   await refreshBadge();
   return {launcher, dialog};
