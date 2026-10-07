@@ -19,7 +19,7 @@ const srv=http.createServer((req,res)=>{const p=new URL(req.url,'http://l').path
  await p.evaluate(()=>window.myr5Menus.portal());await p.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);await shot('01-portal');
  await step('music armed on first tap',async()=>{await p.mouse.click(5,5);await p.waitForTimeout(1500);console.log('music',JSON.stringify(await p.evaluate(()=>window.myr5Music?.state())));});
  await step('ice: real 10 taps',async()=>{await p.evaluate(()=>myr5Portal.board('ice'));await p.waitForTimeout(4000);await shot('02a-ice-board');
-  for(let i=0;i<10;i++){await p.touchscreen.tap(187,400);await p.waitForTimeout(450);}
+  await p.evaluate(()=>[...document.querySelectorAll('button')].find(b=>/Got it/.test(b.textContent))?.click());await p.waitForTimeout(500);for(let i=0;i<10;i++){await p.touchscreen.tap(187,300);await p.waitForTimeout(450);}
   await p.waitForSelector('#portalVaultDoor',{timeout:8000});await shot('02b-ice-door-poster');
   console.log('ice secret',await p.evaluate(()=>!!JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('myr5-vault-v1/')))||'{}').secrets?.ice));});
  await step('other five secrets',async()=>{for(const id of ['pond','jelly','grass','wood','quilt'])await p.evaluate(id=>myr5Portal.secret(id),id);await p.waitForTimeout(500);
