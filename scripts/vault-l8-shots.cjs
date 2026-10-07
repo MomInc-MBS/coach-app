@@ -2,10 +2,10 @@ const {server,PORT}=require('./vault-l8-preview.cjs'),{chromium}=require('playwr
 (async()=>{await new Promise(r=>server.listen(PORT,'127.0.0.1',r));const b=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
 const p=await (await b.newContext({viewport:{width:375,height:812},hasTouch:true,deviceScaleFactor:2})).newPage();const errs=[];p.on('console',m=>m.type()==='error'&&errs.push(m.text()));p.on('pageerror',e=>errs.push(String(e)));
 const shot=n=>p.screenshot({path:out+'/l8-'+n+'.png'}),dbg=()=>p.evaluate(()=>myr5Hall.debug()),wait=ms=>p.waitForTimeout(ms);
-await p.goto(`http://127.0.0.1:${PORT}/`);await p.evaluate(()=>{myr5Vault.reset();window.go();});
-await wait(150);await shot('0-purple');await wait(1100);await shot('1-transition');await wait(3500);await shot('2-start');
+await p.goto(`http://127.0.0.1:${PORT}/`);await p.waitForFunction(()=>window.go,null,{timeout:15000}).catch(()=>console.log(errs));await p.evaluate(()=>{myr5Vault.reset();window.go();});
+await wait(400);for(const [n,t] of [['25',.8],['50',1.6],['75',2.4]]){await p.evaluate(t=>myr5Hall.at(t),t);await wait(500);await shot('1-transition-'+n);}await p.evaluate(()=>myr5Hall.at(-1));await wait(3500);await shot('2-start');
 await p.evaluate(()=>myr5Hall.go(2.8));await wait(2500);console.log(JSON.stringify(await dbg()));await shot('3-locked-card');
 await p.evaluate(()=>myr5Vault.earn('g0'));await p.evaluate(()=>myr5Hall.go(0));await wait(1500);await p.evaluate(()=>myr5Hall.go(2.8));await wait(2000);await shot('4-earned-card');
-await p.evaluate(()=>myr5Hall.jump(6*24));await wait(2500);console.log(JSON.stringify(await dbg()));await shot('5-far');
+await p.evaluate(()=>myr5Hall.jump(6*29));await wait(2500);console.log(JSON.stringify(await dbg()));await shot('5-far');await p.evaluate(()=>myr5Hall.jump(6*50));await wait(2500);await shot('6-unclaimed-end');
 await p.mouse.move(100,500);await p.evaluate(()=>myr5Hall.go(0));await wait(3000);
 console.log('resident-at-start',JSON.stringify(await dbg()),'errors',JSON.stringify(errs));await b.close();server.close();})();

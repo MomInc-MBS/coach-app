@@ -2,9 +2,10 @@
 // (easy -> hard). Walk/inspect feel ported from play/lilboyfriend (eased route, drag/wheel/keys/held arrows,
 // nearest-exhibit inspect). Lazy: loaded only by the vault door. AGPL-3.0-or-later.
 export const GAP=6, ROOT='/creature/models/roster/', TOP=1.55;
-// Smaller GLB of each coach group (01..23). Goal i wears coach i % 23.
-export const COACH_FILES=['01-seed-pearo--blank_toy_figure_3d_model','02-taper-tallstalk--humanoid_robot_3d_model1','03-pearl-orb-ring--robot_3d_model','04-crest-wedge--stylized_3d_character','05-slope-bobble--clay_humanoid_figure_3d_model','06-ridge-triad--geometric_robot_3d_model1','07-bulb-sphereling--cute_robot_3d_model','08-shard-asym--fantasy_creature_3d_model2','09-monolith-tanka--robot_3d_model3','10-petal-wisp--ghost_character_3d_model','11-anvil-cask--clay-style_robot_3d_model','12-seedpod-snailslug--stylized_worm_3d_model','13-fan-split--stylized_toy_3d_model','14-chisel-spire--cone_head_3d_model','15-orbital-coili--robot_character_3d_model','16-spade-arch--stylized_humanoid_3d_model','17-shellcap-manyarm--mushroom_creature_3d_model','18-quad-all--dragon_creature_3d_model','19-genie-multi--multi-armed_humanoid_3d_model','20-lume--robotic_figure_3d_model','21-flyer--winged_humanoid_3d_model','22-curve--stylized_cartoon_figure_3d_model','23-blob-texture-bodies--cute_blob_creature_3d_model'];
-export const coachFile=i=>ROOT+COACH_FILES[i%COACH_FILES.length]+'.glb';
+// Every distinct roster coach (performance-catalog COACHES minus the original MYR5, which has no roster GLB), in catalog order.
+// Statue i wears coach i % coaches.length; goals first, extra coaches stand on as unclaimed glass.
+export const rosterFiles=coaches=>coaches.filter(c=>c.id.startsWith('roster/')).map(c=>ROOT+c.id.slice(7)+'.glb');
+export const statueCount=(goals,coaches)=>Math.max(goals,coaches);
 export const statueZ=i=>-GAP*(i+1),STOP=3.2; // route value at which you stand in front of statue i
 export const stopAt=i=>-statueZ(i)-STOP;
 export const nearestStatue=(route,n,max=1.6)=>{let b=-1,d=max;for(let i=0;i<n;i++){const e=Math.abs(stopAt(i)-route);if(e<d){b=i;d=e;}}return b;};
@@ -38,9 +39,9 @@ const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 export async function enterHall(host=document.body){
  exitHall();
  const THREE=await import('three'),{GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js'),{MeshoptDecoder}=await import('three/addons/libs/meshopt_decoder.module.js');
- const {GOALS}=await import('./vault-goals.mjs'),store=await import('./vault-store.mjs').catch(()=>({}));
+ const {GOALS}=await import('./vault-goals.mjs'),{COACHES}=await import('../../performance-catalog.mjs'),FILES=rosterFiles(COACHES),store=await import('./vault-store.mjs').catch(()=>({}));
  const rewardPacks=await import('../../reward-packs.mjs').catch(()=>null);
- const N=GOALS.length,limit=stopAt(N-1)+2,state=()=>safe(()=>store.read(),{});
+ const G=GOALS.length,N=statueCount(G,FILES.length),limit=stopAt(N-1)+2,state=()=>safe(()=>store.read(),{});
  const el=document.createElement('div');el.className='vh';
  el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button><div class="vh-pos"></div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div>`;
  host.append(el);const $=s=>el.querySelector(s),canvas=$('canvas'),card=$('.vh-card'),pur=$('.vh-pur'),pos=$('.vh-pos');
@@ -66,31 +67,31 @@ export async function enterHall(host=document.body){
   scene.add(g);atoms.push({g,rings});
  }
  // Warp streaks for the entry shrink.
- const sN=140,sp=new Float32Array(sN*6);for(let i=0;i<sN;i++){const a=Math.random()*6.28,r=.6+Math.random()*5,z=-Math.random()*40;sp.set([Math.cos(a)*r,Math.sin(a)*r+1.4,z,Math.cos(a)*r,Math.sin(a)*r+1.4,z-1.5],i*6);}
- const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(sp,3));const sm=new THREE.LineBasicMaterial({color:'#e7c8ff',transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});const streaks=new THREE.LineSegments(sg,sm);streaks.frustumCulled=false;scene.add(streaks);own.push(sg,sm);
+ const sN=320,sp=new Float32Array(sN*6);for(let i=0;i<sN;i++){const a=Math.random()*6.28,r=.6+Math.random()*5,z=-Math.random()*40;sp.set([Math.cos(a)*r,Math.sin(a)*r+1.4,z,Math.cos(a)*r,Math.sin(a)*r+1.4,z-1.5],i*6);}
+ const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(sp,3));const sm=new THREE.LineBasicMaterial({color:'#ffe9c0',transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});const streaks=new THREE.LineSegments(sg,sm);streaks.frustumCulled=false;scene.add(streaks);own.push(sg,sm);
  // Statues.
  const dark=new THREE.MeshStandardMaterial({color:'#2a1450',metalness:.9,roughness:.15,transparent:true,opacity:.6,emissive:'#5a22a8',emissiveIntensity:.7});own.push(dark);
  const pedG=new THREE.CylinderGeometry(.7,.85,.5,24),pedM=new THREE.MeshStandardMaterial({color:'#2a1446',metalness:.6,roughness:.4}),capG=new THREE.TorusGeometry(.72,.03,6,32),haloG=new THREE.CircleGeometry(1.1,32),capM=glow('#ffd36e',.9),nextM=glow('#ffd36e',.5);own.push(pedG,pedM,capG,haloG);
- const nextLight=new THREE.PointLight('#ffd36e',0,6);scene.add(nextLight);
- const statues=GOALS.map((g,i)=>{const grp=new THREE.Group(),x=i%2?1.7:-1.7;grp.position.set(x,0,statueZ(i));grp.rotation.y=i%2?-.5:.5;
+ const nextLight=new THREE.PointLight('#ffd36e',0,8,2);scene.add(nextLight);const pulseM=glow('#ffd36e',.9),pulse=new THREE.Mesh(new THREE.TorusGeometry(.85,.05,8,48),pulseM);pulse.rotation.x=Math.PI/2;pulse.visible=false;scene.add(pulse);own.push(pulse.geometry);
+ const statues=Array.from({length:N},(_,i)=>{const g=GOALS[i]||null;const grp=new THREE.Group(),x=i%2?1.7:-1.7;grp.position.set(x,0,statueZ(i));grp.rotation.y=i%2?-.5:.5;
   const ped=new THREE.Mesh(pedG,pedM);ped.position.y=.25;const cap=new THREE.Mesh(capG,capM);cap.rotation.x=Math.PI/2;cap.position.y=.5;
   const halo=new THREE.Mesh(haloG,nextM);halo.rotation.x=-Math.PI/2;halo.position.y=.02;halo.visible=false;
   grp.add(ped,cap,halo);scene.add(grp);return {g,i,grp,halo,model:null,loading:0,tk:0};});
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
- function skin(s){if(!s.model)return;const e=isEarned(s.g,state());s.model.traverse(o=>{if(o.isMesh){if(!o.userData.orig)o.userData.orig=o.material;o.material=e?o.userData.orig:dark;}});}
+ function skin(s){if(!s.model)return;const e=s.g&&isEarned(s.g,state());s.model.traverse(o=>{if(o.isMesh){if(!o.userData.orig)o.userData.orig=o.material;o.material=e?o.userData.orig:dark;}});}
  function freeModel(m){m.traverse(o=>{if(!o.isMesh)return;o.geometry.dispose();for(const mm of[].concat(o.userData.orig||o.material)){for(const v of Object.values(mm))if(v?.isTexture)v.dispose();mm.dispose();}});}
  function drop(s){if(!s.model)return;s.grp.remove(s.model);freeModel(s.model);s.model=null;}
- async function load(s){if(s.model||s.loading)return;const tk=s.loading=++s.tk;try{const m=(await loader.loadAsync(coachFile(s.i))).scene;
+ async function load(s){if(s.model||s.loading)return;const tk=s.loading=++s.tk;try{const m=(await loader.loadAsync(FILES[s.i%FILES.length])).scene;
   if(s.loading!==tk||s.model||!live||!want.includes(s.i)){freeModel(m);return;}
   const box=new THREE.Box3().setFromObject(m),sz=box.getSize(new THREE.Vector3()),k=TOP/Math.max(sz.y,.001),c=box.getCenter(new THREE.Vector3());m.scale.setScalar(k);m.position.set(-c.x*k,.5-box.min.y*k,-c.z*k);
   s.model=m;s.grp.add(m);skin(s);}catch(e){console.warn('vault statue',e);}finally{if(s.loading===tk)s.loading=0;}}
  let want=[];function stream(c){want=residentWindow(c,N);statues.forEach(s=>{if(want.includes(s.i))load(s);else{s.loading=0;drop(s);}});}
  // Walk state (ported from lilboyfriend).
- let route=0,target=0,vel=0,held=0,cur=-1,insp=-1,blend=0,nextI=-1,started=performance.now(),last=started,raf=0,reached=false;
+ let fixT=-1,route=0,target=0,vel=0,held=0,cur=-1,insp=-1,blend=0,nextI=-1,started=performance.now(),last=started,raf=0,reached=false;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),move=d=>{target=clamp(target+d,0,limit);};
- const showCard=i=>{const g=GOALS[i],m=cardModel(g,state(),safe(()=>rewardPacks.unopenedPacks(),[]));card.hidden=false;
+ const showCard=i=>{const g=GOALS[i];if(!g){card.hidden=false;card.innerHTML='<div class="t">unclaimed</div><div class="c">Nothing is carved here yet. Come back when the vault grows.</div>';return;}const m=cardModel(g,state(),safe(()=>rewardPacks.unopenedPacks(),[]));card.hidden=false;
   card.innerHTML=`<div class="t ${m.tier}">${m.tier} &middot; ${m.earned?'unlocked':'locked'}${i===nextI?' &middot; next':''}</div>`+(m.earned?`<h3>${esc(m.title)}</h3>${m.date?`<small>Earned ${m.date}</small>`:''}${m.pack?'<button data-pack>Open pack</button>':''}`:`<div class="c">${esc(m.clue)}</div>`+(m.progress?`<div class="vh-bar"><i style="width:${100*m.progress.have/m.progress.need}%"></i></div><small>${m.progress.have} / ${m.progress.need}</small>`:''));};
- const refresh=()=>{nextI=firstUnearned(GOALS,state());statues.forEach(s=>{skin(s);s.halo.visible=s.i===nextI;});const n=statues[nextI];nextLight.intensity=n?2.2:0;if(n)nextLight.position.set(n.grp.position.x,2.2,n.grp.position.z+.8);if(insp>=0)showCard(insp);};
+ const refresh=()=>{nextI=firstUnearned(GOALS,state());statues.forEach(s=>{skin(s);s.halo.visible=s.i===nextI;});const n=statues[nextI];pulse.visible=!!n;nextLight.intensity=n?6:0;if(n){nextLight.position.set(n.grp.position.x*.6,1.8,n.grp.position.z+1.4);pulse.position.set(n.grp.position.x,.06,n.grp.position.z);}if(insp>=0)showCard(insp);};
  card.addEventListener('click',e=>{if(e.target.matches('[data-pack]'))document.querySelector('.reward-pack-launch')?.click();});
  // Input: drag up/down walks, wheel, keys, held arrows, tap a statue to walk to it.
  let drag=null;const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
@@ -108,10 +109,10 @@ export async function enterHall(host=document.body){
  const resize=()=>{const w=el.clientWidth||innerWidth,h=el.clientHeight||innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
  addEventListener('resize',resize);resize();
  const look=new THREE.Vector3();
- function frame(now){raf=0;if(!live||document.hidden)return;const dt=Math.min(.05,(now-last)/1000);last=now;const t=(now-started)/1000;
+ function frame(now){raf=0;if(!live||document.hidden)return;const dt=Math.min(.05,(now-last)/1000);last=now;const t=fixT>=0?fixT:(now-started)/1000;
   // Entry: purple fades out, camera starts high + far and shrinks down into the hall with an FOV warp; streaks fade.
-  const e=clamp((t-.3)/2.6,0,1),ease=1-Math.pow(1-e,3),inv=1-ease;pur.style.opacity=String(1-clamp((t-.5)/1.6,0,1));
-  sm.opacity=(1-e)*.9;streaks.position.z=(t*40)%40;streaks.visible=e<1;
+  const e=clamp((t-.3)/2.6,0,1),ease=1-Math.pow(1-e,3),inv=1-ease;pur.style.opacity=String(1-clamp((t-.7)/1.7,0,1));
+  sm.opacity=Math.min(1,(1-e)*1.4);streaks.position.z=(t*40)%40;streaks.visible=e<1;
   if(e>=1)move(held*dt*3);
   const gap=target-route;vel+=(clamp(gap*7,-3.3,3.3)-vel)*(1-Math.exp(-dt*14));const step=Math.abs(vel*dt)<Math.abs(gap)?vel*dt:gap;route+=Math.sign(step)===Math.sign(gap)?step:0;if(Math.abs(gap)<.001)vel=0;
   const near=e>=1&&Math.abs(vel)<.25?nearestStatue(route,N):-1;
@@ -124,16 +125,16 @@ export async function enterHall(host=document.body){
   camera.position.set(0,1.55+inv*7,-route+inv*18);look.set(0,1.55-inv*6,camera.position.z-20);
   if(insp>=0&&blend>.01){const s=statues[insp].grp.position;camera.position.x=s.x*.35*blend;look.lerp(new THREE.Vector3(s.x,1.1,s.z),blend);}
   camera.lookAt(look);
-  for(const s of statues)if(s.model)s.model.rotation.y=Math.sin(t*.6+s.i)*.25+(s.i===insp?t*.5:0);
+  for(const s of statues)if(s.model)s.model.rotation.y=Math.sin(t*.6+s.i)*.2;
   for(const a of atoms){a.g.rotation.y+=dt*.15;for(const r of a.rings){const u=r.userData,p=t*u.sp+u.ph;u.e.position.set(Math.cos(p)*u.rr,Math.sin(p)*u.rr,0);}}
   track.forEach((r,i)=>r.rotation.z=t*.25*(i%2?1:-1));
-  if(nextI>=0){nextLight.intensity=1.6+Math.sin(t*3)*.6;nextM.opacity=.35+.2*Math.sin(t*3);}
+  if(nextI>=0){nextLight.intensity=5+Math.sin(t*3)*2;nextM.opacity=.45+.25*Math.sin(t*3);const ph=(t%1.4)/1.4;pulse.scale.setScalar(1+ph*.9);pulseM.opacity=(1-ph)*.95;}
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
  const vis=()=>{if(!document.hidden&&live&&!raf){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
  live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
   statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
- window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),locked:statues.filter(s=>s.model&&s.model.children.length&&!isEarned(s.g,state())).length}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},refresh};
+ window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),locked:statues.filter(s=>s.model&&s.model.children.length&&s.g&&!isEarned(s.g,state())).length}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
  stream(0);refresh();raf=requestAnimationFrame(frame);
  return {exit:exitHall};
 }
