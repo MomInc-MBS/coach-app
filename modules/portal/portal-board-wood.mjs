@@ -353,7 +353,7 @@ function dispose(){
   U.uAshTex.value?.dispose();U.uAshTex.value=null;for(const s of S.smoke)s.sprite.parent?.remove(s.sprite);for(const s of S.smoke)s.sprite.material.dispose();S.smokeTex?.dispose();}
  S=null;
 }
-return {init,press,move,release,step,dispose,claims,heal,uniforms:U,fragmentDecls:'uniform float uAsh;uniform float uCrumble;uniform sampler2D uAshTex;\n',
+return {init,press,move,release,step,dispose,claims,heal,healSecret:heal,uniforms:U,fragmentDecls:'uniform float uAsh;uniform float uCrumble;uniform sampler2D uAshTex;\n',
  fragment:`if(uCrumble>0.0){float ct=texture2D(uAshTex,vPlanar).r;if(ct<uCrumble)discard;diffuseColor.rgb*=mix(1.0,.35,smoothstep(.07,0.,ct-uCrumble));}
 if(uAsh>0.0){float mt=texture2D(uAshTex,vPlanar*vec2(2.7,2.3)+.31).r;vec3 ac=vec3(.62,.6,.57)*clamp(.45+1.1*lum,.3,1.3)*(.55+.6*mt);diffuseColor.rgb=mix(diffuseColor.rgb,ac,uAsh);roughnessFactor=mix(roughnessFactor,1.,uAsh);}`};
 }
