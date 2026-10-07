@@ -260,6 +260,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
   return cutting.fall.done;
  }
  function heal(){
+  effect.healSecret?.(); // ice secret (L3): restore the shattered crystal (cut() heals first too)
   if(effect.presectioned){effect.heal?.();if(!disposed&&renderer)renderer.render(scene,camera);return;}
   if(!cutting)return;
   cutting.fall.end();for(const mesh of meshObjs){mesh.material.userData.portalCutSideUniform.value=0;const piece=pieceMats.get(mesh.material);if(piece?.userData.portalCutSideUniform)piece.userData.portalCutSideUniform.value=0;}portalCutMask.value?.dispose();portalCutMask.value=null;cutting=null;effect.heal?.();
