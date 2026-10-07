@@ -7,14 +7,20 @@ import {unlockedCoachIds,performanceOwner,coachAccess} from './performance-progr
 import {PACK_SIZES,COSMETIC_PACK_ODDS} from './progression-rules.mjs';
 export const PACK_ODDS=COSMETIC_PACK_ODDS;
 export {PACK_SIZES};
-// Achievement Vault packs (id `reward-pack:<tier>:vault-<id>`): always 2 items, colour/texture only; legendary's first slot is a texture.
-export const VAULT_PACK=Object.freeze({size:2,odds:Object.freeze({rare:Object.freeze({color:70,'64-bit':0}),legendary:Object.freeze({color:40,'64-bit':0})})});
+// Achievement Vault packs (id `reward-pack:secret:vault-<goal>`) are holographic secret packs with no 64-bit items (colour 75 / texture 25).
+// Size follows the goal's tier (legendary 3, rare 2; its first slot is then a texture). vault-store notes the goal tier at grant time so the
+// core never imports the vault goal list.
+export const VAULT_PACK=Object.freeze({rare:2,legendary:3,odds:Object.freeze({secret:Object.freeze({color:75,'64-bit':0})})});
 export const isVaultPack=item=>String(item?.id).includes(':vault-');
+const VT_KEY='myr5-vault-pack-tier-v1';
+export const noteVaultPack=(id,tier)=>{try{const d=JSON.parse(localStorage.getItem(VT_KEY)||'{}');if(d[id]!==tier){d[id]=tier;localStorage.setItem(VT_KEY,JSON.stringify(d));}}catch{/* private mode */}};
+const vaultSize=id=>{try{return VAULT_PACK[JSON.parse(localStorage.getItem(VT_KEY)||'{}')[id]]||VAULT_PACK.rare;}catch{return VAULT_PACK.rare;}};
+export const packSize=item=>isVaultPack(item)?vaultSize(item.id):PACK_SIZES[item.tier];
 const KEY='myr5-opened-reward-packs-v2';
 const ownerKey=()=>`${KEY}/${encodeURIComponent(performanceOwner())}`;
 const safeRead=()=>{try{const data=JSON.parse(localStorage.getItem(ownerKey())||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch{return {};}};
 const save=data=>{try{localStorage.setItem(ownerKey(),JSON.stringify(data));return true;}catch{return false;}};
-export const packItem=(tier,id)=>({kind:'reward-pack',id,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,tier,line:`Open for ${PACK_SIZES[tier]} coach cosmetic${PACK_SIZES[tier]===1?'':'s'}.`});
+export const packItem=(tier,id)=>({kind:'reward-pack',id,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,tier,line:`Open for ${packSize({id,tier})} coach cosmetic${packSize({id,tier})===1?'':'s'}.`});
 const unit=random=>{const value=random();if(!Number.isFinite(value))throw RangeError('Invalid random value.');return Math.min(1-Number.EPSILON,Math.max(0,value));};
 export function rollCategory(tier,random=Math.random,table=PACK_ODDS){
  const odds=table[tier];if(!odds)throw Error('Unknown pack tier');
@@ -51,8 +57,8 @@ export function openRewardPack(item,{random=Math.random}={}){
  const coaches=unlockedCoachIds().filter(coach=>coachAccess(coach));if(!coaches.length)return null;
  const rewards=[];const selected=new Set(),unowned=remainingCosmetics({coaches});
  const vault=isVaultPack(item);
- for(let slot=0;slot<(vault?VAULT_PACK.size:PACK_SIZES[item.tier]);slot++){
-  const rolled=vault&&item.tier==='legendary'&&slot===0?'texture':rollCategory(item.tier,random,vault?VAULT_PACK.odds:PACK_ODDS);
+ for(let slot=0;slot<packSize(item);slot++){
+  const rolled=vault&&vaultSize(item.id)===VAULT_PACK.legendary&&slot===0?'texture':rollCategory(item.tier,random,vault?VAULT_PACK.odds:PACK_ODDS);
   // Preserve category odds until that category is exhausted; then award another
   // unowned category rather than a duplicate while the collection is incomplete.
   const order=[rolled,...['color','64-bit','texture'].filter(category=>category!==rolled&&!(vault&&category==='64-bit'))];

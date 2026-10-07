@@ -120,7 +120,7 @@ test('every tier odds sum to 100 and Secret doubles the Legendary texture chance
 });
 
 test('a secret pack (vault-style id) opens with 3 items',()=>{
- memory.clear();const item=packItem('secret','reward-pack:secret:vault-hidden-1');assert.equal(item.name,'Secret Pack');
+ memory.clear();const item=packItem('secret','reward-pack:secret:hidden-1');assert.equal(item.name,'Secret Pack');
  assert(ledger.grantUnlock('reward-pack',item.id));
  const result=openRewardPack(item,{random:()=>0});assert.equal(result.tier,'secret');assert.equal(result.rewards.length,3);
  assert.deepEqual(openRewardPack(item,{random:()=>.99}),result);

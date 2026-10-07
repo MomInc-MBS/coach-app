@@ -6,7 +6,7 @@ globalThis.myr5AuthenticatedAccount={user:{id:'vault-test'}};
 const events=[];globalThis.window={dispatchEvent:e=>events.push(e)};globalThis.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail;}};
 const store=await import('../modules/vault/vault-store.mjs');
 const ledger=await import('../unlock-ledger.mjs');
-const {openRewardPack,PACK_ODDS,packItem}=await import('../reward-packs.mjs');
+const {openRewardPack,PACK_ODDS,packItem,VAULT_PACK,noteVaultPack}=await import('../reward-packs.mjs');
 const {COSMETIC_PACK_ODDS}=await import('../progression-rules.mjs');
 const ctr=name=>store.read().counters[name]||0;
 
@@ -29,18 +29,19 @@ test('markSecret stores the board, earns the goal, grants a vault pack and fires
  memory.clear();events.length=0;
  assert.deepEqual(store.markSecret('pond'),['still-pond']);
  assert.ok(store.read().secrets.pond);
- assert.ok(ledger.isGranted('reward-pack','reward-pack:rare:vault-still-pond'));
+ assert.ok(ledger.isGranted('reward-pack','reward-pack:secret:vault-still-pond'));
  assert.deepEqual(events.at(-1).detail.ids,['still-pond']);
  assert.deepEqual(store.markSecret('pond'),[],'repeat does not re-earn');
  assert.deepEqual(store.markSecret('not-a-board'),[]);
 });
-test('vault packs hold exactly 2 items; legendary has a texture; other odds untouched',()=>{
+test('vault packs are secret packs: rare goals give 2 items, legendary 3 with a texture, never 64-bit; other odds untouched',()=>{
  memory.clear();
  assert.deepEqual(PACK_ODDS,COSMETIC_PACK_ODDS);
+ assert.deepEqual(VAULT_PACK.odds.secret,{color:75,'64-bit':0});assert.ok(100-VAULT_PACK.odds.secret.color>=2*PACK_ODDS.legendary.texture);
  for(const tier of ['rare','legendary']){
-  const item=packItem(tier,`reward-pack:${tier}:vault-test-${tier}`);ledger.grantUnlock('reward-pack',item.id);
+  const item=packItem('secret',`reward-pack:secret:vault-test-${tier}`);noteVaultPack(item.id,tier);ledger.grantUnlock('reward-pack',item.id);
   const opened=openRewardPack(item,{random:()=>0});
-  assert.equal(opened.rewards.length,2,tier);
+  assert.equal(opened.tier,'secret');assert.equal(opened.rewards.length,tier==='legendary'?3:2,tier);
   assert.ok(opened.rewards.every(r=>r.kind!=='boss-skin'),'vault packs never roll 64-bit');
   if(tier==='legendary')assert.ok(opened.rewards.some(r=>r.kind==='texture'),'legendary has >=1 texture');
  }

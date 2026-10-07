@@ -7,7 +7,7 @@ import {COACHES,COACH_REQUIREMENTS,EXCLUDED_COACH_IDS} from '../../performance-c
 import {colourRewardPool,textureRewardPool} from '../../battle-pass-rewards.mjs';
 import * as cosmetics from '../../creature/source/creator/unlock-store.ts';
 import * as ledger from '../../unlock-ledger.mjs';
-import {openedPack} from '../../reward-packs.mjs';
+import {openedPack,noteVaultPack} from '../../reward-packs.mjs';
 export const VAULT_KEY='myr5-vault-v1';
 const key=()=>`${VAULT_KEY}/${encodeURIComponent(performanceOwner())}`;
 const obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
@@ -36,12 +36,12 @@ export function snapshot(){
  return out;
 }
 export const view=(d=read())=>({counters:d.counters,time:d.time,secrets:d.secrets,earned:d.earned,snap:snapshot()});
-const packId=g=>`reward-pack:${g.tier}:vault-${g.id}`;
+export const packId=g=>`reward-pack:secret:vault-${g.id}`;
 function grant(ids,d){
  const now=Date.now(),done=[];
  for(const id of ids){if(GOALS.some(g=>g.id===id)&&!d.earned[id]){d.earned[id]=now;done.push(id);}}
  if(!done.length||!write(d))return [];
- for(const id of done)ledger.grantUnlock('reward-pack',packId(GOALS.find(g=>g.id===id)));
+ for(const id of done){const g=GOALS.find(x=>x.id===id);noteVaultPack(packId(g),g.tier);ledger.grantUnlock('reward-pack',packId(g));}
  try{window.dispatchEvent(new CustomEvent('myr5:vault-earned',{detail:{ids:done}}));}catch{/* no window in node */}
  return done;
 }

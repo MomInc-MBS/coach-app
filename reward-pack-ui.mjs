@@ -1,6 +1,6 @@
 import {COACHES} from './performance-catalog.mjs';
 import PALETTES from './creature/source/creator/palettes.json' with {type:'json'};
-import {grantDailyPack,openRewardPackExclusive,unopenedPacks,PACK_SIZES} from './reward-packs.mjs';
+import {grantDailyPack,openRewardPackExclusive,unopenedPacks,PACK_SIZES,packSize} from './reward-packs.mjs';
 
 // The pack is just a tile: a 64x64 pixel tile in its tier colour, then the item it awarded. Both popups are
 // modal <dialog> (top layer) so the portal's background inerting never swallows it, and it presents itself
@@ -56,6 +56,8 @@ export function drawTierTile(ctx,tier,{colors=[],opened=false}={}){
  // Secret: an iridescent bevel, cyan/violet/magenta/gold pixels round the frame (CSS hue-rotates it on screen).
  if(tier==='secret'){const hues=['#3ff5ff','#b388ff','#ff4bd8','#ffd36a'];for(let i=0;i<14;i++){const c=hues[i%4],o=2+i*4;rect(o,2,4,2,c);rect(60,o,2,4,c);rect(62-o-4,60,4,2,hues[(i+2)%4]);rect(2,62-o-4,2,4,hues[(i+2)%4]);}}
 }
+// What an opened pack unlocked, as the plain items the reveal card (and the dialog's own result area) list.
+export const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category});return {title:item.title,detail:`${item.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`,colors:item.colors};});
 export function mountRewardPacks(){
  const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
  const launch=document.createElement('button');launch.type='button';launch.className='reward-pack-launch';launch.hidden=true;launch.innerHTML='<canvas width="64" height="64" aria-hidden="true"></canvas><span></span>';document.body.append(launch);
@@ -82,13 +84,12 @@ export function mountRewardPacks(){
  function select(id){
   current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);overlay.dataset.tier=current.tier;
   overlay.querySelector('h2').textContent=`${current.tier} pack`;tile.setAttribute('aria-label',`${current.tier} pack tile`);drawTierTile(tile.getContext('2d'),current.tier);
-  result.textContent=`${PACK_SIZES[current.tier]} coach cosmetic${PACK_SIZES[current.tier]===1?'':'s'} inside. Tap to open.`;open.hidden=false;close.textContent='Later';
+  {const n=packSize(current);result.textContent=`${n} coach cosmetic${n===1?'':'s'} inside. Tap to open.`;};open.hidden=false;close.textContent='Later';
  }
  let pods=null;const preload=()=>pods??=import('./drop-pod-opening.mjs').catch(()=>null);
  function show(id){select(id);preload();launch.hidden=true;overlay.showModal();open.focus();}
  launch.onclick=()=>{const id=available()[0];if(id)show(id);};close.onclick=hide;overlay.addEventListener('close',()=>{current=null;update();});
- // What an opened pack unlocked, as the plain items the reveal card (and the dialog's own result area) list.
- const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category});return {title:item.title,detail:`${item.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`,colors:item.colors};});
+
  function render(opened){
   const summary=rewardSummary(opened);drawTierTile(tile.getContext('2d'),current.tier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
   overlay.classList.remove('opened');void tile.offsetWidth;overlay.classList.add('opened');

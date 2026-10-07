@@ -134,13 +134,16 @@ export async function enterHall(arg=document.body){
  // Walk state (ported from lilboyfriend).
  let fixT=-1,route=0,target=0,vel=0,held=0,cur=-1,insp=-1,blend=0,nextI=-1,started=performance.now(),last=started,raf=0,reached=false;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),move=d=>{target=clamp(target+d,0,limit);};
- const packId=g=>`reward-pack:${g.tier}:vault-${g.id}`;
+ const packId=g=>`reward-pack:secret:vault-${g.id}`;
  let rsum=null;import('../../reward-pack-ui.mjs').then(m=>{rsum=m.rewardSummary;if(insp>=0)showCard(insp);},()=>{});
  const showCard=i=>{const g=GOALS[i],m=cardModel(g,state(),safe(()=>rewardPacks.unopenedPacks(),[]));card.hidden=false;const got=m.earned&&safe(()=>rewardPacks.openedPack(packId(g)),null),list=got&&rsum?got.rewards.map(r=>{const q=rsum({reward:r,category:r.category});return `<div class="c">${esc(q.title)} <small style="display:inline">${esc(q.detail)}</small></div>`;}).join(''):'';
-  card.innerHTML=`<div class="t ${m.tier}">${m.tier} &middot; ${m.earned?'unlocked':'locked'}${i===nextI?' &middot; next':''}</div>`+(m.earned?`<h3>${esc(m.title)}</h3>${m.date?`<small>Earned ${m.date}</small>`:''}${list||(m.pack?'<button data-pack>Open pack</button>':'')}`:`<div class="c">${esc(m.clue)}</div>`+(m.progress?`<div class="vh-bar"><i style="width:${100*m.progress.have/m.progress.need}%"></i></div><small>${m.progress.have} / ${m.progress.need}</small>`:''));};
+  card.innerHTML=`<div class="t ${m.tier}">secret &middot; ${m.earned?'unlocked':'locked'}${i===nextI?' &middot; next':''}</div>`+(m.earned?`<h3>${esc(m.title)}</h3>${m.date?`<small>Earned ${m.date}</small>`:''}${list||(m.pack?'<button data-pack>Open pack</button>':'')}`:`<div class="c">${esc(m.clue)}</div>`+(m.progress?`<div class="vh-bar"><i style="width:${100*m.progress.have/m.progress.need}%"></i></div><small>${m.progress.have} / ${m.progress.need}</small>`:''));};
  const refresh=()=>{nextI=firstUnearned(GOALS,state());statues.forEach(s=>{setEarn(s,true);s.halo.visible=s.i===nextI;});const n=statues[nextI];pulse.visible=!!n;nextLight.intensity=n?6:0;if(n){nextLight.position.set(n.grp.position.x*.6,1.8,n.grp.position.z+1.4);pulse.position.set(n.grp.position.x,.06,n.grp.position.z);}if(insp>=0)showCard(insp);};
  card.addEventListener('click',async e=>{const b=e.target.closest?.('[data-pack]');if(!b||!rewardPacks)return;const g=GOALS[insp];if(!g)return;b.disabled=true;
-  const opened=await rewardPacks.openRewardPackExclusive(rewardPacks.packItem(g.tier,packId(g)));if(!opened){b.disabled=false;b.textContent='Try again';return;}showCard(insp);});
+  // The holographic drop pod plays; the pack opens when the pod is tapped. Without the pod module (offline) it opens plainly.
+  const item=rewardPacks.packItem('secret',packId(g)),pods=await import('../../drop-pod-opening.mjs').catch(()=>null),ui=pods&&await import('../../reward-pack-ui.mjs').catch(()=>null);
+  if(pods&&ui){pods.playDropPod({tier:'secret',hasNext:false,onExit:()=>showCard(insp),open:async()=>{const o=await rewardPacks.openRewardPackExclusive(item);if(!o)return null;showCard(insp);return ui.unlocked(o);}});return;}
+  const opened=await rewardPacks.openRewardPackExclusive(item);if(!opened){b.disabled=false;b.textContent='Try again';return;}showCard(insp);});
  // Input: drag up/down walks, wheel, keys, held arrows, tap a statue to walk to it.
  let drag=null;const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
  canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,y:e.clientY,x:e.clientX,moved:0};canvas.setPointerCapture(e.pointerId);});

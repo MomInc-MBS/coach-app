@@ -60,7 +60,7 @@ if(materialRelease.configured){
 await assertMaterialTrustShipped('dist/client');
 // Achievement Vault: its raw modules reach .ts sources (unlock-store) that production strips, so bundle them in place (lazy, never core:
 // offline-assets VAULT). Splitting shares one store between door/hall; app-runtime/launch-runtime keep the store external so it is not inlined.
-await bundleEditor({entryPoints:['modules/vault/vault-store.mjs','modules/vault/vault-door.mjs','modules/vault/vault-hall.mjs'],bundle:true,splitting:true,format:'esm',target:'es2022',minify:true,outdir:'dist/client/modules/vault',allowOverwrite:true,outExtension:{'.js':'.mjs'},external:['three','three/*','../portal/*'],chunkNames:'chunk-[hash]'});
+await bundleEditor({entryPoints:['modules/vault/vault-store.mjs','modules/vault/vault-door.mjs','modules/vault/vault-hall.mjs'],bundle:true,splitting:true,format:'esm',target:'es2022',minify:true,outdir:'dist/client/modules/vault',allowOverwrite:true,outExtension:{'.js':'.mjs'},external:['three','three/*','../portal/*','../../drop-pod-opening.mjs'],chunkNames:'chunk-[hash]'});
 // Authoring projects remain in the published source repository, not the app bundle.
 for(const folder of ['creature/source','handborne/source']){const target=resolve('dist/client',folder);if(!target.startsWith(resolve('dist/client')+sep))throw Error('Invalid staging path');await rm(target,{recursive:true,force:true});}
 // Keep debugger-only maps in the open-source repository,
