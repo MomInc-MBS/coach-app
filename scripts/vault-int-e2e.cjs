@@ -17,7 +17,13 @@ const srv=http.createServer((req,res)=>{const p=new URL(req.url,'http://l').path
  const step=async(n,f)=>{try{await f();console.log('OK  ',n);}catch(e){console.log('FAIL',n,e.message.split('\n')[0]);}};
  await p.goto(base+'/pose.html');await p.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&!!document.querySelector('.coach-dock'),null,{timeout:60000});
  await p.evaluate(()=>window.myr5Menus.portal());await p.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);await shot('01-portal');
- await step('pond secret',async()=>{await p.evaluate(()=>myr5Portal.secret('pond'));await p.waitForSelector('#portalVaultDoor',{timeout:8000});await shot('02-door-poster');});
+ await step('music armed on first tap',async()=>{await p.mouse.click(5,5);await p.waitForTimeout(1500);console.log('music',JSON.stringify(await p.evaluate(()=>window.myr5Music?.state())));});
+ await step('ice: real 10 taps',async()=>{await p.evaluate(()=>myr5Portal.board('ice'));await p.waitForTimeout(4000);await shot('02a-ice-board');
+  for(let i=0;i<10;i++){await p.touchscreen.tap(187,400);await p.waitForTimeout(450);}
+  await p.waitForSelector('#portalVaultDoor',{timeout:8000});await shot('02b-ice-door-poster');
+  console.log('ice secret',await p.evaluate(()=>!!JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('myr5-vault-v1/')))||'{}').secrets?.ice));});
+ await step('other five secrets',async()=>{for(const id of ['pond','jelly','grass','wood','quilt'])await p.evaluate(id=>myr5Portal.secret(id),id);await p.waitForTimeout(500);
+  console.log('secrets',await p.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('myr5-vault-v1/'))))?.secrets||{})));await shot('02c-door-poster');});
  await step('tap poster -> vault route',async()=>{await p.click('#portalVaultDoor');await p.waitForFunction(()=>document.getElementById('vaultPanel')?.open&&document.getElementById('vaultPanel')._vault,null,{timeout:30000});await p.waitForTimeout(1500);await shot('03-vault-door');
   console.log(JSON.stringify(await p.evaluate(()=>{const i=document.getElementById('vaultPanel')._vault.info();return {head:i.view.head,lines:i.view.lines,foot:i.view.foot};})));});
  const info=()=>p.evaluate(()=>document.getElementById('vaultPanel')._vault.info()),P=(u,v)=>p.evaluate(([u,v])=>document.getElementById('vaultPanel')._vault.project(u,v),[u,v]);
@@ -28,7 +34,8 @@ const srv=http.createServer((req,res)=>{const p=new URL(req.url,'http://l').path
  await step('usb port -> hall',async()=>{const sc=await p.evaluate(()=>document.getElementById('vaultPanel')._vault.projectWorld(0,0,-.2));await p.mouse.click(sc.x,sc.y);await p.waitForFunction(()=>window.myr5Hall,null,{timeout:60000});await p.waitForTimeout(4000);await shot('06-hall');});
  await step('statue 1 card',async()=>{await p.evaluate(()=>myr5Hall.go(6*1-4.8));await p.waitForTimeout(6000);console.log(JSON.stringify(await p.evaluate(()=>myr5Hall.debug())));await shot('07-statue1-card');});
  await step('earn + sweep',async()=>{const id=await p.evaluate(async()=>{const g=await import('/modules/vault/vault-goals.mjs');return g.GOALS[0].id;});await p.evaluate(id=>myr5Vault.earn(id),id);await p.waitForTimeout(300);await shot('08a-sweep');await p.waitForTimeout(2000);await shot('08-earned');});
- await step('open pack',async()=>{await p.waitForSelector('[data-pack]',{timeout:5000});await p.click('[data-pack]');await p.waitForTimeout(1500);await shot('09-pack');});
+ await step('open pack -> holographic drop pod',async()=>{await p.waitForSelector('[data-pack]',{timeout:5000});await p.click('[data-pack]');await p.waitForSelector('dialog.drop-pod[data-tier=secret]',{timeout:8000});await shot('09a-pod-sky');await p.waitForTimeout(7000);await shot('09b-pod-landed');
+  await p.click('[data-hit]');await p.waitForTimeout(4000);await shot('09c-pod-reveal');console.log('reveal',(await p.textContent('.drop-pod-card')).replace(/\s+/g,' ').slice(0,200));await p.click('[data-exit]');await p.waitForTimeout(800);await shot('09d-card-after');});
  await step('hall end + secrets',async()=>{await p.evaluate(()=>myr5Hall.jump(6*50));await p.waitForTimeout(2500);await shot('10-hall-end');for(const id of ['wood','quilt','ice'])await p.evaluate(id=>myr5Portal.secret(id),id);await p.waitForTimeout(500);});
  console.log('hall-end counter',await p.evaluate(()=>JSON.stringify(myr5Vault.state?.())));
  console.log(JSON.stringify(errs));console.log('console errors',JSON.stringify(errs.filter(e=>!/Failed to load resource/.test(e))),'(raw',errs.length,')');
