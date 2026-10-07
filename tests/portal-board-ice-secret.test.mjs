@@ -1,78 +1,53 @@
-// L3 Crystal ice secret: 10 taps → shatter
+// L3 Crystal/ice secret: 10 taps in a row -> shatter; heal() restores the crystal.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {iceSecret,ice} from '../modules/portal/portal-board-ice.mjs';
+import * as THREE from 'three';
+import {iceSecret,iceClaims,newSecret,iceEffect} from '../modules/portal/portal-board-ice.mjs';
 
-test('iceSecret: 10 taps at 500 ms spacing → shattered',()=>{
- let S={taps:[],lastRelease:0,shattered:false};
- for(let i=0;i<10;i++){
-  S=iceSecret(S,{type:'press'},i*500);
-  S=iceSecret(S,{type:'release'},i*500+100);
- }
- assert.equal(S.taps.length,10,'all 10 taps recorded');
- assert.equal(S.shattered,true,'shatter triggered on tap 10');
+const tap=(S,t0,hold=100,dist=0)=>{S=iceSecret(S,{type:'press'},t0);if(dist)S=iceSecret(S,{type:'move',dist},t0+10);return iceSecret(S,{type:'release'},t0+hold);};
+const run=(n,gap=500)=>{let S=newSecret();for(let i=0;i<n;i++)S=tap(S,i*gap);return S;};
+
+test('10 taps at 500 ms spacing -> shattered; 9 are not',()=>{
+ assert.equal(run(10).shattered,true);
+ assert.equal(run(9).shattered,false);
+});
+test('a 700 ms gap or a 15 px drag resets the chain',()=>{
+ let S=run(5);S=tap(S,5*500+700-500);assert.equal(S.taps.length,1,'gap');
+ S=run(5);S=tap(S,3000,100,15);assert.equal(S.taps.length,0,'drag');
+ S=run(5);S=iceSecret(S,{type:'press'},2500);S=iceSecret(S,{type:'release'},3300);assert.equal(S.taps.length,0,'held 800 ms is not a tap');
+ S=run(9);S=tap(S,4500+700);assert.equal(S.shattered,false);
+});
+test('slow drag of small steps adds up to a drag',()=>{
+ let S=iceSecret(newSecret(),{type:'press'},0);for(let i=0;i<5;i++)S=iceSecret(S,{type:'move',dist:4},10*i);
+ S=iceSecret(S,{type:'release'},60);assert.equal(S.taps.length,0);
+});
+test('claims: false for taps 1-2, true from tap 3 (asked on the release, before the tap is counted)',()=>{
+ let S=newSecret();const c=[];
+ for(let i=0;i<4;i++){S=iceSecret(S,{type:'press'},i*400);S=iceSecret(S,{type:'move',dist:1},i*400+10);c.push(iceClaims(S));S=iceSecret(S,{type:'release'},i*400+90);}
+ assert.deepEqual(c,[false,false,true,true]);
+ assert.equal(iceClaims(run(10)),true,'claims while shattered');
 });
 
-test('iceSecret: tap 1–2 do not claim; tap 3+ does',()=>{
- let S={taps:[],lastRelease:0,shattered:false};
- S=iceSecret(S,{type:'press'},0);
- S=iceSecret(S,{type:'release'},100);
- assert.equal(S.taps.length,1);
-
- S=iceSecret(S,{type:'press'},600);
- S=iceSecret(S,{type:'release'},700);
- assert.equal(S.taps.length,2);
-
- S=iceSecret(S,{type:'press'},1200);
- S=iceSecret(S,{type:'release'},1300);
- assert.equal(S.taps.length,3,'claims after tap 3');
-});
-
-test('iceSecret: >12 px move during press resets sequence',()=>{
- let S={taps:[],lastRelease:0,shattered:false};
- S=iceSecret(S,{type:'press'},0);
- S=iceSecret(S,{type:'move',dist:20},50); // 20 px move > 12 px threshold
- S=iceSecret(S,{type:'release'},100);
- assert.equal(S.taps.length,0,'drag resets sequence');
-});
-
-test('iceSecret: >600 ms gap resets sequence',()=>{
- let S={taps:[],lastRelease:0,shattered:false};
- S=iceSecret(S,{type:'press'},0);
- S=iceSecret(S,{type:'release'},100);
- assert.equal(S.taps.length,1);
-
- S=iceSecret(S,{type:'press'},800); // 700 ms gap > 600 ms
- S=iceSecret(S,{type:'release'},900);
- assert.equal(S.taps.length,1,'gap resets sequence, only tap 2 counts as tap 1');
-});
-
-test('iceSecret: keeps only last 10 taps',()=>{
- let S={taps:[],lastRelease:0,shattered:false};
- for(let i=0;i<12;i++){
-  S=iceSecret(S,{type:'press'},i*500);
-  S=iceSecret(S,{type:'release'},i*500+100);
- }
- assert.equal(S.taps.length,10,'capped at 10');
- assert.equal(S.shattered,true,'still shattered after 10th');
-});
-
-test('ice: claims() returns false for taps <3, true for ≥3',()=>{
+test('effect: tap leaves a crack that persists; 10th tap shatters into 30-60 3D shards, dispatches the secret after, heal() restores',()=>{
  globalThis.Path2D=class{};globalThis.matchMedia=()=>({matches:false});
- const gc={fills:0,clears:0,outlines:0,save(){},restore(){},setTransform(){},translate(){},rotate(){},beginPath(){},moveTo(){this.outlines++;},lineTo(){},closePath(){},
-  fill(){this.fills++;},stroke(){},clearRect(){this.clears++;}};
- const glow={canvas:{width:1024,height:1024},ctx:gc,texture:{}},paint={canvas:{width:1024,height:1024},ctx:{},texture:{}};
- ice.init({paint,glow,toWorld:(u,v)=>[u*1000,-v*1000]});
-
- assert.equal(ice.claims(1),false,'no claims before any taps');
- ice.press(1,.5,.5);ice.release(1);
- assert.equal(ice.claims(1),false,'claims false after tap 1');
-
- ice.press(1,.5,.5);ice.release(1);
- assert.equal(ice.claims(1),false,'claims false after tap 2');
-
- ice.press(1,.5,.5);ice.release(1);
- assert.equal(ice.claims(1),true,'claims true after tap 3');
-
- ice.dispose();delete globalThis.Path2D;delete globalThis.matchMedia;
+ const events=[];globalThis.window={dispatchEvent:e=>events.push(e.detail.board)};globalThis.CustomEvent=class{constructor(t,o){this.detail=o.detail;}};
+ const gc=new Proxy({},{get:(_,k)=>k==='canvas'?{width:1024,height:1024}:()=>{},set:()=>true});
+ const mat=new THREE.MeshStandardMaterial(),g=new THREE.PlaneGeometry(100,160),m=new THREE.Mesh(g,mat),grp=new THREE.Group();grp.add(m);
+ const e=iceEffect();
+ e.init({THREE,mesh:m,face:{w:100,h:160},paint:{canvas:{width:1024,height:1024}},glow:{canvas:{width:1024,height:1024},ctx:gc,texture:{}},toWorld:(u,v)=>[u*375,-v*600]});
+ let now=performance.now();const orig=performance.now;performance.now=()=>now;
+ try{
+  for(let i=0;i<9;i++){e.press(1,.5,.5);e.release(1);now+=300;e.step(.016,now);}
+  assert.equal(m.visible,true);assert.equal(events.length,0);
+  e.press(1,.5,.5);e.release(1);
+  assert.equal(m.visible,false,'crystal face hidden');
+  const shards=grp.children.filter(o=>o!==m&&o.geometry?.attributes.uv&&o.material.transparent&&o.geometry.type==='BufferGeometry');
+  assert.ok(shards.length>=30&&shards.length<=60,'shards '+shards.length);
+  for(let i=0;i<30;i++){now+=100;e.step(.016,now);}
+  assert.deepEqual(events,['ice'],'secret fires once, after the burst');
+  e.healSecret();
+  assert.equal(m.visible,true);assert.equal(grp.children.length,1,'shards, flash, dust, backplate removed');
+  assert.equal(e.claims(1),false);
+  e.press(1,.5,.5);e.release(1);assert.equal(e.tapState().taps.length,1,'chain restarted');
+ }finally{performance.now=orig;delete globalThis.window;delete globalThis.CustomEvent;delete globalThis.Path2D;delete globalThis.matchMedia;}
 });

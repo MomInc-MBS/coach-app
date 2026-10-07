@@ -7,14 +7,19 @@ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewpor
 import {createGlbBoard} from '/modules/portal/portal-board-glb.mjs';
 import {ice} from '/modules/portal/portal-board-ice.mjs';
 const host=document.querySelector('#board');
+// manual clock (software GL frames take ~300 ms, which would break a 600 ms tap chain): time only moves when skip(ms) says so; rAF timestamps follow it
+let vt=1000;performance.now=()=>vt;window.skip=ms=>{vt+=ms;};const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>raf(()=>cb(vt));
 window.errors=[];window.secrets=0;window.addEventListener('error',e=>errors.push(e.message));
 window.addEventListener('myr5:portal-secret',()=>window.secrets++);
 try{
  const board=window.board=await createGlbBoard(host,{effect:ice});
  host.style.background=board.background; // the real portal host paints the board background; a black host is just the harness
- host.onpointerdown=e=>{host.setPointerCapture(e.pointerId);board.press(e.pointerId,e.clientX,e.clientY);};
- host.onpointermove=e=>board.press(e.pointerId,e.clientX,e.clientY);
+ host.onpointerdown=e=>{board.press(e.pointerId,e.clientX,e.clientY);window.downClaim=ice.claims(e.pointerId);};
+ host.onpointermove=e=>{if(e.buttons)board.press(e.pointerId,e.clientX,e.clientY);};
  host.onpointerup=host.onpointercancel=e=>{window.lastClaim=ice.claims(e.pointerId);board.release(e.pointerId);};
+ window.tap=async(x,y,hold=60)=>{const o={pointerId:7,clientX:x,clientY:y,bubbles:true,buttons:1};host.dispatchEvent(new PointerEvent('pointerdown',o));skip(hold);await new Promise(r=>setTimeout(r,350));host.dispatchEvent(new PointerEvent('pointerup',{...o,buttons:0}));};
+ const pts=[[190,560],[110,430],[270,480],[150,650],[250,650],[120,540],[280,600],[190,450],[200,700],[190,580]];
+ window.chain=async n=>{window.claimLog=[];for(let i=0;i<n;i++){await tap(...pts[i]);claimLog.push(window.lastClaim);skip(100);await new Promise(r=>setTimeout(r,350));}}; // software GL: each frame blocks ~300 ms, so taps are naturally ~400 ms apart
  window.ready=true;
 }catch(e){errors.push(e.stack);}
 </script></body></html>`;

@@ -167,7 +167,7 @@ function shatter(now){
  redraw(now);const {THREE,mesh,face:{w:fw,h:fh}}=S,orig=mesh.isGroup?[...mesh.children]:[mesh];
  const root=mesh.isGroup?mesh:mesh.parent,box=new THREE.Box3();
  for(const o of orig)if(o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox);}
- const zf=box.max.z,t=(box.max.z-box.min.z)*.5+fw*.02,pt=[];
+ const zf=box.max.z,t=fw*.03,pt=[];
  for(let j=0;j<=NY;j++){pt[j]=[];for(let i=0;i<=NX;i++){const e=i%NX&&j%NY; // jitter interior vertices only so the outline stays square
   pt[j][i]=[(i/NX-.5)*fw+(e?(Math.random()-.5)*.7*fw/NX:0),(.5-j/NY)*fh+(e?(Math.random()-.5)*.7*fh/NY:0)];}}
  const mat=orig[0].material.clone();mat.onBeforeCompile=orig[0].material.onBeforeCompile;mat.customProgramCacheKey=orig[0].material.customProgramCacheKey;mat.transparent=true;
@@ -181,8 +181,8 @@ function shatter(now){
    for(let k=0;k<3;k++){const p=tri[k],q=tri[(k+1)%3];V(p,t/2);V(p,-t/2);V(q,-t/2);V(p,t/2);V(q,-t/2);V(q,t/2);}
    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.computeVertexNormals();
    const m=new THREE.Mesh(geo,mat);m.position.set(mx,my,zf-t/2);m.frustumCulled=false;root.add(m);
-   const dx=mx-cx,dy=my-cy,dl=Math.hypot(dx,dy)||1,k=fw*(.5+1.4*Math.random())/(1+dl/fw);
-   shards.push({m,vx:dx/dl*k,vy:dy/dl*k+fh*.3*Math.random(),vz:fw*(.7+1.8*Math.random()),sx:(Math.random()-.5)*14,sy:(Math.random()-.5)*14,sz:(Math.random()-.5)*10});
+   const dx=mx-cx,dy=my-cy,dl=Math.hypot(dx,dy)||1,k=fw*(.4+1.1*Math.random())/(1+dl/fw);
+   shards.push({m,vx:dx/dl*k,vy:dy/dl*k+fh*.3*Math.random(),vz:fw*(.15+.7*Math.random()),sx:(Math.random()-.5)*14,sy:(Math.random()-.5)*14,sz:(Math.random()-.5)*10});
   }}
  const back=new THREE.Mesh(new THREE.PlaneGeometry(fw*1.01,fh*1.01),new THREE.MeshBasicMaterial({color:0x04080c}));back.position.z=zf-t-fw*.002;root.add(back);
  const flash=new THREE.Mesh(new THREE.PlaneGeometry(Math.max(fw,fh)*4,Math.max(fw,fh)*4),new THREE.MeshBasicMaterial({color:0xcff8ff,transparent:true,blending:THREE.AdditiveBlending,depthTest:false,depthWrite:false}));flash.position.z=zf+fw*.6;flash.renderOrder=20;root.add(flash);
@@ -199,11 +199,11 @@ function unshatter(){
  for(const o of [z.back,z.flash,z.dust]){o.removeFromParent();o.geometry.dispose();o.material.dispose();}
  z.mat.dispose();for(const o of z.orig)o.visible=true;S.shat=null;
 }
-function stepShatter(dt,now){
- const z=S.shat,age=now-z.t0,fade=Math.max(0,1-Math.max(0,age-SHARD_MS*.55)/(SHARD_MS*.45)),G=z.fh*2.4;
+function stepShatter(_,now){
+ const z=S.shat,dt=Math.min(.1,(now-(z.last??now))/1000),age=now-z.t0,fade=Math.max(0,1-Math.max(0,age-SHARD_MS*.55)/(SHARD_MS*.45)),G=z.fh*2.4;
  for(const s of z.shards){const m=s.m;s.vy-=G*dt;m.position.x+=s.vx*dt;m.position.y+=s.vy*dt;m.position.z+=s.vz*dt;m.rotation.x+=s.sx*dt;m.rotation.y+=s.sy*dt;m.rotation.z+=s.sz*dt;}
- z.mat.opacity=fade;
- z.flash.material.opacity=Math.max(0,1-age/380);
+ z.last=now;z.mat.opacity=fade;
+ z.flash.material.opacity=Math.max(0,.75*(1-age/380));
  for(let n=0;n<z.N;n++){const v=z.dv[n];v[1]-=G*.4*dt;for(let k=0;k<3;k++)z.dp[n*3+k]+=v[k]*dt;}
  z.dust.geometry.attributes.position.needsUpdate=true;z.dust.material.opacity=fade;
  if(age>=SHARD_MS&&!z.done){z.done=true;for(const s of z.shards)s.m.visible=false;window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'ice'}}));}
@@ -244,7 +244,7 @@ function init({THREE,mesh,face,paint,glow,toWorld,wake}){
 }
 function setTint(hex,selected=true){if(selected&&!validTint(hex))return;selectedTint=selected?hex:null;if(S){S.tint=selectedTint;S.dirty=true;S.wake?.();}}
 function press(id,u,v){
- if(S.shat)return;
+ if(S.shat){if(!S.shat.done)return;heal();} // fallback if the host never called healSecret(): the next touch brings the crystal back
  const now=performance.now(),x=u*S.sx,y=v*S.sy;
  tapState=iceSecret(tapState,{type:'press'},now);
  if(!tapState.taps.length)unkeep(now); // gap too long: the old web heals
@@ -274,7 +274,9 @@ function release(id){
 // Asked by the glb wrapper just before release(): true for the 3rd tap on, and for the whole shatter.
 function claims(){return !!S&&iceClaims(tapState);}
 function step(dt,now){
+now=Math.max(now,performance.now()); // rAF's timestamp is the frame start, before a crack born in a slow frame (negative age = dead on arrival)
  if(S.shat)return stepShatter(dt,now);
+ if(tapState.taps.length&&!S.drag.size&&now-tapState.lastRelease>SECRET.gap){tapState.taps=[];unkeep(now);} // chain timed out: the web heals
  const n=S.live.length+S.trail.length;
  if(!n)return false;
  const life=trailLife(S.reduced);
