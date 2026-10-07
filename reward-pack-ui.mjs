@@ -20,9 +20,13 @@ const CSS=`
 .reward-pack-actions{display:flex;gap:9px;justify-content:center}.reward-pack-actions button{min-height:44px;border:2px solid var(--pack);border-radius:12px;background:var(--pack);color:#15101c;font:800 15px system-ui;padding:8px 18px;cursor:pointer}.reward-pack-actions button.secondary{background:transparent;color:#fff7df}
 .reward-pack-actions button:focus-visible,.reward-pack-launch:focus-visible{outline:3px solid white;outline-offset:3px}
 @keyframes pack-flip{0%{transform:scale(1)}40%{transform:scale(1.12) rotateY(90deg);filter:brightness(2)}100%{transform:scale(1)}}
-@media(prefers-reduced-motion:reduce){.reward-pack-dialog.opened .reward-pack-tile{animation:none}}
+.reward-pack-launch[data-tier=secret],.reward-pack-dialog[data-tier=secret] .reward-pack-card{border-color:transparent;background:linear-gradient(#21182f,#21182f) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%;animation:pack-iri 5s linear infinite}
+.reward-pack-dialog[data-tier=secret] .reward-pack-card{background:radial-gradient(circle at 50% 30%,#3a2160,#13101e 73%) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%}
+.reward-pack-launch[data-tier=secret] canvas,.reward-pack-dialog[data-tier=secret] .reward-pack-tile{animation:pack-hue 6s linear infinite}
+@keyframes pack-iri{to{background-position:0 0,-300% 0}}@keyframes pack-hue{50%{filter:hue-rotate(60deg) drop-shadow(0 10px 8px #000a)}}
+@media(prefers-reduced-motion:reduce){.reward-pack-dialog.opened .reward-pack-tile,.reward-pack-launch[data-tier=secret],.reward-pack-dialog[data-tier=secret] .reward-pack-card,.reward-pack-launch[data-tier=secret] canvas,.reward-pack-dialog[data-tier=secret] .reward-pack-tile{animation:none}}
 `;
-export const TIER_COLORS=Object.freeze({uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36'});
+export const TIER_COLORS=Object.freeze({uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36',secret:'#b388ff'});
 export const tierOf=id=>{const tier=String(id).startsWith('reward-pack:')?String(id).split(':')[1]:'uncommon';return Object.hasOwn(TIER_COLORS,tier)?tier:'uncommon';};
 const CATEGORY={color:'Colour palette','64-bit':'64-bit pixel finish',texture:'Texture'};
 // What the tile says about an opened pack: the actual item, what kind it is, and its colours when it is a palette.
@@ -49,6 +53,8 @@ export function drawTierTile(ctx,tier,{colors=[],opened=false}={}){
   glyph.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='#')px(x,y);}));
  }
  rect(4,4,56,2,shade(base,110));rect(4,4,2,56,shade(base,110));
+ // Secret: an iridescent bevel, cyan/violet/magenta/gold pixels round the frame (CSS hue-rotates it on screen).
+ if(tier==='secret'){const hues=['#3ff5ff','#b388ff','#ff4bd8','#ffd36a'];for(let i=0;i<14;i++){const c=hues[i%4],o=2+i*4;rect(o,2,4,2,c);rect(60,o,2,4,c);rect(62-o-4,60,4,2,hues[(i+2)%4]);rect(2,62-o-4,2,4,hues[(i+2)%4]);}}
 }
 export function mountRewardPacks(){
  const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
@@ -59,7 +65,7 @@ export function mountRewardPacks(){
  function update(){
   const ids=available(),count=ids.length;
   launch.hidden=!count||overlay.open;if(launch.hidden)return;
-  const tier=tierOf(ids[0]);launch.style.setProperty('--pack',TIER_COLORS[tier]);drawTierTile(launch.querySelector('canvas').getContext('2d'),tier);
+  const tier=tierOf(ids[0]);launch.style.setProperty('--pack',TIER_COLORS[tier]);launch.dataset.tier=tier;drawTierTile(launch.querySelector('canvas').getContext('2d'),tier);
   launch.querySelector('span').textContent=`${count} reward pack${count===1?'':'s'}`;
   const bar=document.getElementById('coachDock')?.getBoundingClientRect();launch.style.bottom=bar?.height?Math.max(18,innerHeight-bar.top+12)+'px':'';
  }
@@ -73,25 +79,37 @@ export function mountRewardPacks(){
   presented.add(id);show(id);
  }
  function hide(){if(overlay.open)overlay.close();}
- function show(id){
-  current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);
+ function select(id){
+  current={kind:'reward-pack',id,tier:tierOf(id)};overlay.classList.remove('opened');overlay.style.setProperty('--pack',TIER_COLORS[current.tier]);overlay.dataset.tier=current.tier;
   overlay.querySelector('h2').textContent=`${current.tier} pack`;tile.setAttribute('aria-label',`${current.tier} pack tile`);drawTierTile(tile.getContext('2d'),current.tier);
   result.textContent=`${PACK_SIZES[current.tier]} coach cosmetic${PACK_SIZES[current.tier]===1?'':'s'} inside. Tap to open.`;open.hidden=false;close.textContent='Later';
-  launch.hidden=true;overlay.showModal();open.focus();
  }
+ let pods=null;const preload=()=>pods??=import('./drop-pod-opening.mjs').catch(()=>null);
+ function show(id){select(id);preload();launch.hidden=true;overlay.showModal();open.focus();}
  launch.onclick=()=>{const id=available()[0];if(id)show(id);};close.onclick=hide;overlay.addEventListener('close',()=>{current=null;update();});
- open.onclick=async()=>{
-  if(!current)return;const pending=current;open.disabled=true;let opened;try{opened=await openRewardPackExclusive(pending);}finally{open.disabled=false;}if(current!==pending)return;if(!opened){result.textContent='Could not save this pack. Try again.';return;}
+ // What an opened pack unlocked, as the plain items the reveal card (and the dialog's own result area) list.
+ const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category});return {title:item.title,detail:`${item.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`,colors:item.colors};});
+ function render(opened){
   const summary=rewardSummary(opened);drawTierTile(tile.getContext('2d'),current.tier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
   overlay.classList.remove('opened');void tile.offsetWidth;overlay.classList.add('opened');
   result.replaceChildren();
   if(!summary.rewards.length)result.textContent='All cosmetics for your unlocked coaches are collected.';
-  for(const reward of summary.rewards){
-   const itemSummary=rewardSummary({reward,category:reward.category});
-   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${itemSummary.title} unlocked!`;kind.textContent=`${itemSummary.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`;result.append(title,kind);
-   if(itemSummary.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of itemSummary.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
+  for(const item of unlocked(opened)){
+   const title=document.createElement('strong'),kind=document.createElement('small');title.textContent=`${item.title} unlocked!`;kind.textContent=item.detail;result.append(title,kind);
+   if(item.colors.length){const swatches=document.createElement('div');swatches.className='reward-pack-swatches';for(const color of item.colors){const chip=document.createElement('i');chip.style.background=color;swatches.append(chip);}result.append(swatches);}
   }
   open.hidden=true;close.textContent='Done';close.focus();
+ }
+ // Open pack starts the full-screen drop-pod sequence; the pack is opened when the pod is tapped, and Open another moves to the next waiting pack.
+ const sequence=pending=>({tier:pending.tier,hasNext:()=>available().some(id=>id!==pending.id),onExit:hide,
+  open:async()=>{const opened=await openRewardPackExclusive(pending);if(!opened)return null;if(current===pending)render(opened);return unlocked(opened);},
+  onNext:()=>{const id=available().find(id=>id!==pending.id);if(!id)return null;select(id);return sequence(current);}});
+ open.onclick=async()=>{
+  if(!current)return;const pending=current,module=await preload();if(current!==pending)return;
+  if(module){module.playDropPod(sequence(pending));return;}
+  // The sequence module could not load (offline without the update): fall back to the plain tile.
+  open.disabled=true;let opened;try{opened=await openRewardPackExclusive(pending);}finally{open.disabled=false;}if(current!==pending)return;if(!opened){result.textContent='Could not save this pack. Try again.';return;}
+  render(opened);
  };
  const onGrant=event=>{if(event.detail?.granted?.some(item=>item.kind==='reward-pack')){update();present();}};
  const onReady=event=>{grantDailyPack({account:event.detail});update();present();};

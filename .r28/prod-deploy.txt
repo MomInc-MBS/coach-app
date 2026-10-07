@@ -1,0 +1,65 @@
+
+ ⛅️ wrangler 4.92.0
+───────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+
+  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the `-e|--env` flag or CLOUDFLARE_ENV env variable.
+  If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example `--env=""`.
+
+
+🌀 Building list of assets...
+✨ Read 1897 files from the assets directory D:\myr5-work\drop-pods\dist\client
+🌀 Starting asset upload...
+🌀 Found 26 new or modified static assets to upload. Proceeding with upload...
++ /pods/.gitkeep
++ /drop-harness.html
++ /reward-pack-ui.mjs
++ /workout-tracks.js
++ /sw.js
++ /pods/drop-pod-secret.glb
++ /war-room/gala-bay.js
++ /creature/assets/editor.js
++ /source.json.gz
++ /release-build.mjs
++ /creature/assets/account-bridge.js
++ /index.html
++ /drop-pod-opening.mjs
++ /pods/drop-pod-uncommon.glb
++ /pods/drop-pod-rare.glb
++ /creature/assets/phone.js
++ /local-coach-runtime.mjs
++ /source.json
++ /release-info.mjs
++ /progression-rules.mjs
++ /post-download.mjs
++ /handborne/unlock-bridge.mjs
++ /pods/drop-pod-legendary.glb
++ /war-room/coach-sprites.js
++ /launch-runtime.mjs
++ /app-runtime.mjs
+Uploaded 8 of 26 assets
+Uploaded 17 of 26 assets
+Uploaded 26 of 26 assets
+✨ Success! Uploaded 26 files (1817 already uploaded) (3.73 sec)
+
+Total Upload: 264.25 KiB / gzip: 73.34 KiB
+Worker Startup Time: 9 ms
+Your Worker has access to the following bindings:
+Binding                                                                        Resource                  
+env.DB (myr5-coach)                                                            D1 Database               
+env.ASSETS                                                                     Assets                    
+env.WORKOUT_IMPORTS_ENABLED ("true")                                           Environment Variable      
+env.CLERK_PUBLISHABLE_KEY ("pk_live_Y2xlcmsubW9taW5jLm9ubGluZSQ")              Environment Variable      
+env.CLERK_FRONTEND_URL ("https://clerk.mominc.online")                         Environment Variable      
+env.CLERK_AUTHORIZED_PARTIES ("https://myr5.mominc.online")                    Environment Variable      
+env.RELEASE_ORIGIN ("https://myr5.mominc.online")                              Environment Variable      
+env.SPOTIFY_CLIENT_ID ("9eb27ceb2aed4ee59517d5b0854a8b79")                     Environment Variable      
+env.SPOTIFY_REDIRECT_URI ("https://myr5.mominc.online/api/spotif...")          Environment Variable      
+env.RELEASE_EMAIL_FROM ("dispatch@mominc.online")                              Environment Variable      
+env.VAPID_SUBJECT ("https://myr5.mominc.online")                               Environment Variable      
+
+Uploaded myr5-coach (9.13 sec)
+Deployed myr5-coach triggers (1.40 sec)
+  myr5.mominc.online (custom domain)
+  schedule: * * * * *
+Current Version ID: 1817deb4-efc3-4825-b556-2512679683c0

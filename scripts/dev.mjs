@@ -2,7 +2,7 @@ import {createServer} from 'vite';
 import {build as bundleStartup} from 'esbuild';
 await bundleStartup({entryPoints:['./creature/source/phone.ts','./creature/source/editor.ts'],bundle:true,format:'esm',target:'es2022',outdir:'creature/assets'});
 await bundleStartup({entryPoints:['./app.mjs'],bundle:true,format:'esm',target:'es2022',outfile:'app-runtime.mjs',external:['https://*']});
-await bundleStartup({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',outfile:'launch-runtime.mjs',external:['./food/pyramid-scanner.mjs']});
+await bundleStartup({entryPoints:['./launch.mjs'],bundle:true,format:'esm',target:'es2022',outfile:'launch-runtime.mjs',external:['./food/pyramid-scanner.mjs','./drop-pod-opening.mjs']});
 import {sites} from '@openai/sites-vite-plugin';
 import {Miniflare} from 'miniflare';
 import {readFile,readdir} from 'node:fs/promises';

@@ -64,8 +64,8 @@ test('250 cosmetic levels have strictly increasing costs and exact benchmark end
  assert.equal(cosmeticLevel(261599).level,249);assert.equal(cosmeticLevel(261600).level,250);
 });
 test('pack content sizes and category odds retain the confirmed values',()=>{
- assert.deepEqual(PACK_SIZES,{uncommon:1,rare:2,legendary:3});
- assert.deepEqual(Object.values(COSMETIC_PACK_ODDS).map(o=>o.texture),[3,5,10]);
+ assert.deepEqual(PACK_SIZES,{uncommon:1,rare:2,legendary:3,secret:3});
+ assert.deepEqual(Object.values(COSMETIC_PACK_ODDS).map(o=>o.texture),[3,5,10,20]);
  for(const odds of Object.values(COSMETIC_PACK_ODDS))assert.equal(Object.values(odds).reduce((a,b)=>a+b),100);
 });
 test('reject invalid progress rather than minting arbitrary XP',()=>{

@@ -5,7 +5,7 @@ import {join,posix} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 
-const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules','audio'];
+const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules','audio','pods'];
 export const CORE_OFFLINE_BUDGET=8*1024*1024;
 // D34: core precache holds only what a first run needs (sign-in/onboarding, home, a camera or manual
 // workout with its counter, updates/recovery, the offline shell). Core is every root, /icons/ or /pod/
@@ -78,6 +78,7 @@ const GROUPS=[
  ['room-cage',CAGE_ROOM],
  ['music',MUSIC],
  ['starter',STARTER],
+ ['drop-pods',/^\/pods\//],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
  // The meshopt decoder is the pyramid's alone (release 5): core here through the pyramid scanner (W2-2O keeps the scenes'

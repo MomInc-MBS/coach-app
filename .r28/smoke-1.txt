@@ -1,0 +1,80 @@
+
+> myr5-coach@1.0.0 test:smoke
+> node --test tests/release-smoke.browser.test.mjs
+
+✖ 1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt (8131.742ms)
+✔ 1b. the far-left dock key keeps its gear icon but opens the coach customizer, not Settings (7230.6969ms)
+✔ 2. every gesture id reaches its documented destination, and the quilt returns after each dialog (34072.4565ms)
+✖ 3. freeze check: a dialog opened over the quilt stays tappable, and the dock Portal key works again after it closes (5587.2798ms)
+✔ 3b. the Downloads menu is its own screen: the quilt steps aside while it is up and comes back tappable (16756.574ms)
+✔ 4. the oval opens the ship view inside the metal frame above the dock, and the phone back button closes it (14172.9659ms)
+✔ 5. one shape without reduced motion runs the real glass and dive, and the quilt returns clean (37836.5796ms)
+✔ 6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it (28720.7351ms)
+✔ 7. a traced route sets its hash; back returns to the quilt, the bar Portal goes home, and back on the quilt stays in the app (7377.4884ms)
+✔ 8. traced destinations open in the frame with the bar lit below it, Food and the oval in their cut, a line dives in and out (48530.2991ms)
+✖ 9. the rest exit goes home to the quilt, a Settings link is a real route, and the Continue chip sits above the bar (35754.4763ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 8
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 247690.3548
+
+✖ failing tests:
+
+test at tests\release-smoke.browser.test.mjs:78:1
+✖ 1. the portal is up: window.myr5Menus.portal() mounts and shows the Quilt (8131.742ms)
+  AssertionError [ERR_ASSERTION]: quilt: customizeCoach is a physical target of at least 44px (40x44)
+      at assertDockKeys (file:///D:/myr5-work/drop-pods/tests/release-smoke.browser.test.mjs:302:10)
+      at TestContext.<anonymous> (file:///D:/myr5-work/drop-pods/tests/release-smoke.browser.test.mjs:86:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\release-smoke.browser.test.mjs:181:1
+✖ 3. freeze check: a dialog opened over the quilt stays tappable, and the dock Portal key works again after it closes (5587.2798ms)
+  AssertionError [ERR_ASSERTION]: after the dialog closes: customizeCoach is a physical target of at least 44px (40x44)
+      at assertDockKeys (file:///D:/myr5-work/drop-pods/tests/release-smoke.browser.test.mjs:302:10)
+      at TestContext.<anonymous> (file:///D:/myr5-work/drop-pods/tests/release-smoke.browser.test.mjs:208:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\release-smoke.browser.test.mjs:520:1
+✖ 9. the rest exit goes home to the quilt, a Settings link is a real route, and the Continue chip sits above the bar (35754.4763ms)
+  locator.click: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#visitRest')[22m
+  [2m    - locator resolved to <button disabled hidden="" id="visitRest">Rest room</button>[22m
+  [2m  - attempting click action[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m    - waiting 20ms[22m
+  [2m    2 × waiting for element to be visible, enabled and stable[22m
+  [2m      - element is not visible[22m
+  [2m    - retrying click action[22m
+  [2m      - waiting 100ms[22m
+  [2m    56 × waiting for element to be visible, enabled and stable[22m
+  [2m       - element is not visible[22m
+  [2m     - retrying click action[22m
+  [2m       - waiting 500ms[22m
+  
+      at TestContext.<anonymous> (D:\myr5-work\drop-pods\tests\release-smoke.browser.test.mjs:534:36) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for locator('#visitRest')", '    - locator resolved to <button disabled hidden="" id="visitRest">Rest room</button>', '  - attempting click action', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '    - waiting 20ms', '    2 × waiting for element to be visible, enabled and stable', '      - element is not visible', '    - retrying click action', '      - waiting 100ms', '    56 × waiting for element to be visible, enabled and stable', '       - element is not visible', '     - retrying click action', '       - waiting 500ms' ]
+  }

@@ -26,8 +26,8 @@ test('How to Play is due once per local day, separately for each account and the
 });
 
 test('the reward pack is a 64x64 tier tile in its tier colour and names the actual awarded item',()=>{
- assert.deepEqual({...TIER_COLORS},{uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36'});
- assert.equal(tierOf('reward-pack:rare:strider-1:4'),'rare');assert.equal(tierOf('reward-pack:legendary:x'),'legendary');
+ assert.deepEqual({...TIER_COLORS},{uncommon:'#76e356',rare:'#4bafff',legendary:'#ff9c36',secret:'#b388ff'});
+ assert.equal(tierOf('reward-pack:rare:strider-1:4'),'rare');assert.equal(tierOf('reward-pack:legendary:x'),'legendary');assert.equal(tierOf('reward-pack:secret:vault-hidden-1'),'secret');assert.equal(tierOf('reward-pack:legendary:cosmetic-pass-v2:L10'),'legendary');
  assert.equal(tierOf('daily:owner:2026-09-25'),'uncommon');assert.equal(tierOf('reward-pack:bogus:x'),'uncommon');
  for(const tier of Object.keys(TIER_COLORS)){
   const fills=[];const ctx={fillStyle:'',clearRect(){},fillRect(x,y,w,h){fills.push({color:this.fillStyle,x,y,w,h});}};

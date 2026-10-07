@@ -15,7 +15,7 @@ const {PACK_ODDS}=await import('../reward-packs.mjs');
 const {textureRewardPool,colourRewardPool,FREE_TEXTURE_IDS}=await import('../battle-pass-rewards.mjs');
 
 test('pack odds are exactly the spec and each tier sums to 100',()=>{
- assert.deepEqual(PACK_ODDS,{uncommon:{color:90,'64-bit':7,texture:3},rare:{color:80,'64-bit':15,texture:5},legendary:{color:70,'64-bit':20,texture:10}});
+ assert.deepEqual(PACK_ODDS,{uncommon:{color:90,'64-bit':7,texture:3},rare:{color:80,'64-bit':15,texture:5},legendary:{color:70,'64-bit':20,texture:10},secret:{color:60,'64-bit':20,texture:20}});
  for(const odds of Object.values(PACK_ODDS))assert.equal(Object.values(odds).reduce((a,b)=>a+b,0),100);
 });
 

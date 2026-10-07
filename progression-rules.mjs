@@ -16,11 +16,13 @@ export const GOLD_HOLD_SECONDS=600,REP_CAP=30;
 export const PREPARATION_REPS=3,SECOND_PREPARATION_TEMPO_SECONDS=5;
 export const SPRINT_ROUNDS=5,SPRINT_SECONDS=15,SPRINT_REST_SECONDS=45;
 export const MAX_CONSECUTIVE_TRAINING_DAYS=2;
-export const PACK_SIZES=Object.freeze({uncommon:1,rare:2,legendary:3});
+export const PACK_SIZES=Object.freeze({uncommon:1,rare:2,legendary:3,secret:3});
 export const COSMETIC_PACK_ODDS=Object.freeze({
  uncommon:Object.freeze({color:90,'64-bit':7,texture:3}),
  rare:Object.freeze({color:80,'64-bit':15,texture:5}),
  legendary:Object.freeze({color:70,'64-bit':20,texture:10}),
+ // Secret packs come only from secret achievements: legendary's size and 64-bit chance, double its texture chance (10 -> 20).
+ secret:Object.freeze({color:60,'64-bit':20,texture:20}),
 });
 export const DAILY_MEDITATION_MULTIPLIER=2,DAILY_TRIO_BONUS=500;
 export const BENCHMARK=Object.freeze({sessions:120,activeMinutes:30,expertXpPerMinute:28,meditationMultiplier:DAILY_MEDITATION_MULTIPLIER,trioBonus:DAILY_TRIO_BONUS});

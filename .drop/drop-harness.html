@@ -1,0 +1,14 @@
+<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+<body style="margin:0;background:#222">
+<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/loaders/GLTFLoader.js":"/vendor/three/GLTFLoader.js"}}</script>
+<button id="go">go</button>
+<script type="module">
+import {playDropPod} from '/drop-pod-opening.mjs';
+import {tierOf} from '/reward-pack-ui.mjs';
+// ?id=reward-pack:<tier>:... runs a real pack id through the UI's tierOf (battle-pass / vault ids); ?tier= sets it directly.
+const q=new URLSearchParams(location.search),tier=q.get('id')?tierOf(q.get('id')):q.get('tier')||'uncommon';
+window.exited=0;window.tier=tier;
+const items=[{title:'Static Pop',detail:'Colour palette for Boxy',colors:['#ff4bd8','#4bafff','#76e356','#ffd36a']}];
+window.start=()=>playDropPod({tier,hasNext:()=>q.get('next')==='1',open:async()=>{window.openCalls=(window.openCalls||0)+1;await new Promise(r=>setTimeout(r,120));return items;},onExit:()=>{window.exited++;},onNext:()=>({tier:'rare',hasNext:()=>false,open:async()=>items,onExit:()=>{window.exited++;}})}).then(c=>window.ctl=c);
+document.getElementById('go').onclick=window.start;
+</script>
