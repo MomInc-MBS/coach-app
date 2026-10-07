@@ -42,7 +42,7 @@ export function wrapText(text,cols){
 }
 const safe=(f,...a)=>{try{return f?.(...a);}catch{return undefined;}};
 // What the CRT shows for goal i: header, wrapped clue, footer ({earned,progress have/need}).
-export function crtView(goals,i,state,cols=28){
+export function crtView(goals,i,state,cols=24){
  const n=goals.length;if(!n)return {head:'NO SIGNAL',lines:[],foot:'',earned:false};
  const g=goals[wrapIndex(i,n)],earned=!!(state?.earned?.[g.id]||safe(g.test,state));
  const p=safe(g.progress,state),have=p&&typeof p==='object'?p.have:null,need=p&&typeof p==='object'?p.need:null;
@@ -57,12 +57,12 @@ const CW_=768,CH_=312;
 function drawCrt(c,w,h,view,t=0){
  const g=c.createRadialGradient(w/2,h/2,10,w/2,h/2,w*.62);g.addColorStop(0,'#4a1a7a');g.addColorStop(.7,'#2a0d4a');g.addColorStop(1,'#12041f');
  c.fillStyle=g;c.fillRect(0,0,w,h);
- c.font='bold 22px ui-monospace,Menlo,Consolas,monospace';c.textBaseline='top';c.shadowColor=ORANGE;c.shadowBlur=10;c.fillStyle=ORANGE;
- c.globalAlpha=.75;c.fillText(view.head,30,16);c.globalAlpha=1;
- c.font='bold 38px ui-monospace,Menlo,Consolas,monospace';
- view.lines.forEach((s,i)=>c.fillText(s,30,52+i*46));
- c.font='bold 26px ui-monospace,Menlo,Consolas,monospace';c.fillStyle=view.earned?'#ffd36e':ORANGE;c.shadowColor=c.fillStyle;
- c.fillText(view.foot,30,h-44);c.shadowBlur=0;
+ c.font='bold 25px ui-monospace,Menlo,Consolas,monospace';c.textBaseline='top';c.shadowColor=ORANGE;c.shadowBlur=10;c.fillStyle=ORANGE;
+ c.globalAlpha=.75;c.fillText(view.head,30,14);c.globalAlpha=1;
+ c.font='bold 44px ui-monospace,Menlo,Consolas,monospace';
+ view.lines.forEach((s,i)=>c.fillText(s,30,50+i*52));
+ c.font='bold 30px ui-monospace,Menlo,Consolas,monospace';c.fillStyle=view.earned?'#ffd36e':ORANGE;c.shadowColor=c.fillStyle;
+ c.fillText(view.foot,30,h-46);c.shadowBlur=0;
  c.fillStyle='rgba(0,0,0,.28)';for(let y=(t|0)%4;y<h;y+=4)c.fillRect(0,y,w,1.6);
  const v=c.createRadialGradient(w/2,h/2,h*.35,w/2,h/2,w*.62);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.7)');c.fillStyle=v;c.fillRect(0,0,w,h);
 }
@@ -73,6 +73,7 @@ function doorwayTexture(){
  c.strokeStyle=GOLD;c.globalAlpha=.7;c.lineWidth=3;c.strokeRect(14,14,484,484);c.globalAlpha=1;
  c.fillStyle=GOLD;for(const [x,y] of [[30,30],[482,30],[30,482],[482,482]]){c.beginPath();c.arc(x,y,5,0,TAU);c.fill();}
  const g=c.createRadialGradient(256,256,4,256,256,230);g.addColorStop(0,'rgba(154,75,224,.55)');g.addColorStop(1,'rgba(122,47,196,0)');c.fillStyle=g;c.fillRect(0,0,512,512);
+ c.fillStyle='rgba(255,154,43,.95)';c.font='bold 17px ui-monospace,Menlo,Consolas,monospace';c.textAlign='center';c.fillText('TAP THE PORT',256,318);
  c.fillStyle='#ffd36e';c.fillRect(230,242,52,28);c.fillStyle='#07040f';c.fillRect(234,246,44,20);
  const p=c.createLinearGradient(0,246,0,266);p.addColorStop(0,'#d9a8ff');p.addColorStop(1,'#7a2fc4');c.fillStyle=p;c.shadowColor='#b66cff';c.shadowBlur=16;c.fillRect(236,248,40,16);c.shadowBlur=0;
  c.fillStyle='#07040f';c.fillRect(240,254,32,5);
@@ -136,11 +137,26 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const at=(u,v,z=0)=>new THREE.Vector3(u-.5,.5-v,z),wallMat=metal('#2a1d3c',.5,.6);
  const mk=(geo,mat,parent,p,shadow=true)=>{const m=new THREE.Mesh(geo,mat);if(p)m.position.copy(p);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m;};
  // wall + casing + doorway (static)
- const starTex=(()=>{const c=ctxOf(768,1024),g=c.createLinearGradient(0,0,0,1024);g.addColorStop(0,'#07040f');g.addColorStop(.5,'#1a0b30');g.addColorStop(1,'#0a0614');c.fillStyle=g;c.fillRect(0,0,768,1024);
-  const n=c.createRadialGradient(560,300,0,560,300,320);n.addColorStop(0,'rgba(122,47,196,.35)');n.addColorStop(1,'rgba(122,47,196,0)');c.fillStyle=n;c.fillRect(0,0,768,1024);
-  for(let i=0;i<420;i++){const r=Math.random(),x=Math.random()*768,y=Math.random()*1024;c.fillStyle=r>.9?'#ffd36e':r>.7?'#d9b8ff':'#ffffff';c.globalAlpha=.25+Math.random()*.6;c.fillRect(x,y,r>.95?2.4:1.3,r>.95?2.4:1.3);}
+// the vault wall: a gunmetal space-hull bulkhead that fills the frame (1 world unit = 320 px; canvas centre = world origin)
+ const wallTex=(()=>{const W=1024,H=2176,c=ctxOf(W,H),X=x=>W/2+x*320,Y=y=>H/2-y*320,g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2a2c38');g.addColorStop(.5,'#23252f');g.addColorStop(1,'#1a1b24');c.fillStyle=g;c.fillRect(0,0,W,H);
+  for(let i=0;i<9000;i++){c.fillStyle=Math.random()>.5?'rgba(255,255,255,.025)':'rgba(0,0,0,.05)';c.fillRect(Math.random()*W,Math.random()*H,2+Math.random()*10,1);}
+  const seam=(x0,y0,x1,y1)=>{c.strokeStyle='#0b0b11';c.lineWidth=4;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();c.strokeStyle='rgba(255,255,255,.1)';c.lineWidth=1.5;c.beginPath();c.moveTo(x0+3,y0+3);c.lineTo(x1+3,y1+3);c.stroke();
+   const n=Math.hypot(x1-x0,y1-y0)/56|0;for(let k=1;k<n;k++){const x=x0+(x1-x0)*k/n,y=y0+(y1-y0)*k/n+(y1===y0?10:0),r=c.createRadialGradient(x-1,y-1,0,x,y,4);r.addColorStop(0,'#9fa2b5');r.addColorStop(1,'#444656');c.fillStyle=r;c.beginPath();c.arc(x,y,3.6,0,TAU);c.fill();}};
+  for(let y=-8;y<=8;y++)seam(0,Y(y*.85),W,Y(y*.85));
+  for(let y=-8;y<8;y++)for(let x=-4;x<=4;x++)seam(X(x*.8+(y&1?.4:0)),Y(y*.85),X(x*.8+(y&1?.4:0)),Y((y+1)*.85));
+  const gold=(y,w)=>{c.fillStyle=GOLD;c.globalAlpha=.85;c.fillRect(0,Y(y),W,w);c.fillRect(0,Y(y)+w+7,W,w*.4);c.globalAlpha=1;};gold(1.13,6);gold(-1.1,6);
+  const star=(cx,cy,r)=>{const g2=c.createRadialGradient(cx,cy,0,cx,cy,r);g2.addColorStop(0,'#241040');g2.addColorStop(.6,'#0c0618');g2.addColorStop(1,'#04020a');c.save();c.beginPath();c.arc(cx,cy,r,0,TAU);c.clip();c.fillStyle=g2;c.fillRect(cx-r,cy-r,2*r,2*r);
+   for(let i=0;i<46;i++){const q=Math.random();c.fillStyle=q>.9?GOLD:q>.7?'#d9b8ff':'#fff';c.globalAlpha=.3+Math.random()*.7;c.fillRect(cx+(Math.random()*2-1)*r,cy+(Math.random()*2-1)*r,1.6,1.6);}c.globalAlpha=1;c.restore();
+   c.strokeStyle=GOLD;c.lineWidth=7;c.beginPath();c.arc(cx,cy,r+3,0,TAU);c.stroke();c.strokeStyle='#0b0b11';c.lineWidth=5;c.beginPath();c.arc(cx,cy,r+10,0,TAU);c.stroke();
+   for(let k=0;k<12;k++){const a=k*TAU/12;c.fillStyle='#8e91a6';c.beginPath();c.arc(cx+Math.cos(a)*(r+19),cy+Math.sin(a)*(r+19),3.4,0,TAU);c.fill();}};
+  star(X(-.3),Y(.88),42);star(X(.3),Y(.88),42);star(X(-.3),Y(-.91),42);star(X(.3),Y(-.91),42);
+  const led=(x,y,col)=>{c.shadowColor=col;c.shadowBlur=14;c.fillStyle=col;c.beginPath();c.arc(x,y,5,0,TAU);c.fill();c.shadowBlur=0;};
+  [-.12,-.04,.04,.12].forEach((x,i)=>led(X(x),Y(.88),i%3===2?GOLD:'#b66cff'));
+  [-.12,-.04,.04,.12].forEach((x,i)=>led(X(x),Y(-.91),i%3===1?GOLD:'#b66cff'));
+  c.fillStyle='rgba(255,211,110,.8)';c.font='bold 22px ui-monospace,Menlo,Consolas,monospace';c.textAlign='center';c.fillText('M.O.M. INC. · VAULT 01',W/2,Y(-1.19));
+  c.fillStyle='#ffd36e';
   return tex(c);})();
- const wall=new THREE.Mesh(new THREE.PlaneGeometry(6,8),new THREE.MeshBasicMaterial({map:starTex,toneMapped:false}));wall.position.z=-.22;root.add(wall);
+ const wall=new THREE.Mesh(new THREE.PlaneGeometry(3.2,6.8),new THREE.MeshBasicMaterial({map:wallTex,toneMapped:false}));wall.position.z=-.22;root.add(wall);
  const cas=metal('#3a3c4a',.9,.38),jamb=metal('#15131c',.7,.5),CW=1.34,HOLE=1.02;
  [[0,(CW+HOLE)/4,CW,(CW-HOLE)/2],[0,-(CW+HOLE)/4,CW,(CW-HOLE)/2]].forEach(([x,y,w,h])=>mk(new THREE.BoxGeometry(w,h,.24),cas,root,new THREE.Vector3(x,y,-.1)));
  [[-(CW+HOLE)/4,0],[(CW+HOLE)/4,0]].forEach(([x,y])=>mk(new THREE.BoxGeometry((CW-HOLE)/2,HOLE,.24),cas,root,new THREE.Vector3(x,y,-.1)));
@@ -166,9 +182,17 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   m.color.set(kind==='plate'?'#8a8da2':kind==='pipe'?'#c9a8ff':kind==='light'?'#ffffff':'#ffd9a0');if(kind==='pipe'){m.emissive.set(PURPLE);m.emissiveMap=m.map;m.emissiveIntensity=.9;}if(kind==='light'){m.emissive.set(GOLD);m.emissiveMap=m.map;m.emissiveIntensity=0;}mats.set(k,m);}return m;};
  let topZ=.03;
  if(layout&&kit){
-  const list=[],keep=new Map();
-  layout.parts.forEach((p,i)=>{const v=vOf(p.v),r=p.r;if(v<-.02||v>1.02||blocked(p.u,v,r*.8))return;keep.set(i,list.length);list.push({...p,v});});
-  list.forEach(p=>{p.drives=p.drives!=null?(keep.get(p.drives)??undefined):undefined;});
+  const list=[],keep=new Map(),cyc={},pick=k=>{const a=layout.parts.filter(p=>p.kind===k);cyc[k]=((cyc[k]??-1)+1)%a.length;return a[cyc[k]];};
+  // trains: the old lower-left cluster squeezed (positions and radii together, so teeth still mesh) into the bottom strip, mirrored to the right
+  const SC=.71,xf=(p,m)=>({...p,u:m?1-(.075+(p.u-.04)*SC):.075+(p.u-.04)*SC,v:.76+(vOf(p.v)-.7307)*SC,r:p.r*SC,rot:m?-(p.rot||0):p.rot});
+  for(const m of [0,1])layout.parts.slice(0,16).forEach((p,i)=>{const q=xf(p,m);if(blocked(q.u,q.v,q.r*.8))return;keep.set(m*100+i,list.length);list.push({...q,drives:p.drives!=null?m*100+p.drives:undefined});});
+  list.forEach(q=>{q.drives=q.drives!=null?keep.get(q.drives):undefined;});
+  // tidy mounted fittings on a symmetric grid in the free panels beside the dial and flywheel, a light row, and screws
+  const slot=(kind,u,v,r,rot)=>{const p=pick(kind);list.push({node:p.node,kind,u,v,r:Math.min(p.r,r),rot,layer:list.length%9+1});};
+  for(const u of [.24,.76])for(const v of [.52,.67])slot('pipe',u,v,.06,0);
+  for(const u of [.24,.76])slot('valve',u,.595,.035,0);
+  for(const u of [.17,.83])for(const v of [.52,.67])slot('screw',u,v,.014,0);
+  for(const [u,v] of [[.12,.032],[.2,.032],[.8,.032],[.88,.032],[.47,.968],[.53,.968]])slot('light',u,v,.015,0);
   parts.gears=gearsFromLayout(list);
   let gi=0;
   list.forEach((p,i)=>{
@@ -187,6 +211,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   }catch(e){console.warn('flywheel',e);}
  }
  if(!S.flyG){const g=new THREE.Group();g.position.copy(at(L.fly.u,L.fly.v,.05));g.add(new THREE.Mesh(new THREE.TorusGeometry(L.fly.r,.02,8,36),metal(GOLD,.9,.3)));face.add(g);S.flyG=g;S.bossLogo=mk(new THREE.CylinderGeometry(.062,.062,.02,28).rotateX(Math.PI/2),metal('#2a1d3c',.8,.4),g,new THREE.Vector3(0,0,.01));}
+ const mount=new THREE.Group();face.add(mount);S.mount=mount;
  const [engr,gold]=await Promise.all([logoTexture(true),logoTexture(false)]);
  // logo plate (engraved) + CRT bezel/screen
  const plate=mk(new THREE.BoxGeometry(L.logo.w,L.logo.h,.02),metal('#2b1f3a',.75,.45),face,at(L.logo.u,L.logo.v,.012));
@@ -220,13 +245,15 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  // weld trail layers (on the door, so they swing with it): bead (normal) and glow (additive) on the door plane
  const layer=(add,z)=>{const c=ctxOf(512,512),t=tex(c),m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,toneMapped:false,blending:add?THREE.AdditiveBlending:THREE.NormalBlending}));m.position.z=z;m.renderOrder=add?31:30;face.add(m);return {c,t};};
  const bead=layer(false,topZ+.004),glow=layer(true,topZ+.006);
- // door-open lamps/CRT initial
+ for(const c of [...face.children])if(c!==slab&&c!==hit&&c!==mount)mount.add(c); // everything on the front rides in one group, hidden once the door swings (edge-on bits)
  drawView();
+ const ringTex=(()=>{const c=ctxOf(128,128),g=c.createRadialGradient(64,64,34,64,64,62);g.addColorStop(0,'rgba(182,108,255,0)');g.addColorStop(.55,'rgba(182,108,255,.95)');g.addColorStop(1,'rgba(122,47,196,0)');c.fillStyle=g;c.fillRect(0,0,128,128);return tex(c);})();
+ const ring=new THREE.Mesh(new THREE.PlaneGeometry(.26,.26),new THREE.MeshBasicMaterial({map:ringTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));ring.position.set(0,0,-.19);ring.visible=false;root.add(ring);
  // --- camera & layout
  function layout2(){
   const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight),aspect=w/h;renderer.setSize(w,h,false);camera.aspect=aspect;
-  const need=1.46,fovT=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)),dist=Math.max(need/2/(fovT*aspect),1.5/2/fovT);S.base=dist;
-  camera.position.set(0,.12,dist);camera.lookAt(0,.12,0);camera.updateProjectionMatrix();S.pxPerUnit=h/(2*dist*fovT);
+  const need=1.09,fovT=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)),dist=Math.max(need/2/(fovT*aspect),1.5/2/fovT);S.base=dist;
+  camera.position.set(0,-.08,dist);camera.lookAt(0,-.08,0);camera.updateProjectionMatrix();S.pxPerUnit=h/(2*dist*fovT);S.scale=512/Math.max(60,S.pxPerUnit);
   sun.target.position.set(0,0,0);wake();
  }
  const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
@@ -307,8 +334,10 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   S.flyG.rotation.z=-S.fly.total;
   // door swing (ease in-out)
   if(S.open!==S.target){const k=Math.min(1,(now-S.t0)/SWING_MS),e=k*k*(3-2*k);S.open=S.from+(S.target-S.from)*e;if(k>=1){S.open=S.target;if(!S.target)S.opening=false;}busy=true;}
-  pivot.rotation.y=-S.open*SWING;camera.position.set(-.2*S.open,.12,S.base*(1+.2*S.open));camera.lookAt(-.2*S.open,.12,0);
-  if(S.dolly){const k=Math.min(1,(now-S.dolly.t0)/1000),e=k*k*(3-2*k),z0=S.base*1.2;camera.position.set(-.2*S.open*(1-e),.12*(1-e),z0+(-.1-z0)*e);camera.lookAt(0,0,-.2);if(S.veil)S.veil.style.opacity=Math.max(0,Math.min(1,(k-.55)/.4));if(k<1)busy=true;if(k>=1&&!S.dolly.done){S.dolly.done=true;finishDolly();}}
+  pivot.rotation.y=-S.open*SWING;mount.visible=S.open<.2;
+  if(S.open>=.99&&S.target===1){if(!S.pulseUntil)S.pulseUntil=now+6000;}else S.pulseUntil=0;
+  ring.visible=S.open>=.99&&!S.dolly;if(ring.visible){const k=Math.sin(now*.006);ring.scale.setScalar(1+.22*k);ring.material.opacity=.7+.3*k;if(now<S.pulseUntil)busy=true;}camera.position.set(-.2*S.open,-.08,S.base*(1+.2*S.open));camera.lookAt(-.2*S.open,-.08,0);
+  if(S.dolly){const k=Math.min(1,(now-S.dolly.t0)/1000),e=k*k*(3-2*k),z0=S.base*1.2;camera.position.set(-.2*S.open*(1-e),-.08*(1-e),z0+(-.1-z0)*e);camera.lookAt(0,0,-.2);if(S.veil)S.veil.style.opacity=Math.max(0,Math.min(1,(k-.55)/.4));if(k<1)busy=true;if(k>=1&&!S.dolly.done){S.dolly.done=true;finishDolly();}}
   // knob follows the finger
   S.knobG.rotation.z=-S.knob.total;
   // train, valves, pipes, lights, lamps
@@ -363,8 +392,8 @@ export async function openVault(){
  const close=document.createElement('button');close.textContent='✕';close.setAttribute('aria-label','Close vault');close.style.cssText='position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;border-radius:22px;border:1px solid #7a2fc4;background:#171020cc;color:#ffd36e;font-size:18px';
  close.onclick=()=>dlg.close();dlg.append(close);
  if(!dlg.open)dlg.showModal?.();
- const [{GOALS},{read}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
- const api=await mountVaultDoor(host,{goals:GOALS,read});
+ const [{GOALS},{view}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
+ const api=await mountVaultDoor(host,{goals:GOALS,read:view});dlg._vault=api;
  dlg.addEventListener('close',()=>api.dispose(),{once:true});
  return dlg;
 }

@@ -35,12 +35,15 @@ const root=path.resolve(__dirname,'..'),PORT=process.env.MYR5_VAULT_PORT||8907;
   const half=await info();assert.ok(half.progress>.45&&half.progress<.55,'half turn '+half.progress);assert.equal(half.open,0);await page.mouse.up();
   await page.waitForTimeout(2500);assert.ok((await info()).progress<.05,'unfinished turn springs back');
   await drag(ring(F,.12,0,Math.PI*2.05,40));await page.waitForTimeout(1500);await shot('07-open');
-  const op=await info();assert.equal(op.open,1,'door fully open');assert.equal(op.shadows,false,'asleep after open');assert.equal(op.awake,false);
+  const op=await info();assert.equal(op.open,1,'door fully open');assert.equal(op.awake,true,'hint ring pulses for a few seconds');await page.waitForTimeout(7000);const op2=await info();assert.equal(op2.shadows,false,'asleep after the pulse');assert.equal(op2.awake,false);
   const sc=await page.evaluate(()=>vault.projectWorld(0,0,-.2));await page.mouse.click(sc.x,sc.y);await page.waitForTimeout(450);
   await page.screenshot({path:path.join(root,'.vault/shots/L7-08-mid-dolly.png')});await page.waitForTimeout(1800);
   await page.screenshot({path:path.join(root,'.vault/shots/L7-09-purple-fill.png')});
   assert.equal(await page.evaluate(()=>window.entered),1,'port tap calls enter');
   assert.equal((await info()).awake,false,'dolly ends asleep');
+  // the real route: openVault() with the real vault-goals / vault-store
+  await page.goto('http://127.0.0.1:'+PORT+'/?real=1');await page.waitForFunction(()=>window.ready||window.errors.length,null,{timeout:90000});
+  assert.deepEqual(await page.evaluate(()=>window.errors),[]);const rv=await page.evaluate(()=>document.getElementById('vaultPanel')._vault.info().view);console.log('real route CRT',JSON.stringify(rv));assert.ok(/^GOAL 01\//.test(rv.head));
   assert.deepEqual(logs,[]);console.log('L7 browser checks passed');
  }finally{await b.close();srv.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});
