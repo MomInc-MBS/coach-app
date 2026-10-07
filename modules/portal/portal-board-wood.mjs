@@ -147,7 +147,7 @@ function stepSmoke(now){
 }
 
 // --- Secret: heat -> fire -> steam/ash -> crumble ------------------------------------------------
-const NF=30,NS=36,NK=300,NX=48,NY=64,ASH_MS=1100,HOLD_MS=500,CRUMBLE_MS=2800;
+const NF=44,NS=36,NK=300,NX=48,NY=64,ASH_MS=1100,HOLD_MS=500,CRUMBLE_MS=2800;
 const faceW=()=>S.toWorld(1,0)[0]-S.toWorld(0,0)[0],faceH=()=>S.toWorld(0,0)[1]-S.toWorld(0,1)[1];
 const wp=(x,y)=>{const [ox,oy]=S.toWorld(0,0);return [ox+x,oy-y];}; // face px -> world
 function isEdge(u,v){ // first touch within 24 px of the screen edge = iOS back-swipe / home bar: never a scrub
@@ -170,7 +170,7 @@ function dotTexture(){
  const c=document.createElement('canvas');c.width=c.height=16;const x=c.getContext('2d'),g=x.createRadialGradient(8,8,0,8,8,8);
  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.4,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,16,16);return c;
 }
-const LAYERS=[[0xff3a00,1,.3,.9],[0xff8a14,.62,.2,.8],[0xffe9a0,.32,.1,.9]]; // colour, size, base alpha, shape: outer/mid/core tongues
+const LAYERS=[[0xff3a00,1,.55,.9],[0xff8a14,.62,.6,.8],[0xffe9a0,.32,.7,.9]]; // colour, size, base alpha, shape: outer/mid/core tongues
 function ensureFx(){
  if(S.fx||!S.scene)return;
  const T=S.THREE,mk=(map,color)=>{const m=new T.SpriteMaterial({map,color,transparent:true,opacity:0,depthWrite:false,depthTest:false,blending:T.AdditiveBlending}),sp=new T.Sprite(m);sp.visible=false;sp.renderOrder=20;S.scene.add(sp);return sp;};
@@ -205,7 +205,7 @@ function spawnSpark(cx,cy,R,now){
 function stepFire(now,I,cx,cy,R,kill){
  const fx=S.fx,W=faceW(),sc=W/340;let alive=0;
  if(I>0){
-  let n=fx.flames.filter(f=>f.alive).length;for(let i=0;n<I*NF&&i<3;i++,n++)spawnFlame(cx,cy,R,sc,now);
+  let n=fx.flames.filter(f=>f.alive).length;for(let i=0;n<I*NF&&i<4;i++,n++)spawnFlame(cx,cy,R,sc,now);
   if(Math.random()<I*.6)spawnSpark(cx,cy,R,now);
  }
  for(const f of fx.flames){
@@ -213,14 +213,14 @@ function stepFire(now,I,cx,cy,R,kill){
   if(t>=1){f.alive=false;f.sp.forEach(s=>s.visible=false);continue;}
   alive++;const env=Math.min(1,t*5)*(1-t)**.7*(1-kill),fl=.8+.2*Math.sin(now*.018+f.ph),sway=Math.sin(now*.007+f.ph)*10*sc*t;
   f.sp.forEach((s,i)=>{const [,size,a,sh]=LAYERS[i];s.visible=true;s.position.set(f.x+sway*(1-i*.3),f.y+t*40*sc*(1+i*.4),S.faceZ+10);
-   s.scale.set(34*sc*f.sz*size*fl*(1-.5*t),(46+70*(1-i*.25))*sc*f.sz*size*(.9+.2*fl)*(1-.2*t),1);s.material.opacity=env*a*(i==2?2.2:1.6)*sh;});
+   s.scale.set(110*sc*f.sz*size*fl*(1-.5*t),(60+100*(1-i*.25))*sc*f.sz*size*(.9+.2*fl)*(1-.2*t),1);s.material.opacity=env*a*(i==2?2.2:1.6)*sh;});
  }
  for(const k of fx.sparks){
   if(!k.alive)continue;const age=(now-k.t0)/1000,t=age*1000/k.life;
   if(t>=1){k.alive=false;k.sp.visible=false;continue;}alive++;
   k.sp.visible=true;k.sp.position.set(k.x+k.vx*age+Math.sin(age*9+k.x)*6,k.y+k.vy*age,S.faceZ+12);k.sp.scale.setScalar(k.s*sc*(1-.5*t));k.sp.material.opacity=(1-t)*(1-kill);
  }
- fx.light.position.set(cx,cy+R*.3,W*.35);fx.light.intensity=I*(1-kill)*(2.2+.9*Math.sin(now*.03)+.5*Math.sin(now*.071));
+ fx.light.position.set(cx,cy+R*.3,W*.35);fx.light.intensity=I*(1-kill)*(5+.9*Math.sin(now*.03)+.5*Math.sin(now*.071));
  return alive>0;
 }
 function stepFlakes(now){
@@ -239,7 +239,7 @@ function spawnFlakes(c1,now){
   const idx=S.order[S.ptr++],k=S.flakes.list.find(k=>!k.alive);
   if(!k||S.ptr%5)continue; // every 5th crossed cell sheds a flake
   const i=idx%NX,j=(idx/NX)|0,[x,y]=wp((i+.5)*cw,(j+.5)*ch);
-  Object.assign(k,{alive:true,t0:now,x,y,vx:(Math.random()-.5)*70,vy:-(10+Math.random()*50),rx:(Math.random()-.5)*8,ry:(Math.random()-.5)*8,rz:(Math.random()-.5)*8,sx:cw*(1+Math.random()*1.4),sy:ch*(.9+Math.random()*1.2)});
+  Object.assign(k,{alive:true,t0:now-(S.hold?Math.random()*1500:0),x,y,vx:(Math.random()-.5)*70,vy:-(10+Math.random()*50),rx:(Math.random()-.5)*8,ry:(Math.random()-.5)*8,rz:(Math.random()-.5)*8,sx:cw*(1+Math.random()*1.4),sy:ch*(.9+Math.random()*1.2)});
   k.m.visible=true;
  }
 }
@@ -250,6 +250,7 @@ function ashPaint(){ // scorch + glow gone, guides back
 }
 function secretStep(dt,now){
  if(!S.scene)return false;
+ if(S.hold)now=S.hold; // debug.pose: time frozen
  const rs=S.rs,U=S.uni;let busy=false;
  S.heat+=((S.stage==='idle'?revNow(rs,now)/SECRET.revs:S.stage==='fire'?1:0)-S.heat)*Math.min(1,dt*5);
  if(S.heat<.005)S.heat=0;
@@ -265,12 +266,8 @@ function secretStep(dt,now){
   const I=Math.max(0,S.heat-.4)*.5; // small tongues at the finger while the heat builds
   if(I>0||S.fx?.flames.some(f=>f.alive)){ensureFx();const [fx,fy]=S.finger?S.toWorld(...S.finger):[0,0];busy=stepFire(now,I,fx,fy,faceW()*.07,0);}
  }else if(S.stage==='fire'){
-  ensureFx();const ft=now-S.t0,W=faceW(),R=(.1+.45*Math.min(1,ft/3500))*W;busy=stepFire(now,Math.min(1,.4+ft/1800*.6),S.fc[0],S.fc[1],R,0);
-  if(now-S.lastStamp>=160){ // keep scorching the burning region
-   S.lastStamp=now;const a=Math.random()*6.283,r=R*Math.sqrt(Math.random()),[ox,oy]=S.toWorld(0,0);
-   const x=(S.fc[0]-ox+Math.cos(a)*r)/W,y=(oy-S.fc[1]+Math.sin(a)*r*.8)/faceH();
-   if(x>0&&x<1&&y>0&&y<1)stamp(x,y,.75);
-  }
+  ensureFx();const ft=now-S.t0,W=faceW(),R=(.1+.45*Math.min(1,ft/3500))*W;const e=Math.min(1,ft/3500),[ox,oy]=S.toWorld(0,0); // the burn spreads and drifts to the board's middle
+  busy=stepFire(now,Math.min(1,.4+ft/1800*.6),lerp(S.fc[0],ox+W/2,e),lerp(S.fc[1],oy-faceH()*.45,e),R,0);
   busy=true;
  }else{
   const t=now-S.t0;
@@ -289,7 +286,7 @@ function secretStep(dt,now){
 }
 // Back to a fresh board. portal's board.heal() only reaches us after a cut, so this also runs on the next press and 9 s after the end.
 function heal(){
- if(!S)return;clearTimeout(S.timer2);
+ if(!S)return;S.hold=0;clearTimeout(S.timer2);
  S.stage='idle';S.rs=woodSecretInit();S.heat=0;S.fc=null;S.finger=null;S.c=0;S.ptr=0;
  if(S.uni.ash){S.uni.ash.value=0;S.uni.crumble.value=0;if(S.uni.glowS)S.uni.glowS.value=1.2;}
  for(const f of S.fx?.flames||[]){f.alive=false;f.sp.forEach(s=>s.visible=false);}
@@ -343,6 +340,9 @@ function step(dt,now){
 const debug={ // preview/test hooks: jump to a stage
  fire(){const w=faceW(),h=faceH();S.rs={...woodSecretInit(),phase:'fire',fireAt:performance.now(),at:{x:w*.3,y:h*.35}};S.wake?.();},
  ash(){if(S.rs.phase==='idle')debug.fire();S.rs={...S.rs,phase:'ash'};S.wake?.();},
+ pose(stage,p){ // freeze mid-stage for screenshots: 'ash'|'crumble', p 0..1
+  const d=stage==='ash'?ASH_MS:CRUMBLE_MS,now=performance.now();debug.ash();S.hold=now;S.stage=stage;S.t0=now-p*d;S.ptr=0;
+  if(stage==='crumble'){ensureFlakes();S.flakes.list.forEach(k=>{k.alive=false;k.m.visible=false;});U.uAsh.value=1;}S.wake?.();},
  heal,state:()=>({stage:S.stage,rs:S.rs,heat:S.heat}),
 };
 function dispose(){
