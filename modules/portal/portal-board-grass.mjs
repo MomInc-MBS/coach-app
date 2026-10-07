@@ -267,7 +267,7 @@ function dispose(){
 const SEC_START=[.1,.085],SEC_SHIP=[.9,.915]; // face (u,v) corners: alien top-left, ship bottom-right
 const ease=t=>{t=clamp01(t);return t*t*(3-2*t);};
 function secGeom(){const W=S.faceW,hw=1/S.aspect;return {W,hw,start:[SEC_START[0],SEC_START[1]*hw],ship:[SEC_SHIP[0],SEC_SHIP[1]*hw]};}
-function secReset(){const g=secGeom();if(S.fx)secDropFx();S.sec=grassSecretInit(g.start,g.ship,PLANT_STEP_PX/g.W);S.emerge=0;S.fired=false;S.vis=null;S.seen=0;S.apos=g.start;}
+function secReset(){const g=secGeom();if(S.fx)secDropFx();for(const f of S.flowers)f.obj.visible=true;S.sec=grassSecretInit(g.start,g.ship,PLANT_STEP_PX/g.W);S.emerge=0;S.fired=false;S.vis=null;S.seen=0;S.apos=g.start;}
 function secEv(ev){const before=S.sec;S.sec=grassSecret(S.sec,ev,performance.now());return S.sec!==before;}
 function buildSecret(T,scene){
  const dis=[],mat=m=>(dis.push(m),m),geo=g=>(dis.push(g),g),radial=col=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);r.addColorStop(0,col);r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);const t=new T.CanvasTexture(c);dis.push(t);return t;};
@@ -281,7 +281,7 @@ function buildSecret(T,scene){
  // ufo: squashed sphere + glass dome + gold ring, tilted sideways, its lower side buried in a dirt mound
  const ufoTilt=new T.Group(),saucer=blob(.07,1,.32,lam(0xc4ccd6,{emissive:0x3a424c})),ring=new T.Mesh(geo(new T.TorusGeometry(.07,.005,6,28)),lam(0xffd36e,{emissive:0x6a4a10})),dome=new T.Mesh(geo(new T.SphereGeometry(.034,16,10,0,Math.PI*2,0,Math.PI/2)),lam(0xbfe6ff,{emissive:0x2a5a7a,transparent:true,opacity:.8}));
  ring.rotation.x=Math.PI/2;dome.position.y=.008;ufoTilt.add(saucer,ring,dome);ufoTilt.rotation.z=-.9;
- const mound=blob(.055,1.2,.45,lam(0x6b4526)),dirt=disc(.12,'rgba(70,44,24,1)',.85);mound.position.set(-.012,.03,.02);
+ const mound=blob(.045,1.2,.4,lam(0x6b4526)),dirt=disc(.12,'rgba(70,44,24,1)',.85);mound.position.set(-.03,.048,.02);
  const ufo=new T.Group();ufo.add(dirt,ufoTilt,mound);
  for(const o of [shade,alien,tuft,ufo])scene.add(o);
  return {alien,tuft,shade,ufo,ufoTilt,dis};
@@ -296,11 +296,12 @@ function buildCrack(){
  const turf=poly=>{const c=cvs(),g=c.getContext('2d');g.save();path(g,poly);g.closePath();g.clip();g.fillStyle='#1b4318';g.fillRect(0,0,cw,ch);g.lineWidth=2;
   for(let i=0;i<2200;i++){const [h,s,l]=bladeHSL(),x=Math.random()*cw,y=Math.random()*ch,a=-Math.PI/2+(Math.random()-.5)*1.6;g.strokeStyle=`hsl(${h*360} ${s*100}% ${l*100}%)`;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*10,y+Math.sin(a)*10);g.stroke();}
   g.lineJoin='miter';path(g,edge);g.strokeStyle='#2e1b0e';g.lineWidth=cw*.045;g.stroke();g.strokeStyle='#6b4a2a';g.lineWidth=cw*.016;g.stroke();g.restore();return tex(c);};
- const plate=(()=>{const c=cvs(),g=c.getContext('2d'),gr=g.createLinearGradient(0,0,cw,ch);gr.addColorStop(0,'#2c333b');gr.addColorStop(.5,'#444d57');gr.addColorStop(1,'#242a31');g.fillStyle=gr;g.fillRect(0,0,cw,ch);
-  g.strokeStyle='rgba(255,255,255,.05)';for(let y=0;y<ch;y+=3){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}
-  g.strokeStyle='#1a1f25';g.lineWidth=6;g.strokeRect(cw*.08,ch*.1,cw*.84,ch*.8);g.strokeStyle='#5c6670';g.lineWidth=2;g.strokeRect(cw*.08+4,ch*.1+4,cw*.84-8,ch*.8-8);
-  g.fillStyle='#69737e';for(const [x,y] of [[.14,.14],[.86,.14],[.14,.86],[.86,.86]]){g.beginPath();g.arc(x*cw,y*ch,5,0,7);g.fill();}
-  g.strokeStyle='#7a2fc4';g.lineWidth=5;g.beginPath();g.arc(cw/2,ch/2,cw*.18,0,7);g.stroke();return tex(c);})();
+ const plate=(()=>{const c=cvs(),g=c.getContext('2d'),gr=g.createLinearGradient(0,0,cw,ch);gr.addColorStop(0,'#1d2026');gr.addColorStop(.5,'#2b2f38');gr.addColorStop(1,'#16181d');g.fillStyle=gr;g.fillRect(0,0,cw,ch); // dark gunmetal
+  g.strokeStyle='rgba(255,255,255,.04)';for(let y=0;y<ch;y+=3){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}
+  const glow=g.createRadialGradient(cw/2,ch/2,cw*.05,cw/2,ch/2,cw*.75);glow.addColorStop(0,'rgba(150,70,240,.55)');glow.addColorStop(1,'rgba(122,47,196,0)');g.fillStyle=glow;g.fillRect(0,0,cw,ch); // purple glow
+  g.strokeStyle='#0d0e11';g.lineWidth=7;g.strokeRect(cw*.08,ch*.1,cw*.84,ch*.8);g.strokeStyle='#ffd36e';g.lineWidth=3;g.strokeRect(cw*.08+5,ch*.1+5,cw*.84-10,ch*.8-10); // gold trim
+  g.fillStyle='#ffd36e';for(const [x,y] of [[.14,.14],[.86,.14],[.14,.86],[.86,.86]]){g.beginPath();g.arc(x*cw,y*ch,5,0,7);g.fill();}
+  g.shadowColor='#b06cff';g.shadowBlur=18;g.strokeStyle='#ffd36e';g.lineWidth=4;g.beginPath();g.arc(cw/2,ch/2,cw*.18,0,7);g.stroke();return tex(c);})();
  const shape=(poly,t)=>{const sh=new T.Shape();poly.forEach(([x,y],i)=>sh[i?'lineTo':'moveTo'](x-.5,hw/2-y));const g=new T.ShapeGeometry(sh),p=g.attributes.position,uv=g.attributes.uv;dis.push(g);
   for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)+.5,1-(hw/2-p.getY(i))/hw);
   const m=new T.MeshBasicMaterial({map:t,transparent:true,opacity:0});dis.push(m);const o=new T.Mesh(g,m);o.scale.setScalar(W);return o;};
@@ -338,7 +339,8 @@ function secStep(dt,now){
  ufo.visible=!spent;ufoTilt.rotation.z=tilt;set(ufo,up,.016+fk*.3,usc);
  let anim=ph==='walk'||ph==='board'||ph==='fly'||vis;
  if(spent){
-  if(!S.fx)buildCrack();const F=S.fx,k=ph==='crack'?t/SECRET.crackMs:1,sk=ph==='split'?t/SECRET.splitMs:ph==='done'?1:0,sp=ease(sk);
+  if(!S.fx)buildCrack();for(const f of S.flowers)f.obj.visible=false; // the lawn sheet covers them
+ const F=S.fx,k=ph==='crack'?t/SECRET.crackMs:1,sk=ph==='split'?t/SECRET.splitMs:ph==='done'?1:0,sp=ease(sk);
   drawCrack(Math.round(ease(Math.min(1,k*1.15))*40)/40);F.G.material.opacity=1-clamp01(sk*3);F.G.visible=sk<.34;F.P.visible=sk>0;
   for(const [o,sg] of [[F.A,1],[F.B,-1]]){o.material.opacity=ph==='crack'?clamp01(t/450):1-clamp01((sk-.62)/.38);o.visible=ph!=='done';o.position.set(F.cx[0]+F.dir[0]*sg*sp*W*.7,F.cx[1]+F.dir[1]*sg*sp*W*.7,S.faceZ+W*.06);o.rotation.z=sg*sp*.07;}
   anim=ph!=='done';
@@ -351,6 +353,7 @@ function secStep(dt,now){
 // debug hook (screenshots): hold the ship/crack sequence at phase `ph`, fraction k of its duration; freeze(null) resumes from idle.
 function freeze(ph,k=0){
  if(!ph){S.freezeT=null;secReset();return;}
+ if(S.fx)secDropFx();for(const f of S.flowers)f.obj.visible=true;
  const g=secGeom(),e=g.start,d=SECRET[NEXT[ph]?.[0]]||1;S.freezeT=k*d;S.fired=false;
  S.sec={...grassSecretInit(g.start,g.ship,PLANT_STEP_PX/g.W),phase:ph,path:[e,g.ship],len:d2(e,g.ship)};S.wake();
 }
