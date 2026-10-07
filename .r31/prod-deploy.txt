@@ -1,0 +1,46 @@
+
+ ⛅️ wrangler 4.92.0 (update available 4.148.0)
+──────────────────────────────────────────────
+🌀 Building list of assets...
+✨ Read 1921 files from the assets directory D:\myr5-work\r31\dist\client
+🌀 Starting asset upload...
+🌀 Found 13 new or modified static assets to upload. Proceeding with upload...
++ /release-build.mjs
++ /modules/portal/portal-board-jelly.mjs
++ /modules/portal/portal.css
++ /launch-runtime.mjs
++ /source.json
++ /audio/page-music.mjs
++ /modules/portal/portal-board-grass.mjs
++ /sw.js
++ /app-runtime.mjs
++ /index.html
++ /modules/portal/portal-board-pond.mjs
++ /modules/portal/portal.mjs
++ /source.json.gz
+Uploaded 4 of 13 assets
+Uploaded 8 of 13 assets
+Uploaded 13 of 13 assets
+✨ Success! Uploaded 13 files (1851 already uploaded) (2.93 sec)
+
+Total Upload: 264.21 KiB / gzip: 73.31 KiB
+Worker Startup Time: 8 ms
+Your Worker has access to the following bindings:
+Binding                                                                        Resource                  
+env.DB (myr5-coach)                                                            D1 Database               
+env.ASSETS                                                                     Assets                    
+env.WORKOUT_IMPORTS_ENABLED ("true")                                           Environment Variable      
+env.CLERK_PUBLISHABLE_KEY ("pk_live_Y2xlcmsubW9taW5jLm9ubGluZSQ")              Environment Variable      
+env.CLERK_FRONTEND_URL ("https://clerk.mominc.online")                         Environment Variable      
+env.CLERK_AUTHORIZED_PARTIES ("https://myr5.mominc.online")                    Environment Variable      
+env.RELEASE_ORIGIN ("https://myr5.mominc.online")                              Environment Variable      
+env.SPOTIFY_CLIENT_ID ("9eb27ceb2aed4ee59517d5b0854a8b79")                     Environment Variable      
+env.SPOTIFY_REDIRECT_URI ("https://myr5.mominc.online/api/spotif...")          Environment Variable      
+env.RELEASE_EMAIL_FROM ("dispatch@mominc.online")                              Environment Variable      
+env.VAPID_SUBJECT ("https://myr5.mominc.online")                               Environment Variable      
+
+Uploaded myr5-coach (9.71 sec)
+Deployed myr5-coach triggers (1.64 sec)
+  myr5.mominc.online (custom domain)
+  schedule: * * * * *
+Current Version ID: 18a76932-3e87-47da-bbf2-cef737c479e8
