@@ -1,12 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {COACHES} from '../performance-catalog.mjs';
-import {rosterFiles,statueCount,nearestStatue,residentWindow,stopAt,cardModel,firstUnearned,isEarned,GAP} from '../modules/vault/vault-hall.mjs';
+import {COACH_REQUIREMENTS} from '../performance-catalog.mjs';
+import {pickCoaches,coachPath,nearestStatue,residentWindow,stopAt,cardModel,firstUnearned,isEarned,GAP} from '../modules/vault/vault-hall.mjs';
 const goals=Array.from({length:12},(_,i)=>({id:'g'+i,clue:'c'+i,title:'T'+i,tier:'rare',test:s=>!!s.earned?.['g'+i],progress:()=>({have:3,need:10})}));
-test('every distinct roster coach gets a statue file; extras beyond goals are decorative',()=>{
- const files=rosterFiles(COACHES);
- assert.equal(files.length,COACHES.length-1);assert.equal(new Set(files).size,files.length);
- for(const f of files)assert.ok(fs.existsSync(new URL('..'+f,import.meta.url)),f);
- assert.equal(statueCount(30,files.length),files.length);assert.equal(statueCount(80,files.length),80);
+test('statues use the highest unlock-level coaches working down, no repeats, last = highest',()=>{
+ const R={easy:0,medium:1,hard:2,expert:3},n=40,ids=pickCoaches(n,COACH_REQUIREMENTS);
+ assert.equal(ids.length,n);assert.equal(new Set(ids).size,n);
+ const lv=ids.map(id=>R[COACH_REQUIREMENTS.find(c=>c.id===id).difficulty]);
+ assert.deepEqual(lv,[...lv].sort((a,b)=>a-b));assert.equal(lv.at(-1),3);
+ const dropped=COACH_REQUIREMENTS.filter(c=>!ids.includes(c.id)).map(c=>R[c.difficulty]);assert.ok(Math.max(...dropped)<=lv[0]);
+ for(const id of ids)assert.ok(fs.existsSync(new URL('..'+coachPath(id),import.meta.url)),id);
 });
 test('at most 5 statues resident at any position',()=>{
  for(let c=0;c<40;c++){const w=residentWindow(c,40);assert.ok(w.length<=5&&w.includes(c));assert.ok(w.every(i=>i>=c-1&&i<=c+3));}
