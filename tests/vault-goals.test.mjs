@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {COACH_REQUIREMENTS} from '../performance-catalog.mjs';
 import {statueCoaches,GOALS,VAULT_GOALS,COUNTER_MODES,newlyEarned} from '../modules/vault/vault-goals.mjs';
 
-test('table: unique ids, valid tiers, placeholder clues, tunables present',()=>{
+test('table: unique ids, valid tiers, cryptic clues, tunables present',()=>{
  assert.equal(new Set(GOALS.map(g=>g.id)).size,GOALS.length);
- for(const g of GOALS){assert.ok(['rare','legendary'].includes(g.tier),g.id);assert.equal(g.clue,'clue:'+g.id);assert.ok(g.title);}
+ for(const g of GOALS){assert.ok(['rare','legendary'].includes(g.tier),g.id);assert.ok(typeof g.clue==='string'&&g.clue.length>0&&!g.clue.startsWith('clue:'),`${g.id} needs real clue`);assert.ok(g.title);}
  assert.ok(VAULT_GOALS.grimMinutes.length===3&&COUNTER_MODES['armie-ignored']==='keyed');
  assert.equal(GOALS.at(-1).id,'unlocked-everything');
 });

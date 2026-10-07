@@ -17,7 +17,56 @@ export const SECRET_BOARDS=Object.freeze(['pond','wood','ice','quilt','grass','j
 export const COACH_CATEGORIES=Object.freeze({meditation:'Meditation',yoga:'Yoga',cardio:'Cardio',quads:'Quads',glutes:'Glutes',chest:'Chest',arms:'Arms','martial-arts':'Martial arts'});
 const num=x=>Number.isFinite(x)?x:0;
 const count=(v,c)=>num(v?.counters?.[c]);
-const goal=(id,tier,title,test,progress)=>Object.freeze({id,tier,title,clue:'clue:'+id,test:v=>{try{return !!test(v||{});}catch{return false;}},...(progress?{progress:v=>{try{const p=progress(v||{});return {have:Math.max(0,Math.min(p.need,num(p.have))),need:p.need};}catch{return {have:0,need:1};}}}:{})});
+const CLUES={
+ 'still-pond':"A silent mirror that swallows your gaze until it overflows.",
+ 'fire-starter':"Kindling that awakens with frantic fingers, then sighs into ash.",
+ 'shatter':"A clear wall that whispers of cracks under hurried kisses.",
+ 'fold-twice':"A blanket that asks for a hug, then a turn to the right.",
+ 'little-way-home':"A meadow trail of petals guiding a lost star to its saucer.",
+ 'boiling-point':"A wobbly dessert that sighs after a patient wait.",
+ 'grim-time-1':"A quiet study where minutes gather like dust.",
+ 'grim-time-2':"A longer vigil where pages turn with patience.",
+ 'grim-time-3':"An epic linger where the grimoire drinks the day.",
+ 'history-open':"A scroll that remembers yesterday's steps.",
+ 'scoreboard-link':"A bridge to strangers' tallies.",
+ 'door-open':"A wheel that yawns wide when spun.",
+ 'hall-end':"The final sentinel in a line of stone guides.",
+ 'vault-pack-opened':"A gift box that cracks when earned.",
+ 'ar-first':"A ghost coach that steps into your room.",
+ 'reminder-set':"A sticky note that begs to be born.",
+ 'reminder-kept':"A note that lingers a week, unwavering.",
+ 'pond-fish-seen':"A shy leviathan that appears when you wait.",
+ 'armie-read-1':"Coach whispers stack up, waiting for ears.",
+ 'armie-ignored-1':"Coach whispers gather dust in the corner.",
+ 'armie-read-100':"Coach mail that overflows the shelf, a legion of whispers.",
+ 'armie-ignored-100':"Coach mail that builds forts, a legion ignored.",
+ 'dj-first':"The inaugural groove on the DJ deck.",
+ 'dj-10':"A gathering of beats that keeps the workout humming.",
+ 'gala-first-part':"One slot awakens, ready for change.",
+ 'gala-all-slots':"Every slot dressed, the avatar complete.",
+ 'breath-all':"A pair of breaths, each a new path.",
+ 'library-10':"Many flips through the move tome.",
+ 'food-scan-10':"A handful of snacks scanned, secrets revealed.",
+ 'shapes-all':"Every outline gathered, the portal whole.",
+ 'arcade-30':"A bounty of points earned in the tub's sky.",
+ 'share-1':"A single pass sent to the pocket realm.",
+ 'share-25':"Many passes flutter like confetti in the air.",
+ 'coach-meditation':"Stillness takes form; a teacher arrives.",
+ 'coach-yoga':"Flexibility bends into possibility.",
+ 'coach-cardio':"Pulse quickens; the rhythm arrives.",
+ 'coach-quads':"Thighs remember their strength.",
+ 'coach-glutes':"Power awakens where it's been sleeping.",
+ 'coach-chest':"Breath finds muscle; the guide appears.",
+ 'coach-arms':"Lift finds its ally.",
+ 'coach-martial-arts':"A combat savvy sensei steps onto the mat.",
+ 'boss-skin-first':"A boss's skin earned, pixel perfect.",
+ 'texture-every-coach':"Every coach dons a fresh new coat.",
+ 'all-colours':"Every hue collected, the palette complete.",
+ 'all-six':"All board secrets laid bare, the vault sighs.",
+ 'all-coaches':"Every coach dressed, textures in place.",
+ 'unlocked-everything':"Coaches, textures, and hues unite: the hall awaits."
+};
+const goal=(id,tier,title,test,progress)=>Object.freeze({id,tier,title,clue:CLUES[id]||'clue:'+id,test:v=>{try{return !!test(v||{});}catch{return false;}},...(progress?{progress:v=>{try{const p=progress(v||{});return {have:Math.max(0,Math.min(p.need,num(p.have))),need:p.need};}catch{return {have:0,need:1};}}}:{})});
 const counter=(id,tier,title,name,need)=>goal(id,tier,title,v=>count(v,name)>=need,v=>({have:count(v,name),need}));
 const minutes=(id,tier,title,mins)=>goal(id,tier,title,v=>num(v.time?.['grim-time'])>=mins*60000,v=>({have:Math.floor(num(v.time?.['grim-time'])/60000),need:mins}));
 const secret=(id,title,board)=>goal(id,'rare',title,v=>!!v.secrets?.[board]);
