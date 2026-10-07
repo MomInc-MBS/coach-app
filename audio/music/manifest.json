@@ -5,31 +5,31 @@
  "tracks": {
   "hey-man-idk": {
    "url": "/audio/music/hey-man-idk.m4a",
-   "bpm": 105.25,
+   "bpm": 188.43,
    "bars": 8,
    "beats": 32,
-   "frames": 804506,
+   "frames": 449348,
    "loopStart": 0,
-   "loopEnd": 18.242766,
-   "duration": 18.242766,
-   "sourceStart": 0.61,
-   "tailFolded": 0.06,
-   "bytes": 260040,
-   "decodedFrames": 804506
+   "loopEnd": 10.189297,
+   "duration": 10.189297,
+   "sourceStart": 0.585,
+   "tailFolded": 0.04,
+   "bytes": 145363,
+   "decodedFrames": 449348
   },
   "guarded-gate": {
    "url": "/audio/music/guarded-gate.m4a",
-   "bpm": 120.0,
+   "bpm": 121.3,
    "bars": 8,
    "beats": 32,
-   "frames": 705600,
+   "frames": 698032,
    "loopStart": 0,
-   "loopEnd": 16.0,
-   "duration": 16.0,
-   "sourceStart": 0.02,
-   "tailFolded": 0.06,
-   "bytes": 228716,
-   "decodedFrames": 705600
+   "loopEnd": 15.82839,
+   "duration": 15.82839,
+   "sourceStart": 0.075,
+   "tailFolded": 0.04,
+   "bytes": 226826,
+   "decodedFrames": 698032
   },
   "daemon-time": {
    "url": "/audio/music/daemon-time.m4a",
