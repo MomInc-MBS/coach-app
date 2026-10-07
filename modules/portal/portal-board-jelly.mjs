@@ -149,6 +149,73 @@ if(uTrailN>0&&vPlanar.x>=uTrailBounds.x&&vPlanar.x<=uTrailBounds.z&&vPlanar.y>=u
 }
 `;
 
+// ---- Vault secret (Ian 2026-10-06): hold one finger 7 s -> bubbles spread from the finger and cluster on the bones,
+// the block boils, a dark door rises out of the middle and parts the jelly. Fires myr5:portal-secret {board:'jelly'}.
+// jellySecret is the pure reducer (ms clock): state {id,x,y,t0,skip,up,upH,done}; held() is the effective hold in ms
+// (a lifted finger's value drains to 0 over `subside`, so every visual below just follows it).
+export const HOLD={ms:7000,drift:24,subside:1000,front:6,boil:5.5,doorFrom:6.2,door:7,sink:.7}; // seconds: front reaches every bone, boil ramp starts, door rise, lands at ms; sink = door drop per s on lift
+export const held=(s,now)=>s.done?HOLD.ms:s.id==null?0:s.up!=null?Math.max(0,s.upH*(1-(now-s.up)/HOLD.subside)):Math.max(0,now-s.t0+s.skip);
+export function jellySecret(s,ev,now){
+ s=s||{};const live=s.id!=null&&s.up==null&&!s.done,mine=live&&ev.id===s.id;
+ switch(ev.type){
+  case'down':return s.done||live?s:{id:ev.id,x:ev.x,y:ev.y,t0:now,skip:0,up:null,done:false};
+  case'move':return mine&&Math.hypot(ev.x-s.x,ev.y-s.y)>HOLD.drift?{...s,up:now,upH:held(s,now),drift:true}:s;
+  case'up':return mine?{...s,up:now,upH:held(s,now)}:s;
+  case'skip':return live?{...s,skip:s.skip+ev.ms}:s;
+  case'tick':return live&&held(s,now)>=HOLD.ms?{...s,done:true}:s;
+ }
+ return s;
+}
+const clamp01=x=>Math.max(0,Math.min(1,x)),ease=x=>x*x*(3-2*x);
+function rng(seed){return()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;}
+const NB=300,NS=36; // bubbles (bone clusters + free + boil extras), steam puffs
+function makeFx(THREE,scene,mesh,face,toWorld,boneZ){
+ const rnd=rng(7),g=new THREE.Group(),dummy=new THREE.Object3D(),bones=[];
+ g.frustumCulled=false;
+ const geo=mesh.isMesh?mesh.geometry:mesh.children?.[0]?.geometry,pos=geo?.attributes?.position;
+ if(pos&&pos.count){const st=Math.max(1,Math.floor(pos.count/400));for(let i=0;i<pos.count;i+=st)if(pos.getZ(i)>boneZ)bones.push([(pos.getX(i)+face.w/2)/face.w,(face.h/2-pos.getY(i))/face.h]);}
+ if(!bones.length)for(let i=0;i<150;i++)bones.push([.1+.8*rnd(),.08+.84*rnd()]); // no mesh (tests): scatter
+ const bub=Array.from({length:NB},(_,i)=>{ // 0-159 ride the bones, 160-219 free, 220+ boil extras
+  const b=i<160?bones[Math.floor(rnd()*bones.length)]:[.06+.88*rnd(),.05+.9*rnd()],j=i<160?.012:0;
+  return{u:b[0]+(rnd()-.5)*j,v:b[1]+(rnd()-.5)*j,r:3+4*rnd(),P:.8+.5*rnd(),ph:rnd(),w:rnd()*6.28,extra:i>=220?rnd():-1};});
+ const bm=new THREE.InstancedMesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshStandardMaterial({color:0xcfffb8,emissive:0x2f7a22,roughness:.1,transparent:true,opacity:.5,depthWrite:false}),NB);
+ const sc=document.createElement('canvas');sc.width=sc.height=64;const x=sc.getContext('2d'),gr=x.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(235,255,225,.9)');gr.addColorStop(1,'rgba(235,255,225,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);
+ const steamTex=new THREE.CanvasTexture(sc),sm=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:steamTex,transparent:true,opacity:.3,depthWrite:false}),NS);
+ const steam=Array.from({length:NS},()=>({u:rnd(),P:1.6+1.2*rnd(),ph:rnd(),s:30+30*rnd(),w:rnd()*6.28}));
+ bm.frustumCulled=sm.frustumCulled=false;g.add(bm,sm);
+ // door: dark gap, gold frame, slab, flywheel; two jelly flaps part to either side
+ const door=new THREE.Group(),m=(c,o={})=>new THREE.MeshStandardMaterial({color:c,...o}),B=new THREE.BoxGeometry(1,1,1);
+ const add=(geom,mat,px,py,pz,sx,sy,sz)=>{const o=new THREE.Mesh(geom,mat);o.position.set(px,py,pz);o.scale.set(sx,sy,sz);door.add(o);return o;};
+ const flapMat=new THREE.MeshStandardMaterial({color:0x7ddc4a,emissive:0x1d4a12,roughness:.15,transparent:true,opacity:.62,depthWrite:false});
+ const flaps=[-1,1].map(()=>{const f=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),flapMat);g.add(f);return f;});
+ const parts={gap:add(B,new THREE.MeshBasicMaterial({color:0x04060a,transparent:true,opacity:.92}),0,0,0,1.1,1.06,.1),
+  frame:add(B,m(0xc9a24a,{metalness:.8,roughness:.35,emissive:0x2a1f05}),0,0,1,1.07,1.04,.6),
+  slab:add(B,m(0x34303c,{metalness:.7,roughness:.42,emissive:0x120a1c}),0,0,2,1,1,1),
+  wheel:add(new THREE.TorusGeometry(1,.14,8,24),m(0xd8b45c,{metalness:.8,roughness:.3,emissive:0x2a1f05}),0,0,2,1,1,1)};
+ g.add(door);door.visible=false;scene.add(g);
+ const sizes=()=>{const[x0,y0]=toWorld(0,0),[x1,y1]=toWorld(1,1);return{fw:x1-x0,fh:y0-y1,cx:(x0+x1)/2,cy:(y0+y1)/2-.03*(y0-y1)};};
+ let doorP=0,lastT=0;
+ return{bones:bones.length,get doorP(){return doorP;},
+  update(h,calm,time){ // h seconds held, calm 0..1 post-done fade, time seconds (any clock)
+   const{fw,fh,cx,cy}=sizes(),[fu,fv]=S.fin,boil=ease(clamp01(h-HOLD.boil)),dmax=Math.max(.6,...bub.map(b=>Math.hypot(b.u-fu,(b.v-fv)*face.h/face.w))),keep=1-calm,Z=3,k=fw/300;
+   bub.forEach((b,i)=>{
+    const[wx,wy]=toWorld(b.u,b.v),d=Math.hypot(b.u-fu,(b.v-fv)*face.h/face.w);
+    const delay=b.extra>=0?HOLD.boil+b.extra:d<.5?d*8:4+(d-.5)/Math.max(.1,dmax-.5)*(HOLD.front-4),c=h-delay,P=b.P*(1-.45*boil);
+    let ph=(c/P+b.ph)%1;if(ph<0)ph+=1;
+    const grow=ease(clamp01(c/.3))*(ph<.82?1:(1-ph)/.18)*keep,r=b.r*(1+.7*boil)*grow*k;
+    dummy.position.set(wx+Math.sin(time*3+b.w)*3*(1+boil),wy+ph*fw*(.09+.1*boil),Z+r);dummy.scale.setScalar(Math.max(r,1e-4));dummy.updateMatrix();bm.setMatrixAt(i,dummy.matrix);});
+   bm.instanceMatrix.needsUpdate=true;
+   steam.forEach((s,i)=>{const ph=(time/s.P+s.ph)%1,a=boil*keep*Math.sin(ph*Math.PI),[sx,sy]=toWorld(s.u,.9-ph*.7);
+    dummy.position.set(sx+Math.sin(time*.8+s.w)*10,sy,Z+14);dummy.scale.setScalar(Math.max(s.s*(.6+ph)*k*a,1e-4));dummy.updateMatrix();sm.setMatrixAt(i,dummy.matrix);});
+   sm.instanceMatrix.needsUpdate=true;
+   const tp=ease(clamp01((h-HOLD.doorFrom)/(HOLD.door-HOLD.doorFrom))),dt=Math.max(0,Math.min(.1,time-lastT));lastT=time;doorP=Math.max(tp,doorP-HOLD.sink*dt);const p=doorP,W=fw*.36,H=fh*.44,D=14*k;door.visible=p>.01;
+   door.position.set(cx,cy,-D+p*D*1.8);door.scale.setScalar(Math.max(p,1e-3));
+   parts.gap.scale.set(W*1.1,H*1.06,.1);parts.frame.scale.set(W*1.07,H*1.04,D*.6);parts.slab.scale.set(W,H,D);parts.slab.position.z=D*.3;parts.wheel.scale.setScalar(W*.2);parts.wheel.position.z=D*.9;
+   flaps.forEach((f,i)=>{f.visible=p>.01;f.position.set(cx+(i?1:-1)*(W*p/2+W*.1),cy,Z+4);f.scale.set(W*.14*p+1e-3,H*.55*p+1e-3,10*k);});
+  },
+  dispose(){scene.remove?.(g);g.traverse(o=>{o.geometry?.dispose();o.material?.dispose?.();});steamTex.dispose();bm.dispose();sm.dispose();}};
+}
+
 let S=null; // per-instance state; a single portal board is ever active at once
 
 function computeHalfDepth(THREE,mesh){
@@ -183,22 +250,35 @@ async function init({THREE,mesh,material,uniforms,scene,face,toWorld,wake}){
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;uniforms.uWobble.value=reduced?0:1;
  uniforms.uTrailTint.value={r:1,g:1,b:1,isColor:true};writeLinearTint(uniforms.uTrailTint.value,selectedTint||'#ffffff');uniforms.uTrailTintMix.value=selectedTint?1:0;
  S={uniforms,toWorld,faceW:face.w,aspect:face.h/face.w,rippleVecs:uniforms.uRipple.value,nextSlot:0,lastSpawn:new Map(),
-    reduced,trail:[],heads:new Map(),epoch:null,wake};trail3d=S;
+    reduced,trail:[],heads:new Map(),epoch:null,wake,sec:{},fin:[.5,.5],fxLast:0,calmAt:0,
+    fx:THREE.InstancedMesh&&typeof document!=='undefined'?makeFx(THREE,scene,mesh,face,toWorld,uniforms.uBoneZ.value):{update(){},dispose(){}}};trail3d=S;
+ globalThis.myr5JellyFF=ms=>{S&&secret({type:'skip',ms});S?.wake();};myr5JellyFF.held=()=>S&&held(S.sec,performance.now())/1000; // debug: fast-forward the hold / read it
 }
 function press(id,u,v){
+ const[x,y]=S.toWorld(u,v);if(S.sec.id==null||S.sec.up!=null){S.fin=[u,v];}secret({type:'down',id,x,y});
  S.lastSpawn.set(id,[u,v]);
  pushRipple(u,v,S.faceW*TAP_AMP);
  pushTrail(id,u,v,false);
 }
 function move(id,u,v,pu,pv){
+ {const[x,y]=S.toWorld(u,v);secret({type:'move',id,x,y});}
  const last=S.lastSpawn.get(id)||[pu,pv],[lx,ly]=S.toWorld(last[0],last[1]),[cx,cy]=S.toWorld(u,v);
  if(Math.hypot(cx-lx,cy-ly)>=DRAG_STEP_PX){pushRipple(u,v,S.faceW*DRAG_AMP);S.lastSpawn.set(id,[u,v]);}
  pushTrail(id,u,v,true);
 }
-function release(id,u,v){pushRipple(u,v,S.faceW*RELEASE_AMP);S.lastSpawn.delete(id);pushTrail(id,u,v,true);S.heads.delete(id);}
+function release(id,u,v){secret({type:'up',id});pushRipple(u,v,S.faceW*RELEASE_AMP);S.lastSpawn.delete(id);pushTrail(id,u,v,true);S.heads.delete(id);}
+const secret=ev=>{S.sec=jellySecret(S.sec,ev,performance.now());};
+// claims(id): the finger that is (still) holding the secret; a drifted-off finger is just a stroke again.
+const claims=id=>!!S&&S.sec.id===id&&S.sec.up==null;
 function step(dt,frameNow){
  let active=false;
  const ut=S.uniforms.uTime.value;S.epoch=frameNow/1000-ut;
+ {const was=S.sec.done,now=frameNow;S.sec=jellySecret(S.sec,{type:'tick'},now);
+  if(S.sec.done&&!was){S.calmAt=now;if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'jelly'}}));}
+  const h=held(S.sec,now)/1000,calm=S.sec.done?clamp01((now-S.calmAt)/1500):0;
+  if(h>0){ // finger bobble, then a harder boil: ripples around the finger / anywhere
+   const gap=h>HOLD.boil?140:450;if(now-S.fxLast>gap){S.fxLast=now;const b=h>HOLD.boil,a=Math.random();pushRipple(b?.1+.8*a:S.fin[0]+(a-.5)*.2,b?.1+.8*Math.random():S.fin[1]+(Math.random()-.5)*.2,S.faceW*(b?.03:.015)*(1-calm));}}
+  S.fx.update(h,calm,now/1000);active=h>0&&calm<1||!S.sec.done&&S.fx.doorP>.01;}
  for(const r of S.rippleVecs)if(r.w>0&&(ut-r.z)<RIPPLE_MAX_AGE)active=true;
  trailExpire(S.trail,ut);
  S.uniforms.uTrailN.value=trailPack(S.trail,S.uniforms.uTrail.value);
@@ -212,7 +292,7 @@ function setJellyTint(hex,selected=true){
  if(trail3d){writeLinearTint(trail3d.uniforms.uTrailTint.value,selectedTint||'#ffffff');trail3d.uniforms.uTrailTintMix.value=selectedTint?1:0;trail3d.wake?.();}
  if(trail2d){trail2d.tint=selectedTint;trail2d.wake?.();}
 }
-function dispose(){if(S===trail3d)trail3d=null;S=null;}
+function dispose(){S?.fx.dispose();delete globalThis.myr5JellyFF;if(S===trail3d)trail3d=null;S=null;}
 
 // R7: the gash in 2D, for the flat board: the same short trail (trailPush/trailExpire/gashWidth) as a translucent lime
 // slit on `paint` (drawn opaque, deeper down its middle, then faded as a whole by SLIT.alpha, so the round joins never
@@ -257,5 +337,5 @@ export const jelly={
  fragmentDecls:`uniform vec4 uTrail[${TRAIL.cap}];\nuniform int uTrailN;\nuniform vec4 uTrailBounds;\nuniform float uWobble;\nuniform vec3 uTrailTint;\nuniform float uTrailTintMix;\n`, // fragment only (portal-board-glb.mjs)
  vertexDisplace:VERTEX_DISPLACE,
  fragment:FRAGMENT,
- init,press,move,release,step,dispose,setTint:setJellyTint,tintTarget:'trace',trace2d:jellyGash,
+ init,press,move,release,claims,step,dispose,setTint:setJellyTint,tintTarget:'trace',trace2d:jellyGash,
 };

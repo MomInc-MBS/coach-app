@@ -322,3 +322,10 @@ dialog.portal-framed.portal-fullscreen #coachDock{left:0!important;right:0!impor
 #coachDock.ship-control-deck .dock-live{position:absolute}
 /* The hub uses the selected grimoire metal in every shared dock. */
 #coachDock.coach-dock.ship-control-deck :is(button,a).dock-portal{border-color:color-mix(in srgb,var(--portal-metal,#4d3d4f),#fff 40%);background:radial-gradient(circle at 50% 40%,var(--portal-metal,#4d3d4f) 0 46%,color-mix(in srgb,var(--portal-metal,#4d3d4f),#000 65%) 47% 58%,transparent 59%),repeating-conic-gradient(color-mix(in srgb,var(--portal-metal,#4d3d4f),#fff 40%) 0deg 8deg,color-mix(in srgb,var(--portal-metal,#4d3d4f),#000 30%) 8deg 15deg)}
+/* Vault door poster (portal.mjs showVaultDoor): placeholder CSS door until pod/worlds/vault/door-poster.webp paints over it. */
+#portalVaultDoor{position:absolute;inset:0;z-index:8;border:0;padding:0;display:grid;place-items:center;cursor:pointer;background:url('/pod/worlds/vault/door-poster.webp') center/contain no-repeat,rgba(23,16,32,.82);animation:vault-door-in .6s ease both}
+#portalVaultDoor .vault-slab{position:relative;width:min(78vw,380px);aspect-ratio:1;border:6px solid #ffd36e;border-radius:10px;background:linear-gradient(135deg,#9a4be0,#7a2fc4 45%,#3d1763);box-shadow:0 0 40px #7a2fc4aa,inset 0 0 30px #0008;display:grid;justify-items:center;align-content:start;padding-top:9%}
+#portalVaultDoor img{width:42%;opacity:.85;filter:drop-shadow(0 1px 0 #fff4)}
+#portalVaultDoor i{position:absolute;left:50%;top:62%;width:34%;aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:8px solid #ffd36e;background:radial-gradient(#3d1763 30%,#171020)}
+@keyframes vault-door-in{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){#portalVaultDoor{animation:none}}

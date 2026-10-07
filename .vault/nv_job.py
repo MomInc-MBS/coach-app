@@ -6,6 +6,8 @@ card = pathlib.Path(sys.argv[1]); model = sys.argv[2] if len(sys.argv) > 2 else 
 key = os.environ.get('NVIDIA_API_KEY') or subprocess.run(['powershell', '-c', "[Environment]::GetEnvironmentVariable('NVIDIA_API_KEY','User')"], capture_output=True, text=True).stdout.strip()
 body = json.dumps({'model': model, 'messages': [{'role': 'user', 'content': card.read_text(encoding='utf-8')}], 'max_tokens': 12000}).encode()
 req = urllib.request.Request('https://integrate.api.nvidia.com/v1/chat/completions', body, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'})
-text = json.load(urllib.request.urlopen(req, timeout=900))['choices'][0]['message'].get('content') or ''
+ch = json.load(urllib.request.urlopen(req, timeout=900))['choices'][0]; m = ch['message']
+text = m.get('content') or m.get('reasoning_content') or m.get('reasoning') or ''
+if not text.strip(): sys.exit(f'EMPTY reply (finish_reason={ch.get("finish_reason")}); shrink the card (<40 KB) or try z-ai/glm-5.3-flash')
 out = pathlib.Path(__file__).parent / 'replies' / f"{card.stem}.{model.split('/')[-1]}.txt"; out.parent.mkdir(exist_ok=True)
 out.write_text(text, encoding='utf-8'); sys.stdout.reconfigure(encoding='utf-8'); print(text)
