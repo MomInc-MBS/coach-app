@@ -2,7 +2,8 @@
 // quilted diamonds so the traced-shape guides are the only pattern), blades sway in the wind, part
 // around a touch and spring back on release; mixed-colour flower clusters plant along a drag, pop in,
 // and fade away 7 s later; cut()/heal() open the lawn over the board's cut-out. JS drives touch/flower
-// state; all blade motion is GLSL. AGPL-3.0-or-later.
+// state; all blade motion is GLSL. Vault secret (Achievement Vault L5): a tiny purple alien cap in one corner, a buried UFO in the
+// opposite one; a flower line drawn between them walks the alien to the ship, which cracks the ground open on a metal plate. AGPL-3.0-or-later.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
@@ -60,6 +61,47 @@ vec2 wind=vec2(0.9,0.4)*uBreeze*uFaceSize.x*0.006*sin(uTime*1.6+pr.x*9.0+pr.y*5.
 bw.xy+=bend*position.y+wind*tw;bw.z-=length(bend)*0.5*position.y;
 vec4 mvPosition=modelViewMatrix*bw;gl_Position=projectionMatrix*mvPosition;`;
 
+// --- Vault secret: pure reducer (face-width units: x=u, y=v/aspect; state is replaced, never mutated) ---
+export const SECRET={speed:1.5,lag:2,gapMs:3000,boardMs:700,flyMs:1400,crackMs:1700,splitMs:1900,shipR:.14,reach:1.5};
+const d2=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+export const grassSecretInit=(start,ship,step)=>({phase:'idle',start,ship,step,path:[],len:0,pos:0,drawing:null,wait:0,last:null,t0:0,claimed:false,resets:0,added:0});
+export const secretPoint=(path,d)=>{for(let i=1;i<path.length;i++){const l=d2(path[i-1],path[i]);if(d<=l||i===path.length-1){const k=l?Math.min(1,d/l):1,a=path[i-1],b=path[i];return [a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];}d-=l;}return path[0]||[0,0];};
+const NEXT={board:['boardMs','fly'],fly:['flyMs','crack'],crack:['crackMs','split'],split:['splitMs','done']};
+// ev: {t:'down'|'move',id,x,y} | {t:'up',id} | {t:'tick'} | {t:'reset'}. A stroke starts within reach of the alien and each point
+// must land 1..1.5 steps from the line's tip (a longer jump plants nothing: that is the gap).
+export function grassSecret(s,ev,now){
+ const C=SECRET,tip=s.path[s.path.length-1],p=[ev.x,ev.y];
+ if(ev.t==='down'){
+  if(s.phase==='idle'&&d2(p,s.start)<=C.reach*s.step)return grassSecret({...s,phase:'walk',path:[s.start],len:0,pos:0,drawing:ev.id,wait:0,last:now,claimed:false},{...ev,t:'move'},now);
+  if(s.phase==='walk'&&s.drawing==null&&d2(p,tip)<=C.reach*s.step)return {...s,drawing:ev.id,wait:0};
+  return s;
+ }
+ if(ev.t==='move'){
+  if(s.phase!=='walk'||s.drawing!==ev.id)return s;
+  const d=d2(p,tip);if(d<s.step||d>C.reach*s.step)return s;
+  return {...s,path:[...s.path,p],len:s.len+d,wait:0,added:s.added+1};
+ }
+ if(ev.t==='up')return s.drawing===ev.id?{...s,drawing:null}:s;
+ if(ev.t==='reset')return {...grassSecretInit(s.start,s.ship,s.step),resets:s.resets+1};
+ if(ev.t!=='tick')return s;
+ const dt=s.last==null?0:Math.min(.1,Math.max(0,(now-s.last)/1000)),n={...s,last:now};
+ if(s.phase==='walk'){
+  const near=tip&&d2(tip,s.ship)<=C.shipR,limit=s.drawing!=null&&!near?Math.max(0,s.len-C.lag*s.step):s.len;
+  if(n.pos<limit-1e-9){n.pos=Math.min(limit,n.pos+C.speed*dt);n.wait=0;if(n.pos>0)n.claimed=true;}
+  else if(near&&s.len>0){n.phase='board';n.t0=now;}
+  else{n.wait+=dt*1000;if(n.wait>C.gapMs)return {...grassSecretInit(s.start,s.ship,s.step),last:now,resets:s.resets+1,added:s.added};}
+ }else if(NEXT[s.phase]&&now-s.t0>=C[NEXT[s.phase][0]]){n.phase=NEXT[s.phase][1];n.t0=now;}
+ return n;
+}
+// Pointer ids the board must not also treat as a tap/shape: the line stroke once the alien walks, everything after boarding.
+export const grassSecretClaims=(s,id)=>s.phase!=='idle'&&(s.phase==='walk'?s.drawing===id&&s.claimed:true);
+// Jagged angular bolt a->b (face-width units), endpoints exact, offsets taper to 0 at the ends and alternate sides so it stays simple.
+export function crackPath(a,b,rand=Math.random,n=12){
+ const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),nx=-dy/L,ny=dx/L,out=[a];
+ for(let i=1;i<n;i++){const t=(i+(rand()-.5)*.5)/n,o=(i%2?1:-1)*L*(.03+rand()*.045)*Math.sin(Math.PI*t);out.push([a[0]+dx*t+nx*o,a[1]+dy*t+ny*o]);}
+ return [...out,b];
+}
+
 let S=null; // per-instance state; a single portal board is ever active at once (see portal-board-ice.mjs)
 
 // Tapered, slightly drooping strip: 4 rows x 2 verts = 3 quads; vertex colour darkens toward the root.
@@ -114,8 +156,10 @@ async function init({THREE:T,scene,mesh,material,uniforms,toWorld,faceZ,wake}){
  let petal=null;
  tmpl.traverse(n=>{if(!n.isMesh)return;n.material.metalness=0; // Kenney ships metalness 1: black without an env map
   const c=n.material.color;if(n.material.name==='colorRed'||(c.r>.5&&c.g<.3&&c.b<.3))petal=n.material;});
- S={scene,toWorld,faceZ,uniforms,tmpl,petal,lawn:makeBlades(T,uniforms,mesh.isMesh?mesh.parent:mesh),warm,wake,reduced,faceW,aspect:faceW/faceH,
+ S={blocks:mesh.isMesh?[mesh]:mesh.children.filter(c=>c.isMesh),scene,toWorld,faceZ,uniforms,tmpl,petal,lawn:makeBlades(T,uniforms,mesh.isMesh?mesh.parent:mesh),warm,wake,reduced,faceW,aspect:faceW/faceH,
   flowerScale:faceW*FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowerScaleRatio:FLOWER_FRAC/(Math.max(tsize.x,tsize.z)||1),flowers:[],pool:[],lastPlanted:new Map(),springIdx:0,timer:0,petalTint:null};
+ S.ob=buildSecret(T,scene);secReset();
+ window.myr5GrassSecret={autoWalk,state:()=>S?.sec,claims:id=>claims(id),freeze};
 }
 function makeFlower(){
  const obj=S.tmpl.clone(true),mats=[];let petal=null;
@@ -127,20 +171,29 @@ function setPetalTint(hex,selected=true){
  S.petalTint=selected?new THREE.Color(hex):null;
  for(const f of [...S.flowers,...S.pool])f.petal?.color.copy(S.petalTint||f.randomColor);
 }
-function plant(u,v){
+function plant(u,v,hold){
  const [wx,wy]=S.toWorld(u,v);
  const f=(S.flowers.length>=FLOWER_CAP?S.flowers.shift():S.pool.pop())||makeFlower();
  f.randomColor.setHSL(...flowerHSL());f.petal?.color.copy(S.petalTint||f.randomColor);
  f.obj.position.set(wx,wy,S.faceZ+S.faceW*FLOWER_LIFT);f.obj.visible=true;f.u=u;f.v=v;
  f.obj.rotation.set(FLOWER_TILT,Math.random()*Math.PI*2,0); // stand toward the camera, random yaw about the stem
- f.sizeFactor=.8+Math.random()*.5;f.target=S.flowerScale*f.sizeFactor;f.born=performance.now();
+ f.hold=!!hold;f.sizeFactor=.8+Math.random()*.5;f.target=S.flowerScale*f.sizeFactor;f.born=performance.now();
  f.obj.scale.setScalar(S.reduced?f.target:1e-4);
  for(const m of f.mats)m.opacity=1;
  S.scene.add(f.obj);S.flowers.push(f);
 }
-function plantCluster(u,v,n){for(const [du,dv] of clusterOffsets(n,CLUSTER_FRAC))plant(clamp01(u+du),clamp01(v+dv*S.aspect));}
-function press(id,u,v){plantCluster(u,v,3);S.lastPlanted.set(id,[u,v]);}
+function plantCluster(u,v,n,hold){for(const [du,dv] of clusterOffsets(n,CLUSTER_FRAC))plant(clamp01(u+du),clamp01(v+dv*S.aspect),hold);}
+// Vault secret: a stroke the reducer owns plants only the flowers that extend its line (so planted line === walkable line).
+const pt=(u,v)=>({x:u,y:v/S.aspect});
+function press(id,u,v){
+ if(S.sec.phase==='done')secReset(); // the board was healed/resumed after the door showed: start over
+ secEv({t:'down',id,...pt(u,v)});
+ plantCluster(u,v,3,S.sec.drawing===id);S.lastPlanted.set(id,[u,v]);
+}
+function claims(id){return !!S&&grassSecretClaims(S.sec,id);}
 function move(id,u,v){
+ if(S.sec.drawing===id){const n=S.sec.added;secEv({t:'move',id,...pt(u,v)});if(S.sec.added!==n)plantCluster(u,v,2+(Math.random()<.5),true);return;}
+ if(S.sec.phase!=='idle'&&S.sec.phase!=='walk')return;
  const cur=S.toWorld(u,v),last=S.lastPlanted.get(id);
  if(!last){S.lastPlanted.set(id,[u,v]);return;}
  const old=S.toWorld(last[0],last[1]);
@@ -148,7 +201,7 @@ function move(id,u,v){
 }
 function resize(){
  if(!S)return;
- const [x0,y0]=S.toWorld(0,0),[x1,y1]=S.toWorld(1,1);S.faceW=Math.abs(x1-x0);S.aspect=S.faceW/Math.max(1,Math.abs(y1-y0));S.flowerScale=S.faceW*S.flowerScaleRatio;
+ const [x0,y0]=S.toWorld(0,0),[x1,y1]=S.toWorld(1,1);S.faceW=Math.abs(x1-x0);S.aspect=S.faceW/Math.max(1,Math.abs(y1-y0));S.flowerScale=S.faceW*S.flowerScaleRatio;if(S.sec.phase==='idle')secReset();
  const now=performance.now();
  for(const f of S.flowers){
   const [x,y]=S.toWorld(f.u,f.v),age=now-f.born,k=fadeLife(age),pop=S.reduced?1:popScale(age);
@@ -156,13 +209,13 @@ function resize(){
  }
 }
 function release(id,u,v){
- S.lastPlanted.delete(id);
+ secEv({t:'up',id});S.lastPlanted.delete(id);
  const slot=S.uniforms.uSpring.value[S.springIdx];
  slot.set(u,v,S.uniforms.uTime.value,1);
  S.springIdx=(S.springIdx+1)%S.uniforms.uSpring.value.length;
 }
 function step(dt,now){
- let animating=false;
+ let animating=secStep(dt,now);
  for(let i=S.flowers.length-1;i>=0;i--){
   const f=S.flowers[i],age=now-f.born,k=fadeLife(age);
   if(k<=0||(S.reduced&&k<1)){S.scene.remove(f.obj);S.pool.push(f);S.flowers.splice(i,1);continue;}
@@ -193,7 +246,8 @@ function cut(polyUv){
  for(const f of S.flowers)if(pointInPolygon(f.u,f.v,polyUv))f.obj.visible=false;
 }
 function heal(){
- if(!S?.lawn.cutIdx)return;
+ if(!S)return;if(S.sec.phase!=='idle')secReset();
+ if(!S.lawn.cutIdx)return;
  const {im,rest,cutIdx}=S.lawn,m=im.instanceMatrix.array;
  for(const i of cutIdx)m.set(rest.subarray(16*i,16*i+16),16*i);
  im.instanceMatrix.needsUpdate=true;S.lawn.cutIdx=null;
@@ -205,7 +259,136 @@ function dispose(){
  S.tmpl.traverse(n=>{n.geometry?.dispose();if(n.material)for(const m of [n.material].flat())m.dispose();});
  const {im}=S.lawn;im.removeFromParent();im.geometry.dispose();im.material.dispose();im.dispose();
  S.scene.remove(S.warm);
+ if(S.fx)secDropFx();for(const o of [S.ob.shade,S.ob.alien,S.ob.tuft,S.ob.ufo,S.ob.beam])S.scene.remove(o);for(const d of S.ob.dis)d.dispose();delete window.myr5GrassSecret;
  S=null;
+}
+
+// --- Vault secret: THREE visuals (all primitives; unit = face width, so every object is scaled by S.faceW) ---
+const SEC_START=[.1,.085],SEC_SHIP=[.9,.915]; // face (u,v) corners: alien top-left, ship bottom-right
+const ease=t=>{t=clamp01(t);return t*t*(3-2*t);};
+function secGeom(){const W=S.faceW,hw=1/S.aspect;return {W,hw,start:[SEC_START[0],SEC_START[1]*hw],ship:[SEC_SHIP[0],SEC_SHIP[1]*hw]};}
+function secReset(){const g=secGeom();if(S.fx)secDropFx();for(const f of S.flowers)f.obj.visible=true;S.sec=grassSecretInit(g.start,g.ship,PLANT_STEP_PX/g.W);S.emerge=0;S.fired=false;S.vis=null;S.seen=0;S.apos=g.start;}
+function secEv(ev){const before=S.sec;S.sec=grassSecret(S.sec,ev,performance.now());return S.sec!==before;}
+function buildSecret(T,scene){
+ const dis=[],mat=m=>(dis.push(m),m),geo=g=>(dis.push(g),g),radial=col=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);r.addColorStop(0,col);r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);const t=new T.CanvasTexture(c);dis.push(t);return t;};
+ const lam=(color,extra)=>mat(new T.MeshLambertMaterial({color,...extra})),blob=(r,sx,sy,m)=>{const o=new T.Mesh(geo(new T.SphereGeometry(r,16,10)),m);o.scale.set(sx,sy,1);return o;};
+ const disc=(r,col,op)=>new T.Mesh(geo(new T.PlaneGeometry(r*2,r*2)),mat(new T.MeshBasicMaterial({map:radial(col),transparent:true,opacity:op,depthWrite:false})));
+ // alien: the top of a MYR5 alien's head, a purple cone (MOM purple #7a2fc4) with a pale nub, half hidden by a grass tuft until it walks
+ const coneG=geo(new T.ConeGeometry(.03,.075,20));coneG.translate(0,.0375,0);
+ const cone=new T.Mesh(coneG,lam(0xa45cff,{emissive:0x5a24a8})),rim=new T.Mesh(coneG,mat(new T.MeshBasicMaterial({color:0xe4ccff,side:T.BackSide}))),nub=new T.Mesh(geo(new T.SphereGeometry(.006,10,8)),mat(new T.MeshBasicMaterial({color:0xc9a0ff})));nub.position.y=.076;
+ rim.scale.set(1.28,1.1,1.28);rim.position.y=-.004;const alien=new T.Group();alien.add(rim,cone,nub);
+ const tuft=new T.Group(),shade=disc(.12,'rgba(0,0,0,.95)',.8);tuft.add(blob(.034,1.1,.4,lam(0x2f7a24,{emissive:0x0c2a08})));
+ // ufo: squashed sphere + glass dome + gold ring, tilted sideways, its lower side buried in a dirt mound
+ const ufoTilt=new T.Group(),saucer=blob(.07,1,.32,lam(0xc4ccd6,{emissive:0x3a424c})),ring=new T.Mesh(geo(new T.TorusGeometry(.07,.005,6,28)),lam(0xffd36e,{emissive:0x6a4a10})),dome=new T.Mesh(geo(new T.SphereGeometry(.034,16,10,0,Math.PI*2,0,Math.PI/2)),lam(0xbfe6ff,{emissive:0x2a5a7a,transparent:true,opacity:.8}));
+ ring.rotation.x=Math.PI/2;dome.position.y=.008;ufoTilt.add(saucer,ring,dome);ufoTilt.rotation.z=-.9;
+ const mound=blob(.045,1.2,.4,lam(0x6b4526)),dirt=disc(.12,'rgba(70,44,24,1)',.85);mound.position.set(-.03,.048,.02);
+ const ufo=new T.Group();ufo.add(dirt,ufoTilt,mound);
+ const bc=document.createElement('canvas');bc.width=8;bc.height=64;{const g=bc.getContext('2d'),r=g.createLinearGradient(0,0,0,64);r.addColorStop(0,'rgba(255,236,170,.95)');r.addColorStop(1,'rgba(176,108,255,0)');g.fillStyle=r;g.fillRect(0,0,8,64);}
+ const bt=new T.CanvasTexture(bc);dis.push(bt);const beam=new T.Mesh(geo(new T.PlaneGeometry(1,1)),mat(new T.MeshBasicMaterial({map:bt,transparent:true,blending:T.AdditiveBlending,depthWrite:false,opacity:0})));beam.visible=false;
+ for(const o of [shade,alien,tuft,ufo,beam])scene.add(o);
+ return {alien,tuft,shade,ufo,ufoTilt,beam,dis};
+}
+// ground crack + split, built into the living lawn: the real blades near the bolt bend away from it, dirt shows in the line, then the
+// blades/flowers of each side (plus a dark ground sheet each, standing in for the hidden block) slide apart and reveal a gunmetal/gold/purple
+// plate (stands in for the vault door poster).
+function buildCrack(){
+ const T=THREE,{W,hw,start,ship}=secGeom(),main=crackPath(ship,start),edge=[[1,hw],...main,[0,0]],clampP=p=>[Math.min(1,Math.max(0,p[0])),Math.min(hw,Math.max(0,p[1]))];
+ const polyA=[...edge,[1,0]],polyB=[...edge,[0,hw]],cw=384,ch=Math.round(cw*hw),dis=[];
+ const cvs=()=>{const c=document.createElement('canvas');c.width=cw;c.height=ch;return c;},path=(g,pts)=>{g.beginPath();pts.forEach(([x,y],i)=>g[i?'lineTo':'moveTo'](x*cw,y*cw));};
+ const tex=c=>{const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;dis.push(t);return t;};
+ const ground=poly=>{const c=cvs(),g=c.getContext('2d');g.save();path(g,poly);g.closePath();g.clip();g.fillStyle='#24132f';g.fillRect(0,0,cw,ch);
+  g.lineJoin='miter';path(g,edge);g.strokeStyle='#2e1b0e';g.lineWidth=cw*.045;g.stroke();g.strokeStyle='#6b4a2a';g.lineWidth=cw*.016;g.stroke();g.restore();return tex(c);};
+ const plate=(()=>{const c=cvs(),g=c.getContext('2d'),gr=g.createLinearGradient(0,0,cw,ch);gr.addColorStop(0,'#1d2026');gr.addColorStop(.5,'#2b2f38');gr.addColorStop(1,'#16181d');g.fillStyle=gr;g.fillRect(0,0,cw,ch); // dark gunmetal
+  g.strokeStyle='rgba(255,255,255,.04)';for(let y=0;y<ch;y+=3){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}
+  const glow=g.createRadialGradient(cw/2,ch/2,cw*.05,cw/2,ch/2,cw*.75);glow.addColorStop(0,'rgba(150,70,240,.55)');glow.addColorStop(1,'rgba(122,47,196,0)');g.fillStyle=glow;g.fillRect(0,0,cw,ch); // purple glow
+  g.strokeStyle='#0d0e11';g.lineWidth=7;g.strokeRect(cw*.08,ch*.1,cw*.84,ch*.8);g.strokeStyle='#ffd36e';g.lineWidth=3;g.strokeRect(cw*.08+5,ch*.1+5,cw*.84-10,ch*.8-10); // gold trim
+  g.fillStyle='#ffd36e';for(const [x,y] of [[.14,.14],[.86,.14],[.14,.86],[.86,.86]]){g.beginPath();g.arc(x*cw,y*ch,5,0,7);g.fill();}
+  g.shadowColor='#b06cff';g.shadowBlur=18;g.strokeStyle='#ffd36e';g.lineWidth=4;g.beginPath();g.arc(cw/2,ch/2,cw*.18,0,7);g.stroke();return tex(c);})();
+ const shape=(poly,t)=>{const sh=new T.Shape();poly.forEach(([x,y],i)=>sh[i?'lineTo':'moveTo'](x-.5,hw/2-y));const g=new T.ShapeGeometry(sh),p=g.attributes.position,uv=g.attributes.uv;dis.push(g);
+  for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)+.5,1-(hw/2-p.getY(i))/hw);
+  const m=new T.MeshBasicMaterial({map:t});dis.push(m);const o=new T.Mesh(g,m);o.scale.setScalar(W);return o;};
+ const A=shape(polyA,ground(polyA)),B=shape(polyB,ground(polyB)),P=new T.Mesh(new T.PlaneGeometry(1,hw),new T.MeshBasicMaterial({map:plate}));dis.push(P.geometry,P.material);P.scale.setScalar(W);P.visible=false;
+ const gc=cvs(),glow=new T.CanvasTexture(gc),G=new T.Mesh(new T.PlaneGeometry(1,hw),new T.MeshBasicMaterial({map:glow,transparent:true,depthWrite:false}));dis.push(glow,G.geometry,G.material);G.scale.setScalar(W);
+ const branches=[2,5,8].map(i=>{const a=main[i],d=i%2?1:-1;return [a,clampP([a[0]+.06*d,a[1]+.05]),clampP([a[0]+.1*d,a[1]+.045*d+.09]),clampP([a[0]+.13*d,a[1]+.14])];});
+ const cx=S.toWorld(.5,.5),ctr=(o,z)=>o.position.set(cx[0],cx[1],S.faceZ+W*z);
+ ctr(A,-.0045);ctr(B,-.0045);ctr(P,-.0052);ctr(G,.08);for(const o of [A,B,P,G])S.scene.add(o);
+ const mean=p=>p.reduce((a,q)=>[a[0]+q[0]/p.length,a[1]+q[1]/p.length],[0,0]),ca=mean(polyA),cb=mean(polyB),dx=ca[0]-cb[0],dy=-(ca[1]-cb[1]),dl=Math.hypot(dx,dy)||1;
+ // every blade/flower: which side of the bolt and how far from it (face-width units)
+ const uvA=polyA.map(([x,y])=>[x,y*S.aspect]),dseg=(p,a,b)=>{const vx=b[0]-a[0],vy=b[1]-a[1],k=clamp01(((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy||1));return Math.hypot(p[0]-a[0]-vx*k,p[1]-a[1]-vy*k);};
+ const ru=S.lawn.rootUV,n=ru.length/2,bs=new Int8Array(n),bd=new Float32Array(n);
+ for(let i=0;i<n;i++){const p=[ru[2*i],ru[2*i+1]/S.aspect];bs[i]=pointInPolygon(ru[2*i],ru[2*i+1],uvA)?1:-1;let d=9;for(let k=1;k<main.length;k++)d=Math.min(d,dseg(p,main[k-1],main[k]));bd[i]=d;}
+ for(const f of S.flowers)f.side=pointInPolygon(f.u,f.v,uvA)?1:-1;
+ for(const m of S.blocks)m.visible=false; // the ground sheets stand in for the block
+ S.fx={A,B,P,G,main,branches,gc,glow,cw,ch,cx,dir:[dx/dl,dy/dl],dis,drawn:-1,bs,bd};
+}
+function drawCrack(prog){
+ const F=S.fx;if(F.drawn===prog)return;F.drawn=prog;const g=F.gc.getContext('2d'),{cw,ch}=F;g.clearRect(0,0,cw,ch);if(prog<=0){F.glow.needsUpdate=true;return;}
+ const seg=(pts,k)=>{g.beginPath();let tot=0;for(let i=1;i<pts.length;i++)tot+=d2(pts[i-1],pts[i]);let rem=tot*k;g.moveTo(pts[0][0]*cw,pts[0][1]*cw);for(let i=1;i<pts.length&&rem>0;i++){const l=d2(pts[i-1],pts[i]),f=Math.min(1,rem/l);g.lineTo((pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f)*cw,(pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f)*cw);rem-=l;}g.stroke();};
+ g.lineJoin='miter';g.lineCap='round';g.miterLimit=3;
+ for(const [w,col,blur] of [[cw*.045,'#1c0f06',0],[cw*.026,'#4a2f19',0],[cw*.016,'#ff8a1f',cw*.04],[cw*.006,'#fff3c2',0]]){g.lineWidth=w;g.strokeStyle=col;g.shadowColor='#ff9a2a';g.shadowBlur=blur;seg(F.main,prog);if(prog>.35)for(const b of F.branches)seg(b,Math.min(1,(prog-.35)/.5));} // dirt bed, then the glow
+ F.glow.needsUpdate=true;
+}
+// slide each real blade along the bolt's cross direction: crack-time parting (blades near the line lean away) + split-time pull-apart
+function moveLawn(part,sp){
+ const F=S.fx,{im,rest}=S.lawn,m=im.instanceMatrix.array,fw=S.uniforms.uFaceSize.value.x,[dx,dy]=F.dir,pa=part*.06*fw,mv=sp*.7*fw;
+ for(let i=0;i<F.bs.length;i++){const k=Math.max(0,1-F.bd[i]/.09),o=F.bs[i]*(k*k*pa+mv);m[16*i+12]=rest[16*i+12]+dx*o;m[16*i+13]=rest[16*i+13]+dy*o;}
+ im.instanceMatrix.needsUpdate=true;
+}
+function secDropFx(){const F=S.fx;S.fx=null;for(const o of [F.A,F.B,F.P,F.G])S.scene.remove(o);for(const d of F.dis)d.dispose();
+ const {im,rest}=S.lawn,m=im.instanceMatrix.array;for(let i=0;i<F.bs.length;i++){m[16*i+12]=rest[16*i+12];m[16*i+13]=rest[16*i+13];}im.instanceMatrix.needsUpdate=true;im.visible=true;
+ for(const b of S.blocks)b.visible=true;resize();}
+// per-frame: tick the reducer, then pose everything from it. Returns true while anything is moving.
+function secStep(dt,now){
+ if(S.sec.phase==='done'&&S.fired&&!S.vis)return false;
+ if(S.freezeT==null)S.sec=grassSecret(S.sec,{t:'tick'},now);const sec=S.sec,ph=sec.phase,W=S.faceW,wp=(x,y)=>S.toWorld(x,y*S.aspect),set=(o,[x,y],z,sc=1)=>{const [px,py]=wp(x,y);o.position.set(px,py,S.faceZ+W*z);o.scale.setScalar(W*sc);},t=S.freezeT??now-sec.t0;
+ if(sec.resets!==S.seen){S.seen=sec.resets;S.vis={t0:now,from:S.apos};}
+ S.emerge=ph==='walk'?Math.min(1,S.emerge+dt*3):ph==='idle'?0:S.emerge;
+ let ap=ph==='walk'?secretPoint(sec.path,sec.pos):sec.start,asc=1;
+ if(ph==='board'){const k=ease(t/SECRET.boardMs),e=secretPoint(sec.path,sec.len);ap=[e[0]+(sec.ship[0]-e[0])*k,e[1]+(sec.ship[1]-e[1])*k];asc=1-k;}
+ let vis=false;
+ if(S.vis){const k=(now-S.vis.t0)/350;vis=k<2.4;if(k<1){ap=S.vis.from||ap;asc=1-ease(k);}else asc=ease((k-1)/1.4);if(!vis)S.vis=null;}
+ S.apos=ap;const bob=ph==='walk'?Math.abs(Math.sin(now*.012))*.01:0,{alien,tuft,shade,ufo,ufoTilt}=S.ob,em=S.emerge;
+ alien.visible=ph==='idle'||ph==='walk'||ph==='board'||vis;alien.rotation.z=ph==='walk'?Math.sin(now*.012)*.14:0;set(alien,[ap[0],ap[1]+(1-em)*.02-bob],.03,asc);
+ tuft.visible=alien.visible&&em<1;set(tuft,[sec.start[0],sec.start[1]+.005],.036,1-em);shade.visible=ph==='idle'||ph==='walk'||vis;set(shade,sec.start,.02);
+ let up=sec.ship,usc=1,tilt=-.9,fk=0;const spent=ph==='crack'||ph==='split'||ph==='done';
+ if(ph==='fly'){fk=ease(t/SECRET.flyMs);up=[sec.ship[0]+Math.sin(t*.018)*.014*(1-fk),sec.ship[1]-fk*fk*2.2];usc=1-.85*fk;tilt=-.9*(1-Math.min(1,fk*4))+Math.sin(t*.014)*.08*(1-fk);} // straight up, small wobble
+ ufo.visible=!spent;ufoTilt.rotation.z=tilt;set(ufo,up,.016+fk*.3,usc);
+ {const b=S.ob.beam;b.visible=ph==='fly'&&fk<.97;if(b.visible){const h=Math.max(.1,sec.ship[1]-up[1]+.08),[bx,by]=wp(up[0],up[1]+h/2);b.position.set(bx,by,S.faceZ+W*.05);b.scale.set(W*.1*usc,W*h,1);b.material.opacity=.75*Math.sin(Math.PI*Math.min(1,fk*1.1+.05));}}
+ let anim=ph==='walk'||ph==='board'||ph==='fly'||vis;
+ if(spent){
+  if(!S.fx)buildCrack();
+  const F=S.fx,k=ph==='crack'?t/SECRET.crackMs:1,sk=ph==='split'?t/SECRET.splitMs:ph==='done'?1:0,sp=ease(sk),prog=Math.round(ease(Math.min(1,k*1.15))*40)/40;
+  drawCrack(prog);F.G.material.opacity=1-clamp01(sk*3);F.G.visible=sk<.34;F.P.visible=sk>0;
+  const sig=prog+'|'+sp.toFixed(3);if(F.sig!==sig){F.sig=sig;moveLawn(prog,sp);}
+  const gone=sk>=.85;S.lawn.im.visible=!gone;
+  for(const [o,sg] of [[F.A,1],[F.B,-1]]){o.visible=!gone;o.position.set(F.cx[0]+F.dir[0]*sg*sp*W*.7,F.cx[1]+F.dir[1]*sg*sp*W*.7,S.faceZ-W*.0045);}
+  for(const f of S.flowers){const [x,y]=S.toWorld(f.u,f.v);f.obj.visible=!gone;f.obj.position.set(x+F.dir[0]*f.side*sp*W*.7,y+F.dir[1]*f.side*sp*W*.7,S.faceZ+W*FLOWER_LIFT);}
+  anim=ph!=='done';
+  if(ph==='done'&&!S.fired){S.fired=true;window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'grass'}}));}
+ }
+ // line flowers never fade while a walk is live: pin them at full pop age
+ if(ph!=='idle')for(const f of S.flowers)if(f.hold&&now-f.born>FADE_MS-1500)f.born=now-POP_MS-1;
+ return anim;
+}
+// debug hook (screenshots): hold the ship/crack sequence at phase `ph`, fraction k of its duration; freeze(null) resumes from idle.
+function freeze(ph,k=0){
+ if(!ph){S.freezeT=null;secReset();return;}
+ if(S.fx)secDropFx();for(const f of S.flowers)f.obj.visible=true;
+ const g=secGeom(),e=g.start,d=SECRET[NEXT[ph]?.[0]]||1;S.freezeT=k*d;S.fired=false;
+ S.sec={...grassSecretInit(g.start,g.ship,PLANT_STEP_PX/g.W),phase:ph,path:[e,g.ship],len:d2(e,g.ship)};S.wake();
+}
+// debug / test hook: draw a flower line from the alien to the ship through the real press/move/release path.
+// opts: gapAt (0..1 of the way: lift there), gapMs (stay lifted this long, then draw on; 0 = never resume), rate (steps per second).
+async function autoWalk({gapAt=null,gapMs=0,rate=30}={}){
+ const g=secGeom(),sleep=ms=>new Promise(r=>setTimeout(r,ms)),id=77,at=k=>[g.start[0]+(g.ship[0]-g.start[0])*k,g.start[1]+(g.ship[1]-g.start[1])*k],uv=([x,y])=>[x,y*S.aspect],n=Math.ceil(d2(g.start,g.ship)/(PLANT_STEP_PX/g.W*1.1));
+ let down=false;
+ for(let i=0;i<=n;i++){
+  const k=i/n,[u,v]=uv(at(k));
+  if(gapAt!=null&&k>=gapAt&&down){release(id,u,v);down=false;if(!gapMs)return;await sleep(gapMs);gapAt=null;}
+  if(!down){press(id,u,v);down=true;}else move(id,u,v);
+  S.wake();await sleep(1000/rate);
+ }
+ if(down)release(id,...uv(g.ship));
 }
 
 // R7: the flowers in 2D, for the flat board: the same clusters along a drag, popping in and fading out after FADE_MS,
@@ -245,5 +428,5 @@ export const grass={
  uniforms:{uHalfDepth:{value:0},uSpring:{value:Array.from({length:6},()=>new THREE.Vector4(0,0,0,0))},uBreeze:{value:1}},
  uniformDecls:'uniform float uHalfDepth;\nuniform vec4 uSpring[6];\nuniform float uBreeze;\n',
  vertexDisplace:VERTEX_DISPLACE,
-  init,press,move,release,resize,step,cut,heal,dispose,setTint:setPetalTint,trace2d:grassFlowers,
+  init,press,move,release,claims,resize,step,cut,heal,dispose,setTint:setPetalTint,trace2d:grassFlowers,
 };
