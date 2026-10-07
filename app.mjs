@@ -27,13 +27,14 @@ import {mountRoutes,hashRoute} from './modules/routes.mjs';
 import {mountMenuLifecycle} from './menu-lifecycle.mjs';
 import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
 import {mountPhysicalSoundUI} from './audio/sound-ui.mjs';
+import {mountPageMusic} from './audio/page-music.mjs';
 import {mountPodChrome} from './modules/pod-chrome.mjs';
 import {ensurePortalMounted} from './modules/portal/portal-entry.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
 mountRoutes();
 window.myr5MenuLifecycle=mountMenuLifecycle();
 mountBattlePass();
-mountPhysicalSoundUI();
+mountPhysicalSoundUI();mountPageMusic();
 const lazyGrimoire=document.createElement('button');
 lazyGrimoire.type='button';lazyGrimoire.id='podGrimoireLazyOpen';lazyGrimoire.textContent='GRIMOIRE';
 lazyGrimoire.setAttribute('aria-label','Open grimoire settings');

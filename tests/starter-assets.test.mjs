@@ -38,3 +38,11 @@ test('starter ship GLB uses only core glTF plus WebP textures, so the plain GLTF
  assert.deepEqual(json.extensionsRequired||[],['EXT_texture_webp']);
  assert.equal(json.meshes.length,1);assert.match(json.nodes[0].name,/^tripo_node_/);
 });
+test('page music: six AAC loops are an optional Music group, never core, and stay small',async()=>{
+ const {core,optional}=await offlineInventory('.');
+ assert.deepEqual(core.filter(a=>a.url.startsWith('/audio/music/')).map(a=>a.url),[],'no music in core');
+ const music=optional.filter(a=>a.group==='music');
+ assert.equal(music.filter(a=>a.url.endsWith('.m4a')).length,6);
+ assert.ok(music.some(a=>a.url==='/audio/music/manifest.json'));
+ assert.ok(music.reduce((s,a)=>s+a.bytes,0)<2*1048576,'music group under 2 MiB');
+});

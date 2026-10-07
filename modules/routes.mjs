@@ -67,6 +67,7 @@ const pending=new Map();
 
 function paint(){
  const current=active?active.id:quiltUp()?'portal':'';
+ window.dispatchEvent(new CustomEvent('myr5:route',{detail:{id:current}})); // page music follows the scene
  for(const button of dock()?.querySelectorAll('[data-route]')||[]){if(button.dataset.route===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
  const centre=dock()?.querySelector('.dock-portal');
  if(centre){const onQuilt=quiltUp()&&!active;centre.querySelector('span').textContent=onQuilt?'POD':'PORTAL';centre.setAttribute('aria-label',onQuilt?'Open workout pod':'Return to portal grimoire');centre.title=centre.getAttribute('aria-label');}

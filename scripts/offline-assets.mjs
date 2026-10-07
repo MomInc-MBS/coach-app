@@ -25,6 +25,8 @@ export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|mo
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.(?:glb|webp)|modules\/rooms\/reminders-computer\.css)$/;
 // W4-4E (D47): the customizer cage and the Draco decoder only it needs. Never core; the customizer stays 2D without it.
 export const CAGE_ROOM=/^\/pod\/rooms\/cage\//;
+// Page music (audio/music: six AAC loops + manifest) is an optional "Music" group, never core; page-music.mjs fetches it lazily.
+export const MUSIC=/^\/audio\/music\//;
 // Each grimoire's art: its GLB board (cogs: its folder), its flat poster (portal.mjs's base layer) and its tunnel effect.
 const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+',jelly:'jelly\\.glb',wood:'wood\\.glb',pond:'(?!)'}; // pond is procedural: just its poster and tunnel
 const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+id,new RegExp(`^/(?:pod/worlds/boards/(?:${art}|${id}-poster\\.webp)|modules/portal/portal-tunnel-${id}\\.mjs)$`)]);
@@ -33,7 +35,7 @@ const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+
 const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/|food\/drgf-paper-character\.png$)/;
 const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:audio|icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
-const runtime=/\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
+const runtime=/\.(?:html|css|mjs|js|webmanifest|json|mp3|m4a|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;
 const excluded=new Set(['sw.js','source.json','source.json.gz','package.json','package-lock.json','recover.html','recovery-page.mjs','about.html']);
 
 async function identify(root,path){
@@ -46,7 +48,7 @@ async function coreClosure(root,urls,template){
  try{for(const [ref] of (await readFile(template,'utf8')).matchAll(reference))queue.push(ref);}catch(error){if(error.code!=='ENOENT')throw error;}
  while(queue.length){
   const url=queue.shift();
- if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url)||CAGE_ROOM.test(url))continue;
+ if(core.has(url)||!urls.has(url)||!coreFolder(url)||DEFERRED.test(url)||STARTER.test(url)||BOARDS.test(url)||TUNNELS.test(url)||SCOREBOARD_ROOM.test(url)||REMINDERS_ROOM.test(url)||CAGE_ROOM.test(url)||MUSIC.test(url))continue;
   core.add(url);
   if(/\.(?:html|css|mjs|js|webmanifest|json)$/.test(url))for(const [ref] of (await readFile(join(root,url),'utf8')).matchAll(reference))
    queue.push(ref.startsWith('/')?ref:posix.join(posix.dirname(url),ref),'/'+ref.replace(/^\.\//,''));
@@ -72,6 +74,7 @@ const GROUPS=[
  ['room-scoreboard',SCOREBOARD_ROOM],
  ['room-reminders',REMINDERS_ROOM],
  ['room-cage',CAGE_ROOM],
+ ['music',MUSIC],
  ['starter',STARTER],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
