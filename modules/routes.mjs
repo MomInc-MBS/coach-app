@@ -57,6 +57,8 @@ export const ROUTES={
  pod:{label:'Training pod',page:true,focus:'#homeScreen',open:hideQuilt},
  history:{label:'History',dialog:'#historyPanel',open:()=>panel('history')},
  install:{label:'Install',dialog:'#installPanel',open:()=>panel('install')},
+ // Achievement Vault: reached only through a grimoire secret (portal.mjs door poster); vault-door.mjs builds #vaultPanel.
+ vault:{label:'Vault',dialog:'#vaultPanel',open:()=>import('./vault/vault-door.mjs').then(m=>m.openVault())},
 };
 // Old ?panel= deep links (reminder pushes, update emails, recovery) open the same routes.
 export const PANEL_ROUTES={spotify:'spotify',meals:'food',reminders:'reminders',account:'scoreboard',history:'history',install:'install'};

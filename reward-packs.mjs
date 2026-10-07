@@ -7,14 +7,17 @@ import {unlockedCoachIds,performanceOwner,coachAccess} from './performance-progr
 import {PACK_SIZES,COSMETIC_PACK_ODDS} from './progression-rules.mjs';
 export const PACK_ODDS=COSMETIC_PACK_ODDS;
 export {PACK_SIZES};
+// Achievement Vault packs (id `reward-pack:<tier>:vault-<id>`): always 2 items, colour/texture only; legendary's first slot is a texture.
+export const VAULT_PACK=Object.freeze({size:2,odds:Object.freeze({rare:Object.freeze({color:70,'64-bit':0}),legendary:Object.freeze({color:40,'64-bit':0})})});
+export const isVaultPack=item=>String(item?.id).includes(':vault-');
 const KEY='myr5-opened-reward-packs-v2';
 const ownerKey=()=>`${KEY}/${encodeURIComponent(performanceOwner())}`;
 const safeRead=()=>{try{const data=JSON.parse(localStorage.getItem(ownerKey())||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch{return {};}};
 const save=data=>{try{localStorage.setItem(ownerKey(),JSON.stringify(data));return true;}catch{return false;}};
 export const packItem=(tier,id)=>({kind:'reward-pack',id,name:`${tier[0].toUpperCase()+tier.slice(1)} Pack`,tier,line:`Open for ${PACK_SIZES[tier]} coach cosmetic${PACK_SIZES[tier]===1?'':'s'}.`});
 const unit=random=>{const value=random();if(!Number.isFinite(value))throw RangeError('Invalid random value.');return Math.min(1-Number.EPSILON,Math.max(0,value));};
-export function rollCategory(tier,random=Math.random){
- const odds=PACK_ODDS[tier];if(!odds)throw Error('Unknown pack tier');
+export function rollCategory(tier,random=Math.random,table=PACK_ODDS){
+ const odds=table[tier];if(!odds)throw Error('Unknown pack tier');
  const roll=unit(random)*100;
  return roll<odds.color?'color':roll<odds.color+odds['64-bit']?'64-bit':'texture';
 }
@@ -47,11 +50,12 @@ export function openRewardPack(item,{random=Math.random}={}){
  if(previous)return rewardsOf(previous).every(grantReward)?previous:null;
  const coaches=unlockedCoachIds().filter(coach=>coachAccess(coach));if(!coaches.length)return null;
  const rewards=[];const selected=new Set(),unowned=remainingCosmetics({coaches});
- for(let slot=0;slot<PACK_SIZES[item.tier];slot++){
-  const rolled=rollCategory(item.tier,random);
+ const vault=isVaultPack(item);
+ for(let slot=0;slot<(vault?VAULT_PACK.size:PACK_SIZES[item.tier]);slot++){
+  const rolled=vault&&item.tier==='legendary'&&slot===0?'texture':rollCategory(item.tier,random,vault?VAULT_PACK.odds:PACK_ODDS);
   // Preserve category odds until that category is exhausted; then award another
   // unowned category rather than a duplicate while the collection is incomplete.
-  const order=[rolled,...['color','64-bit','texture'].filter(category=>category!==rolled)];
+  const order=[rolled,...['color','64-bit','texture'].filter(category=>category!==rolled&&!(vault&&category==='64-bit'))];
   let category=rolled,choices=[];
   for(const candidate of order){const available=unowned.filter(reward=>reward.category===candidate&&!selected.has(identity(reward)+':'+reward.kind));if(available.length){category=candidate;choices=available;break;}}
   if(!choices.length)break; // Complete collection: do not manufacture duplicates.

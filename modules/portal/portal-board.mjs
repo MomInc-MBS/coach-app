@@ -205,6 +205,7 @@ tintCache.set(key,tmp);
    if(p){fx.move?.(id,u,v,p.u,p.v);p.u=u;p.v=v;}else{pointers.set(id,{u,v});fx.press?.(id,u,v);}
    wake();
   },
+  claims(){return false;},
   release(id){const p=pointers.get(id);if(p){pointers.delete(id);fx.release?.(id,p.u,p.v);wake();}},
   frameMs:()=>0,
   pause(){for(const [id,p] of pointers)fx.release?.(id,p.u,p.v);pointers.clear();cancelAnimationFrame(raf);raf=0;},
@@ -345,6 +346,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
   patternRect:()=>patternRectOf(host),
   quiltRect,
   press(id,clientX,clientY){if(reduced)return;const [x,y]=local(clientX,clientY),touch=pointers.get(id);if(touch){touch.x=x;touch.y=y;}else pointers.set(id,{x,y,px:x,py:y});wake();},
+  claims(){return false;}, // L4 fills this (quilt fold secret)
   release(id){pointers.delete(id);wake();},
   frameMs:()=>frameMs,
   pause(){paused=true;pointers.clear();cancelAnimationFrame(frame);frame=0;},
