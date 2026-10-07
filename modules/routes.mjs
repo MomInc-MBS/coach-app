@@ -241,7 +241,7 @@ function portalButton(event){
 
 export function mountRoutes(){
  if(window.myr5Routes)return window.myr5Routes;
- import('./vault/vault-store.mjs').catch(()=>{}); // loads the store so it hears myr5:vault-bump from raw-served files (portal, pond)
+ import('./vault/vault-banner.mjs').catch(()=>{}).then(()=>import('./vault/vault-store.mjs')).catch(()=>{}); // banner first so it hears the drained-pending earns; loads the store so it hears myr5:vault-bump from raw-served files (portal, pond)
  let seen='';
  addEventListener('popstate',event=>{seen=location.href;sync(event);});
  addEventListener('hashchange',()=>{const href=location.href,handled=href===seen;seen='';if(!handled)sync({type:'hashchange',state:history.state});});

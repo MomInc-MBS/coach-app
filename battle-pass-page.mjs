@@ -165,12 +165,12 @@ export function mountBattlePass(){
  document.addEventListener('pointercancel',e=>{if(e.pointerId===activePointer)stopPointer();});
  window.addEventListener('blur',stopPointer);
   dialog.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.target.closest('button,input,textarea,select')){e.preventDefault();scene.fire();}});
- dialog.addEventListener('close',()=>{stopPointer();scene.stop();});
+ dialog.addEventListener('close',()=>{stopPointer();scene.stop();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:null}}));});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopPointer();scene.stop();}else if(dialog.open)scene.start();});
  window.addEventListener('resize',()=>{if(dialog.open)scene.resize();});
  const open=()=>{
   syncBattlePass();render();
-  if(!dialog.open){scene.resetScore?.();dialog.showModal();}
+  if(!dialog.open){scene.resetScore?.();dialog.showModal();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:'battlepass'}}));}
   buildMap();
   const targetChapter=previewFocus();
   const target=targetChapter===chapterForLevel(rank.level)?route.querySelector('[aria-current="step"]'):route.querySelector(`[data-chapter="${targetChapter}"] [data-level="${targetChapter*10+8}"]`);

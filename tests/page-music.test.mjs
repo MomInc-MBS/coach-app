@@ -5,9 +5,11 @@ import {trackForRoute,loopPosition,rampPlan,duckPlan,ROUTE_TRACK,FADE_IN} from '
 
 test('route -> track mapping follows Ian\'s list',()=>{
  const t=(id,o)=>trackForRoute(id,o);
- assert.equal(t('',{}),'hey-man-idk');assert.equal(t('pod'),'hey-man-idk');assert.equal(t('workout'),'hey-man-idk');
+ assert.equal(t('',{}),'main-theme-one');assert.equal(t('pod'),'main-theme-one');assert.equal(t('workout'),null);assert.equal(t('select'),null);
+ assert.equal(t('',{scene:'battlepass'}),'hey-man-idk','XP Flight dialog over the pod');assert.equal(t('',{scene:null}),'main-theme-one');
+ assert.deepEqual(Object.keys(ROUTE_TRACK).filter(k=>ROUTE_TRACK[k]==='hey-man-idk'),['battlepass'],'hey-man-idk is flyer-only');
  assert.equal(t('',{portalUp:true}),'main-theme-one');assert.equal(t('settings'),'main-theme-one');
- for(const id of ['battlepass','achievements','vault'])assert.equal(t(id),'guarded-gate');
+ for(const id of ['achievements','vault'])assert.equal(t(id),'guarded-gate');
  assert.equal(t('customizeCoach'),'daemon-time');assert.equal(t('',{pathname:'/creature/index.html'}),'daemon-time');assert.equal(t('',{pathname:'/war-room/index.html'}),'daemon-time');
  assert.equal(t('food'),'sick-with-science');assert.equal(t('scoreboard'),'laboratory-violence');
  assert.equal(t('history'),undefined,'unmapped scenes keep the current song');

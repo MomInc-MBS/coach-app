@@ -4,14 +4,17 @@
 // Loops come from audio/music (scripts/music-loops.py): exactly 8 bars, loopStart 0 / loopEnd = duration, no encoder padding left.
 import {physicalSound} from './physical-sound.mjs';
 
-export const ROUTE_TRACK={pod:'hey-man-idk',workout:'hey-man-idk',select:'hey-man-idk',battlepass:'guarded-gate',achievements:'guarded-gate',vault:'guarded-gate',
+export const ROUTE_TRACK={pod:'main-theme-one',workout:null,select:null,battlepass:'hey-man-idk',achievements:'guarded-gate',vault:'guarded-gate',
  customize:'daemon-time',customizeCoach:'daemon-time','war-room':'daemon-time',food:'sick-with-science',portal:'main-theme-one',settings:'main-theme-one',scoreboard:'laboratory-violence',meditate:null};
 export const TRACK_LEVEL={'main-theme-one':.35};
 export const TRACK_FADE={'main-theme-one':5};
 export const FADE_IN=3,DUCK_LEVEL=.3,DUCK_DOWN=.12,DUCK_UP=1.2;
+// The pod and its menus share the grimoire song; hey-man-idk is only the XP Flight (battle pass) screen; workout/select stay silent (camera / pickers).
+// Pod + menus share the grimoire song; hey-man-idk is XP Flight (battle pass) only; workout/select are silent.
 // Track for a scene. undefined = keep whatever plays (history, install...), null = silence (workout camera, meditation).
-export function trackForRoute(id,{portalUp=false,quiet=false,pathname=''}={}){
+export function trackForRoute(id,{portalUp=false,quiet=false,pathname='',scene=null}={}){
  if(quiet)return null;
+ if(scene==='battlepass')return 'hey-man-idk'; // XP Flight dialog opens over any page
  if(/^\/(?:creature|war-room)\//.test(pathname))return 'daemon-time';
  if(!id)return portalUp?ROUTE_TRACK.portal:ROUTE_TRACK.pod;
  return ROUTE_TRACK[id];
@@ -28,7 +31,7 @@ const MIX_KINDS=['ice','crackle','water'];
 const BED_BOARD_GAIN=.5;
 
 export function createPageMusic({sound=physicalSound,documentRef=globalThis.document,windowRef=globalThis.window,fetchRef=(...a)=>globalThis.fetch(...a),pathname=globalThis.location?.pathname||''}={}){
- let ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
+ let scene=null,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
  const buffers=new Map(),log=[];
  const warn=e=>{if(!warned){warned=true;console.warn('page music:',e?.message||e);}};
  const note=(what,param,v0,v1,t0,t1)=>{log.push({what,v0,v1,t0,t1});if(log.length>60)log.shift();};
@@ -144,7 +147,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
  const quiet=()=>{const d=documentRef?.body?.dataset||{};return d.tracking==='true'||d.cameraWorkout==='true';};
  function sync(){
   const id=windowRef?.myr5Routes?.current?.()||'',portalUp=documentRef?.getElementById?.('portalHome')?.hidden===false;
-  const t=trackForRoute(id,{portalUp,quiet:quiet(),pathname});
+  const t=trackForRoute(id,{portalUp,quiet:quiet(),pathname,scene});
   if(t!==undefined)setTrack(t);
  }
  const unlock=()=>{if(armed)return;armed=true;documentRef.removeEventListener('pointerdown',unlock,true);documentRef.removeEventListener('keydown',unlock,true);ensure();sync();if(want!==undefined)setTrack(want);};
@@ -155,6 +158,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
   windowRef.addEventListener('myr5:sound-settings',()=>{level();if(!muted()&&ctx?.state==='suspended'&&!documentRef.hidden)void ctx.resume();});
   windowRef.addEventListener('myr5:response',e=>{if(!duck)return;const p=duckPlan(e.detail?.state==='speaking');ramp(duck.gain,'duck',p.to,ctx.currentTime,p.seconds);});
   windowRef.addEventListener('myr5:route',sync);
+  windowRef.addEventListener('myr5:music-scene',e=>{scene=e.detail?.scene||null;sync();});
   windowRef.addEventListener('myr5:music-cut',()=>cutNow());
   windowRef.addEventListener('myr5:music-resume',()=>resumeNow());
   new MutationObserver(sync).observe(documentRef.body||documentRef.documentElement,{attributes:true,attributeFilter:['data-tracking','data-camera-workout']});
