@@ -111,9 +111,34 @@ function ribbon(gc,p,h0,taper,len,pad=0){
  gc.closePath();
 }
 
+// Secret: pure reducer for tap tracking (testable without WebGL)
+// Events: {type:'press',u,v,dist}, {type:'move',dist}, {type:'release'}
+export function iceSecret(state,ev,now){
+ const S=state||{taps:[],lastRelease:0,shattered:false};
+ if(ev.type==='press'){
+  // A press might be a new tap. Track it but wait for release to confirm.
+  S.pressTime=now;S.moveDist=0;S.didMove=false;
+ }else if(ev.type==='move'){
+  // >12 px movement = drag, not a tap. Reset the sequence.
+  S.moveDist=(ev.dist??0);
+  if(S.moveDist>12){S.taps=[];S.didMove=true;}
+ }else if(ev.type==='release'){
+  if(S.didMove){S.taps=[];return S;} // was a drag, reset
+  const gap=now-S.lastRelease;
+  // >600 ms gap resets the sequence
+  if(gap>600){S.taps=[];}
+  // Record this tap (taps 1–2 don't claim, tap 3+ do; tap 10 = shatter)
+  S.taps.push({time:now});if(S.taps.length>10)S.taps.shift();
+  S.lastRelease=now;
+  if(S.taps.length===10){S.shattered=true;}
+ }
+ return S;
+}
+
 // One instance per board layer: the 3D board's (ice itself) and the flat board's 2D trace (ice.trace2d, R7) each get their own.
 export function iceEffect(){
 let S=null; // per-instance state
+let tapState=null; // pure reducer state for secret tracking
 
 function frame(i,k){ // cached Path2D of big pool pattern i at growth level k (lazily computed)
  const f=S.field;
@@ -132,15 +157,35 @@ function spawnTrail(p,x,y,dx,dy,k){
  S.trail.push({t0:performance.now(),shape,hair,len:Math.max(hair.at(-1)[2],...shape.map(b=>b.at(-1)[2])),reach:Math.max(...shape.map(b=>b.at(-1)[2]))});
  p.x=x;p.y=y;S.dirty=true;
 }
+// Shatter: spawn shards radiating outward (reuse big crack pool, spinning + fading)
+function spawnShards(now){
+ const f=S.field/2,count=12;
+ for(let i=0;i<count;i++){
+  const angle=i*Math.PI*2/count,dist=rand([.6,.9])*f,x=f+Math.cos(angle)*dist,y=f+Math.sin(angle)*dist;
+  S.live.push({x,y,i:S.next++%POOL,rot:angle+rand([-.3,.3]),t0:now,spin:rand([3,8]),isShatter:true});
+ }
+ S.dirty=true;
+}
 function redraw(now){
  const gc=S.glow.ctx,f=S.field/2,h=.5*S.scale,pad=EDGE_PX*S.scale,core=S.tint||CORE,glintColor=S.tint?tintRgba(S.tint,.9):GLINT,glint=()=>{gc.shadowColor=glintColor;gc.shadowBlur=3*S.scale;},flat=()=>{gc.shadowBlur=0;};
  gc.clearRect(0,0,S.glow.canvas.width,S.glow.canvas.height);
  gc.save();gc.lineJoin='round';
  for(const c of S.live){ // dark rim, then the core
-  const age=now-c.t0,k=Math.round(crackT(age,S.reduced)*LEVELS);
-  if(!k)continue;
-  gc.setTransform(1,0,0,1,0,0);gc.translate(c.x,c.y);gc.rotate(c.rot);gc.translate(-f,-f);
-  gc.globalAlpha=crackAlpha(age,S.reduced);const p=frame(c.i,k);
+  const age=now-c.t0;
+  let alpha,rot,k;
+  if(c.isShatter){
+   // Shard: fades over 600 ms, rotates
+   alpha=Math.max(0,1-age/600);if(!alpha)continue;
+   rot=c.rot+c.spin*(age/600);
+   k=LEVELS; // full size immediately
+  }else{
+   k=Math.round(crackT(age,S.reduced)*LEVELS);
+   if(!k)continue;
+   alpha=crackAlpha(age,S.reduced);
+   rot=c.rot;
+  }
+  gc.setTransform(1,0,0,1,0,0);gc.translate(c.x,c.y);gc.rotate(rot);gc.translate(-f,-f);
+  gc.globalAlpha=alpha;const p=frame(c.i,k);
   flat();gc.strokeStyle=EDGE;gc.lineWidth=(BIG_EDGE+2*EDGE_PX)*S.scale;gc.stroke(p);
   glint();gc.fillStyle=gc.strokeStyle=core;gc.fill(p);gc.lineWidth=BIG_EDGE*S.scale;gc.stroke(p);
  }
@@ -163,6 +208,7 @@ function init({paint,glow,toWorld,wake}){
  S={glow,toWorld,live:[],trail:[],pool:[],next:Math.floor(Math.random()*POOL),drag:new Map(),dirty:false,
   field:Math.round(w*BIG.frac),scale:w/1024,sx:w,sy:paint.canvas.height,
   reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,tint:selectedTint,wake};
+ tapState={taps:[],lastRelease:0,shattered:false};
 }
 function setTint(hex,selected=true){if(selected&&!validTint(hex))return;selectedTint=selected?hex:null;if(S){S.tint=selectedTint;S.dirty=true;S.wake?.();}}
 function press(id,u,v){
@@ -171,6 +217,8 @@ function press(id,u,v){
  if(S.live.length>=MAX_BIG)S.live.shift();
  S.live.push({x,y,i:S.next++%POOL,rot:Math.random()*Math.PI*2,t0:performance.now()});
  S.dirty=true;
+ // Update tap state
+ tapState=iceSecret(tapState,{type:'press'},performance.now());
 }
 // Walk the finger's path since the last move, dropping a trail crack every `spacing` screen px so fast drags stay continuous.
 function move(id,u,v){
@@ -182,21 +230,40 @@ function move(id,u,v){
  let s=p.left;
  for(;s<=d;s+=rand(TRAIL.spacing))spawnTrail(p,(p.u+(u-p.u)*s/d)*S.sx,(p.v+(v-p.v)*s/d)*S.sy,tx/td,ty/td,td/d);
  p.left=s-d;p.u=u;p.v=v;
+ // Update tap state with distance moved (world coords = screen px)
+ tapState=iceSecret(tapState,{type:'move',dist:d},performance.now());
 }
-function release(id){S.drag.delete(id);}
+function release(id){
+ S.drag.delete(id);
+ // Update tap state and check for shatter
+ const now=performance.now();tapState=iceSecret(tapState,{type:'release'},now);
+ if(tapState.shattered&&!tapState.dispatched){
+  tapState.dispatched=true;
+  spawnShards(now);
+  window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:'ice'}}));
+ }
+}
+function claims(id){
+ // Claim from tap 3 onwards (taps 1–2 stay eligible for shape open)
+ return tapState.taps.length>=3;
+}
 function step(dt,now){
  const n=S.live.length+S.trail.length;
  if(!n)return false;
  const life=trailLife(S.reduced);
- S.live=S.live.filter(c=>crackAlpha(now-c.t0,S.reduced)>0);
+ S.live=S.live.filter(c=>{
+  if(c.isShatter)return crackAlpha(now-c.t0,false,{grow:0,hold:600,shrink:0})>0;
+  return crackAlpha(now-c.t0,S.reduced)>0;
+ });
  S.trail=S.trail.filter(c=>now-c.t0<life);
  // Reduced motion: frames only change when a crack is born or dies; otherwise every frame animates.
  if(!S.reduced||S.dirty||S.live.length+S.trail.length!==n)redraw(now);
  S.dirty=false;
  return S.live.length+S.trail.length>0;
 }
-function dispose(){S=null;}
-return {init,setTint,press,move,release,step,dispose};
+function dispose(){S=null;tapState=null;}
+function getTapState(){return tapState;}
+return {init,setTint,press,move,release,claims,step,dispose,tapState:()=>tapState};
 }
 
 // fragment (3D): the ice under the glow layer darkens by its alpha, so the dark rim (which emits nothing) shows as dark.
