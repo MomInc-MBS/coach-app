@@ -71,6 +71,7 @@ Vault packs reuse the existing tiers (`rare` / `legendary`) so `reward-pack-ui.m
 
 **Ian update (7 Oct):** not every coach becomes a statue. Use exactly one statue per programmed achievement. Pick the coaches with the HIGHEST unlock level (latest to unlock, per `performance-catalog.mjs COACH_REQUIREMENTS` difficulty/level) and work down until every achievement has one. The hardest achievement (last in the hall) wears the highest-level coach. There must be an **"Unlocked everything"** achievement (all coaches + all textures + all colours) as the final statue.
 Hall look (Ian): the inside of a data/internet cable; statues are digital holograms (inside MOM Inc's brain), PURPLE while locked and ORANGE once earned. The vault overall is sci-fi/space, purple + gold.
+Door payoff (Ian, 7 Oct): the opened safe door reveals a dark wall with one tiny USB port (not a big purple screen). Tap it → camera dollies into the port → purple fill → L8 shrink (gold pins streak into cable strands) → data-cable hall.
 
 ## 5. Lanes
 | Lane | What | Worker | Files |
