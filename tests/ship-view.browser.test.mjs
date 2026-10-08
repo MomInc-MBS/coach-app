@@ -31,7 +31,7 @@ async function withPage(run){
   }catch{res.writeHead(404);res.end();}
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
- try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.address().port);await run(page);}
+ try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.address().port);await page.evaluate(async()=>{const T=await import('three'),add=T.Object3D.prototype.add;T.Scene.prototype.add=function(...objects){if(objects.some(object=>object.name==='coach-preview-space'))window.__shipScene=this;return add.apply(this,objects);};});await run(page);}
  finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
 
@@ -44,7 +44,7 @@ async function primeFixture(page){
  });
 }
 
-// No verified pack: Original MYR5's bundled starter ship (the real GLB) over today's starter wonder.
+// No verified pack: Original MYR5's bundled starter ship (the real GLB) over supply-drop space.
 const starterState=()=>({
  bg:document.querySelector('.ship-view-bg').style.backgroundImage,
  scene:document.querySelector('.ship-scene')?.dataset.ship||null,
@@ -56,7 +56,10 @@ const starterState=()=>({
  downloadHidden:document.querySelector('.ship-view-download').hidden,
  hasCoach:!!document.querySelector('.ship-view-coach .myr5-companion-card'),
 });
-const STARTER_BG=/^url\("\/pod\/worlds\/starter\/(great-wall-of-china-a|great-pyramid-of-giza-a|machu-picchu-a|taj-mahal-a|colosseum-a|mount-fuji-a)\.webp"\)$/;
+async function assertSpace(page){
+ const state=await page.evaluate(()=>({background:window.__shipScene?.background?.isTexture,fog:window.__shipScene?.fog?.far,ground:!!window.__shipScene?.getObjectByName('supply-drop-ground'),sky:!!window.__shipScene?.getObjectByName('supply-drop-sky'),pixelImage:document.querySelector('.ship-view-bg').style.backgroundImage,introPixelImage:document.querySelector('.ship-scene-background')?.style.backgroundImage||''}));
+ assert.deepEqual(state,{background:true,fog:95,ground:true,sky:true,pixelImage:'',introPixelImage:''});
+}
 const UPGRADE='Earn ships on your tracks · Download Ships & worlds for all of them';
 
 test('an explicit owned ship choice loads that GLB instead of revealing a different reward',async()=>withPage(async page=>{
@@ -87,7 +90,7 @@ test('choosing the starter hull overrides a previously downloaded owned ship',as
  assert.ok(!requests.includes('/plan/assets-inbox/ships/mom.glb'));
 }));
 
-test('signed out: the starter ship makes its entrance over a starter wonder once per session, then idles; no upgrade line, no reveal marked',async()=>withPage(async page=>{
+test('signed out: the starter ship makes its entrance over supply-drop space once per session, then idles; no upgrade line, no reveal marked',async()=>withPage(async page=>{
  await primeFixture(page);
  const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));
  const first=await page.evaluate(async state=>{
@@ -97,14 +100,14 @@ test('signed out: the starter ship makes its entrance over a starter wonder once
   await openStarter();
   return {...(0,eval)(state)(),events:readyEvents.map(e=>({ship:e.ship,revealComplete:e.revealComplete,starter:e.starter}))};
  },`(${starterState})`);
- assert.match(first.bg,STARTER_BG);
+ await assertSpace(page);
  assert.deepEqual({...first,bg:undefined},{bg:undefined,scene:'supportive',status:'Coach ready. Select the ship to customize.',revealed:true,idleCanvas:false,flash:true,line:null,downloadHidden:true,hasCoach:true,events:[{ship:'supportive',revealComplete:false,starter:true}]});
  assert.ok(requests.includes('/pod/worlds/starter/supportive.glb'),'loads the bundled starter ship');
  await page.locator('.ship-view-close').click();await page.waitForFunction(()=>location.hash!=='#ship');
  await page.evaluate(()=>openStarter());
  const again=await page.evaluate(state=>(0,eval)(state)(),`(${starterState})`);
  assert.deepEqual({scene:again.scene,idleCanvas:again.idleCanvas,flash:again.flash,line:again.line},{scene:null,idleCanvas:true,flash:false,line:null},'the entrance plays once per session; after that the view idles');
- assert.match(again.bg,STARTER_BG);
+ await assertSpace(page);
 }));
 
 test('signed in without a ship, reduced motion: a still starter scene plus the upgrade line, no download button',async()=>withPage(async page=>{
@@ -116,7 +119,7 @@ test('signed in without a ship, reduced motion: a still starter scene plus the u
   await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>null,ownedShipIds:()=>[]});
   return (0,eval)(state)();
  },`(${starterState})`);
- assert.match(state.bg,STARTER_BG);
+ await assertSpace(page);
  assert.deepEqual({scene:state.scene,idleCanvas:state.idleCanvas,flash:state.flash,line:state.line,downloadHidden:state.downloadHidden},{scene:null,idleCanvas:true,flash:false,line:UPGRADE,downloadHidden:true},'reduced motion never plays the cinematic');
 }));
 
@@ -184,7 +187,7 @@ async function mountFixtureWithShip(page){
   window.bridgeDisposes=0;
   GLTFLoader.prototype.loadAsync=async()=>{const model=new THREE.Group();model.add(new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshStandardMaterial()));return {scene:model};};
   const {openShipView}=await import('/ship-view.js');
-  const bridge={ownedShipIds:()=>['supportive'],getShipUrl:()=>'blob:verified',getBackgroundUrl:()=>'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',dispose:()=>window.bridgeDisposes++};
+ const bridge={ownedShipIds:()=>['supportive'],getShipUrl:()=>'blob:verified',getBackgroundUrl:()=>{throw Error('pixel backgrounds belong to the center pod viewport');},dispose:()=>window.bridgeDisposes++};
   window.dialog=await openShipView({loadCoachViewer:window.fakeLoadCoachViewer,getBridge:async()=>bridge});
   return true;
  });
@@ -193,7 +196,7 @@ test('an available ship bridge renders the ship over the coach instead of the fa
  assert(await mountFixtureWithShip(page));
  await page.waitForFunction(()=>document.querySelector('.ship-view-canvas'));
  assert.equal(await page.evaluate(()=>document.querySelector('.ship-view-fallback').hidden),true);
- assert.match(await page.evaluate(()=>document.querySelector('.ship-view-bg').style.backgroundImage),/^url\("data:image\/gif/);
+ await assertSpace(page);
  await page.locator('.ship-view-close').click();
  await page.waitForFunction(()=>bridgeDisposes===1);
  assert.equal(await page.locator('.ship-view-canvas').count(),0);
@@ -240,8 +243,8 @@ test('first verified owned arrival completes the real beam/flash before enabling
   const previous=makeBridge;window.makeBridge=()=>({...previous(),ownedShipIds:()=>['supportive','direct']});
  });
  await page.evaluate(()=>openArrival());
- assert.equal(await page.locator('.ship-scene').getAttribute('data-ship'),'direct','new unseen ship takes precedence over a previously customized ship');
- assert.deepEqual(await page.evaluate(()=>arrival.coachEditorShips()),['supportive','direct']);
+ assert.equal(await page.locator('.ship-scene').getAttribute('data-ship'),'supportive','the explicitly selected starter hull keeps priority over an unrelated new reward');
+ assert.deepEqual(await page.evaluate(()=>arrival.coachEditorShips()),['supportive'],'the new reward remains unrevealed while the chosen starter is shown');
 }));
 
 test('closing or changing account during real arrival cancels without marking seen or retaining coach',async()=>withPage(async page=>{
@@ -282,7 +285,7 @@ test('closing while the optional arrival module loads prevents a late scene and 
  await page.evaluate(()=>{window.opening=openArrival();});
  const pending=await requested;
  await page.locator('.ship-view-close').click();
- await page.waitForFunction(()=>!document.querySelector('.ship-view').open);
+ await page.waitForFunction(()=>!document.querySelector('.ship-view').open&&document.querySelector('#coachMount .myr5-companion-card'));
  await pending.continue();await page.evaluate(()=>window.opening);
  assert.equal(await page.evaluate(()=>bridgeDisposes),1);
  assert.equal(await page.locator('.ship-scene').count(),0);
@@ -308,6 +311,8 @@ test('the beam is hidden until the ship has flown in, charges, then opens',async
  assert.equal(marks.beamAtTakeOff,'ship-scene-beam','no is-charging before the approach completes');
  assert.ok(marks.charging-marks.approach>=marks.APPROACH_MS-20,`the beam charges only after the flight (${marks.charging-marks.approach} ms)`);
  assert.ok(marks.open-marks.charging>=marks.BEAM_CHARGE_MS-20,`it charges before it opens (${marks.open-marks.charging} ms)`);
+ const layers=await page.evaluate(()=>({beam:Number(getComputedStyle(document.querySelector('.ship-scene-beam')).zIndex),canvas:Number(getComputedStyle(document.querySelector('.ship-scene-canvas')).zIndex),pointer:getComputedStyle(document.querySelector('.ship-scene-beam')).pointerEvents}));
+ assert.ok(layers.beam>layers.canvas,'beam remains visible above the opaque space canvas');assert.equal(layers.pointer,'none','beam leaves hull taps available');
 }));
 
 // W2-2Q #148: nothing dead-ends. The still ship (reduced motion, repeat opens, Menu -> Ship) taps through to the

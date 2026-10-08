@@ -1,0 +1,11 @@
+/* The coach has the whole pane; information sits on its glass instead of reserving space. */
+.preview-bay .preview-stage{position:absolute;inset:0;min-height:0}
+.preview-bay::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:linear-gradient(115deg,#b8dcf51c 0%,#bdcee008 28%,transparent 43%,#796aab0c 76%,#150e2e24),linear-gradient(180deg,#a4c9e20e,transparent 36%,#140b2314);box-shadow:inset 0 1px 0 #d9eeff45,inset 0 0 20px #0b082640}
+.preview-bay .preview-readout{position:absolute;top:0;left:0;right:0;padding:10px 12px;background:linear-gradient(#1b142ad9,#1b142a00);z-index:3}
+.preview-bay .preview-toolbar{position:absolute;bottom:0;left:0;right:0;z-index:3;gap:6px;padding:8px 10px;background:linear-gradient(transparent,#191022c9 30%);border-top:0}
+.preview-bay .preview-readout,.preview-bay .preview-toolbar,.preview-bay .preview-strip{opacity:1;transition:opacity .25s ease}
+.preview-bay[data-idle=true] .preview-readout,.preview-bay[data-idle=true] .preview-toolbar,.preview-bay[data-idle=true] .preview-strip{opacity:0;pointer-events:none}
+.preview-bay[data-idle=true] .preview-toolbar button,.preview-bay[data-idle=true] .preview-toolbar input,.preview-bay[data-idle=true] .preview-toolbar select,.preview-bay[data-idle=true] .preview-toolbar textarea,.preview-bay[data-idle=true] .preview-toolbar a,.preview-bay[data-idle=true] .preview-toolbar [tabindex],.preview-bay[data-idle=true] .preview-toolbar [contenteditable=true]{pointer-events:none!important}
+.preview-bay[data-idle=false] .preview-readout,.preview-bay[data-idle=false] .preview-toolbar,.preview-bay[data-idle=false] .preview-strip{transition:none}
+.preview-bay .preview-strip{z-index:3}
+@media(prefers-reduced-motion:reduce){.preview-bay .preview-readout,.preview-bay .preview-toolbar,.preview-bay .preview-strip{transition:none}}

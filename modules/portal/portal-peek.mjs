@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import {recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,shipPoseAbove,measureShip} from '../ships/ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
+import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
 
 export const RT_SCALE=Object.freeze({high:1,medium:.55,low:.35});
 export const MAX_RT_DIM=2048,MAX_DPR=1.5;
@@ -76,15 +77,16 @@ function disposeTree(root){root.traverse(n=>{n.geometry?.dispose();for(const m o
 
 // Parsed once per page; dispose() frees the GPU copies and the next peek re-uploads them.
 let starterShip=null;
-// Ship pod: the starter ship hovering over today's starter wonder, as the ship view shows it without the Ships pack.
+// Ship pod: the starter ship hovering over the supply-drop space, as in the full ship view.
 // ponytail: always the starter ship; an owned pack ship needs app.mjs's bridge, which this unbundled module can't reach.
 async function shipSource(){
  const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
  starterShip??=new GLTFLoader().loadAsync('/pod/worlds/starter/supportive.glb').catch(e=>{starterShip=null;throw e;});
- const [gltf,bg]=await Promise.all([starterShip,wonder()]);
- const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(34,1,.1,100);
+ const gltf=await starterShip;
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(34,1,.1,400);
  camera.position.set(0,.45,7);camera.lookAt(0,.9,0);
- scene.background=bg;
+ const space=createCoachPreviewSpace(THREE,{pixelRatio:Math.min(devicePixelRatio||1,MAX_DPR)});
+ scene.background=space.background;scene.fog=space.fog;scene.add(space.group);
  scene.add(new THREE.HemisphereLight(0xe9d9ff,0x23162d,2.5));
  const key=new THREE.DirectionalLight(0xffefca,4.2);key.position.set(-3,5,4);scene.add(key);
  const rim=new THREE.DirectionalLight(0xb58cff,3.2);rim.position.set(4,2,-3);scene.add(rim);
@@ -97,10 +99,10 @@ async function shipSource(){
  let pose=null,aspect=0;const t0=performance.now();
  return {scene,camera,
   update(now){
-   if(camera.aspect!==aspect){aspect=camera.aspect;cover(bg,aspect);group.scale.setScalar(fit);group.position.y=SHIP_ANCHOR_Y;pose=shipPoseAbove({top:.4,bottom:-.4,aspect},measureShip(THREE,group,camera));group.scale.setScalar(fit*pose.scale);}
+   if(camera.aspect!==aspect){aspect=camera.aspect;group.scale.setScalar(fit);group.position.y=SHIP_ANCHOR_Y;pose=shipPoseAbove({top:.4,bottom:-.4,aspect},measureShip(THREE,group,camera));group.scale.setScalar(fit*pose.scale);}
    group.position.y=pose.y+Math.sin((now-t0)/820)*.07*pose.scale;group.rotation.y=-.32+Math.sin((now-t0)/1700)*.055;
   },
-  dispose(){disposeTree(group);bg.dispose();}};
+  dispose(){space.dispose();disposeTree(group);}};
 }
 // Meditation: the still room's far layer, today's wonder (the glass is greyscale on this route).
 // ponytail: the sleeping coach and your character are DOM/creature-viewer layers, not offscreen-renderable here.

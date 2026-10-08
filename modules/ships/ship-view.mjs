@@ -1,14 +1,14 @@
 // D-ship-route: full-screen ship view. Same coach capsule renderer as the pod's "Show my coach"
-// card (creature/assets/phone.js), reparented full-screen, with the owned ship + biome backdrop
+// card (creature/assets/phone.js), reparented full-screen, with the owned ship + supply-drop space
 // composed behind it when the signed "Ships and worlds" pack is already downloaded and verified
 // locally. Without that pack (signed out, no ship owned, or not downloaded) Original MYR5's bundled
-// starter ship and a starter wonder show instead, with his entrance the first open of the session.
+// starter ship shows instead, with his entrance the first open of the session.
 // `getBridge`/`ownedShipIds` are injected by app.mjs (modules/ships/ship-view-bridge.mjs) —
 // scripts/build.mjs serves THIS file unbundled in production (no Vite, no build-time defines), so it
 // must stay free of imports that need either. tests/ship-view-import-graph.test.mjs enforces that.
 import {offAxis} from '../portal/peer.mjs'; // #135: tilt looks round the ship through the portal window
 import {initialScene,recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,coachBand,shipPoseAbove,measureShip,openCustomizer} from './ship-scene-domain.mjs';
-import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
+import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
 
 const HASH = '#ship';
 const RECIPE_KEY = 'myr5-recipe-v1';
@@ -27,17 +27,18 @@ function disposeModel(root) {
  for (const t of textures) t.dispose(); for (const m of materials) m.dispose(); for (const g of geometries) g.dispose();
 }
 
-/** A still (idle hover only) ship + biome backdrop, not the full approach/beam/flash cinematic —
+/** A still (idle hover only) ship + supply-drop space, not the full approach/beam/flash cinematic —
  * used after the first arrival has completed. */
-async function mountRealShip({ stage, bgEl, bridge, ship, background, tint = null }) {
+async function mountRealShip({ stage, bridge, ship, tint = null }) {
  const [THREE, { GLTFLoader }] = await Promise.all([import('three'), import('three/addons/loaders/GLTFLoader.js')]);
- bgEl.style.backgroundImage = `url("${bridge.getBackgroundUrl(background)}")`;
  const canvas = document.createElement('canvas'); canvas.className = 'ship-view-canvas'; stage.append(canvas);
- const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
+ const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(34, 1, .1, 400);
  let renderer;
  try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }); }
  catch (error) { canvas.remove(); throw error; }
  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15; renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+ const space = createCoachPreviewSpace(THREE, { pixelRatio: renderer.getPixelRatio() });
+ scene.background = space.background; scene.fog = space.fog; scene.add(space.group);
  camera.position.set(0, .45, 7); camera.lookAt(0, .9, 0);
  scene.add(new THREE.HemisphereLight(0xe9d9ff, 0x23162d, 2.5));
  const key = new THREE.DirectionalLight(0xffefca, 4.2); key.position.set(-3, 5, 4); scene.add(key);
@@ -48,8 +49,8 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background, tint = nul
  let disposed = false;
  let loaded;
  try { loaded = await new GLTFLoader().loadAsync(bridge.getShipUrl(ship)); }
- catch (error) { observer.disconnect(); canvas.remove(); throw error; }
- if (disposed) { disposeModel(loaded.scene); observer.disconnect(); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
+ catch (error) { observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); throw error; }
+ if (disposed) { disposeModel(loaded.scene); observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
  const box = new THREE.Box3().setFromObject(loaded.scene), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
  loaded.scene.position.sub(center);
  const group = new THREE.Group(), model = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); model.rotation.y = SHIP_FACING; model.add(loaded.scene); applyShipTint(model, tint); group.add(model); group.scale.setScalar(fit);
@@ -74,7 +75,7 @@ async function mountRealShip({ stage, bgEl, bridge, ship, background, tint = nul
  return {
   dispose() {
    if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect();
-   disposeModel(scene); renderer.dispose(); renderer.forceContextLoss(); canvas.remove();
+   space.dispose(); disposeModel(scene); renderer.dispose(); renderer.forceContextLoss(); canvas.remove();
    bridge.dispose?.();
   }
  };
@@ -104,13 +105,11 @@ async function offerStarter(isCurrent) {
  return true;
 }
 
-/** No verified pack: the starter ship over today's starter wonder. The upgrade line shows only when
+/** No verified pack: the starter ship over the supply-drop space. The upgrade line shows only when
  * signed in; the download button only when they own a ship. Reduced motion or a repeat open idles. */
 async function showStarter({ signedIn, owned, isCurrent, always = false }) {
- const background = starterWonderUrl(backgroundForDay(STARTER_WONDERS));
- bgEl.style.backgroundImage = `url("${background}")`;
  const line = fallback.querySelector('p'); line.textContent = UPGRADE_TEXT; line.hidden = !signedIn; downloadBtn.textContent = 'Download Ships & worlds'; downloadBtn.dataset.pack = 'coach-ships-biomes'; downloadBtn.hidden = !owned.length; fallback.hidden = !signedIn;
- const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL, getBackgroundUrl: () => background };
+ const bridge = { ownedShipIds: () => [STARTER_SHIP], getShipUrl: () => STARTER_SHIP_URL };
  try {
   if ((always || !starterEntranceDone) && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
@@ -122,10 +121,10 @@ async function showStarter({ signedIn, owned, isCurrent, always = false }) {
    if (await offerStarter(isCurrent) && realShip === scene) { scene.dispose(); realShip = null; } if (isCurrent()) offerCustomizer();
    return false;
   }
-  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: STARTER_SHIP, tint: savedTint() });
+  const mounted = await mountRealShip({ stage, bridge, ship: STARTER_SHIP, tint: savedTint() });
   if (!isCurrent()) mounted.dispose(); else realShip = mounted;
   return true;
- } catch { await offerStarter(isCurrent); if (isCurrent()) offerCustomizer(); /* no WebGL or model: the wonder and the coach still show */ return false; }
+ } catch { await offerStarter(isCurrent); if (isCurrent()) offerCustomizer(); /* no WebGL or model: the space fallback and coach still show */ return false; }
 }
 
 async function waitForCard(timeoutMs = 8000) {
@@ -235,7 +234,7 @@ async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner
    if (!arrived) throw new Error('Ship arrival did not complete'); // the owned ship failed: fall back to the starter below
    fallback.hidden = true; return;
   }
-  const mounted = await mountRealShip({ stage, bgEl, bridge, ship: shipId, background: scene.background, tint: /^#[0-9a-f]{6}$/i.test(custom.tint || '') ? custom.tint : savedTint() });
+  const mounted = await mountRealShip({ stage, bridge, ship: shipId, tint: /^#[0-9a-f]{6}$/i.test(custom.tint || '') ? custom.tint : savedTint() });
   if (!isCurrent()) { mounted.dispose(); return; }
   realShip = mounted; fallback.hidden = true;
  } catch (error) {

@@ -8,6 +8,7 @@ import {loadCoachSpritePreviews} from './war-room-coaches';
 import {createStandaloneAccountContext} from '../../standalone-account-context.mjs';
 import {CreatureViewer} from './viewer';
 import {LatestPreview} from './latest-preview';
+import {mountPreviewIdle} from './preview-idle';
 import {GESTURES,type Gesture} from './motion';
 import {REGIONS,PICKER_BODIES,EYE_LAYOUTS,PUPILS,RECIPE_KEY,MOTION_KEY,MAX_IMPORT_BYTES,fresh,importCreature,loadRecipe,motionSettings} from './profile';
 
@@ -208,7 +209,7 @@ function fillTextures(){$('textureId').replaceChildren();textureGrid.replaceChil
  const locked=idLocked(t.id),button=document.createElement('button'),preview=document.createElement('img'),name=document.createElement('span');button.type='button';button.dataset.texture=t.id;button.setAttribute('aria-label',`${t.displayName}${locked?', locked':''}`);button.setAttribute('aria-pressed',String(materialChoice().textureId===t.id));preview.src=texturePreviewDataURL(t.familyId);preview.alt='';name.textContent=t.displayName;button.append(preview,name);if(locked){const icon=document.createElement('i');icon.className='texture-tile-lock';icon.textContent='🔒';icon.setAttribute('aria-hidden','true');button.append(icon);}button.onclick=()=>{const select=$('textureId') as HTMLSelectElement;select.value=t.id;select.dispatchEvent(new Event('change',{bubbles:true}));};textureGrid.append(button);
 }}
 fillBodies();fillTextures();
-($('textureId') as HTMLSelectElement).parentElement!.after(textureGrid);
+$('panel-textures').prepend(textureGrid);
 void loadCoachSpritePreviews(document).then(previews=>{
  spritePreviews=previews;fillBodySprites();
  if(bodyGrid.childElementCount)($('body') as HTMLSelectElement).parentElement!.after(bodyGrid);
@@ -375,7 +376,8 @@ function applyMotion(){viewer?.setSettings({...settings,reduced:settings.reduced
 systemMotion.addEventListener('change',applyMotion);
 window.addEventListener('storage',event=>{if(event.key===RECIPE_KEY&&event.newValue){try{recipe=saved=ownedLook(importCreature(event.newValue));undo=[];redo=[];activeRange=null;render('Coach updated from another app tab');}catch{tell('An invalid coach update was ignored.');}}});
 const motionIndicator=setInterval(()=>{const current=viewer?.motion?.current;if(!current)return;$('motionLabel').textContent=GESTURES[current].label;},250);
-window.addEventListener('pagehide',()=>{standaloneAccount.dispose();closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
+const disposePreviewIdle=mountPreviewIdle(document.querySelector<HTMLElement>('.preview-bay')!);
+window.addEventListener('pagehide',()=>{disposePreviewIdle();standaloneAccount.dispose();closeShipPreview();skinEpoch++;skinSource?.dispose();pendingSkinSource?.dispose();skinSource=null;pendingSkinSource=null;window.removeEventListener('myr5:sections-installed',installedSections);clearInterval(motionIndicator);queue.dispose();viewer?.dispose();});
 // D34 post-download: listen for body download state from service worker
 const pendingBodyUrls=new Set<string>();let bodyDownloadTimer=0;const originalStatus='Your coach is ready';
 navigator.serviceWorker?.addEventListener('message',({data})=>{
@@ -386,5 +388,5 @@ navigator.serviceWorker?.addEventListener('message',({data})=>{
  else if(pendingBodyUrls.size)tell('Downloading this body…');
  else tell(originalStatus);
 });
-try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.resetView();render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
+try{viewer=new CreatureViewer($('creatureStage'),base);applyMotion();viewer.resetView();setZoom(.94);render(initialError||originalStatus);void refreshSkinEditor();(window as any).myr5Companion={get recipe(){return recipe;},get viewer(){return viewer;},get ready(){return ready;},importRecipe:(raw:string)=>commit(importCreature(raw))};}
 catch(error){tell('3D could not start. '+(error as Error).message);}

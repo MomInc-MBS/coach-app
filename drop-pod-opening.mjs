@@ -92,7 +92,7 @@ void main(){float fade=pow(clamp(1.-vUv.y,0.,1.),uPow);float edge=pow(clamp(vE,0
 #include <colorspace_fragment>
 }`;
 
-function glowTexture(THREE,inner='255,255,255',stops=[[0,1],[.25,.55],[.6,.14],[1,0]]){
+export function glowTexture(THREE,inner='255,255,255',stops=[[0,1],[.25,.55],[.6,.14],[1,0]]){
  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);
  for(const [k,a] of stops)g.addColorStop(k,`rgba(${inner},${a})`);x.fillStyle=g;x.fillRect(0,0,128,128);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
@@ -212,7 +212,7 @@ function buildFallbackPod(THREE,tier){
  group.userData=parts;return group;
 }
 
-function buildTerrain(THREE,tier){
+export function buildTerrain(THREE,tier){
  const g=new THREE.Group(),color=new THREE.Color(tier.color);
  const size=170,seg=70,geo=new THREE.PlaneGeometry(size,size,seg,seg);geo.rotateX(-Math.PI/2);
  const p=geo.attributes.position,cols=new Float32Array(p.count*3),c=new THREE.Color();
@@ -238,14 +238,14 @@ function buildTerrain(THREE,tier){
  return {group:g,mound,scorch};
 }
 
-function makeSky(THREE,tier){
+export function makeSky(THREE,tier){
  const c=document.createElement('canvas');c.width=4;c.height=512;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,512),tc=new THREE.Color(tier.color);
  const tint=(k,base)=>'#'+new THREE.Color(base).lerp(tc,k).getHexString();
  g.addColorStop(0,'#01020a');g.addColorStop(.45,'#070b24');g.addColorStop(.72,tint(.14,0x141a4a));g.addColorStop(.86,tint(.28,0x2a2150));g.addColorStop(1,'#1a1228');x.fillStyle=g;x.fillRect(0,0,4,512);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
 }
 
-function makeStars(THREE,uniforms){
+export function makeStars(THREE,uniforms){
  const layers=[];
  for(const [n,R,size,tw] of [[800,95,1.5,.3],[360,70,2.3,.5],[120,45,3.6,.8]]){
   const pos=new Float32Array(n*3),sz=new Float32Array(n),ph=new Float32Array(n),col=new Float32Array(n*3),cc=new THREE.Color();

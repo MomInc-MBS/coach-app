@@ -11,20 +11,9 @@ import {sampleShot,SHOTS,type Cinematic} from './cinematic-shots';
 import {regionBounds,frameRegion,regionFrame} from './creator/camera-focus';
 import {REGIONS,type Region} from './creator/design';
 import {podCameraFrame} from './pod-camera';
+import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
 
 export const ZOOM_MIN=0,ZOOM_MAX=1;
-// A tiny, static glow texture keeps the editor's existing CSS backdrop visible through
-// the WebGL canvas. Camera-mounted sprites stay behind the model as the user rotates it.
-function previewGlowTexture(){
- const canvas=document.createElement('canvas');canvas.width=canvas.height=128;
- const ctx=canvas.getContext('2d')!;
- const glow=ctx.createRadialGradient(64,64,3,64,64,64);
- glow.addColorStop(0,'rgba(255,255,255,.55)');
- glow.addColorStop(.36,'rgba(255,255,255,.2)');
- glow.addColorStop(1,'rgba(255,255,255,0)');
- ctx.fillStyle=glow;ctx.fillRect(0,0,128,128);
- const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return texture;
-}
 export class CreatureViewer {
  regionBoxes=new Map<Region,T.Box3>();focused:Region|null=null;
  // #9: 'body' frames the whole creature (every region) plus a little headroom for raised arms and hops;
@@ -48,7 +37,7 @@ export class CreatureViewer {
   if(this.cinematicKind!==kind){this.cinematicKind=kind;this.play(SHOTS[kind].gesture);}
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
- scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewGlows:T.Sprite[]=[];previewGlowMap:T.Texture|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
+ scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
  constructor(public mount:HTMLElement,public assetBase:string,public interactive=true,skinResolver?:InstalledSkinResolver){this.skinResolver=skinResolver;
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
   this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;
@@ -59,14 +48,14 @@ export class CreatureViewer {
   const key=new T.DirectionalLight(0xffeedc,interactive?2.8:3);key.position.set(-3,5,5);this.scene.add(key);
   const rim=new T.DirectionalLight(0xb997ff,interactive?1.5:2);rim.position.set(3,4,-3);this.scene.add(rim);
   if(interactive){
+   const space=createCoachPreviewSpace(T,{pixelRatio:this.renderer.getPixelRatio()});
+   this.scene.add(space.group);this.scene.background=space.background;this.scene.fog=space.fog;
+   this.scene.add(this.camera);
+   this.previewSpaceDispose=()=>{if(this.scene.background===space.background)this.scene.background=null;if(this.scene.fog===space.fog)this.scene.fog=null;space.dispose();};
+   this.camera.far=400;this.camera.updateProjectionMatrix();
    // Fill the side hidden from the key and add a restrained cool edge. Neither casts shadows.
    const fill=new T.DirectionalLight(0xffc78f,1.05);fill.position.set(4,2,4);this.scene.add(fill);
    const edge=new T.DirectionalLight(0x9ac9ec,.75);edge.position.set(-4,3,-4);this.scene.add(edge);
-   this.previewGlowMap=previewGlowTexture();this.scene.add(this.camera);
-   for(const [color,opacity,x,y,size] of [[0xffa65f,.3,-5,2,17],[0x9d9be8,.2,5,-3,15]] as const){
-    const sprite=new T.Sprite(new T.SpriteMaterial({map:this.previewGlowMap,color,transparent:true,opacity,depthWrite:false,depthTest:true,toneMapped:false}));
-    sprite.position.set(x,y,-35);sprite.scale.set(size,size,1);this.camera.add(sprite);this.previewGlows.push(sprite);
-   }
   }
   const floor=new T.Mesh(new T.CylinderGeometry(1.45,1.55,.08,64),new T.MeshStandardMaterial({color:0x241e31,roughness:.5,metalness:.4}));floor.position.y=-.05;this.scene.add(floor);
   const ring=new T.Mesh(new T.TorusGeometry(1.4,.014,6,64),new T.MeshBasicMaterial({color:0xd3b86d}));ring.rotation.x=Math.PI/2;ring.position.y=.005;this.scene.add(ring);
@@ -121,5 +110,5 @@ export class CreatureViewer {
  // renders is a cumulative count of actual renderer.render() calls (D43.5's setMaxFps skips both the render
  // and this increment) — tests diff two readings over a real wall-clock window to get an actual renders/s.
  stats(){return {awake:!!this.frame,gesture:this.motion?.current,drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,programs:this.renderer.info.programs?.length??0,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
- dispose(){this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.previewGlows.forEach(sprite=>sprite.material.dispose());this.previewGlowMap?.dispose();disposeObject(this.scene);this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+ dispose(){if(this.disposed)return;this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.previewSpaceDispose?.();this.previewSpaceDispose=null;disposeObject(this.scene);if(this.scene.background instanceof T.Texture)this.scene.background.dispose();this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }

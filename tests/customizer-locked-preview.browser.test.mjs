@@ -19,7 +19,7 @@ const LOCKED_BODY='roster/16-spade-arch--stylized_humanoid_3d_model';
 const root=resolve('dist/client');
 const TYPES={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css'};
 
-test('locked body preview: picking an unlocked texture keeps previewing the locked body and never saves',async()=>{
+test('locked body preview: picking an unlocked texture keeps previewing the locked body and never saves',{timeout:180000},async()=>{
  const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://local').pathname;
   try{const body=await readFile(resolve(root,'.'+path));res.setHeader('Content-Type',TYPES[extname(path)]||'application/octet-stream');res.end(body);}catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
@@ -43,12 +43,14 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   assert.equal(JSON.parse(before).materials.body.textureId,'clay','fixture: the saved coach owns Clay');
 
   // Preview a locked body -- must not save by itself either.
-  await page.selectOption('#body',LOCKED_BODY);
+  await page.click('#tab-body');
+  await page.click(`#panel-body button[data-body="${LOCKED_BODY}"]`);
   await page.waitForFunction(id=>window.myr5Companion?.ready===true&&document.getElementById('body').value===id,LOCKED_BODY,{timeout:60000});
   assert.match(await page.locator('.preview-strip').textContent(),/Preview/,'body select shows the preview-only strip');
   assert.equal(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')),before,'previewing a locked body alone must not save');
 
   // Now pick a default-unlocked texture, as if just experimenting while the locked body previews.
+  await page.click('#tab-textures');
   await page.selectOption('#textureId','clay');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
 
@@ -58,9 +60,10 @@ test('locked body preview: picking an unlocked texture keeps previewing the lock
   assert.equal(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')),before,'nothing was saved while a locked body was in the look');
 
   // Leaving the preview (picking an owned body) returns to the last saved look, not the preview-time texture.
-  await page.selectOption('#body','myr5');
+  await page.click('#tab-body');
+  await page.click('#panel-body button[data-body="myr5"]');
   await page.waitForFunction(()=>window.myr5Companion?.ready===true&&window.myr5Companion?.recipe?.body==='myr5',null,{timeout:60000});
   const afterLeaving=JSON.parse(await page.evaluate(()=>localStorage.getItem('myr5-recipe-v1')));
   assert.equal(afterLeaving.materials?.body?.textureId,'clay','the preview-only texture tweak was discarded, not saved');
- } finally {await browser?.close();await new Promise(r=>server.close(r));}
+ } finally {await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 });
