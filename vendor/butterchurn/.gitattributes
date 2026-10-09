@@ -1,0 +1,3 @@
+# Preserve upstream bytes and the provenance hashes on Windows checkouts.
+*.js -text
+LICENSE.* -text
