@@ -66,6 +66,8 @@ export function mountHomeCharacter(){
  const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){listenForMotion();load();}};
  listenForMotion();
  const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240,bottom=height*.24-bodyHeight*(1-feetFraction);canvas.style.bottom=`${bottom}px`;physics.setRestCenter(width/2,height-bottom-bodyHeight/2);physics.resize(width,height,bodyWidth,bodyHeight);};
+ const layoutObserver=typeof ResizeObserver==='function'?new ResizeObserver(resize):null;
+ layoutObserver?.observe(host);layoutObserver?.observe(canvas);
  resize();window.addEventListener('resize',resize);
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:recipe',load);window.addEventListener('pageshow',shownAgain);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',reducedChanged);
@@ -73,5 +75,5 @@ export function mountHomeCharacter(){
  entry.addEventListener('click',()=>{location.href='/war-room/index.html';});
  load();
  import(COACH_SPRITES).then(m=>m.loadWarRoomCoaches(document)).then(value=>{if(!disposed){coaches=value;load();}}).catch(()=>{});
-  window.addEventListener('pagehide',event=>{if(event.persisted){unsubscribeMotion();return;}disposed=true;unsubscribeMotion();sync();observer.disconnect();intersection.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:recipe',load);window.removeEventListener('pageshow',shownAgain);window.removeEventListener('myr5:account-progress',load);window.removeEventListener('storage',storage);document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',reducedChanged);}); // a bfcache hide keeps it alive for pageshow
+  window.addEventListener('pagehide',event=>{if(event.persisted){unsubscribeMotion();return;}disposed=true;unsubscribeMotion();sync();observer.disconnect();intersection.disconnect();layoutObserver?.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:recipe',load);window.removeEventListener('pageshow',shownAgain);window.removeEventListener('myr5:account-progress',load);window.removeEventListener('storage',storage);document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',reducedChanged);}); // a bfcache hide keeps it alive for pageshow
 }

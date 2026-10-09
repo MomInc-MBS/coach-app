@@ -39,19 +39,23 @@ test('R26: the pod window draws the War Room coach sprites and redraws after a c
   const before=created.length;fire();assert.equal(created.length,before+1,'each coach change repaints the pod window');
  }
 });
-test('phone pose is wired to the pixel performer and keeps the original platform fixed',()=>{
- let frameCallback,physicsOptions,painted,platform;const state={x:14,y:-8,angle:1.2,phase:'fall',pose:'fall',active:true,shipProgress:0};
- const canvas={style:{},dataset:{},setAttribute(){}};
+test('phone pose is wired to the pixel performer and follows late pod layout sizing',()=>{
+ let frameCallback,physicsOptions,painted,platform,layoutCallback;const observed=[],resizes=[],restCenters=[],state={x:14,y:-8,angle:1.2,phase:'fall',pose:'fall',active:true,shipProgress:0};
+ const canvas={style:{},dataset:{},clientWidth:120,clientHeight:240,setAttribute(){}};
  const button={setAttribute(){},addEventListener(){}};
  const host={hidden:true,dataset:{},clientWidth:320,clientHeight:220,append:value=>{platform=value;},querySelector:s=>s==='canvas'?canvas:s==='button'?button:{textContent:''}};
  const listeners=new Map(),body={dataset:{screen:'pod',tracking:'false'}};
  const document={body,hidden:false,createElement:()=>({style:{},dataset:{},className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
  const window={addEventListener:(key,fn)=>listeners.set(key,fn),GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{},GalaPerformance:{create:()=>({paint:(c,t,r,m)=>{painted=m;}})}};
  const sourceWithMocks=source.replace('import(COACH_SPRITES)','Promise.resolve({loadWarRoomCoaches:async()=>{throw Error("offline");}})');
- vm.runInNewContext(sourceWithMocks+';mountHomeCharacter();',{window,document,createCharacterPhysics:options=>{physicsOptions=options;return {state,sample(){},step(){},resize(){},setRestCenter(){},reset(){}};},subscribePhoneMotion:callback=>{sensor.callback=callback;return()=>{};},matchMedia:()=>({matches:false,addEventListener(){}}),loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:callback=>{frameCallback=callback;return 1;},cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
+ vm.runInNewContext(sourceWithMocks+';mountHomeCharacter();',{window,document,createCharacterPhysics:options=>{physicsOptions=options;return {state,sample(){},step(){},resize(...args){resizes.push(args);},setRestCenter(...args){restCenters.push(args);},reset(){}};},subscribePhoneMotion:callback=>{sensor.callback=callback;return()=>{};},matchMedia:()=>({matches:false,addEventListener(){}}),loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:callback=>{frameCallback=callback;return 1;},cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}},ResizeObserver:class{constructor(callback){layoutCallback=callback;}observe(value){observed.push(value);}disconnect(){}}});
  assert.equal(physicsOptions.ship,false,'the customizer physics must not board the ship');
  assert.equal(physicsOptions.climb,false);assert.equal(physicsOptions.contain,true);
  assert.equal(platform.className,'home-character-platform');
+ assert.ok(observed.includes(host)&&observed.includes(canvas),'hidden-to-visible host and rendered canvas sizes are observed');
+ host.clientWidth=400;host.clientHeight=350;canvas.clientWidth=150;canvas.clientHeight=180;layoutCallback();
+ assert.deepEqual(resizes.at(-1),[400,350,150,180]);
+ assert.deepEqual(restCenters.at(-1),[200,350-parseFloat(canvas.style.bottom)-90]);
  sensor.callback({gx:1,gy:0,shake:0,angularSpeed:0,timeSeconds:1});
  frameCallback(40);
  assert.equal(painted.pose,'fall');assert.equal(host.dataset.phonePhase,'fall');
