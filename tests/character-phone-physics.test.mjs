@@ -119,13 +119,13 @@ test('slow sideways tilt slides for a moment, then falls and can climb after the
   assert.equal(physics.state.phase, 'wave');
 });
 
-test('fast rotation while upright still finishes its fall and enters gradual recovery', () => {
+test('quick movement inside the safe tilt range leaves the character planted', () => {
   const physics = make();
   physics.sample({ gx: 0, gy: 1, angularSpeed: 2.2 }, 0);
   physics.step(1.06);
-  assert.equal(physics.state.phase, 'fall');
+  assert.equal(physics.state.phase, 'idle');
   physics.step(0.3);
-  assert.equal(physics.state.phase, 'recover');
+  assert.equal(physics.state.phase, 'idle');
   const start = { x: physics.state.x, y: physics.state.y };
   physics.step(3.1);
   assert.equal(physics.state.phase, 'idle');
@@ -140,7 +140,8 @@ test('restoring upright after a fall slowly walks back from the fall position', 
   const before = { x: physics.state.x, y: physics.state.y };
   physics.sample({ gx: 0, gy: 1, angularSpeed: 0.1 }, 1.56);
   assert.equal(physics.state.phase, 'recover');
-  assert.deepEqual({ x: physics.state.x, y: physics.state.y }, before);
+  assert.equal(physics.state.x, before.x);
+  assert.equal(physics.state.y, 0, 'the return starts on the platform');
   physics.step(1.5);
   assert.equal(physics.state.phase, 'recover');
   assert.ok(Math.hypot(physics.state.x, physics.state.y) < Math.hypot(before.x, before.y));
@@ -157,7 +158,8 @@ test('restoring upright after the character exits lets it walk back from the exi
   const exit = { x: physics.state.x, y: physics.state.y };
   physics.sample({ gx: 0, gy: 1, angularSpeed: 0 }, 11.06);
   assert.equal(physics.state.phase, 'recover');
-  assert.deepEqual({ x: physics.state.x, y: physics.state.y }, exit);
+  assert.equal(physics.state.x, exit.x);
+  assert.equal(physics.state.y, 0);
   physics.step(3.1);
   assert.equal(physics.state.phase, 'idle');
 });
@@ -174,4 +176,24 @@ test('reset clears movement and ship progress', () => {
   assert.equal(physics.state.phase, 'ship');
   physics.reset();
   assert.deepEqual(physics.state, { x: 0, y: 0, angle: 0, phase: 'idle', pose: 'idle', active: false, shipProgress: 0 });
+});
+
+test('22.5 degrees either side is a neutral range, including quick rotation noise',()=>{
+ const p=make();
+ for(const degrees of [-22.5,-15,0,15,22.5]){const a=degrees*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:8,shake:20},degrees+30);p.step(.2);assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);}
+ const a=23*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:0});p.step(.9);assert.equal(p.state.phase,'fall');
+});
+
+test('pixel mode never climbs and its rotated body bounces inside the visible window',()=>{
+ const p=make({width:390,height:300,bodyWidth:80,bodyHeight:150,contain:true,buffer:0,climb:false});p.setRestCenter(195,190);
+ p.sample({gx:1,gy:0,angularSpeed:3,shake:40});
+ for(let n=0;n<1200;n++){p.step(1/60);assert.ok(['air-run','look-down','fall','bounce'].includes(p.state.phase));assert.ok(p.state.x>=-120-1e-6&&p.state.x<=120+1e-6);assert.ok(p.state.y>=-150-1e-6&&p.state.y<=70+1e-6);}
+ p.sample({gx:0,gy:1});assert.equal(p.state.phase,'recover');
+ for(let n=0;n<190;n++){p.step(1/60);assert.equal(p.state.y,0);assert.equal(p.state.angle,0);}assert.equal(p.state.phase,'idle');
+});
+
+test('a deliberate upright shake settles onto the platform and walks home',()=>{
+ const p=make({contain:true,buffer:0,climb:false});p.sample({gx:0,gy:1,shake:40});
+ for(let n=0;n<900;n++)p.step(1/60);
+ assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);
 });

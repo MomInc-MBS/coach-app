@@ -14,12 +14,17 @@ export function createCharacterPhysics({
   bodyHeight,
   buffer = 96,
   ship = false,
+  climb = true,
+  safeTiltDegrees = 22.5,
+  contain = false,
 } = {}) {
   const safeDimension = (value, fallback = 1) => Number.isFinite(value) ? Math.max(1, value) : fallback;
   const view = { width: safeDimension(width), height: safeDimension(height) };
   const body = { width: safeDimension(bodyWidth), height: safeDimension(bodyHeight) };
   const margin = Math.max(0, Number.isFinite(buffer) ? buffer : 96);
+  const restCenter = { x: null, y: null };
   let hasShip = Boolean(ship);
+  const safeTilt = Math.max(0, Math.min(60, safeTiltDegrees)) * Math.PI / 180;
   const state = { x: 0, y: 0, angle: 0, phase: 'idle', pose: 'idle', active: false, shipProgress: 0 };
 
   let vx = 0;
@@ -39,12 +44,20 @@ export function createCharacterPhysics({
   let edge = { x: 0, y: 1 };
   let lastTime = 0;
 
-  const centerBounds = () => ({
+  const exitBounds = () => ({
     left: -view.width / 2 - margin - body.width / 2,
     right: view.width / 2 + margin + body.width / 2,
     top: -view.height / 2 - margin - body.height / 2,
     bottom: view.height / 2 + margin + body.height / 2,
   });
+  const centerBounds = () => {
+    if (!contain) return exitBounds();
+    const c = Math.abs(Math.cos(state.angle)), s = Math.abs(Math.sin(state.angle));
+    const halfW = Math.min(view.width / 2, (body.width * c + body.height * s) / 2);
+    const halfH = Math.min(view.height / 2, (body.height * c + body.width * s) / 2);
+    const ox = restCenter.x ?? view.width / 2, oy = restCenter.y ?? view.height / 2;
+    return { left: -ox + halfW, right: view.width - ox - halfW, top: -oy + halfH, bottom: view.height - oy - halfH };
+  };
   const setPhase = (phase, pose = phase) => {
     state.phase = phase;
     state.pose = pose;
@@ -76,7 +89,9 @@ export function createCharacterPhysics({
   };
   const lerp = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
   const enterRecovery = () => {
-    recoveryStart = { x: state.x, y: state.y };
+    // Return along the original platform, never diagonally through the air.
+    state.y = 0; state.angle = 0;
+    recoveryStart = { x: state.x, y: 0 };
     vx = 0;
     vy = 0;
     recoverAfterFall = false;
@@ -99,6 +114,8 @@ export function createCharacterPhysics({
       gravityX = rawX / norm;
       gravityY = rawY / norm;
     }
+    const neutralTilt = Math.abs(Math.atan2(gravityX, gravityY)) <= safeTilt + 1e-9;
+    if (neutralTilt) { gravityX = 0; gravityY = 1; }
     const angular = Number.isFinite(input.angularSpeed) ? Math.abs(input.angularSpeed) : 0;
     const shake = Number.isFinite(input.shake) ? Math.max(0, input.shake) : 0;
     const now = Number.isFinite(timeSeconds) ? timeSeconds : lastTime;
@@ -109,7 +126,7 @@ export function createCharacterPhysics({
 
     // An impulse is edge-triggered, so one sustained sensor reading cannot pin
     // the character against a wall. A renewed pulse can add another impulse.
-    if (shake > 14 && shakeArmed) {
+    if (shake > 14 && shakeArmed && !(neutralTilt && angular > 2)) {
       shakeArmed = false;
       const direction = ((Math.floor(Math.max(0, now) * 10) % 2) ? 1 : -1);
       vx += direction * Math.min(1500, shake * 20);
@@ -118,7 +135,7 @@ export function createCharacterPhysics({
       else if (state.phase === 'idle' || state.phase === 'slide' || state.phase === 'recover') startFall('fall');
     }
 
-    if (angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
+    if (!neutralTilt && angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
       angularArmed = false;
       setFallEdge();
       fallHold = 0;
@@ -157,7 +174,7 @@ export function createCharacterPhysics({
         edge = { x: gravityX / gravityLength, y: gravityY / gravityLength };
         fallAge += h;
         fallHold = sideways() ? fallHold + h : 0;
-        if (fallHold >= 2 - 1 / 60) { beginClimb(); continue; }
+        if (climb && fallHold >= 2 - 1 / 60) { beginClimb(); continue; }
         if (recoverAfterFall && supported() && fallAge >= 0.25) { enterRecovery(); continue; }
         vx += fallGravity.x * 620 * h;
         vy += fallGravity.y * 620 * h;
@@ -166,7 +183,10 @@ export function createCharacterPhysics({
         if (supported() && state.y > 0) {
           state.y = 0;
           if (vy > 35) { vy = -vy * 0.28; setPhase('bounce', 'wiggle'); }
-          else vy = 0;
+          else {
+            vy = 0;
+            if (Math.abs(vx) < 30) { enterRecovery(); continue; }
+          }
         }
         state.angle = gravityAngle();
         const beforeX = state.x;
@@ -199,7 +219,7 @@ export function createCharacterPhysics({
       if (state.phase === 'climb-out') {
         state.angle = gravityAngle();
         const t = phaseAge / 3;
-        const b = centerBounds();
+        const b = exitBounds();
         const targetX = edge.x ? (edge.x > 0 ? b.left : b.right) : 0;
         const targetY = edge.y ? (edge.y > 0 ? b.top : b.bottom) : b.top;
         state.x = lerp(climbStart.x, targetX, t);
@@ -230,7 +250,7 @@ export function createCharacterPhysics({
       }
 
       if (state.phase === 'slide') {
-        tiltHold = sideways() ? tiltHold + h : 0;
+        tiltHold = !supported() ? tiltHold + h : 0;
         if (tiltHold >= 0.8) { startFall('fall'); continue; }
         vx += gravityX * 480 * h;
         vx *= Math.pow(0.91, h * 60);
@@ -252,8 +272,13 @@ export function createCharacterPhysics({
     view.height = safeDimension(nextHeight, view.height);
     body.width = safeDimension(nextBodyWidth, body.width);
     body.height = safeDimension(nextBodyHeight, body.height);
-    clampPosition(false);
+    if (!['recover', 'climb-out', 'ship', 'gone'].includes(state.phase)) clampPosition(false);
     return snapshot();
+  }
+
+  function setRestCenter(x, y) {
+    restCenter.x = Number.isFinite(x) ? x : null;
+    restCenter.y = Number.isFinite(y) ? y : null;
   }
 
   function reset() {
@@ -267,5 +292,5 @@ export function createCharacterPhysics({
 
   // Adapters enable boarding only after the selected, authorized model has loaded.
   const setShipAvailable = available => { hasShip = Boolean(available); };
-  return { sample, step, resize, reset, setShipAvailable, state };
+  return { sample, step, resize, reset, setShipAvailable, setRestCenter, state };
 }
