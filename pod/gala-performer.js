@@ -18,14 +18,19 @@
   const scenes=playlist(hasPet?{...look,parts:{...look.parts,pet:1}}:look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity;
   weapon.width=40;weapon.height=72;if(hasWeapon)W.draw(weapon.getContext('2d'),look.weapon);
   draw(pet,look,{base:false,weapon:false,petOnly:true});let lastPose='';
-  function paint(canvas,time=0,still=false){
+  function paint(canvas,time=0,still=false,motion={}){
    if(canvas.width!==160||canvas.height!==168){canvas.width=160;canvas.height=168;}
    const specialPlaying=hasWeapon&&window.GalaWeaponMotion&&window.performance.now()-specialAt<(window.GalaWeaponMotion.abilityFor(look.weapon)?.animationMs||0);
    const ctx=canvas.getContext('2d'),scene=specialPlaying?{name:'weapon',time:0,progress:0,duration:2000}:still?{name:'idle',time:0,progress:0,duration:6000}:moment(scenes,time);
    ctx.clearRect(0,0,160,168);ctx.imageSmoothingEnabled=false;canvas.dataset.scene=scene.name;
    const seconds=scene.time/1000,wave=Math.sin(seconds*TAU*1.15),blink=!still&&(scene.name==='face'?(seconds>1.5&&seconds<1.68)||(seconds>3.2&&seconds<3.37):(time%4900>4570&&time%4900<4710));
-   const pose={};if(scene.name==='walk')pose.walk=wave;if(scene.name==='pet')pose.petting=wave;if(scene.name==='weapon')pose.weapon=true;
-   const poseKey=JSON.stringify([blink,scene.name,scene.name==='walk'||scene.name==='pet'?Math.round(wave*10):0]);
+   const motionPose=motion.pose||'idle',movement=still?'idle':({ 'air-run':'wiggle',bounce:'wiggle',wave:'greet',fall:'look-down','climb-out':'climb',recover:'walk' }[motionPose]||motionPose),active=movement!=='idle'&&movement!=='gone';
+   const pose={};if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb')pose.walk=active?Math.sin(time/85)*.8:wave;
+   if(scene.name==='pet')pose.petting=wave;
+   if(movement==='climb')pose.petting=Math.sin(time/120)*.95;
+   if(movement==='greet')pose.meditationStanding=true;
+   if(scene.name==='weapon')pose.weapon=true;
+   const poseKey=JSON.stringify([blink,scene.name,movement,Math.round((pose.walk||pose.petting||0)*10)]);
    if(poseKey!==lastPose){draw(body,look,{base:false,weapon:false,companion:false,prop:scene.name!=='weapon',blink,pose});lastPose=poseKey;}
    let offset=0,flip=false,zoom=0;
    if(scene.name==='walk'){
@@ -37,10 +42,11 @@
    const bob=still?0:Math.sin(time/850)*.8;
    if(zoom<1){ctx.globalAlpha=(1-zoom)*.5;ctx.fillStyle='#b69adb';ctx.beginPath();ctx.ellipse(80+offset,153,35,3,0,0,TAU);ctx.fill();ctx.globalAlpha=1;}
    ctx.save();ctx.translate(offset,0);if(flip){ctx.translate(160,0);ctx.scale(-1,1);}
-   if(scene.name==='walk'){
+   if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb'||movement==='look-down'){
+    const gait=movement==='climb'?Math.sin(time/110)*7:movement==='wiggle'?Math.sin(time/72)*4:movement==='look-down'?Math.sin(time/90)*2:wave*2;
     ctx.drawImage(body,0,0,64,70,32,13+bob,96,105);
-    ctx.drawImage(body,0,70,32,26,32,118+wave*2,48,39);
-    ctx.drawImage(body,32,70,32,26,80,118-wave*2,48,39);
+    ctx.drawImage(body,0,70,32,26,32,118+gait,48,39);
+    ctx.drawImage(body,32,70,32,26,80,118-gait,48,39);
    }else ctx.drawImage(body,17*zoom,10*zoom,64-34*zoom,96-66*zoom,32-24*zoom,13-3*zoom+bob,96+48*zoom,144);
    if((look.parts.pet||hasPet)&&zoom<1){
     ctx.globalAlpha=1-zoom;const affection=scene.name==='pet'?Math.max(0,wave)*1.3:0;ctx.drawImage(pet,32,13-affection,96,144);ctx.globalAlpha=1;
