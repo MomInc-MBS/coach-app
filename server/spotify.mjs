@@ -1,4 +1,4 @@
-import {SPOTIFY_SCOPES,spotifyNowPlaying,spotifyPlaylist} from '../spotify-domain.mjs';
+import {SPOTIFY_SCOPES,spotifyNowPlaying,spotifyPlaylist,spotifyTrack,spotifyDevice} from '../spotify-domain.mjs';
 import {inspectAccountDataEpoch} from './account-data-epochs.mjs';
 import {epochFencedBatch} from './remote-epochs.mjs';
 
@@ -98,6 +98,15 @@ async function readBody(request){
   const text=await request.text();if(text.length>2048)throw error('Request too large.',413);
   try{return JSON.parse(text);}catch{throw error('Invalid request.');}
 }
+function pageOffset(u,allowed){
+  for(const key of u.searchParams.keys())if(!allowed.includes(key))throw error('Invalid query.');
+  const raw=u.searchParams.get('offset');if(raw===null)return 0;
+  if(!/^(0|[1-9][0-9]{0,5})$/.test(raw))throw error('Choose a valid offset.');
+  const offset=Number(raw);if(!Number.isSafeInteger(offset)||offset>100000)throw error('Choose a valid offset.');
+  return offset;
+}
+const onlyKeys=(input,keys)=>input&&typeof input==='object'&&!Array.isArray(input)&&Object.keys(input).every(key=>keys.includes(key))&&keys.every(key=>Object.hasOwn(input,key));
+const spotifyId=value=>typeof value==='string'&&/^[A-Za-z0-9]{10,32}$/.test(value);
 export async function spotifyApi(request,env,database,user){
   try{
     config(env);await secret(env);
@@ -131,6 +140,28 @@ export async function spotifyApi(request,env,database,user){
       return json({connected:false});
     }
     if(p==='/api/spotify/now-playing'&&m==='GET')return json({nowPlaying:spotifyNowPlaying(await spotifyFetch(env,database,user,'/me/player'))});
+    if(p==='/api/spotify/search'&&m==='GET'){
+      for(const key of u.searchParams.keys())if(!['q','offset'].includes(key))throw error('Invalid query.');
+      const q=u.searchParams.get('q');if(typeof q!=='string'||!q.trim()||q.length>200)throw error('Enter a valid search.');
+      const offset=pageOffset(u,['q','offset']),data=await spotifyFetch(env,database,user,`/search?${new URLSearchParams({q:q.trim(),type:'track',limit:'10',offset:String(offset)})}`);
+      return json({items:(data?.tracks?.items||[]).map(spotifyTrack).filter(Boolean),total:Number(data?.tracks?.total)||0,offset});
+    }
+    if(p==='/api/spotify/queue'&&m==='GET'){
+      if(u.search)return json({error:'Invalid query.'},400);
+      const data=await spotifyFetch(env,database,user,'/me/player/queue');
+      return json({items:(data?.queue||[]).map(spotifyTrack).filter(Boolean)});
+    }
+    if(p==='/api/spotify/devices'&&m==='GET'){
+      if(u.search)return json({error:'Invalid query.'},400);
+      const data=await spotifyFetch(env,database,user,'/me/player/devices');
+      return json({items:(data?.devices||[]).map(spotifyDevice)});
+    }
+    if(p==='/api/spotify/playlist-tracks'&&m==='GET'){
+      for(const key of u.searchParams.keys())if(!['playlistId','offset'].includes(key))throw error('Invalid query.');
+      const playlistId=u.searchParams.get('playlistId');if(!spotifyId(playlistId))throw error('Choose a valid playlist.',422);
+      const offset=pageOffset(u,['playlistId','offset']),data=await spotifyFetch(env,database,user,`/playlists/${encodeURIComponent(playlistId)}/items?limit=50&offset=${offset}`);
+      return json({items:(data?.items||[]).map(entry=>spotifyTrack(entry?.item??entry?.track)).filter(Boolean),total:Number(data?.total)||0,offset});
+    }
     if(p==='/api/spotify/playlists'&&m==='GET'){
       const offset=Math.max(0,Math.min(1000,Number.parseInt(u.searchParams.get('offset')||'0',10)||0));
       const data=await spotifyFetch(env,database,user,`/me/playlists?limit=20&offset=${offset}`);
@@ -138,16 +169,43 @@ export async function spotifyApi(request,env,database,user){
     }
     if(p==='/api/spotify/playback'&&m==='POST'){
       const input=await readBody(request),action=input?.action;
-      if(!['pause','resume','next','previous','playlist'].includes(action))throw error('Unknown playback control.',422);
+      if(!['pause','resume','next','previous','playlist','seek','volume','shuffle','repeat','track','queue','transfer'].includes(action))throw error('Unknown playback control.',422);
       let path='/me/player/',method='POST',body;
       if(action==='pause'){path+='pause';method='PUT';}
       if(action==='resume'){path+='play';method='PUT';}
       if(action==='next')path+='next';
       if(action==='previous')path+='previous';
       if(action==='playlist'){
-        if(!/^[A-Za-z0-9]{10,32}$/.test(input.playlistId||''))throw error('Choose a valid playlist.',422);
+        if(!onlyKeys(input,['action','playlistId'])||!spotifyId(input.playlistId))throw error('Choose a valid playlist.',422);
         path+='play';method='PUT';body={context_uri:`spotify:playlist:${input.playlistId}`};
       }
+      if(action==='seek'){
+        if(!onlyKeys(input,['action','positionMs'])||!Number.isSafeInteger(input.positionMs)||input.positionMs<0||input.positionMs>86400000)throw error('Choose a valid playback position.',422);
+        path+=`seek?position_ms=${input.positionMs}`;method='PUT';
+      }
+      if(action==='volume'){
+        if(!onlyKeys(input,['action','volumePercent'])||!Number.isInteger(input.volumePercent)||input.volumePercent<0||input.volumePercent>100)throw error('Choose a valid volume.',422);
+        path+=`volume?volume_percent=${input.volumePercent}`;method='PUT';
+      }
+      if(action==='shuffle'){
+        if(!onlyKeys(input,['action','enabled'])||typeof input.enabled!=='boolean')throw error('Choose a valid shuffle setting.',422);
+        path+=`shuffle?state=${input.enabled}`;method='PUT';
+      }
+      if(action==='repeat'){
+        if(!onlyKeys(input,['action','mode'])||!['off','context','track'].includes(input.mode))throw error('Choose a valid repeat mode.',422);
+        path+=`repeat?state=${input.mode}`;method='PUT';
+      }
+      if(action==='track'||action==='queue'){
+        if(!onlyKeys(input,['action','trackId'])||!spotifyId(input.trackId))throw error('Choose a valid track.',422);
+        const uri=`spotify:track:${input.trackId}`;
+        if(action==='track'){path+='play';method='PUT';body={uris:[uri]};}
+        else{path+=`queue?uri=${encodeURIComponent(uri)}`;method='POST';}
+      }
+      if(action==='transfer'){
+        if(!onlyKeys(input,['action','deviceId'])||typeof input.deviceId!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(input.deviceId))throw error('Choose a valid device.',422);
+        path='/me/player';method='PUT';body={device_ids:[input.deviceId],play:true};
+      }
+      if(['pause','resume','next','previous'].includes(action)&&!onlyKeys(input,['action']))throw error('Invalid playback control.',422);
       await spotifyFetch(env,database,user,path,{method,body});return json({ok:true});
     }
     return json({error:'Not found.'},404);

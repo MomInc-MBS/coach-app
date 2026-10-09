@@ -19,10 +19,18 @@ export function spotifyPlaylist(item) {
   return {id:item?.id||'',name:item?.name||'Untitled playlist',tracks:Number(item?.items?.total??item?.tracks?.total??0),image:item?.images?.[0]?.url||null,url:item?.external_urls?.spotify||null};
 }
 
+export function spotifyTrack(item) {
+  if(!item||typeof item!=='object')return null;
+  return {id:typeof item.id==='string'?item.id:null,name:item.name||'Unknown track',artists:(item.artists||[]).map(a=>a?.name).filter(Boolean),album:item.album?.name||null,image:item.album?.images?.[0]?.url||null,url:item.external_urls?.spotify||null,durationMs:Number(item.duration_ms)||0,uri:item.uri||(item.id?`spotify:track:${item.id}`:null)};
+}
+
+export function spotifyDevice(item) {
+  return {id:item?.id||null,name:item?.name||'Unknown device',active:!!item?.is_active,restricted:!!item?.is_restricted,volumePercent:Number.isInteger(item?.volume_percent)?item.volume_percent:null,supportsVolume:!!item?.supports_volume};
+}
+
 export function spotifyNowPlaying(data) {
-  if (!data?.item) return {playing:false,track:null,progressMs:0,durationMs:0,device:null,bpm:null};
-  const item=data.item;
-  return {playing:!!data.is_playing,track:{id:item.id||null,name:item.name||'Unknown track',artists:(item.artists||[]).map(a=>a.name).filter(Boolean),album:item.album?.name||null,image:item.album?.images?.[0]?.url||null,url:item.external_urls?.spotify||null},progressMs:Number(data.progress_ms)||0,durationMs:Number(item.duration_ms)||0,device:data.device?.name||null,bpm:null};
+  const item=data?.item,base={playing:!!data?.is_playing,progressMs:Number(data?.progress_ms)||0,durationMs:Number(item?.duration_ms)||0,device:data?.device?.name||null,deviceId:data?.device?.id||null,volumePercent:Number.isInteger(data?.device?.volume_percent)?data.device.volume_percent:null,shuffle:!!data?.shuffle_state,repeat:['off','context','track'].includes(data?.repeat_state)?data.repeat_state:'off'};
+  return {...base,track:item?spotifyTrack(item):null,bpm:null};
 }
 
 // Tempo is only active when a provider actually supplies a measured value.
