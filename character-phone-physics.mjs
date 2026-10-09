@@ -67,7 +67,7 @@ export function createCharacterPhysics({
   const gravityAngle = () => Math.atan2(gravityX, gravityY);
   const snapshot = () => ({ ...state });
   const supported = () => Math.abs(gravityX) < 0.2 && gravityY > 0.8;
-  const sideways = () => Math.abs(gravityX) > 0.8 || gravityY < 0;
+  const sideways = () => Math.abs(Math.atan2(gravityX, gravityY)) >= 89 * Math.PI / 180;
   const setFallEdge = () => {
     const length = Math.hypot(gravityX, gravityY) || 1;
     edge = { x: gravityX / length, y: gravityY / length };
@@ -126,7 +126,7 @@ export function createCharacterPhysics({
 
     // An impulse is edge-triggered, so one sustained sensor reading cannot pin
     // the character against a wall. A renewed pulse can add another impulse.
-    if (shake > 14 && shakeArmed && !(neutralTilt && angular > 2)) {
+    if (shake > 14 && shakeArmed && !(angular > 2 && !sideways())) {
       shakeArmed = false;
       const direction = ((Math.floor(Math.max(0, now) * 10) % 2) ? 1 : -1);
       vx += direction * Math.min(1500, shake * 20);
@@ -135,7 +135,7 @@ export function createCharacterPhysics({
       else if (state.phase === 'idle' || state.phase === 'slide' || state.phase === 'recover') startFall('fall');
     }
 
-    if (!neutralTilt && angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
+    if (sideways() && angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
       angularArmed = false;
       setFallEdge();
       fallHold = 0;
@@ -146,10 +146,10 @@ export function createCharacterPhysics({
 
     // A slow orientation change moves the supported coach across the glass.
     if (state.phase === 'idle' && (!supported() || Math.abs(vx) > 18)) { tiltHold = 0; setPhase('slide', 'slide'); }
-    if (['idle', 'slide'].includes(state.phase)) state.angle = gravityAngle();
+    if (['idle', 'slide'].includes(state.phase)) state.angle = Math.max(-.35, Math.min(.35, gravityAngle()));
     if (['fall', 'bounce'].includes(state.phase)) setFallEdge();
-    if (!wasSupported && supported() && ['fall', 'bounce', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) enterRecovery();
-    if (!['idle', 'recover'].includes(state.phase)) state.angle = gravityAngle();
+    if (!wasSupported && supported() && ['slide', 'fall', 'bounce', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) enterRecovery();
+    if (!['idle', 'slide', 'recover'].includes(state.phase)) state.angle = gravityAngle();
 
     return snapshot();
   }
@@ -250,11 +250,13 @@ export function createCharacterPhysics({
       }
 
       if (state.phase === 'slide') {
-        tiltHold = !supported() ? tiltHold + h : 0;
+        tiltHold = sideways() ? tiltHold + h : 0;
         if (tiltHold >= 0.8) { startFall('fall'); continue; }
         vx += gravityX * 480 * h;
         vx *= Math.pow(0.91, h * 60);
         state.x += vx * h;
+        const slideLimit = view.width * .15;
+        state.x = Math.max(-slideLimit, Math.min(slideLimit, state.x));
         state.y = lerp(state.y, 0, Math.min(1, h * 2));
         clampPosition(true);
         if (supported() && Math.abs(vx) < 8 && Math.abs(state.x) < 4) {

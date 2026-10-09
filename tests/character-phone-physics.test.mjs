@@ -181,7 +181,7 @@ test('reset clears movement and ship progress', () => {
 test('22.5 degrees either side is a neutral range, including quick rotation noise',()=>{
  const p=make();
  for(const degrees of [-22.5,-15,0,15,22.5]){const a=degrees*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:8,shake:20},degrees+30);p.step(.2);assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);}
- const a=23*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:0});p.step(.9);assert.equal(p.state.phase,'fall');
+ const a=23*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:0});p.step(4);assert.equal(p.state.phase,'slide');assert.ok(Math.abs(p.state.x)<=390*.15);p.sample({gx:1,gy:0,angularSpeed:0});p.step(.9);assert.equal(p.state.phase,'fall');
 });
 
 test('pixel mode never climbs and its rotated body bounces inside the visible window',()=>{
@@ -197,3 +197,4 @@ test('a deliberate upright shake settles onto the platform and walks home',()=>{
  for(let n=0;n<900;n++)p.step(1/60);
  assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);
 });
+

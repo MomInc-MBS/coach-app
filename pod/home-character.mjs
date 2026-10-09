@@ -33,7 +33,8 @@ export function mountHomeCharacter(){
    physics.sample(motion,now/1000);physics.step(dt);
    const state=physics.state;
    // CSS uses clockwise positive angles; the domain heading points the feet toward gravity.
-   canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y}px) rotate(${-state.angle}rad)`;
+   const groundedLean=state.phase==='slide'?(canvas.clientHeight||0)*.42*(1-Math.cos(state.angle)):0;
+   canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y+groundedLean}px) rotate(${-state.angle}rad)`;
    canvas.dataset.pose=state.pose;canvas.dataset.phase=state.phase;host.dataset.phase=state.phase;host.dataset.phonePhase=state.phase;host.dataset.phoneX=Math.round(state.x);host.dataset.phoneY=Math.round(state.y);
    performer.paint(canvas,now-origin,false,{pose:state.pose,phase:state.phase,active:state.active});
   }

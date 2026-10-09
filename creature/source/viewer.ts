@@ -141,7 +141,7 @@ export class CreatureViewer {
   this.phoneElapsed+=holdTransientFrame?0:phaseDt;
   const state=this.phonePhysics.state;
   this.renderer.domElement.dataset.phonePhase=state.phase;this.mount.dataset.phoneMotionPhase=state.phase;
-  const contactTarget=['climb','wave','climb-out','recover'].includes(state.phase)?1:0;this.phoneFloorContact+=(contactTarget-this.phoneFloorContact)*Math.min(1,Math.min(.05,dt)*5);
+  const contactTarget=['slide','climb','wave','climb-out','recover'].includes(state.phase)?1:0;if(state.phase==='recover')this.phoneFloorContact=1;else this.phoneFloorContact+=(contactTarget-this.phoneFloorContact)*Math.min(1,Math.min(.05,dt)*5);
   if(['climb','wave','climb-out','ship','gone'].includes(state.phase))void this.loadPhoneShip();
   const pose=String(state.pose);
   if(pose!==this.phonePose){
@@ -152,7 +152,7 @@ export class CreatureViewer {
   let actorX=state.x,actorY=state.y;
   if(state.phase==='ship'&&state.shipProgress<.36){const t=state.shipProgress/.36;actorX*=1-t;actorY*=1-t;}
   const offset=right.clone().multiplyScalar(actorX*unitsPerPixel).addScaledVector(up,-actorY*unitsPerPixel),rotation=new T.Quaternion().setFromAxisAngle(viewDirection.negate(),state.angle);
-  const wallTarget=['climb','wave','climb-out'].includes(state.phase)?1:0,wallEase=1-Math.exp(-Math.min(.05,dt)*5);this.phoneWallBlend+=(wallTarget-this.phoneWallBlend)*wallEase;
+  const wallTarget=['climb','wave','climb-out'].includes(state.phase)?1:0,wallEase=1-Math.exp(-Math.min(.05,dt)*5);if(state.phase==='recover')this.phoneWallBlend=0;else this.phoneWallBlend+=(wallTarget-this.phoneWallBlend)*wallEase;
   const waveTarget=state.phase==='wave'?1:0;this.phoneWaveLookBlend+=(waveTarget-this.phoneWaveLookBlend)*wallEase;
   if(this.phoneWallBlend>.001){const platform=this.floorObjects[0]?.getWorldPosition(new T.Vector3())??new T.Vector3(0,-.05,0),towardWall=platform.sub(pivot).normalize(),wallFacing=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),towardWall),wallRoll=wallFacing.clone().multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),state.angle));rotation.slerp(wallRoll,this.phoneWallBlend);}
   const pivotShift=pivot.clone().sub(pivot.clone().applyQuaternion(rotation));this.rig.root.position.copy(offset).add(pivotShift);this.rig.root.quaternion.copy(rotation);this.rig.root.updateMatrixWorld(true);
