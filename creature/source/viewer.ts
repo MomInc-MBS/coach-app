@@ -44,7 +44,7 @@ export class CreatureViewer {
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
  scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
- phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';
+ phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';phoneTransientHoldFrames=0;
  phoneFloorContact=0;
  phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
  phoneFraming:'none'|'wide'|'restore'='none';phoneCameraSnapshot:{position:T.Vector3;target:T.Vector3;direction:T.Vector3;minDistance:number;maxDistance:number}|null=null;phoneFrameGoal:{position:T.Vector3;target:T.Vector3}|null=null;phoneCameraChange=()=>this.phoneScreenSize();
@@ -103,7 +103,7 @@ export class CreatureViewer {
    if(this.camera.position.distanceToSquared(snapshot.position)<1e-4&&this.orbit.target.distanceToSquared(snapshot.target)<1e-4)this.restorePhoneCamera();
   }
  }
- private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneFloorContact=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
+ private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneTransientHoldFrames=0;this.phoneFloorContact=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
  private selectPhoneShip(recipe:Design){
   const account=(globalThis as any).myr5AuthenticatedAccount,owner=typeof account==='string'?account:account?.user?.id;
   let saved:{ship?:string;tint?:string}|null=null;
@@ -134,15 +134,18 @@ export class CreatureViewer {
    if(this.phonePose!=='idle'||this.phonePhysics.state.phase!=='idle'){this.resetPhonePhysics();}
    this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();return;
   }
-  const phaseDt=['air-run','look-down'].includes(this.phonePhysics.state.phase)?Math.min(.05,dt):dt;
-  this.phoneElapsed+=phaseDt;this.phonePhysics.step(phaseDt);
+  const transient=['air-run','look-down'].includes(this.phonePhysics.state.phase);
+  const phaseDt=transient?Math.min(.05,dt):dt;
+  const holdTransientFrame=transient&&this.phoneTransientHoldFrames>0;
+  if(holdTransientFrame)this.phoneTransientHoldFrames--;else this.phonePhysics.step(phaseDt);
+  this.phoneElapsed+=holdTransientFrame?0:phaseDt;
   const state=this.phonePhysics.state;
   this.renderer.domElement.dataset.phonePhase=state.phase;this.mount.dataset.phoneMotionPhase=state.phase;
   const contactTarget=['climb','wave','climb-out'].includes(state.phase)?1:0;this.phoneFloorContact+=(contactTarget-this.phoneFloorContact)*Math.min(1,dt*5);
   if(['climb','wave','climb-out','ship','gone'].includes(state.phase))void this.loadPhoneShip();
   const pose=String(state.pose);
   if(pose!==this.phonePose){
-   this.phonePose=pose;const gesture:Gesture=['wiggle','air-run','bounce'].includes(pose)?'wiggle':['walk','slide','recover','climb','ship'].includes(pose)?'walk':['greet','wave'].includes(pose)?'greet':'idle';this.motion.play(gesture);if(state.phase==='slide')this.motion.action.setEffectiveTimeScale(.55);
+   this.phonePose=pose;const gesture:Gesture=['wiggle','air-run','bounce'].includes(pose)?'wiggle':['walk','slide','recover','climb','ship'].includes(pose)?'walk':['greet','wave'].includes(pose)?'greet':'idle';this.motion.play(gesture);this.motion.update(.05);if(state.phase==='slide')this.motion.action.setEffectiveTimeScale(.55);
   }
   const viewDirection=this.camera.getWorldDirection(new T.Vector3()),right=new T.Vector3(1,0,0).applyQuaternion(this.camera.quaternion),up=new T.Vector3(0,1,0).applyQuaternion(this.camera.quaternion);
   const pivot=this.bodyBounds.getCenter(new T.Vector3()),cameraPosition=this.camera.getWorldPosition(new T.Vector3()),depth=pivot.clone().sub(cameraPosition).dot(viewDirection),unitsPerPixel=2*depth*Math.tan(T.MathUtils.degToRad(this.camera.fov/2))/Math.max(1,this.mount.clientHeight);
@@ -174,7 +177,7 @@ export class CreatureViewer {
    this.rig.nodes.FootRight?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.28,0,.18)));
   }
  }
- private startPhoneMotion(){if(!this.interactive||this.phoneMotionDispose)return;this.phoneMotionDispose=subscribePhoneMotion(sample=>{if(this.phonePhysicsAllowed())this.phonePhysics.sample(sample,sample.timeSeconds);});}
+ private startPhoneMotion(){if(!this.interactive||this.phoneMotionDispose)return;this.phoneMotionDispose=subscribePhoneMotion(sample=>{if(!this.phonePhysicsAllowed())return;const before=this.phonePhysics.state.phase;this.phonePhysics.sample(sample,sample.timeSeconds);const after=this.phonePhysics.state.phase;if(['air-run','look-down'].includes(after)&&!['air-run','look-down'].includes(before))this.phoneTransientHoldFrames=1;});}
  private disposePhoneShip(){++this.phoneShipEpoch;this.phoneShipLoadId=null;this.phoneShipUnavailableId=null;this.phonePhysics.setShipAvailable(false);if(this.phoneShipRoot){this.scene.remove(this.phoneShipRoot);this.disposeShipTree(this.phoneShipRoot);}this.phoneShipRoot=null;this.phoneShipModel=null;this.phoneShipBridge?.dispose?.();this.phoneShipBridge=null;this.renderer.domElement.dataset.phoneShipReady='false';}
  private disposeShipTree(root:T.Object3D){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>(),textures=new Set<T.Texture>();root.traverse(node=>{const mesh=node as T.Mesh;if(mesh.geometry)geometries.add(mesh.geometry);for(const material of(Array.isArray(mesh.material)?mesh.material:[mesh.material]))if(material){materials.add(material);for(const value of Object.values(material))if((value as T.Texture)?.isTexture)textures.add(value as T.Texture);}});textures.forEach(texture=>texture.dispose());materials.forEach(material=>material.dispose());geometries.forEach(geometry=>geometry.dispose());}
  private async loadPhoneShip(){
