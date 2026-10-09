@@ -26,7 +26,7 @@
    ctx.clearRect(0,0,160,168);ctx.imageSmoothingEnabled=false;canvas.dataset.scene=scene.name;
    const motionPose=motion.pose||'idle',movement=still?'idle':({ 'air-run':'wiggle',bounce:'wiggle',wave:'greet',fall:'look-down','climb-out':'climb',recover:'walk' }[motionPose]||motionPose),active=movement!=='idle'&&movement!=='gone';
    const seconds=scene.time/1000,wave=Math.sin(seconds*TAU*1.15),blink=!still&&(movement==='look-down'||(scene.name==='face'?(seconds>1.5&&seconds<1.68)||(seconds>3.2&&seconds<3.37):(time%4900>4570&&time%4900<4710)));
-   const pose={};if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb')pose.walk=active?Math.sin(time/85)*.8:wave;
+   const pose={};if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb')pose.walk=movement==='walk'?Math.sin(time/430)*.45:active?Math.sin(time/85)*.8:wave;
    if(scene.name==='pet')pose.petting=wave;
    if(movement==='climb')pose.petting=Math.sin(time/120)*.95;
    if(movement==='greet')pose.greet=Math.sin(time/95);
@@ -44,7 +44,7 @@
    if(zoom<1){ctx.globalAlpha=(1-zoom)*.5;ctx.fillStyle='#b69adb';ctx.beginPath();ctx.ellipse(80+offset,153,35,3,0,0,TAU);ctx.fill();ctx.globalAlpha=1;}
    ctx.save();ctx.translate(offset,0);if(flip){ctx.translate(160,0);ctx.scale(-1,1);}
    if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb'||movement==='look-down'){
-    const gait=movement==='climb'?Math.sin(time/110)*7:movement==='wiggle'?Math.sin(time/72)*4:movement==='look-down'?Math.sin(time/90)*2:wave*2;
+    const gait=movement==='climb'?Math.sin(time/110)*7:movement==='wiggle'?Math.sin(time/72)*4:movement==='look-down'?Math.sin(time/90)*2:movement==='walk'?Math.sin(time/430)*3:wave*2;
     ctx.drawImage(body,0,0,64,70,32,13+bob,96,105);
     ctx.drawImage(body,0,70,32,26,32,118+gait,48,39);
     ctx.drawImage(body,32,70,32,26,80,118-gait,48,39);
