@@ -1,0 +1,7 @@
+BitChord playback gain helpers
+Source: https://github.com/kushagrasinghx/BitChord
+Revision: 2c599a6cd7a195227a11dab5769f88da8fd08194
+Origin: app/src/main/java/com/music/bitchord/playback/CrossfadeController.kt
+MYR5 adaptation: actual-dj-engine.mjs riseGain / fallGain (JavaScript port).
+Copyright and license: upstream contributors, GPL-3.0. See LICENSE.
+The remaining native Android playback and analysis stack is not bundled here.

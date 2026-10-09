@@ -31,7 +31,7 @@ const MIX_KINDS=['ice','crackle','water'];
 const BED_BOARD_GAIN=.5;
 
 export function createPageMusic({sound=physicalSound,documentRef=globalThis.document,windowRef=globalThis.window,fetchRef=(...a)=>globalThis.fetch(...a),pathname=globalThis.location?.pathname||''}={}){
- let scene=null,hold=false,holdTimer=0,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
+ let scene=null,hold=false,djActive=false,holdTimer=0,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
  const buffers=new Map(),log=[];
  const warn=e=>{if(!warned){warned=true;console.warn('page music:',e?.message||e);}};
  const note=(what,param,v0,v1,t0,t1)=>{log.push({what,v0,v1,t0,t1});if(log.length>60)log.shift();};
@@ -147,7 +147,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
  const quiet=()=>{const d=documentRef?.body?.dataset||{};return d.tracking==='true'||d.cameraWorkout==='true';};
  function sync(){
   const id=windowRef?.myr5Routes?.current?.()||'',portalUp=documentRef?.getElementById?.('portalHome')?.hidden===false;
-  const t=trackForRoute(id,{portalUp,quiet:quiet(),pathname,scene,hold});
+  const t=djActive?null:trackForRoute(id,{portalUp,quiet:quiet(),pathname,scene,hold});
   if(t!==undefined)setTrack(t);
  }
  const unlock=()=>{if(armed)return;armed=true;documentRef.removeEventListener('pointerdown',unlock,true);documentRef.removeEventListener('keydown',unlock,true);ensure();sync();if(want!==undefined)setTrack(want);};
@@ -159,6 +159,7 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
   windowRef.addEventListener('myr5:response',e=>{if(!duck)return;const p=duckPlan(e.detail?.state==='speaking');ramp(duck.gain,'duck',p.to,ctx.currentTime,p.seconds);});
   windowRef.addEventListener('myr5:route',sync);
   windowRef.addEventListener('myr5:music-scene',e=>{scene=e.detail?.scene||null;sync();});
+  windowRef.addEventListener('myr5:dj-active',e=>{djActive=!!e.detail?.active;sync();});
   // portal.mjs holds the music for the whole trace + tunnel and releases it once the destination is shown (15 s safety).
   windowRef.addEventListener('myr5:music-hold',e=>{hold=!!e.detail?.hold;clearTimeout(holdTimer);if(hold)holdTimer=setTimeout(()=>{hold=false;sync();},15000);sync();});
   windowRef.addEventListener('myr5:music-cut',()=>cutNow());

@@ -15,5 +15,6 @@ test('the complete AGPL source offer is shipped outside offline caches and linke
 test('the source offer covers the authored build and server source and never secrets, plan, tests or build outputs',async()=>{
  const paths=Object.keys(await sourceOffer());
  for(const path of ['LICENSE','package.json','wrangler.jsonc','app.mjs','pose.html','server/worker.mjs','creature/source/phone.ts','handborne/source/app/companion.ts','modules/materials/material-config.mjs','drizzle/0000_new_cammi.sql','release-trust/public-build.json'])assert.ok(paths.includes(path),path);
+ for(const path of ['vendor/bitchord/LICENSE','vendor/bitchord/NOTICE','vendor/butterchurn/LICENSE.engine','vendor/butterchurn/LICENSE.presets','vendor/butterchurn/butterchurn-2.6.7.min.js','vendor/butterchurn/presets-2.4.7.min.js'])assert.ok(paths.includes(path),path);
  for(const path of paths)assert.doesNotMatch(path,/^(plan|tests|dist|node_modules)\/|\/assets\/|(^|\/)\.|\.dpapi$|secret|^(app-runtime|launch-runtime|local-coach-runtime)\.mjs$|^war-room\/gala-bay\.js$|^handborne\/companion\.mjs$/);
 });

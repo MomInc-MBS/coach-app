@@ -12,3 +12,4 @@ vendor/mediapipe/
 
 *.tsbuildinfo
 .sites-runtime/
+.actual-dj/

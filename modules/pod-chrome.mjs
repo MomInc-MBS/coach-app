@@ -38,9 +38,9 @@ export function mountPodChrome(grimoireButton,{signal}={}){
  nav=doc.createElement('nav');nav.id='podPersistentChrome';nav.className='pod-persistent-chrome';nav.setAttribute('aria-label','Pod terminals');
  grimoireButton.classList.add('metal-grimoire-key');
  if(grimoireButton.id==='podGrimoireLazyOpen')nav._lazyGrimoireButton=grimoireButton;
- const playing=doc.createElement('button');playing.type='button';playing.id='spotifyNowPlayingOpen';playing.className='pod-now-playing';playing.setAttribute('aria-label','Open Spotify DJ terminal');
+ const playing=doc.createElement('button');playing.type='button';playing.id='spotifyNowPlayingOpen';playing.className='pod-now-playing';playing.setAttribute('aria-label','Open actual.dj');
  const caption=doc.createElement('small');caption.textContent='NOW PLAYING';
- const label=doc.createElement('span');label.id='spotifyNowPlayingLabel';label.textContent='CONNECT SPOTIFY';playing.append(caption,label);nav.append(grimoireButton,playing);doc.body.append(nav);
+ const label=doc.createElement('span');label.id='spotifyNowPlayingLabel';label.textContent='actual.dj';playing.append(caption,label);nav.append(grimoireButton,playing);doc.body.append(nav);
  const move=()=>{
   const settings=doc.getElementById('settings');
   if(settingsKey)settingsKey.setAttribute('aria-expanded',String(!!settings?.open));

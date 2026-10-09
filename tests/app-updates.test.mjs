@@ -37,3 +37,17 @@ test('lazy food and renderer assets participate in the release identity',async()
   assert.notEqual(await releaseBuildId(root),second);
  }finally{assert.equal(dirname(resolve(root)),resolve(tmpdir()));assert.ok(basename(root).startsWith('coach-release-'));await rm(root,{recursive:true,force:true});}
 });
+
+test('linked dependencies and nested build output do not change the release identity',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'coach-release-'));
+ try{
+  for(const folder of ['handborne/source/node_modules','handborne/source/dist'])await mkdir(join(root,folder),{recursive:true});
+  await writeFile(join(root,'handborne/source/app.ts'),'authored');
+  const first=await releaseBuildId(root);
+  await writeFile(join(root,'handborne/source/node_modules/dependency.js'),'dependency');
+  await writeFile(join(root,'handborne/source/dist/bundle.js'),'generated');
+  assert.equal(await releaseBuildId(root),first);
+  await writeFile(join(root,'handborne/source/app.ts'),'changed authored source');
+  assert.notEqual(await releaseBuildId(root),first);
+ }finally{assert.equal(dirname(resolve(root)),resolve(tmpdir()));assert.ok(basename(root).startsWith('coach-release-'));await rm(root,{recursive:true,force:true});}
+});

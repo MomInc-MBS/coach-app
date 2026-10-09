@@ -46,6 +46,13 @@ function rig(){
  return {m,win,doc,ctx,tick:ms=>{now+=ms/1000;},flush:()=>new Promise(r=>setTimeout(r,20))};
 }
 const gainOf=m=>m.log; // fade-in/out entries: {what,v0,v1,t0,t1}
+
+test('actual.dj holds page music for its session and closing restores the current route',async()=>{
+ const r=rig(),{m,win}=r;m.mount();m.unlock();await r.flush();assert.equal(m.current(),'main-theme-one');
+ win.dispatch('myr5:dj-active',{active:true});await r.flush();assert.equal(m.current(),null);
+ win.myr5Routes.current=()=>'food';win.dispatch('myr5:route',{id:'food'});await r.flush();assert.equal(m.current(),null,'route changes cannot restart background music over the decks');
+ win.dispatch('myr5:dj-active',{active:false});await r.flush();assert.equal(m.current(),'sick-with-science');
+});
 test('portal home is silent; destination track starts only after the portal transition ends, then fades in 3 s',async()=>{
  const r=rig(),{m,win}=r;m.mount();m.unlock();
  win.dispatch('myr5:route',{});r.m.sync();await r.flush();assert.equal(m.current(),'main-theme-one','pod plays');

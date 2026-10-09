@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
 test('physical Spotify controls stay usable on a transparent hand station', {timeout: 20000}, async t => {
-  const files = new Map(await Promise.all(['spotify-terminal.mjs', 'spotify-domain.mjs', 'spotify-terminal.css'].map(async name =>
+  const files = new Map(await Promise.all(['spotify-terminal.mjs', 'spotify-domain.mjs', 'spotify-terminal.css', 'spotify-return.mjs', 'auth-paths.mjs', 'actual-dj.mjs', 'actual-dj-engine.mjs', 'actual-dj-library.mjs', 'actual-dj-providers.mjs', 'actual-dj-visualizer.mjs', 'actual-dj.css'].map(async name =>
     [`/${name}`, await readFile(new URL(`../${name}`, import.meta.url))])));
   const server = createServer((req, res) => {
     if (req.url === '/') {res.writeHead(200, {'Content-Type': 'text/html'});res.end('<!doctype html><body></body>');return;}
@@ -19,6 +19,7 @@ test('physical Spotify controls stay usable on a transparent hand station', {tim
   const page = await browser.newPage({viewport: {width: 375, height: 667}});
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.addStyleTag({url: `http://127.0.0.1:${server.address().port}/spotify-terminal.css`});
+  await page.addStyleTag({url: `http://127.0.0.1:${server.address().port}/actual-dj.css`});
   await page.evaluate(async () => {
     window.actions = [];
     const {initSpotifyTerminal} = await import('/spotify-terminal.mjs');
@@ -36,6 +37,7 @@ test('physical Spotify controls stay usable on a transparent hand station', {tim
     window.terminal.open();
   });
   await page.waitForFunction(() => document.querySelector('.sp-account-name')?.textContent === 'DJ');
+  await page.locator('.dj-tabs [data-view="spotify"]').click();
   const style = await page.locator('.sp-hand').evaluate(section => {
     const knob = section.querySelector('.sp-knob');
     return {background: getComputedStyle(section).backgroundColor,
