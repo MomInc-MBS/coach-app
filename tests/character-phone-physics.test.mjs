@@ -198,3 +198,7 @@ test('a deliberate upright shake settles onto the platform and walks home',()=>{
  assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);
 });
 
+
+test('tilts short of sideways only lean and slide, even when turned quickly',()=>{
+ for(const degrees of [-88,-60,30,60,88]){const p=make({contain:true,climb:false});const a=degrees*Math.PI/180;p.sample({gx:Math.sin(a),gy:Math.cos(a),angularSpeed:10,shake:20});p.step(5);assert.equal(p.state.phase,'slide');assert.ok(Math.abs(p.state.angle)<=.35+1e-9);assert.ok(Math.abs(p.state.x)<=390*.15);p.sample({gx:0,gy:1});assert.equal(p.state.phase,'recover');assert.equal(p.state.y,0);}
+});
