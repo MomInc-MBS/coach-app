@@ -73,7 +73,13 @@
    }
    ctx.restore();return scene;
   }
-  return {paint,scenes,weapon:hasWeapon?look.weapon:null,triggerSpecial(){if(hasWeapon)specialAt=window.performance.now();}};
+  return {paint,scenes,weapon:hasWeapon?look.weapon:null,get feetFraction(){
+   // Saved coach designs have different transparent margins below their feet.
+   const context=body.getContext('2d');if(!context.getImageData)return null;
+   const pixels=context.getImageData(0,0,body.width,body.height).data;
+   for(let y=body.height-1;y>=0;y--)for(let x=0;x<body.width;x++)if(pixels[(y*body.width+x)*4+3]>200)return (13+(y+1)*1.5)/168;
+   return null;
+  },triggerSpecial(){if(hasWeapon)specialAt=window.performance.now();}};
  }
   function drawCoachArms(ctx,body,movement,time){
    // Move the outer limb pixels; center-column crops also include the coach's face and torso.

@@ -23,7 +23,7 @@ export function mountHomeCharacter(){
   feetFraction=(coaches?.hasBody||coaches?.hasPet)? .935 : .835;
   host.querySelector('[data-weapon]').textContent=W.name(look.weapon);
   canvas.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)}`);
-  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase,active:physics.state.active});resize();sync();
+  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase,active:physics.state.active});feetFraction=performer.feetFraction||feetFraction;resize();sync();
  }
  function shown(){return document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest';}
  function animate(now){
