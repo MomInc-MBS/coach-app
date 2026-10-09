@@ -40,6 +40,8 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
  const detach=()=>{stop();doc?.removeEventListener('click',click,true);doc?.removeEventListener('visibilitychange',visibility);view.removeEventListener('pageshow',visibility);view.removeEventListener('pagehide',stop);};
  return {subscribe(callback){listeners.add(callback);if(listeners.size===1)attach();return()=>{listeners.delete(callback);if(!listeners.size)detach();};},request};
 }
-let source;
-export function subscribePhoneMotion(callback){source??=createPhoneMotionSource();return source.subscribe(callback);}
-export function requestPhoneMotion(){source??=createPhoneMotionSource();return source.request();}
+// The customizer bundle and its separately loaded housing must share one permission request.
+const SOURCE=Symbol.for('myr5.characterPhoneMotion');
+const sharedSource=()=>window[SOURCE]??=(createPhoneMotionSource());
+export function subscribePhoneMotion(callback){return sharedSource().subscribe(callback);}
+export function requestPhoneMotion(){return sharedSource().request();}
