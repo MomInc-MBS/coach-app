@@ -1,14 +1,15 @@
 // Full gravity is independent of the decorative, calibrated room parallax.
 export function screenGravity(x,y,angle=0){const a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return {gx:x*c+y*s,gy:-x*s+y*c};}
 export function createPhoneMotionSource(view=globalThis.window,doc=view?.document){
- const listeners=new Set();let running=false,motionAt=-Infinity,lastAngle=null,lastAt=0,permission=null;
+ const listeners=new Set();let running=false,motionAt=-Infinity,lastAngle=null,lastAt=0,lastGravity=null,permission=null;
  const now=()=> (view.performance?.now?.()??Date.now())/1000;
  const emit=(gravity,shake=0,rotationSpeed=0)=>{
   if(doc?.hidden||!Number.isFinite(gravity.gx)||!Number.isFinite(gravity.gy))return;
   const timeSeconds=now(),length=Math.hypot(gravity.gx,gravity.gy);
-  // A phone held flat has no screen-plane gravity: retain the last heading instead of inventing a fall.
-  if(length<.12)return;
-  const gx=gravity.gx/length,gy=gravity.gy/length,angle=Math.atan2(gx,gy);
+  // A flat phone has no screen-plane gravity. Hold its last heading, but still
+  // deliver gyro and linear-acceleration samples so a shake can trigger motion.
+  if(length>=.12)lastGravity={gx:gravity.gx/length,gy:gravity.gy/length};
+  const {gx,gy}=lastGravity??{gx:0,gy:1},angle=Math.atan2(gx,gy);
   let angularSpeed=rotationSpeed;if(lastAngle!=null&&timeSeconds>lastAt){const delta=Math.atan2(Math.sin(angle-lastAngle),Math.cos(angle-lastAngle));angularSpeed=Math.max(angularSpeed,Math.abs(delta)/(timeSeconds-lastAt));}
   lastAngle=angle;lastAt=timeSeconds;
   for(const callback of listeners)callback({gx,gy,shake,angularSpeed,timeSeconds});
@@ -28,8 +29,8 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
   const b=event.beta*Math.PI/180,g=event.gamma*Math.PI/180;
   emit(screenGravity(Math.cos(b)*Math.sin(g),Math.sin(b),screenAngle()));
  };
- const start=()=>{if(running||!listeners.size)return;running=true;lastAngle=null;lastAt=0;view.addEventListener('devicemotion',motion,{passive:true});view.addEventListener('deviceorientation',orientation,{passive:true});};
- const stop=()=>{if(!running)return;running=false;view.removeEventListener('devicemotion',motion);view.removeEventListener('deviceorientation',orientation);lastAngle=null;};
+ const start=()=>{if(running||!listeners.size)return;running=true;lastAngle=null;lastAt=0;lastGravity=null;view.addEventListener('devicemotion',motion,{passive:true});view.addEventListener('deviceorientation',orientation,{passive:true});};
+ const stop=()=>{if(!running)return;running=false;view.removeEventListener('devicemotion',motion);view.removeEventListener('deviceorientation',orientation);lastAngle=null;lastGravity=null;};
  const request=()=>{
   if(permission)return permission;
   // Both requests must begin in this same tap on iOS, before either promise is awaited.
