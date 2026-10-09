@@ -45,6 +45,7 @@ export class CreatureViewer {
  }
  scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
  phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';
+ phoneFloorContact=0;
  phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
  phoneFraming:'none'|'wide'|'restore'='none';phoneCameraSnapshot:{position:T.Vector3;target:T.Vector3;direction:T.Vector3;minDistance:number;maxDistance:number}|null=null;phoneFrameGoal:{position:T.Vector3;target:T.Vector3}|null=null;phoneCameraChange=()=>this.phoneScreenSize();
  phoneAccountChange=()=>{if(!this.interactive||!this.rig)return;this.resetPhonePhysics();this.disposePhoneShip();this.selectPhoneShip(this.rig.recipe);this.phoneScreenSize();};
@@ -102,7 +103,7 @@ export class CreatureViewer {
    if(this.camera.position.distanceToSquared(snapshot.position)<1e-4&&this.orbit.target.distanceToSquared(snapshot.target)<1e-4)this.restorePhoneCamera();
   }
  }
- private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
+ private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneFloorContact=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
  private selectPhoneShip(recipe:Design){
   const account=(globalThis as any).myr5AuthenticatedAccount,owner=typeof account==='string'?account:account?.user?.id;
   let saved:{ship?:string;tint?:string}|null=null;
@@ -136,6 +137,7 @@ export class CreatureViewer {
   this.phoneElapsed+=dt;this.phonePhysics.step(dt);
   const state=this.phonePhysics.state;
   this.renderer.domElement.dataset.phonePhase=state.phase;this.mount.dataset.phoneMotionPhase=state.phase;
+  const contactTarget=['climb','wave','climb-out'].includes(state.phase)?1:0;this.phoneFloorContact+=(contactTarget-this.phoneFloorContact)*Math.min(1,dt*5);
   if(['climb','wave','climb-out','ship','gone'].includes(state.phase))void this.loadPhoneShip();
   const pose=String(state.pose);
   if(pose!==this.phonePose){
@@ -147,6 +149,7 @@ export class CreatureViewer {
   if(state.phase==='ship'&&state.shipProgress<.36){const t=state.shipProgress/.36;actorX*=1-t;actorY*=1-t;}
   const offset=right.clone().multiplyScalar(actorX*unitsPerPixel).addScaledVector(up,-actorY*unitsPerPixel),rotation=new T.Quaternion().setFromAxisAngle(viewDirection.negate(),state.angle),pivotShift=pivot.clone().sub(pivot.clone().applyQuaternion(rotation));
   this.rig.root.position.copy(offset).add(pivotShift);this.rig.root.quaternion.copy(rotation);this.rig.root.updateMatrixWorld(true);
+  if(this.phoneFloorContact>.001){let lowest=Infinity;for(let i=0;i<8;i++){const point=this.phoneProjectionCorners[i]!.set(i&1?this.bodyBounds.max.x:this.bodyBounds.min.x,i&2?this.bodyBounds.max.y:this.bodyBounds.min.y,i&4?this.bodyBounds.max.z:this.bodyBounds.min.z).applyMatrix4(this.rig.root.matrixWorld);lowest=Math.min(lowest,point.y);}const floor=this.floorObjects[0] as T.Mesh|undefined,floorY=floor?floor.position.y+.04:-.01;this.rig.root.position.y+=(floorY-lowest)*this.phoneFloorContact;this.rig.root.updateMatrixWorld(true);}
   this.rig.root.visible=state.phase!=='gone'&&!(state.phase==='ship'&&state.shipProgress>=.36);
   this.updatePhoneShip(state.phase,state.shipProgress,state,pivot,right,up,unitsPerPixel);
   if(pose==='climb'){
