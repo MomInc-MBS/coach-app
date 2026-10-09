@@ -64,7 +64,7 @@ export function mountHomeCharacter(){
  const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});intersection.observe(host);
  const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){listenForMotion();load();}};
  listenForMotion();
- const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240;physics.resize(width,height,bodyWidth,bodyHeight);physics.setRestCenter(width/2,height-bodyHeight/2);};
+ const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240,bottom=height*.14+9.6;physics.setRestCenter(width/2,height-bottom-bodyHeight/2);physics.resize(width,height,bodyWidth,bodyHeight);};
  resize();window.addEventListener('resize',resize);
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:recipe',load);window.addEventListener('pageshow',shownAgain);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',reducedChanged);
