@@ -46,7 +46,7 @@ body:has(#library[open]) .myr5-companion-card{display:none!important}
 #homeScreen{display:flex;flex-direction:column;min-height:calc(100dvh - 72px - var(--myr5-bar) - 12px)}
 #homeScreen>.training-view{flex:1 1 0;display:flex;flex-direction:column}
 #homeScreen .containment-bay{flex:1;display:flex;min-height:0}
-#homeScreen #view{flex:1;height:auto;min-height:150px;background:radial-gradient(ellipse at 50% 45%,transparent 58%,#120c1ccc),var(--room-world) center 86%/cover no-repeat;image-rendering:pixelated;container-type:size}
+#homeScreen #view{flex:1;height:auto;min-height:150px;background:radial-gradient(ellipse at 50% 45%,transparent 58%,#120c1ccc),var(--pod-world,var(--room-world)) center 86%/cover no-repeat;image-rendering:pixelated;container-type:size}
 #view .pod-floor{display:none}
 /* The coach is parked here between scenes (its reveal is the oval's ship intro); the pre-set film still shows it. */
 body:not([data-cinematic=pre]) #view .coach-mount,body[data-cinematic=pre] #view :is(.home-character,.coach-line){display:none}

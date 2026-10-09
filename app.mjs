@@ -12,6 +12,7 @@ import {performanceOwner} from './performance-progress.mjs';
 import {workoutPathAccess} from './chosen-styles.mjs';
 import {reconcilePerformanceWorkouts} from './performance-reconcile.mjs';
 import {mountHomeCharacter} from './pod/home-character.mjs';
+import {mountPodPlaces} from './pod/pod-places.mjs';
 import {mountContinueWorkout} from './pod/continue-workout.mjs';
 import {initHardware} from './pod/hardware.mjs';
 import {setFlipValue,countDigits,clockDigits} from './flip-display.mjs';
@@ -321,6 +322,7 @@ function refreshWorkoutPaths(){for(const option of $('movement').options){const 
 window.addEventListener('myr5:performance-progress',refreshWorkoutPaths);window.addEventListener('myr5:account-ready',refreshWorkoutPaths);refreshWorkoutPaths();
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+mountPodPlaces(document.getElementById('view'));
 // #19: today's newest paused/interrupted workout is offered by a Continue popup on the pod page (never the quilt).
 // A saved manual row can start a new camera session without deleting its old local record.
 mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,canContinue:row=>workoutPathAccess(row.mode),onContinue:row=>{
