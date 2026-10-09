@@ -193,7 +193,7 @@ test('pixel mode never climbs and its rotated body bounces inside the visible wi
 });
 
 test('a deliberate upright shake settles onto the platform and walks home',()=>{
- const p=make({contain:true,buffer:0,climb:false});p.sample({gx:0,gy:1,shake:40});
+ const p=make({contain:true,buffer:0,climb:false});p.sample({gx:0,gy:1,angularSpeed:5,shake:40});
  for(let n=0;n<900;n++)p.step(1/60);
  assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);
 });

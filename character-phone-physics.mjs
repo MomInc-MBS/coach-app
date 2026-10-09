@@ -126,7 +126,7 @@ export function createCharacterPhysics({
 
     // An impulse is edge-triggered, so one sustained sensor reading cannot pin
     // the character against a wall. A renewed pulse can add another impulse.
-    if (shake > 14 && shakeArmed && !(angular > 2 && !sideways())) {
+    if (shake > 14 && shakeArmed && !(shake < 30 && angular > 2 && !sideways())) {
       shakeArmed = false;
       const direction = ((Math.floor(Math.max(0, now) * 10) % 2) ? 1 : -1);
       vx += direction * Math.min(1500, shake * 20);
