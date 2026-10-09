@@ -19,7 +19,7 @@ export function createCharacterPhysics({
   const view = { width: safeDimension(width), height: safeDimension(height) };
   const body = { width: safeDimension(bodyWidth), height: safeDimension(bodyHeight) };
   const margin = Math.max(0, Number.isFinite(buffer) ? buffer : 96);
-  const hasShip = Boolean(ship);
+  let hasShip = Boolean(ship);
   const state = { x: 0, y: 0, angle: 0, phase: 'idle', pose: 'idle', active: false, shipProgress: 0 };
 
   let vx = 0;
@@ -265,5 +265,7 @@ export function createCharacterPhysics({
     return snapshot();
   }
 
-  return { sample, step, resize, reset, state };
+  // Adapters enable boarding only after the selected, authorized model has loaded.
+  const setShipAvailable = available => { hasShip = Boolean(available); };
+  return { sample, step, resize, reset, setShipAvailable, state };
 }
