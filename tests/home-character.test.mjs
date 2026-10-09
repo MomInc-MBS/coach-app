@@ -67,7 +67,9 @@ test('active phone phases hold the Gala playlist and animate a coach-sprite arm 
  const canvas=makeCanvas();performer.paint(canvas,50000,false,{phase:'wave',pose:'greet',active:true});
  assert.equal(canvas.dataset.scene,'idle','physics movement freezes the usual face/walk playlist');
  assert.ok(drawnPoses.some(options=>typeof options.pose?.greet==='number'),'the avatar draw hook receives a real wave pose');
- assert.equal(drawCalls.filter(args=>args.length===9&&[14,38].includes(args[1])).length,2,'the selected coach sprite reuses both of its pixel arms for the wave');
+ const limbCalls=drawCalls.filter(args=>args.length===9&&args[1]===48);
+ assert.equal(limbCalls.length,1,'the selected coach sprite waves its outer arm pixels');
+ assert.ok(limbCalls.every(args=>args[1]>=48),'waving does not cut pixels from the face and torso columns');
  performer.paint(canvas,51000,false,{phase:'look-down',pose:'look-down',active:true});
  assert.ok(drawnPoses.some(options=>options.blink===true),'look-down closes the face before the fall');
 });
