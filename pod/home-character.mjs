@@ -13,7 +13,7 @@ export function mountHomeCharacter(){
  window.GalaWeaponMotion={drawAnimatedWeapon,abilityFor,evolution};
  let performer,frame=0,last=0,origin=performance.now(),visible=true,disposed=false,coaches=null;
  const platform=document.createElement('div');platform.className='home-character-platform';platform.setAttribute('aria-hidden','true');host.append(platform);
- const physics=createCharacterPhysics({width:host.clientWidth||320,height:host.clientHeight||220,bodyWidth:canvas.clientWidth||120,bodyHeight:canvas.clientHeight||240,buffer:96,ship:false});
+ const physics=createCharacterPhysics({width:host.clientWidth||320,height:host.clientHeight||220,bodyWidth:canvas.clientWidth||120,bodyHeight:canvas.clientHeight||240,buffer:0,ship:false,climb:false,contain:true});
  let motion={gx:0,gy:0,shake:0,angularSpeed:0,timeSeconds:0},unsubscribeMotion=()=>{};
  function load(){
   let storage;try{storage=localStorage;}catch{}
@@ -32,9 +32,8 @@ export function mountHomeCharacter(){
    const dt=last?Math.min(.05,(now-last)/1000):1/60;last=now;
    physics.sample(motion,now/1000);physics.step(dt);
    const state=physics.state;
-   const climbPose=['climb','wave','climb-out'].includes(state.phase);
    // CSS uses clockwise positive angles; the domain heading points the feet toward gravity.
-   canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y}px) rotate(${climbPose?0:-state.angle}rad)`;
+   canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y}px) rotate(${-state.angle}rad)`;
    canvas.dataset.pose=state.pose;canvas.dataset.phase=state.phase;host.dataset.phase=state.phase;host.dataset.phonePhase=state.phase;host.dataset.phoneX=Math.round(state.x);host.dataset.phoneY=Math.round(state.y);
    performer.paint(canvas,now-origin,false,{pose:state.pose,phase:state.phase,active:state.active});
   }
@@ -64,7 +63,7 @@ export function mountHomeCharacter(){
  const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});intersection.observe(host);
  const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){listenForMotion();load();}};
  listenForMotion();
- const resize=()=>physics.resize(host.clientWidth||320,host.clientHeight||220,canvas.clientWidth||120,canvas.clientHeight||240);
+ const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240;physics.resize(width,height,bodyWidth,bodyHeight);physics.setRestCenter(width/2,height-bodyHeight/2);};
  resize();window.addEventListener('resize',resize);
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:recipe',load);window.addEventListener('pageshow',shownAgain);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',reducedChanged);
