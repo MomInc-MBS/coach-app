@@ -16,9 +16,9 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
  const screenAngle=()=>view.screen?.orientation?.angle??view.orientation??0;
  const motion=event=>{
   const a=event.accelerationIncludingGravity;if(!a||![a.x,a.y].every(Number.isFinite))return;
-  const linear=event.acceleration;let shake=linear&&[linear.x,linear.y,linear.z].every(Number.isFinite)?Math.hypot(linear.x,linear.y,linear.z):0;
+  const linear=event.acceleration,hasLinear=linear&&[linear.x,linear.y,linear.z].every(Number.isFinite);let shake=hasLinear?Math.hypot(linear.x,linear.y,linear.z):0;
   if(!linear||linear.x==null)shake=Math.abs(Math.hypot(a.x,a.y,a.z??0)-9.81);
-  motionAt=now();emit(screenGravity(-a.x,a.y,screenAngle()),Math.min(80,shake));
+  motionAt=now();emit(screenGravity(-(a.x-(hasLinear?linear.x:0)),a.y-(hasLinear?linear.y:0),screenAngle()),Math.min(80,shake));
  };
  const orientation=event=>{
   if(now()-motionAt<.5||!Number.isFinite(event.beta)||!Number.isFinite(event.gamma))return;
