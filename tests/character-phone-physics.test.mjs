@@ -13,6 +13,12 @@ test('boarding is enabled only when the adapter has a loaded ship',()=>{
  available.sample({gx:1,gy:0,angularSpeed:3},0);for(const dt of [1.06,2,3,2,3])available.step(dt);
  assert.equal(available.state.phase,'ship');
 });
+test('the same fast righting sample cannot interrupt a cautious upright recovery',()=>{
+ const p=make();p.sample({gx:1,gy:0,angularSpeed:3},0);p.step(1.5);
+ p.sample({gx:0,gy:1,angularSpeed:3},2);assert.equal(p.state.phase,'recover');
+ p.sample({gx:0,gy:1,angularSpeed:3},2);assert.equal(p.state.phase,'recover');
+ p.step(3.1);assert.equal(p.state.phase,'idle');
+});
 
 test('starts at its centered rest pose and slowly tilts into a supported slide', () => {
   const physics = make();

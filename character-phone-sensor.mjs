@@ -3,13 +3,13 @@ export function screenGravity(x,y,angle=0){const a=angle*Math.PI/180,c=Math.cos(
 export function createPhoneMotionSource(view=globalThis.window,doc=view?.document){
  const listeners=new Set();let running=false,motionAt=-Infinity,lastAngle=null,lastAt=0,permission=null;
  const now=()=> (view.performance?.now?.()??Date.now())/1000;
- const emit=(gravity,shake=0)=>{
+ const emit=(gravity,shake=0,rotationSpeed=0)=>{
   if(doc?.hidden||!Number.isFinite(gravity.gx)||!Number.isFinite(gravity.gy))return;
   const timeSeconds=now(),length=Math.hypot(gravity.gx,gravity.gy);
   // A phone held flat has no screen-plane gravity: retain the last heading instead of inventing a fall.
   if(length<.12)return;
   const gx=gravity.gx/length,gy=gravity.gy/length,angle=Math.atan2(gx,gy);
-  let angularSpeed=0;if(lastAngle!=null&&timeSeconds>lastAt){const delta=Math.atan2(Math.sin(angle-lastAngle),Math.cos(angle-lastAngle));angularSpeed=Math.abs(delta)/(timeSeconds-lastAt);}
+  let angularSpeed=rotationSpeed;if(lastAngle!=null&&timeSeconds>lastAt){const delta=Math.atan2(Math.sin(angle-lastAngle),Math.cos(angle-lastAngle));angularSpeed=Math.max(angularSpeed,Math.abs(delta)/(timeSeconds-lastAt));}
   lastAngle=angle;lastAt=timeSeconds;
   for(const callback of listeners)callback({gx,gy,shake,angularSpeed,timeSeconds});
  };
@@ -18,7 +18,10 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
   const a=event.accelerationIncludingGravity;if(!a||![a.x,a.y].every(Number.isFinite))return;
   const linear=event.acceleration,hasLinear=linear&&[linear.x,linear.y,linear.z].every(Number.isFinite);let shake=hasLinear?Math.hypot(linear.x,linear.y,linear.z):0;
   if(!linear||linear.x==null)shake=Math.abs(Math.hypot(a.x,a.y,a.z??0)-9.81);
-  motionAt=now();emit(screenGravity(-(a.x-(hasLinear?linear.x:0)),a.y-(hasLinear?linear.y:0),screenAngle()),Math.min(80,shake));
+  const rate=event.rotationRate;
+  // The gyroscope's degrees/second survive delayed delivery when WebGL is busy.
+  const rotationSpeed=rate?Math.hypot(...['alpha','beta','gamma'].map(axis=>Number.isFinite(rate[axis])?rate[axis]:0))*Math.PI/180:0;
+  motionAt=now();emit(screenGravity(-(a.x-(hasLinear?linear.x:0)),a.y-(hasLinear?linear.y:0),screenAngle()),Math.min(80,shake),rotationSpeed);
  };
  const orientation=event=>{
   if(now()-motionAt<.5||!Number.isFinite(event.beta)||!Number.isFinite(event.gamma))return;

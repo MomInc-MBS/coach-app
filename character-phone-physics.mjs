@@ -118,7 +118,7 @@ export function createCharacterPhysics({
       else if (state.phase === 'idle' || state.phase === 'slide' || state.phase === 'recover') startFall('fall');
     }
 
-    if (angular > 2 && angularArmed && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
+    if (angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
       angularArmed = false;
       setFallEdge();
       fallHold = 0;
