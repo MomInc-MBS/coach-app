@@ -8,7 +8,7 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
   const timeSeconds=now(),length=Math.hypot(gravity.gx,gravity.gy);
   // A flat phone has no screen-plane gravity. Hold its last heading, but still
   // deliver gyro and linear-acceleration samples so a shake can trigger motion.
-  if(length>=.12)lastGravity={gx:gravity.gx/length,gy:gravity.gy/length};
+  if(length>=.3)lastGravity={gx:gravity.gx/length,gy:gravity.gy/length};
   const {gx,gy}=lastGravity??{gx:0,gy:1},angle=Math.atan2(gx,gy);
   let angularSpeed=rotationSpeed;if(lastAngle!=null&&timeSeconds>lastAt){const delta=Math.atan2(Math.sin(angle-lastAngle),Math.cos(angle-lastAngle));angularSpeed=Math.max(angularSpeed,Math.abs(delta)/(timeSeconds-lastAt));}
   lastAngle=angle;lastAt=timeSeconds;
@@ -22,7 +22,7 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
   const rate=event.rotationRate;
   // The gyroscope's degrees/second survive delayed delivery when WebGL is busy.
   const rotationSpeed=rate?Math.hypot(...['alpha','beta','gamma'].map(axis=>Number.isFinite(rate[axis])?rate[axis]:0))*Math.PI/180:0;
-  motionAt=now();emit(screenGravity(-(a.x-(hasLinear?linear.x:0)),a.y-(hasLinear?linear.y:0),screenAngle()),Math.min(80,shake),rotationSpeed);
+  motionAt=now();emit(screenGravity(-(a.x-(hasLinear?linear.x:0))/9.81,(a.y-(hasLinear?linear.y:0))/9.81,screenAngle()),Math.min(80,shake),rotationSpeed);
  };
  const orientation=event=>{
   if(now()-motionAt<.5||!Number.isFinite(event.beta)||!Number.isFinite(event.gamma))return;
