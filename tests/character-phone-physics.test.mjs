@@ -5,6 +5,14 @@ import { createCharacterPhysics } from '../character-phone-physics.mjs';
 const make = (options = {}) => createCharacterPhysics({ width: 390, height: 844, bodyWidth: 80, bodyHeight: 150, ...options });
 const finite = state => Object.values(state).every(value => typeof value !== 'number' || Number.isFinite(value));
 
+test('standing feet keep their rest anchor through hidden and visible layout sizing',()=>{
+ const p=make({contain:true});
+ p.setRestCenter(160,20);p.resize(320,136,120,240);
+ assert.equal(p.state.y,0);
+ p.setRestCenter(160,80);p.resize(320,136,48,50);
+ assert.equal(p.state.y,0);assert.equal(p.state.x,0);
+});
+
 test('boarding is enabled only when the adapter has a loaded ship',()=>{
  const unavailable=make({ship:true});unavailable.setShipAvailable(false);
  unavailable.sample({gx:1,gy:0,angularSpeed:3},0);for(const dt of [1.06,2,3,2,3])unavailable.step(dt);

@@ -274,7 +274,10 @@ export function createCharacterPhysics({
     view.height = safeDimension(nextHeight, view.height);
     body.width = safeDimension(nextBodyWidth, body.width);
     body.height = safeDimension(nextBodyHeight, body.height);
-    if (!['recover', 'climb-out', 'ship', 'gone'].includes(state.phase)) clampPosition(false);
+    // A standing character belongs at its calibrated rest anchor. Early hidden
+    // layout measurements must not push it below the eventual platform.
+    if (state.phase === 'idle') { state.x = 0; state.y = 0; }
+    else if (!['recover', 'climb-out', 'ship', 'gone'].includes(state.phase)) clampPosition(false);
     return snapshot();
   }
 
