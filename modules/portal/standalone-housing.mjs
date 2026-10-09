@@ -1,4 +1,5 @@
 import {readLook,applyLookVars,stripSeq} from './portal-look.mjs';
+import {requestPhoneMotion} from '../../character-phone-sensor.mjs';
 
 const BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
 export const frameMarkup=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div><div class="portal-standalone-aura" aria-hidden="true"></div>`;
@@ -26,7 +27,7 @@ export async function mountStandaloneHousing({content=document.querySelector('.e
  const pointer=e=>{if(disposed||reduced?.matches||doc.hidden)return;tx=Math.max(-1,Math.min(1,(e.clientX/Math.max(1,view.innerWidth)-.5)*2));ty=Math.max(-1,Math.min(1,(e.clientY/Math.max(1,view.innerHeight)-.5)*2));requestTilt();};
  const step=()=>{raf=0;x+=(tx-x)*.055;y+=(ty-y)*.055;content.style.setProperty('--editor-peer-x',(x*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-y',(y*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-tilt',(x*.65).toFixed(2)+'deg');if(Math.abs(tx-x)+Math.abs(ty-y)>.01)raf=requestAnimationFrame(step);};
  const orientation=event=>{if(disposed||reduced?.matches||doc.hidden||event.beta==null||event.gamma==null)return;if(!sensorBase)sensorBase={beta:event.beta,gamma:event.gamma};tx=Math.max(-1,Math.min(1,(event.gamma-sensorBase.gamma)/15));ty=Math.max(-1,Math.min(1,(event.beta-sensorBase.beta)/15));requestTilt();};
- const allowTilt=async()=>{const DeviceOrientationEvent=view.DeviceOrientationEvent;try{const answer=await DeviceOrientationEvent.requestPermission();if(disposed)return;if(answer==='granted'){view.addEventListener('deviceorientation',orientation);chip?.remove();}}catch{}}
+ const allowTilt=async()=>{try{const granted=await requestPhoneMotion();if(disposed)return;if(granted){view.addEventListener('deviceorientation',orientation);chip?.remove();}}catch{}}
  const chip=view?.DeviceOrientationEvent?.requestPermission?doc.createElement('button'):null;
  if(chip){chip.type='button';chip.className='editor-tilt-request';chip.textContent='Enable tilt';chip.setAttribute('aria-label','Enable device tilt to look around');(doc.querySelector('.view-buttons')||doc.querySelector('.preview-toolbar')||content).append(chip);chip.addEventListener('click',allowTilt);}
  else if(view?.DeviceOrientationEvent)view.addEventListener('deviceorientation',orientation);

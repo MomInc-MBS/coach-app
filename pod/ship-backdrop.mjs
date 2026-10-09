@@ -1,3 +1,4 @@
+import {requestPhoneMotion} from '../character-phone-sensor.mjs';
 /** Keep the decorative pod scene moving only while the pod page is the visible workspace. */
 export function mountShipBackdropMotion({root=document.getElementById('podShipBackdrop'),body=document.body,doc=document}={}){
  if(!root||!body||!doc)return ()=>{};
@@ -34,7 +35,7 @@ export function mountShipBackdropMotion({root=document.getElementById('podShipBa
  const requestSensor=async()=>{
   const api=view?.DeviceOrientationEvent;
   if(!api?.requestPermission)return;
-  let answer='denied';try{answer=await api.requestPermission();}catch{}
+  let answer='denied';try{answer=await requestPhoneMotion()?'granted':'denied';}catch{}
   try{view.localStorage.setItem(tiltKey,answer==='granted'?'granted':'denied');}catch{}
   if(answer==='granted'){startSensor();sensorButton?.remove();}
  };
