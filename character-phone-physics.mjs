@@ -17,6 +17,7 @@ export function createCharacterPhysics({
   climb = true,
   safeTiltDegrees = 22.5,
   contain = false,
+  tiltExit = false,
 } = {}) {
   const safeDimension = (value, fallback = 1) => Number.isFinite(value) ? Math.max(1, value) : fallback;
   const view = { width: safeDimension(width), height: safeDimension(height) };
@@ -38,18 +39,22 @@ export function createCharacterPhysics({
   let tiltHold = 0;
   let fallAge = 0;
   let recoverAfterFall = false;
+  let tiltExitFall = false;
   let fallGravity = { x: 0, y: 1 };
   let recoveryStart = { x: 0, y: 0 };
   let climbStart = { x: 0, y: 0 };
   let edge = { x: 0, y: 1 };
   let lastTime = 0;
 
-  const exitBounds = () => ({
-    left: -view.width / 2 - margin - body.width / 2,
-    right: view.width / 2 + margin + body.width / 2,
-    top: -view.height / 2 - margin - body.height / 2,
-    bottom: view.height / 2 + margin + body.height / 2,
-  });
+  const rotatedHalfExtents = () => {
+    const c = Math.abs(Math.cos(state.angle)), s = Math.abs(Math.sin(state.angle));
+    return { width: (body.width * c + body.height * s) / 2, height: (body.height * c + body.width * s) / 2 };
+  };
+  const exitBounds = () => {
+    const half = rotatedHalfExtents();
+    return { left: -view.width / 2 - margin - half.width, right: view.width / 2 + margin + half.width,
+      top: -view.height / 2 - margin - half.height, bottom: view.height / 2 + margin + half.height };
+  };
   const centerBounds = () => {
     if (!contain) return exitBounds();
     const c = Math.abs(Math.cos(state.angle)), s = Math.abs(Math.sin(state.angle));
@@ -73,11 +78,20 @@ export function createCharacterPhysics({
     edge = { x: gravityX / length, y: gravityY / length };
     fallGravity = { x: gravityX, y: gravityY };
   };
+  const fallExitDistance = () => {
+    const half = rotatedHalfExtents();
+    const ox = (restCenter.x ?? view.width / 2) - view.width / 2;
+    const oy = (restCenter.y ?? view.height / 2) - view.height / 2;
+    return Math.abs(edge.x) * (view.width / 2 + half.width + margin)
+      + Math.abs(edge.y) * (view.height / 2 + half.height + margin)
+      - ox * edge.x - oy * edge.y;
+  };
   const startFall = (pose = 'fall', canRecover = false) => {
     setFallEdge();
     fallHold = 0;
     fallAge = 0;
     recoverAfterFall = canRecover;
+    tiltExitFall = Boolean(tiltExit && canRecover);
     setPhase('fall', pose);
   };
   const clampPosition = (bounce = true) => {
@@ -95,6 +109,7 @@ export function createCharacterPhysics({
     vx = 0;
     vy = 0;
     recoverAfterFall = false;
+    tiltExitFall = false;
     state.shipProgress = 0;
     setPhase('recover', 'walk');
   };
@@ -102,6 +117,7 @@ export function createCharacterPhysics({
     climbStart = { x: state.x, y: state.y };
     vx = 0;
     vy = 0;
+    tiltExitFall = false;
     setPhase('climb', 'climb');
   };
 
@@ -126,13 +142,21 @@ export function createCharacterPhysics({
 
     // An impulse is edge-triggered, so one sustained sensor reading cannot pin
     // the character against a wall. A renewed pulse can add another impulse.
+    let shakeTriggered = false;
     if (shake > 14 && shakeArmed && !(shake < 30 && angular > 2 && !sideways())) {
+      shakeTriggered = true;
       shakeArmed = false;
       const direction = ((Math.floor(Math.max(0, now) * 10) % 2) ? 1 : -1);
       vx += direction * Math.min(1500, shake * 20);
       vy -= Math.min(780, shake * 10);
       if (['climb', 'wave', 'climb-out'].includes(state.phase)) startFall('fall');
       else if (state.phase === 'idle' || state.phase === 'slide' || state.phase === 'recover') startFall('fall');
+      else if (state.phase === 'fall' || state.phase === 'bounce') {
+        recoverAfterFall = false;
+        tiltExitFall = false;
+        clampPosition(true);
+      }
+      else if (state.phase === 'air-run' || state.phase === 'look-down') { recoverAfterFall = false; tiltExitFall = false; }
     }
 
     if (sideways() && angular > 2 && angularArmed && !(state.phase === 'recover' && supported()) && !['air-run', 'look-down', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) {
@@ -140,7 +164,8 @@ export function createCharacterPhysics({
       setFallEdge();
       fallHold = 0;
       fallAge = 0;
-      recoverAfterFall = true;
+      recoverAfterFall = !shakeTriggered;
+      tiltExitFall = false;
       setPhase('air-run', 'wiggle');
     }
 
@@ -176,8 +201,15 @@ export function createCharacterPhysics({
         fallHold = sideways() ? fallHold + h : 0;
         if (climb && fallHold >= 2 - 1 / 60) { beginClimb(); continue; }
         if (recoverAfterFall && supported() && fallAge >= 0.25) { enterRecovery(); continue; }
-        vx += fallGravity.x * 620 * h;
-        vy += fallGravity.y * 620 * h;
+        let acceleration = 620;
+        if (tiltExit && tiltExitFall) {
+          const remaining = Math.max(1 / 60, 1.15 - fallAge);
+          const alongVelocity = vx * edge.x + vy * edge.y;
+          const distance = fallExitDistance() + 2 - state.x * edge.x - state.y * edge.y;
+          acceleration = Math.max(acceleration, 2 * Math.max(0, distance - alongVelocity * remaining) / (remaining * remaining));
+        }
+        vx += fallGravity.x * acceleration * h;
+        vy += fallGravity.y * acceleration * h;
         state.x += vx * h;
         state.y += vy * h;
         if (supported() && state.y > 0) {
@@ -191,12 +223,13 @@ export function createCharacterPhysics({
         state.angle = gravityAngle();
         const beforeX = state.x;
         const beforeY = state.y;
-        clampPosition(true);
+        if (!(tiltExit && tiltExitFall)) clampPosition(true);
         if (state.x !== beforeX || state.y !== beforeY) {
           if (state.phase !== 'bounce') setPhase('bounce', 'wiggle');
         } else if (state.phase === 'bounce' && phaseAge > 0.35) setPhase('fall', 'fall');
-        vx *= Math.pow(0.985, h * 60);
-        vy *= Math.pow(0.985, h * 60);
+        const drag = tiltExit && tiltExitFall ? 1 : Math.pow(0.985, h * 60);
+        vx *= drag;
+        vy *= drag;
         continue;
       }
 
@@ -251,7 +284,7 @@ export function createCharacterPhysics({
 
       if (state.phase === 'slide') {
         tiltHold = sideways() ? tiltHold + h : 0;
-        if (tiltHold >= 0.8) { startFall('fall'); continue; }
+        if (tiltHold >= 0.8) { startFall('fall', tiltExit); continue; }
         vx += gravityX * 480 * h;
         vx *= Math.pow(0.91, h * 60);
         state.x += vx * h;
@@ -289,7 +322,7 @@ export function createCharacterPhysics({
   function reset() {
     state.x = 0; state.y = 0; state.angle = 0; state.shipProgress = 0;
     setPhase('idle', 'idle');
-    vx = 0; vy = 0; phaseAge = 0; fallHold = 0; tiltHold = 0; fallAge = 0; recoverAfterFall = false;
+    vx = 0; vy = 0; phaseAge = 0; fallHold = 0; tiltHold = 0; fallAge = 0; recoverAfterFall = false; tiltExitFall = false;
     gravityX = 0; gravityY = 1; lastTime = 0;
     shakeArmed = true; angularArmed = true;
     return snapshot();

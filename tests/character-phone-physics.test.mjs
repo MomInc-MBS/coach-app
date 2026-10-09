@@ -201,9 +201,29 @@ test('pixel mode never climbs and its rotated body bounces inside the visible wi
 });
 
 test('a deliberate upright shake settles onto the platform and walks home',()=>{
- const p=make({contain:true,buffer:0,climb:false});p.sample({gx:0,gy:1,angularSpeed:5,shake:40});
- for(let n=0;n<900;n++)p.step(1/60);
+ const p=make({contain:true,buffer:0,climb:false,tiltExit:true});p.sample({gx:0,gy:1,angularSpeed:5,shake:40});
+ for(let n=0;n<900;n++){p.step(1/60);assert.ok(Math.abs(p.state.x)<=155+1e-6);assert.ok(Math.abs(p.state.y)<=347+1e-6);}
  assert.equal(p.state.phase,'idle');assert.equal(p.state.x,0);assert.equal(p.state.y,0);
+});
+
+test('orientation-driven max-zoom falls pass fully beyond the projected viewport before held tilt climbs',()=>{
+ const assertExitsRight=(p)=>{
+  const c=Math.abs(Math.cos(p.state.angle)),s=Math.abs(Math.sin(p.state.angle));
+  const halfWidth=(2200*c+3000*s)/2;
+  const centerX=184+p.state.x;
+  assert.ok(centerX-halfWidth>320,`whole body should leave right edge: ${centerX-halfWidth} > 320`);
+ };
+ for(const angularSpeed of [3,.5]){
+  const p=make({width:320,height:480,bodyWidth:2200,bodyHeight:3000,contain:true,buffer:0,tiltExit:true});p.setRestCenter(184,230);
+  p.sample({gx:1,gy:0,angularSpeed},0);
+  if(angularSpeed<2){assert.equal(p.state.phase,'slide');p.step(.8);}
+  else p.step(1.06);
+  assert.equal(p.state.phase,'fall');
+  p.step(1.16);
+  assert.equal(p.state.phase,'fall');
+  assertExitsRight(p);
+  p.step(.84);assert.equal(p.state.phase,'climb');
+ }
 });
 
 

@@ -44,7 +44,7 @@ export class CreatureViewer {
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
  scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
- phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';phoneTransientHoldFrames=0;
+ phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,tiltExit:true,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';phoneTransientHoldFrames=0;
  phoneFloorContact=0;phoneWallBlend=0;phoneWaveLookBlend=0;phoneWalkBlend=0;
  phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
  phoneCameraChange=()=>this.phoneScreenSize();
@@ -93,7 +93,7 @@ export class CreatureViewer {
   const tint=id&&saved?.ship===id&&/^#[0-9a-f]{6}$/i.test(saved.tint||'')?saved.tint!:id&&recipe.shipId===id&&/^#[0-9a-f]{6}$/i.test(recipe.shipColor||'')?recipe.shipColor!:'#ffffff';
   this.phoneShipSelectedId=id;this.phoneShipTint=tint;
   const width=this.mount.clientWidth||1,height=this.mount.clientHeight||1;
-  this.phonePhysics=createCharacterPhysics({width,height,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,ship:false});
+  this.phonePhysics=createCharacterPhysics({width,height,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,tiltExit:true,ship:false});
   this.renderer.domElement.dataset.phoneShip=id||'';this.renderer.domElement.dataset.phoneShipReady='false';
   return id;
  }
