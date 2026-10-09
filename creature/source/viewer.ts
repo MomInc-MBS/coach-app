@@ -47,7 +47,7 @@ export class CreatureViewer {
  phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';phoneTransientHoldFrames=0;
  phoneFloorContact=0;phoneWallBlend=0;phoneWaveLookBlend=0;
  phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
- phoneFraming:'none'|'wide'|'restore'='none';phoneCameraSnapshot:{position:T.Vector3;target:T.Vector3;direction:T.Vector3;minDistance:number;maxDistance:number}|null=null;phoneFrameGoal:{position:T.Vector3;target:T.Vector3}|null=null;phoneCameraChange=()=>this.phoneScreenSize();
+ phoneCameraChange=()=>this.phoneScreenSize();
  phoneAccountChange=()=>{if(!this.interactive||!this.rig)return;this.resetPhonePhysics();this.disposePhoneShip();this.selectPhoneShip(this.rig.recipe);this.phoneScreenSize();};
  constructor(public mount:HTMLElement,public assetBase:string,public interactive=true,skinResolver?:InstalledSkinResolver){this.skinResolver=skinResolver;
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
@@ -78,32 +78,12 @@ export class CreatureViewer {
   // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. Ongoing
   // falls/climbs use the real frame gap; the brief flip and look-down beats advance per rendered frame
   // so a busy renderer still shows both poses before continuing the fall.
-  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));this.updatePhoneCameraFraming(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
+  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
  }
  // Layout size, not getBoundingClientRect(): a portal destination arrives scaled from the wormhole's core (2N), and a
  // resize read mid-arrival would keep a thumbnail-sized canvas once it lands (the meditation room's borrowed coach).
- resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}if(this.phoneFraming==='wide')this.updatePhoneFrameGoal();this.phoneScreenSize();}}
- private phoneFrameBounds(){const bounds=this.bodyBounds.clone();if(bounds.isEmpty())return bounds;const bodyHeight=bounds.max.y-bounds.min.y;for(const object of this.floorObjects){const floorBounds=new T.Box3().setFromObject(object);if(!floorBounds.isEmpty())bounds.union(floorBounds);}bounds.min.y=Math.min(bounds.min.y,-.15);bounds.max.y+=bodyHeight*.2;return bounds;}
- private updatePhoneFrameGoal(){const snapshot=this.phoneCameraSnapshot;if(!snapshot||this.bodyBounds.isEmpty())return;const frame=regionFrame(this.camera,this.phoneFrameBounds(),1.2,this.side);if(!frame)return;const position=frame.target.clone().addScaledVector(snapshot.direction,frame.distance);this.phoneFrameGoal={position,target:frame.target};}
- private beginPhoneFraming(){if(this.phoneCameraSnapshot)return;const direction=this.camera.position.clone().sub(this.orbit.target);if(direction.lengthSq()<1e-8)direction.set(0,0,this.side);direction.normalize();this.phoneCameraSnapshot={position:this.camera.position.clone(),target:this.orbit.target.clone(),direction,minDistance:this.orbit.minDistance,maxDistance:this.orbit.maxDistance};this.phoneFraming='wide';this.updatePhoneFrameGoal();}
- private restorePhoneCamera(){const snapshot=this.phoneCameraSnapshot;if(!snapshot){this.phoneFraming='none';return;}this.phoneFraming='none';this.phoneCameraSnapshot=null;this.phoneFrameGoal=null;this.camera.position.copy(snapshot.position);this.orbit.target.copy(snapshot.target);this.orbit.minDistance=snapshot.minDistance;this.orbit.maxDistance=snapshot.maxDistance;this.orbit.update();this.phoneScreenSize();}
- private updatePhoneCameraFraming(dt:number){
-  if(!this.rig)return;
-  const phase=this.phonePhysics.state.phase;
-  if(phase!=='idle'&&this.phoneFraming==='none')this.beginPhoneFraming();
-  if(phase==='idle'&&this.phoneCameraSnapshot&&this.phoneFraming==='wide')this.phoneFraming='restore';
-  const snapshot=this.phoneCameraSnapshot;if(!snapshot||!this.phoneFrameGoal)return;
-  const alpha=Math.min(1,Math.max(0,dt)*5);
-  if(this.phoneFraming==='wide'){
-   this.camera.position.lerp(this.phoneFrameGoal.position,alpha);this.orbit.target.lerp(this.phoneFrameGoal.target,alpha);
-   const distance=this.phoneFrameGoal.position.distanceTo(this.phoneFrameGoal.target);this.orbit.minDistance=Math.min(.7,distance*.5);this.orbit.maxDistance=Math.max(14,distance*2);
-  }else if(this.phoneFraming==='restore'){
-   this.camera.position.lerp(snapshot.position,alpha);this.orbit.target.lerp(snapshot.target,alpha);
-   this.orbit.minDistance=snapshot.minDistance;this.orbit.maxDistance=snapshot.maxDistance;
-   if(this.camera.position.distanceToSquared(snapshot.position)<1e-4&&this.orbit.target.distanceToSquared(snapshot.target)<1e-4)this.restorePhoneCamera();
-  }
- }
- private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneTransientHoldFrames=0;this.phoneFloorContact=0;this.phoneWallBlend=0;this.phoneWaveLookBlend=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
+ resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}this.phoneScreenSize();}}
+ private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneTransientHoldFrames=0;this.phoneFloorContact=0;this.phoneWallBlend=0;this.phoneWaveLookBlend=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';}
  private selectPhoneShip(recipe:Design){
   const account=(globalThis as any).myr5AuthenticatedAccount,owner=typeof account==='string'?account:account?.user?.id;
   let saved:{ship?:string;tint?:string}|null=null;
@@ -113,7 +93,7 @@ export class CreatureViewer {
   const tint=id&&saved?.ship===id&&/^#[0-9a-f]{6}$/i.test(saved.tint||'')?saved.tint!:id&&recipe.shipId===id&&/^#[0-9a-f]{6}$/i.test(recipe.shipColor||'')?recipe.shipColor!:'#ffffff';
   this.phoneShipSelectedId=id;this.phoneShipTint=tint;
   const width=this.mount.clientWidth||1,height=this.mount.clientHeight||1;
-  this.phonePhysics=createCharacterPhysics({width,height,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});
+  this.phonePhysics=createCharacterPhysics({width,height,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,ship:false});
   this.renderer.domElement.dataset.phoneShip=id||'';this.renderer.domElement.dataset.phoneShipReady='false';
   return id;
  }
@@ -225,7 +205,7 @@ export class CreatureViewer {
   if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}
   if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);}
   this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures=assembly.skinTextures;
-  this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}if(this.phoneFraming==='wide')this.updatePhoneFrameGoal();return true;
+  this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}return true;
  }
  setSkinResolver(resolver?:InstalledSkinResolver){this.skinResolver=resolver;}
  clearSkinState(){this.generation++;this.resetPhonePhysics();if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);this.rig=null;this.motion=null;}this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.regionBoxes.clear();this.bodyBounds.makeEmpty();}
