@@ -5,6 +5,15 @@ import { createCharacterPhysics } from '../character-phone-physics.mjs';
 const make = (options = {}) => createCharacterPhysics({ width: 390, height: 844, bodyWidth: 80, bodyHeight: 150, ...options });
 const finite = state => Object.values(state).every(value => typeof value !== 'number' || Number.isFinite(value));
 
+test('boarding is enabled only when the adapter has a loaded ship',()=>{
+ const unavailable=make({ship:true});unavailable.setShipAvailable(false);
+ unavailable.sample({gx:1,gy:0,angularSpeed:3},0);for(const dt of [1.06,2,3,2,3])unavailable.step(dt);
+ assert.equal(unavailable.state.phase,'gone');
+ const available=make({ship:false});available.setShipAvailable(true);
+ available.sample({gx:1,gy:0,angularSpeed:3},0);for(const dt of [1.06,2,3,2,3])available.step(dt);
+ assert.equal(available.state.phase,'ship');
+});
+
 test('starts at its centered rest pose and slowly tilts into a supported slide', () => {
   const physics = make();
   assert.deepEqual(physics.state, { x: 0, y: 0, angle: 0, phase: 'idle', pose: 'idle', active: false, shipProgress: 0 });
