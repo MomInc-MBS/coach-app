@@ -13,7 +13,7 @@ import {REGIONS,type Region,type Design} from './creator/design';
 import {podCameraFrame} from './pod-camera';
 import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
 import {createCharacterPhysics} from '../../character-phone-physics.mjs';
-import {subscribePhoneMotion,type PhoneMotionSample} from './phone-motion';
+import {subscribePhoneMotion} from './phone-motion';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {SHIP_FACING,applyShipTint} from '../../modules/ships/ship-scene-domain.mjs';
 import {localVerifiedBridge} from '../../modules/ships/verified-ship-assets.mjs';
@@ -44,8 +44,9 @@ export class CreatureViewer {
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
  scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
- phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneSample:PhoneMotionSample={gx:0,gy:0,shake:0,angularSpeed:0,timeSeconds:0};phoneElapsed=0;phonePose='idle';
- phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());phoneCameraChange=()=>this.phoneScreenSize();
+ phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:96,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';
+ phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
+ phoneFraming:'none'|'wide'|'restore'='none';phoneCameraSnapshot:{position:T.Vector3;target:T.Vector3;direction:T.Vector3;minDistance:number;maxDistance:number}|null=null;phoneFrameGoal:{position:T.Vector3;target:T.Vector3}|null=null;phoneCameraChange=()=>this.phoneScreenSize();
  phoneAccountChange=()=>{if(!this.interactive||!this.rig)return;this.resetPhonePhysics();this.disposePhoneShip();this.selectPhoneShip(this.rig.recipe);this.phoneScreenSize();};
  constructor(public mount:HTMLElement,public assetBase:string,public interactive=true,skinResolver?:InstalledSkinResolver){this.skinResolver=skinResolver;
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
@@ -76,12 +77,32 @@ export class CreatureViewer {
   // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. dt still
   // reflects the real gap between accepted frames (matching whatever gate is active), so a capped
   // coach's own animation covers the same ground in fewer, bigger steps rather than slow motion.
-  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,dt=Math.min(this.maxFps?gate/1000:.05,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;this.motion?.update(dt);this.updatePhonePhysics(dt);if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=dt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
+  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));this.updatePhoneCameraFraming(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
  }
  // Layout size, not getBoundingClientRect(): a portal destination arrives scaled from the wormhole's core (2N), and a
  // resize read mid-arrival would keep a thumbnail-sized canvas once it lands (the meditation room's borrowed coach).
- resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}this.phoneScreenSize();}}
- private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';}
+ resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}if(this.phoneFraming==='wide')this.updatePhoneFrameGoal();this.phoneScreenSize();}}
+ private phoneFrameBounds(){const bounds=this.bodyBounds.clone();if(bounds.isEmpty())return bounds;const bodyHeight=bounds.max.y-bounds.min.y;for(const object of this.floorObjects){const floorBounds=new T.Box3().setFromObject(object);if(!floorBounds.isEmpty())bounds.union(floorBounds);}bounds.min.y=Math.min(bounds.min.y,-.15);bounds.max.y+=bodyHeight*.2;return bounds;}
+ private updatePhoneFrameGoal(){const snapshot=this.phoneCameraSnapshot;if(!snapshot||this.bodyBounds.isEmpty())return;const frame=regionFrame(this.camera,this.phoneFrameBounds(),1.2,this.side);if(!frame)return;const position=frame.target.clone().addScaledVector(snapshot.direction,frame.distance);this.phoneFrameGoal={position,target:frame.target};}
+ private beginPhoneFraming(){if(this.phoneCameraSnapshot)return;const direction=this.camera.position.clone().sub(this.orbit.target);if(direction.lengthSq()<1e-8)direction.set(0,0,this.side);direction.normalize();this.phoneCameraSnapshot={position:this.camera.position.clone(),target:this.orbit.target.clone(),direction,minDistance:this.orbit.minDistance,maxDistance:this.orbit.maxDistance};this.phoneFraming='wide';this.updatePhoneFrameGoal();}
+ private restorePhoneCamera(){const snapshot=this.phoneCameraSnapshot;if(!snapshot){this.phoneFraming='none';return;}this.phoneFraming='none';this.phoneCameraSnapshot=null;this.phoneFrameGoal=null;this.camera.position.copy(snapshot.position);this.orbit.target.copy(snapshot.target);this.orbit.minDistance=snapshot.minDistance;this.orbit.maxDistance=snapshot.maxDistance;this.orbit.update();this.phoneScreenSize();}
+ private updatePhoneCameraFraming(dt:number){
+  if(!this.rig)return;
+  const phase=this.phonePhysics.state.phase;
+  if(phase!=='idle'&&this.phoneFraming==='none')this.beginPhoneFraming();
+  if(phase==='idle'&&this.phoneCameraSnapshot&&this.phoneFraming==='wide')this.phoneFraming='restore';
+  const snapshot=this.phoneCameraSnapshot;if(!snapshot||!this.phoneFrameGoal)return;
+  const alpha=Math.min(1,Math.max(0,dt)*5);
+  if(this.phoneFraming==='wide'){
+   this.camera.position.lerp(this.phoneFrameGoal.position,alpha);this.orbit.target.lerp(this.phoneFrameGoal.target,alpha);
+   const distance=this.phoneFrameGoal.position.distanceTo(this.phoneFrameGoal.target);this.orbit.minDistance=Math.min(.7,distance*.5);this.orbit.maxDistance=Math.max(14,distance*2);
+  }else if(this.phoneFraming==='restore'){
+   this.camera.position.lerp(snapshot.position,alpha);this.orbit.target.lerp(snapshot.target,alpha);
+   this.orbit.minDistance=snapshot.minDistance;this.orbit.maxDistance=snapshot.maxDistance;
+   if(this.camera.position.distanceToSquared(snapshot.position)<1e-4&&this.orbit.target.distanceToSquared(snapshot.target)<1e-4)this.restorePhoneCamera();
+  }
+ }
+ private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';this.restorePhoneCamera();}
  private selectPhoneShip(recipe:Design){
   const account=(globalThis as any).myr5AuthenticatedAccount,owner=typeof account==='string'?account:account?.user?.id;
   let saved:{ship?:string;tint?:string}|null=null;
@@ -112,7 +133,7 @@ export class CreatureViewer {
    if(this.phonePose!=='idle'||this.phonePhysics.state.phase!=='idle'){this.resetPhonePhysics();}
    this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();return;
   }
-  this.phoneElapsed+=dt;this.phonePhysics.sample(this.phoneSample,this.phoneElapsed);this.phonePhysics.step(dt);
+  this.phoneElapsed+=dt;this.phonePhysics.step(dt);
   const state=this.phonePhysics.state;
   this.renderer.domElement.dataset.phonePhase=state.phase;this.mount.dataset.phoneMotionPhase=state.phase;
   if(['climb','wave','climb-out','ship','gone'].includes(state.phase))void this.loadPhoneShip();
@@ -131,6 +152,9 @@ export class CreatureViewer {
   if(pose==='climb'){
    // A quadruped braces all four joints against the ledge; the alternating forelimb pull reads as climbing.
    const phase=this.phoneElapsed*8,armL=this.rig.nodes.ArmLeft,armR=this.rig.nodes.ArmRight,footL=this.rig.nodes.FootLeft,footR=this.rig.nodes.FootRight;
+   this.rig.nodes.BodyMotion?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.2,0,.035*Math.sin(phase))));
+   if(this.rig.nodes.BodyMotion)this.rig.nodes.BodyMotion.position.y-=.055;
+   this.rig.nodes.HeadMotion?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.09,0,0)));
    armL?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.52-.12*Math.sin(phase),0,-.18)));
    armR?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.52+.12*Math.sin(phase),0,.18)));
    footL?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.22,0,-.1)));
@@ -146,7 +170,7 @@ export class CreatureViewer {
    this.rig.nodes.FootRight?.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.28,0,.18)));
   }
  }
- private startPhoneMotion(){if(!this.interactive||this.phoneMotionDispose)return;this.phoneMotionDispose=subscribePhoneMotion(sample=>{this.phoneSample=sample;});}
+ private startPhoneMotion(){if(!this.interactive||this.phoneMotionDispose)return;this.phoneMotionDispose=subscribePhoneMotion(sample=>{if(this.phonePhysicsAllowed())this.phonePhysics.sample(sample,sample.timeSeconds);});}
  private disposePhoneShip(){++this.phoneShipEpoch;this.phoneShipLoadId=null;this.phoneShipUnavailableId=null;this.phonePhysics.setShipAvailable(false);if(this.phoneShipRoot){this.scene.remove(this.phoneShipRoot);this.disposeShipTree(this.phoneShipRoot);}this.phoneShipRoot=null;this.phoneShipModel=null;this.phoneShipBridge?.dispose?.();this.phoneShipBridge=null;this.renderer.domElement.dataset.phoneShipReady='false';}
  private disposeShipTree(root:T.Object3D){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>(),textures=new Set<T.Texture>();root.traverse(node=>{const mesh=node as T.Mesh;if(mesh.geometry)geometries.add(mesh.geometry);for(const material of(Array.isArray(mesh.material)?mesh.material:[mesh.material]))if(material){materials.add(material);for(const value of Object.values(material))if((value as T.Texture)?.isTexture)textures.add(value as T.Texture);}});textures.forEach(texture=>texture.dispose());materials.forEach(material=>material.dispose());geometries.forEach(geometry=>geometry.dispose());}
  private async loadPhoneShip(){
@@ -175,8 +199,8 @@ export class CreatureViewer {
   const root=this.phoneShipRoot,id=selected;this.renderer.domElement.dataset.phoneShip=id||'';const visible=phase==='ship';this.renderer.domElement.dataset.phoneShipReady=String(!!root&&visible);if(!root)return;root.visible=visible;if(!visible)return;
   const start=this.bodyBounds.getCenter(new T.Vector3()).applyMatrix4(this.rig!.root.matrixWorld),finish=pivot.clone();
   const p=T.MathUtils.clamp(Number.isFinite(progress)?progress:0,0,1),approach=T.MathUtils.clamp(p/.36,0,1),outbound=T.MathUtils.clamp((p-.36)/.64,0,1);
-  const gravityX=Math.sin(state.angle),width=this.mount.clientWidth,height=this.mount.clientHeight;
-  const departure=finish.clone().addScaledVector(right,-gravityX*(width*.52)*unitsPerPixel).addScaledVector(up,height*.58*unitsPerPixel);
+  const gravityX=Math.sin(state.angle),gravityY=Math.cos(state.angle),width=this.mount.clientWidth,height=this.mount.clientHeight;
+  const departure=finish.clone().addScaledVector(right,-gravityX*(width*.65)*unitsPerPixel).addScaledVector(up,gravityY*(height*.65)*unitsPerPixel);
   if(p<.36)root.position.copy(start).lerp(finish,approach);else root.position.copy(finish).lerp(departure,outbound);
   const scale=Math.max(.12,1-outbound*.78);root.scale.setScalar(this.phoneShipBaseScale*scale);
   root.rotation.y=SHIP_FACING+Math.sin(outbound*Math.PI)*.28;
@@ -190,7 +214,7 @@ export class CreatureViewer {
   if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}
   if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);}
   this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures=assembly.skinTextures;
-  this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}return true;
+  this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}if(this.phoneFraming==='wide')this.updatePhoneFrameGoal();return true;
  }
  setSkinResolver(resolver?:InstalledSkinResolver){this.skinResolver=resolver;}
  clearSkinState(){this.generation++;this.resetPhonePhysics();if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);this.rig=null;this.motion=null;}this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.regionBoxes.clear();this.bodyBounds.makeEmpty();}
