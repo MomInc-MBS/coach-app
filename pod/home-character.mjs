@@ -11,7 +11,7 @@ export function mountHomeCharacter(){
  const host=document.getElementById('homeCharacter'),canvas=host.querySelector('canvas'),hud=document.getElementById('hud');
  const W=window.GalaWeapons,A=window.GalaAvatar,reduced=matchMedia('(prefers-reduced-motion: reduce)');
  window.GalaWeaponMotion={drawAnimatedWeapon,abilityFor,evolution};
- let performer,frame=0,last=0,origin=performance.now(),visible=true,disposed=false,coaches=null;
+ let performer,frame=0,last=0,origin=performance.now(),visible=true,disposed=false,coaches=null,feetFraction=.835;
  const platform=document.createElement('div');platform.className='home-character-platform';platform.setAttribute('aria-hidden','true');host.append(platform);
  const physics=createCharacterPhysics({width:host.clientWidth||320,height:host.clientHeight||220,bodyWidth:canvas.clientWidth||120,bodyHeight:canvas.clientHeight||240,buffer:0,ship:false,climb:false,contain:true});
  let motion={gx:0,gy:0,shake:0,angularSpeed:0,timeSeconds:0},unsubscribeMotion=()=>{};
@@ -20,9 +20,10 @@ export function mountHomeCharacter(){
   const look=loadGala(storage,A).look,chosen=look.weapon||{type:'rapier',tier:0};
   look.weapon=W.unlocked(chosen)?chosen:{type:chosen.type,tier:0};
   performer=window.GalaPerformance.create(look,coaches?{draw:(canvas,value,options)=>coaches.draw(A.draw,canvas,value,options),hasPet:coaches.hasPet,hasCoachBody:coaches.hasBody}:{});origin=performance.now();
+  feetFraction=(coaches?.hasBody||coaches?.hasPet)? .935 : .835;
   host.querySelector('[data-weapon]').textContent=W.name(look.weapon);
   canvas.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)}`);
-  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase,active:physics.state.active});sync();
+  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase,active:physics.state.active});resize();sync();
  }
  function shown(){return document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest';}
  function animate(now){
@@ -33,7 +34,7 @@ export function mountHomeCharacter(){
    physics.sample(motion,now/1000);physics.step(dt);
    const state=physics.state;
    // CSS uses clockwise positive angles; the domain heading points the feet toward gravity.
-   const groundedLean=state.phase==='slide'?(canvas.clientHeight||0)*.42*(1-Math.cos(state.angle)):0;
+   const groundedLean=state.phase==='slide'?(canvas.clientHeight||0)*(feetFraction-.5)*(1-Math.cos(state.angle)):0;
    canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y+groundedLean}px) rotate(${-state.angle}rad)`;
    canvas.dataset.pose=state.pose;canvas.dataset.phase=state.phase;host.dataset.phase=state.phase;host.dataset.phonePhase=state.phase;host.dataset.phoneX=Math.round(state.x);host.dataset.phoneY=Math.round(state.y);
    performer.paint(canvas,now-origin,false,{pose:state.pose,phase:state.phase,active:state.active});
@@ -64,7 +65,7 @@ export function mountHomeCharacter(){
  const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});intersection.observe(host);
  const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){listenForMotion();load();}};
  listenForMotion();
- const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240,bottom=height*.14+9.6;physics.setRestCenter(width/2,height-bottom-bodyHeight/2);physics.resize(width,height,bodyWidth,bodyHeight);};
+ const resize=()=>{const width=host.clientWidth||320,height=host.clientHeight||220,bodyWidth=canvas.clientWidth||120,bodyHeight=canvas.clientHeight||240,bottom=height*.24-bodyHeight*(1-feetFraction);canvas.style.bottom=`${bottom}px`;physics.setRestCenter(width/2,height-bottom-bodyHeight/2);physics.resize(width,height,bodyWidth,bodyHeight);};
  resize();window.addEventListener('resize',resize);
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:recipe',load);window.addEventListener('pageshow',shownAgain);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',reducedChanged);
