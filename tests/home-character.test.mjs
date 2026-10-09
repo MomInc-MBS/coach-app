@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 const source=(await readFile(new URL('../pod/home-character.mjs',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'').replace('export function','function');
 const performerSource=await readFile(new URL('../pod/gala-performer.js',import.meta.url),'utf8');
-const phone=()=>({state:{x:80,y:0,angle:0,phase:'idle',pose:'idle',active:false,shipProgress:0},sample(){},step(){},resize(){},reset(){}});
+const phone=()=>({state:{x:80,y:0,angle:0,phase:'idle',pose:'idle',active:false,shipProgress:0},sample(){},step(){},resize(){},setRestCenter(){},reset(){}});
 const sensor=callback=>{sensor.last=callback;return()=>{};};
 test('Gala stays through exercise changes and returns after stop, camera failure and rest',()=>{
  const listeners=new Map(),observers=[];
@@ -40,7 +40,7 @@ test('R26: the pod window draws the War Room coach sprites and redraws after a c
  }
 });
 test('phone pose is wired to the pixel performer and keeps the original platform fixed',()=>{
- let frameCallback,physicsOptions,painted,platform;const state={x:14,y:-8,angle:1.2,phase:'wave',pose:'greet',active:true,shipProgress:0};
+ let frameCallback,physicsOptions,painted,platform;const state={x:14,y:-8,angle:1.2,phase:'fall',pose:'fall',active:true,shipProgress:0};
  const canvas={style:{},dataset:{},setAttribute(){}};
  const button={setAttribute(){},addEventListener(){}};
  const host={hidden:true,dataset:{},clientWidth:320,clientHeight:220,append:value=>{platform=value;},querySelector:s=>s==='canvas'?canvas:s==='button'?button:{textContent:''}};
@@ -48,13 +48,14 @@ test('phone pose is wired to the pixel performer and keeps the original platform
  const document={body,hidden:false,createElement:()=>({style:{},dataset:{},className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
  const window={addEventListener:(key,fn)=>listeners.set(key,fn),GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{},GalaPerformance:{create:()=>({paint:(c,t,r,m)=>{painted=m;}})}};
  const sourceWithMocks=source.replace('import(COACH_SPRITES)','Promise.resolve({loadWarRoomCoaches:async()=>{throw Error("offline");}})');
- vm.runInNewContext(sourceWithMocks+';mountHomeCharacter();',{window,document,createCharacterPhysics:options=>{physicsOptions=options;return {state,sample(){},step(){},resize(){},reset(){}};},subscribePhoneMotion:callback=>{sensor.callback=callback;return()=>{};},matchMedia:()=>({matches:false,addEventListener(){}}),loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:callback=>{frameCallback=callback;return 1;},cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
+ vm.runInNewContext(sourceWithMocks+';mountHomeCharacter();',{window,document,createCharacterPhysics:options=>{physicsOptions=options;return {state,sample(){},step(){},resize(){},setRestCenter(){},reset(){}};},subscribePhoneMotion:callback=>{sensor.callback=callback;return()=>{};},matchMedia:()=>({matches:false,addEventListener(){}}),loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:callback=>{frameCallback=callback;return 1;},cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
  assert.equal(physicsOptions.ship,false,'the customizer physics must not board the ship');
+ assert.equal(physicsOptions.climb,false);assert.equal(physicsOptions.contain,true);
  assert.equal(platform.className,'home-character-platform');
  sensor.callback({gx:1,gy:0,shake:0,angularSpeed:0,timeSeconds:1});
  frameCallback(40);
- assert.equal(painted.pose,'greet');assert.equal(host.dataset.phonePhase,'wave');
- assert.match(canvas.style.transform,/translate\(calc\(-50% \+ 14px\),-8px\) rotate\(0rad\)/,'climbing and waving stay aligned to the original fixed platform');
+ assert.equal(painted.pose,'fall');assert.equal(host.dataset.phonePhase,'fall');
+ assert.match(canvas.style.transform,/translate\(calc\(-50% \+ 14px\),-8px\) rotate\(-1.2rad\)/,'the falling feet point toward gravity');
 });
 test('active phone phases hold the Gala playlist and animate a coach-sprite arm wave',()=>{
  const drawCalls=[],drawnPoses=[],contexts=[];
@@ -79,7 +80,8 @@ test('reduced motion resets phone physics and the resting transform',()=>{
  const reduced={matches:false,addEventListener:(name,fn)=>{changePreference=fn;},removeEventListener(){}};
  const document={body,hidden:false,createElement:()=>({style:{},className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
  const window={addEventListener(){},GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{},GalaPerformance:{create:()=>({paint(){}})}};
- vm.runInNewContext(source+';mountHomeCharacter();',{window,document,createCharacterPhysics:()=>({state:{x:20,y:30,angle:1,phase:'fall',pose:'fall',active:true,shipProgress:0},sample(){},step(){},resize(){},reset(){resetCount++;Object.assign(this.state,{x:0,y:0,angle:0,phase:'idle',pose:'idle',active:false});}}),subscribePhoneMotion:()=>()=>{},matchMedia:()=>reduced,loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
+ vm.runInNewContext(source+';mountHomeCharacter();',{window,document,createCharacterPhysics:()=>({state:{x:20,y:30,angle:1,phase:'fall',pose:'fall',active:true,shipProgress:0},sample(){},step(){},resize(){},setRestCenter(){},reset(){resetCount++;Object.assign(this.state,{x:0,y:0,angle:0,phase:'idle',pose:'idle',active:false});}}),subscribePhoneMotion:()=>()=>{},matchMedia:()=>reduced,loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
  reduced.matches=true;changePreference();
  assert.equal(resetCount,1);assert.equal(canvas.style.transform,'translateX(-50%)');assert.equal(host.dataset.phonePhase,'idle');
 });
+
