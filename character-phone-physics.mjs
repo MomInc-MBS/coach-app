@@ -2,7 +2,9 @@
  * Deterministic phone-orientation physics for the customizer character.
  * Coordinates are CSS-pixel offsets from the centered resting pose. `gx` points
  * screen-right and `gy` screen-down; upright is (0, 1). `shake` is acceleration
- * magnitude in g and angularSpeed is radians/second. The adapter owns sensor
+ * magnitude in m/s² (shake impulses above 14 m/s²) and angularSpeed is
+ * radians/second. Poses are renderer hints (`wiggle` for unsupported midair,
+ * `greet` for the midpoint wave, `walk` for recovery). The adapter owns sensor
  * permissions, reduced-motion policy, rendering, and persistence.
  */
 export function createCharacterPhysics({
@@ -28,6 +30,9 @@ export function createCharacterPhysics({
   let shakeArmed = true;
   let angularArmed = true;
   let fallHold = 0;
+  let tiltHold = 0;
+  let fallAge = 0;
+  let recoverAfterFall = false;
   let fallGravity = { x: 0, y: 1 };
   let recoveryStart = { x: 0, y: 0 };
   let climbStart = { x: 0, y: 0 };
@@ -46,7 +51,7 @@ export function createCharacterPhysics({
     phaseAge = 0;
     state.active = phase !== 'idle' && phase !== 'gone';
   };
-  const gravityAngle = () => Math.atan2(gravityX, gravityY) * 180 / Math.PI;
+  const gravityAngle = () => Math.atan2(gravityX, gravityY);
   const snapshot = () => ({ ...state });
   const supported = () => Math.abs(gravityX) < 0.2 && gravityY > 0.8;
   const sideways = () => Math.abs(gravityX) > 0.8 || gravityY < 0;
@@ -55,9 +60,11 @@ export function createCharacterPhysics({
     edge = { x: gravityX / length, y: gravityY / length };
     fallGravity = { x: gravityX, y: gravityY };
   };
-  const startFall = (pose = 'fall') => {
+  const startFall = (pose = 'fall', canRecover = false) => {
     setFallEdge();
     fallHold = 0;
+    fallAge = 0;
+    recoverAfterFall = canRecover;
     setPhase('fall', pose);
   };
   const clampPosition = (bounce = true) => {
@@ -72,6 +79,8 @@ export function createCharacterPhysics({
     recoveryStart = { x: state.x, y: state.y };
     vx = 0;
     vy = 0;
+    recoverAfterFall = false;
+    state.shipProgress = 0;
     setPhase('recover', 'walk');
   };
   const beginClimb = () => {
@@ -95,16 +104,16 @@ export function createCharacterPhysics({
     const now = Number.isFinite(timeSeconds) ? timeSeconds : lastTime;
     lastTime = now;
 
-    if (shake <= 0.7) shakeArmed = true;
+    if (shake <= 7) shakeArmed = true;
     if (angular < 1.2) angularArmed = true;
 
     // An impulse is edge-triggered, so one sustained sensor reading cannot pin
     // the character against a wall. A renewed pulse can add another impulse.
-    if (shake > 1.4 && shakeArmed) {
+    if (shake > 14 && shakeArmed) {
       shakeArmed = false;
       const direction = ((Math.floor(Math.max(0, now) * 10) % 2) ? 1 : -1);
-      vx += direction * Math.min(1500, shake * 430);
-      vy -= Math.min(780, shake * 210);
+      vx += direction * Math.min(1500, shake * 20);
+      vy -= Math.min(780, shake * 10);
       if (['climb', 'wave', 'climb-out'].includes(state.phase)) startFall('fall');
       else if (state.phase === 'idle' || state.phase === 'slide' || state.phase === 'recover') startFall('fall');
     }
@@ -113,13 +122,17 @@ export function createCharacterPhysics({
       angularArmed = false;
       setFallEdge();
       fallHold = 0;
-      setPhase('air-run', 'air-run');
+      fallAge = 0;
+      recoverAfterFall = true;
+      setPhase('air-run', 'wiggle');
     }
 
     // A slow orientation change moves the supported coach across the glass.
-    if (state.phase === 'idle' && (!supported() || Math.abs(vx) > 18)) setPhase('slide', 'slide');
+    if (state.phase === 'idle' && (!supported() || Math.abs(vx) > 18)) { tiltHold = 0; setPhase('slide', 'slide'); }
     if (['idle', 'slide'].includes(state.phase)) state.angle = gravityAngle();
-    if (!wasSupported && supported() && ['fall', 'bounce', 'climb', 'wave', 'climb-out'].includes(state.phase)) enterRecovery();
+    if (['fall', 'bounce'].includes(state.phase)) setFallEdge();
+    if (!wasSupported && supported() && ['fall', 'bounce', 'climb', 'wave', 'climb-out', 'ship', 'gone'].includes(state.phase)) enterRecovery();
+    if (!['idle', 'recover'].includes(state.phase)) state.angle = gravityAngle();
 
     return snapshot();
   }
@@ -133,19 +146,26 @@ export function createCharacterPhysics({
 
       if (['air-run', 'look-down'].includes(state.phase)) {
         if (state.phase === 'air-run' && phaseAge >= 0.6 - 1e-6) { setPhase('look-down', 'look-down'); continue; }
-        if (state.phase === 'look-down' && phaseAge >= 0.45 - 1e-6) { startFall('fall'); continue; }
+        if (state.phase === 'look-down' && phaseAge >= 0.45 - 1e-6) { startFall('fall', recoverAfterFall); continue; }
       }
 
       if (state.phase === 'fall' || state.phase === 'bounce') {
+        // Keep the falling vector aligned with fresh device samples. The edge
+        // remembered at fall start is only used to choose the later climb path.
+        fallGravity = { x: gravityX, y: gravityY };
+        const gravityLength = Math.hypot(gravityX, gravityY) || 1;
+        edge = { x: gravityX / gravityLength, y: gravityY / gravityLength };
+        fallAge += h;
         fallHold = sideways() ? fallHold + h : 0;
-        if (fallHold >= 2) { beginClimb(); continue; }
+        if (fallHold >= 2 - 1 / 60) { beginClimb(); continue; }
+        if (recoverAfterFall && supported() && fallAge >= 0.25) { enterRecovery(); continue; }
         vx += fallGravity.x * 620 * h;
         vy += fallGravity.y * 620 * h;
         state.x += vx * h;
         state.y += vy * h;
         if (supported() && state.y > 0) {
           state.y = 0;
-          if (vy > 35) { vy = -vy * 0.28; setPhase('bounce', 'air-run'); }
+          if (vy > 35) { vy = -vy * 0.28; setPhase('bounce', 'wiggle'); }
           else vy = 0;
         }
         state.angle = gravityAngle();
@@ -153,7 +173,7 @@ export function createCharacterPhysics({
         const beforeY = state.y;
         clampPosition(true);
         if (state.x !== beforeX || state.y !== beforeY) {
-          if (state.phase !== 'bounce') setPhase('bounce', 'air-run');
+          if (state.phase !== 'bounce') setPhase('bounce', 'wiggle');
         } else if (state.phase === 'bounce' && phaseAge > 0.35) setPhase('fall', 'fall');
         vx *= Math.pow(0.985, h * 60);
         vy *= Math.pow(0.985, h * 60);
@@ -163,14 +183,15 @@ export function createCharacterPhysics({
       if (state.phase === 'climb') {
         state.angle = gravityAngle();
         const t = phaseAge / 3;
-        state.x = lerp(climbStart.x, -edge.x * view.width * 0.18, t);
-        state.y = lerp(climbStart.y, -edge.y * view.height * 0.18, t);
+        state.x = lerp(climbStart.x, 0, t);
+        state.y = lerp(climbStart.y, 0, t);
         if (t >= 1 - 1e-6) { climbStart = { x: state.x, y: state.y }; setPhase('wave', 'wave'); }
         continue;
       }
 
       if (state.phase === 'wave') {
         state.angle = gravityAngle();
+        state.pose = 'greet';
         if (phaseAge >= 2 - 1e-6) { climbStart = { x: state.x, y: state.y }; setPhase('climb-out', 'climb'); }
         continue;
       }
@@ -209,6 +230,8 @@ export function createCharacterPhysics({
       }
 
       if (state.phase === 'slide') {
+        tiltHold = sideways() ? tiltHold + h : 0;
+        if (tiltHold >= 0.8) { startFall('fall'); continue; }
         vx += gravityX * 480 * h;
         vx *= Math.pow(0.91, h * 60);
         state.x += vx * h;
@@ -236,7 +259,7 @@ export function createCharacterPhysics({
   function reset() {
     state.x = 0; state.y = 0; state.angle = 0; state.shipProgress = 0;
     setPhase('idle', 'idle');
-    vx = 0; vy = 0; phaseAge = 0; fallHold = 0;
+    vx = 0; vy = 0; phaseAge = 0; fallHold = 0; tiltHold = 0; fallAge = 0; recoverAfterFall = false;
     gravityX = 0; gravityY = 1; lastTime = 0;
     shakeArmed = true; angularArmed = true;
     return snapshot();
