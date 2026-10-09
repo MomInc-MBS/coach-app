@@ -75,15 +75,16 @@
   }
   return {paint,scenes,weapon:hasWeapon?look.weapon:null,triggerSpecial(){if(hasWeapon)specialAt=window.performance.now();}};
  }
- function drawCoachArms(ctx,body,movement,time){
-  const wave=Math.sin(time/95),climb=Math.sin(time/110),sway=Math.sin(time/72),arms=[
-   {side:-1,pivot:21,crop:14,maskX:16,maskWidth:10,angle:movement==='greet'?0.08:movement==='climb'?1.02+climb*.32:-.1+sway*.24},
-   {side:1,pivot:44,crop:38,maskX:40,maskWidth:11,angle:movement==='greet'?-1.08+wave*.36:movement==='climb'?-1.02-climb*.32:.1-sway*.24},
-  ];
+  function drawCoachArms(ctx,body,movement,time){
+   // Move the outer limb pixels; center-column crops also include the coach's face and torso.
+   const wave=Math.sin(time/170),climb=Math.sin(time/110),sway=Math.sin(time/72),arms=movement==='greet'?
+    [{x:48,y:43,w:16,h:29,px:48,py:62,angle:wave*.4}]:
+    [{x:0,y:52,w:16,h:25,px:16,py:52,angle:movement==='climb'?.5+climb*.25:sway*.3},
+     {x:48,y:52,w:16,h:25,px:48,py:52,angle:movement==='climb'?-.5-climb*.25:-sway*.3}];
   ctx.save();ctx.translate(32,13);ctx.scale(1.5,1.5);
   for(const arm of arms){
-   ctx.save();ctx.globalCompositeOperation='destination-out';ctx.fillRect(arm.maskX,37,arm.maskWidth,27);ctx.restore();
-   ctx.save();ctx.translate(arm.pivot,38);ctx.rotate(arm.angle);ctx.drawImage(body,arm.crop,35,14,29,-(arm.pivot-arm.crop),-3,14,29);ctx.restore();
+    ctx.save();ctx.globalCompositeOperation='destination-out';ctx.fillRect(arm.x,arm.y,arm.w,arm.h);ctx.restore();
+    ctx.save();ctx.translate(arm.px,arm.py);ctx.rotate(arm.angle);ctx.drawImage(body,arm.x,arm.y,arm.w,arm.h,arm.x-arm.px,arm.y-arm.py,arm.w,arm.h);ctx.restore();
   }
   ctx.restore();
  }
