@@ -75,9 +75,9 @@ export class CreatureViewer {
   this.visibilityObserver=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;});this.visibilityObserver.observe(mount);
   if(interactive){this.startPhoneMotion();window.addEventListener('myr5:account-ready',this.phoneAccountChange);window.addEventListener('myr5:account-cleared',this.phoneAccountChange);}
   // D43.5: coach-overlay can cap this below the native ~31fps (setMaxFps) while a counted set is
-  // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. dt still
-  // reflects the real gap between accepted frames (matching whatever gate is active), so a capped
-  // coach's own animation covers the same ground in fewer, bigger steps rather than slow motion.
+  // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. Ongoing
+  // falls/climbs use the real frame gap; the brief flip and look-down beats advance per rendered frame
+  // so a busy renderer still shows both poses before continuing the fall.
   const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));this.updatePhoneCameraFraming(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
  }
  // Layout size, not getBoundingClientRect(): a portal destination arrives scaled from the wormhole's core (2N), and a
@@ -134,7 +134,8 @@ export class CreatureViewer {
    if(this.phonePose!=='idle'||this.phonePhysics.state.phase!=='idle'){this.resetPhonePhysics();}
    this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();return;
   }
-  this.phoneElapsed+=dt;this.phonePhysics.step(dt);
+  const phaseDt=['air-run','look-down'].includes(this.phonePhysics.state.phase)?Math.min(.05,dt):dt;
+  this.phoneElapsed+=phaseDt;this.phonePhysics.step(phaseDt);
   const state=this.phonePhysics.state;
   this.renderer.domElement.dataset.phonePhase=state.phase;this.mount.dataset.phoneMotionPhase=state.phase;
   const contactTarget=['climb','wave','climb-out'].includes(state.phase)?1:0;this.phoneFloorContact+=(contactTarget-this.phoneFloorContact)*Math.min(1,dt*5);
