@@ -8,7 +8,7 @@ const phone=()=>({state:{x:80,y:0,angle:0,phase:'idle',pose:'idle',active:false,
 const sensor=callback=>{sensor.last=callback;return()=>{};};
 test('Gala stays through exercise changes and returns after stop, camera failure and rest',()=>{
  const listeners=new Map(),observers=[];
- const canvas={setAttribute(){}},button={setAttribute(){},addEventListener(){}},label={};
+ const canvas={style:{},setAttribute(){}},button={setAttribute(){},addEventListener(){}},label={};
  const host={hidden:true,clientWidth:320,clientHeight:220,append(){},querySelector:s=>s==='canvas'?canvas:s==='button'?button:label},hud={hidden:false};
  const body={dataset:{screen:'pod',tracking:'false'}};
  const document={body,hidden:false,createElement:()=>({className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:hud,querySelector:()=>null,addEventListener(){}};
@@ -24,7 +24,7 @@ test('Gala stays through exercise changes and returns after stop, camera failure
 test('R26: the pod window draws the War Room coach sprites and redraws after a coach or War Room change',async()=>{
  const listeners=new Map(),created=[];let loads=0;
  const coaches={draw:(avatarDraw,canvas)=>{canvas.drawnBy='coach';},hasPet:true};
- const canvas={setAttribute(){}},button={setAttribute(){},addEventListener(){}},label={};
+ const canvas={style:{},setAttribute(){}},button={setAttribute(){},addEventListener(){}},label={};
  const host={hidden:true,clientWidth:320,clientHeight:220,append(){},querySelector:s=>s==='canvas'?canvas:s==='button'?button:label};
  const document={body:{dataset:{screen:'pod',tracking:'false'}},hidden:false,createElement:()=>({className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
  const window={addEventListener:(key,fn)=>listeners.set(key,fn),GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{draw(){}},GalaPerformance:{create:(look,options={})=>{created.push(options);return {paint(){}};}}};
@@ -84,4 +84,5 @@ test('reduced motion resets phone physics and the resting transform',()=>{
  reduced.matches=true;changePreference();
  assert.equal(resetCount,1);assert.equal(canvas.style.transform,'translateX(-50%)');assert.equal(host.dataset.phonePhase,'idle');
 });
+
 
