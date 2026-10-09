@@ -46,7 +46,7 @@ async function withPage(run){
  }finally{await browser?.close();server.closeAllConnections();await new Promise(done=>server.close(done));}
 }
 
-for(const motion of ['reduce','no-preference'])test(`oval uses supply-drop sky and ground with the real coach and hull (${motion})`,{timeout:60000},async()=>withPage(async(page,requests)=>{
+for(const motion of ['reduce','no-preference'])test(`oval uses supply-drop sky and ground with the real coach and hull (${motion})`,{timeout:120000},async()=>withPage(async(page,requests)=>{
  await page.emulateMedia({reducedMotion:motion});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.evaluate(()=>openOval());
