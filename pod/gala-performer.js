@@ -13,7 +13,7 @@
   let remaining=Math.max(0,time)%scenes.reduce((sum,scene)=>sum+scene.duration,0);
   for(const scene of scenes){if(remaining<scene.duration)return {...scene,time:remaining,progress:remaining/scene.duration};remaining-=scene.duration;}
  }
- function create(look,{draw=A.draw,hasPet=false}={}){
+ function create(look,{draw=A.draw,hasPet=false,hasCoachBody=false}={}){
   const body=document.createElement('canvas'),pet=document.createElement('canvas'),weapon=document.createElement('canvas');
   const scenes=playlist(hasPet?{...look,parts:{...look.parts,pet:1}}:look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity;
   weapon.width=40;weapon.height=72;if(hasWeapon)W.draw(weapon.getContext('2d'),look.weapon);
@@ -21,16 +21,17 @@
   function paint(canvas,time=0,still=false,motion={}){
    if(canvas.width!==160||canvas.height!==168){canvas.width=160;canvas.height=168;}
    const specialPlaying=hasWeapon&&window.GalaWeaponMotion&&window.performance.now()-specialAt<(window.GalaWeaponMotion.abilityFor(look.weapon)?.animationMs||0);
-   const ctx=canvas.getContext('2d'),scene=specialPlaying?{name:'weapon',time:0,progress:0,duration:2000}:still?{name:'idle',time:0,progress:0,duration:6000}:moment(scenes,time);
+   const moving=motion.active===true&&motion.phase!=='gone';
+   const ctx=canvas.getContext('2d'),scene=still||moving?{name:'idle',time:0,progress:0,duration:6000}:specialPlaying?{name:'weapon',time:0,progress:0,duration:2000}:moment(scenes,time);
    ctx.clearRect(0,0,160,168);ctx.imageSmoothingEnabled=false;canvas.dataset.scene=scene.name;
-   const seconds=scene.time/1000,wave=Math.sin(seconds*TAU*1.15),blink=!still&&(scene.name==='face'?(seconds>1.5&&seconds<1.68)||(seconds>3.2&&seconds<3.37):(time%4900>4570&&time%4900<4710));
    const motionPose=motion.pose||'idle',movement=still?'idle':({ 'air-run':'wiggle',bounce:'wiggle',wave:'greet',fall:'look-down','climb-out':'climb',recover:'walk' }[motionPose]||motionPose),active=movement!=='idle'&&movement!=='gone';
+   const seconds=scene.time/1000,wave=Math.sin(seconds*TAU*1.15),blink=!still&&(movement==='look-down'||(scene.name==='face'?(seconds>1.5&&seconds<1.68)||(seconds>3.2&&seconds<3.37):(time%4900>4570&&time%4900<4710)));
    const pose={};if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb')pose.walk=active?Math.sin(time/85)*.8:wave;
    if(scene.name==='pet')pose.petting=wave;
    if(movement==='climb')pose.petting=Math.sin(time/120)*.95;
-   if(movement==='greet')pose.meditationStanding=true;
+   if(movement==='greet')pose.greet=Math.sin(time/95);
    if(scene.name==='weapon')pose.weapon=true;
-   const poseKey=JSON.stringify([blink,scene.name,movement,Math.round((pose.walk||pose.petting||0)*10)]);
+   const poseKey=JSON.stringify([blink,scene.name,movement,Math.round((pose.walk||pose.petting||0)*10),Math.round((pose.greet||0)*10)]);
    if(poseKey!==lastPose){draw(body,look,{base:false,weapon:false,companion:false,prop:scene.name!=='weapon',blink,pose});lastPose=poseKey;}
    let offset=0,flip=false,zoom=0;
    if(scene.name==='walk'){
@@ -48,10 +49,12 @@
     ctx.drawImage(body,0,70,32,26,32,118+gait,48,39);
     ctx.drawImage(body,32,70,32,26,80,118-gait,48,39);
    }else ctx.drawImage(body,17*zoom,10*zoom,64-34*zoom,96-66*zoom,32-24*zoom,13-3*zoom+bob,96+48*zoom,144);
+   if(hasCoachBody&&['greet','climb','wiggle'].includes(movement))drawCoachArms(ctx,body,movement,time);
    if((look.parts.pet||hasPet)&&zoom<1){
     ctx.globalAlpha=1-zoom;const affection=scene.name==='pet'?Math.max(0,wave)*1.3:0;ctx.drawImage(pet,32,13-affection,96,144);ctx.globalAlpha=1;
     if(scene.name==='pet'){const rise=(seconds%1.25)/1.25,hx=45,hy=113-rise*18;ctx.globalAlpha=Math.sin(rise*Math.PI)*.85;ctx.fillStyle='#ff97c2';ctx.fillRect(hx-3,hy-2,3,3);ctx.fillRect(hx+1,hy-2,3,3);ctx.fillRect(hx-2,hy+1,5,2);ctx.fillRect(hx,hy+3,1,1);ctx.globalAlpha=1;}
    }
+   if(motion.phase==='bounce'&&!still){ctx.save();ctx.globalAlpha=.76;ctx.fillStyle='#ead8bb';for(const [x,y] of [[34,151],[43,146],[53,151],[105,151],[116,145],[126,150]])ctx.fillRect(x+(Math.sin(time/70+x)*3|0),y,3,2);ctx.restore();}
    if(hasWeapon&&zoom<1&&window.GalaWeaponMotion){
     const M=window.GalaWeaponMotion,ability=M.abilityFor(look.weapon),special=ability&&window.performance.now()-specialAt<ability.animationMs;
     const attack=scene.name==='weapon',beat=scene.time%1350;
@@ -71,6 +74,18 @@
    ctx.restore();return scene;
   }
   return {paint,scenes,weapon:hasWeapon?look.weapon:null,triggerSpecial(){if(hasWeapon)specialAt=window.performance.now();}};
+ }
+ function drawCoachArms(ctx,body,movement,time){
+  const wave=Math.sin(time/95),climb=Math.sin(time/110),sway=Math.sin(time/72),arms=[
+   {side:-1,pivot:21,crop:14,maskX:16,maskWidth:10,angle:movement==='greet'?0.08:movement==='climb'?1.02+climb*.32:-.1+sway*.24},
+   {side:1,pivot:44,crop:38,maskX:40,maskWidth:11,angle:movement==='greet'?-1.08+wave*.36:movement==='climb'?-1.02-climb*.32:.1-sway*.24},
+  ];
+  ctx.save();ctx.translate(32,13);ctx.scale(1.5,1.5);
+  for(const arm of arms){
+   ctx.save();ctx.globalCompositeOperation='destination-out';ctx.fillRect(arm.maskX,37,arm.maskWidth,27);ctx.restore();
+   ctx.save();ctx.translate(arm.pivot,38);ctx.rotate(arm.angle);ctx.drawImage(body,arm.crop,35,14,29,-(arm.pivot-arm.crop),-3,14,29);ctx.restore();
+  }
+  ctx.restore();
  }
  window.GalaPerformance={playlist,moment,create};
 })();

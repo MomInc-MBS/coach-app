@@ -56,7 +56,7 @@ function draw(canvas,look,{base=true,weapon=true,time=0,companion=true,petOnly=f
  const gem=(x,y,col=gold)=>{poly([[x,y-2],[x+2,y],[x,y+2],[x-2,y]],col);dot(x,y-1,white);};
  const box=(x,y,w,h,col)=>{rect(x,y,w,h,ink);rect(x+1,y+1,w-2,h-2,col);};
  const width=[0,-2,3,2,4,-1,1,-3,3,0][p.body];
- const armPose=side=>{const x=side<0?21-width:44+width,y=39;let angle=(pose.walk||0)*side*.1,stretch=1;if(pose.meditate)angle=-side*.45;else if(pose.meditationStanding)angle=-side*.92;else if(side<0&&pose.petting!=null){stretch=[1.8,1.5,1.02,1.55,1.5,1.4,1.5,1.4,1.25,1.16][p.pet];angle=Math.asin((x-14)/(23*stretch))+pose.petting*.045;}if(side>0&&pose.weapon)angle=-.8;c.translate(x,y);c.rotate(angle);c.scale(1,stretch);c.translate(-x,-y);};
+ const armPose=side=>{const x=side<0?21-width:44+width,y=39;let angle=(pose.walk||0)*side*.1,stretch=1;if(pose.meditate)angle=-side*.45;else if(pose.meditationStanding)angle=-side*.92;else if(side>0&&pose.greet!=null)angle=-1.08+pose.greet*.36;else if(side<0&&pose.petting!=null){stretch=[1.8,1.5,1.02,1.55,1.5,1.4,1.5,1.4,1.25,1.16][p.pet];angle=Math.asin((x-14)/(23*stretch))+pose.petting*.045;}if(side>0&&pose.weapon)angle=-.8;c.translate(x,y);c.rotate(angle);c.scale(1,stretch);c.translate(-x,-y);};
  if(!petOnly){
  // Each base has its own silhouette and surface pattern.
  if(base){const i=p.base;poly([[13-i%3,87],[22,84],[43,84],[52+i%3,88],[45,93],[20,93]],i===6?'#913f58':i===4?'#383341':i===5?'#aea6c9':'#756580');for(let x=18;x<48;x+=3){rect(x,89,2,2,i%2?gold:'#bca7bd');if(i===3||i===9)gem(x,84-(x%3),i===3?'#81b791':H);}if(i===1)rect(18,85,29,2,gold);if(i===2)box(20,87,5,3,'#a4a0bd');if(i===7)for(let x=18;x<49;x+=4)rect(x,86,1,6,ink);if(i===8)for(let x=16;x<49;x+=8)poly([[x,88],[x+2,79],[x+5,88]],'#8db9d0');}

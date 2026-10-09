@@ -3,12 +3,11 @@
 .home-character[hidden],#hud[hidden]{display:none!important}
 .home-character button{position:absolute;inset:0;display:block;width:100%;height:100%;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#f1e8ff;cursor:pointer;pointer-events:auto;overflow:visible}
 .home-character button:focus-visible{outline:3px solid #b4efcf;outline-offset:-4px}
-.home-character canvas{position:absolute;left:50%;top:auto;bottom:0;display:block;min-height:0;width:auto;height:125%;max-width:none;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(3px 3px #211b31aa);transform-origin:50% 82%;z-index:2}
+.home-character canvas{position:absolute;left:50%;top:auto;bottom:0;display:block;min-height:0;width:auto;height:125%;max-width:none;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(3px 3px #211b31aa);transform:translateX(-50%);transform-origin:50% 82%;z-index:2}
 .home-character-platform{position:absolute;z-index:3;left:8%;right:8%;bottom:7%;height:9px;border:2px solid #7b6689;border-bottom:4px solid #382d43;background:repeating-linear-gradient(90deg,#bca7bd 0 9px,#86728f 9px 12px,#54465f 12px 15px);box-shadow:0 5px 0 #1e1924,0 7px 0 #bd9b6b55,0 9px 9px #09070dbb;image-rendering:pixelated;pointer-events:none;transform-origin:50% 50%}
 .home-character-platform:before{content:"";position:absolute;left:3px;right:3px;top:-5px;height:3px;background:repeating-linear-gradient(90deg,#ead8bb 0 7px,#ad98aa 7px 11px);border-top:1px solid #fff2d0}
 .home-character[data-phase="gone"] .home-character-platform{opacity:.8}
 .home-character[data-phase="climb"],.home-character[data-phase="climb-out"]{overflow:visible}
 /* Let the portrait clear the glass before it rebounds at the 96px physics buffer. */
-#view:has(>.home-character){overflow:visible}
 /* The weapon's name stays in the canvas's label and the Avatar dialog (the plate's "Your avatar"). */
 .home-character [data-weapon]{display:none}

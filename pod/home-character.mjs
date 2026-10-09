@@ -19,14 +19,15 @@ export function mountHomeCharacter(){
   let storage;try{storage=localStorage;}catch{}
   const look=loadGala(storage,A).look,chosen=look.weapon||{type:'rapier',tier:0};
   look.weapon=W.unlocked(chosen)?chosen:{type:chosen.type,tier:0};
-  performer=window.GalaPerformance.create(look,coaches?{draw:(canvas,value,options)=>coaches.draw(A.draw,canvas,value,options),hasPet:coaches.hasPet}:{});origin=performance.now();
+  performer=window.GalaPerformance.create(look,coaches?{draw:(canvas,value,options)=>coaches.draw(A.draw,canvas,value,options),hasPet:coaches.hasPet,hasCoachBody:coaches.hasBody}:{});origin=performance.now();
   host.querySelector('[data-weapon]').textContent=W.name(look.weapon);
   canvas.setAttribute('aria-label',`${look.name||'Your Gala character'} with ${W.name(look.weapon)}`);
-  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase});sync();
+  performer.paint(canvas,0,reduced.matches,{pose:physics.state.pose,phase:physics.state.phase,active:physics.state.active});sync();
  }
  function shown(){return document.body.dataset.tracking!=='true'&&document.body.dataset.screen!=='rest';}
  function animate(now){
   frame=0;if(disposed||!shown()||!visible||document.hidden||document.querySelector('dialog[open]'))return;
+  if(reduced.matches){if(physics.state.phase!=='idle'||canvas.style.transform!=='translateX(-50%)')resetForReducedMotion();return;}
   if(now-last>32){
    const dt=last?Math.min(.05,(now-last)/1000):1/60;last=now;
    physics.sample(motion,now/1000);physics.step(dt);
@@ -34,7 +35,7 @@ export function mountHomeCharacter(){
    const climbPose=['climb','wave','climb-out'].includes(state.phase);
    canvas.style.transform=`translate(calc(-50% + ${state.x}px),${state.y}px) rotate(${climbPose?0:state.angle}rad)`;
    canvas.dataset.pose=state.pose;canvas.dataset.phase=state.phase;host.dataset.phase=state.phase;host.dataset.phonePhase=state.phase;host.dataset.phoneX=Math.round(state.x);host.dataset.phoneY=Math.round(state.y);
-   performer.paint(canvas,now-origin,reduced.matches,{pose:state.pose,phase:state.phase});
+   performer.paint(canvas,now-origin,false,{pose:state.pose,phase:state.phase,active:state.active});
   }
   if(!reduced.matches)frame=requestAnimationFrame(animate);
  }
@@ -43,6 +44,15 @@ export function mountHomeCharacter(){
   if(frame)cancelAnimationFrame(frame);frame=0;
   if(!disposed&&show&&visible&&!document.hidden)frame=requestAnimationFrame(animate);
  }
+ function listenForMotion(){unsubscribeMotion();unsubscribeMotion=()=>{};if(!disposed&&!reduced.matches)unsubscribeMotion=subscribePhoneMotion(sample=>{motion=sample;});}
+ function resetForReducedMotion(){
+  unsubscribeMotion();unsubscribeMotion=()=>{};physics.reset();motion={gx:0,gy:1,shake:0,angularSpeed:0,timeSeconds:0};last=0;
+  canvas.style.transform='translateX(-50%)';canvas.dataset.pose='idle';canvas.dataset.phase='idle';
+  host.dataset.phase='idle';host.dataset.phonePhase='idle';host.dataset.phoneX='0';host.dataset.phoneY='0';
+  platform.style.transform='';
+  performer?.paint(canvas,0,true,{pose:'idle',phase:'idle',active:false});
+ }
+ function reducedChanged(){if(reduced.matches)resetForReducedMotion();else listenForMotion();sync();}
  function attack(){
   if(!performer?.weapon)return;
   const index=performer.scenes.findIndex(scene=>scene.name==='weapon');
@@ -51,15 +61,15 @@ export function mountHomeCharacter(){
  }
  const observer=new MutationObserver(sync);observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-tracking','data-screen','open']});
  const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});intersection.observe(host);
- const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){unsubscribeMotion=subscribePhoneMotion(sample=>{motion=sample;});load();}};
- unsubscribeMotion=subscribePhoneMotion(sample=>{motion=sample;});
+ const storage=event=>{if(event.key===GALA_KEY||event.key===RECIPE_KEY||event.key?.startsWith(COACH_CHOICE))load();},shownAgain=event=>{if(event.persisted){listenForMotion();load();}};
+ listenForMotion();
  const resize=()=>physics.resize(host.clientWidth||320,host.clientHeight||220,canvas.clientWidth||120,canvas.clientHeight||240);
  resize();window.addEventListener('resize',resize);
  window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:recipe',load);window.addEventListener('pageshow',shownAgain);window.addEventListener('myr5:account-progress',load);window.addEventListener('storage',storage);
- document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',sync);
+ document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',reducedChanged);
  const entry=host.querySelector('button');entry.setAttribute('aria-label','Open your character in the War Room');
  entry.addEventListener('click',()=>{location.href='/war-room/index.html';});
  load();
  import(COACH_SPRITES).then(m=>m.loadWarRoomCoaches(document)).then(value=>{if(!disposed){coaches=value;load();}}).catch(()=>{});
-  window.addEventListener('pagehide',event=>{if(event.persisted){unsubscribeMotion();return;}disposed=true;unsubscribeMotion();sync();observer.disconnect();intersection.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:recipe',load);window.removeEventListener('pageshow',shownAgain);window.removeEventListener('myr5:account-progress',load);window.removeEventListener('storage',storage);document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',sync);}); // a bfcache hide keeps it alive for pageshow
+  window.addEventListener('pagehide',event=>{if(event.persisted){unsubscribeMotion();return;}disposed=true;unsubscribeMotion();sync();observer.disconnect();intersection.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:recipe',load);window.removeEventListener('pageshow',shownAgain);window.removeEventListener('myr5:account-progress',load);window.removeEventListener('storage',storage);document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',reducedChanged);}); // a bfcache hide keeps it alive for pageshow
 }

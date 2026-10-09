@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 const source=(await readFile(new URL('../pod/home-character.mjs',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'').replace('export function','function');
+const performerSource=await readFile(new URL('../pod/gala-performer.js',import.meta.url),'utf8');
 const phone=()=>({state:{x:80,y:0,angle:0,phase:'idle',pose:'idle',active:false,shipProgress:0},sample(){},step(){},resize(){},reset(){}});
 const sensor=callback=>{sensor.last=callback;return()=>{};};
 test('Gala stays through exercise changes and returns after stop, camera failure and rest',()=>{
@@ -54,4 +55,29 @@ test('phone pose is wired to the pixel performer and keeps the original platform
  frameCallback(40);
  assert.equal(painted.pose,'greet');assert.equal(host.dataset.phonePhase,'wave');
  assert.match(canvas.style.transform,/translate\(calc\(-50% \+ 14px\),-8px\) rotate\(0rad\)/,'climbing and waving stay aligned to the original fixed platform');
+});
+test('active phone phases hold the Gala playlist and animate a coach-sprite arm wave',()=>{
+ const drawCalls=[],drawnPoses=[],contexts=[];
+ const context={clearRect(){},save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...args){drawCalls.push(args);},fillRect(){},beginPath(){},ellipse(){},fill(){}};
+ const makeCanvas=()=>{const value={width:0,height:0,dataset:{},getContext:()=>context};contexts.push(value);return value;};
+ const window={GalaAvatar:{draw(){}},GalaWeapons:{unlocked:()=>false},performance:{now:()=>0}};
+ vm.runInNewContext(performerSource,{window,document:{createElement:makeCanvas}});
+ const draw=(canvas,look,options)=>{drawnPoses.push(options);canvas.width=64;canvas.height=96;};
+ const performer=window.GalaPerformance.create({parts:{}},{draw,hasCoachBody:true});
+ const canvas=makeCanvas();performer.paint(canvas,50000,false,{phase:'wave',pose:'greet',active:true});
+ assert.equal(canvas.dataset.scene,'idle','physics movement freezes the usual face/walk playlist');
+ assert.ok(drawnPoses.some(options=>typeof options.pose?.greet==='number'),'the avatar draw hook receives a real wave pose');
+ assert.equal(drawCalls.filter(args=>args.length===9&&[14,38].includes(args[1])).length,2,'the selected coach sprite reuses both of its pixel arms for the wave');
+ performer.paint(canvas,51000,false,{phase:'look-down',pose:'look-down',active:true});
+ assert.ok(drawnPoses.some(options=>options.blink===true),'look-down closes the face before the fall');
+});
+test('reduced motion resets phone physics and the resting transform',()=>{
+ let changePreference,resetCount=0;const canvas={style:{},dataset:{},setAttribute(){}},button={setAttribute(){},addEventListener(){}},body={dataset:{screen:'pod',tracking:'false'}};
+ const host={hidden:true,dataset:{},clientWidth:300,clientHeight:210,append(){},querySelector:s=>s==='canvas'?canvas:s==='button'?button:{textContent:''}};
+ const reduced={matches:false,addEventListener:(name,fn)=>{changePreference=fn;},removeEventListener(){}};
+ const document={body,hidden:false,createElement:()=>({style:{},className:'',setAttribute(){}}),getElementById:id=>id==='homeCharacter'?host:{},querySelector:()=>null,addEventListener(){}};
+ const window={addEventListener(){},GalaWeapons:{unlocked:()=>true,name:()=>''},GalaAvatar:{},GalaPerformance:{create:()=>({paint(){}})}};
+ vm.runInNewContext(source+';mountHomeCharacter();',{window,document,createCharacterPhysics:()=>({state:{x:20,y:30,angle:1,phase:'fall',pose:'fall',active:true,shipProgress:0},sample(){},step(){},resize(){},reset(){resetCount++;Object.assign(this.state,{x:0,y:0,angle:0,phase:'idle',pose:'idle',active:false});}}),subscribePhoneMotion:()=>()=>{},matchMedia:()=>reduced,loadGala:()=>({look:{weapon:{type:'rapier'}}}),performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame(){},drawAnimatedWeapon(){},abilityFor(){},evolution(){},GALA_KEY:'avatar',MutationObserver:class{observe(){}disconnect(){}},IntersectionObserver:class{observe(){}disconnect(){}}});
+ reduced.matches=true;changePreference();
+ assert.equal(resetCount,1);assert.equal(canvas.style.transform,'translateX(-50%)');assert.equal(host.dataset.phonePhase,'idle');
 });
