@@ -27,8 +27,12 @@ export const SCOREBOARD_ROOM=/^\/(?:pod\/rooms\/classroom-(?:wall|desks)\.glb|mo
 export const REMINDERS_ROOM=/^\/(?:pod\/rooms\/console\.(?:glb|webp)|modules\/rooms\/reminders-computer\.css)$/;
 // W4-4E (D47): the customizer cage and the Draco decoder only it needs. Never core; the customizer stays 2D without it.
 export const CAGE_ROOM=/^\/pod\/rooms\/cage\//;
-// Page music (audio/music: six AAC loops + manifest) is an optional "Music" group, never core; page-music.mjs fetches it lazily.
-export const MUSIC=/^\/audio\/music\//;
+// Page music (six AAC loops + manifest) is optional Music. These raw DJ authoring
+// modules are also optional: production Coach statically bundles them in core
+// launch-runtime.mjs. Keep their standalone source route without duplicating
+// first-run bytes; genuine runtime CSS, visualizer vendors and Hand assets retain
+// their existing groups.
+export const MUSIC=/^\/(?:audio\/music\/|actual-dj(?:-providers|-hand|-playlist)?\.mjs$)/;
 // Each grimoire's art: its GLB board (cogs: its folder), its flat poster (portal.mjs's base layer) and its tunnel effect.
 const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+',jelly:'jelly\\.glb',wood:'wood\\.glb',pond:'(?!)'}; // pond is procedural: just its poster and tunnel
 const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+id,new RegExp(`^/(?:pod/worlds/boards/(?:${art}|${id}-poster\\.webp)|modules/portal/portal-tunnel-${id}\\.mjs)$`)]);

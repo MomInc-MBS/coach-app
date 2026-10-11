@@ -23,6 +23,7 @@ export async function sourceOffer(root='.'){
  }
  for(const folder of ROOTS)await walk(folder);
  paths.push(...REUSED_SOURCES);
+ paths.push('vendor/shaders/runtime.mjs','vendor/shaders/LICENSE');
  const sources={};
  for(const path of paths.sort()){sources[path]=await readFile(join(root,path),'utf8');if(PRIVATE_KEY.test(sources[path]))throw new Error(`The source offer would publish a private key: ${path}`);}
  return sources;

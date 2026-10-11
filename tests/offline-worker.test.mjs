@@ -21,6 +21,56 @@ test('unverified core failure returns503 and never retries without integrity',as
 test('force messages never activate while old windows remain, even if every window claims safe',async()=>{const f=fixture();f.setClients([{id:'a',postMessage(){}}]);await f.event('message',{data:{type:'SKIP_WAITING'}});let reply;await f.event('message',{data:{type:'PREPARE_UPDATE'},ports:[{postMessage:value=>reply=value}]});assert.equal(f.skips,0);assert.equal(reply.reason,'busy');});
 test('optional resources are intercepted on demand, cached separately and do not enter core',async()=>{const f=fixture();let response,pending;f.handlers.fetch({request:new Request('https://test/creature/model.glb'),respondWith:p=>response=p,waitUntil:p=>pending=p});assert(response);assert.equal((await response).status,200);await pending;assert(f.stores.has('myr5-optional-'+f.name.slice('myr5-shell-'.length)));assert.equal(f.stores.has(f.name),false);assert.equal(f.calls[0].integrity,optional.integrity);});
 
+const musicBody=Uint8Array.from({length:16},(_,i)=>i),musicAsset={url:'/audio/music/test.m4a',integrity:'sha256-music',bytes:16,group:'music'};
+const musicHeaders={'content-type':'audio/mp4',etag:'"music-v1"','last-modified':'Fri, 09 Oct 2026 08:00:00 GMT','content-encoding':'gzip','content-length':'999'};
+async function musicFetch(f,headers={},method='GET'){
+ let response;const pending=[];
+ f.handlers.fetch({request:new Request('https://test'+musicAsset.url+'?release=test',{method,headers}),respondWith:p=>response=p,waitUntil:p=>pending.push(p)});
+ const result=await response;for(let i=0;i<pending.length;i++)await pending[i];return result;
+}
+test('cached optional and downloaded-package music return real ranges while retaining full canonical200',async()=>{
+ for(const location of ['optional','package']){
+  const f=fixture(async()=>{assert.fail('verified music must work offline');},[musicAsset]),cache=await f.caches.open(`myr5-${location}-`+f.name.slice('myr5-shell-'.length));
+  await cache.put(musicAsset.url,new Response(musicBody,{headers:musicHeaders}));
+  for(const [range,start,end] of [['bytes=0-3',0,3],['bytes=5-',5,15],['bytes=-4',12,15],['bytes=14-99',14,15]]){
+   const response=await musicFetch(f,{range});assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),`bytes ${start}-${end}/16`);
+   assert.equal(response.headers.get('content-length'),String(end-start+1));assert.equal(response.headers.get('accept-ranges'),'bytes');
+   assert.equal(response.headers.get('content-type'),'audio/mp4');assert.equal(response.headers.get('etag'),'"music-v1"');assert.equal(response.headers.has('content-encoding'),false);
+   assert.deepEqual(new Uint8Array(await response.arrayBuffer()),musicBody.slice(start,end+1));
+  }
+  const canonical=await cache.match(musicAsset.url);assert.equal(canonical.status,200);assert.deepEqual(new Uint8Array(await canonical.arrayBuffer()),musicBody);
+  for(const method of ['GET','HEAD']){
+   const response=await musicFetch(f,method==='HEAD'?{range:'bytes=0-3'}:{},method);assert.equal(response.status,200);
+   assert.equal(response.headers.get('content-length'),'16');assert.equal(response.headers.get('accept-ranges'),'bytes');assert.equal((await response.arrayBuffer()).byteLength,method==='HEAD'?0:16);
+  }
+  assert.equal(f.calls.length,0);
+ }
+});
+test('initial music range downloads verified full200 and caches only complete canonical bytes',async()=>{
+ const f=fixture(async()=>new Response(musicBody,{headers:musicHeaders}),[musicAsset]);
+ const response=await musicFetch(f,{range:'bytes=4-7','if-range':'"music-v1"'});assert.equal(response.status,206);
+ assert.deepEqual(new Uint8Array(await response.arrayBuffer()),musicBody.slice(4,8));
+ assert.equal(f.calls.length,1);assert.equal(f.calls[0].method,'GET');assert.equal(f.calls[0].headers.has('range'),false);assert.equal(f.calls[0].headers.has('if-range'),false);assert.equal(f.calls[0].integrity,musicAsset.integrity);
+ const cache=await f.caches.open('myr5-optional-'+f.name.slice('myr5-shell-'.length)),canonical=await cache.match(musicAsset.url);
+ assert.equal(canonical.status,200);assert.deepEqual(new Uint8Array(await canonical.arrayBuffer()),musicBody);
+});
+test('offline music validators, rejected ranges, verified older cache and integrity failures preserve safety',async()=>{
+ const f=fixture(async()=>{throw Error('offline');},[musicAsset]);
+ const old=await f.caches.open('myr5-package-older');await old.put('/__myr5_package__',Response.json([musicAsset]));await old.put(musicAsset.url,new Response(musicBody,{headers:musicHeaders}));
+ for(const [validator,status] of [['"music-v1"',206],[musicHeaders['last-modified'],206],['"old"',200],['W/"music-v1"',200],['2026-10-09T08:00:00Z',200],['Sat, 10 Oct 2026 08:00:00 GMT',200]]){
+  const response=await musicFetch(f,{range:'bytes=0-3','if-range':validator});assert.equal(response.status,status,validator);assert.equal((await response.arrayBuffer()).byteLength,status===206?4:16);
+ }
+ for(const range of ['bytes=16-','bytes=3-2','bytes=-0','bytes=-','bytes=0-1,3-4','items=0-1']){
+  const response=await musicFetch(f,{range});assert.equal(response.status,416,range);assert.equal(response.headers.get('content-range'),'bytes */16');assert.equal((await response.arrayBuffer()).byteLength,0);
+ }
+ const broken=fixture(async()=>{throw Error('SRI mismatch');},[musicAsset]);assert.equal((await musicFetch(broken,{range:'bytes=0-3'})).status,503);assert.equal(broken.calls.length,1);assert.equal(broken.calls[0].integrity,musicAsset.integrity);
+});
+test('unexpected partial music download is rejected before canonical cache writes',async()=>{
+ const f=fixture(async()=>new Response(musicBody.slice(0,4),{status:206,headers:{'content-range':'bytes 0-3/16'}}),[musicAsset]);
+ assert.equal((await musicFetch(f,{range:'bytes=0-3'})).status,503);
+ assert.equal(f.stores.has('myr5-optional-'+f.name.slice('myr5-shell-'.length)),false);assert.equal(f.stores.has('myr5-package-'+f.name.slice('myr5-shell-'.length)),false);
+});
+
 function readyClient(id,{safe=true,onConfirm=()=>{}}={}){return {id,url:'https://test/pose.html',postMessage(data,ports){if(data.type==='UPDATE_ABORT')return;if(data.type==='UPDATE_CONFIRM')onConfirm();ports[0].postMessage({safe,protocol:2,id:data.id});ports[0].close();}};}
 test('idle prepared clients activate together without closing windows',async()=>{const f=fixture(),a=readyClient('a'),b=readyClient('b');f.setClients([a,b]);let reply;await f.event('message',{data:{type:'PREPARE_UPDATE'},source:a,ports:[{postMessage:v=>reply=v}]});assert.equal(f.skips,1);assert.equal(reply.activated,true);});
 test('an active or unresponsive client blocks automatic activation',async()=>{for(const b of [readyClient('b',{safe:false}),{id:'b',url:'https://test/pose.html',postMessage(){}}]){const f=fixture(),a=readyClient('a');f.setClients([a,b]);let reply;await f.event('message',{data:{type:'PREPARE_UPDATE'},source:a,ports:[{postMessage:v=>reply=v}]});assert.equal(f.skips,0);assert.equal(reply.activated,false);}});

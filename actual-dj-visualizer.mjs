@@ -33,22 +33,28 @@ export function createDJVisualizer(canvas, { getAnalyser = () => null, onStatus 
   let running = false, disposed = false, failed = false, pending = false, frame = 0, last = 0;
   let lib, viz, gl, source, gain, scene = 'orbit', palette = 0, react = 1, presetDirty = true;
   let micStream, micContext, micAnalyser, micSource, micGeneration = 0;
-  let external = false, lastStatus = '';
+  let external = false, lastStatus = '', sizedRatio = 0;
   const waveform = new Uint8Array(1024);
   const status = text => { if (text !== lastStatus) { lastStatus = text; onStatus(text); } };
   const selected = () => micAnalyser ?? getAnalyser();
   const dimensions = () => {
     const rect = canvas.getBoundingClientRect();
-    return { width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height)), pixelRatio: Math.min(devicePixelRatio || 1, 1.5) };
+    sizedRatio = Math.min(devicePixelRatio || 1, 1.5);
+    // Butterchurn 2.6.7 uses width/height directly for its output viewport;
+    // pixelRatio multiplies internal textures only. Apply our mobile cap once
+    // here and give its canonical sizing API the same backing-pixel dimensions.
+    return { width: Math.max(1, Math.round(rect.width * sizedRatio)), height: Math.max(1, Math.round(rect.height * sizedRatio)), pixelRatio: 1 };
   };
   function resize() {
     if (!viz) return;
     const { width, height, pixelRatio } = dimensions();
-    canvas.width = Math.round(width * pixelRatio); canvas.height = Math.round(height * pixelRatio);
+    if (canvas.width === width && canvas.height === height) return;
+    canvas.width = width; canvas.height = height;
     viz.setRendererSize(width, height, { pixelRatio });
   }
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
+  window.addEventListener('resize', resize);
 
   function detach() {
     if (gain) {
@@ -89,7 +95,9 @@ export function createDJVisualizer(canvas, { getAnalyser = () => null, onStatus 
       if (!current || current.context.state === 'closed') return;
       gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false });
       if (!gl) throw Error('WebGL2 is unavailable. This device cannot run MilkDrop visuals.');
-      viz = lib.engine.createVisualizer(current.context, canvas, dimensions());
+      const size = dimensions();
+      canvas.width = size.width; canvas.height = size.height;
+      viz = lib.engine.createVisualizer(current.context, canvas, size);
       viz.setInternalMeshSize(32, 24);
       bind(current); resize(); preset();
     } catch (error) {
@@ -104,6 +112,7 @@ export function createDJVisualizer(canvas, { getAnalyser = () => null, onStatus 
     const delta = last ? Math.min((now - last) / 1000, .1) : 1 / 30;
     last = now;
     const analyser = selected();
+    if (viz && sizedRatio !== Math.min(devicePixelRatio || 1, 1.5)) resize();
     if (!analyser || analyser.context.state === 'closed') {
       if (source) detach();
       status('Choose local audio or microphone for live MilkDrop visuals.'); return;
@@ -165,7 +174,7 @@ export function createDJVisualizer(canvas, { getAnalyser = () => null, onStatus 
     // within each scene family; it is an alternate look, not a recolor shader.
     setPalette(value) { palette = ((Math.trunc(Number(value) || 0) % 3) + 3) % 3; presetDirty = true; },
     dispose() {
-      disposed = true; running = false; cancelAnimationFrame(frame); stopMic(); detach(); observer.disconnect();
+      disposed = true; running = false; cancelAnimationFrame(frame); stopMic(); detach(); observer.disconnect(); window.removeEventListener('resize', resize);
       // Upstream has no destroy(). Losing the owned context releases textures,
       // buffers/programs without deleting another engine's AudioContext.
       gl?.getExtension('WEBGL_lose_context')?.loseContext(); viz = null; lib = null;

@@ -101,6 +101,30 @@ function offlineResponse(response){
  headers.delete('content-encoding');headers.delete('content-length');
  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
+// Music stays cached as a verified complete file. Slice only the response sent to the media element.
+// Same single-range semantics as scripts/actual-dj-preview.mjs; no provider audio is intercepted.
+async function musicResponse(request,response,asset){
+ if(!/^\/audio\/music\/[^/]+\.m4a$/.test(asset.url)||response.status!==200)return response;
+ const size=asset.bytes;if(!Number.isSafeInteger(size)||size<=0||size>1024*1024)return new Response('Music asset exceeds byte-serving bounds',{status:502});
+ const reader=response.body?.getReader(),chunks=[];let length=0;
+ if(reader)try{while(true){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>size){await reader.cancel();return new Response('Music asset size mismatch',{status:502});}chunks.push(value);}}finally{reader.releaseLock();}
+ if(length!==size)return new Response('Music asset size mismatch',{status:502});
+ const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+ const headers=new Headers(response.headers);headers.delete('content-encoding');headers.delete('content-range');headers.set('accept-ranges','bytes');headers.set('content-length',String(size));
+ if(request.method==='HEAD')return new Response(null,{headers});
+ const range=request.headers.get('range'),validator=request.headers.get('if-range');
+ const date=Date.parse(validator),modified=Date.parse(headers.get('last-modified'));
+ const matches=!validator||(validator.startsWith('"')?validator===headers.get('etag'):!validator.startsWith('W/')&&Number.isFinite(date)&&Number.isFinite(modified)&&validator===headers.get('last-modified'));
+ if(!range||!matches)return new Response(bytes,{headers});
+ const match=range.match(/^bytes=(\d*)-(\d*)$/i);let start,end;
+ if(match&&(match[1]||match[2])){
+  if(match[1]){start=Number(match[1]);end=match[2]?Number(match[2]):size-1;}
+  else{const suffix=Number(match[2]);start=suffix>0?Math.max(0,size-suffix):size;end=size-1;}
+ }
+ if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||start>=size||end<start){headers.set('content-range',`bytes */${size}`);headers.set('content-length','0');return new Response(null,{status:416,headers});}
+ end=Math.min(end,size-1);headers.set('content-range',`bytes ${start}-${end}/${size}`);headers.set('content-length',String(end-start+1));
+ return new Response(bytes.subarray(start,end+1),{status:206,headers});
+}
 async function downloadAsset(asset){
  // Edge security products can rewrite HTML in transit. Keep integrity strict for
  // executable and binary assets, but allow those harmless HTML transformations.
@@ -108,7 +132,7 @@ async function downloadAsset(asset){
  const response=await fetch(new Request(new URL(asset.url,self.location.origin),{cache:'reload',...(html?{}:{integrity:asset.integrity})}));
  const destination=response.url?new URL(response.url):null;
  const redirectedElsewhere=response.redirected&&(!destination||destination.origin!==self.location.origin||assetPath(destination.pathname)!==assetPath(asset.url));
- if(!response.ok||redirectedElsewhere)throw Error('Could not save Coach asset: '+asset.url);
+ if(!response.ok||redirectedElsewhere||/^\/audio\/music\/[^/]+\.m4a$/.test(asset.url)&&response.status!==200)throw Error('Could not save Coach asset: '+asset.url);
  return offlineResponse(response);
 }
 async function installAssets(){
@@ -192,7 +216,7 @@ self.addEventListener('message',event=>{
 });
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
- if(request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname.startsWith('/source.json')||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html'||request.headers.has('x-myr5-package'))return;
+ if((request.method!=='GET'&&!(request.method==='HEAD'&&/^\/audio\/music\/[^/]+\.m4a$/.test(url.pathname)))||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('with-chatgpt')||url.pathname==='/callback'||url.pathname.startsWith('/signin')||url.pathname.startsWith('/source.json')||url.pathname==='/repair-coach'||url.pathname==='/recover'||url.pathname==='/recover.html'||request.headers.has('x-myr5-package'))return;
  if(url.pathname.startsWith('/voice/')){
   event.respondWith((async()=>{const cache=await caches.open(VOICE),cached=await cache.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok&&!response.redirected)await cache.put(request,response.clone());return response;})());return;
  }
@@ -208,7 +232,7 @@ self.addEventListener('fetch',event=>{
  event.respondWith((async()=>{
   // Opening a cache creates it, so the package cache is only read by name here.
   const cached=optional?await caches.match(path,{cacheName:PACKAGE})||(await localCopy(asset))?.hit:await(await caches.open(SHELL)).match(path);
-  if(cached)return offlineResponse(cached);
+  if(cached)return musicResponse(request,offlineResponse(cached),asset);
   tell('start');
   let response;
   try{response=await downloadAsset(asset);}catch{
@@ -218,7 +242,7 @@ self.addEventListener('fetch',event=>{
   }
   if(kept){const copy=response.clone();event.waitUntil(packageCache().then(cache=>cache.put(path,copy)).catch(()=>{}).then(()=>tell('done')));}
   else if(optional)event.waitUntil(saveOptional(asset,response));else try{await(await caches.open(SHELL)).put(path,response.clone());}catch{}
-  return response;
+  return musicResponse(request,response,asset);
  })());
 });
 self.addEventListener('push',event=>{

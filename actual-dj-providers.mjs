@@ -45,3 +45,48 @@ export function providerLink(id,value){
   return {provider:id,name:provider.name,url:u.href,embed};
  }catch{return null;}
 }
+
+const LOCAL_SOURCE=Object.freeze({
+ id:'local',name:'MYR5 + imported audio',route:'local-deck',
+ capabilities:Object.freeze({localMix:true,autoDJ:true,manualHandoff:false,sourceAttributionRequired:false,controls:'local-deck'}),
+});
+const PROVIDER_ROUTES=Object.freeze({
+ apple:Object.freeze({route:'official-player',controls:'official-player'}),
+ spotify:Object.freeze({route:'official-player',controls:'spotify-terminal-separate'}),
+ soundcloud:Object.freeze({route:'official-player',controls:'official-player'}),
+ youtube:Object.freeze({route:'official-player',controls:'official-player'}),
+ tidal:Object.freeze({route:'official-player',controls:'official-player'}),
+ deezer:Object.freeze({route:'official-player',controls:'official-player'}),
+ bandcamp:Object.freeze({route:'external-link',controls:'external-app'}),
+ amazon:Object.freeze({route:'external-link',controls:'external-app'}),
+});
+
+// Source picks describe where a link can be opened. Only local audio can enter
+// the Web Audio decks; the Spotify account/API surface remains its own route.
+export function getDJSourceChoices(){
+ return [LOCAL_SOURCE,...DJ_PROVIDERS.map(provider=>{
+  const route=PROVIDER_ROUTES[provider.id];
+  return Object.freeze({
+   id:provider.id,name:provider.name,home:provider.home,hint:provider.hint,mode:provider.mode,route:route.route,
+   capabilities:Object.freeze({
+    localMix:false,autoDJ:false,manualHandoff:true,sourceAttributionRequired:true,controls:route.controls,
+   }),
+  });
+ })];
+}
+
+// Normalize a user-authored source link without resolving track metadata or
+// implying that a protected provider can play through the local mixer.
+export function normalizeProviderSourceEntry(providerId,sourceUrl,label){
+ if(typeof sourceUrl!=='string'||sourceUrl.length>2048)return null;
+ if(typeof label!=='string'||label.length>120||/[\u0000-\u001f\u007f]/.test(label))return null;
+ const cleanLabel=label.trim();if(!cleanLabel)return null;
+ const provider=DJ_PROVIDERS.find(item=>item.id===providerId);if(!provider)return null;
+ const link=providerLink(providerId,sourceUrl);if(!link)return null;
+ const choice=getDJSourceChoices().find(item=>item.id===providerId);
+ return Object.freeze({
+  kind:'source-link',provider:providerId,label:cleanLabel,sourceUrl,
+  validatedUrl:link.url,embedUrl:link.embed,route:choice.route,capabilities:choice.capabilities,
+  attribution:Object.freeze({app:'actual.dj',provider:provider.name,sourceUrl}),
+ });
+}

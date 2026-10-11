@@ -11,7 +11,7 @@ test('actual.dj plays actual media, persists imports, hands off providers and pr
  const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  t.after(async()=>{await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});
  const page=await browser.newPage({viewport:{width:375,height:667}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- const base=`http://127.0.0.1:${server.address().port}`;await page.goto(base+'/actual-dj-preview');
+ const base=`http://127.0.0.1:${server.address().port}`;await page.goto(base+'/actual-dj-preview');await page.locator('.dj-more').click();await page.locator('.dj-tabs [data-view=mix]').click();
  await page.waitForFunction(()=>document.querySelector('[data-deck=a] .dj-title')?.textContent==='Hey Man IDK');
  assert.equal(await page.locator('.dj-track-list .dj-crate-row').count(),6);
  await page.locator('[data-deck=a] .dj-play').click();await page.waitForFunction(()=>document.querySelector('[data-deck=a]')?.classList.contains('dj-playing'));
@@ -24,7 +24,7 @@ test('actual.dj plays actual media, persists imports, hands off providers and pr
  await page.locator('.dj-files').setInputFiles({name:'Studio test.wav',mimeType:'audio/wav',buffer:wav()});
  await page.waitForFunction(()=>document.querySelectorAll('.dj-track-list .dj-crate-row').length===7);
  await page.locator('.dj-track-list .dj-crate-row').filter({hasText:'Studio test'}).locator('[data-load=queue]').click();assert.equal(await page.locator('.dj-queue-row').count(),1);
- await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.dj-track-list .dj-crate-row').length===7);assert.equal(await page.locator('.dj-queue-row').count(),1);
+ await page.reload();await page.locator('.dj-more').click();await page.locator('.dj-tabs [data-view=mix]').click();await page.waitForFunction(()=>document.querySelectorAll('.dj-track-list .dj-crate-row').length===7);assert.equal(await page.locator('.dj-queue-row').count(),1);
  await page.locator('.dj-track-list .dj-crate-row').filter({hasText:'Studio test'}).locator('[data-load=a]').click();
  await page.locator('[data-deck=a] .dj-play').click();await page.waitForFunction(()=>document.querySelector('[data-deck=a]')?.classList.contains('dj-playing'));
  await page.locator('.dj-tabs [data-view=providers]').click();assert.equal(await page.locator('.dj-playing').count(),0);
@@ -35,7 +35,7 @@ test('actual.dj plays actual media, persists imports, hands off providers and pr
  const dimensions=await page.locator('.actual-dj').evaluate(n=>({width:n.clientWidth,scrollWidth:n.scrollWidth,screen:n.querySelector('.sp-screen').clientWidth,screenScroll:n.querySelector('.sp-screen').scrollWidth}));assert.ok(dimensions.scrollWidth<=dimensions.width+1,JSON.stringify(dimensions));assert.ok(dimensions.screenScroll<=dimensions.screen+1,JSON.stringify(dimensions));
  // Reinitialize with a signed-in API fixture: no real account is changed.
  await page.evaluate(async()=>{window.djPreview.dispose();const {initSpotifyTerminal}=await import('/spotify-terminal.mjs');window.spActions=[];window.djAccount={user:{id:'test'},dataEpoch:1};window.spotifyTest=initSpotifyTerminal({getAccount:()=>window.djAccount,request:async(path,options={})=>{if(path==='/api/spotify/status')return Response.json({connected:true,account:{name:'DJ TEST'}});if(path==='/api/spotify/now-playing')return Response.json({nowPlaying:{playing:false,track:null}});if(path.startsWith('/api/spotify/playlists'))return Response.json({items:[],total:0});if(path.startsWith('/api/spotify/search')&&window.holdSpotifySearch)return new Promise(resolve=>{window.finishSpotifySearch=()=>resolve(Response.json({items:[{id:'1234567890abcdefghijkl',name:'Old account track',artists:[]}],total:1}));});if(path.startsWith('/api/spotify/search'))return Response.json({items:[{id:'1234567890abcdefghijkl',name:'Search track',artists:['Artist'],url:'https://open.spotify.com/track/1234567890abcdefghijkl'}],total:1});if(path==='/api/spotify/playback'){window.spActions.push(JSON.parse(options.body));return Response.json({ok:true});}return Response.json({error:'fixture unavailable'},{status:404});}});window.spotifyTest.open();});
- await page.locator('.dj-tabs [data-view=spotify]').click();await page.waitForFunction(()=>document.querySelector('.sp-account-name')?.textContent==='DJ TEST');
+ await page.locator('.dj-more').click();await page.locator('.dj-tabs [data-view=spotify]').click();await page.waitForFunction(()=>document.querySelector('.sp-account-name')?.textContent==='DJ TEST');
  await page.locator('.sp-hand [data-action=next]').click();await page.waitForFunction(()=>window.spActions.some(a=>a.action==='next'));
  await page.locator('#djSpotifySearch').fill('Search track');await page.locator('.dj-spotify-search button').click();await page.waitForFunction(()=>document.querySelector('.dj-spotify-results')?.textContent.includes('Search track'));
  await page.locator('.dj-spotify-results button').filter({hasText:'PLAY'}).click();await page.waitForFunction(()=>window.spActions.some(a=>a.action==='track'));

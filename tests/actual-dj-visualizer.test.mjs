@@ -4,7 +4,7 @@ import { createDJVisualizer } from '../actual-dj-visualizer.mjs';
 
 function browser(getUserMedia) {
   const saved = new Map(), contexts = [], connections = [], frames = new Map();
-  const stopped = [], statuses = []; let next = 1;
+  const stopped = [], statuses = [], listeners = new Map(); let next = 1;
   function set(name, value) { saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name)); Object.defineProperty(globalThis, name, { configurable: true, writable: true, value }); }
   const node = context => ({ context, fftSize: 1024, connect(target) { connections.push(target); }, disconnect() {} });
   class AudioContext {
@@ -14,14 +14,14 @@ function browser(getUserMedia) {
     async resume() {}
     async close() { this.state = 'closed'; }
   }
-  set('window', { AudioContext });
+  set('window', { AudioContext, addEventListener(type, handler) { listeners.set(type, handler); }, removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); } });
   set('navigator', { mediaDevices: { getUserMedia } });
   set('matchMedia', () => ({ matches: false }));
   set('ResizeObserver', class { observe() {} disconnect() { stopped.push('observer'); } });
   set('requestAnimationFrame', fn => { const id = next++; frames.set(id, fn); return id; });
   set('cancelAnimationFrame', id => frames.delete(id));
   return {
-    contexts, connections, frames, stopped, statuses,
+    contexts, connections, frames, stopped, statuses, listeners,
     create() { return createDJVisualizer({}, { onStatus: s => statuses.push(s) }); },
     restore() { for (const [name, descriptor] of saved) descriptor ? Object.defineProperty(globalThis, name, descriptor) : delete globalThis[name]; },
   };
@@ -64,6 +64,7 @@ test('microphone is never monitored to speakers and stopping cancels rendering',
   const audio = capture(), environment = browser(async () => audio.stream);
   try {
     const visual = environment.create();
+    assert.equal(environment.listeners.has('resize'), true);
     visual.start(); assert.equal(environment.frames.size, 1);
     assert.equal(await visual.microphone(), true);
     assert.equal(environment.connections.length, 1);
@@ -72,5 +73,6 @@ test('microphone is never monitored to speakers and stopping cancels rendering',
     assert.equal(environment.frames.size, 0);
     assert.equal(audio.stops(), 1);
     visual.dispose(); assert.ok(environment.stopped.includes('observer'));
+    assert.equal(environment.listeners.size, 0, 'dispose releases the window resize listener');
   } finally { environment.restore(); }
 });
