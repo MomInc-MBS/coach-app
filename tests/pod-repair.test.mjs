@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const memory=new Map();
 globalThis.localStorage??={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,String(value)),removeItem:key=>memory.delete(key),clear:()=>memory.clear()};
 const {dailyGuideDue,markDailyGuide,guideOwner,localDay}=await import('../daily-guide.mjs');
-const {TIER_COLORS,tierOf,rewardSummary,drawTierTile}=await import('../reward-pack-ui.mjs');
+const {TIER_COLORS,tierOf,rewardSummary,rewardRevealType,rewardRevealTier,unlocked,drawTierTile}=await import('../reward-pack-ui.mjs');
 const {SETTINGS_LINKS,collapseOnOpen}=await import('../coach-hub.mjs');
 const {idleStatus}=await import('../pod/pod.mjs');
 const {continueVisible,continuePrompt}=await import('../pod/continue-workout.mjs');
@@ -37,6 +37,7 @@ test('the reward pack is a 64x64 tier tile in its tier colour and names the actu
  }
  const palette=rewardSummary({category:'color',reward:{kind:'palette',id:'pal-03',name:'Static Pop'}});
  assert.equal(palette.title,'Static Pop');assert.equal(palette.detail,'Colour palette');
+ assert.equal(rewardSummary({category:'color',reward:{kind:'color',id:'#ff3b30',name:'Ruby'}}).detail,'Colour','a single color is not labeled as a palette');
  const catalog=JSON.parse(fs.readFileSync(new URL('../creature/source/creator/palettes.json',import.meta.url),'utf8'));
  assert.deepEqual(palette.colors,catalog.find(p=>p.id==='pal-03').colors,'reward swatches use the actual palette currently in the catalog');
  const fills=[];drawTierTile({clearRect(){},fillRect(){fills.push(this.fillStyle);}},'rare',{opened:true,colors:palette.colors});
@@ -45,6 +46,24 @@ test('the reward pack is a 64x64 tier tile in its tier colour and names the actu
  assert.equal(skin.title,'Strider Skin');assert.equal(skin.detail,'64-bit boss skin');assert.deepEqual(skin.colors,[]);
  const source=fs.readFileSync(new URL('../reward-pack-ui.mjs',import.meta.url),'utf8');
  assert(!/three|GLTFLoader|canister\.glb/.test(source),'no 3D dependency for the reward display');
+});
+
+test('pack reveal color follows the saved rewards, with textures taking priority and secret styling preserved',()=>{
+ assert.equal(rewardRevealType({tier:'uncommon',rewards:[{kind:'texture'}]}),'texture');
+ assert.equal(rewardRevealType({tier:'rare',rewards:[{kind:'color'},{kind:'color'}]}),'multiple-colors');
+ assert.equal(rewardRevealType({tier:'legendary',rewards:[{kind:'color'}]}),'single-color');
+ assert.equal(rewardRevealTier({tier:'uncommon',rewards:[{kind:'color',category:'color',id:'#ff3b30'}]}),'uncommon','one color is green');
+ assert.equal(rewardRevealTier({tier:'uncommon',rewards:[{kind:'color'},{kind:'color'}]}),'rare','multiple colors are blue');
+ assert.equal(rewardRevealTier({tier:'uncommon',rewards:[{kind:'palette',id:'pal-03'}]}),'rare','a multi-band palette is multiple colors');
+ assert.equal(rewardRevealTier({tier:'legendary',rewards:[{kind:'texture',category:'texture'},{kind:'color'}]}),'legendary','texture wins for mixed rewards');
+ assert.equal(rewardRevealTier({tier:'secret',rewards:[{kind:'texture'}]}),'secret','secret remains iridescent');
+ assert.equal(rewardRevealTier({tier:'rare',rewards:[{kind:'boss-skin',category:'64-bit'}]},'rare'),'rare','boss skins retain their pack-tier fallback');
+ const reward={kind:'texture',id:'gross-texture',coachId:'earned-coach',name:'Gross texture',category:'texture'},[item]=unlocked({rewards:[reward]});
+ assert.equal(item.kind,reward.kind);assert.equal(item.id,reward.id);assert.equal(item.coachId,reward.coachId);
+ assert.match(item.detail,/Original MYR5 and/,'the earned coach and original coach both appear in the reward detail');
+ const pod=fs.readFileSync(new URL('../drop-pod-opening.mjs',import.meta.url),'utf8');
+ assert.match(pod,/data-reward-type=texture\]:not\(\[data-tier=secret\]\).*drop-pod-card strong/s,'gold reveal shimmer follows texture reward type, not pack rarity');
+ assert.match(pod,/setTier\(tier\);delete dlg\.dataset\.rewardType/,'opening another pack clears the previous reward styling');
 });
 
 test('Settings drops Portal, Achievements and Reminders and opens folded',()=>{

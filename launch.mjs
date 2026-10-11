@@ -15,6 +15,7 @@ import {mountCoachHub,mountSatcomFrame} from './coach-hub.mjs';
 import {authFetch,signOut} from './auth-client.mjs';
 import {mountCreatureSkinRewardReveal} from './creature-skin-reward-reveal.mjs';
 import {mountRewardPacks} from './reward-pack-ui.mjs';
+import {mountCosmeticRewardReveal} from './cosmetic-reward-reveal.mjs';
 
 import {mountGalaReturn} from './gala-handoff.mjs';
 import {mountMeditation} from './meditation.mjs';
@@ -39,6 +40,7 @@ mountLaunch();
 initSpotifyTerminal({request:authFetch,getAccount:()=>account});
 mountRemindersComputer();
 mountCreatureSkinRewardReveal();
+mountCosmeticRewardReveal();
 mountRewardPacks();
 mountCoachHub({api});
 mountGalaReturn();

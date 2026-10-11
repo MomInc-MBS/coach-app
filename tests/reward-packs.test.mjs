@@ -86,6 +86,21 @@ test('tiers award one, two and three distinct coach-specific items',()=>{
  }
 });
 
+test('one pack cannot roll the same material for another coach and inherited MYR5',()=>{
+ memory.clear();const blob='roster/23-blob-texture-bodies--blob_creature_3d_model';
+ const originalPool=remainingCosmetics({coaches:['myr5',blob]}).filter(reward=>reward.category==='color');
+ const perCoach=originalPool.length/2;assert(Number.isInteger(perCoach)&&perCoach>1);
+ const item=packItem('rare','reward-pack:rare:shared-original-no-duplicate');ledger.grantUnlock('reward-pack',item.id);
+ let call=0;const random=()=>{
+  const values=[0,(perCoach+.25)/originalPool.length,0,0];
+  return values[call++]??0;
+ };
+ const result=openRewardPack(item,{random});assert.equal(result.rewards.length,2);
+ assert.equal(result.rewards[0].coachId,blob,'first item goes to the other starter coach');
+ assert.equal(store.isGranted(result.rewards[0].kind,result.rewards[0].id,'myr5'),true,'the other-coach grant appears on original MYR5');
+ assert(!result.rewards.slice(1).some(reward=>reward.kind===result.rewards[0].kind&&reward.id===result.rewards[0].id&&reward.coachId==='myr5'));
+});
+
 test('ownership stays with its coach, account and account reset epoch',()=>{
  memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'owner-a'}};
  assert(store.grantUnlock('texture','chest-plate-steel','myr5'));

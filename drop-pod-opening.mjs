@@ -51,9 +51,9 @@ dialog.drop-pod::backdrop{background:#02030a}
 .drop-pod-card small{display:block;opacity:.85;text-transform:uppercase;letter-spacing:.12em;font-size:12px;margin-top:4px}
 .drop-pod-item+.drop-pod-item{margin-top:12px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--pack) 40%,transparent)}
 .drop-pod-swatches{display:flex;justify-content:center;gap:6px;margin-top:10px}.drop-pod-swatches i{width:30px;height:30px;border:2px solid #fff7df;border-radius:5px}
-.drop-pod[data-tier=legendary] .drop-pod-card::before{content:"";position:absolute;inset:-60%;z-index:-1;background:conic-gradient(from 0deg,transparent 0 10%,#ffd36a55 12%,transparent 16% 35%,#ffd36a44 37%,transparent 41% 60%,#ffd36a55 62%,transparent 66% 85%,#ffd36a44 87%,transparent 91%);animation:dp-spin 9s linear infinite}
-.drop-pod[data-tier=legendary] .drop-pod-card{overflow:visible;isolation:isolate}
-.drop-pod[data-tier=legendary] .drop-pod-card strong{background:linear-gradient(100deg,#fff7df 20%,#ffd36a 45%,#fff 50%,#ffd36a 55%,#fff7df 80%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:dp-shimmer 2.6s linear infinite}
+.drop-pod[data-reward-type=texture]:not([data-tier=secret]) .drop-pod-card::before{content:"";position:absolute;inset:-60%;z-index:-1;background:conic-gradient(from 0deg,transparent 0 10%,#ffd36a55 12%,transparent 16% 35%,#ffd36a44 37%,transparent 41% 60%,#ffd36a55 62%,transparent 66% 85%,#ffd36a44 87%,transparent 91%);animation:dp-spin 9s linear infinite}
+.drop-pod[data-reward-type=texture]:not([data-tier=secret]) .drop-pod-card{overflow:visible;isolation:isolate}
+.drop-pod[data-reward-type=texture]:not([data-tier=secret]) .drop-pod-card strong{background:linear-gradient(100deg,#fff7df 20%,#ffd36a 45%,#fff 50%,#ffd36a 55%,#fff7df 80%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:dp-shimmer 2.6s linear infinite}
 @keyframes dp-spin{to{transform:rotate(1turn)}}@keyframes dp-shimmer{to{background-position:-250% 0}}
 .drop-pod[data-tier=secret] .drop-pod-card{border-color:transparent;background:radial-gradient(circle at 50% 20%,#3a2160,#0d0b1c 75%) padding-box,linear-gradient(120deg,#3ff5ff,#b388ff,#ff4bd8,#ffd36a,#3ff5ff) border-box;background-size:auto,300% 100%;animation:dp-iri 4s linear infinite;box-shadow:0 0 50px #b388ff88,0 0 90px #3ff5ff33,0 18px 40px #000b}
 .drop-pod[data-tier=secret] .drop-pod-card .eyebrow{font:900 30px/1 system-ui;letter-spacing:.32em;margin:2px 0 4px;background:linear-gradient(100deg,#3ff5ff,#b388ff 30%,#ff4bd8 55%,#ffd36a 80%,#3ff5ff);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:dp-shimmer 3s linear infinite;filter:drop-shadow(0 0 10px #b388ffaa)}
@@ -65,7 +65,7 @@ dialog.drop-pod::backdrop{background:#02030a}
 .drop-pod-actions button.secondary{background:#0009;color:#fff7df}
 .drop-pod button:focus-visible{outline:3px solid #fff;outline-offset:3px}.drop-pod .drop-pod-hit:focus-visible{outline:none}
 .drop-pod-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media(prefers-reduced-motion:reduce){.drop-pod-flash.go,.drop-pod-flash.pop{animation-duration:.15s}.drop-pod-card{transition:opacity .2s;transform:translate(-50%,0) scale(1)}.drop-pod[data-tier=legendary] .drop-pod-card::before,.drop-pod[data-tier=legendary] .drop-pod-card strong,.drop-pod[data-tier=secret] .drop-pod-card,.drop-pod[data-tier=secret] .drop-pod-card .eyebrow{animation:none}.drop-pod-hit::after,.drop-pod.ready .drop-pod-prompt{animation:none}}
+@media(prefers-reduced-motion:reduce){.drop-pod-flash.go,.drop-pod-flash.pop{animation-duration:.15s}.drop-pod-card{transition:opacity .2s;transform:translate(-50%,0) scale(1)}.drop-pod[data-reward-type=texture]:not([data-tier=secret]) .drop-pod-card::before,.drop-pod[data-reward-type=texture]:not([data-tier=secret]) .drop-pod-card strong,.drop-pod[data-tier=secret] .drop-pod-card,.drop-pod[data-tier=secret] .drop-pod-card .eyebrow{animation:none}.drop-pod-hit::after,.drop-pod.ready .drop-pod-prompt{animation:none}}
 `;
 
 const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)),lerp=(a,b,k)=>a+(b-a)*k,smooth=k=>k*k*(3-2*k);
@@ -475,6 +475,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
   get t(){return t;},get landed(){return landed;},get promptReady(){return landed&&t>=T_PROMPT&&tapT===null;},get tapped(){return tapT!==null;},
   tap(){if(tapT===null){tapT=t;gate=false;}},
   release(){gate=true;},
+  setRevealColor(hex){const c=new THREE.Color(hex);beamMat.uniforms.uColor.value.copy(c);beamMat2.uniforms.uColor.value.copy(white.clone().lerp(c,.3));hatchLight.color.copy(c);},
   cancelTap(){tapT=null;gate=false;},
   skipToPrompt(){silent=true;if(t<T_PROMPT)skipOffset+=T_PROMPT-t+.001;},
   skipToOpen(){fast=true;if(!popped)silent=true;if(popped){pop0=Math.min(pop0,t-2);fast=false;}},
@@ -510,7 +511,7 @@ function createWorld(THREE,renderer,tierName,{reduced,onEvent}){
 // reveal items [{title,detail,colors}] (or null when it could not be saved: the pod stays closed, tap to retry).
 // hasNext is a boolean or a function; onNext() may return the next {tier,open,hasNext,onNext}; the sequence restarts from the sky with it.
 export async function playDropPod(config){
- let {tier,open,hasNext,onNext}=config;const onExit=config.onExit;
+ let {tier,open,hasNext,onNext}=config;let getRevealType=config.revealType,getRevealColor=config.revealColor;const onExit=config.onExit;
  const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
  const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
  const dlg=document.createElement('dialog');dlg.className='drop-pod';dlg.setAttribute('aria-label','Opening reward pack');
@@ -525,6 +526,11 @@ export async function playDropPod(config){
  let phase=startPhase({reduced}),world=null,renderer=null,raf=0,disposed=false,gen=0,fullscreenTried=false,items=null,pending=null,THREE=null;
  const go=event=>{phase=advance(phase,event);dlg.dataset.phase=phase;};
  const setTier=name=>{const t=TIERS[name]?name:'uncommon';dlg.dataset.tier=t;dlg.style.setProperty('--pack',TIERS[t].color);$('.drop-pod-caption').textContent=t==='secret'?'Secret transmission':'Incoming drop pod';};
+ const applyRewardPresentation=targetWorld=>{
+  if(typeof getRevealType!=='function')return;
+  dlg.dataset.rewardType=getRevealType();const color=typeof getRevealColor==='function'?getRevealColor():null;
+  if(color){dlg.style.setProperty('--pack',color);targetWorld?.setRevealColor(color);}
+ };
  setTier(tier);dlg.dataset.phase=phase;
  dlg.tabIndex=-1;dlg.showModal();dlg.focus({preventScroll:true});
  // Fullscreen where allowed (not iOS Safari); the fixed 100vw x 100dvh dialog is the fallback.
@@ -540,7 +546,7 @@ export async function playDropPod(config){
  dlg.addEventListener('cancel',event=>{event.preventDefault();exit();});
 
  function showItems(list){
-  const wrap=$('[data-items]');wrap.replaceChildren();$('[data-eyebrow]').textContent=dlg.dataset.tier==='secret'?'SECRET':`${dlg.dataset.tier} pack opened`;
+  const wrap=$('[data-items]');wrap.replaceChildren();$('[data-eyebrow]').textContent=dlg.dataset.tier==='secret'?'SECRET':({texture:'Texture reward','multiple-colors':'Multiple colors','single-color':'Color reward'}[dlg.dataset.rewardType]||'Cosmetic rewards');
   if(!list.length){const s=document.createElement('strong');s.textContent='Collection complete';const d=document.createElement('small');d.textContent='All cosmetics for your unlocked coaches are collected.';const item=document.createElement('div');item.className='drop-pod-item';item.append(s,d);wrap.append(item);}
   for(const entry of list){
    const item=document.createElement('div');item.className='drop-pod-item';const s=document.createElement('strong');s.textContent=`${entry.title} unlocked!`;const d=document.createElement('small');d.textContent=entry.detail||'';item.append(s,d);
@@ -560,13 +566,16 @@ export async function playDropPod(config){
   let result=null;try{result=await open();}catch(error){console.error(error);}
   if(disposed||mine!==gen)return;
   if(!result){go('fail');world.cancelTap();dlg.classList.add('ready');$('[data-error]').textContent='Could not save this pack. Tap the pod to try again.';$('[data-hit]').focus();return;}
+  // The reward is now durably saved and granted. Color the reveal from that
+  // result while leaving the pod's already-played flight at its pack tier.
+  applyRewardPresentation(world);
   items=result;world.release();
  }
  $('[data-hit]').onclick=tap;
  $('[data-exit]').onclick=exit;
  $('[data-next]').onclick=async()=>{
   const nextConfig=await onNext?.();if(!nextConfig||disposed)return;
-  ({tier,open,hasNext,onNext}=nextConfig);go('restart');await begin();
+  ({tier,open,hasNext,onNext}=nextConfig);getRevealType=nextConfig.revealType;getRevealColor=nextConfig.revealColor;go('restart');await begin();
  };
  // Skip: straight to the reveal. The pack still opens (once) through open().
  $('[data-skip]').onclick=async()=>{
@@ -593,7 +602,7 @@ export async function playDropPod(config){
  let worldRevealed=false;
 
  async function begin(){
-  const mine=++gen;dlg.classList.remove('ready');worldRevealed=false;items=null;setTier(tier);dlg.dataset.phase=phase;$('[data-error]').textContent='';
+  const mine=++gen;dlg.classList.remove('ready');worldRevealed=false;items=null;setTier(tier);delete dlg.dataset.rewardType;dlg.dataset.phase=phase;$('[data-error]').textContent='';
   world?.dispose();world=null;
   if(!THREE){
    try{THREE=await import('three');}catch(error){console.error(error);}
@@ -618,7 +627,7 @@ export async function playDropPod(config){
  // No WebGL: skip the 3D and still open the pack, so a pack is never stuck.
  async function fallbackReveal(){
   dlg.dataset.phase='landed';phase='landed';let result=null;try{result=await open();}catch(error){console.error(error);}
-  if(disposed)return;showItems(result||[]);phase='opened';go('revealed');afterReveal();
+  if(disposed)return;if(result)applyRewardPresentation(null);showItems(result||[]);phase='opened';go('revealed');afterReveal();
  }
  await begin();
  return {exit,state:()=>phase,get world(){return world;}};

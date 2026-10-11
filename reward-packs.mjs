@@ -67,6 +67,9 @@ export function openRewardPack(item,{random=Math.random}={}){
   if(!choices.length)break; // Complete collection: do not manufacture duplicates.
   const reward={...choices[Math.floor(unit(random)*choices.length)],category};
   selected.add(identity(reward)+':'+reward.kind);rewards.push(reward);
+  // A non-original coach's material reward also unlocks that material on MYR5.
+  // Reserve the inherited MYR5 slot for this pack so it cannot roll twice.
+  if(reward.coachId!=='myr5'&&reward.kind!=='boss-skin')selected.add(store.cosmeticId('myr5',reward.id)+':'+reward.kind);
  }
  const result={tier:item.tier,rewards,category:rewards[0]?.category||'complete',reward:rewards[0]||null,complete:rewards.length===0};
  const current=safeRead();if(current[item.id])return current[item.id];

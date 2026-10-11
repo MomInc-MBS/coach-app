@@ -30,14 +30,19 @@ globalThis.Image=class{set src(value){this.mask=value.includes('mask');}async de
 const manifest=JSON.parse(await readFile(new URL('../pod/gala-coaches/manifest.json',import.meta.url),'utf8'));
 globalThis.fetch=async()=>({ok:true,json:async()=>manifest});
 
-test('a texture and palette belong only to the coach that earned them; save guards reject cross-coach reuse',()=>{
- memory.clear();const ids=unlockedCoachIds();const first=ids[0],second=ids.find(id=>id!==first);
- mod.grantUnlock('texture','chest-plate-steel',first);mod.grantUnlock('palette','pal-01',first);
- assert(!mod.isLocked('chest-plate-steel',first));assert(mod.isLocked('chest-plate-steel',second));
- assert(mod.colorTriad('pal-01',false,first));assert.equal(mod.colorTriad('pal-01',false,second),undefined);
+test('materials earned for another coach also unlock the original MYR5 coach; other coaches stay scoped',()=>{
+ memory.clear();const initial=unlockedCoachIds(),earner=initial.find(id=>id!=='myr5'),third=COACHES.find(coach=>!initial.includes(coach.id));
+ assert(earner&&third,'a non-original coach and an additional coach are available');
+ const state=readPerformanceProgress();state.coaches.push(third.id);localStorage.setItem(`${PERFORMANCE_KEY}/${performanceOwner()}`,JSON.stringify(state));
+ const second=third.id;
+ mod.grantUnlock('texture','chest-plate-steel',earner);mod.grantUnlock('palette','pal-01',earner);
+ assert(!mod.isLocked('chest-plate-steel',earner));assert(!mod.isLocked('chest-plate-steel','myr5'));
+ assert(mod.isLocked('chest-plate-steel',second));
+ assert(mod.colorTriad('pal-01',false,earner));assert(mod.colorTriad('pal-01',false,'myr5'));assert.equal(mod.colorTriad('pal-01',false,second),undefined);
  const base=mod.fresh(),materials={body:{textureId:'chest-plate-steel',colorId:'pal-01',sparkle:0,metallic:0}};
  const draft={...base,body:second,headFrom:second,armsFrom:second,feetFrom:second,materials};
- const kept=mod.keepOwned(draft,base,new Set([first,second]));assert.equal(kept.materials,undefined);
+ const kept=mod.keepOwned(draft,base,new Set([earner,second]));assert.equal(kept.materials,undefined,'the inherited cosmetics do not grant access on a different coach');
+ memory.clear();
 });
 
 test('the mirror skin helper uses the same palette and shade as regular Gala avatars',()=>{

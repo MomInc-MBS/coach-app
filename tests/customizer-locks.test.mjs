@@ -7,11 +7,11 @@ import {build} from 'esbuild';
 const memory=new Map();
 globalThis.localStorage={getItem:k=>memory.has(k)?memory.get(k):null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k),clear:()=>memory.clear()};
 const result=await build({
- stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export {parseRecipe} from './creature/source/creator/design';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export {choosePerformancePaths,recordPerformanceSession} from './performance-progress.mjs';export {coachRequirements} from './achievements-board.mjs';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
+ stdin:{contents:"export * from './creature/source/save-look';export * from './creature/source/profile';export {parseRecipe} from './creature/source/creator/design';export * from './creature/source/creator/materials-registry';export * from './creature/source/creator/unlock-store';export * from './creature/source/creator/track-placements';export * from './creature/source/creator/camera-focus';export {choosePerformancePaths,recordPerformanceSession} from './performance-progress.mjs';export {coachRequirements} from './achievements-board.mjs';export * as T from 'three';",resolveDir:process.cwd(),loader:'ts'},
  bundle:true,format:'esm',platform:'neutral',mainFields:['module','main'],write:false,target:'es2022',
 });
 const m=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {saveRecipe,keepOwned,selectOwnedBody,loadRecipe,parseRecipe,fresh,RECIPE_KEY,isLocked,isTextureUnlocked,resolveRegionMaterial,grantUnlock,migrateEarnedTextureUnlocks,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
+const {saveRecipe,keepOwned,selectOwnedBody,loadRecipe,parseRecipe,fresh,RECIPE_KEY,isLocked,isTextureUnlocked,resolveRegionMaterial,grantUnlock,grantUnlocks,grantedIds,ownerGrantedIds,migrateEarnedTextureUnlocks,findPalette,findColor,TEXTURES,sectionComplete,bodyLockSection,TRACK_PLACEMENTS,choosePerformancePaths,recordPerformanceSession,coachRequirements,frameRegion,T}=m;
 
 const CHEST_BODY='roster/16-spade-arch--stylized_humanoid_3d_model'; // Spade · Arch 2, Chest only
 const DUAL_BODY='roster/16-spade-arch--pyramid_head_figure_3d_model'; // Spade · Arch 1, Chest + Martial Arts
@@ -28,6 +28,79 @@ test('only five textures and the 15 free colours are open; retired finishes are 
  assert.equal(isLocked('arms-rope'),false);assert.equal(isLocked('chest-rubber-grip'),true);assert.equal(isLocked('legacy-3'),true);assert.equal(isLocked('legacy-4'),true);
  assert.equal(isLocked('pal-01'),true);
  assert.equal(isLocked('flat'),true);assert.equal(isLocked('legacy-22'),true);assert.equal(isLocked('default-ruby'),true);assert.equal(isLocked('#ff3b30'),false);assert.equal(isLocked('default-gold'),true);assert.equal(isLocked('creature-anything'),false);assert.equal(isLocked('#060409'),false);assert.equal(isLocked('#0a0a0a'),true);
+});
+
+test('a cosmetic earned for another coach unlocks only the original MYR5 shared showcase',()=>{
+ memory.clear();const before=Object.getOwnPropertyDescriptor(globalThis,'myr5AuthenticatedAccount');
+ try{
+  globalThis.myr5AuthenticatedAccount={user:{id:'inheritance-owner'},dataEpoch:0};
+  grantUnlock('texture','chest-plate-steel',STARTER_BODY);
+  grantUnlock('color','default-gold',STARTER_BODY);
+  grantUnlock('palette','pal-01',STARTER_BODY);
+  assert.equal(isLocked('chest-plate-steel','myr5'),false);
+  assert.equal(isLocked('default-gold','myr5','color'),false);
+  assert.equal(isLocked('pal-01','myr5','color'),false);
+  assert.equal(isLocked('chest-plate-steel',STARTER_BODY),false,'the coach that earned it keeps its unlock');
+  assert.equal(isLocked('chest-plate-steel',CHEST_BODY),true,'other coaches do not inherit it');
+  assert.ok(grantedIds('palette','myr5').includes('pal-01'));
+  assert.ok(ownerGrantedIds('texture').includes('coach:myr5:chest-plate-steel'));
+ }finally{if(before)Object.defineProperty(globalThis,'myr5AuthenticatedAccount',before);else delete globalThis.myr5AuthenticatedAccount;}
+});
+
+test('existing earned coach-scoped grants are inherited by original MYR5 from the current owner ledger',()=>{
+ memory.clear();const before=Object.getOwnPropertyDescriptor(globalThis,'myr5AuthenticatedAccount');
+ try{
+  globalThis.myr5AuthenticatedAccount={user:{id:'history-owner'},dataEpoch:3};
+  const key='myr5-unlocks-v2/'+encodeURIComponent('account:history-owner:3');
+  localStorage.setItem(key,JSON.stringify({
+   texture:['coach:'+encodeURIComponent(STARTER_BODY)+':chest-plate-steel'],
+   color:['coach:'+encodeURIComponent(STARTER_BODY)+':default-gold'],
+   palette:['coach:'+encodeURIComponent(STARTER_BODY)+':pal-01'],
+  }));
+  assert.equal(isLocked('chest-plate-steel','myr5'),false);
+  assert.equal(isLocked('default-gold','myr5','color'),false);
+  assert.equal(isLocked('pal-01','myr5','color'),false);
+ }finally{if(before)Object.defineProperty(globalThis,'myr5AuthenticatedAccount',before);else delete globalThis.myr5AuthenticatedAccount;}
+});
+
+test('bulk grants normalize retired textures, emit one owner-scoped event, and retries do not replay unlocks',()=>{
+ memory.clear();const beforeAccount=Object.getOwnPropertyDescriptor(globalThis,'myr5AuthenticatedAccount'),beforeDispatch=Object.getOwnPropertyDescriptor(globalThis,'dispatchEvent');
+ const events=[];
+ try{
+  globalThis.myr5AuthenticatedAccount={user:{id:'bulk-owner'},dataEpoch:4};
+  Object.defineProperty(globalThis,'dispatchEvent',{configurable:true,writable:true,value:event=>{if(event.type==='myr5:cosmetics-unlocked')events.push(event.detail);return true;}});
+  assert.equal(grantUnlocks([
+   {kind:'texture',id:'legacy-21',coachId:STARTER_BODY},
+   {kind:'texture',id:'legacy-21',coachId:STARTER_BODY},
+   {kind:'palette',id:'pal-01',coachId:STARTER_BODY},
+  ]),2);
+  assert.equal(isLocked('opal-jelly','myr5'),false,'a removed texture grants its live twin');
+  assert.equal(isLocked('legacy-21','myr5'),true,'the removed id stays unavailable');
+  assert.equal(events.length,1);
+  assert.equal(events[0].owner,'account:bulk-owner:4');
+  assert.deepEqual(events[0].granted,[
+   {kind:'texture',id:'opal-jelly',coachId:STARTER_BODY},
+   {kind:'palette',id:'pal-01',coachId:STARTER_BODY},
+  ]);
+  assert.equal(grantUnlock('texture','legacy-21',STARTER_BODY),false,'a retry is idempotent');
+  assert.equal(events.length,1,'idempotent retries do not replay the reveal event');
+ }finally{
+  if(beforeAccount)Object.defineProperty(globalThis,'myr5AuthenticatedAccount',beforeAccount);else delete globalThis.myr5AuthenticatedAccount;
+  if(beforeDispatch)Object.defineProperty(globalThis,'dispatchEvent',beforeDispatch);else delete globalThis.dispatchEvent;
+ }
+});
+
+test('shared MYR5 unlocks remain isolated by account and account reset epoch',()=>{
+ memory.clear();const before=Object.getOwnPropertyDescriptor(globalThis,'myr5AuthenticatedAccount');
+ try{
+  globalThis.myr5AuthenticatedAccount={user:{id:'scoped-owner'},dataEpoch:0};
+  grantUnlock('texture','chest-plate-steel',STARTER_BODY);
+  assert.equal(isLocked('chest-plate-steel','myr5'),false);
+  globalThis.myr5AuthenticatedAccount={user:{id:'other-owner'},dataEpoch:0};
+  assert.equal(isLocked('chest-plate-steel','myr5'),true,'a second account sees no inherited unlock');
+  globalThis.myr5AuthenticatedAccount={user:{id:'scoped-owner'},dataEpoch:1};
+  assert.equal(isLocked('chest-plate-steel','myr5'),true,'a reset epoch starts with a clean cosmetic ledger');
+ }finally{if(before)Object.defineProperty(globalThis,'myr5AuthenticatedAccount',before);else delete globalThis.myr5AuthenticatedAccount;}
 });
 
 test('a locked palette paints only in preview; the normal render still falls back',()=>{

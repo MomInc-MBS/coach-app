@@ -36,8 +36,23 @@ export function rewardSummary(opened){
  // A single colour (pool items carry `hex`; a hex id is itself one) shows one swatch the way a palette shows its bands.
  const single=reward.kind==='color'?[/^#[0-9a-f]{6}$/i.test(reward.id)?reward.id:reward.hex].filter(Boolean):[];
  const colors=reward.kind==='palette'?PALETTES.find(item=>item.id===reward.id)?.colors||[]:single;
- return {title:reward.name||'Collection complete',detail:reward.kind==='boss-skin'?'64-bit boss skin':CATEGORY[reward.category||opened?.category]||'Cosmetic',colors,rewards};
+ const detail=reward.kind==='boss-skin'?'64-bit boss skin':reward.kind==='color'?'Colour':reward.kind==='palette'?'Colour palette':CATEGORY[reward.category||opened?.category]||'Cosmetic';
+ return {title:reward.name||'Collection complete',detail,colors,rewards};
 }
+// Determine the reveal treatment from the persisted rewards. Secret packs keep
+// their established holographic treatment; boss skins with no cosmetic colour
+// keep the original pack-tier fallback.
+export function rewardRevealType(opened,fallback='uncommon'){
+ if(opened?.tier==='secret'||fallback==='secret')return 'secret';
+ const rewards=opened?.rewards||(opened?.reward?[opened.reward]:[]);
+ if(rewards.some(reward=>reward.kind==='texture'||reward.category==='texture'))return 'texture';
+ const colors=rewards.reduce((n,reward)=>n+(reward.kind==='palette'?(PALETTES.find(item=>item.id===reward.id)?.colors?.length||2):reward.kind==='color'?1:0),0);
+ if(colors>1)return 'multiple-colors';
+ if(colors===1)return 'single-color';
+ return 'cosmetic';
+}
+export const rewardRevealTier=(opened,fallback='uncommon')=>({texture:'legendary','multiple-colors':'rare','single-color':'uncommon',secret:'secret'})[rewardRevealType(opened,fallback)]||(TIER_COLORS[fallback]?fallback:'uncommon');
+const REWARD_COLORS=Object.freeze({texture:TIER_COLORS.legendary,'multiple-colors':TIER_COLORS.rare,'single-color':TIER_COLORS.uncommon});
 const shade=(hex,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16,n>>8&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v+amount))));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');};
 // A 64x64 bevelled pixel tile in the tier colour. Unopened: a pixel "?" glyph. Opened: the awarded palette's
 // colours as bands (or a pixel star for skins/textures), so the tile itself shows what came out.
@@ -57,7 +72,7 @@ export function drawTierTile(ctx,tier,{colors=[],opened=false}={}){
  if(tier==='secret'){const hues=['#3ff5ff','#b388ff','#ff4bd8','#ffd36a'];for(let i=0;i<14;i++){const c=hues[i%4],o=2+i*4;rect(o,2,4,2,c);rect(60,o,2,4,c);rect(62-o-4,60,4,2,hues[(i+2)%4]);rect(2,62-o-4,2,4,hues[(i+2)%4]);}}
 }
 // What an opened pack unlocked, as the plain items the reveal card (and the dialog's own result area) list.
-export const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category});return {title:item.title,detail:`${item.detail} for ${COACHES.find(coach=>coach.id===reward.coachId)?.label||'your coach'}`,colors:item.colors};});
+export const unlocked=opened=>rewardSummary(opened).rewards.map(reward=>{const item=rewardSummary({reward,category:reward.category}),coach=COACHES.find(entry=>entry.id===reward.coachId)?.label||'your coach',detail=['color','palette','texture'].includes(reward.kind)?`${item.detail} for Original MYR5 and ${coach}`:`${item.detail} for ${coach}`;return {...reward,title:item.title,detail,colors:item.colors};});
 export function mountRewardPacks(){
  const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
  const launch=document.createElement('button');launch.type='button';launch.className='reward-pack-launch';launch.hidden=true;launch.innerHTML='<canvas width="64" height="64" aria-hidden="true"></canvas><span></span>';document.body.append(launch);
@@ -91,7 +106,7 @@ export function mountRewardPacks(){
  launch.onclick=()=>{const id=available()[0];if(id)show(id);};close.onclick=hide;overlay.addEventListener('close',()=>{current=null;update();});
 
  function render(opened){
-  const summary=rewardSummary(opened);drawTierTile(tile.getContext('2d'),current.tier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
+  const summary=rewardSummary(opened),revealType=rewardRevealType(opened,current.tier),revealTier=rewardRevealTier(opened,current.tier),revealColor=REWARD_COLORS[revealType]||TIER_COLORS[current.tier];overlay.dataset.tier=current.tier;overlay.dataset.rewardType=revealType;overlay.style.setProperty('--pack',revealColor);drawTierTile(tile.getContext('2d'),revealTier,{colors:summary.colors,opened:true});tile.setAttribute('aria-label',`${summary.title}, ${summary.detail}`);
   overlay.classList.remove('opened');void tile.offsetWidth;overlay.classList.add('opened');
   result.replaceChildren();
   if(!summary.rewards.length)result.textContent='All cosmetics for your unlocked coaches are collected.';
@@ -102,9 +117,10 @@ export function mountRewardPacks(){
   open.hidden=true;close.textContent='Done';close.focus();
  }
  // Open pack starts the full-screen drop-pod sequence; the pack is opened when the pod is tapped, and Open another moves to the next waiting pack.
- const sequence=pending=>({tier:pending.tier,hasNext:()=>available().some(id=>id!==pending.id),onExit:hide,
-  open:async()=>{const opened=await openRewardPackExclusive(pending);if(!opened)return null;if(current===pending)render(opened);return unlocked(opened);},
-  onNext:()=>{const id=available().find(id=>id!==pending.id);if(!id)return null;select(id);return sequence(current);}});
+ const sequence=pending=>{let openedResult=null;return {tier:pending.tier,hasNext:()=>available().some(id=>id!==pending.id),onExit:hide,revealType:()=>rewardRevealType(openedResult,pending.tier),revealTier:()=>rewardRevealTier(openedResult,pending.tier),revealColor:()=>REWARD_COLORS[rewardRevealType(openedResult,pending.tier)]||TIER_COLORS[pending.tier],
+  open:async()=>{const opened=await openRewardPackExclusive(pending);if(!opened)return null;openedResult=opened;if(current===pending)render(opened);return unlocked(opened);},
+  onNext:()=>{const id=available().find(id=>id!==pending.id);if(!id)return null;select(id);return sequence(current);}};
+ };
  open.onclick=async()=>{
   if(!current)return;const pending=current,module=await preload();if(current!==pending)return;
   if(module){module.playDropPod(sequence(pending));return;}
