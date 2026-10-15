@@ -94,14 +94,14 @@ export function mountEffectPicker(anchor, {document:doc=anchor?.ownerDocument||g
     title.append(groupLabel,current);groupLabel.textContent=group.label;current.className='effect-current';current.textContent=optionMap.get(choices[group.id]||group.defaultEffect)?.label||'Random';groupLabels.set(group.id,current);section.dataset.effectGroup=group.id;section.append(title);drawGroup(group,section);menu.append(section);
   }
   menu.append(status);doc.body.append(menu);anchor.insertAdjacentElement('afterend',root);
-  const hideMenu=()=>{try{if(menu.matches(':popover-open'))menu.hidePopover();}catch{}menu.hidden=true;};
-  const showMenu=()=>{menu.hidden=false;try{if(typeof menu.showPopover==='function')menu.showPopover();}catch{menu.dataset.fallbackOpen='';}};
+  const hideMenu=()=>{try{if(menu.matches(':popover-open'))menu.hidePopover();}catch{}delete menu.dataset.fallbackOpen;menu.hidden=true;};
+  const showMenu=()=>{menu.hidden=false;try{if(typeof menu.showPopover==='function')menu.showPopover();}catch{menu.dataset.fallbackOpen='';}menu.querySelector('.effect-group > summary')?.focus({preventScroll:true});};
   const syncMenu=()=>{if(root.open)showMenu();else hideMenu();};
   const onOutside=event=>{if(root.open&&!root.contains(event.target)&&!menu.contains(event.target)){root.open=false;hideMenu();}};
   const onKeydown=event=>{if(event.key==='Escape'&&root.open){event.preventDefault();root.open=false;hideMenu();summary.focus();}};
   root.addEventListener('toggle',syncMenu);
   doc.addEventListener('pointerdown',onOutside,true);doc.addEventListener('keydown',onKeydown,true);
-  const onStorage=event=>{if(event.key===EFFECT_CHOICES_KEY){choices=readEffectChoices();for(const radio of root.querySelectorAll('input[type=radio]'))radio.checked=choices[radio.dataset.effectGroup]===radio.value;for(const group of EFFECT_GROUPS)groupLabels.get(group.id).textContent=optionMap.get(choices[group.id]||group.defaultEffect)?.label||'Random';status.textContent='Exercise effect choices updated in another MYR5 tab.';}};
+  const onStorage=event=>{if(event.key===EFFECT_CHOICES_KEY){choices=readEffectChoices();for(const radio of menu.querySelectorAll('input[type=radio]'))radio.checked=choices[radio.dataset.effectGroup]===radio.value;for(const group of EFFECT_GROUPS)groupLabels.get(group.id).textContent=optionMap.get(choices[group.id]||group.defaultEffect)?.label||'Random';status.textContent='Exercise effect choices updated in another MYR5 tab.';}};
   doc.defaultView?.addEventListener('storage',onStorage);
   return {element:root,dispose(){if(disposed)return;disposed=true;doc.defaultView?.removeEventListener('storage',onStorage);root.removeEventListener('toggle',syncMenu);doc.removeEventListener('pointerdown',onOutside,true);doc.removeEventListener('keydown',onKeydown,true);hideMenu();menu.remove();root.remove();}};
 }
