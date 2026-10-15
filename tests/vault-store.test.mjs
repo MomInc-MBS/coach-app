@@ -20,6 +20,26 @@ test('keyed and max counters',()=>{
  store.bump('armie-ignored',1,{key:'a'});store.bump('armie-ignored',1,{key:'a'});store.bump('armie-ignored',1,{key:'b'});assert.equal(ctr('armie-ignored'),2);
  store.bump('arcade-score',12);store.bump('arcade-score',7);assert.equal(ctr('arcade-score'),12);
 });
+test('new max quest counters reject out-of-range payloads and never regress',()=>{
+ memory.clear();
+ store.bump('pyramid-level',21);store.bump('fruit-streak',65);store.bump('aura-tier',3.5);store.bump('yoga-hold-seconds',61);
+ assert.equal(ctr('pyramid-level'),0);assert.equal(ctr('fruit-streak'),0);assert.equal(ctr('aura-tier'),0);assert.equal(ctr('yoga-hold-seconds'),0);
+ store.bump('pyramid-level',5);store.bump('pyramid-level',3);assert.equal(ctr('pyramid-level'),5);
+ store.bump('yoga-hold-seconds',22.5);store.bump('yoga-hold-seconds',18);assert.equal(ctr('yoga-hold-seconds'),22.5);
+});
+test('retired quest completions and claimed packs remain archived and cannot be awarded again',async()=>{
+ memory.clear();
+ const oldId='grim-time-1',oldPack=`reward-pack:secret:vault-${oldId}`,owner='account:vault-test';
+ const state={counters:{},days:{},keys:{},time:{},timeDay:{},secrets:{},earned:{[oldId]:12345}};
+ localStorage.setItem(`myr5-vault-v1/${encodeURIComponent(owner)}`,JSON.stringify(state));
+ ledger.grantUnlock('reward-pack',oldPack);
+ assert.deepEqual(store.evaluate(),[]);
+ assert.equal(store.read().earned[oldId],12345);
+ assert.ok(ledger.isGranted('reward-pack',oldPack));
+ assert.deepEqual(store.archivedCompletions().map(x=>({id:x.id,earned:x.earned,packId:x.packId})),[{id:oldId,earned:12345,packId:oldPack}]);
+ assert.deepEqual(window.myr5Vault.earn(oldId),[]);
+ assert.equal(store.read().earned[oldId],12345);
+});
 test('addTime caps grimoire time at 20 min per local day',()=>{
  memory.clear();
  store.addTime('grim-time',15*60000,{day:'d1'});store.addTime('grim-time',15*60000,{day:'d1'});assert.equal(store.read().time['grim-time'],20*60000);

@@ -18,6 +18,7 @@ import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {SHIP_FACING,applyShipTint} from '../../modules/ships/ship-scene-domain.mjs';
 import {localVerifiedBridge} from '../../modules/ships/verified-ship-assets.mjs';
 import {ownedShipIds,SHIP_IDS} from '../../modules/ships/ship-access.mjs';
+import {projectAvatarPowerAnchors} from '../power-anchors.mjs';
 
 export const ZOOM_MIN=0,ZOOM_MAX=1;
 export class CreatureViewer {
@@ -44,6 +45,7 @@ export class CreatureViewer {
   const [x,y,z,target]=sampleShot(kind,elapsed);this.camera.position.set(x,y,z);this.orbit.target.set(0,target,0);this.camera.fov=36;this.camera.updateProjectionMatrix();this.orbit.update();
  }
  scene=new T.Scene();camera=new T.PerspectiveCamera(36,1,.1,50);renderer:T.WebGLRenderer;orbit:OrbitControls;rig:CreatureRig|null=null;motion:MotionController|null=null;generation=0;disposed=false;frame=0;last=0;visible=true;settings=motionSettings(null);resizeObserver:ResizeObserver;visibilityObserver:IntersectionObserver;gesture:Gesture='idle';paused=false;tick:FrameRequestCallback=()=>{};stage:'pod'|'encounter'|'overlay'='pod';floorObjects:T.Object3D[]=[];previewSpaceDispose:(()=>void)|null=null;skinResolver?:InstalledSkinResolver;skinTextures=new Set<T.Texture>();maxFps:number|null=null;renders=0;
+ powerSoles:{index:number;node:T.Object3D;local:T.Vector3}[]=[];powerAnchors:{index:number;x:number;y:number;visible:boolean}[]=[];powerProjectionWorld=new T.Vector3();powerProjectionNdc=new T.Vector3();
  phonePhysics=createCharacterPhysics({width:1,height:1,bodyWidth:1,bodyHeight:1,buffer:0,contain:true,tiltExit:true,ship:false});phoneMotionDispose:(()=>void)|null=null;phoneElapsed=0;phonePose='idle';phoneTransientHoldFrames=0;
  phoneFloorContact=0;phoneWallBlend=0;phoneWaveLookBlend=0;phoneWalkBlend=0;
  phoneShipEpoch=0;phoneShipLoadId:string|null=null;phoneShipUnavailableId:string|null=null;phoneShipBaseScale=1;phoneShipSelectedId:string|null=null;phoneShipTint='#ffffff';phoneShipBridge:{ownedShipIds():string[];getShipUrl(id:string):string;dispose?():void}|null=null;phoneShipRoot:T.Group|null=null;phoneShipModel:T.Object3D|null=null;phoneShipLoader=new GLTFLoader();phoneProjectionCorners=Array.from({length:8},()=>new T.Vector3());
@@ -78,12 +80,14 @@ export class CreatureViewer {
   // tracking slowly, so this WebGL render competes less with MediaPipe on the main thread. Ongoing
   // falls/climbs use the real frame gap; the brief flip and look-down beats advance per rendered frame
   // so a busy renderer still shows both poses before continuing the fall.
-  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
+  const tick=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(tick);const gate=this.maxFps?1000/this.maxFps:32,frameGap=Math.max(0,(now-this.last)/1000);if(now-this.last<gate)return;this.last=now;if(!this.visible||document.hidden)return;const motionDt=Math.min(this.maxFps?gate/1000:.05,frameGap);this.motion?.update(motionDt);this.updatePhonePhysics(Math.min(.5,frameGap));if(!this.interactive&&this.stage==='pod'&&!this.cinematicKind&&!this.paused&&!this.settings.reduced&&this.settings.amount>0&&this.homeMoving){this.homeElapsed+=motionDt;this.homeView();}this.orbit.update();this.renderer.render(this.scene,this.camera);this.refreshPowerAnchors();this.renders++;};this.tick=tick;this.frame=requestAnimationFrame(this.tick);
  }
  // Layout size, not getBoundingClientRect(): a portal destination arrives scaled from the wormhole's core (2N), and a
  // resize read mid-arrival would keep a thumbnail-sized canvas once it lands (the meditation room's borrowed coach).
  resize(){const width=this.mount.clientWidth,height=this.mount.clientHeight;if(width&&height){this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.focused&&this.interactive)this.focusRegion(this.focused);else this.homeView();}this.phoneScreenSize();}}
  private resetPhonePhysics(){if(!this.interactive)return;this.phonePhysics.reset();this.phoneElapsed=0;this.phonePose='idle';this.phoneTransientHoldFrames=0;this.phoneFloorContact=0;this.phoneWallBlend=0;this.phoneWaveLookBlend=0;this.phoneWalkBlend=0;this.renderer.domElement.dataset.phonePhase='idle';this.mount.dataset.phoneMotionPhase='idle';this.motion?.play(this.gesture);if(this.rig){this.rig.root.position.set(0,0,0);this.rig.root.quaternion.identity();this.rig.root.visible=true;}if(this.phoneShipRoot)this.phoneShipRoot.visible=false;this.renderer.domElement.dataset.phoneShipReady='false';}
+ private cachePowerSoles(rig:CreatureRig){return(['FootLeft','FootRight'] as const).flatMap((name,side)=>{const node=rig.nodes[name],bounds=new T.Box3();node.updateMatrix();for(const child of node.children){if(!(child instanceof T.Mesh))continue;const geometry=child.geometry;if(!geometry.boundingBox)geometry.computeBoundingBox();if(geometry.boundingBox){child.updateMatrix();bounds.union(geometry.boundingBox.clone().applyMatrix4(child.matrix));}}if(bounds.isEmpty())return[];return[{index:side===0?27:28,node,local:new T.Vector3((bounds.min.x+bounds.max.x)/2,bounds.min.y,(bounds.min.z+bounds.max.z)/2)}];});}
+ private refreshPowerAnchors(){this.powerAnchors=projectAvatarPowerAnchors(this.powerSoles,this.camera,!!this.rig?.root.visible,this.powerProjectionWorld,this.powerProjectionNdc);}
  private selectPhoneShip(recipe:Design){
   const account=(globalThis as any).myr5AuthenticatedAccount,owner=typeof account==='string'?account:account?.user?.id;
   let saved:{ship?:string;tint?:string}|null=null;
@@ -199,6 +203,7 @@ export class CreatureViewer {
   root.rotation.y=SHIP_FACING+Math.sin(outbound*Math.PI)*.28;
  }
  async setRecipe(raw:unknown,preview=false){
+  this.powerSoles=[];this.powerAnchors=[];
   this.resetPhonePhysics();
   this.disposePhoneShip();
   const recipe=importCreature(JSON.stringify(raw)),generation=++this.generation;
@@ -207,10 +212,10 @@ export class CreatureViewer {
   if(this.disposed||generation!==this.generation){assembly.skinTextures.forEach(texture=>texture.dispose());return false;}
   if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);}
   this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures=assembly.skinTextures;
-  this.rig=rig!;this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}return true;
+  this.rig=rig!;this.powerSoles=this.cachePowerSoles(rig!);this.powerAnchors=[];this.motion=new MotionController(rig!);Object.assign(this.motion,this.settings,{paused:this.paused});this.scene.add(rig!.root);this.motion.play(this.gesture);this.selectPhoneShip(recipe);this.phoneScreenSize();if(!this.cinematicKind){if(this.stage==='overlay')this.fitBody();else if(this.interactive&&this.focused)this.focusRegion(this.focused);else this.homeView();}return true;
  }
  setSkinResolver(resolver?:InstalledSkinResolver){this.skinResolver=resolver;}
- clearSkinState(){this.generation++;this.resetPhonePhysics();if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);this.rig=null;this.motion=null;}this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.regionBoxes.clear();this.bodyBounds.makeEmpty();}
+ clearSkinState(){this.generation++;this.powerSoles=[];this.powerAnchors=[];this.resetPhonePhysics();if(this.rig){this.motion?.dispose();this.scene.remove(this.rig.root);disposeObject(this.rig.root);this.rig=null;this.motion=null;}this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.regionBoxes.clear();this.bodyBounds.makeEmpty();}
  play(id:Gesture){this.gesture=id;this.motion?.play(id);}
  // Workout overlay: turn to face where the coach walks (0 = the camera, π/2 = screen right).
  face(yaw:number){if(this.rig)this.rig.root.rotation.y=yaw;}
@@ -238,6 +243,6 @@ export class CreatureViewer {
  }
  // renders is a cumulative count of actual renderer.render() calls (D43.5's setMaxFps skips both the render
  // and this increment) — tests diff two readings over a real wall-clock window to get an actual renders/s.
- stats(){return {awake:!!this.frame,gesture:this.motion?.current,phonePhase:this.phonePhysics.state.phase,phoneMotionPhase:this.phonePhysics.state.phase,phoneShip:this.renderer.domElement.dataset.phoneShip,phoneShipReady:this.renderer.domElement.dataset.phoneShipReady==='true',drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,programs:this.renderer.info.programs?.length??0,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},rigVersion:1,recipe:this.rig?.recipe};}
- dispose(){if(this.disposed)return;this.disposed=true;this.generation++;this.phoneMotionDispose?.();this.phoneMotionDispose=null;window.removeEventListener('myr5:account-ready',this.phoneAccountChange);window.removeEventListener('myr5:account-cleared',this.phoneAccountChange);this.disposePhoneShip();cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.removeEventListener('change',this.phoneCameraChange);this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.previewSpaceDispose?.();this.previewSpaceDispose=null;disposeObject(this.scene);if(this.scene.background instanceof T.Texture)this.scene.background.dispose();this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();delete this.mount.dataset.phoneMotionPhase;}
+ stats(){return {awake:!!this.frame,gesture:this.motion?.current,phonePhase:this.phonePhysics.state.phase,phoneMotionPhase:this.phonePhysics.state.phase,phoneShip:this.renderer.domElement.dataset.phoneShip,phoneShipReady:this.renderer.domElement.dataset.phoneShipReady==='true',drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,visible:this.visible,paused:this.paused,renders:this.renders,maxFps:this.maxFps,programs:this.renderer.info.programs?.length??0,contextLost:this.renderer.getContext().isContextLost(),canvas:{width:this.renderer.domElement.width,height:this.renderer.domElement.height},powerAnchors:this.powerAnchors,rigVersion:1,recipe:this.rig?.recipe};}
+ dispose(){if(this.disposed)return;this.disposed=true;this.generation++;this.powerSoles=[];this.powerAnchors=[];this.phoneMotionDispose?.();this.phoneMotionDispose=null;window.removeEventListener('myr5:account-ready',this.phoneAccountChange);window.removeEventListener('myr5:account-cleared',this.phoneAccountChange);this.disposePhoneShip();cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.visibilityObserver.disconnect();this.orbit.removeEventListener('change',this.phoneCameraChange);this.orbit.dispose();this.motion?.dispose();this.skinTextures.forEach(texture=>texture.dispose());this.skinTextures.clear();this.previewSpaceDispose?.();this.previewSpaceDispose=null;disposeObject(this.scene);if(this.scene.background instanceof T.Texture)this.scene.background.dispose();this.scene.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();delete this.mount.dataset.phoneMotionPhase;}
 }

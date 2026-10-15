@@ -21,6 +21,7 @@ import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
+import {workoutEffectsSnapshot,isMartialSliceExercise,latestRetainableWorkoutSnapshot,createOptionalRetry} from './arcade/workout-effects-state.mjs';
 import {EXERCISES} from './exercise-library.mjs';
 import {physicalSound} from './audio/physical-sound.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
@@ -63,6 +64,80 @@ document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
 document.addEventListener('keydown',()=>voice.unlock(),{capture:true});
 if(!voice.available){$('voiceType').textContent='Speech unavailable in this browser';$('toggleVoice').disabled=true;}
 let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,generation=0;
+let workoutEffects=null,workoutEffectsLoading=null,workoutEffectsToken=0,latestWorkoutEffects=null,pendingRetainedDetail=null,retainedPower=null,avatarPower=null,avatarPowerCard=null,avatarPowerLoadingCard=null,avatarPowerFailedCard=null,retainedPowerLoading=null,retainedPowerToken=0,avatarPowerToken=0,retainedOwner=null;
+const retainedPowerRetry=createOptionalRetry(),avatarPowerRetry=createOptionalRetry();
+let questReporter=null,questReporterOwner=null,questReporterLoading=null,questReporterToken=0,pendingQuestDetails=new Map();
+function dropWorkoutEffects(){workoutEffectsToken++;workoutEffects?.stop();workoutEffects=null;workoutEffectsLoading=null;latestWorkoutEffects=null;}
+function invalidateWorkoutEffects(){workoutEffectsToken++;workoutEffectsLoading=null;workoutEffects?.invalidate();if(latestWorkoutEffects)latestWorkoutEffects={...latestWorkoutEffects,validHold:false,workout:{...latestWorkoutEffects.workout,active:false}};}
+function publishRetainedPower(){try{window.dispatchEvent(new CustomEvent('myr5:retained-character-power',{detail:{ownerId:retainedOwner??performanceOwner(),record:retainedPower?.read()??{version:1,equipped:null,styles:{}}}}));}catch{}}
+window.addEventListener('myr5:retained-character-power-request',()=>publishRetainedPower());
+function mountRetainedAvatar(card,avatarModule){
+ if(!card||!retainedPower||!card.isConnected||avatarPowerCard===card||avatarPowerLoadingCard===card)return;
+ if(avatarPowerFailedCard&&avatarPowerFailedCard!==card){const previous=avatarPowerFailedCard;avatarPowerFailedCard=null;if(previous!==card)avatarPowerRetry.reset();}
+ if(avatarPowerFailedCard===card&&!avatarPowerRetry.canStart())return;
+ if(!avatarPowerRetry.canStart())return;
+ avatarPowerRetry.start();const token=++avatarPowerToken;avatarPowerLoadingCard=card;
+ Promise.resolve(avatarModule?avatarModule:import('./arcade/power/avatar-power.mjs')).then(module=>{
+  if(token!==avatarPowerToken||!retainedPower||!card.isConnected||performanceOwner()!==retainedOwner)return;
+  const mounted=module.mountAvatarPower({card,retained:retainedPower,sound:physicalSound,seed:0x4d595235});
+  avatarPower=mounted;avatarPowerCard=card;avatarPowerRetry.succeed();if(avatarPowerFailedCard===card)avatarPowerFailedCard=null;
+ }).catch(()=>{if(token===avatarPowerToken&&avatarPowerLoadingCard===card){avatarPowerFailedCard=card;avatarPowerRetry.fail();}}).finally(()=>{if(token===avatarPowerToken&&avatarPowerLoadingCard===card)avatarPowerLoadingCard=null;});
+}
+function ensureRetainedPower(card=document.querySelector('.myr5-companion-card')){
+ const owner=performanceOwner();
+ if(retainedPower){if(owner!==retainedOwner){retainedPower.setOwner(owner);retainedOwner=owner;avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;if(avatarPowerFailedCard===card)avatarPowerFailedCard=null;avatarPowerRetry.reset();publishRetainedPower();}else if(card&&card!==avatarPowerCard&&card!==avatarPowerLoadingCard){avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;if(avatarPowerFailedCard&&avatarPowerFailedCard!==card){avatarPowerFailedCard=null;avatarPowerRetry.reset();}}
+  if(card)mountRetainedAvatar(card);return;}
+ if(retainedPowerLoading)return;
+ if(!retainedPowerRetry.canStart())return;
+ retainedPowerRetry.start();const token=++retainedPowerToken;
+ retainedPowerLoading=import('./arcade/power/retained-power.mjs').then(storeModule=>{
+  if(token!==retainedPowerToken||performanceOwner()!==owner)return;
+  let storage=null;try{storage=localStorage;}catch{}
+  retainedPower=storeModule.createRetainedPower({storage,ownerId:owner});retainedOwner=owner;
+  if(pendingRetainedDetail?.workout?.ownerId===owner&&retainedPower.observe(pendingRetainedDetail))avatarPower?.refresh();
+  retainedPowerRetry.succeed();publishRetainedPower();
+  const currentCard=card?.isConnected?card:document.querySelector('.myr5-companion-card');if(currentCard)mountRetainedAvatar(currentCard);
+ }).catch(()=>{if(token===retainedPowerToken)retainedPowerRetry.fail();}).finally(()=>{if(token===retainedPowerToken)retainedPowerLoading=null;});
+}
+function syncRetainedPowerOwner(){retainedPowerToken++;retainedPowerLoading=null;pendingRetainedDetail=null;questReporter=null;questReporterOwner=null;questReporterLoading=null;questReporterToken++;pendingQuestDetails.clear();retainedPowerRetry.reset();const owner=performanceOwner();if(owner!==retainedOwner){retainedOwner=owner;avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;avatarPowerFailedCard=null;avatarPowerRetry.reset();if(retainedPower)retainedPower.setOwner(owner);publishRetainedPower();}ensureRetainedPower();}
+function routeQuestWorkoutProgress(detail){
+ const ownerId=detail?.workout?.ownerId;
+ if(!ownerId||ownerId!==performanceOwner())return;
+ const workout=detail.workout;
+ if(workout.stage!=='working'||workout.paused===true)return;
+ const value=workout.kind==='reps'?Number(workout.workingReps):Number(workout.activeSeconds);
+ if(!Number.isFinite(value)||value<=0)return;
+ const previous=pendingQuestDetails.get(workout.mode);
+ const prior=previous?.workout?.kind==='reps'?Number(previous.workout.workingReps):Number(previous?.workout?.activeSeconds)||0;
+ if(!previous||value>=prior)pendingQuestDetails.set(workout.mode,detail);
+ if(questReporterOwner===ownerId&&questReporter){for(const queued of pendingQuestDetails.values())try{questReporter.recordWorkout(queued);}catch{}return;}
+ if(questReporterLoading)return;
+ const loadingOwner=ownerId,token=++questReporterToken;
+ questReporterLoading=import('./arcade/quest-progress-reporter.mjs').then(module=>{
+  if(token!==questReporterToken||performanceOwner()!==loadingOwner)return;
+  questReporter=module.createQuestProgressReporter(loadingOwner);questReporterOwner=loadingOwner;
+  for(const queued of pendingQuestDetails.values())try{questReporter.recordWorkout(queued);}catch{}
+  pendingQuestDetails.clear();
+ }).catch(()=>{}).finally(()=>{if(token===questReporterToken)questReporterLoading=null;});
+}
+function routeWorkoutEffects(detail){
+ latestWorkoutEffects=detail;
+ routeQuestWorkoutProgress(detail);
+ if(detail?.workout?.ownerId&&detail.workout.ownerId===performanceOwner())ensureRetainedPower();
+ pendingRetainedDetail=latestRetainableWorkoutSnapshot(pendingRetainedDetail,detail,retainedOwner??performanceOwner());
+ if(retainedPower?.observe(detail)){avatarPower?.refresh();publishRetainedPower();}
+ if(document.body.dataset.tracking!=='true'||document.hidden){workoutEffects?.invalidate();return;}
+ if(!detail?.workout?.active){workoutEffects?.pose(detail);return;}
+ if(workoutEffects){workoutEffects.pose(detail);return;}
+ if(workoutEffectsLoading)return;
+ const token=workoutEffectsToken;
+ workoutEffectsLoading=import('./arcade/workout-effects.mjs').then(module=>{
+  if(token!==workoutEffectsToken||document.body.dataset.tracking!=='true'||document.hidden||!latestWorkoutEffects?.workout?.active)return;
+  const host=document.getElementById('coachOverlay');if(!host)return;
+  const session=String(latestWorkoutEffects.workout.sessionId||'');let seed=2166136261;for(let i=0;i<session.length;i++)seed=Math.imul(seed^session.charCodeAt(i),16777619);
+  workoutEffects=module.mountWorkoutEffects({host,sound:physicalSound,seed:seed>>>0});workoutEffects.pose(latestWorkoutEffects);
+ }).catch(()=>{}).finally(()=>{if(token===workoutEffectsToken)workoutEffectsLoading=null;});
+}
 // R9-OFFLINE: the pinned pose tracker, same-origin (scripts/mediapipe.mjs) and in the Starter download, so a set runs offline.
 const MEDIAPIPE='/vendor/mediapipe/0.10.14';
 let lastTime=-1,frames=0,timing=0,windowStart=0,lastUi=0;
@@ -130,6 +205,7 @@ async function showLensInfo(track){
   fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
+  dropWorkoutEffects();
   cameraAcquisition?.abort();cameraAcquisition=null;
   frozenSettings=null;
   poseFrames.stop();cancelAnimationFrame(frame);cancelAnimationFrame(manualFrame);manualFrame=0;if(tracker){try{tracker.close();}catch{}tracker=null;}closeProbe();draw=null;
@@ -259,11 +335,17 @@ async function loop(run){
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
       // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
-      window.dispatchEvent(new CustomEvent('myr5:pose',{detail:{points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0}}));
+      const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0};
+      window.dispatchEvent(new CustomEvent('myr5:pose',{detail:poseDetail}));
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
       for(const cue of events){window.dispatchEvent(new CustomEvent('myr5:cue',{detail:{key:cue.key==='encouragement'?'time':cue.key}}));voice.say(cue.text,{key:cue.key,interrupt:cue.key==='complete'||cue.key==='ready'});}
-      if(await pod.consume(state.motion,Date.now())){renderMotion(state.motion);cinematics.play('post');return;}
+      const effectActiveBeforeConsume=pod.flow?.active;
+      const pendingConsume=pod.consume(state.motion,Date.now());
+      const effectWorkout=pod.flow?.workout,effectActive=pod.flow?.active??effectActiveBeforeConsume;
+      const effectDetail=workoutEffectsSnapshot({pose:poseDetail,motion:state.motion,workout:effectWorkout,sessionId:effectActive?.localId??run,ownerId:effectActive?.performanceOwner??null,mode:effectActive?.mode??session.mode,tracking:state.phase==='tracking'&&document.body.dataset.tracking==='true',visible:!document.hidden,canCount:pod.canCount(),workingSet:pod.flow?.phase==='set'});
+      window.dispatchEvent(new CustomEvent('myr5:workout-effects',{detail:effectDetail}));routeWorkoutEffects(effectDetail);
+      if(await pendingConsume){renderMotion(state.motion);cinematics.play('post');return;}
       if(state.phase==='preparation-rest')return;
       if(now-windowStart>=1000){state.rate=frames*1000/(now-windowStart);state.inferenceMs=timing/frames;frames=0;timing=0;windowStart=now;}
       if(now-lastUi>=160){renderMotion(state.motion);status(state.motion.message);$('detail').textContent=`${state.rate.toFixed(0)} tracking updates/s (${state.delegate}) · ${state.inferenceMs.toFixed(0)} ms/update · ${v.videoWidth} × ${v.videoHeight}`;lastUi=now;}
@@ -324,7 +406,13 @@ function refreshWorkoutPaths(){for(const option of $('movement').options){const 
 window.addEventListener('myr5:performance-progress',refreshWorkoutPaths);window.addEventListener('myr5:account-ready',refreshWorkoutPaths);refreshWorkoutPaths();
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));
 mountHomeCharacter();
+ensureRetainedPower();
 mountPodPlaces(document.getElementById('view'));
+let retainedCardObserver=null;
+const attachRetainedPower=()=>{const card=document.querySelector('.myr5-companion-card');if(!card)return false;ensureRetainedPower(card);retainedCardObserver?.disconnect();return true;};
+if(!attachRetainedPower()&&typeof MutationObserver==='function'){retainedCardObserver=new MutationObserver(attachRetainedPower);retainedCardObserver.observe(document.body,{childList:true,subtree:true});}
+window.addEventListener('pagehide',()=>{avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;});
+window.addEventListener('pageshow',event=>{if(event.persisted)ensureRetainedPower();});
 // #19: today's newest paused/interrupted workout is offered by a Continue popup on the pod page (never the quilt).
 // A saved manual row can start a new camera session without deleting its old local record.
 mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,canContinue:row=>workoutPathAccess(row.mode),onContinue:row=>{
@@ -359,16 +447,20 @@ window.myr5Menus={...window.myr5Menus,ship:async(options={})=>{const {openShipVi
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();
 mountCoachOverlay();
-// Fruit-Ninja slice game over the camera for martial arts + holds (lazy; external to the core bundle).
-{let slice=null,loading=false;
- const eligible=()=>{const x=EXERCISES[session.mode];return x&&(x.group==='stances'||x.group==='boxing'||x.kind==='hold')?(x.kind==='hold'?'hold':'martial'):null;};
- const drop=()=>{slice?.stop();slice=null;};
+// Fruit-Ninja slice game over the camera for eligible martial reps (lazy; external to the core bundle).
+{let slice=null,loading=false,sliceGeneration=0;
+ const eligible=()=>isMartialSliceExercise(EXERCISES[session.mode])?'martial':null;
+ const drop=()=>{sliceGeneration++;slice?.stop();slice=null;};
+ window.addEventListener('myr5:movement-configured',drop);
  window.addEventListener('myr5:pose',event=>{
-  if(!slice){const mode=eligible(),host=document.getElementById('coachOverlay');if(!mode||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;
-   import('./arcade/slice/camera-slice.mjs').then(m=>{if(!slice&&document.body.dataset.tracking==='true')slice=m.mountCameraSlice({host,mode,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n)});}).catch(()=>{}).finally(()=>{loading=false;});return;}
+  if(!slice){const mode=eligible(),host=document.getElementById('coachOverlay');if(!mode||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;const generation=sliceGeneration,exercise=session.mode;
+   import('./arcade/slice/camera-slice.mjs').then(m=>{if(!slice&&generation===sliceGeneration&&exercise===session.mode&&eligible()&&document.body.dataset.tracking==='true')slice=m.mountCameraSlice({host,mode,ownerId:pod?.flow?.active?.performanceOwner??null,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n)});}).catch(()=>{}).finally(()=>{loading=false;});return;}
   slice.pose(event.detail);});
- new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+ new MutationObserver(()=>{if(document.body.dataset.tracking!=='true'){drop();dropWorkoutEffects();}}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
  window.myr5Slice={get active(){return slice},drop};}
+window.addEventListener('myr5:movement-configured',dropWorkoutEffects);
+window.addEventListener('myr5:account-ready',()=>{dropWorkoutEffects();syncRetainedPowerOwner();});
+document.addEventListener('click',event=>{const button=event.target?.closest?.('.workout-performance-controls button');if(button?.textContent?.trim()==='Break hold')invalidateWorkoutEffects();},true);
 
 let cinematics={play(){}};
 let optionalLoaded=false;

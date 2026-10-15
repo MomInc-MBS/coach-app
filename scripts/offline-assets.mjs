@@ -38,7 +38,9 @@ const GRIMOIRE_ART={ice:'ice\\.glb',grass:'(?:grass|flower)\\.glb',cogs:'cogs/.+
 const GRIMOIRE_GROUPS=Object.entries(GRIMOIRE_ART).map(([id,art])=>['grimoire-'+id,new RegExp(`^/(?:pod/worlds/boards/(?:${art}|${id}-poster\\.webp)|modules/portal/portal-tunnel-${id}\\.mjs)$`)]);
 // Named by first-run code, but used only by deferrable features that already cope without them:
 // food reference search (2.6 MB) and Records handwriting fonts (swap).
-const DEFERRED=/^\/(?:nutrition-data\.mjs$|pod\/fonts\/|food\/drgf-paper-character\.png$)/;
+// The production pages use the generated runtime bundles; source entries remain published for dev/source tools,
+// but are not downloaded in addition to those bundles. The conservative URL scanner also sees their names in comments.
+const DEFERRED=/^\/(?:app\.mjs$|launch\.mjs$|nutrition-data\.mjs$|pod\/fonts\/|food\/drgf-paper-character\.png$)/;
 const coreFolder=url=>!url.slice(1).includes('/')||/^\/(?:audio|icons|modules\/portal|modules\/ships|food|vendor\/three)\//.test(url)||url.startsWith('/pod/')&&!/\.(?:glb|gltf|bin)$/i.test(url);
 const reference=/(?:\.{1,2}\/|\/)?[\w@][\w\-./@]*\.(?:html|css|mjs|js|webmanifest|json|mp3|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|woff2?|ttf|otf)\b/g;
 const runtime=/\.(?:html|css|mjs|js|webmanifest|json|mp3|m4a|ogg|wav|png|jpe?g|webp|avif|gif|svg|ico|glb|gltf|bin|wasm|task|woff2?|ttf|otf)$/i;

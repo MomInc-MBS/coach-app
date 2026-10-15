@@ -1,6 +1,8 @@
 // Pyramid Jump: classic Doodle-Jump on 2D paper, 20 levels from the office to MOM's mothership desk (see LEVELS in logic.mjs).
 // Lazy/optional (arcade/ is never core). World y points up (feet = y); the camera only scrolls up; falling below the view ends the run.
-import {W,BEST_KEY,PLAT_W,JUMP,GRAVITY,Level,mulberry,mealMarkers,markerHeight,paperFor,LEVELS,LEVEL_H,LEVEL_COUNT,END_Y,levelAt,highestLevel,saveLevel} from './logic.mjs';
+import {W,BEST_KEY,PLAT_W,JUMP,GRAVITY,Level,mulberry,mealMarkers,markerHeight,paperFor,LEVELS,LEVEL_H,LEVEL_COUNT,END_Y,levelAt,highestLevel,saveLevel,newlyReachedQuestLevel} from './logic.mjs';
+import {performanceOwner} from '../../performance-progress.mjs';
+import {createQuestProgressReporter} from '../quest-progress-reporter.mjs';
 const PW=40,PH=50;
 const hash=n=>{const x=Math.sin(n*127.1)*43758.5453;return x-Math.floor(x);};
 export const bestScore=(store=localStorage)=>{try{const n=JSON.parse(store.getItem(BEST_KEY));return Number.isSafeInteger(n)&&n>0?n:0;}catch{return 0;}};
@@ -17,12 +19,14 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
  const exit=btn('EXIT',()=>onExit());exit.style.cssText+=';position:absolute;top:max(10px,env(safe-area-inset-top));right:10px;min-height:44px;min-width:44px';exit.setAttribute('aria-label','Exit to the pyramid');
  over.append(msg,row);root.append(canvas,exit,over);
  const art=paperFor(recipe),shape=new Path2D(art.d),tags=mealMarkers(meals);
- let lvl,p,camY,maxY,best=bestScore(),t=0,dir=0,tilt=0,tiltAt=-9,raf=0,last=0,dead=true,disposed=false,scale=1,viewH=640,plus=0,cur=0,banner=null,won=false;
+ let lvl,p,camY,maxY,best=bestScore(),t=0,dir=0,tilt=0,tiltAt=-9,raf=0,last=0,dead=true,disposed=false,scale=1,viewH=640,plus=0,cur=0,banner=null,won=false,runOwner=null,reportQuest=null;
  const showOver=(text,...btns)=>{msg.textContent=text;row.replaceChildren(...btns);over.style.display='grid';};
  function begin(from){ // from = 1-based level to start on (1 = the office desk)
+  runOwner=performanceOwner();
+  reportQuest=createQuestProgressReporter(runOwner);
   lvl=new Level(mulberry(seed++),plus);p={x:W/2,y:0,vx:0,vy:JUMP,fly:0,flyV:0,gear:null,face:1};camY=-90;maxY=0;dead=false;won=false;over.style.display='none';
   if(from>1){const y0=(from-1)*LEVEL_H+20;lvl.ensure(y0+300);const it=lvl.items.find(i=>i.type==='static'&&!i.blink&&i.y>=y0);p.x=it.x+PLAT_W/2;p.y=it.y;camY=p.y-viewH*.45;maxY=p.y;}
-  lvl.ensure(camY+viewH*2);for(const i of lvl.items)Object.assign(i,{broken:false,by:0});cur=-1;
+  lvl.ensure(camY+viewH*2);for(const i of lvl.items)Object.assign(i,{broken:false,by:0});cur=Math.max(0,Math.min(LEVEL_COUNT-1,from-1));
  }
  const menu=()=>{const hi=highestLevel(),b=[btn(hi>1?'NEW CLIMB':'START',()=>begin(1))];if(hi>1)b.unshift(btn(`CONTINUE FROM LEVEL ${hi}`,()=>begin(hi)));b.push(btn('EXIT',()=>onExit()));return b;};
  function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,r.width*d);canvas.height=Math.max(1,r.height*d);scale=canvas.width/W;viewH=canvas.height/scale;}
@@ -37,7 +41,7 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
  const solid=it=>!it.blink||Math.sin(t*6.28/it.blink+it.phase)>-.3; // origami / star platforms fold away on a timer
  function die(why){if(dead)return;dead=true;const s=Math.floor(maxY/10);if(s>best){best=s;try{localStorage.setItem(BEST_KEY,String(best));}catch{/* ignore */}}
   showOver(`${why}\nLEVEL ${cur+1} · HEIGHT ${s}\nBEST ${best}${s>=best&&s>0?'  NEW BEST!':''}`,...menu());}
- function win(){dead=won=true;saveLevel(LEVEL_COUNT);showOver(`LEVEL ${LEVEL_COUNT} COMPLETE\nYou ate your way to MOM.`,btn('NEW GAME+',()=>{plus++;begin(1);}),btn('EXIT',()=>onExit()));}
+ function win(){dead=won=true;saveLevel(LEVEL_COUNT);reportQuest?.record('pyramid-complete',1);showOver(`LEVEL ${LEVEL_COUNT} COMPLETE\nYou ate your way to MOM.`,btn('NEW GAME+',()=>{plus++;begin(1);}),btn('EXIT',()=>onExit()));}
  function step(dt){
   t+=dt;if(dead)return;
   const L=levelAt(p.y),steer=dir||(t-tiltAt<.5?tilt:0);p.vx=steer*340;if(steer)p.face=steer>0?1:-1;
@@ -58,7 +62,7 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
    }
   }
   maxY=Math.max(maxY,p.y);camY=Math.max(camY,p.y-viewH*.45);
-  const nl=levelAt(maxY);if(nl!==cur){cur=nl;banner={t,text:`LEVEL ${nl+1} · ${LEVELS[nl].name}`};saveLevel(nl+1);}
+  const nl=levelAt(maxY);if(nl!==cur){const crossed=newlyReachedQuestLevel(cur,nl);cur=nl;banner={t,text:`LEVEL ${nl+1} · ${LEVELS[nl].name}`};saveLevel(nl+1);if(crossed)reportQuest?.record('pyramid-level',crossed);}
   lvl.items=lvl.items.filter(i=>(i.y+(i.by||0))>camY-200);
   if(p.y+PH<camY)die('FELL');
  }

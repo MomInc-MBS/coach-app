@@ -9,10 +9,14 @@ export const VAULT_GOALS=Object.freeze({
  grimMinutes:Object.freeze([5,30,120]),timeCapMinutesPerDay:20, // addTime caps grimoire time per local day
  share:Object.freeze([1,25]),armieRead:Object.freeze([5,100]),armieIgnored:Object.freeze([5,100]),
  libraryOpen:10,djSessions:10,foodScans:10,arcadeScore:30,galaSlots:8,breathModes:2,shapes:9,
+ pyramidLevels:Object.freeze([5,10,15]),fruitStreaks:Object.freeze([5,8,12]),powerLevels:Object.freeze([3,4,6]),
+ effectTier:4,yogaHoldSeconds:60,
 });
 // How a counter counts (bump): 'day' = +n at most once per local day (default), 'max' = best value seen,
 // 'keyed' = distinct keys (one per Armie letter id, gala slot, breathing mode, portal shape).
-export const COUNTER_MODES=Object.freeze({'arcade-score':'max','armie-ignored':'keyed','gala-slot':'keyed','breath-mode':'keyed','shape-opened':'keyed','library-open':'keyed'});
+export const COUNTER_MODES=Object.freeze({'arcade-score':'max','pyramid-level':'max','pyramid-complete':'max','fruit-streak':'max','aura-tier':'max','blizzard-tier':'max','fire-tier':'max','lightning-tier':'max','yoga-hold-seconds':'max','armie-ignored':'keyed','gala-slot':'keyed','breath-mode':'keyed','shape-opened':'keyed','library-open':'keyed'});
+export const MAX_COUNTER_VALUES=Object.freeze({'pyramid-level':20,'pyramid-complete':1,'fruit-streak':64,'aura-tier':6,'blizzard-tier':6,'fire-tier':6,'lightning-tier':6,'yoga-hold-seconds':60});
+export const INTEGER_MAX_COUNTERS=Object.freeze(['pyramid-level','pyramid-complete','fruit-streak','aura-tier','blizzard-tier','fire-tier','lightning-tier']);
 export const SECRET_BOARDS=Object.freeze(['pond','wood','ice','quilt','grass','jelly']);
 export const COACH_CATEGORIES=Object.freeze({meditation:'Meditation',yoga:'Yoga',cardio:'Cardio',quads:'Quads',glutes:'Glutes',chest:'Chest',arms:'Arms','martial-arts':'Martial arts'});
 const num=x=>Number.isFinite(x)?x:0;
@@ -65,6 +69,21 @@ const CLUES={
  'all-six':"Six books, six secrets. The wood, the water, the glass, the quilt, the grass, the goo.",
  'all-coaches':"Collect the entire family. Mother will set extra places.",
  'unlocked-everything':"Everyone. Every coat. Every colour. Then come find me."
+ , 'pyramid-level-5':"Five floors above the office. The paper is getting thin.",
+ 'pyramid-level-10':"Ten floors into the fold. Keep your footing.",
+ 'pyramid-level-15':"Fifteen levels up. The desk can see you now.",
+ 'pyramid-level-20':"You landed on Mother's desk. She was expecting you.",
+ 'fruit-streak-5':"Five clean cuts before the fruit can fall.",
+ 'fruit-streak-8':"Eight in one rush. Keep your eyes ahead of your hand.",
+ 'fruit-streak-12':"Twelve hits in a streak. The blade is keeping score.",
+ 'aura-level-3':"Twelve counted reps. The aura is starting to take shape.",
+ 'aura-level-4':"Sixteen counted reps. Keep the light under control.",
+ 'aura-level-6':"Twenty-six counted reps. The aura has reached its top tier.",
+ 'blizzard-level-2':"One active minute in a core or balance hold. The cold has noticed.",
+ 'blizzard-level-4':"Seven minutes and forty-five active seconds. Ice holds its shape.",
+ 'fire-level-4':"Sixteen push-ups or bridges in one set. Feel the ground heat up.",
+ 'lightning-level-4':"Sixteen arm or shoulder reps in one set. Hold the charge.",
+ 'yoga-hold-60':"Hold a yoga pose for sixty counted seconds. Breathe normally."
 };
 const goal=(id,tier,title,test,progress)=>Object.freeze({id,tier,title,clue:CLUES[id]||'clue:'+id,test:v=>{try{return !!test(v||{});}catch{return false;}},...(progress?{progress:v=>{try{const p=progress(v||{});return {have:Math.max(0,Math.min(p.need,num(p.have))),need:p.need};}catch{return {have:0,need:1};}}}:{})});
 const counter=(id,tier,title,name,need)=>goal(id,tier,title,v=>count(v,name)>=need,v=>({have:count(v,name),need}));
@@ -73,7 +92,7 @@ const secret=(id,title,board)=>goal(id,'rare',title,v=>!!v.secrets?.[board]);
 const ratio=(id,tier,title,have,need)=>goal(id,tier,title,v=>num(v.snap?.[need])>0&&num(v.snap?.[have])>=num(v.snap?.[need]),v=>({have:num(v.snap?.[have]),need:Math.max(1,num(v.snap?.[need]))}));
 const G=VAULT_GOALS;
 const all=v=>[['coachesHave','coachesNeed'],['texturedCoaches','coachesNeed'],['coloursHave','coloursNeed'],['texturesHave','texturesNeed']].every(([h,n])=>num(v.snap?.[n])>0&&num(v.snap?.[h])>=num(v.snap?.[n]));
-export const GOALS=Object.freeze([
+const DEFINED_GOALS=Object.freeze([
  counter('history-open','rare','Looked Back','history-open',1),
  counter('scoreboard-link','rare','Linked Up','scoreboard-link',1),
  counter('reminder-set','rare','Remembered','reminder-set',1),
@@ -104,6 +123,17 @@ export const GOALS=Object.freeze([
  goal('vault-pack-opened','rare','Pack Rat',v=>num(v.snap?.vaultPacksOpened)>=1),
  minutes('grim-time-2','rare','Grimoire Regular',G.grimMinutes[1]),
  ...Object.entries(COACH_CATEGORIES).map(([track,label])=>goal('coach-'+track,'rare','First '+label+' Coach',v=>num(v.snap?.catsHave?.[track])>=1)),
+ counter('pyramid-level-5','rare','Paper Climber I','pyramid-level',G.pyramidLevels[0]),
+ counter('pyramid-level-10','rare','Paper Climber II','pyramid-level',G.pyramidLevels[1]),
+ counter('pyramid-level-15','legendary','Paper Climber III','pyramid-level',G.pyramidLevels[2]),
+ counter('pyramid-level-20','legendary','Desk Landing','pyramid-complete',1),
+ ...G.fruitStreaks.map((need,index)=>counter(`fruit-streak-${need}`,index===2?'legendary':'rare',`Fruit Streak ${need}`,'fruit-streak',need)),
+ ...G.powerLevels.map((need,index)=>counter(`aura-level-${need}`,index===2?'legendary':'rare',`Aura Tier ${need}`,'aura-tier',need)),
+ counter('blizzard-level-2','rare','Blizzard Tier 2','blizzard-tier',2),
+ counter('blizzard-level-4','legendary','Blizzard Tier 4','blizzard-tier',4),
+ counter('fire-level-4','rare','Fire Tier 4','fire-tier',G.effectTier),
+ counter('lightning-level-4','rare','Lightning Tier 4','lightning-tier',G.effectTier),
+ counter('yoga-hold-60','rare','Living Hold','yoga-hold-seconds',G.yogaHoldSeconds),
  goal('boss-skin-first','rare','Pixel Perfect',v=>num(v.snap?.bossSkins)>=1),
  counter('share-25','rare','Town Crier','share',G.share[1]),
  counter('armie-read-100','rare','Pen Pal','armie-read',G.armieRead[1]),
@@ -115,7 +145,11 @@ export const GOALS=Object.freeze([
  ratio('all-colours','legendary','Every Colour','coloursHave','coloursNeed'),
  goal('unlocked-everything','legendary','Unlocked Everything',all),
 ]);
-export const goalById=id=>GOALS.find(g=>g.id===id);
+export const ARCHIVED_GOAL_IDS=Object.freeze(['grim-time-1','grim-time-2','grim-time-3','share-1','share-25','armie-read-1','armie-read-100','armie-ignored-1','armie-ignored-100','dj-first','dj-10','library-10']);
+const ARCHIVED_SET=new Set(ARCHIVED_GOAL_IDS);
+export const ARCHIVED_GOALS=Object.freeze(DEFINED_GOALS.filter(g=>ARCHIVED_SET.has(g.id)));
+export const GOALS=Object.freeze(DEFINED_GOALS.filter(g=>!ARCHIVED_SET.has(g.id)));
+export const goalById=id=>GOALS.find(g=>g.id===id)||ARCHIVED_GOALS.find(g=>g.id===id);
 /** Ids whose test passes in v and are not already earned (earned: {id:ts}). */
 export const newlyEarned=(v,earned={})=>GOALS.filter(g=>!earned[g.id]&&g.test(v)).map(g=>g.id);
 const RANK={easy:0,medium:1,hard:2,expert:3};

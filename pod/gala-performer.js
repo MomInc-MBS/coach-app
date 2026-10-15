@@ -15,7 +15,7 @@
  }
  function create(look,{draw=A.draw,hasPet=false,hasCoachBody=false}={}){
   const body=document.createElement('canvas'),pet=document.createElement('canvas'),weapon=document.createElement('canvas');
-  const scenes=playlist(hasPet?{...look,parts:{...look.parts,pet:1}}:look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity;
+  const scenes=playlist(hasPet?{...look,parts:{...look.parts,pet:1}}:look),hasWeapon=scenes.some(scene=>scene.name==='weapon');let specialAt=-Infinity,powerTransform={offset:0,flip:false,zoom:0,gait:0};
   weapon.width=40;weapon.height=72;if(hasWeapon)W.draw(weapon.getContext('2d'),look.weapon);
   draw(pet,look,{base:false,weapon:false,petOnly:true});let lastPose='';
   function paint(canvas,time=0,still=false,motion={}){
@@ -42,9 +42,13 @@
    if(scene.name==='face')zoom=ease(Math.min(seconds/.9,(5.5-seconds)/.9));
    const bob=still?0:Math.sin(time/850)*.8;
    if(zoom<1){ctx.globalAlpha=(1-zoom)*.5;ctx.fillStyle='#b69adb';ctx.beginPath();ctx.ellipse(80+offset,153,35,3,0,0,TAU);ctx.fill();ctx.globalAlpha=1;}
+   let gait=0;
+   if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb'||movement==='look-down'){
+    gait=movement==='climb'?Math.sin(time/110)*7:movement==='wiggle'?Math.sin(time/72)*4:movement==='look-down'?Math.sin(time/90)*2:movement==='walk'?Math.sin(time/430)*3:wave*2;
+   }
+   powerTransform={offset,flip,zoom,gait};
    ctx.save();ctx.translate(offset,0);if(flip){ctx.translate(160,0);ctx.scale(-1,1);}
    if(scene.name==='walk'||movement==='walk'||movement==='wiggle'||movement==='climb'||movement==='look-down'){
-    const gait=movement==='climb'?Math.sin(time/110)*7:movement==='wiggle'?Math.sin(time/72)*4:movement==='look-down'?Math.sin(time/90)*2:movement==='walk'?Math.sin(time/430)*3:wave*2;
     ctx.drawImage(body,0,0,64,70,32,13+bob,96,105);
     ctx.drawImage(body,0,70,32,26,32,118+gait,48,39);
     ctx.drawImage(body,32,70,32,26,80,118-gait,48,39);
@@ -73,7 +77,7 @@
    }
    ctx.restore();return scene;
   }
-  return {paint,scenes,weapon:hasWeapon?look.weapon:null,get feetFraction(){
+  return {paint,scenes,weapon:hasWeapon?look.weapon:null,get powerTransform(){return {...powerTransform};},get feetFraction(){
    // Saved coach designs have different transparent margins below their feet.
    const context=body.getContext('2d');if(!context.getImageData)return null;
    const pixels=context.getImageData(0,0,body.width,body.height).data;

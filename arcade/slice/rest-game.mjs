@@ -3,12 +3,14 @@
 import {createSlice,render} from './core.mjs';
 import {createDodger,createSwipe,throwPlan,REST} from './rest-logic.mjs';
 import {subscribePhoneMotion,requestPhoneMotion} from '../../character-phone-sensor.mjs';
+import {performanceOwner} from '../../performance-progress.mjs';
+import {createQuestProgressReporter} from '../quest-progress-reporter.mjs';
 
 const W=180,GRAV=260;
 export function mountRestGame(scene,{avatar,attackButton,feedback}){
  const canvas=document.createElement('canvas'),g=canvas.getContext('2d');
  canvas.className='slice-layer';canvas.setAttribute('aria-hidden','true');
- let e,dodger,frame=0,last=0,nextThrow=0,nextLaser=0,throws=0,swallow=false,unsub=()=>{},k=1;
+ let e,dodger,frame=0,last=0,nextThrow=0,nextLaser=0,throws=0,swallow=false,unsub=()=>{},k=1,runOwner=null,reportQuest=null;
  const phone={gx:0,motion:0},pointer={down:false,x:0,y:0,speed:0};
  const swipe=createSwipe(),say=t=>{if(feedback)feedback.textContent=t;};
  const floorY=()=>e.h*.8,coachY=()=>e.h*.17;
@@ -19,7 +21,7 @@ export function mountRestGame(scene,{avatar,attackButton,feedback}){
   e=createSlice({w:W,h,mode:'rest',auto:false,coachX:W/2,onEvent:(type,d)=>{
    if(type==='laser-hit')say('Zapped! Hold still to shield next time.');
    if(type==='laser-shield')say('Shield up. Nice and steady.');
-   if(type==='combo')say(`COMBO x${d.n}!`);
+   if(type==='combo'){say(`COMBO x${d.n}!`);reportQuest?.record('fruit-streak',d.n);}
    if(type==='wave-end')say('Wave over. Keep going, your rest continues.');
   }});
   dodger=createDodger(W,14);throws=0;nextThrow=1;nextLaser=REST.laserEvery[0]/1000;
@@ -61,7 +63,7 @@ export function mountRestGame(scene,{avatar,attackButton,feedback}){
  const keys=ev=>{const d=ev.key==='ArrowLeft'?-1:ev.key==='ArrowRight'?1:0;if(d)dodger.key(ev.type==='keydown'?d:0);};
  return {
   start(){
-   if(frame)return;begin();scene.append(canvas);last=0;frame=requestAnimationFrame(tick);
+   if(frame)return;runOwner=performanceOwner();reportQuest=createQuestProgressReporter(runOwner);begin();scene.append(canvas);last=0;frame=requestAnimationFrame(tick);
    scene.addEventListener('pointerdown',down,{passive:true});scene.addEventListener('pointermove',move,{passive:true});
    addEventListener('pointerup',up);addEventListener('pointercancel',up);attackButton?.addEventListener('click',click,true);
    addEventListener('keydown',keys);addEventListener('keyup',keys);

@@ -21,6 +21,19 @@ export function cardModel(g,state,packs=[]){
   progress:!e&&p&&p.need>1?{have:Math.max(0,Math.min(p.have|0,p.need)),need:p.need}:null,
   pack:e&&packs.find(id=>String(id).endsWith(':vault-'+g.id))||null};
 }
+export function archivedCompletionRows(entries){
+ return (Array.isArray(entries)?entries:[]).filter(entry=>entry&&entry.earned!==undefined&&entry.earned!==null&&typeof entry.title==='string')
+  .map(entry=>{const stamp=entry.earned&&typeof entry.earned==='object'?(entry.earned.at??entry.earned.ts):entry.earned,date=stamp!==undefined&&stamp!==null&&!isNaN(new Date(stamp))?new Date(stamp).toLocaleDateString():'';return {id:String(entry.id??''),title:entry.title,date,tier:String(entry.tier??''),packId:String(entry.packId??'')};});
+}
+export function archivePackLabel(row,opened=false){return row?.packId?(opened?'Reward pack opened':'Reward pack earned'):'';}
+export function bindArchiveDialog({dialog,openButton,closeButton,documentRef=globalThis.document}={}){
+ let opener=null;
+ const open=()=>{if(!dialog.hidden)return;opener=openButton;dialog.hidden=false;closeButton.focus?.();};
+ const close=()=>{if(dialog.hidden)return;dialog.hidden=true;if(opener?.isConnected!==false)opener?.focus?.();opener=null;};
+ const onOpen=()=>open(),onClose=()=>close(),onKey=e=>{if(dialog.hidden)return;if(e.key==='Escape'){e.preventDefault?.();e.stopImmediatePropagation?.();close();}else if(e.key==='Tab'){e.preventDefault?.();e.stopImmediatePropagation?.();closeButton.focus?.();}};
+ openButton?.addEventListener('click',onOpen);closeButton?.addEventListener('click',onClose);documentRef?.addEventListener('keydown',onKey);
+ return {open,close,dispose(){openButton?.removeEventListener('click',onOpen);closeButton?.removeEventListener('click',onClose);documentRef?.removeEventListener('keydown',onKey);close();}};
+}
 let live=null;
 export function exitHall(){const l=live;live=null;if(!l)return;l.stop();window.dispatchEvent(new CustomEvent('myr5:vault-hall-exit'));}
 const CSS=`.vh{position:fixed;inset:0;z-index:7000;background:#08030f;overflow:hidden;touch-action:none;font:500 15px/1.4 system-ui;color:#fff4d6;user-select:none}
@@ -35,7 +48,11 @@ const CSS=`.vh{position:fixed;inset:0;z-index:7000;background:#08030f;overflow:h
 .vh-card h3{margin:2px 0 6px;font:900 19px/1.15 system-ui;color:#ffd36e}.vh-card .t{font:800 11px ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:#b56bff}.vh-card .t.legendary{color:#ff9c36}
 .vh-card .c{font:600 16px/1.35 ui-monospace,monospace;color:#ff9c36;text-shadow:0 0 8px #ff9c3688;margin:6px 0}
 .vh-bar{height:10px;border-radius:5px;background:#3a2358;overflow:hidden}.vh-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff9c36,#ffd36e)}.vh-card small{display:block;margin-top:4px;color:#d8c8ee}
-.vh-card button{margin-top:8px;min-height:44px;padding:0 18px;border:0;border-radius:12px;background:#ffd36e;color:#15101c;font:800 15px system-ui}`;
+.vh-card button{margin-top:8px;min-height:44px;padding:0 18px;border:0;border-radius:12px;background:#ffd36e;color:#15101c;font:800 15px system-ui}
+.vh-archive-open{position:absolute;left:12px;top:calc(68px + env(safe-area-inset-top,0px));min-height:44px;padding:0 14px;border:1px solid #b56bff;border-radius:22px;background:#171020eF;color:#f2dfff;font:750 13px system-ui;z-index:3}
+.vh-archive[hidden]{display:none}.vh-archive:not([hidden]){position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:18px;background:#08030fdd;box-sizing:border-box}
+.vh-archive-panel{width:min(600px,100%);max-height:82vh;overflow:auto;padding:18px;border:2px solid #7a2fc4;border-radius:18px;background:#171020f5;box-shadow:0 0 32px #7a2fc488;box-sizing:border-box}
+.vh-archive-panel h2{margin:0 56px 14px 0;color:#ffd36e;font:900 22px/1.2 system-ui}.vh-archive-panel ul{list-style:none;margin:0;padding:0}.vh-archive-panel li{padding:12px 2px;border-top:1px solid #61417b}.vh-archive-panel strong{display:block;color:#fff4d6}.vh-archive-panel small{display:block;margin-top:4px;color:#d8c8ee;overflow-wrap:anywhere}.vh-archive-panel button{float:right;min-height:44px;padding:0 14px;border:1px solid #ffd36e;border-radius:12px;background:#24182f;color:#ffd36e;font:800 14px system-ui}`;
 const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const HOLO_V=`uniform float uT;varying vec3 vN,vV;varying float vH,vY;
 float h1(float n){return fract(sin(n*91.7)*43758.5);}
@@ -69,12 +86,16 @@ export async function enterHall(arg=document.body){
  const THREE=await import('three'),{GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js'),{MeshoptDecoder}=await import('three/addons/libs/meshopt_decoder.module.js');
  const goalsMod=await import('./vault-goals.mjs'),{GOALS}=goalsMod,store=await import('./vault-store.mjs').catch(()=>({}));
  const rewardPacks=await import('../../reward-packs.mjs').catch(()=>null),{COACH_REQUIREMENTS}=await import('../../performance-catalog.mjs');
- const N=GOALS.length,limit=stopAt(N-1)+2,state=()=>safe(()=>store.state(),{});
+ void store.drainQuestPending?.();
+ const N=GOALS.length,limit=stopAt(N-1)+2,state=()=>safe(()=>store.state(),{}),readArchive=()=>archivedCompletionRows(safe(()=>store.archivedCompletions?.(),[]));
  // L0's statueCoaches(goals) wins when present (ids or {id}); otherwise highest-unlock-level coaches, working down.
  const FILES=(safe(()=>goalsMod.statueCoaches(GOALS),null)||pickCoaches(N,COACH_REQUIREMENTS)).map(c=>coachPath(c.coachId||c.id||c));
  const el=document.createElement('div');el.className='vh';
- el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button><div class="vh-pos"></div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div>`;
- host.append(el);const $=s=>el.querySelector(s),canvas=$('canvas'),card=$('.vh-card'),pur=$('.vh-pur'),pos=$('.vh-pos');
+ el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button>${readArchive().length?'<button class="vh-archive-open" type="button">Past achievements</button>':''}<div class="vh-pos"></div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div><section class="vh-archive" role="dialog" aria-modal="true" aria-labelledby="vh-archive-title" hidden><div class="vh-archive-panel" tabindex="-1"><button class="vh-archive-close" type="button" aria-label="Close past achievements">Close</button><h2 id="vh-archive-title">Past achievements</h2><ul></ul></div></section>`;
+ host.append(el);const $=s=>el.querySelector(s),canvas=$('canvas'),card=$('.vh-card'),pur=$('.vh-pur'),pos=$('.vh-pos'),archiveDialog=$('.vh-archive'),archiveOpen=$('.vh-archive-open'),archiveClose=$('.vh-archive-close'),archiveList=$('.vh-archive-panel ul');
+ const archiveBinding=archiveOpen?bindArchiveDialog({dialog:archiveDialog,openButton:archiveOpen,closeButton:archiveClose}):null;
+ const paintArchive=()=>{const rows=readArchive();if(archiveOpen)archiveOpen.hidden=!rows.length;if(!rows.length){archiveBinding?.close();return;}archiveList.innerHTML=rows.map(row=>{const opened=row.packId&&safe(()=>rewardPacks?.openedPack(row.packId),false);const pack=archivePackLabel(row,!!opened);return `<li><strong>${esc(row.title)}</strong><small>${row.date?`Earned ${esc(row.date)}`:'Earned date unavailable'}${row.tier?` · ${esc(row.tier)}`:''}${pack?` · ${pack}`:''}</small></li>`;}).join('');};
+ archiveOpen?.addEventListener('click',paintArchive);paintArchive();
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
  const scene=new THREE.Scene();scene.background=new THREE.Color('#050210');
  const camera=new THREE.PerspectiveCamera(60,1,.1,140);
@@ -153,7 +174,7 @@ export async function enterHall(arg=document.body){
  function tap(e){const r=canvas.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);
   for(const s of statues)if(s.model&&ray.intersectObject(s.grp,true).length){target=clamp(stopAt(s.i),0,limit);return;}}
  canvas.addEventListener('wheel',e=>{e.preventDefault();move(clamp(e.deltaY*.008,-1.5,1.5));},{passive:false});
- const kd=e=>{const k=e.key;if(k==='ArrowUp'||k==='w')held=-1;else if(k==='ArrowDown'||k==='s')held=1;else if(k==='Escape')exitHall();},ku=()=>{held=0;};addEventListener('keydown',kd);addEventListener('keyup',ku);
+ const kd=e=>{if(!archiveDialog.hidden)return;const k=e.key;if(k==='ArrowUp'||k==='w')held=-1;else if(k==='ArrowDown'||k==='s')held=1;else if(k==='Escape')exitHall();},ku=()=>{held=0;};addEventListener('keydown',kd);addEventListener('keyup',ku);
  for(const b of el.querySelectorAll('.vh-arr button')){const d=+b.dataset.d;b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);held=-d;});b.addEventListener('pointerup',ku);b.addEventListener('pointercancel',ku);}
  $('.vh-x').onclick=exitHall;
  window.addEventListener('myr5:vault-earned',refresh);
@@ -164,7 +185,7 @@ export async function enterHall(arg=document.body){
   // Entry: purple fades out, camera starts high + far and shrinks down into the hall with an FOV warp; streaks fade.
   const e=clamp((t-.3)/2.6,0,1),ease=1-Math.pow(1-e,3),inv=1-ease;pur.style.opacity=String(1-clamp((t-.7)/1.7,0,1));
   sm.opacity=Math.min(1,(1-e)*1.4);streaks.position.z=(t*40)%40;streaks.visible=e<1;pins.position.z=(t*46)%4.2*1+camera.position.z*0;pinM.opacity=Math.min(1,(1-e)*1.8);pins.visible=e<1;
-  if(e>=1)move(held*dt*3);
+  if(!archiveDialog.hidden){held=0;vel=0;target=route;}else if(e>=1)move(held*dt*3);
   const gap=target-route;vel+=(clamp(gap*7,-3.3,3.3)-vel)*(1-Math.exp(-dt*14));const step=Math.abs(vel*dt)<Math.abs(gap)?vel*dt:gap;route+=Math.sign(step)===Math.sign(gap)?step:0;if(Math.abs(gap)<.001)vel=0;
   const near=e>=1&&Math.abs(vel)<.25?nearestStatue(route,N):-1;
   if(near!==insp){insp=near;if(insp>=0)showCard(insp);else card.hidden=true;}
@@ -184,7 +205,7 @@ export async function enterHall(arg=document.body){
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
  const vis=()=>{if(!document.hidden&&live&&!raf){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
  live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
-  statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();el.remove();delete window.myr5Hall;}};
+  archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
  if(/[?&]debug/.test(location.search)||localStorage.myr5Debug)window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),earned:statues.filter(s=>s.earned).map(s=>s.i)}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
  statues.forEach(s=>setEarn(s,false));stream(0);refresh();raf=requestAnimationFrame(frame);

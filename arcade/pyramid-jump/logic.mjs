@@ -56,6 +56,9 @@ export const PLAT_W=64,JUMP=760,GRAVITY=1600,MAX_JUMP=JUMP*JUMP/(2*GRAVITY); // 
 export const LEVEL_KEY='myr5-pyramid-jump-level-v1';
 export const highestLevel=(store=localStorage)=>{try{const n=JSON.parse(store.getItem(LEVEL_KEY));return Number.isSafeInteger(n)&&n>=1?Math.min(n,LEVEL_COUNT):1;}catch{return 1;}};
 export const saveLevel=(n,store=localStorage)=>{try{if(n>highestLevel(store))store.setItem(LEVEL_KEY,String(n));}catch{/* ignore */}};
+/** Convert an actual upward transition (zero-based current level) to its 1-based quest milestone. */
+export const newlyReachedQuestLevel=(previous,current)=>Number.isSafeInteger(previous)&&Number.isSafeInteger(current)
+  &&current>previous&&current>=0&&current<LEVEL_COUNT?current+1:null;
 // Rows climb for 20 levels then end in MOM's desk (end = its height). Rows are never further apart than ~150 (< MAX_JUMP) and
 // every breaking/blinking row also carries a solid platform, so a safe route always exists. Difficulty ramps per level:
 // wider gaps, more moving and breaking platforms, then monsters (from level 2) and black holes (from level 8); `plus` = New Game+.

@@ -9,6 +9,7 @@ export function initRestArena(){
  const fx=document.getElementById('restWeaponFx'),type=document.getElementById('weaponType'),tier=document.getElementById('weaponTier'),note=document.getElementById('weaponStatus'),bar=document.getElementById('weaponLevelBar');
  const body=document.createElement('canvas'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
  let progress=equipmentProgress(),look=null,equipped={type:'rapier',tier:0},running=false,frame=0,last=0,action=null,queued=false;
+ let powerRecord={version:1,equipped:null,styles:{}},powerOwnerId=null,powerFingerprint='',powerModule=null,powerRenderer=null,blizzardModule=null,powerSchedule=null,powerLoading=null,powerLoadToken=0,powerTime=0,powerPulse=0,lastPowerAt=0,powerArt=null,powerArtCtx=null;
  let anchor={x:0,y:0,scale:1},lastWeapon='';
  canvas.width=160;canvas.height=168;
  window.GalaProgress={read:()=>progress};
@@ -20,6 +21,19 @@ export function initRestArena(){
   fx.width=Math.round(bounds.width*ratio);fx.height=Math.round(bounds.height*ratio);
   anchor={x:(avatar.left+avatar.width*.78-bounds.left)*ratio,y:(avatar.top+avatar.height*.48-bounds.top)*ratio,scale:ratio*1.15};
  }
+ const hasPower=()=>!!powerRecord.styles?.[powerRecord.equipped];
+ function resetPower(){powerSchedule?.reset();powerTime=0;powerPulse=0;lastPowerAt=0;}
+ function makePowerArt(){if(powerArtCtx)return;powerArt=document.createElement('canvas');powerArt.width=160;powerArt.height=168;powerArtCtx=powerArt.getContext('2d',{alpha:true});if(!powerArtCtx){powerArt=null;return;}powerArtCtx.imageSmoothingEnabled=false;}
+ function ensurePowerRenderer(){
+  if(powerModule&&powerRenderer&&blizzardModule&&powerSchedule){if(running)draw(performance.now());return;}
+  if(powerLoading||!hasPower())return;
+  const token=++powerLoadToken;
+  powerLoading=Promise.all([import('../arcade/power/avatar-power.mjs'),import('../arcade/power/power.mjs'),import('../arcade/hold/blizzard.mjs')])
+   .then(([avatar,power,blizzard])=>{if(token!==powerLoadToken||!hasPower())return;powerModule=avatar;powerRenderer=power;blizzardModule=blizzard;powerSchedule=avatar.createAvatarPowerSchedule({seed:0x525354});makePowerArt();resetPower();if(running)draw(performance.now());})
+   .catch(()=>{}).finally(()=>{if(token===powerLoadToken)powerLoading=null;});
+ }
+ function requestPowerSnapshot(){if(typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('myr5:retained-character-power-request'));}
+ function retainedPower(event){const detail=event?.detail;if(!detail||typeof detail.ownerId!=='string')return;const next=detail.record&&typeof detail.record==='object'?detail.record:{version:1,equipped:null,styles:{}};const fingerprint=JSON.stringify(next);if(detail.ownerId===powerOwnerId&&fingerprint===powerFingerprint){if(hasPower())ensurePowerRenderer();return;}powerOwnerId=detail.ownerId;powerFingerprint=fingerprint;powerLoadToken++;powerLoading=null;powerRecord=next;resetPower();if(hasPower())ensurePowerRenderer();else if(look)draw(performance.now());}
  function load(){
   try{look=loadGala(localStorage,A).look;}catch{look=structuredClone(A.defaultLook);}
   const selected=look.weapon||{type:'rapier',tier:0};
@@ -45,6 +59,14 @@ export function initRestArena(){
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,160,168);ctx.imageSmoothingEnabled=false;
   const pulse=action&&!reduced.matches?Math.sin(Math.min(1,(now-action.startedAt)/duration())*Math.PI):0;
   ctx.drawImage(body,26+pulse*4,14-pulse*5,96,144);
+  if(powerSchedule&&powerModule&&powerRenderer&&blizzardModule){
+   const dt=lastPowerAt?Math.max(0,Math.min(.25,(now-lastPowerAt)/1000)):0;lastPowerAt=now;
+   const canShow=running&&!document.hidden&&hasPower(),active=canShow?powerSchedule.step(dt,true,reduced.matches):0;
+   if(active){powerTime+=reduced.matches?0:dt;if(powerPulse<=0)powerPulse=1;if(reduced.matches)powerPulse=0;else powerPulse=Math.max(0,powerPulse-dt*2.5);
+    const feet=[{index:27,x:.46,y:.835,visible:true},{index:28,x:.54,y:.835,visible:true}],state=powerModule.avatarPowerState(powerRecord,160,168,reduced.matches?0:powerTime,reduced.matches?0:powerPulse,false,feet);
+    if(state&&powerArtCtx){powerArtCtx.clearRect(0,0,160,168);if(state.blizzard)blizzardModule.renderBlizzard(powerArtCtx,state);else powerRenderer.renderPower(powerArtCtx,state);ctx.save();ctx.globalAlpha=.55;ctx.translate(-6+pulse*4,1-pulse*5);ctx.drawImage(powerArt,0,0);ctx.restore();}
+   }else{powerPulse=0;if(!canShow)powerTime=0;}
+  }
   const effects=fx.getContext('2d');effects.clearRect(0,0,fx.width,fx.height);
   effects.save();effects.translate(anchor.x,anchor.y);effects.rotate(-Math.PI/2-.13);
   drawAnimatedWeapon(effects,equipped,{weapons:W,x:0,y:0,scale:anchor.scale,now,action,reducedMotion:reduced.matches});
@@ -52,11 +74,12 @@ export function initRestArena(){
  }
  function tick(now){frame=0;if(!running||document.hidden)return;if(now-last>(reduced.matches?100:32)){draw(now);last=now;}frame=requestAnimationFrame(tick);}
  function start(){running=true;load();if(!frame)frame=requestAnimationFrame(tick);}
- function stop(){running=false;action=null;queued=false;if(frame)cancelAnimationFrame(frame);frame=0;scene.classList.remove('team-strike');}
- const visibility=()=>{if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;}else if(running&&!frame){measure();frame=requestAnimationFrame(tick);}};
+ function stop(){running=false;action=null;queued=false;if(frame)cancelAnimationFrame(frame);frame=0;resetPower();scene.classList.remove('team-strike');draw(performance.now());}
+ const visibility=()=>{if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;resetPower();draw(performance.now());}else if(running&&!frame){measure();last=0;frame=requestAnimationFrame(tick);}};
+ const pageshow=()=>{requestPowerSnapshot();if(running&&!document.hidden&&!frame)frame=requestAnimationFrame(tick);};
  const account=event=>{progress=equipmentProgress(event.detail);load();};
  const resize=new ResizeObserver(measure);resize.observe(scene);
- window.addEventListener('myr5:account-progress',account);window.addEventListener('mominc-avatar-change',load);document.addEventListener('visibilitychange',visibility);load();
+ window.addEventListener('myr5:account-progress',account);window.addEventListener('mominc-avatar-change',load);window.addEventListener('myr5:retained-character-power',retainedPower);window.addEventListener('pageshow',pageshow);document.addEventListener('visibilitychange',visibility);load();requestPowerSnapshot();
  return {load,start,stop,get weapon(){return {...equipped};},get progress(){return {...progress};},attack(hit){
    const now=performance.now();
    // A special finishes even if the user continues tapping. One queued basic
@@ -66,5 +89,5 @@ export function initRestArena(){
    }
    action={startedAt:now,special:!!hit.special};queued=false;
    scene.classList.toggle('team-strike',!!hit.assisted);draw(now);
-  },dispose(){stop();resize.disconnect();window.removeEventListener('myr5:account-progress',account);window.removeEventListener('mominc-avatar-change',load);document.removeEventListener('visibilitychange',visibility);type.removeEventListener('change',equip);tier.removeEventListener('change',equip);}};
+  },dispose(){stop();powerLoadToken++;powerSchedule?.dispose();powerArt=null;powerArtCtx=null;resize.disconnect();window.removeEventListener('myr5:account-progress',account);window.removeEventListener('mominc-avatar-change',load);window.removeEventListener('myr5:retained-character-power',retainedPower);window.removeEventListener('pageshow',pageshow);document.removeEventListener('visibilitychange',visibility);type.removeEventListener('change',equip);tier.removeEventListener('change',equip);}};
 }

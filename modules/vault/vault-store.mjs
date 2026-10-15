@@ -1,7 +1,7 @@
 // Achievement Vault store (owner-scoped localStorage `myr5-vault-v1/<owner>`). Every write re-evaluates the goals,
 // grants a vault pack per newly earned goal (unlock-ledger, idempotent) and dispatches `myr5:vault-earned {ids}`. No timers.
 // Counters follow vault-goals COUNTER_MODES: once per local day by default (anti-farm), 'max', or distinct keys.
-import {GOALS,VAULT_GOALS,COUNTER_MODES,SECRET_BOARDS,COACH_CATEGORIES,newlyEarned} from './vault-goals.mjs';
+import {GOALS,ARCHIVED_GOALS,VAULT_GOALS,COUNTER_MODES,MAX_COUNTER_VALUES,INTEGER_MAX_COUNTERS,SECRET_BOARDS,COACH_CATEGORIES,newlyEarned} from './vault-goals.mjs';
 import {performanceOwner,localDay,unlockedCoachIds} from '../../performance-progress.mjs';
 import {COACHES,COACH_REQUIREMENTS,EXCLUDED_COACH_IDS} from '../../performance-catalog.mjs';
 import {colourRewardPool,textureRewardPool} from '../../battle-pass-rewards.mjs';
@@ -37,6 +37,10 @@ export function snapshot(){
 }
 export const view=(d=read())=>({counters:d.counters,time:d.time,secrets:d.secrets,earned:d.earned,snap:snapshot()});
 export const packId=g=>`reward-pack:secret:vault-${g.id}`;
+/** Read-only completions for goals retired from active evaluation. Existing earned timestamps and packs stay untouched. */
+export function archivedCompletions(d=read()){
+ return ARCHIVED_GOALS.filter(g=>Object.hasOwn(d.earned||{},g.id)).map(g=>({id:g.id,title:g.title,clue:g.clue,tier:g.tier,earned:d.earned[g.id],packId:packId(g)}));
+}
 function grant(ids,d){
  const now=Date.now(),done=[];
  for(const id of ids){if(GOALS.some(g=>g.id===id)&&!d.earned[id]){d.earned[id]=now;done.push(id);}}
@@ -49,7 +53,11 @@ function grant(ids,d){
 export function evaluate(d=read()){return grant(newlyEarned(view(d),d.earned),d);}
 export function bump(counter,n=1,{key:k,day=localDay()}={}){
  const d=read(),mode=COUNTER_MODES[counter]||'day',add=Math.max(0,finite(n));
- if(mode==='max')d.counters[counter]=Math.max(finite(d.counters[counter]),add);
+ if(mode==='max'){
+  const limit=MAX_COUNTER_VALUES[counter];
+  if(limit!==undefined&&(add>limit||(INTEGER_MAX_COUNTERS.includes(counter)&&!Number.isSafeInteger(add))))return evaluate(d);
+  d.counters[counter]=Math.max(finite(d.counters[counter]),add);
+ }
  else if(mode==='keyed'){if(k==null)return evaluate(d);const keys=Array.isArray(d.keys[counter])?d.keys[counter]:[];if(!keys.includes(String(k)))keys.push(String(k));d.keys[counter]=keys;d.counters[counter]=keys.length;}
  else{if(d.days[counter]===day)return evaluate(d);d.days[counter]=day;d.counters[counter]=finite(d.counters[counter])+add;}
  write(d);return evaluate(d);
@@ -69,5 +77,12 @@ export const state=()=>view();
 // Raw-served files (portal, pond) cannot import this module, and the arcade/war-room pages never load it: they send `myr5:vault-bump`
 // {counter,n,key|ms} or queue [counter,n,key] in `myr5-vault-pending`, drained here at load.
 export function drainPending(){try{const q=JSON.parse(localStorage.getItem('myr5-vault-pending')||'[]');localStorage.removeItem('myr5-vault-pending');for(const [c,n,k] of Array.isArray(q)?q:[])bump(c,n,{key:k});}catch{/* none */}}
-if(typeof window!=='undefined'){window.addEventListener?.('myr5:vault-bump',e=>{const {counter,n,key,ms}=e.detail||{};if(typeof counter!=='string')return;ms!=null?addTime(counter,ms):bump(counter,n,{key});});drainPending();}
-if(typeof window!=='undefined')window.myr5Vault={earn:id=>grant([id],read()),reset:()=>{try{localStorage.removeItem(key());}catch{/* private mode */}},state,bump,addTime,markSecret,evaluate};
+/** Retry bounded game maxima whenever the Vault hall is entered, even if this module was already cached. */
+export function drainQuestPending(){return import('../../arcade/quest-progress-reporter.mjs').then(({drainQueuedQuestProgress})=>drainQueuedQuestProgress()).catch(()=>false);}
+if(typeof window!=='undefined'){
+ window.addEventListener?.('myr5:vault-bump',e=>{const {counter,n,key,ms}=e.detail||{};if(typeof counter!=='string')return;ms!=null?addTime(counter,ms):bump(counter,n,{key});});
+ drainPending();
+ // Game metrics may have been earned while the optional Vault module was offline.
+ void drainQuestPending();
+}
+if(typeof window!=='undefined')window.myr5Vault={earn:id=>grant([id],read()),reset:()=>{try{localStorage.removeItem(key());}catch{/* private mode */}},state,bump,addTime,markSecret,evaluate,archivedCompletions};
