@@ -226,7 +226,7 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
  raf=requestAnimationFrame(tick);
  return {
   state:()=>({p,camY,maxY,dead,won,cur,items:lvl.items}),
-  teleport(h){lvl.ensure(h+viewH*2);p.y=h;p.vy=JUMP;camY=h-viewH*.45;maxY=Math.max(maxY,h);},
+  teleport(h){if(dead&&!won){dead=false;over.style.display='none';}lvl.ensure(h+viewH*2);p.y=h;p.vy=JUMP;p.fly=.35;p.flyV=0;camY=h-viewH*.45;maxY=Math.max(maxY,h);},
   level(n){const h=(n-1)*LEVEL_H+30;this.teleport(h);},
   dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);ro.disconnect();unsub?.();removeEventListener('keydown',kd);removeEventListener('keyup',ku);removeEventListener('pointerup',pu);removeEventListener('pointercancel',pu);canvas.remove();exit.remove();over.remove();},
  };
