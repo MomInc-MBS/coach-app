@@ -63,6 +63,44 @@ function triangleCount(root) {
   return total;
 }
 
+function pointSurfaceDistance(point, meshes) {
+  let best = Infinity;
+  const triangle = new T.Triangle(), closest = new T.Vector3(), a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3();
+  for (const mesh of meshes) {
+    const geometry = mesh.geometry, position = geometry.getAttribute('position'), index = geometry.index;
+    for (let face = 0, count = (index?.count ?? position.count) / 3; face < count; face++) {
+      a.fromBufferAttribute(position, index ? index.getX(face * 3) : face * 3).applyMatrix4(mesh.matrixWorld);
+      b.fromBufferAttribute(position, index ? index.getX(face * 3 + 1) : face * 3 + 1).applyMatrix4(mesh.matrixWorld);
+      c.fromBufferAttribute(position, index ? index.getX(face * 3 + 2) : face * 3 + 2).applyMatrix4(mesh.matrixWorld);
+      triangle.set(a, b, c).closestPointToPoint(point, closest);
+      best = Math.min(best, point.distanceTo(closest));
+      if (best <= 1e-5) return best;
+    }
+  }
+  return best;
+}
+
+function meshPointDistance(mesh, point) {
+  let best = Infinity;
+  const geometry = mesh.geometry, position = geometry.getAttribute('position'), index = geometry.index;
+  const a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3(), triangle = new T.Triangle(), closest = new T.Vector3();
+  for (let face = 0, count = (index?.count ?? position.count) / 3; face < count; face++) {
+    a.fromBufferAttribute(position, index ? index.getX(face * 3) : face * 3).applyMatrix4(mesh.matrixWorld);
+    b.fromBufferAttribute(position, index ? index.getX(face * 3 + 1) : face * 3 + 1).applyMatrix4(mesh.matrixWorld);
+    c.fromBufferAttribute(position, index ? index.getX(face * 3 + 2) : face * 3 + 2).applyMatrix4(mesh.matrixWorld);
+    triangle.set(a, b, c).closestPointToPoint(point, closest);
+    best = Math.min(best, point.distanceTo(closest));
+    if (best <= 1e-5) return best;
+  }
+  return best;
+}
+
+function meshesUnder(root, predicate = () => true) {
+  const out = [];
+  root?.traverse(object => { if (object.isMesh && predicate(object)) out.push(object); });
+  return out;
+}
+
 function subsetGeometry(source, triangleIds) {
   const position = source.getAttribute('position'), index = source.index;
   const remap = new Map(), sourceVertices = [], outIndex = [];
@@ -176,6 +214,7 @@ test('quadruped ownership conserves source triangles and isolates verified lower
       if (isBlob) prepareBlobSource(scene);
       const before = fingerprint(scene), bodyBefore = triangleCount(scene.getObjectByName('body')),
         headBefore = triangleCount(scene.getObjectByName('head'));
+      const originalArmsMaterial = meshesUnder(scene.getObjectByName('arms'))[0]?.material;
       const sourceId = isBlob ? 'roster/23-blob-texture-bodies--blob_creature_3d_model' : `roster/18-quad-all--${name}`;
       const shouldRepair = repaired.has(name) || bodyFragmentOnly.has(name), changed = correctQuadrupedOwnership(scene, sourceId);
       scene.updateWorldMatrix(true, true);
@@ -215,6 +254,30 @@ test('quadruped ownership conserves source triangles and isolates verified lower
         if (name === 'stylized_quadruped_3d_model') {
           assert.equal(scene.userData.quadrupedOwnershipBodyTransferredFromFeet, 102,
             'Quadzilla: only its 102-triangle central foot island moves to torso');
+        }
+        if (name === 'quadruped_robot_3d_model1') {
+          const body = scene.getObjectByName('body');
+          const details = meshesUnder(body, mesh => mesh.userData.ownershipAttachment === 'body-belly-detail');
+          assert.equal(details.length, 1, 'Werner: retain one measured detached belly detail');
+          const detail = details[0];
+          assert.equal(detail.userData.quadrupedBodyOwnedTriangles, 548, 'Werner: tag all original apron faces');
+          assert.ok(Array.isArray(detail.userData.ownershipAttachmentWorldOffset)
+            && detail.userData.ownershipAttachmentWorldOffset.length === 3, 'Werner: record the intentional world-space attachment translation');
+          assert.equal(detail.material, originalArmsMaterial, 'Werner: preserve the source arms material and texture');
+          const contact = new T.Vector3(...detail.userData.ownershipAttachmentBodyContactWorldPoint);
+          const bodySurfaces = meshesUnder(body, mesh => mesh !== detail);
+          assert.ok(pointSurfaceDistance(contact, bodySurfaces) <= 0.001,
+            'Werner: use a measured point on the original torso surface');
+          assert.ok(meshPointDistance(detail, contact) <= 0.02,
+            'Werner: reattach the orb so its original surface intersects the torso within 0.02 units');
+          assert.ok(new T.Vector3(...detail.userData.ownershipAttachmentWorldOffset).length() > 0.7,
+            'Werner: record the intentional movement from the original orphaned position');
+          const beforeCenter = new T.Box3().setFromObject(detail).getCenter(new T.Vector3()), oldY = body.position.y;
+          body.position.y += 0.1; scene.updateWorldMatrix(true, true);
+          const afterCenter = new T.Box3().setFromObject(detail).getCenter(new T.Vector3());
+          assert.ok(afterCenter.distanceTo(beforeCenter.clone().add(new T.Vector3(0, 0.1, 0))) < 1e-5,
+            'Werner: attached detail follows its body parent');
+          body.position.y = oldY; scene.updateWorldMatrix(true, true);
         }
       }
 

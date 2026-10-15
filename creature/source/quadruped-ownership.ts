@@ -48,11 +48,32 @@ const BODY_FRAGMENT_ONLY_IDS = new Set([
   'roster/18-quad-all--stylized_quadruped_3d_model',
 ]);
 const STYLIZED_QUAD_ID = 'roster/18-quad-all--stylized_quadruped_3d_model';
+const WERNER_APRON_ID = 'roster/18-quad-all--quadruped_robot_3d_model1';
 
 const sq = (v: number) => v * v;
 const dist2XZ = (a: Point, b: Point) => sq(a.x - b.x) + sq(a.z - b.z);
 const add = (a: Point, b: Point): Point => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
 const scale = (a: Point, n: number): Point => ({ x: a.x * n, y: a.y * n, z: a.z * n });
+
+function closestSurfacePoint(meshes: T.Mesh[], point: T.Vector3) {
+  const triangle = new T.Triangle(), closest = new T.Vector3(), a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3();
+  let distance = Infinity, result: T.Vector3 | undefined, normal: T.Vector3 | undefined;
+  for (const mesh of meshes) {
+    const geometry = mesh.geometry, position = geometry.getAttribute('position'), index = geometry.index;
+    const count = (index?.count ?? position.count) / 3;
+    for (let face = 0; face < count; face++) {
+      a.fromBufferAttribute(position, index ? index.getX(face * 3) : face * 3).applyMatrix4(mesh.matrixWorld);
+      b.fromBufferAttribute(position, index ? index.getX(face * 3 + 1) : face * 3 + 1).applyMatrix4(mesh.matrixWorld);
+      c.fromBufferAttribute(position, index ? index.getX(face * 3 + 2) : face * 3 + 2).applyMatrix4(mesh.matrixWorld);
+      triangle.set(a, b, c).closestPointToPoint(point, closest);
+      const nextDistance = closest.distanceToSquared(point);
+      if (nextDistance < distance) {
+        distance = nextDistance; result = closest.clone(); normal = triangle.getNormal(new T.Vector3());
+      }
+    }
+  }
+  return result && normal ? { point: result, normal, distance: Math.sqrt(distance) } : undefined;
+}
 
 function makeTriangle(mesh: T.Mesh, region: string, id: number): Triangle {
   const g = mesh.geometry, p = g.getAttribute('position'), ix = g.index, at = (i: number) => {
@@ -307,6 +328,7 @@ export function correctQuadrupedOwnership(source: T.Group, sourceId: string): bo
   const allBox = new T.Box3(); for (const tri of allLow) for (const p of tri.points) allBox.expandByPoint(new T.Vector3(p.x, p.y, p.z));
   const weld = Math.max(0.001, allBox.getSize(new T.Vector3()).length() * 0.0005), topology = lowComponents(allLow, weld);
   const bodySize = bodyBox.getSize(new T.Vector3()), heldComponents = new Set<number>();
+  const bodyAttachmentComponents = new Set<number>(), bodyAttachmentOffsets = new Map<number, T.Vector3>(), bodyAttachmentContacts = new Map<number, T.Vector3>();
   if (sourceId === 'roster/18-quad-all--fantasy_creature_3d_model3'
     || sourceId === 'roster/18-quad-all--quadruped_robot_3d_model') {
     const bodyRegion = source.getObjectByName('body'), bodyMaterial = bodyRegion
@@ -666,7 +688,24 @@ export function correctQuadrupedOwnership(source: T.Group, sourceId: string): bo
         && Math.abs(center.x - bodyCenter.x) < bodySize.x * 0.08
         && center.y < cutoff * 0.4 && frontOffset > bodySize.z * 0.25
         && size.x < bodySize.x * 0.1 && size.y < feetBox.getSize(new T.Vector3()).y * 0.3
-        && size.z < bodySize.z * 0.12) heldComponents.add(id);
+        && size.z < bodySize.z * 0.12) {
+        const bodyMeshes = regionMeshes.get('body') ?? [];
+        const nearestBody = closestSurfacePoint(bodyMeshes, center);
+        if (!nearestBody) return;
+        const outward = nearestBody.normal;
+        if (outward.dot(center.clone().sub(nearestBody.point)) < 0) outward.negate();
+        const half = size.clone().multiplyScalar(0.5);
+        const radius = Math.sqrt(sq(outward.x * half.x) + sq(outward.y * half.y) + sq(outward.z * half.z));
+        if (!(radius > 0) || nearestBody.distance <= radius * 0.5) return;
+        // Keep the orphan orb as a visible belly detail: its center sits at 82% of
+        // its directional support radius beyond the measured torso surface, so it
+        // intersects slightly without disappearing into the body.
+        const contactPoint = nearestBody.point.clone();
+        const targetCenter = contactPoint.clone().addScaledVector(outward, radius * 0.82);
+        heldComponents.add(id); bodyAttachmentComponents.add(id);
+        bodyAttachmentOffsets.set(id, targetCenter.sub(center));
+        bodyAttachmentContacts.set(id, contactPoint);
+      }
     });
   }
   const seedTriangles: Triangle[] = [];
@@ -735,17 +774,17 @@ export function correctQuadrupedOwnership(source: T.Group, sourceId: string): bo
   }
   const bodyRegion = source.getObjectByName('body');
   const bodyMaterial = bodyRegion ? regionMeshes.get('body')!.find(mesh => !Array.isArray(mesh.material))?.material : undefined;
-  const byMesh = new Map<T.Mesh, Map<QuadrupedLimbNode | 'body', number[]>>();
+  const byMesh = new Map<T.Mesh, Map<QuadrupedLimbNode | 'body' | 'bodyAttachment', number[]>>();
   let bodyOwnedTriangles = 0;
   let bodyTransferredTriangles = 0;
   let bodyTransferredFromFeet = 0;
-  const addTarget = (tri: Triangle, node: QuadrupedLimbNode | 'body') => {
+  const addTarget = (tri: Triangle, node: QuadrupedLimbNode | 'body' | 'bodyAttachment') => {
     let targets = byMesh.get(tri.mesh); if (!targets) byMesh.set(tri.mesh, targets = new Map());
     let ids = targets.get(node); if (!ids) targets.set(node, ids = []); ids.push(tri.id);
   };
   for (let i = 0; i < allLow.length; i++) if (heldComponents.has(topology.component[i])) {
     const tri = allLow[i];
-    addTarget(tri, 'body'); bodyOwnedTriangles++;
+    addTarget(tri, bodyAttachmentComponents.has(topology.component[i]) ? 'bodyAttachment' : 'body'); bodyOwnedTriangles++;
     if (tri.region !== 'body') bodyTransferredTriangles++;
     if (tri.region === 'feet') bodyTransferredFromFeet++;
   }
@@ -770,14 +809,27 @@ export function correctQuadrupedOwnership(source: T.Group, sourceId: string): bo
     for (const { node, geometry } of parts) {
       const part = mesh.clone(false); part.geometry = geometry;
       const count = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
-      if (node === 'body') {
+      if (node === 'body' || node === 'bodyAttachment') {
         if (!bodyRegion || !bodyMaterial) { geometry.dispose(); continue; }
-        part.name = `${mesh.name || 'Quadruped underside'} body-owned underside`;
+        const isAttachment = node === 'bodyAttachment';
+        part.name = isAttachment ? `${mesh.name || 'Quadruped detail'} attached belly detail` : `${mesh.name || 'Quadruped underside'} body-owned underside`;
         part.userData = { ...mesh.userData, quadrupedBodyOwnedTriangles: count };
         source.updateWorldMatrix(true, true); bodyRegion.updateWorldMatrix(true, false);
         const relative = bodyRegion.matrixWorld.clone().invert().multiply(mesh.matrixWorld);
         relative.decompose(part.position, part.quaternion, part.scale);
-        part.material = bodyMaterial;
+        if (isAttachment) {
+          const worldOffset = sourceId === WERNER_APRON_ID && count === 548
+            ? bodyAttachmentOffsets.values().next().value as T.Vector3 | undefined : undefined;
+          const contactPoint = sourceId === WERNER_APRON_ID && count === 548
+            ? bodyAttachmentContacts.values().next().value as T.Vector3 | undefined : undefined;
+          if (!worldOffset || !contactPoint) { geometry.dispose(); continue; }
+          const localOffset = worldOffset.clone().applyMatrix3(new T.Matrix3().setFromMatrix4(bodyRegion.matrixWorld.clone().invert()));
+          part.position.add(localOffset);
+          part.userData.ownershipAttachmentWorldOffset = worldOffset.toArray();
+          part.userData.ownershipAttachmentBodyContactWorldPoint = contactPoint.toArray();
+          part.userData.ownershipAttachment = 'body-belly-detail';
+          part.material = mesh.material;
+        } else part.material = bodyMaterial;
         bodyRegion.add(part);
       } else {
         part.name = `${mesh.name || 'Quadruped limb'} ${node}`;
