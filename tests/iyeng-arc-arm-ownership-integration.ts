@@ -1,4 +1,4 @@
-﻿import * as T from 'three';
+import * as T from 'three';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -26,4 +26,3 @@ const rig=createRig(assembly.root,recipe);rig.root.updateMatrixWorld(true);
 const movement:Record<string,number>={};
 for(const name of ['ArmLeft','ArmRight'] as const){let picked:T.Mesh|undefined,vertex=-1,best=-1;rig.nodes[name].traverse(o=>{if(!(o instanceof T.Mesh))return;const p=o.geometry.getAttribute('position');for(let i=0;i<p.count;i++){const point=new T.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld),d=point.distanceTo(rig.nodes[name].getWorldPosition(new T.Vector3()));if(d>best){best=d;picked=o;vertex=i;}}});if(!picked)throw Error(`${name} has no arm surface (rigid or skinned)`);const before=picked.getVertexPosition(vertex,new T.Vector3()).applyMatrix4(picked.matrixWorld);rig.nodes[name].rotation.z=.28;rig.root.updateMatrixWorld(true);const after=picked.getVertexPosition(vertex,new T.Vector3()).applyMatrix4(picked.matrixWorld);movement[name]=before.distanceTo(after);rig.nodes[name].rotation.z=0;rig.root.updateMatrixWorld(true);if(movement[name]<.05)throw Error(`${name} source surface did not move with its arm pivot`);}
 console.log(JSON.stringify({id,sourceTrianglesConserved:true,originalFootFinTriangles:repairReport.handOwnershipTriangles,recoveredFinArmTriangles:(repairReport as any).petalWispArmTriangles,armMovement:movement}));assembly.dispose();
-

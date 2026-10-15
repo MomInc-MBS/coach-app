@@ -860,5 +860,3 @@ export function correctQuadrupedOwnership(source: T.Group, sourceId: string): bo
   source.userData.quadrupedOwnershipBodyTransferredFromFeet = bodyTransferredFromFeet;
   return true;
 }
-
-

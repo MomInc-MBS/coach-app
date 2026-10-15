@@ -117,7 +117,7 @@ test('Rous real GLB keeps its two grounded feet on opposite moving rig nodes',as
   }
 });
 
-test('a shared cut boundary stays welded along its full height during arm motion',()=>{
+test('proximal cut vertices stay welded while distal cut surfaces follow the arm',()=>{
  const source=new THREE.Group();source.userData.pivots={body:[0,0,0],head:[0,0,0],arm:[0,0,0],foot:[0,0,0]};
  for(const name of ['head','eye','collar','body','arms','feet']){const group=new THREE.Group();group.name=name;source.add(group);}
  const surface=(name,vertices)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices.flat(),3));source.getObjectByName(name).add(new THREE.Mesh(g,new THREE.MeshStandardMaterial()));};
@@ -127,7 +127,7 @@ test('a shared cut boundary stays welded along its full height during arm motion
  rig.root.updateMatrixWorld(true);const p=arm.geometry.getAttribute('position'),seams=[];let tip;
  for(let i=0;i<p.count;i++){const world=arm.getVertexPosition(i,new THREE.Vector3()).applyMatrix4(arm.matrixWorld);if(world.x<.21)seams.push([i,world]);else tip=[i,world];}
  assert.equal(seams.length,2);rig.nodes.ArmRight.rotation.z=.8;rig.root.updateMatrixWorld(true);
- for(const [i,rest] of seams)assert.ok(rest.distanceTo(arm.getVertexPosition(i,new THREE.Vector3()).applyMatrix4(arm.matrixWorld))<1e-6,'every real cut vertex stays attached to body');
+ for(const [i,rest] of seams){const drift=rest.distanceTo(arm.getVertexPosition(i,new THREE.Vector3()).applyMatrix4(arm.matrixWorld));if(rest.y>.8)assert.ok(drift<1e-6,'proximal shoulder cut stays attached');else assert.ok(drift>.05,'distal surface does not stretch back to the body');}
  assert.ok(tip[1].distanceTo(arm.getVertexPosition(tip[0],new THREE.Vector3()).applyMatrix4(arm.matrixWorld))>.05,'distal arm still moves');
 });
 

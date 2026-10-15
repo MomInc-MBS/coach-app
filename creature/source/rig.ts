@@ -171,7 +171,7 @@ export function createRig(source:T.Group,recipe:Design){
    }
    // Separate armor, hands and toes follow the limb rigidly. Only components
    // that actually meet the anchor need a blended shoulder/hip seam.
-   for(let i=0;i<d.length;i++){v.fromBufferAttribute(g.getAttribute('position'),i).applyMatrix4(mesh.matrixWorld);const distal=limb?T.MathUtils.smoothstep(v.distanceTo(joint),limbExtent*.15,limbExtent*.5):0,own=limb&&!connectedToAnchor[i]?1:limb&&isCutSeam(v)?0:Math.max(distal,T.MathUtils.smoothstep(d[i],touch,reach));index[i*4+1]=1;w[i*4]=1-own;w[i*4+1]=own;}
+   for(let i=0;i<d.length;i++){v.fromBufferAttribute(g.getAttribute('position'),i).applyMatrix4(mesh.matrixWorld);const distal=limb?T.MathUtils.smoothstep(v.distanceTo(joint),limbExtent*.15,limbExtent*.5):0,own=limb&&!connectedToAnchor[i]?1:limb&&v.distanceTo(joint)<=limbExtent*.35&&isCutSeam(v)?0:Math.max(distal,T.MathUtils.smoothstep(d[i],touch,reach));index[i*4+1]=1;w[i*4]=1-own;w[i*4+1]=own;}
    g.setAttribute('skinIndex',new T.Uint16BufferAttribute(index,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(w,4));g.computeBoundingSphere();
    const skinned=new T.SkinnedMesh(g,mesh.material);skinned.name=mesh.name;node.remove(mesh);node.add(skinned);skinned.bind(new T.Skeleton([anchor,node] as unknown as T.Bone[]));});
  }
