@@ -29,10 +29,10 @@ The War Room's **Auras** selector stores one device-local choice. **Random** sel
 | Flower bloom | Existing `../hold/assets/flowers-plants_2.png`, cell 48; same CC0 atlas. | Implemented |
 | Rabbit companion | Existing `../hold/assets/rabbit/Rabbit/Rabbit_Idle.png` and `Rabbit_Run.png`; Animated Wild Animals by ScratchIO, CC0. | Implemented |
 | Fox companion | Existing `../hold/assets/fox/Fox/Fox_Idle.png` and `Fox_Run.png`; same CC0 collection. | Implemented |
-| Bear companion | Added `../hold/assets/bear/Bear/Bear_Idle.png` and `Bear_Run.png` from the collection's `All.zip`; 24 idle and 10 run frames. | Implemented |
+| Bear companion | Added `../hold/assets/bear/Bear/Bear_Idle.png` and `Bear_Run.png` from the collection's `All.zip`; 12 idle and 5 run frames, each 64x33. | Implemented |
 | Deer companion | Added `../hold/assets/deer/Deer/Deer_Idle.png` and `Deer_Run.png`; 15 idle and 9 run frames. | Implemented |
-| Wolf companion | Added `../hold/assets/wolf/Wolf/Wolf_Walk.png` and `Wolf_Run.png`; 16 walk and 12 run frames, with walk used for idle. | Implemented |
-| Boar companion | Added `../hold/assets/boar/Boar/Boar_Idle.png` and `Boar_Run.png`; 16 idle and 12 run frames. | Implemented |
+| Wolf companion | Added `../hold/assets/wolf/Wolf/Wolf_Walk.png` and `Wolf_Run.png`; 8 walk and 6 run frames, each 64x40, with walk used for idle. | Implemented |
+| Boar companion | Added `../hold/assets/boar/Boar/Boar_Idle.png` and `Boar_Run.png`; 8 idle and 6 run frames, each 64x40. | Implemented |
 | Stone chips | Existing `../hold/assets/rocks-original.png`; Rocks (Rework), CC0. | Implemented |
 | Blue crystal shards | Existing `../hold/assets/crystals/PNG/32x32/crystal-blue.png`; Crystals collection, CC0. | Implemented |
 | Ice crystal shards | Existing `../hold/assets/crystals/PNG/32x32/crystal-icy.png`; same CC0 collection. | Implemented |

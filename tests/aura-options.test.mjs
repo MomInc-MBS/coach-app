@@ -36,10 +36,10 @@ test('War Room aura choices include every shipped effect sheet with its actual f
   ];
   for (const relative of ecologyAssets) assert.ok((await readFile(path.join(root, relative))).length > 0, `missing ${relative}`);
   const frames = [
-    ['bear/Bear/Bear_Idle.png', 24, 32, 33], ['bear/Bear/Bear_Run.png', 10, 32, 33],
-    ['boar/Boar/Boar_Idle.png', 16, 32, 40], ['boar/Boar/Boar_Run.png', 12, 32, 40],
+    ['bear/Bear/Bear_Idle.png', 12, 64, 33], ['bear/Bear/Bear_Run.png', 5, 64, 33],
+    ['boar/Boar/Boar_Idle.png', 8, 64, 40], ['boar/Boar/Boar_Run.png', 6, 64, 40],
     ['deer/Deer/Deer_Idle.png', 15, 48, 52], ['deer/Deer/Deer_Run.png', 9, 48, 52],
-    ['wolf/Wolf/Wolf_Walk.png', 16, 32, 40], ['wolf/Wolf/Wolf_Run.png', 12, 32, 40],
+    ['wolf/Wolf/Wolf_Walk.png', 8, 64, 40], ['wolf/Wolf/Wolf_Run.png', 6, 64, 40],
   ];
   for (const [relative, count, frameWidth, frameHeight] of frames) {
     const bytes = await readFile(path.join(root, 'arcade/hold/assets', relative));

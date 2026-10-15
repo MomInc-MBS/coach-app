@@ -88,14 +88,14 @@ async function loadSprites() {
   if (img.foxRun) sources.set('animal:fox:run', buildAnimal(img.foxRun, 6, 64, 36));
   if (img.rabbitIdle) sources.set('animal:rabbit:idle', buildAnimal(img.rabbitIdle, 10, 32, 26));
   if (img.rabbitRun) sources.set('animal:rabbit:run', buildAnimal(img.rabbitRun, 6, 32, 26));
-  if (img.bearIdle) sources.set('animal:bear:idle', buildAnimal(img.bearIdle, 24, 32, 33));
-  if (img.bearRun) sources.set('animal:bear:run', buildAnimal(img.bearRun, 10, 32, 33));
-  if (img.boarIdle) sources.set('animal:boar:idle', buildAnimal(img.boarIdle, 16, 32, 40));
-  if (img.boarRun) sources.set('animal:boar:run', buildAnimal(img.boarRun, 12, 32, 40));
+  if (img.bearIdle) sources.set('animal:bear:idle', buildAnimal(img.bearIdle, 12, 64, 33));
+  if (img.bearRun) sources.set('animal:bear:run', buildAnimal(img.bearRun, 5, 64, 33));
+  if (img.boarIdle) sources.set('animal:boar:idle', buildAnimal(img.boarIdle, 8, 64, 40));
+  if (img.boarRun) sources.set('animal:boar:run', buildAnimal(img.boarRun, 6, 64, 40));
   if (img.deerIdle) sources.set('animal:deer:idle', buildAnimal(img.deerIdle, 15, 48, 52));
   if (img.deerRun) sources.set('animal:deer:run', buildAnimal(img.deerRun, 9, 48, 52));
-  if (img.wolfWalk) sources.set('animal:wolf:idle', buildAnimal(img.wolfWalk, 16, 32, 40));
-  if (img.wolfRun) sources.set('animal:wolf:run', buildAnimal(img.wolfRun, 12, 32, 40));
+  if (img.wolfWalk) sources.set('animal:wolf:idle', buildAnimal(img.wolfWalk, 8, 64, 40));
+  if (img.wolfRun) sources.set('animal:wolf:run', buildAnimal(img.wolfRun, 6, 64, 40));
 
   // Rocks are six 32x32 cells. Crystal sheets contain four separated sprites;
   // these bounds were inspected at native resolution, then aspect-fit to 64x64.
