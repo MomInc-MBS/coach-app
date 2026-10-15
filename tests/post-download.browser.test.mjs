@@ -391,6 +391,7 @@ test('an interrupted download resumes where it stopped, after a reload and after
   await page.locator('#closeSettings').click();
   await page.waitForFunction(()=>document.querySelector('.full-download-bar progress')?.value>0.1,null,{timeout:60000});
   // Reload mid-download: the tap was the consent, so it resumes by itself.
+  await new Promise((resolve,reject)=>{const deadline=Date.now()+10000;const poll=()=>server.seen.some(row=>row.pkg)?resolve():Date.now()>deadline?reject(Error('the package had no first network request before reload')):setTimeout(poll,20);poll();});
   const before=server.seen.filter(r=>r.pkg).length;
   await page.reload();
   await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent==='Downloading your picks…',null,{timeout:20000});
