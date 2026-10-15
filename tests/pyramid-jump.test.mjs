@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {paperFor,mealMarkers,Level,mulberry,MAX_JUMP,levelAt,markerHeight,LEVELS,LEVEL_H,END_Y,highestLevel,saveLevel} from '../arcade/pyramid-jump/logic.mjs';
+import {paperFor,mealMarkers,Level,mulberry,MAX_JUMP,levelAt,markerHeight,LEVELS,LEVEL_H,END_Y,highestLevel,saveLevel,steeringForMotion} from '../arcade/pyramid-jump/logic.mjs';
 import {SHAPES} from '../arcade/pyramid-jump/data.mjs';
 import {foodPhotoToday,markFoodPhotoToday} from '../food/pyramid-tiles.mjs';
 const mem=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,String(v))};};
@@ -28,6 +28,13 @@ test('platform generator always leaves a reachable safe route and mixes every ty
  for(const k of['static','moving','breaking','spring','monster','hole'])assert.ok(kinds.has(k),k);
  assert.deepEqual([...gear].sort(),['jetpack','propeller']);
  
+});
+test('Pyramid Jump steers strongly from small signed corrections and treats zero as neutral',()=>{
+ assert.ok(steeringForMotion({steerX:.6,gx:0})>.99,'a small near-flat right correction restores the full previous heading feel');
+ assert.ok(steeringForMotion({steerX:-.6,gx:0})<-.99,'a small left correction is equally responsive');
+ assert.equal(steeringForMotion({steerX:0,gx:.9}),0,'current neutral input wins over a stale retained heading');
+ assert.equal(steeringForMotion({gx:.25}),.55,'legacy motion providers still use their gx');
+ assert.equal(steeringForMotion({}),0);
 });
 test('20 levels in order: every band is reachable, the desk ends level 20, tags span the climb, progress saves',()=>{
  assert.equal(LEVELS.length,20);assert.deepEqual([0,999,1000,19999,20500].map(levelAt),[0,0,1,19,19]);

@@ -1,6 +1,6 @@
 // Pyramid Jump: classic Doodle-Jump on 2D paper, 20 levels from the office to MOM's mothership desk (see LEVELS in logic.mjs).
 // Lazy/optional (arcade/ is never core). World y points up (feet = y); the camera only scrolls up; falling below the view ends the run.
-import {W,BEST_KEY,PLAT_W,JUMP,GRAVITY,Level,mulberry,mealMarkers,markerHeight,paperFor,LEVELS,LEVEL_H,LEVEL_COUNT,END_Y,levelAt,highestLevel,saveLevel,newlyReachedQuestLevel} from './logic.mjs';
+import {W,BEST_KEY,PLAT_W,JUMP,GRAVITY,Level,mulberry,mealMarkers,markerHeight,paperFor,LEVELS,LEVEL_H,LEVEL_COUNT,END_Y,levelAt,highestLevel,saveLevel,newlyReachedQuestLevel,steeringForMotion} from './logic.mjs';
 import {performanceOwner} from '../../performance-progress.mjs';
 import {createQuestProgressReporter} from '../quest-progress-reporter.mjs';
 const PW=40,PH=50;
@@ -32,7 +32,7 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
  function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,r.width*d);canvas.height=Math.max(1,r.height*d);scale=canvas.width/W;viewH=canvas.height/scale;}
  const ro=new ResizeObserver(resize);ro.observe(canvas);resize();
  if(startLevel)begin(startLevel);else if(auto)begin(Math.max(1,highestLevel()));else if(highestLevel()>1)showOver(`PYRAMID JUMP\nREACHED LEVEL ${highestLevel()} OF ${LEVEL_COUNT}`,...menu());else begin(1);
- const unsub=subscribeMotion?.(({gx})=>{tilt=Math.max(-1,Math.min(1,gx*2.2));tiltAt=t;});
+ const unsub=subscribeMotion?.(sample=>{tilt=steeringForMotion(sample);tiltAt=t;});
  const key=down=>e=>{const k=e.key;if(k==='ArrowLeft'||k==='a')dir=down?-1:dir<0?0:dir;else if(k==='ArrowRight'||k==='d')dir=down?1:dir>0?0:dir;};
  const kd=key(true),ku=key(false);addEventListener('keydown',kd);addEventListener('keyup',ku);
  const pd=e=>{if(e.target!==canvas)return;const r=canvas.getBoundingClientRect();dir=e.clientX<r.left+r.width/2?-1:1;},pu=()=>{dir=0;};

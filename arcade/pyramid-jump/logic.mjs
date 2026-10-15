@@ -50,6 +50,10 @@ export const LEVELS=[
  {name:'MOM’s Mothership Desk',gate:'LAND ON HER DESK',sky:'#3a2a4e',mon:'alien'},
 ];
 export const levelAt=h=>Math.max(0,Math.min(LEVEL_COUNT-1,Math.floor(h/LEVEL_H))); // 0-based
+export function steeringForMotion({steerX,gx}={}){
+ const sample=Number.isFinite(steerX)?steerX:gx;
+ return Number.isFinite(sample)?Math.max(-1,Math.min(1,sample*2.2)):0;
+}
 
 export const mulberry=seed=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 export const PLAT_W=64,JUMP=760,GRAVITY=1600,MAX_JUMP=JUMP*JUMP/(2*GRAVITY); // 180 units

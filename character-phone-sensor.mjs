@@ -6,13 +6,16 @@ export function createPhoneMotionSource(view=globalThis.window,doc=view?.documen
  const emit=(gravity,shake=0,rotationSpeed=0)=>{
   if(doc?.hidden||!Number.isFinite(gravity.gx)||!Number.isFinite(gravity.gy))return;
   const timeSeconds=now(),length=Math.hypot(gravity.gx,gravity.gy);
+  // Pyramid Jump needs the current weak tilt direction even when the stable
+  // character heading intentionally holds its last value near flat.
+  const steerX=length>=.12/9.81?gravity.gx/length:0;
   // A flat phone has no screen-plane gravity. Hold its last heading, but still
   // deliver gyro and linear-acceleration samples so a shake can trigger motion.
   if(length>=.3)lastGravity={gx:gravity.gx/length,gy:gravity.gy/length};
   const {gx,gy}=lastGravity??{gx:0,gy:1},angle=Math.atan2(gx,gy);
   let angularSpeed=rotationSpeed;if(lastAngle!=null&&timeSeconds>lastAt){const delta=Math.atan2(Math.sin(angle-lastAngle),Math.cos(angle-lastAngle));angularSpeed=Math.max(angularSpeed,Math.abs(delta)/(timeSeconds-lastAt));}
   lastAngle=angle;lastAt=timeSeconds;
-  for(const callback of listeners)callback({gx,gy,shake,angularSpeed,timeSeconds});
+  for(const callback of listeners)callback({gx,gy,steerX,shake,angularSpeed,timeSeconds});
  };
  const screenAngle=()=>view.screen?.orientation?.angle??view.orientation??0;
  const motion=event=>{
