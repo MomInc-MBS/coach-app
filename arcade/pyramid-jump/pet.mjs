@@ -3,6 +3,7 @@
 import {paperFor,readRecipe,topOf} from './logic.mjs';
 const STYLE=`
 #pyramidScanner .pj-layer{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+#pyramidScanner .pj-layer[data-behind]{z-index:1}
 #pyramidScanner .pj-pet{position:absolute;left:0;top:0;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer;filter:drop-shadow(2px 3px 2px #30251988);touch-action:manipulation}
 #pyramidScanner .pj-pet svg{display:block;width:100%;height:100%;overflow:hidden}
 #pyramidScanner .pj-lip{position:absolute;left:-16px;right:-16px;bottom:-6px;height:20px;background:repeating-linear-gradient(90deg,#8b5bc7 0 9px,#d4a93a 9px 14px);border:2px solid #351344;border-radius:2px 2px 5px 5px}
@@ -16,7 +17,7 @@ const ease=t=>t<.5?2*t*t:1-(-2*t+2)**2/2;
 export function mountPet({host,walker,playAt,apex,getMeals,dialog,recipe=readRecipe()}){
  const art=paperFor(recipe),top=topOf(art.d),[ex,ey,er]=art.eye,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const style=document.createElement('style');style.textContent=STYLE;document.head.append(style);
- const layer=document.createElement('div');layer.className='pj-layer';
+ const layer=document.createElement('div');layer.className='pj-layer';layer.dataset.behind='';
  const pet=document.createElement('button');pet.type='button';pet.className='pj-pet';pet.setAttribute('aria-label','A little paper friend peeks out of her pocket. Tap to say hi');
  const peekH=Math.max(60,ey+er*1.7+46-top+20);
  const tufts=`<path d="M78,${top+3}l5,-14l6,12l6,-18l6,16l7,-15l5,14l7,-11l4,11z" fill="${art.colour}" stroke="#2a1838" stroke-width="3" stroke-linejoin="round"/>`;
@@ -43,29 +44,30 @@ export function mountPet({host,walker,playAt,apex,getMeals,dialog,recipe=readRec
   if(!play.hidden){const r=playAt.getBoundingClientRect(),pw=play.offsetWidth||110,ph=play.offsetHeight||44;play.style.transform=`translate(${Math.round(hb.width/2-pw/2)}px,${Math.round(r.top-hb.top-ph-14)}px)`;} // PLAY takes the camera button's job, above the TODAY/LAST MEAL switch
  }
  const home=()=>{const hb=hostBox();return {x:hb.width-w-14,y:hb.height*.56};};
- function jumpOut(){
-  state='fly';full();pet.setAttribute('aria-label','Your paper friend. Tap to hop onto the pyramid');
-  const h0=home();to(h0.x,h0.y,750,90);tween.then=()=>{state='right';};
- }
  function hopOnPyramid(){
-  state='fly';host.dataset.jump='';pet.setAttribute('aria-label','Your paper friend bouncing on the pyramid');pet.tabIndex=-1;
+  if(state==='peek')full();delete layer.dataset.behind;state='fly';host.dataset.jump='';pet.setAttribute('aria-label','Your paper friend bouncing on the pyramid');pet.tabIndex=-1;
   const a=apex();to(a.x-w/2,a.y-h,700,80);tween.then=()=>{state='bounce';play.hidden=false;play.focus({preventScroll:true});};
  }
  function backHome(){
   delete host.dataset.jump;play.hidden=true;state='fly';pet.tabIndex=0;pet.setAttribute('aria-label','Your paper friend. Tap to hop onto the pyramid');
   const h0=home();to(h0.x,h0.y,700,80);tween.then=()=>{state='right';};
  }
- pet.onclick=()=>{if(state==='peek')jumpOut();else if(state==='right')hopOnPyramid();};
+ pet.onclick=()=>{if(state==='peek'||state==='right')hopOnPyramid();};
+ // While peeking the pyramid canvas sits on top, so catch taps on the pet's box before the pyramid gets them.
+ let swallow=false;const inPet=ev=>{const b=pet.getBoundingClientRect();return ev.clientX>=b.left&&ev.clientX<=b.right&&ev.clientY>=b.top&&ev.clientY<=b.bottom;};
+ const capDown=ev=>{if(state==='peek'&&inPet(ev)){swallow=true;ev.stopPropagation();ev.preventDefault();hopOnPyramid();}};
+ const capRest=ev=>{if(swallow){ev.stopPropagation();ev.preventDefault();if(ev.type==='click')swallow=false;}};
+ host.addEventListener('pointerdown',capDown,true);for(const t of['pointerup','click'])host.addEventListener(t,capRest,true);
  play.onclick=async()=>{
   if(game||gamePromise)return;
   const motion=await import('../../character-phone-sensor.mjs').catch(()=>null);void motion?.requestPhoneMotion?.(); // iOS asks for tilt inside this tap
   gamePromise=import('./game.mjs').then(m=>{
    if(disposed)return;
    layer.hidden=true;const root=document.createElement('div');root.className='pj-game';root.style.cssText='position:absolute;inset:0;z-index:7;background:#05030f;overflow:hidden';(dialog||host).append(root);
-   const g=m.startGame(root,{startLevel:+new URLSearchParams(location.search).get('pjlevel')||0,recipe,meals:getMeals(),subscribeMotion:motion?.subscribePhoneMotion,onExit(){g.dispose();root.remove();game=null;layer.hidden=false;backHome();}});
+   const g=m.startGame(root,{auto:true,startLevel:+new URLSearchParams(location.search).get('pjlevel')||0,recipe,meals:getMeals(),subscribeMotion:motion?.subscribePhoneMotion,onExit(){g.dispose();root.remove();game=null;layer.hidden=false;backHome();}});
    game={g,root};window.__pyramidJump=g; // test hook: g.teleport(h)
   }).catch(()=>{layer.hidden=false;}).finally(()=>{gamePromise=null;});
  };
  raf=requestAnimationFrame(frame);
- return {dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);game?.g.dispose();game?.root.remove();delete host.dataset.jump;layer.remove();style.remove();if(window.__pyramidJump===game?.g)delete window.__pyramidJump;}};
+ return {dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);host.removeEventListener('pointerdown',capDown,true);for(const t of['pointerup','click'])host.removeEventListener(t,capRest,true);game?.g.dispose();game?.root.remove();delete host.dataset.jump;layer.remove();style.remove();if(window.__pyramidJump===game?.g)delete window.__pyramidJump;}};
 }

@@ -10,7 +10,7 @@ const SHADOW='#49334b66',EDGE='#624848';
 const SLOGANS=[['CARED FOR.','CORRECTED.','PROVIDED FOR.'],['SMILE.','REP.','REPEAT.'],['READ THE','SOURCE.'],['ASK MOM.'],['KEEP THE','LABEL.'],['MOM IS','PROUD.'],['EAT. LIFT.','REPORT.'],['FITNESS IS','A FAMILY.']];
 const POSTER=['#e5d4a2','#e0c3ea','#f2c6a0','#bfdcc6','#f0e08a'],QUILT=['#c8587a','#e0a050','#5a9ac8','#7ab86a','#a070c0','#e8d070'],ORIGAMI=['#f4a0b4','#a0d4f4','#f4e090','#b0e0a8','#d0b0f0'];
 
-export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onExit=()=>{},seed=Date.now(),startLevel=0}={}){
+export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onExit=()=>{},seed=Date.now(),startLevel=0,auto=false}={}){
  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block';
  canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Pyramid Jump. Tilt or touch the left and right sides to steer.');
  const over=document.createElement('div');over.style.cssText='position:absolute;inset:0;display:none;place-content:center;gap:12px;text-align:center;background:#0009;color:#fff4dc;font:800 18px/1.4 system-ui,sans-serif;letter-spacing:.05em;white-space:pre-line';
@@ -31,7 +31,7 @@ export function startGame(root,{recipe=null,meals=null,subscribeMotion=null,onEx
  const menu=()=>{const hi=highestLevel(),b=[btn(hi>1?'NEW CLIMB':'START',()=>begin(1))];if(hi>1)b.unshift(btn(`CONTINUE FROM LEVEL ${hi}`,()=>begin(hi)));b.push(btn('EXIT',()=>onExit()));return b;};
  function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,r.width*d);canvas.height=Math.max(1,r.height*d);scale=canvas.width/W;viewH=canvas.height/scale;}
  const ro=new ResizeObserver(resize);ro.observe(canvas);resize();
- if(startLevel)begin(startLevel);else if(highestLevel()>1)showOver(`PYRAMID JUMP\nREACHED LEVEL ${highestLevel()} OF ${LEVEL_COUNT}`,...menu());else begin(1);
+ if(startLevel)begin(startLevel);else if(auto)begin(Math.max(1,highestLevel()));else if(highestLevel()>1)showOver(`PYRAMID JUMP\nREACHED LEVEL ${highestLevel()} OF ${LEVEL_COUNT}`,...menu());else begin(1);
  const unsub=subscribeMotion?.(({gx})=>{tilt=Math.max(-1,Math.min(1,gx*2.2));tiltAt=t;});
  const key=down=>e=>{const k=e.key;if(k==='ArrowLeft'||k==='a')dir=down?-1:dir<0?0:dir;else if(k==='ArrowRight'||k==='d')dir=down?1:dir>0?0:dir;};
  const kd=key(true),ku=key(false);addEventListener('keydown',kd);addEventListener('keyup',ku);
