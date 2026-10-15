@@ -5,6 +5,7 @@ import {createPoseInput,createSideStep} from '../arcade/runner/pose-input.mjs';
 import {MovementSession,MOVEMENTS} from '../movement-engine.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 import {PerformanceWorkout} from '../pod/performance-workout.mjs';
+import {GENTLE_BLOCK_XP} from '../progression-rules.mjs';
 
 // A perfect player: reacts 0.45 s before jump/slide traps and moves out of the middle lane before a pit.
 function bot(run){
@@ -71,7 +72,7 @@ test('Cool Cardio replaces Jog in place, is the only runner mode, and is endless
   // Sprint style is ignored, the 600 s gentle finish is gone, and finishing (tap stop or caught) pays the gentle rate.
   const w=new PerformanceWorkout({mode:'jogging',kind:'steps',cardio:'sprint'});assert.equal(w.kind,'gentle');
   let t=0,count=0;for(let i=0;i<=700*4;i++){t+=250;if(i%2===0)count++;assert.equal(w.update({kind:'steps',count},t),null,'no auto finish at '+i/4+' s');}
-  const r=w.finish();assert.ok(r&&r.activeSeconds>=699,'finishes on demand');assert.equal(r.xpBase,Math.floor(r.activeSeconds/15));
+  const r=w.finish();assert.ok(r&&r.activeSeconds>=699,'finishes on demand');assert.equal(r.xpBase,Math.floor(r.activeSeconds/15)*GENTLE_BLOCK_XP);
   const gentle=new PerformanceWorkout({mode:'march',kind:'steps'});t=0;count=0;let done=null;for(let i=0;i<=700*4&&!done;i++){t+=250;if(i%2===0)count++;done=gentle.update({kind:'steps',count},t);}
   assert.ok(done,'Easy march still finishes at 600 s as before');
 });
