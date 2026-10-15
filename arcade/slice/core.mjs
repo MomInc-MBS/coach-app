@@ -19,7 +19,7 @@ export const pathKind=(pts,limit=.3)=>pathCurvature(pts)>limit?'slice':'explode'
 // samples = whole-body motion per second (screen heights/s); still enough = shield up.
 export const stillness=(samples,max=.35)=>samples.length>0&&samples.reduce((s,v)=>s+v,0)/samples.length<=max;
 
-export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=w/2,stillMax=.35,onEvent=()=>{}}={}){
+export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=w/2,stillMax=.35,strikes=true,onEvent=()=>{}}={}){
  const rand=rng(seed),pick=a=>a[Math.floor(rand()*a.length)];
  const e={w,h,mode,coachX,objects:[],halves:[],parts:[],stains:[],trail:[],pops:[],t:0,wave:0,strikes:0,score:0,xp:0,combo:0,best:0,hits:0,over:false,
   laser:{phase:'idle',t:0,tx:0,ty:0,samples:[],result:null,flash:0},cool:0,spawnIn:1,bonusIn:4,swipeAt:-9,swipeN:0,speed:1};
@@ -29,6 +29,8 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
  // Parabola from the coach at the bottom toward the user: launch speed picks the apex, flight time picks the landing x.
  e.launch=()=>{const tx=w*(.15+rand()*.7),apex=h*(.45+rand()*.35),vy=-Math.sqrt(2*GRAVITY*apex)*e.speed,T=-2*vy/GRAVITY;
   return mk(pick(TYPE_IDS),coachX,h-4,(tx-coachX)/T,vy,11+rand()*6);};
+ // Generic thrower (rest mode: coach throws DOWN from the top): e.spawn({type,x,y,vx,vy,r,bonus}); non-bonus objects feel gravity.
+ e.spawn=({type=pick(TYPE_IDS),x,y,vx=0,vy=0,r=12,bonus=false})=>mk(type,x,y,vx,vy,r,bonus);
  e.dropBonus=()=>mk(pick(TYPE_IDS),w*(.1+rand()*.8),-12,(rand()-.5)*6,22+rand()*10,9,true);
  e.spawnWave=()=>{const n=Math.min(8,2+e.wave);for(let i=0;i<n;i++){const o=e.launch();o.hold=true;o.delay=i*.35/e.speed;o.vx0=o.vx;o.vy0=o.vy;o.vx=o.vy=0;}};
  function burst(x,y,type,n,spread){const cs=TYPES[type];for(let i=0;i<n;i++){const a=rand()*TAU,s=spread*(.3+rand());e.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:.5+rand()*.4,c:pick(cs),s:1+Math.floor(rand()*3)});}}
@@ -62,7 +64,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   for(const o of e.objects){
    if(o.hold){o.delay-=dt;if(o.delay<=0){o.hold=false;o.vx=o.vx0;o.vy=o.vy0;}continue;}
    o.rot+=o.vr*dt;o.x+=o.vx*dt;o.y+=o.vy*dt;if(!o.bonus)o.vy+=GRAVITY*dt;
-   if(o.vy>0&&o.y>h+o.r){o.alive=false;if(!o.bonus)strike();} // a missed rock lands = strike
+   if(o.vy>0&&o.y>h+o.r){o.alive=false;if(!o.bonus){emit('land',{x:o.x,type:o.type});if(strikes)strike();}} // a missed rock lands = strike
   }
   e.objects=e.objects.filter(o=>o.alive);
   for(const q of e.halves){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=GRAVITY*dt;q.hr+=q.hvr*dt;}e.halves=e.halves.filter(q=>q.y<h+40);
