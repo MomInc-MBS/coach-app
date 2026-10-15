@@ -56,7 +56,7 @@ async function installed(browser,base){
 // '#pod' opens the pod itself (no quilt), for steps that drive the pod's own controls.
 async function home(context,base,path='/pose.html',{displayMode}={}){
  const page=await context.newPage();
- if(displayMode){const session=await context.newCDPSession(page);await session.send('Emulation.setEmulatedMedia',{features:[{name:'display-mode',value:displayMode}]});}
+ if(displayMode)await page.addInitScript(mode=>{const native=window.matchMedia.bind(window);window.matchMedia=query=>query===`(display-mode: ${mode})`?{media:query,matches:true,onchange:null,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){},dispatchEvent(){return true;}}:native(query);},displayMode);
  await page.goto(base+path);
  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&navigator.serviceWorker.controller&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning,null,{timeout:30000});
  return page;
@@ -171,7 +171,8 @@ test('a fresh installed-app launch reconciles old partial picks and automaticall
   await setup.evaluate(()=>{localStorage.setItem('myr5-download-groups',JSON.stringify(['starter','coach']));localStorage.setItem('myr5-full-download','on');});
   await setup.close();
   const page=await home(context,server.base,'/pose.html',{displayMode:'standalone'});
-  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  try{await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});}
+  catch(error){console.error('Installed package diagnostic',JSON.stringify({ui:await page.evaluate(()=>({text:document.querySelector('.full-download-bar [data-text]')?.textContent,phase:document.querySelector('.full-download-bar [data-text]')?.textContent,menu:document.getElementById('downloadsMenu')?.open,standalone:matchMedia('(display-mode: standalone)').matches,pending:localStorage.getItem('myr5-full-package-install-pending'),chosen:localStorage.getItem('myr5-download-groups'),state:localStorage.getItem('myr5-full-download'),rows:[...document.querySelectorAll('#downloadsMenu [data-group]')].map(box=>[box.dataset.group,box.checked])})),requests:server.seen.filter(row=>row.pkg)}));throw error;}
   const stored=await page.evaluate(async()=>{const name=(await caches.keys()).find(n=>n.startsWith('myr5-package-'));return (await(await caches.open(name)).keys()).map(r=>new URL(r.url).pathname);});
   assert(stored.includes(asset.url),'the automatic public package completes into the service worker package cache');
   assert.equal(server.seen.filter(row=>row.pkg&&row.path===asset.url).length,1);
@@ -188,9 +189,48 @@ test('an installed app opened offline waits visibly, then starts the full packag
   await waitMenu(page);
   assert.equal(await page.locator('#downloadsMenu [data-network]').isVisible(),true,'the offline package wait is explained');
   await context.setOffline(false);
-  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  try{await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});}
+  catch(error){console.error('Offline reconnect diagnostic',JSON.stringify({ui:await page.evaluate(()=>({text:document.querySelector('.full-download-bar [data-text]')?.textContent,menu:document.getElementById('downloadsMenu')?.open,online:navigator.onLine,saveData:navigator.connection?.saveData,pending:localStorage.getItem('myr5-full-package-install-pending'),chosen:localStorage.getItem('myr5-download-groups'),state:localStorage.getItem('myr5-full-download'),network:document.querySelector('#downloadsMenu [data-network]')?.hidden})),requests:server.seen.filter(row=>row.pkg)}));throw error;}
   const stored=await page.evaluate(async()=>{const name=(await caches.keys()).find(n=>n.startsWith('myr5-package-'));return (await(await caches.open(name)).keys()).map(r=>new URL(r.url).pathname);});
   assert(stored.includes(asset.url),'reconnection completes the pending Vault asset');
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+test('an installed app with Data Saver enabled honors a deliberate smaller group choice',async()=>{
+ const vault=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');
+ const starter=PACKAGE.find(a=>a.group==='starter');assert(vault&&starter,'fixture uses separate public groups');
+ const server=await serve({pkg:[vault,starter]});let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);
+  await context.addInitScript(()=>Object.defineProperty(navigator,'connection',{configurable:true,value:{saveData:true,type:'cellular'}}));
+  const page=await home(context,server.base,'/pose.html',{displayMode:'standalone'});await waitMenu(page);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('myr5-full-package-install-pending')),'1','fresh installed app remains pending until user choice');
+  assert.equal(server.seen.filter(row=>row.pkg).length,0,'Data Saver prevents automatic package transfer');
+  await pick(page,['vault']);
+  await page.getByRole('button',{name:'Download selected'}).click();
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  assert.equal(server.seen.filter(row=>row.pkg&&row.path===vault.url).length,1,'the selected Vault group is fetched');
+  assert.equal(server.seen.filter(row=>row.pkg&&row.path===starter.url).length,0,'the unselected Starter group stays out of this manual package');
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+test('a real quota preflight error stays visible and Resume completes after space is available',async()=>{
+ const asset=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');assert(asset,'fixture uses a Vault public asset');
+ const server=await serve({pkg:[asset]});let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);
+  await context.addInitScript(()=>Object.defineProperty(navigator,'storage',{configurable:true,value:{estimate:async()=>({quota:1,usage:0}),persist:async()=>false}}));
+  const page=await home(context,server.base);await waitMenu(page);
+  await page.getByRole('button',{name:'Download selected'}).click();
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Not enough free space'),null,{timeout:10000});
+  assert.equal(server.seen.filter(row=>row.pkg).length,0,'quota is checked before requesting package files');
+  await page.evaluate(()=>Object.defineProperty(navigator,'storage',{configurable:true,value:{estimate:async()=>({quota:1024*1024,usage:0}),persist:async()=>true}}));
+  // The modal covers the page-level bar; use its visible status control to resume.
+  await page.locator('#downloadsMenu .downloads-status [data-toggle]').click();
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  assert.equal(server.seen.filter(row=>row.pkg&&row.path===asset.url).length,1,'Resume fetches and caches the asset');
   await context.close();
  }finally{await browser?.close();await server.close();}
 });
@@ -310,9 +350,15 @@ test('everything downloads, then a deferred feature works offline',{timeout:6000
   await cold.evaluate(()=>sessionStorage.setItem('myr5-ship-gate','ship-admission-v2')); // #148: opened through the arrival's ship
   await cold.goto(server.base+'/creature/index.html');
   await cold.waitForFunction(()=>window.myr5Companion?.ready===true,null,{timeout:60000});
-  const body='roster/01-seed-pearo--3d_character_model';
-  await cold.selectOption('#body',body);
+  // Exercise the real visible shape picker, then wait for its selected GLB to load offline.
+  await cold.waitForFunction(()=>!!document.querySelector('.coach-sprite-grid button[data-body][aria-label$=", available"][aria-pressed="false"]'),null,{timeout:30000});
+  const shape=cold.locator('.coach-sprite-grid button[data-body][aria-label$=", available"][aria-pressed="false"]').first();
+  const body=await shape.getAttribute('data-body');
+  const modelUrl='/creature/models/'+body+'.glb';
+  assert(PACKAGE.some(asset=>asset.url===modelUrl),'the selected available model is in the complete package');
+  await shape.click();
   await cold.waitForFunction(id=>window.myr5Companion?.recipe?.body===id&&window.myr5Companion?.ready===true,body,{timeout:60000});
+  assert.equal(await cold.locator(`.coach-sprite-grid button[data-body="${body}"]`).getAttribute('aria-pressed'),'true','the real editor selected the downloaded model');
   await context.close();
  }finally{await browser?.close();await server.close();}
 });
