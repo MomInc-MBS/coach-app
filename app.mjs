@@ -189,7 +189,7 @@ const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
-const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{void stop();voice.say('Stopped.',{interrupt:true});},
+const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{if(EXERCISES[session.mode]?.endless&&state.phase==='tracking'){void finishEndless();return;}void stop();voice.say('Stopped.',{interrupt:true});},
   // Downward correction can remove a false camera rep without creating free XP.
   onAdjust:delta=>{if(delta>=0||state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
@@ -470,13 +470,16 @@ mountCoachOverlay();
 window.addEventListener('myr5:movement-configured',dropWorkoutEffects);
 window.addEventListener('myr5:account-ready',()=>{dropWorkoutEffects();syncRetainedPowerOwner();});
 document.addEventListener('click',event=>{const button=event.target?.closest?.('.workout-performance-controls button');if(button?.textContent?.trim()==='Break hold')invalidateWorkoutEffects();},true);
-// Cardio runner: the corridor game over the camera for march-type cardio (lazy; external to the core bundle). Body controls only.
+// Cool Cardio ends on the counter tap or when Coach catches you: both FINISH the set and award the XP earned so far
+// (finishWorking, not the interrupt path). Under 15 s active there is nothing to award, so it is a plain stop.
+async function finishEndless(){try{if(await pod?.finishWorking?.(state.motion,Date.now()))return;}catch(error){status(error.message);}stop();}
+// Cool Cardio runner: the corridor game over the camera (lazy; external to the core bundle). Body controls only; no other mode gets it.
 {let runner=null,loading=false;
- const eligible=()=>{const x=EXERCISES[session.mode];return x?.group==='cardio'&&x.detector==='march';};
+ const eligible=()=>!!EXERCISES[session.mode]?.runner;
  const drop=()=>{runner?.stop();runner=null;};
  window.addEventListener('myr5:pose',event=>{
   if(!runner){const host=document.getElementById('cameraWorkout');if(!eligible()||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;
-   import('./arcade/runner/runner.mjs').then(m=>{if(!runner&&document.body.dataset.tracking==='true')runner=m.mountRunner({host,Session:MovementSession,workout:()=>pod?.flow?.workout,sound:k=>physicalSound.play(k)});}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
+   import('./arcade/runner/runner.mjs').then(m=>{if(!runner&&document.body.dataset.tracking==='true')runner=m.mountRunner({host,Session:MovementSession,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n),onCaught:()=>{void finishEndless();}});}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
   runner.pose(event.detail);});
  new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
  window.myr5Runner={get active(){return runner},drop};}

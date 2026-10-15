@@ -103,11 +103,11 @@ export function createMazeScene(THREE,theme=themeFor){
   const arc=(start,count)=>new THREE.CylinderGeometry(R,R,1,count,1,true,start*TAU/SEG,count*TAU/SEG).rotateX(Math.PI/2);
   const tubeGeo={solid:arc(0,SEG),window:[arc(-3,6),arc(5,6)],pit:arc(2,12)};
   const ribGeo=new THREE.TorusGeometry(R-.04,.07,4,24);
-  let group=null,course=null,look=null,cameraLane=LANES[1],yaw=0,rotors=[],pitSpots=[],envReady=false;
+  let group=null,course=null,look=null,cameraLane=LANES[1],yaw=0,rotors=[],pitSpots=[],envLook=null;
   const E=new THREE.Color(),LZ=new THREE.Color(),W=new THREE.Color();
   function applyTheme(t){
     if(look===t)return;look=t;
-    scene.background.set(t.bg);scene.fog.color.set(t.fog);hemi.color.set(t.hemi[0]);hemi.groundColor.set(t.hemi[1]);lamp.color.set(t.light);ahead.color.set(t.light);
+    scene.background.set(t.bg);scene.fog.color.set(t.fog);hemi.color.set(t.hemi[0]);hemi.groundColor.set(t.hemi[1]);lamp.color.set(t.light);ahead.color.set(t.light);fill.color.set(t.light);
     paintWall(plateTex.image.getContext('2d'),256,256,t.wall);
     for(const {m,opts} of metals){m.map.needsUpdate=true;m.color.set(t.wall.tint).multiplyScalar(opts.shade??1);m.metalness=opts.metalness??t.wall.metalness;m.roughness=opts.roughness??t.wall.roughness;}
     const n=t.neon;cyan.color.set(n.rail);warm.color.set(n.warm);red.color.set(n.red);amber.color.set(n.amber);blade.color.set(n.blade);
@@ -230,23 +230,23 @@ export function createMazeScene(THREE,theme=themeFor){
         const mid=pathAt(event.at+L/2,course);pitSpots.push({at:event.at,end:event.at+L,pos:new THREE.Vector3(mid.x,-.55,mid.z)});
       }
     });
-    // Course banner: the next hall starts where this one ends (rest stretches get their own board).
-    const banner=course.rest?label(['REST HERE','MOM IS PROUD'],false,2.3,.8):label(['MOM INC / '+String(course.level+2).padStart(2,'0'),'NEXT HALL'],false,2.3,.8);
-    const bp=onPath(course.rest?8:course.length-3);banner.position.set(0,3.2,0);bp.add(banner);
+    // Course banner: the next hall starts where this one ends.
+    const banner=label(['MOM INC / '+String(course.level+2).padStart(2,'0'),'NEXT HALL'],false,2.3,.8);
+    const bp=onPath(course.length-3);banner.position.set(0,3.2,0);bp.add(banner);
     batchStaticBoxes();
     dust.length=0;for(let i=0;i<DUST;i++)dust.push({d:Math.random()*24-2,x:(Math.random()*2-1)*1.9,y:Math.random()*3.6,s:Math.random()*TAU});
   }
-  // A tiny generated environment (warm ceiling panels, cool floor bounce) so the metal shows highlights.
-  function makeEnv(renderer){
-    const env=new THREE.Scene(),pm=new THREE.PMREMGenerator(renderer);env.background=new THREE.Color('#120c16');
+  // A tiny generated environment (ceiling panels, side glow, floor bounce) in the theme's colours so the metal shows highlights.
+  function makeEnv(renderer,t){
+    const env=new THREE.Scene(),pm=new THREE.PMREMGenerator(renderer);env.background=new THREE.Color(t.bg);
     const panel=(c,w,h,x,y,z)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m);};
-    for(let z=-8;z<=8;z+=4)panel('#ffd9a0',2,1.2,0,5,z);panel('#ff9a4a',1,8,-5,1,0);panel('#ff9a4a',1,8,5,1,0);panel('#4a3a66',10,10,0,-5,0);panel('#79e8ff',.4,10,3,-4,0);
+    for(let z=-8;z<=8;z+=4)panel(t.light,2,1.2,0,5,z);panel(t.neon.amber,1,8,-5,1,0);panel(t.neon.amber,1,8,5,1,0);panel(t.wall.to,10,10,0,-5,0);panel(t.neon.rail,.4,10,3,-4,0);
     const tex=pm.fromScene(env,.04).texture;pm.dispose();return tex;
   }
   let strobeTimer=0,strobeState=[1,1];
   return {scene,camera,get theme(){return look?.name},render(renderer,run,motion=true,options={}){
     if(course!==run.course){build(run.course,themeAt(run.courses));yaw=pathAt(run.distance,course).yaw;}
-    if(!envReady){envReady=true;scene.environment=makeEnv(renderer);scene.environmentIntensity=.45;}
+    if(envLook!==look){envLook=look;scene.environment?.dispose();scene.environment=makeEnv(renderer,look);scene.environmentIntensity=.45;}
     const pressure=Math.max(0,Math.min(1,+options.pressure||0)),now=performance.now()/1000;
     const p=pathAt(run.distance,course),blend=motion?.22:1,pace=Math.min(1,runSpeed(run)/4);
     cameraLane=cameraLane+((LANES[run.lane]??0)-cameraLane)*blend;yaw=yaw+(p.yaw-yaw)*(motion?.18:1);

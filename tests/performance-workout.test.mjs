@@ -70,7 +70,7 @@ test('ending a working set requires actual earned performance',()=>{
  assert.equal(timed.finishWorking({mode:'high-horse',kind:'hold',totalHold:15,hold:15},16000)?.earned,true);
 });
 test('sprint has five active fifteen-second intervals, five recoveries, and no unattended credit',()=>{
- const w=new PerformanceWorkout({mode:'jogging',kind:'steps',cardio:'sprint'});
+ const w=new PerformanceWorkout({mode:'march',kind:'steps',cardio:'sprint'});
  for(let t=0;t<10;t++)w.update({kind:'steps',count:0},t*1000);assert.equal(w.activeSeconds,0);
  let raw=0,time=10000,result;
  for(let round=0;round<5;round++){

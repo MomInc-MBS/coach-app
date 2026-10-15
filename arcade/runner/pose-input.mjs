@@ -2,9 +2,8 @@
 // jogUpdate / jumpUpdate / repUpdate) through their public update(); only the one-leg side step is new.
 // Every number a phone test might need to move lives here.
 export const POSE_TUNING={
-  jogWindow:1.6,     // s of recent knee-lift steps that set the pace
-  jogFullSteps:3,    // steps inside jogWindow for full speed
-  paceEase:.45,      // s, pace smoothing (rise and fall)
+  jogHold:1.4,       // s after a knee-lift step that still counts as jogging (full speed). ~0.7 steps/s keeps you running.
+                     // The knee-lift height knob is Cool Cardio's own `lift` in exercise-library.mjs (.08 torso; other marches .13/.4).
   side:{
     out:.62,         // stepping ankle: lateral distance from the hip midline, in torso lengths
     plant:.38,       // planted ankle must stay this close to the midline
@@ -18,7 +17,6 @@ export const POSE_TUNING={
     flip:false       // raw camera frames are unmirrored: the player's right is image-left. Flip if a device disagrees.
   }
 };
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const median=a=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
 // Side-step detector on raw landmarks (ankles 27/28, knees 25/26, hips 23/24, shoulders 11/12).
 export function createSideStep(tuning=POSE_TUNING.side){
@@ -50,18 +48,17 @@ export function createSideStep(tuning=POSE_TUNING.side){
 // Session: the app's MovementSession class (passed in so the lazy chunk does not reload the engine).
 export function createPoseInput({Session,tuning=POSE_TUNING}){
   const jog=new Session('jogging'),jump=new Session('jumping'),crouch=new Session('squat',{samples:null}),side=createSideStep(tuning.side);
-  let steps=[],lastCount=0,jumpPhase='',crouchPhase='',pace=0,lastT=null;
-  return {get pace(){return pace},get calibrated(){return !!(jump.base&&crouch.base)},
+  let lastStep=-Infinity,lastCount=0,jumpPhase='',crouchPhase='',jogging=false;
+  return {get jogging(){return jogging},get calibrated(){return !!(jump.base&&crouch.base)},
     update({points,world=null,width=1,height=1,now}){
-      const actions=[];if(!points||!Number.isFinite(now))return {pace,actions};
-      const t=now/1000,aspect=width/Math.max(1,height),dt=lastT===null?0:Math.max(0,t-lastT);lastT=t;
+      const actions=[];if(!points||!Number.isFinite(now))return {jogging,actions};
+      const t=now/1000,aspect=width/Math.max(1,height);
       const s=jog.update(points,now,aspect,world);
-      if(s.count>lastCount){for(let i=lastCount;i<s.count;i++)steps.push(t);lastCount=s.count;}
-      steps=steps.filter(x=>t-x<=tuning.jogWindow);
-      const target=clamp(steps.length/tuning.jogFullSteps,0,1);pace+=(target-pace)*(1-Math.exp(-dt/tuning.paceEase));
+      if(s.count>lastCount){lastCount=s.count;lastStep=t;}
+      jogging=t-lastStep<=tuning.jogHold;
       const j=jump.update(points,now,aspect,world);if(j.phase==='air'&&jumpPhase!=='air')actions.push('jump');jumpPhase=j.phase;
       const c=crouch.update(points,now,aspect,world);if(c.phase==='bottom'&&crouchPhase!=='bottom')actions.push('slide');crouchPhase=c.phase;
       const dir=side.update(points,t,aspect);if(dir)actions.push(dir);
-      return {pace,actions};
+      return {jogging,actions};
     }};
 }

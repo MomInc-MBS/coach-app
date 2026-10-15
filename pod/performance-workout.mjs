@@ -18,7 +18,8 @@ const number=value=>Math.max(0,Number(value)||0);
  * baselines exclude everything performed during a preparation or recovery. */
 export class PerformanceWorkout {
  constructor({mode,kind,difficulty=exerciseDifficulty(mode),cardio='gentle',snapshot=null}={}){
-  this.mode=mode;this.kind=kind==='hold'?'hold':kind==='reps'?'reps':cardio==='sprint'?'sprint':'gentle';this.difficulty=difficulty;
+  // Cool Cardio (the runner) is endless gentle cardio: no sprint rounds, no 600 s finish; it ends on stop or when Coach catches you.
+  this.mode=mode;this.endless=!!EXERCISES[mode]?.endless;this.kind=kind==='hold'?'hold':kind==='reps'?'reps':cardio==='sprint'&&!this.endless?'sprint':'gentle';this.difficulty=difficulty;
   this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;this.holdBlocks=[];
   if(snapshot&&snapshot.mode===mode)Object.assign(this,snapshot,{finished:false,continuousSeconds:0,lastNow:null,lastCameraHold:0,continuousRawOffset:0});
   if(snapshot?.activeSeconds>=HOLD_BLOCK_SECONDS&&!Array.isArray(snapshot.holdBlocks))this.holdBlocks=null;
@@ -86,7 +87,7 @@ export class PerformanceWorkout {
    if(this.sprintSeconds>=SPRINT_SECONDS){this.stage='sprint-rest';this.recoveryUntil=now+SPRINT_REST_SECONDS*1000;this.xpBase+=SPRINT_ROUND_XP;}
    return null;
   }
-  this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;this.xpBase=Math.floor(this.activeSeconds/15)*GENTLE_BLOCK_XP;if(this.activeSeconds>=HOLD_TARGET_SECONDS)return this.finish();return null;
+  this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;this.xpBase=Math.floor(this.activeSeconds/15)*GENTLE_BLOCK_XP;if(!this.endless&&this.activeSeconds>=HOLD_TARGET_SECONDS)return this.finish();return null;
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15)return null;
