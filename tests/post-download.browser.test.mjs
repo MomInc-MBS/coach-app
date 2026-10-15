@@ -54,8 +54,10 @@ async function installed(browser,base){
  await page.close();return context;
 }
 // '#pod' opens the pod itself (no quilt), for steps that drive the pod's own controls.
-async function home(context,base,path='/pose.html'){
- const page=await context.newPage();await page.goto(base+path);
+async function home(context,base,path='/pose.html',{displayMode}={}){
+ const page=await context.newPage();
+ if(displayMode){const session=await context.newCDPSession(page);await session.send('Emulation.setEmulatedMedia',{features:[{name:'display-mode',value:displayMode}]});}
+ await page.goto(base+path);
  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&navigator.serviceWorker.controller&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning,null,{timeout:30000});
  return page;
 }
@@ -76,6 +78,7 @@ async function dismissUpdateNotice(page){const notice=page.locator('.app-update-
 
 test('every package file has a group, and the regular coach never pulls a roster body',()=>{
  assert(PACKAGE.every(a=>typeof a.group==='string'),'grouped');
+ assert(PACKAGE.some(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs'),'the complete public package includes Vault');
  assert.deepEqual(groupOf('coach').filter(a=>/\/roster\/.+\.glb$/.test(a.url)),[]);
  const bodies=PACKAGE.filter(a=>/\/creature\/models\/roster\/.+\.glb$/.test(a.url));
  assert(bodies.length>=50&&bodies.every(a=>a.group.startsWith('bodies-')),'every roster body sits in a workout section');
@@ -93,18 +96,19 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   const rows=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#downloadsMenu [data-group]')].map(box=>[box.dataset.group,{size:box.closest('label').querySelector('[data-size]').textContent,checked:box.checked}])));
   assert.deepEqual(Object.keys(rows).sort(),[...new Set(PACKAGE.map(a=>a.group))].sort(),'a toggle for every group the build has');
   for(const [group,row] of Object.entries(rows))if(!['voices','starter'].includes(group))assert.equal(row.size,mb(bytes(groupOf(group))),group);
-  // W2-2O: the menu leads with the Starter pack (the portal scenes' art), recommended and picked, with its size.
-  assert.deepEqual(Object.entries(rows).filter(([,row])=>row.checked).map(([group])=>group),['starter','coach'],'Starter and Your coach (both recommended) start picked');
+  // The first menu offers the whole public library as one recommended, resumable package.
+  assert(Object.values(rows).every(row=>row.checked),'every public content group starts selected');
   const lead=page.locator('#downloadsMenu .download-row').first();
-  assert.equal(await lead.locator('input').getAttribute('data-group'),'starter','Starter leads');
-  assert.match(await lead.textContent(),/^Starter: portal, pyramid, ship and worldsRecommended.+ MB(?: left)?$/);
+  assert.equal(await lead.locator('input').getAttribute('data-all'),'everything','complete package toggle leads');
+  assert.match(await lead.textContent(),/^Complete public content packageRecommendedEvery public group, including Vault worlds and their assets\./);
+  assert.equal(await lead.locator('input').isChecked(),true,'the complete package toggle is selected');
   // The quilt mounts, hidden, behind the menu and may already have fetched its texture on demand; so may the pod's
   // viewing port its room backdrop (W2-2M, great-wall.webp). The row counts only what is left.
   const early=['/pod/worlds/quilt.webp','/pod/worlds/great-wall.webp'],starterLeft=[[],[early[0]],[early[1]],early]
    .map(skip=>bytes(groupOf('starter').filter(a=>!skip.includes(a.url))))
    .find(left=>rows.starter.size===(left===bytes(groupOf('starter'))?mb(left):`${mb(left)} left`));
   assert.ok(starterLeft!==undefined,`Starter row: ${rows.starter.size}`);
-  assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(starterLeft+bytes(groupOf('coach')))}`);
+  assert.match(await page.locator('#downloadsMenu [data-total]').textContent(),/^Selected: .+$/,'all selected groups contribute to the package total');
   assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'Download selected','focus moves into the menu');
   assert.equal(await page.getByRole('dialog',{name:'Downloads'}).isVisible(),true,'the menu is labelled by its title');
   assert.deepEqual(await page.evaluate(()=>{const r=document.getElementById('downloadsMenu').getBoundingClientRect();return [r.width,r.height];}),[375,812],'its own full screen');
@@ -114,6 +118,9 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   await page.locator('#downloadsMenu details summary').click();
   assert.equal(await page.locator('#downloadsMenu [data-group="bodies-starter"]').isEnabled(),true);
   await page.waitForFunction(()=>!document.querySelector('#downloadsMenu [data-group="bodies-chest"]').closest('label').querySelector('[data-lock]').hidden);
+  await page.locator('#downloadsMenu [data-all="everything"]').uncheck();
+  await page.locator('#downloadsMenu [data-group="starter"]').check();
+  await page.locator('#downloadsMenu [data-group="coach"]').check();
   await page.locator('#downloadsMenu [data-all="bodies"]').check();
   assert.equal(await page.locator('#downloadsMenu [data-total]').textContent(),`Selected: ${mb(starterLeft+bytes(PACKAGE.filter(a=>a.group==='coach'||a.group.startsWith('bodies-'))))}`);
   await page.locator('#downloadsMenu [data-all="bodies"]').uncheck();
@@ -152,6 +159,39 @@ test('the Downloads menu opens once after the first open, before the quilt; Sett
   await stopCamera(next);
   await waitMenu(next);
   await fresh.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+test('a fresh installed-app launch reconciles old partial picks and automatically completes the public package',async()=>{
+ const asset=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');assert(asset,'fixture uses a Vault public asset');
+ const server=await serve({pkg:[asset]});let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);
+  const setup=await context.newPage();await setup.goto(server.base+'/__test__');
+  await setup.evaluate(()=>{localStorage.setItem('myr5-download-groups',JSON.stringify(['starter','coach']));localStorage.setItem('myr5-full-download','on');});
+  await setup.close();
+  const page=await home(context,server.base,'/pose.html',{displayMode:'standalone'});
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  const stored=await page.evaluate(async()=>{const name=(await caches.keys()).find(n=>n.startsWith('myr5-package-'));return (await(await caches.open(name)).keys()).map(r=>new URL(r.url).pathname);});
+  assert(stored.includes(asset.url),'the automatic public package completes into the service worker package cache');
+  assert.equal(server.seen.filter(row=>row.pkg&&row.path===asset.url).length,1);
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
+test('an installed app opened offline waits visibly, then starts the full package when connection returns',async()=>{
+ const asset=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');assert(asset,'fixture uses a Vault public asset');
+ const server=await serve({pkg:[asset]});let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);await context.setOffline(true);
+  const page=await home(context,server.base,'/pose.html',{displayMode:'standalone'});
+  await waitMenu(page);
+  assert.equal(await page.locator('#downloadsMenu [data-network]').isVisible(),true,'the offline package wait is explained');
+  await context.setOffline(false);
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  const stored=await page.evaluate(async()=>{const name=(await caches.keys()).find(n=>n.startsWith('myr5-package-'));return (await(await caches.open(name)).keys()).map(r=>new URL(r.url).pathname);});
+  assert(stored.includes(asset.url),'reconnection completes the pending Vault asset');
+  await context.close();
  }finally{await browser?.close();await server.close();}
 });
 

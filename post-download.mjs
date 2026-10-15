@@ -4,11 +4,12 @@
 // those whole files (Sites has no byte ranges), each checked against its build sha256, so an interrupted
 // download resumes file by file, across reloads. The menu is its own full-screen page, shown once after
 // the first open and never over the quilt portal (the portal waits, hidden, until it closes); Settings
-// and Install reopen it (window.myr5Packs.open). Nothing is forced: the app works with just the core.
+// and Install reopen it (window.myr5Packs.open). A fresh installed-app launch saves the full public
+// package automatically; ordinary web visits keep a deliberate Download action.
 import {ROWS,TRACKS,LEVELS_PER_BOSS} from './battle-pass-rewards.mjs';
 import {RELEASE} from './release-info.mjs';
 
-const STATE='myr5-full-download',CHOSEN='myr5-download-groups',SEEN='myr5-downloads-seen';
+const STATE='myr5-full-download',CHOSEN='myr5-download-groups',SEEN='myr5-downloads-seen',INSTALL_PENDING='myr5-full-package-install-pending',INSTALLED_SEEN='myr5-full-package-installed-app-seen';
 const BUSY=['camera','model','tracking','manual'];
 const mb=bytes=>bytes>0&&bytes<104858?'<0.1 MB':(bytes/1048576).toFixed(bytes<10*1048576?1:0)+' MB';
 const read=(store,key)=>{try{return store.getItem(key);}catch{return null;}};
@@ -35,6 +36,7 @@ const GROUPS=[
  ['food','Food scanner','The food scanner model and the food list.'],
  ['meditation','Meditation & backgrounds','Meditation, rest and board backgrounds.'],
  ['games','Games & War Room','Arcade games and the War Room.'],
+ ['vault','Achievement Vault','Vault hall, secret worlds, boards, models and art.'],
 ];
 // Body sections follow the board rows (#102): a section's bodies unlock when every boss in its row
 // is beaten. Mirrors track-placements.ts sectionComplete(), which can't be imported here (its catalog
@@ -49,7 +51,7 @@ export function mountPostDownload({host}){
  const menu=document.createElement('dialog'),bar=document.createElement('section'),settings=document.createElement('section'),note=document.createElement('p');
  menu.id='downloadsMenu';menu.className='downloads-menu';menu.setAttribute('aria-labelledby','downloadsTitle');menu.setAttribute('aria-describedby','downloadsText');
 const status='<p role="status" data-text></p><progress max="1" value="0" aria-label="Download progress"></progress><span data-bytes></span><button type="button" data-toggle></button><button type="button" data-update hidden>Update Coach to continue downloads</button>';
- menu.innerHTML='<div class="downloads-page"><h2 id="downloadsTitle">Downloads</h2><p id="downloadsText">MyR5 already works. Pick what else to keep on this phone for offline use. You can change this any time in Settings.</p><p class="hint" data-cellular hidden>You’re on mobile data. Wi‑Fi is best for big downloads.</p><fieldset data-groups><legend>What to download</legend></fieldset><section data-packs></section></div>'
+ menu.innerHTML='<div class="downloads-page"><h2 id="downloadsTitle">Downloads</h2><p id="downloadsText">Save the complete public content library for offline use in one resumable download. Groups are selected by default; clear any you do not want on this device. You can change this any time in Settings.</p><p class="hint" data-cellular hidden>You’re on mobile data. Wi‑Fi is best for big downloads.</p><p class="hint" data-network hidden>You’re offline. The complete package is selected and will start when you reconnect.</p><p class="hint" data-save-data hidden>Data Saver is on. The complete package is selected; tap Download selected when you want to start.</p><fieldset data-groups><legend>Complete content package</legend></fieldset><section data-packs></section></div>'
   +'<footer class="downloads-footer"><div class="downloads-status">'+status+'</div><p data-total></p><div class="actions"><button type="button" class="main-action" data-download>Download selected</button><button type="button" data-later>Not now</button></div></footer>';
  bar.className='full-download-bar';bar.setAttribute('aria-label','MyR5 downloads');bar.hidden=true;
  settings.className='full-download-settings';settings.setAttribute('aria-labelledby','fullDownloadSettingsTitle');
@@ -95,6 +97,9 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
 
  let plan=null,phase='checking',message='',got=0,controller=null,wantMenu=false,autoMenu=false,firstPick=false,restorePortal=false,doneTimer=0,progress=null;
  const busy=()=>document.body.dataset.cameraWorkout==='true'||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||BUSY.includes(window.myr5TestState?.phase);
+ const installedApp=()=>navigator.standalone===true||globalThis.matchMedia?.('(display-mode: standalone)').matches===true;
+ const saveDataRequested=()=>navigator.connection?.saveData===true;
+ if(installedApp()&&!read(localStorage,INSTALLED_SEEN)){write(localStorage,INSTALL_PENDING,'1');write(localStorage,INSTALLED_SEEN,'1');}
  // A ?panel= or #route deep link came for one thing; nothing auto-opens over it (the quilt portal waits the same way).
  const deepLinked=()=>new URLSearchParams(location.search).has('panel')||!!window.myr5Routes?.hashRoute?.();
  const idle=()=>!busy()&&!document.hidden&&!document.querySelector('dialog[open]');
@@ -132,12 +137,12 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
    }
    if(sizes(id))list.insertAdjacentHTML('beforeend',row(id,title,text,id==='coach'||id==='starter'?'<em>Recommended</em>':''));
   }
-  if(Object.keys(groups).length>1)list.insertAdjacentHTML('beforeend',row('*everything','Everything','Every group above.'));
+  if(Object.keys(groups).length>1)list.insertAdjacentHTML('afterbegin',row('*everything','Complete public content package','Every public group, including Vault worlds and their assets.','<em>Recommended</em>'));
   // A re-render while the menu is up (a fresher plan) keeps what the user has toggled so far.
   const picked=chosen(),kept=menu.open?current:null;
   for(const box of boxes()){
    const info=sizes(box.dataset.group),label=box.closest('label');label.dataset.saved=String(!info.remaining);
-   box.checked=!info.remaining||(kept?.has(box.dataset.group)?kept.get(box.dataset.group):firstPick?['starter','coach'].includes(box.dataset.group):!picked||picked.includes(box.dataset.group));
+   box.checked=!info.remaining||(kept?.has(box.dataset.group)?kept.get(box.dataset.group):firstPick?true:!picked||picked.includes(box.dataset.group));
    label.querySelector('[data-size]').textContent=!info.remaining?'Saved':info.remaining<info.total?`${mb(info.remaining)} left`:mb(info.total);
   }
   paintLocks();sync();
@@ -158,7 +163,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
   }
   const selected=all.filter(box=>box.checked&&!saved(box)).reduce((sum,box)=>sum+left(box),0);
   menu.querySelector('[data-total]').textContent=busyNow?'':selected?`Selected: ${mb(selected)}`:'Nothing new selected.';
-  const download=menu.querySelector('[data-download]');download.disabled=busyNow||phase==='stale'||!selected;download.hidden=busyNow||phase==='stale';
+  const download=menu.querySelector('[data-download]');download.disabled=busyNow||phase==='stale'||!selected||!navigator.onLine;download.hidden=busyNow||phase==='stale';
  }
  list.addEventListener('change',event=>{
   const all=event.target.dataset.all;
@@ -169,12 +174,20 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  function openMenu(auto){
   if(menu.open)return;
   // Shown once: the first open marks it seen (and picks the recommended group); Settings reopens it.
-  autoMenu=auto;firstPick=auto&&(firstPick||!read(localStorage,SEEN)&&!chosen()?.length);menu.returnValue='';if(auto)write(localStorage,SEEN,'1');
+  const installPending=read(localStorage,INSTALL_PENDING)==='1';
+  autoMenu=auto;firstPick=auto&&(firstPick||installPending||!read(localStorage,SEEN)&&!chosen()?.length);
+  if(installPending)write(localStorage,CHOSEN,null);
+  const autoPackage=auto&&firstPick&&(installedApp()||installPending)&&navigator.onLine&&!saveDataRequested();
+  menu.returnValue='';if(auto)write(localStorage,SEEN,'1');
   // Its own screen, never a modal over the quilt: the portal steps aside and comes back after.
   restorePortal=portalUp();if(restorePortal)window.myr5Portal.hide();
-  menu.querySelector('[data-cellular]').hidden=!cellular();menu.querySelector('[data-later]').textContent=auto?'Not now':'Close';
+  menu.querySelector('[data-cellular]').hidden=!cellular();menu.querySelector('[data-network]').hidden=navigator.onLine;menu.querySelector('[data-save-data]').hidden=!saveDataRequested();menu.querySelector('[data-later]').textContent=auto?'Not now':'Close';
   renderMenu();paint();menu.showModal();menu.querySelector('.downloads-page').scrollTop=0;
   menu.querySelector(auto&&!menu.querySelector('[data-download]').disabled?'[data-download]':'[data-later]').focus();
+  // A fresh installed-app launch or appinstalled event starts the complete public package online.
+  // Browser visitors and Data Saver users keep the selected package but wait for the user's action;
+  // signed owner-scoped packs are mounted separately below.
+   if(autoPackage)queueMicrotask(()=>{if(menu.open&&!controller)void start();});
   import('./battle-pass.mjs').then(({loadProgress})=>{progress=loadProgress();paintLocks();},()=>{});
   // Sizes change as bodies download on demand; show the worker's current count.
   if(plan&&!controller)ask().then(fresh=>{if(controller)return;plan=fresh;got=0;paint();if(menu.open)renderMenu();},()=>{});
@@ -254,7 +267,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
     if(quota&&quota-usage<plan.remaining)throw say(`Not enough free space. MyR5 needs ${mb(plan.remaining)}.`);
     for(const asset of plan.missing){await save(asset,signal);got+=asset.bytes;paint();}
    }
-   phase='done';bar.hidden=false;clearTimeout(doneTimer);doneTimer=0;
+   phase='done';write(localStorage,INSTALL_PENDING,null);bar.hidden=false;clearTimeout(doneTimer);doneTimer=0;
   }catch(error){
    if(signal.aborted){phase='paused';write(localStorage,STATE,'paused');}
    else if(error.code==='stale_release'){phase='stale';message=error.message;}
@@ -289,23 +302,35 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  const ticker=setInterval(()=>{
   if(menu.open&&busy())menu.close('busy');
    if(note.textContent)showNote(note.textContent);
-  if(wantMenu&&!deepLinked()&&idle()&&navigator.onLine){wantMenu=false;openMenu(true);}
+  if(wantMenu&&!deepLinked()&&idle()){wantMenu=false;openMenu(true);}
   if(phase==='done'&&!bar.hidden&&!doneTimer&&idle())doneTimer=setTimeout(()=>{bar.hidden=true;},6000);
  },1000);
- window.addEventListener('online',()=>{if(read(localStorage,STATE)==='on'&&['ready','error'].includes(phase)&&!cellular())void start();});
- window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(ticker);window.removeEventListener('myr5:account-ready',sectionsReady);window.removeEventListener('myr5:account-cleared',sectionsCleared);clearSections();}});
+ window.addEventListener('online',()=>{if(read(localStorage,STATE)==='on'&&['ready','error'].includes(phase)&&!saveDataRequested())void start();});
+ window.addEventListener('online',()=>{
+  if(menu.open){menu.querySelector('[data-network]').hidden=true;sync();}
+  if(read(localStorage,INSTALL_PENDING)==='1'){
+   write(localStorage,CHOSEN,null);
+   if(menu.open&&!saveDataRequested()){firstPick=true;renderMenu();void start();}
+   else if(!menu.open)wantMenu=true;
+  }
+ });
+ window.addEventListener('offline',()=>{if(menu.open){menu.querySelector('[data-network]').hidden=false;sync();}});
+ const installedEvent=()=>{write(localStorage,INSTALL_PENDING,'1');write(localStorage,SEEN,null);wantMenu=true;if(menu.open){firstPick=true;write(localStorage,CHOSEN,null);renderMenu();if(navigator.onLine&&!saveDataRequested())void start();}};
+ window.addEventListener('appinstalled',installedEvent);
+ window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(ticker);window.removeEventListener('myr5:account-ready',sectionsReady);window.removeEventListener('myr5:account-cleared',sectionsCleared);window.removeEventListener('appinstalled',installedEvent);clearSections();}});
  (async()=>{
   // A first visit is controlled once the core install activates; its menu can open then.
   if(!worker.controller)await new Promise(resolve=>worker.addEventListener?.('controllerchange',resolve,{once:true}));
+  if(read(localStorage,INSTALL_PENDING)==='1')write(localStorage,CHOSEN,null);
   try{plan=await ask();}catch(error){phase='error';message=error.message;paint();return;}
   phase=plan.remaining?'ready':'done';paint();if(menu.open)renderMenu();
   const state=read(localStorage,STATE);
   if(state)write(localStorage,SEEN,'1');
-  // The earlier tap was the consent: resume after a reload, or fetch an update's changed files,
-  // but never silently on mobile data.
-  if(plan.remaining&&state==='on'&&navigator.onLine&&!cellular())return void start();
+  // Resume an already-started package after a reload, or fetch an update's changed files.
+  if(plan.remaining&&state==='on'&&navigator.onLine&&!saveDataRequested())return void start();
   if(plan.remaining&&state==='paused'){phase='paused';bar.hidden=false;paint();return;}
   // A deep link (?panel=) came for one thing; like the quilt, the menu waits for a plain open.
-  if(!read(localStorage,SEEN)&&!deepLinked()&&Object.values(plan.groups||{}).some(group=>group.remaining))wantMenu=true;
+  if(!plan.remaining)write(localStorage,INSTALL_PENDING,null);
+  if((!read(localStorage,SEEN)||read(localStorage,INSTALL_PENDING)==='1')&&!deepLinked()&&Object.values(plan.groups||{}).some(group=>group.remaining))wantMenu=true;
  })();
 }

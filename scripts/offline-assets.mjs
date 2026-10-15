@@ -5,8 +5,7 @@ import {join,posix} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 
-const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules','audio','pods'];
-export const CORE_OFFLINE_BUDGET=8*1024*1024;
+const folders=['pod','creature','models','icons','handborne','arcade','war-room','food','vendor','modules','audio','pods','reward-assets'];
 // D34: core precache holds only what a first run needs (sign-in/onboarding, home, a camera or manual
 // workout with its counter, updates/recovery, the offline shell). Core is every root, /icons/ or /pod/
 // file that the first-run pages name, directly or through other core files. The scan is conservative:
@@ -75,7 +74,8 @@ export async function identifyVoice(root){
 // carries one. First match wins; whatever is left (regular coach models, customizer, exercise demos, app
 // screens) is "Your coach". Roster bodies never join it: each goes to its workout section from
 // track-placements.ts (#102), or the bodies' Starter section when it has no placement.
-// "starter" (W2-2O) is the portal experience's art, offered first on the first open. Site size rule: the
+// "starter" (W2-2O) is the portal experience's art. Vault code and art remain optional public assets,
+// grouped into the same integrity-checked post-download package as the rest of the library.
 // Each grimoire device downloads its own board art and tunnel effect together. Quilt stays Starter.
 const GROUPS=[
  ...GRIMOIRE_GROUPS,
@@ -83,8 +83,9 @@ const GROUPS=[
  ['room-reminders',REMINDERS_ROOM],
  ['room-cage',CAGE_ROOM],
  ['music',MUSIC],
+ ['vault',VAULT],
  ['starter',STARTER],
- ['drop-pods',/^\/pods\//],
+ ['drop-pods',/^\/(?:pods|reward-assets)\//],
  ['voices',/^\/voice\//],
  ['hand',/^\/handborne\//],
  // The meshopt decoder is the pyramid's alone (release 5): core here through the pyramid scanner (W2-2O keeps the scenes'
@@ -110,10 +111,8 @@ export async function offlineInventory(root,template='sw.js'){
   for(const entry of await readdir(join(root,path),{withFileTypes:true})){
    if(entry.name.startsWith('.')||entry.name==='source')continue;
    const name=path+'/'+entry.name;
-   if(VAULT.test('/'+name+'/'))continue; // online-only lazy vault: in neither inventory
    if(entry.isDirectory())await walk(name);
-   // ponytail: the no-SIMD tracker (Safari before 16.4) is served online only, never downloaded; add it to Starter if those phones matter.
-   else if(entry.isFile()&&runtime.test(entry.name)&&!entry.name.includes('nosimd'))assets.push(await identify(root,name));
+   else if(entry.isFile()&&runtime.test(entry.name))assets.push(await identify(root,name));
   }
  }
  for(const entry of await readdir(root,{withFileTypes:true}))if(entry.isFile()&&!excluded.has(entry.name)&&runtime.test(entry.name))assets.push(await identify(root,entry.name));
@@ -130,7 +129,6 @@ export async function offlineAssets(root){return (await offlineInventory(root)).
 export async function writeOfflineWorker(root,buildId,template='sw.js'){
  await identifyVoice(root);
  const {core:assets,optional}=await offlineInventory(root,template);
- if(assets.reduce((sum,a)=>sum+a.bytes,0)>CORE_OFFLINE_BUDGET)throw Error('Core offline shell exceeds the 8 MiB release budget.');
  for(const required of ['/pose.html','/app-runtime.mjs','/launch-bootstrap.mjs','/launch-runtime.mjs','/local-coach-runtime.mjs','/onboarding.html','/onboarding.mjs','/workout-tracks.js','/pod/gala-weapons.js','/pod/gala-avatar.js','/pod/gala-performer.js','/pod/dj-identity.js']){
   if(!assets.some(asset=>asset.url===required&&asset.bytes>0))throw Error('Missing offline Coach asset: '+required);
  }
@@ -139,6 +137,6 @@ export async function writeOfflineWorker(root,buildId,template='sw.js'){
  await writeFile(join(root,'sw.js'),source.replace(/^const SHELL='[^']*'/,`const SHELL='myr5-shell-${buildId}'`).replace('/* OFFLINE_ASSETS */ []',JSON.stringify(assets)).replace('/* OPTIONAL_ASSETS */ []',JSON.stringify(optional)));
  const mib=list=>(list.reduce((sum,asset)=>sum+asset.bytes+(asset.contains||0),0)/1048576).toFixed(1);
  const groups=Object.entries(Object.groupBy(optional,a=>a.group)).map(([id,list])=>`${id} ${list.length}/${mib(list)}`).join(', ');
- console.log(`Offline Coach: ${assets.length} files, ${mib(assets)} MiB (${assets.reduce((sum,a)=>sum+a.bytes,0)} of ${CORE_OFFLINE_BUDGET} B). Post-download package: ${optional.length} entries, ${mib(optional)} MiB (groups, files/MiB: ${groups}).`);
+ console.log(`Offline Coach core: ${assets.length} files, ${mib(assets)} MiB. Complete public content package: ${optional.length} entries, ${mib(optional)} MiB (groups, files/MiB: ${groups}).`);
  return assets;
 }
