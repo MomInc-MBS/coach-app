@@ -90,6 +90,6 @@ export class PerformanceWorkout {
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15)return null;
-  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
+  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+(this.bonusXp||0),earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }
