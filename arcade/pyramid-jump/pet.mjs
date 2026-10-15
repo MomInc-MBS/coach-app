@@ -32,7 +32,7 @@ export function mountPet({host,walker,playAt,apex,getMeals,dialog,recipe=readRec
  function frame(now){
   if(disposed)return;raf=requestAnimationFrame(frame);
   const hb=hostBox();
-  if(state==='peek'&&walker?.isConnected){const r=walker.getBoundingClientRect();pos={x:r.left-hb.left+r.width*.665-w/2,y:r.top-hb.top+r.height*.62-h+6};}
+  if(state==='peek'&&walker?.isConnected){const r=walker.getBoundingClientRect();pos={x:r.left-hb.left+r.width*.63-w/2,y:r.top-hb.top+r.height*.31-h+6};} // peeks out of the DR GIRLFRIEND badge pocket, up top
   if(tween){const t=Math.min(1,(now-tween.t0)/tween.ms),e=ease(t);pos={x:tween.from.x+(tween.to.x-tween.from.x)*e,y:tween.from.y+(tween.to.y-tween.from.y)*e-Math.sin(t*Math.PI)*tween.hop};if(t>=1){const done=tween.then;tween=null;done?.();}}
   else if(state==='right')pos.y+=Math.sin(now/260)*.35;
   else if(state==='bounce'){const a=apex(),b=Math.abs(Math.sin(now/230));pos={x:a.x-w/2,y:a.y-h-b*34};}
