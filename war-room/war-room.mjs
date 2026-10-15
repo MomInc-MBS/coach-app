@@ -3,14 +3,26 @@ import {authFetch} from '../auth-client.mjs';
 import {equipmentProgress} from '../pod/rest-arena.mjs';
 import {authTransitions} from '../auth-transition.mjs';
 import {createWarRoomApi} from './account-api.mjs';
+import {AURA_OPTIONS, readAuraChoice, saveAuraChoice} from '../arcade/power/aura-options.mjs';
 const css=document.createElement('link');css.rel='stylesheet';css.href='/war-room/war-room.css';document.head.append(css);
 const bayCss=document.createElement('link');bayCss.rel='stylesheet';bayCss.href='/war-room/gala-bay.css';document.head.append(bayCss);
 const $=id=>document.getElementById(id);
+const auraChoice=$('auraChoice');
 const CHECKS=[['djscratch','DJ Scratch'],['gala','Gala'],['lilboyfriend','Lil Boyfriend'],['corgi','Corgi'],['hand','Helping Hand'],['armie','Coach Armie']];
 const transitions=authTransitions(),{api}=createWarRoomApi({request:authFetch,transitions}),accountContext=createStandaloneAccountContext({transitions});
 const time=ms=>{if(!Number.isFinite(Number(ms)))return '—';const s=Math.max(0,Math.round(Number(ms)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
 const GUEST='Sign in to use your saved run and loadouts.';
 let arsenal=null;
+if(auraChoice){
+ auraChoice.replaceChildren(...AURA_OPTIONS.map(option=>{const item=document.createElement('option');item.value=option.id;item.textContent=option.label;return item;}));
+ auraChoice.value=readAuraChoice();
+ $('auraStatus').textContent=`Saved on this device · ${AURA_OPTIONS.find(option=>option.id===auraChoice.value)?.label}.`;
+ auraChoice.addEventListener('change',()=>{
+  const saved=saveAuraChoice(auraChoice.value);
+  $('auraStatus').textContent=saved?`Saved on this device · ${AURA_OPTIONS.find(option=>option.id===auraChoice.value)?.label}.`:'Could not save this aura on this device.';
+ });
+ window.addEventListener('storage',event=>{if(event.key==='myr5-aura-choice-v1'){auraChoice.value=readAuraChoice();$('auraStatus').textContent=`Aura preference updated in another MYR5 tab · ${AURA_OPTIONS.find(option=>option.id===auraChoice.value)?.label}.`;}});
+}
 // Gala weapon upgrades unlock from the signed-in account's training, as in the pod; guests keep base tiers.
 const galaProgress=progress=>{window.GalaProgress=progress?{read:()=>equipmentProgress(progress)}:undefined;window.dispatchEvent(new Event('mominc-avatar-change'));};
 transitions.subscribe(()=>{$('refresh').disabled=false;galaProgress(null);arsenal=null;$('saveLoadout').disabled=true;$('arsenalStatus').textContent='Account changed. Refresh the War Room.';});

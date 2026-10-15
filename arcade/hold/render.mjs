@@ -63,11 +63,17 @@ async function loadSprites() {
     ['flowers', 'flowers-plants_2.png'],
     ['foxIdle', 'fox/Fox/Fox_Idle.png'], ['foxRun', 'fox/Fox/Fox_Run.png'],
     ['rabbitIdle', 'rabbit/Rabbit/Rabbit_Idle.png'], ['rabbitRun', 'rabbit/Rabbit/Rabbit_Run.png'],
+    ['bearIdle', 'bear/Bear/Bear_Idle.png'], ['bearRun', 'bear/Bear/Bear_Run.png'],
+    ['boarIdle', 'boar/Boar/Boar_Idle.png'], ['boarRun', 'boar/Boar/Boar_Run.png'],
+    ['deerIdle', 'deer/Deer/Deer_Idle.png'], ['deerRun', 'deer/Deer/Deer_Run.png'],
+    ['wolfWalk', 'wolf/Wolf/Wolf_Walk.png'], ['wolfRun', 'wolf/Wolf/Wolf_Run.png'],
     ['rocks', 'rocks-original.png'],
     ['crystalBlue', 'crystals/PNG/32x32/crystal-blue.png'],
     ['crystalIcy', 'crystals/PNG/32x32/crystal-icy.png'],
     ['crystalRed', 'crystals/PNG/32x32/crystal-red-small.png'],
     ['crystalGreen', 'crystals/PNG/32x32/crystal-green-alt.png'],
+    ['crystalGold', 'crystals/PNG/32x32/crystal-gold.png'],
+    ['crystalPurple', 'crystals/PNG/32x32/crystal-purple.png'],
   ];
   const loaded = await Promise.all(specs.map(async ([key, path]) => [key, await image(path).catch(() => null)]));
   const img = Object.fromEntries(loaded);
@@ -82,6 +88,14 @@ async function loadSprites() {
   if (img.foxRun) sources.set('animal:fox:run', buildAnimal(img.foxRun, 6, 64, 36));
   if (img.rabbitIdle) sources.set('animal:rabbit:idle', buildAnimal(img.rabbitIdle, 10, 32, 26));
   if (img.rabbitRun) sources.set('animal:rabbit:run', buildAnimal(img.rabbitRun, 6, 32, 26));
+  if (img.bearIdle) sources.set('animal:bear:idle', buildAnimal(img.bearIdle, 24, 32, 33));
+  if (img.bearRun) sources.set('animal:bear:run', buildAnimal(img.bearRun, 10, 32, 33));
+  if (img.boarIdle) sources.set('animal:boar:idle', buildAnimal(img.boarIdle, 16, 32, 40));
+  if (img.boarRun) sources.set('animal:boar:run', buildAnimal(img.boarRun, 12, 32, 40));
+  if (img.deerIdle) sources.set('animal:deer:idle', buildAnimal(img.deerIdle, 15, 48, 52));
+  if (img.deerRun) sources.set('animal:deer:run', buildAnimal(img.deerRun, 9, 48, 52));
+  if (img.wolfWalk) sources.set('animal:wolf:idle', buildAnimal(img.wolfWalk, 16, 32, 40));
+  if (img.wolfRun) sources.set('animal:wolf:run', buildAnimal(img.wolfRun, 12, 32, 40));
 
   // Rocks are six 32x32 cells. Crystal sheets contain four separated sprites;
   // these bounds were inspected at native resolution, then aspect-fit to 64x64.
@@ -93,6 +107,15 @@ async function loadSprites() {
   ];
   const crystals = crystalSpecs.map(([name, rect]) => img[name] && normalize(img[name], rect, { maxW: 44, maxH: 58 })).filter(Boolean);
   if (crystals.length) sources.set('mineral:crystal', crystals);
+  const crystalPalettes = [
+    ['blue', img.crystalBlue && normalize(img.crystalBlue, [0, 7, 64, 121], { maxW: 44, maxH: 58 })],
+    ['ice', img.crystalIcy && normalize(img.crystalIcy, [128, 3, 32, 61], { maxW: 44, maxH: 58 })],
+    ['red', img.crystalRed && normalize(img.crystalRed, [2, 0, 30, 32], { maxW: 44, maxH: 58 })],
+    ['green', img.crystalGreen && normalize(img.crystalGreen, [9, 18, 45, 77], { maxW: 44, maxH: 58 })],
+    ['gold', img.crystalGold && normalize(img.crystalGold, [0, 0, 32, 32], { maxW: 44, maxH: 58 })],
+    ['purple', img.crystalPurple && normalize(img.crystalPurple, [0, 0, 32, 32], { maxW: 44, maxH: 58 })],
+  ];
+  for (const [palette, sprite] of crystalPalettes) if (sprite) sources.set(`mineral:crystal:${palette}`, [sprite]);
 }
 
 export function preloadEcosystemSprites() {
@@ -108,7 +131,7 @@ function getSprite(e) {
     const frame = Math.floor(Math.max(0, e.phaseTime || 0) * (mode === 'run' ? 10 : 2)) % frames.length;
     return frames[frame];
   }
-  const variants = sources.get(`mineral:${e.variant}`);
+  const variants = sources.get(e.palette ? `mineral:${e.variant}:${e.palette}` : `mineral:${e.variant}`);
   if (!variants?.length) return null;
   return variants[Math.abs((e.id || 0) * 7) % variants.length];
 }

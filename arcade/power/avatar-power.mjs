@@ -2,6 +2,8 @@
 // calls the coach's play/walk APIs, so existing gestures remain in control.
 import { renderPower } from './power.mjs';
 import { renderBlizzard } from '../hold/blizzard.mjs';
+import { renderEcosystem } from '../hold/render.mjs';
+import { AURA_OPTIONS, readAuraChoice, resolveAuraChoice } from './aura-options.mjs';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 function randomFor(seed = 1) {
@@ -45,6 +47,26 @@ export function avatarLayerOpacity(cameraTracking) { return cameraTracking ? 0.0
 function stageFor(card) {
   if (card?.matches?.('.myr5-companion-stage')) return card;
   return card?.querySelector?.('.myr5-companion-stage') ?? card;
+}
+function renderEcologyAura(ctx, state, id) {
+  const ecology = AURA_OPTIONS.find(option => option.id === id)?.ecology;
+  if (!ecology) return false;
+  const { w, h, time = 0 } = state, ground = h * .9;
+  let entities;
+  if (ecology.kind === 'plant') {
+    entities = [.22, .5, .78].map((fraction, index) => ({ id: index + 1, kind: 'plant', variant: ecology.variant,
+      x: w * fraction, y: ground + (index === 1 ? 1 : 0), size: Math.min(54, w * .38), growth: .92 + index * .04,
+      alpha: .88, phaseTime: time + index * .7 }));
+  } else if (ecology.kind === 'animal') {
+    entities = [{ id: 1, kind: 'animal', variant: ecology.variant, phase: 'idle', x: w * .5, y: ground,
+      size: Math.min(50, w * .4), growth: 1, alpha: .92, phaseTime: time }];
+  } else {
+    entities = [.24, .5, .76].map((fraction, index) => ({ id: index + 1, kind: 'mineral', variant: ecology.variant,
+      palette: ecology.palette, x: w * fraction, y: ground, size: Math.min(30, w * .22), growth: 1,
+      alpha: .9, phaseTime: time }));
+  }
+  renderEcosystem(ctx, { entities, debris: [] });
+  return true;
 }
 export function avatarPowerState(record, width, height, time = 0, pulse = 0, walking = false, powerAnchors = null) {
   const style = record?.equipped, stored = style && record.styles?.[style];
@@ -125,8 +147,10 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
 
   const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: false, addEventListener() {}, removeEventListener() {} };
   const schedule = createAvatarPowerSchedule({ seed });
+  const random = randomFor((Number(seed) ^ 0x41555241) >>> 0);
+  let auraChoice = readAuraChoice(), currentEffect = resolveAuraChoice(auraChoice, random);
   let record = retained?.read?.() ?? { version: 1, equipped: null, styles: {} };
-  let fingerprint = JSON.stringify(record), width = 1, height = 1, dpr = 1, lastFrame = 0, lastSizeCheck = 0, time = 0, pulse = 0, wasActive = false, raf = 0, disposed = false;
+  let fingerprint = JSON.stringify(record), width = 1, height = 1, dpr = 1, lastFrame = 0, lastSizeCheck = 0, time = 0, pulse = 0, previewRemaining = 0, wasActive = false, raf = 0, disposed = false;
   let resizeObserver = null;
 
   function resize() {
@@ -148,6 +172,10 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
       ctx.clearRect(0, 0, width, height); canvas.style.display = 'none';
     }
   }
+  function choiceChanged() {
+    auraChoice = readAuraChoice(); currentEffect = resolveAuraChoice(auraChoice, random);
+    schedule.reset(); pulse = 1; previewRemaining = 2.4; wasActive = false;
+  }
   function paint(now) {
     if (disposed) return;
     raf = requestAnimationFrame(paint);
@@ -157,21 +185,32 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     if (!resizeObserver && now - lastSizeCheck >= 500) { lastSizeCheck = now; resize(); }
     let stats = null;
     try { stats = globalThis.myr5Creature?.stats?.() ?? null; } catch { /* coach stats are an optional visibility hint */ }
-    const canShow = !!record.styles?.[record.equipped] && isVisible(card, stage, canvas, stats);
-    const active = schedule.step(dt, canShow, reduced.matches);
+    const earned = !!record.styles?.[record.equipped];
+    const canShow = isVisible(card, stage, canvas, stats);
+    previewRemaining = Math.max(0, previewRemaining - (canShow ? dt : 0));
+    const active = previewRemaining > 0 ? 1 : schedule.step(dt, canShow, reduced.matches);
     if (!active) { wasActive = false; pulse = 0; ctx.clearRect(0, 0, width, height); canvas.style.display = 'none'; return; }
     canvas.style.display = 'block';
     canvas.style.opacity = String(avatarLayerOpacity(document.body?.dataset?.tracking === 'true'));
     const reducedMotion = reduced.matches;
     time += reducedMotion ? 0 : dt;
-    if (!wasActive) pulse = 1;
+    if (!wasActive) { pulse = 1; currentEffect = resolveAuraChoice(auraChoice, random); }
     wasActive = true;
     pulse = Math.max(0, pulse - dt * 2.5);
-    const state = avatarPowerState(record, width, height, reducedMotion ? 0 : time,
+    const visualRecord = earned ? record : { equipped: 'aura', styles: { aura: { units: 1, maxUnits: 1, intensity: .38, tier: 1 } } };
+    const state = avatarPowerState(visualRecord, width, height, reducedMotion ? 0 : time,
       reducedMotion ? 0 : pulse, stats?.gesture === 'walk' || stats?.phoneMotionPhase === 'walk', stats?.powerAnchors);
+    if (state?.blizzard && currentEffect !== 'classic') {
+      Object.assign(state, { w: width, h: height, route: record.equipped, active: true,
+        intensity: record.styles[record.equipped]?.intensity ?? 0, tier: record.styles[record.equipped]?.tier ?? 0,
+        points: [] });
+    }
+    if (state) state.effect = currentEffect;
     ctx.clearRect(0, 0, width, height);
-    if (state?.blizzard) renderBlizzard(ctx, state);
-    else if (state) renderPower(ctx, state);
+    if (state && !renderEcologyAura(ctx, state, state.effect)) {
+      if (state?.blizzard && (!state.effect || state.effect === 'classic')) renderBlizzard(ctx, state);
+      else renderPower(ctx, state);
+    }
   }
 
   resize();
@@ -182,12 +221,17 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     lastFrame = 0;
   };
   document.addEventListener?.('visibilitychange', visibility);
+  globalThis.addEventListener?.('myr5:aura-choice-change', choiceChanged);
+  const storageChanged = event => { if (event?.key === 'myr5-aura-choice-v1') choiceChanged(); };
+  globalThis.addEventListener?.('storage', storageChanged);
   globalThis.addEventListener?.('pagehide', stop, { once: true });
   raf = requestAnimationFrame(paint);
   function stop() {
     if (disposed) return;
     disposed = true; cancelAnimationFrame(raf); resizeObserver?.disconnect();
     globalThis.removeEventListener?.('resize', resize); globalThis.removeEventListener?.('pagehide', stop);
+    globalThis.removeEventListener?.('myr5:aura-choice-change', choiceChanged);
+    globalThis.removeEventListener?.('storage', storageChanged);
     document.removeEventListener?.('visibilitychange', visibility); schedule.dispose();
     ctx.clearRect(0, 0, width, height); canvas.remove();
   }

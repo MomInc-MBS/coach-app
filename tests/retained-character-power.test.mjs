@@ -195,7 +195,7 @@ test('avatar bursts use visible time, stop cleanly when hidden, and shorten with
 });
 
 test('avatar mount renders inside its card, dims during camera tracking, and never commandeers gestures', t => {
-  const saved = new Map(['document','requestAnimationFrame','cancelAnimationFrame','ResizeObserver','matchMedia','getComputedStyle','myr5Creature']
+  const saved = new Map(['document','requestAnimationFrame','cancelAnimationFrame','ResizeObserver','matchMedia','getComputedStyle','myr5Creature','localStorage']
     .map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   t.after(() => { for (const [key, descriptor] of saved) descriptor ? Object.defineProperty(globalThis, key, descriptor) : delete globalThis[key]; });
   let draws = 0, frameId = 0, frameQueue = new Map(), plays = 0, walks = 0;
@@ -215,7 +215,8 @@ test('avatar mount renders inside its card, dims during camera tracking, and nev
     getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1'}),
     requestAnimationFrame(callback){const id=++frameId;frameQueue.set(id,callback);return id;},
     cancelAnimationFrame(id){frameQueue.delete(id);},
-    myr5Creature:{stats:()=>({visible:true,paused:false,gesture:'walk'}),play(){plays++;},walk(){walks++;}} });
+    myr5Creature:{stats:()=>({visible:true,paused:false,gesture:'walk'}),play(){plays++;},walk(){walks++;}},
+    localStorage:{getItem:()=> 'classic'} });
   const retained = { read:()=>({version:1,equipped:'aura',styles:{aura:{intensity:.8,tier:5,units:24,maxUnits:30,kind:'reps',updatedAt:1}}}) };
   const mounted = mountAvatarPower({card,retained,seed:8}), canvas = stage.child;
   const runFrames = (count,start) => {

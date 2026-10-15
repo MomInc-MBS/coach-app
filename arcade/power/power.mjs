@@ -2,6 +2,7 @@
 // progression rules and CC0 pixel effect sheets; no new rendering dependency.
 import { EXERCISES } from '../../exercise-library.mjs';
 import { REP_CAP, HOLD_BLOCK_SECONDS, HOLD_CAP_SECONDS, repRate } from '../../progression-rules.mjs';
+import { AURA_OPTIONS } from './aura-options.mjs';
 
 export const POWER_STALE_MS = 1000;
 const REP_BANDS = Array.from({ length: REP_CAP - 1 }, (_, i) => i + 2)
@@ -227,6 +228,41 @@ function drawSheetFrame(ctx, key, frame, x, y, size, alpha = 1, rotation = 0) {
   ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
   ctx.restore();
 }
+const auraSources = new Map(AURA_OPTIONS.filter(option => option.asset).map(option => [option.id, {
+  path: `/arcade/${option.id === 'blizzard' ? 'hold' : 'power'}/assets/${option.asset}`,
+  columns: option.columns, rows: option.rows, layout: option.layout ?? 'body',
+}]));
+function loadAuraImage(id) {
+  const source = auraSources.get(id);
+  if (!source) return null;
+  const key = `aura:${id}`;
+  if (imageCache.has(key)) return imageCache.get(key);
+  if (typeof Image === 'undefined') return null;
+  const image = new Image(); imageCache.set(key, image);
+  image.onerror = () => imageCache.delete(key); image.src = source.path;
+  return image;
+}
+function drawAuraFrame(ctx, id, frame, x, y, size, alpha = 1, rotation = 0) {
+  const source = auraSources.get(id), image = loadAuraImage(id);
+  if (!source || !image?.complete || !image.naturalWidth || typeof document === 'undefined') return;
+  const frameCount = source.columns * source.rows;
+  const sourceFrame = ((frame % frameCount) + frameCount) % frameCount;
+  const cacheKey = `aura:${id}:${sourceFrame}`;
+  let sprite = frameCache.get(cacheKey);
+  if (!sprite) {
+    sprite = document.createElement('canvas'); sprite.width = sprite.height = 64;
+    const sourceContext = sprite.getContext('2d');
+    if (!sourceContext) return;
+    sourceContext.imageSmoothingEnabled = false;
+    const frameSize = 100;
+    sourceContext.drawImage(image, (sourceFrame % source.columns) * frameSize,
+      Math.floor(sourceFrame / source.columns) * frameSize, frameSize, frameSize, 0, 0, 64, 64);
+    frameCache.set(cacheKey, sprite);
+  }
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(Math.round(x), Math.round(y));
+  if (rotation) ctx.rotate(rotation);
+  ctx.drawImage(sprite, -size / 2, -size / 2, size, size); ctx.restore();
+}
 function drawPixelCrack(ctx, x, y, size, tier, time, seed) {
   const branches = Math.min(6, 2 + Math.floor(tier * 0.7));
   const arm = Math.max(4, Math.round(size * (0.55 + tier * 0.03)));
@@ -242,8 +278,8 @@ function drawPixelCrack(ctx, x, y, size, tier, time, seed) {
   ctx.restore();
 }
 function pointPixel(state, index) {
-  const p = state.points[index];
-  return visible(state.points, index) ? { x: p.x * state.w, y: p.y * state.h } : null;
+  const points = state.points ?? [], p = points[index];
+  return visible(points, index) ? { x: p.x * state.w, y: p.y * state.h } : null;
 }
 function auraAccents(state) {
   const pts = [23, 24, 25, 26, 27, 28].map(i => [i, pointPixel(state, i)]).filter(([, p]) => p);
@@ -278,8 +314,27 @@ export function renderPower(ctx, state) {
   const layer = renderPower.layerContext;
   if (!layer) return;
   layer.clearRect(0, 0, width, height); layer.imageSmoothingEnabled = false; layer.globalCompositeOperation = 'source-over';
-  const frame = Math.floor(state.time * 7), alpha = 0.55;
-  if (state.route === 'aura') {
+  const frame = Math.floor(state.time * 7);
+  if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
+    const source = auraSources.get(state.effect), cx = state.w * .5, cy = state.h * .48;
+    const anchors = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
+      .map(index => pointPixel(state, index)).filter(Boolean);
+    if (source.layout === 'circle') {
+      const size = Math.min(state.w * .86, state.h * .72);
+      drawAuraFrame(layer, state.effect, frame, cx, state.h * .58, size, .76, state.time * .08);
+    } else {
+      const count = state.effect === 'magicbubbles' ? 8 : source.layout === 'orbit' ? 5 : 4;
+      for (let i = 0; i < count; i++) {
+        const anchor = anchors.length ? anchors[(i * 3 + Math.floor(state.time)) % anchors.length] : { x: cx, y: cy };
+        const phase = state.time * (source.layout === 'orbit' ? .8 : .35) + i * 2.399963229728653;
+        const radiusX = state.w * (source.layout === 'orbit' ? .15 : .08);
+        const radiusY = state.h * (source.layout === 'orbit' ? .11 : .055);
+        const size = Math.min(state.w * .38, state.h * .24) * (source.layout === 'orbit' ? .9 : 1);
+        drawAuraFrame(layer, state.effect, frame + i * 7, anchor.x + Math.cos(phase) * radiusX,
+          anchor.y + Math.sin(phase) * radiusY, size, .78, source.layout === 'orbit' ? phase : Math.sin(phase) * .25);
+      }
+    }
+  } else if (state.route === 'aura') {
     for (const a of auraAccents(state)) drawSheetFrame(layer, 'brightfire', frame + a.index * 3, a.x, a.y,
       12 + Math.max(0, state.tier - 1) * 3, 0.9, a.angle);
   } else if (state.route === 'lightning') {
@@ -291,12 +346,17 @@ export function renderPower(ctx, state) {
     }
   }
   if (state.pulse > 0) {
-    const accents = state.route === 'lightning' ? lightningAccents(state).slice(0, 4) : state.route === 'aura' ? auraAccents(state).slice(0, 6) : state.contacts.slice(0, 4);
-    for (const p of accents) {
-      const point = Number.isFinite(p.x) ? p : { x: p.x, y: p.y };
-      if (state.route === 'floor' && p.index != null) drawSheetFrame(layer, 'fire', frame + 9, point.x, point.y, 15 + state.tier * 1.5, 0.9 * state.pulse, 0);
-      else if (state.route === 'lightning') drawSheetFrame(layer, 'lightning', frame % 8, point.x, point.y, 15 + state.tier * 1.4, 0.9 * state.pulse, 0);
-      else drawSheetFrame(layer, 'brightfire', frame + 17, point.x, point.y, 16 + state.tier * 1.6, 0.9 * state.pulse, 0);
+    if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
+      drawAuraFrame(layer, state.effect, frame + 23, state.w * .5, state.h * .48,
+        Math.min(state.w * .56, state.h * .42), .9 * state.pulse, 0);
+    } else {
+      const accents = state.route === 'lightning' ? lightningAccents(state).slice(0, 4) : state.route === 'aura' ? auraAccents(state).slice(0, 6) : state.contacts.slice(0, 4);
+      for (const p of accents) {
+        const point = Number.isFinite(p.x) ? p : { x: p.x, y: p.y };
+        if (state.route === 'floor' && p.index != null) drawSheetFrame(layer, 'fire', frame + 9, point.x, point.y, 15 + state.tier * 1.5, 0.9 * state.pulse, 0);
+        else if (state.route === 'lightning') drawSheetFrame(layer, 'lightning', frame % 8, point.x, point.y, 15 + state.tier * 1.4, 0.9 * state.pulse, 0);
+        else drawSheetFrame(layer, 'brightfire', frame + 17, point.x, point.y, 16 + state.tier * 1.6, 0.9 * state.pulse, 0);
+      }
     }
   }
   ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalCompositeOperation = 'source-over';

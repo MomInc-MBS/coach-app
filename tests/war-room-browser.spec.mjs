@@ -18,6 +18,17 @@ test.beforeAll(async()=>{server=http.createServer(async(req,res)=>{const path=ne
   unlocked=false;const requests=[];page.on('request',r=>requests.push(new URL(r.url()).pathname));
   await page.goto(base+'/war-room/');await expect(page.locator('h1')).toHaveText('WAR ROOM');
   await expect(page.locator('#access')).toHaveText('Public War Room');
+  await expect(page.locator('#aurasTitle')).toHaveText('Auras');
+  await expect(page.locator('#auraChoice option')).toHaveCount(36);
+  await expect(page.locator('#auraChoice')).toHaveValue('random');
+  await page.locator('.controls-drawer > summary').click();
+  await page.locator('#auraChoice').selectOption('nebula');
+  await expect(page.locator('#auraStatus')).toContainText('Nebula');
+  expect(await page.evaluate(()=>localStorage.getItem('myr5-aura-choice-v1'))).toBe('nebula');
+  await page.reload();
+  await expect(page.locator('#auraChoice')).toHaveValue('nebula');
+  await page.locator('.controls-drawer > summary').click();
+  await expect(page.locator('#auraStatus')).toContainText('Nebula');
   await expect(page.locator('#leaderRows tr')).toHaveCount(1);
   await expect(page.locator('#saveLoadout')).toBeDisabled();
   await expect(page.locator('#arsenalStatus')).not.toContainText('Coach Army');

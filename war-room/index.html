@@ -32,6 +32,13 @@
           <h2 id="identityTitle">Identity</h2>
           <p id="identity">No DJ identity.</p>
         </section>
+        <section class="aura-controls" aria-labelledby="aurasTitle">
+          <h2 id="aurasTitle">Auras</h2>
+          <p class="aura-help">Choose a coach aura. Random rotates through the available pixel effects during power bursts.</p>
+          <label for="auraChoice">Aura</label>
+          <select id="auraChoice" aria-describedby="auraStatus"></select>
+          <p id="auraStatus" role="status" aria-live="polite"></p>
+        </section>
         <section class="board" aria-labelledby="boardTitle">
           <div class="section-heading"><h2 id="boardTitle">Rankings</h2><button id="refresh" type="button">Refresh</button></div>
           <p id="boardStatus" role="status">Loading…</p>
