@@ -26,6 +26,16 @@ function fallbackGroup(style) {
 function styleForGroup(group) {
   return group === 'shoulders' ? 'lightning' : group === 'floor' ? 'floor' : group === 'core' ? 'blizzard' : 'aura';
 }
+function groupForContext(mode, previewGroup, record) {
+  if (previewGroup) return previewGroup;
+  if (mode && EXERCISES[mode]) return effectGroupForExercise(mode);
+  return record.styles?.[record.equipped]?.group ?? fallbackGroup(record.equipped) ?? 'legs';
+}
+export function avatarEffectContext({ mode = null, previewGroup = null, record = null, effectChoices = {}, random = Math.random } = {}) {
+  const group = groupForContext(mode, previewGroup, record ?? { styles: {} });
+  return { group, effect: group ? resolveEffectForGroup(group, effectChoices, random) : null };
+}
+export function usesNativeBlizzard(effect) { return effect === 'blizzard'; }
 
 /** Deterministic visible-time scheduler, exported for direct timing tests. */
 export function createAvatarPowerSchedule({ seed = 1, minInterval = 12, maxInterval = 24, duration = 1.4 } = {}) {
@@ -163,15 +173,14 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
   const random = randomFor((Number(seed) ^ 0x41555241) >>> 0);
   let effectChoices = readEffectChoices(), previewGroup = null, currentEffect = null;
   let record = retained?.read?.() ?? { version: 1, equipped: null, styles: {} };
-  function activeGroup() {
-    const mode = currentExerciseMode();
-    if (mode && EXERCISES[mode]) return effectGroupForExercise(mode);
-    return record.styles?.[record.equipped]?.group ?? fallbackGroup(record.equipped) ?? 'legs';
+  function context(groupPreview = previewGroup) {
+    return avatarEffectContext({ mode: currentExerciseMode(), previewGroup: groupPreview, record, effectChoices, random });
   }
-  function selectedEffect(group = previewGroup ?? activeGroup()) {
+  let effectiveGroup = context().group;
+  function selectedEffect(group = effectiveGroup) {
     return group ? resolveEffectForGroup(group, effectChoices, random) : null;
   }
-  currentEffect = selectedEffect();
+  currentEffect = context().effect;
   let fingerprint = JSON.stringify(record), width = 1, height = 1, dpr = 1, lastFrame = 0, lastSizeCheck = 0, time = 0, pulse = 0, previewRemaining = 0, wasActive = false, raf = 0, disposed = false;
   let resizeObserver = null;
 
@@ -191,14 +200,14 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     const nextFingerprint = JSON.stringify(next);
     if (nextFingerprint !== fingerprint) {
       record = next; fingerprint = nextFingerprint; schedule.reset(); pulse = 0; wasActive = false;
-      currentEffect = selectedEffect();
+      effectiveGroup = context().group; currentEffect = context().effect;
       ctx.clearRect(0, 0, width, height); canvas.style.display = 'none';
     }
   }
   function choiceChanged(event) {
     effectChoices = readEffectChoices();
     previewGroup = event?.detail?.group ?? null;
-    currentEffect = selectedEffect();
+    effectiveGroup = context().group; currentEffect = context().effect;
     schedule.reset(); wasActive = false;
     if (previewGroup) { pulse = 1; previewRemaining = 2.4; }
     else pulse = 0;
@@ -213,13 +222,19 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     let stats = null;
     try { stats = globalThis.myr5Creature?.stats?.() ?? null; } catch { /* coach stats are an optional visibility hint */ }
     const mode = currentExerciseMode();
+    const nextGroup = context().group;
+    if (nextGroup !== effectiveGroup) {
+      effectiveGroup = nextGroup; currentEffect = selectedEffect(effectiveGroup);
+      schedule.reset(); wasActive = false; pulse = 0;
+      ctx.clearRect(0, 0, width, height); canvas.style.display = 'none';
+    }
     if (previewRemaining <= 0 && mode && EXERCISES[mode] && !effectGroupForExercise(mode)) {
       wasActive = false; pulse = 0; ctx.clearRect(0, 0, width, height); canvas.style.display = 'none'; return;
     }
     const canShow = isVisible(card, stage, canvas, stats);
     const hadPreview = previewRemaining > 0;
     previewRemaining = Math.max(0, previewRemaining - (canShow ? dt : 0));
-    if (hadPreview && previewRemaining === 0) { previewGroup = null; currentEffect = selectedEffect(); }
+    if (hadPreview && previewRemaining === 0) { previewGroup = null; effectiveGroup = context(null).group; currentEffect = selectedEffect(effectiveGroup); }
     const active = previewRemaining > 0 ? 1 : schedule.step(dt, canShow, reduced.matches);
     if (!active) { wasActive = false; pulse = 0; ctx.clearRect(0, 0, width, height); canvas.style.display = 'none'; return; }
     canvas.style.display = 'block';
@@ -229,14 +244,14 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     if (!wasActive) { pulse = 1; currentEffect = selectedEffect(); }
     wasActive = true;
     pulse = Math.max(0, pulse - dt * 2.5);
-    const selectedStyle = styleForGroup(previewGroup ?? activeGroup());
+    const selectedStyle = styleForGroup(effectiveGroup);
     const earnedStyle = record.styles?.[selectedStyle] ?? record.styles?.[record.equipped];
     const visualRecord = earnedStyle
       ? { equipped: selectedStyle, styles: { [selectedStyle]: earnedStyle } }
       : { equipped: selectedStyle, styles: { [selectedStyle]: { units: 1, maxUnits: 1, intensity: .38, tier: 1 } } };
     const state = avatarPowerState(visualRecord, width, height, reducedMotion ? 0 : time,
       reducedMotion ? 0 : pulse, stats?.gesture === 'walk' || stats?.phoneMotionPhase === 'walk', stats?.powerAnchors);
-    if (state?.blizzard && currentEffect !== 'classic') {
+    if (state?.blizzard && !usesNativeBlizzard(currentEffect)) {
       Object.assign(state, { w: width, h: height, route: selectedStyle, active: true,
         intensity: visualRecord.styles[selectedStyle]?.intensity ?? 0, tier: visualRecord.styles[selectedStyle]?.tier ?? 0,
         points: [] });
@@ -244,7 +259,7 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     if (state) state.effect = currentEffect;
     ctx.clearRect(0, 0, width, height);
     if (state && !renderEcologyAura(ctx, state, state.effect)) {
-      if (state?.blizzard && (!state.effect || state.effect === 'classic')) renderBlizzard(ctx, state);
+      if (state?.blizzard && usesNativeBlizzard(state.effect)) renderBlizzard(ctx, state);
       else renderPower(ctx, state);
     }
   }

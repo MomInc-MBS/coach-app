@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createRetainedPower, RETAINED_POWER_KEY } from '../arcade/power/retained-power.mjs';
-import { avatarLayerOpacity, avatarPowerState, createAvatarPowerSchedule, mountAvatarPower } from '../arcade/power/avatar-power.mjs';
+import { avatarEffectContext, avatarLayerOpacity, avatarPowerState, createAvatarPowerSchedule, mountAvatarPower, usesNativeBlizzard } from '../arcade/power/avatar-power.mjs';
 import { projectAvatarPowerAnchors } from '../creature/power-anchors.mjs';
 import { powerProgress, retainedPowerStyle, supportContacts } from '../arcade/power/power.mjs';
 import { EXERCISES } from '../exercise-library.mjs';
@@ -111,6 +111,21 @@ test('avatar states cover all four retained visuals and Blizzard stays sparse ar
   assert.ok(state.snow.length <= 48);
   const still = avatarPowerState({ equipped: 'blizzard', styles: { blizzard: { intensity: .8, tier: 5, units: 50, maxUnits: 120, kind: 'hold' } } }, 132, 190, 1.2, 1, false);
   assert.notEqual(state.iceEdges[0].x1, still.iceEdges[0].x1);
+});
+
+test('avatar effect context follows the current exercise group and suppresses cardio history', () => {
+  const record = { equipped: 'aura', styles: { aura: { group: 'legs' } } };
+  const choices = { legs: 'classic', shoulders: 'lightning', core: 'blizzard' };
+  assert.deepEqual(avatarEffectContext({ mode: 'squat', record, effectChoices: choices }), { group: 'legs', effect: 'classic' });
+  assert.deepEqual(avatarEffectContext({ mode: 'front-raise', record, effectChoices: choices }), { group: 'shoulders', effect: 'lightning' });
+  assert.deepEqual(avatarEffectContext({ mode: 'tree', record, effectChoices: choices }), { group: 'core', effect: 'blizzard' });
+  assert.deepEqual(avatarEffectContext({ mode: 'jogging', record, effectChoices: choices }), { group: null, effect: null });
+});
+
+test('native Blizzard remains on its hold renderer while other core variants use their sprites', () => {
+  assert.equal(usesNativeBlizzard('blizzard'), true);
+  assert.equal(usesNativeBlizzard('protectioncircle'), false);
+  assert.equal(usesNativeBlizzard('loading'), false);
 });
 
 test('retained floor effects follow projected animated soles and omit hidden or offscreen feet', () => {
