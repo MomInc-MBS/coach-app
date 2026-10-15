@@ -106,7 +106,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  const idle=()=>!busy()&&!document.hidden&&!document.querySelector('dialog[open]');
  const cellular=()=>navigator.connection?.type==='cellular'||navigator.connection?.saveData===true;
  // null: the whole package (a download chosen before the menu existed, or Everything).
- function chosen(){try{const list=JSON.parse(read(localStorage,CHOSEN));if(Array.isArray(list))return list;}catch{}return read(localStorage,STATE)?null:[];}
+ function chosen(){if(read(localStorage,INSTALL_PENDING)==='1')return null;try{const list=JSON.parse(read(localStorage,CHOSEN));if(Array.isArray(list))return list;}catch{}return read(localStorage,STATE)?null:[];}
  const boxes=()=>[...list.querySelectorAll('[data-group]')];
  function paint(){
   const total=plan?.total||0,left=Math.max(0,(plan?.remaining||0)-got),done=total-left;
