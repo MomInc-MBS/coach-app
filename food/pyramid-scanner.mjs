@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
-import {pyramidTiles,mealNutrients,todayTiles} from './pyramid-tiles.mjs';
+import {pyramidTiles,mealNutrients,todayTiles,foodPhotoToday} from './pyramid-tiles.mjs';
 import {offAxis} from '../modules/portal/peer.mjs'; // #135: tilt looks round the pyramid through the portal window
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
@@ -123,7 +123,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  const cancelled=()=>new DOMException('Pyramid scanner closed.','AbortError');
  if(signal?.aborted)throw cancelled();
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- let disposed=false,raf=0,observer,timer;
+ let disposed=false,raf=0,observer,timer,pet=null,petAsked=false,ready=false;
  let meal=pyramidTiles(null,null),today=todayTiles(null),mode=0,dial=-1,typing=false,uncertain=false,guessName='';
  let zoomKey=null,zoomReturn=null,flyArmed=false,flyTimer=0,spin=null;
  const flights=[]; // numbers flying from the lens to the screens
@@ -176,7 +176,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  function disposeTree(root){root.traverse(node=>{node.geometry?.dispose();if(node.material)disposeMat(node.material);});}
  function dispose(){
   if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
-  releaseRoomStyle();delete dialogEl?.dataset.asking;
+  releaseRoomStyle();delete dialogEl?.dataset.asking;pet?.dispose?.();window.removeEventListener('myr5:food-photo-ready',wakePet);
   signal?.removeEventListener('abort',dispose);download.abort();clearTimeout(timer);clearTimeout(flyTimer);
   window.removeEventListener('myr5:meal-nutrition',onNutrition);window.removeEventListener('myr5:food-selected',onSelected);window.removeEventListener('myr5:food-reset',onReset);
   dialogEl?.removeEventListener('cancel',onCancel);
@@ -297,6 +297,13 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  function spinTo(to){velocity=0;if(reduced){spin=null;setRotation(to);return;}const from=pivot.rotation.y;spin={from,to,t0:performance.now(),ms:Math.min(1100,380+Math.abs(to-from)*110)};}
  flip.onclick=()=>spinTo(Math.round(pivot.rotation.y/TAU)*TAU+TAU);
  mode=1;syncMode(); // initialise the indicator's labels (mode 0 = last meal)
+
+ // ---- Photo days: Dr. Girlfriend's pocket holds a paper friend (arcade/pyramid-jump, lazy and never core).
+ const apex=()=>toScreen(tmp2.set(0,modelSize.y/2,0).applyMatrix4(stage.matrixWorld));
+ function wakePet(){
+  if(disposed||petAsked||!ready||!foodPhotoToday())return;petAsked=true;
+  import('../arcade/pyramid-jump/pet.mjs').then(m=>{if(!disposed)pet=m.mountPet({host,walker:host.querySelector('.dg-pyramid-walker'),playAt:flip,apex,getMeals,dialog:dialogEl});}).catch(()=>{petAsked=false;});
+ }
 
  // ---- Knobs: glow, wiggle and steam feedback (unchanged), now each with a job (D36).
  function spawnSteam(k){
@@ -509,7 +516,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   }else lensTag.hidden=true;
 
   faces();repaint();
-  delete host.dataset.loading;ui.hidden=false;
+  delete host.dataset.loading;ui.hidden=false;ready=true;wakePet();window.addEventListener('myr5:food-photo-ready',wakePet);
   if(loading){if(reduced)loading.remove();else{loading.dataset.out='';loading.addEventListener('transitionend',()=>loading.remove(),{once:true});}}
   observer=new ResizeObserver(reframe);observer.observe(host);reframe();
   let last=performance.now();
