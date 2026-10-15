@@ -1,0 +1,5 @@
+<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="margin:0;background:#1a1030"><section id=cameraWorkout style="position:fixed;inset:0"><div id=coachOverlay style="position:absolute;inset:0"></div></section>
+<script type=module>
+import {mountCameraSlice} from '/arcade/slice/camera-slice.mjs';
+window.mount=(mode)=>window.s=mountCameraSlice({host:document.getElementById('coachOverlay'),mode,seed:7,onXp:n=>window.xp=(window.xp||0)+n});
+</script>

@@ -1,8 +1,11 @@
 // Fruit-Ninja slice engine: input-agnostic (pose limbs, finger swipes, taps all call hitSegment) + 2D pixel renderer.
 // Logical canvas is small (default 180x320); scale it up in CSS with image-rendering:pixelated.
 // Optional art: arcade/slice/sprites/<type>.png = 8 rotation frames of 64px cells in one row (Tripo renders replace the procedural pixels).
-export const TYPES={rock:['#8a7a68','#5e5246','#b9a88f'],ice:['#bfe9ff','#6fb7e8','#ffffff'],planet:['#e0743c','#9c3d78','#ffd27a'],moon:['#cfcfd8','#8d8d9a','#f4f4ff'],flare:['#ffb400','#ff5a1f','#fff3a0']};
-export const TYPE_IDS=Object.keys(TYPES);
+// [main, shade, light] per object id. Every id's art is arcade/slice/sprites/<id>.png (Tripo render) or, until it exists,
+// the canister placeholder sheet tinted with the main colour.
+export const TYPES={'asteroid-rock':['#8a7a68','#5e5246','#b9a88f'],'asteroid-ember':['#d0552a','#7a2a14','#ffb070'],'ice-comet':['#9fdcff','#4f9fd8','#ffffff'],'mini-planet':['#c060d8','#6a3a9c','#ffd27a'],moon:['#cfcfd8','#8d8d9a','#f4f4ff'],'sun-chunk':['#ffb400','#ff5a1f','#fff3a0'],'satellite-junk':['#9aa6b4','#4a5566','#e8f0ff'],'xp-star':['#ffe14a','#c8901a','#fffbd0'],'xp-orb':['#4affc8','#1a9c80','#d8fff4']};
+export const TYPE_IDS=Object.keys(TYPES).filter(k=>!k.startsWith('xp-'));
+export const BONUS_IDS=['xp-star','xp-orb'];
 const GRAVITY=260,TAU=Math.PI*2;
 export function rng(seed=1){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 export function distPointSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l)):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
@@ -15,11 +18,11 @@ export function pathCurvature(pts){
  for(const q of p)bow=Math.max(bow,distPointSeg(q,a,b));
  return chord<path*.25?1:Math.min(1,bow/Math.max(chord,1e-9)*2); // loops back on itself = fully curved
 }
-export const pathKind=(pts,limit=.3)=>pathCurvature(pts)>limit?'slice':'explode';
+export const pathKind=(pts,limit=.2)=>pathCurvature(pts)>limit?'slice':'explode';
 // samples = whole-body motion per second (screen heights/s); still enough = shield up.
-export const stillness=(samples,max=.35)=>samples.length>0&&samples.reduce((s,v)=>s+v,0)/samples.length<=max;
+export const stillness=(samples,max=.1)=>samples.length>0&&samples.reduce((s,v)=>s+v,0)/samples.length<=max;
 
-export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=w/2,stillMax=.35,strikes=true,onEvent=()=>{}}={}){
+export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=w/2,stillMax=.1,strikes=true,onEvent=()=>{}}={}){
  const rand=rng(seed),pick=a=>a[Math.floor(rand()*a.length)];
  const e={w,h,mode,coachX,objects:[],halves:[],parts:[],stains:[],trail:[],pops:[],t:0,wave:0,strikes:0,score:0,xp:0,combo:0,best:0,hits:0,over:false,
   laser:{phase:'idle',t:0,tx:0,ty:0,samples:[],result:null,flash:0},cool:0,spawnIn:1,bonusIn:4,swipeAt:-9,swipeN:0,speed:1};
@@ -31,7 +34,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   return mk(pick(TYPE_IDS),coachX,h-4,(tx-coachX)/T,vy,11+rand()*6);};
  // Generic thrower (rest mode: coach throws DOWN from the top): e.spawn({type,x,y,vx,vy,r,bonus}); non-bonus objects feel gravity.
  e.spawn=({type=pick(TYPE_IDS),x,y,vx=0,vy=0,r=12,bonus=false})=>mk(type,x,y,vx,vy,r,bonus);
- e.dropBonus=()=>mk(pick(TYPE_IDS),w*(.1+rand()*.8),-12,(rand()-.5)*6,22+rand()*10,9,true);
+ e.dropBonus=()=>mk(pick(BONUS_IDS),w*(.1+rand()*.8),-12,(rand()-.5)*6,22+rand()*10,9,true);
  e.spawnWave=()=>{const n=Math.min(8,2+e.wave);for(let i=0;i<n;i++){const o=e.launch();o.hold=true;o.delay=i*.35/e.speed;o.vx0=o.vx;o.vy0=o.vy;o.vx=o.vy=0;}};
  function burst(x,y,type,n,spread){const cs=TYPES[type];for(let i=0;i<n;i++){const a=rand()*TAU,s=spread*(.3+rand());e.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:.5+rand()*.4,c:pick(cs),s:1+Math.floor(rand()*3)});}}
  function award(o,kind,a,b){
@@ -80,11 +83,18 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
 
 // ---- renderer ----
 const sheets={},cache={};
-function sheet(type){if(typeof Image==='undefined')return null;if(!(type in sheets)){sheets[type]=null;const i=new Image();i.onload=()=>{sheets[type]=i;};i.src=`/arcade/slice/sprites/${type}.png`;}return sheets[type];}
+// sheet(type): the id's own sheet, else the tinted canister placeholder. null until loaded (procedural pixels meanwhile).
+function load(src){return new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src;});}
+function tinted(img,colour){const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d');x.drawImage(img,0,0);x.globalCompositeOperation='multiply';x.fillStyle=colour;x.fillRect(0,0,c.width,c.height);x.globalCompositeOperation='destination-in';x.drawImage(img,0,0);return c;}
+function sheet(type){
+ if(typeof Image==='undefined')return null;
+ if(!(type in sheets)){sheets[type]=null;const base=`/arcade/slice/sprites/`;
+  load(base+type+'.png').then(i=>{sheets[type]=i;},()=>load(base+'canister.png').then(i=>{sheets[type]=tinted(i,TYPES[type][0]);},()=>{}));}
+ return sheets[type];
+}
 function procedural(type,seed){ // 16x16 pixel disc, hash-shaded
  const k=type+seed%7;if(cache[k])return cache[k];const c=document.createElement('canvas');c.width=c.height=16;const g=c.getContext('2d'),cs=TYPES[type];
  for(let y=0;y<16;y++)for(let x=0;x<16;x++){const d=Math.hypot(x-7.5,y-7.5);if(d>7.5)continue;const n=((x*73856093^y*19349663^seed%7*83492791)>>>0)%7;g.fillStyle=d>6.2?cs[1]:x+y<9&&n<5?cs[2]:n<2?cs[1]:cs[0];g.fillRect(x,y,1,1);}
- if(type==='planet'){g.fillStyle=cs[2];g.fillRect(0,9,16,1);}
  return cache[k]=c;
 }
 function drawBody(g,o){

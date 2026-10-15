@@ -21,6 +21,8 @@ import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
+import {EXERCISES} from './exercise-library.mjs';
+import {physicalSound} from './audio/physical-sound.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
 import {acceptShipRevealComplete} from './modules/ships/ship-access.mjs';
 import {localVerifiedBridge as shipViewBridge,ownedShipIds as shipOwnedShipIds,mountFirstShipArrival} from './modules/ships/ship-view-bridge.mjs';
@@ -357,6 +359,16 @@ window.myr5Menus={...window.myr5Menus,ship:async(options={})=>{const {openShipVi
 // myr5:account-progress (workout sync, breathing, meals, account refresh), which battle-pass.mjs listens for.
 syncBattlePass();
 mountCoachOverlay();
+// Fruit-Ninja slice game over the camera for martial arts + holds (lazy; external to the core bundle).
+{let slice=null,loading=false;
+ const eligible=()=>{const x=EXERCISES[session.mode];return x&&(x.group==='stances'||x.group==='boxing'||x.kind==='hold')?(x.kind==='hold'?'hold':'martial'):null;};
+ const drop=()=>{slice?.stop();slice=null;};
+ window.addEventListener('myr5:pose',event=>{
+  if(!slice){const mode=eligible(),host=document.getElementById('coachOverlay');if(!mode||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;
+   import('./arcade/slice/camera-slice.mjs').then(m=>{if(!slice&&document.body.dataset.tracking==='true')slice=m.mountCameraSlice({host,mode,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n)});}).catch(()=>{}).finally(()=>{loading=false;});return;}
+  slice.pose(event.detail);});
+ new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+ window.myr5Slice={get active(){return slice},drop};}
 
 let cinematics={play(){}};
 let optionalLoaded=false;
