@@ -470,6 +470,16 @@ mountCoachOverlay();
 window.addEventListener('myr5:movement-configured',dropWorkoutEffects);
 window.addEventListener('myr5:account-ready',()=>{dropWorkoutEffects();syncRetainedPowerOwner();});
 document.addEventListener('click',event=>{const button=event.target?.closest?.('.workout-performance-controls button');if(button?.textContent?.trim()==='Break hold')invalidateWorkoutEffects();},true);
+// Cardio runner: the corridor game over the camera for march-type cardio (lazy; external to the core bundle). Body controls only.
+{let runner=null,loading=false;
+ const eligible=()=>{const x=EXERCISES[session.mode];return x?.group==='cardio'&&x.detector==='march';};
+ const drop=()=>{runner?.stop();runner=null;};
+ window.addEventListener('myr5:pose',event=>{
+  if(!runner){const host=document.getElementById('cameraWorkout');if(!eligible()||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;
+   import('./arcade/runner/runner.mjs').then(m=>{if(!runner&&document.body.dataset.tracking==='true')runner=m.mountRunner({host,Session:MovementSession,workout:()=>pod?.flow?.workout,sound:k=>physicalSound.play(k)});}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
+  runner.pose(event.detail);});
+ new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+ window.myr5Runner={get active(){return runner},drop};}
 
 let cinematics={play(){}};
 let optionalLoaded=false;

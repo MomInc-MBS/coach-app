@@ -1,0 +1,33 @@
+// One look per course, cycled. wall = hull texture style + tint; neon = strip/laser colours; sky = what the windows show.
+// gore only in the horror deck (the site's splats, clay chunks and gold bones).
+export const THEMES=[
+  {name:'MOM hull',bg:'#040208',fog:'#0c0712',hemi:['#a898c0','#1c1222'],light:'#ffd49a',
+   wall:{style:'plate',from:'#77707f',to:'#5f5868',grime:'30,8,24',tint:'#aaa2b6',metalness:.75,roughness:.4},
+   neon:{rail:'#79e8ff',warm:'#ffe6b0',red:'#ff593e',amber:'#ffb44a',laser:'#ff4fd8',emergency:'#ff1e2e',blade:'#ff5a1e',sign:'#ff85e5'},
+   sky:{kind:'planet',stars:'#e8e2ff',colors:['#f6b6ff','#8e5b99','#281433'],bands:'#d4a017'}},
+  {name:'Nebula lab',bg:'#06040c',fog:'#1a1426',hemi:['#e8f4ff','#3a3450'],light:'#f4fbff',
+   wall:{style:'lab',from:'#e9edf2',to:'#c9d0da',grime:'90,110,140',tint:'#f2f4f8',metalness:.15,roughness:.35},
+   neon:{rail:'#3cf2d8',warm:'#f0fbff',red:'#ff4f8a',amber:'#7af0ff',laser:'#ff3fa4',emergency:'#ff2e6a',blade:'#ff4fd8',sign:'#3cf2d8'},
+   sky:{kind:'nebula',stars:'#ffffff',colors:['#ff4fd8','#5a3cff','#2ad8ff','#ff8a3c']}},
+  {name:'Rust bucket',bg:'#070402',fog:'#170c06',hemi:['#d8b48a','#24140a'],light:'#ffb070',
+   wall:{style:'rust',from:'#7a4a2a',to:'#4a2a18',grime:'40,16,4',tint:'#c89a78',metalness:.55,roughness:.7},
+   neon:{rail:'#ffb02e',warm:'#ffd08a',red:'#ff3a14',amber:'#ff8a1e',laser:'#ff6a1e',emergency:'#ff2a10',blade:'#ffd02e',sign:'#ffb02e'},
+   sky:{kind:'asteroids',stars:'#ffe8d0',rock:'#6a5a4a'}},
+  {name:'Hex hive',bg:'#020604',fog:'#06140c',hemi:['#9affc0','#0a1a10'],light:'#c8ffd8',
+   wall:{style:'hex',from:'#2a3a30',to:'#16221a',grime:'0,30,10',tint:'#8fb8a0',metalness:.7,roughness:.35},
+   neon:{rail:'#7dff4a',warm:'#e0ffd0',red:'#ff3a6a',amber:'#d8ff3a',laser:'#b04aff',emergency:'#ff2a4a',blade:'#7dff4a',sign:'#7dff4a'},
+   sky:{kind:'rings',stars:'#d8ffe8',colors:['#ffe0a0','#c8904a','#4a2a14'],ring:'#e8d0a0'}},
+  {name:'Earthrise',bg:'#01030a',fog:'#08122a',hemi:['#a8c8ff','#0a1428'],light:'#d8e8ff',
+   wall:{style:'plate',from:'#4a5a78',to:'#2a3448',grime:'4,10,30',tint:'#9ab0d8',metalness:.8,roughness:.3},
+   neon:{rail:'#ffffff',warm:'#d8ecff',red:'#ff4a4a',amber:'#4ab8ff',laser:'#4affff',emergency:'#ff3030',blade:'#4ab8ff',sign:'#8ad0ff'},
+   sky:{kind:'earth',stars:'#ffffff'}},
+  {name:'Red giant',bg:'#0a0202',fog:'#1e0606',hemi:['#ff9a7a','#2a0a06'],light:'#ff9a6a',
+   wall:{style:'hex',from:'#4a1a16',to:'#24080a',grime:'60,0,0',tint:'#d88a7a',metalness:.6,roughness:.45},
+   neon:{rail:'#ff7a2e',warm:'#ffc89a',red:'#ff2a1a',amber:'#ff9a2e',laser:'#ffd02e',emergency:'#ff1a1a',blade:'#ff4a1a',sign:'#ff7a2e'},
+   sky:{kind:'redstar',stars:'#ffd8c8',colors:['#fff0c0','#ff6a2a','#a01008']}},
+  {name:'Gore deck',bg:'#030002',fog:'#120208',hemi:['#b07a90','#1a0410'],light:'#ff8a8a',gore:true,
+   wall:{style:'rust',from:'#4a2a34',to:'#2a1018',grime:'60,0,30',tint:'#a0788a',metalness:.5,roughness:.5},
+   neon:{rail:'#ff2a6a',warm:'#ffb0c0',red:'#ff1a1a',amber:'#ff4a8a',laser:'#ff1a4a',emergency:'#ff0010',blade:'#ff1a1a',sign:'#ff4a6a'},
+   sky:{kind:'planet',stars:'#ffb0b0',colors:['#ff8a6a','#660022','#1a0008'],bands:'#330011'}},
+];
+export const themeFor=n=>THEMES[((n%THEMES.length)+THEMES.length)%THEMES.length];
