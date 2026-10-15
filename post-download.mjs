@@ -202,6 +202,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  }
  menu.querySelector('[data-download]').onclick=()=>{
   const all=boxes(),picked=all.filter(box=>box.checked).map(box=>box.dataset.group);
+  write(localStorage,INSTALL_PENDING,null);
   write(localStorage,CHOSEN,picked.length===all.length?null:JSON.stringify(picked));
   menu.close('download');void start();
  };
