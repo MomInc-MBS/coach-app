@@ -62,7 +62,7 @@ export function mountPet({host,walker,playAt,apex,getMeals,dialog,recipe=readRec
   gamePromise=import('./game.mjs').then(m=>{
    if(disposed)return;
    layer.hidden=true;const root=document.createElement('div');root.className='pj-game';root.style.cssText='position:absolute;inset:0;z-index:7;background:#05030f;overflow:hidden';(dialog||host).append(root);
-   const g=m.startGame(root,{recipe,meals:getMeals(),subscribeMotion:motion?.subscribePhoneMotion,onExit(){g.dispose();root.remove();game=null;layer.hidden=false;backHome();}});
+   const g=m.startGame(root,{startLevel:+new URLSearchParams(location.search).get('pjlevel')||0,recipe,meals:getMeals(),subscribeMotion:motion?.subscribePhoneMotion,onExit(){g.dispose();root.remove();game=null;layer.hidden=false;backHome();}});
    game={g,root};window.__pyramidJump=g; // test hook: g.teleport(h)
   }).catch(()=>{layer.hidden=false;}).finally(()=>{gamePromise=null;});
  };
