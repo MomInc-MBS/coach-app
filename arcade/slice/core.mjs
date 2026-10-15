@@ -105,16 +105,16 @@ function drawBody(g,o){
  if(o.bonus){g.strokeStyle='#ffe14a';g.lineWidth=1;g.strokeRect(-r-1,-r-1,r*2+2,r*2+2);}
 }
 // coach(g,e) lets the host draw the 64-bit coach sprite under the objects.
-export function render(g,e,{coach=null,sliceEffects=true}={}){
+export function render(g,e,{coach=null,pointerTrail=true}={}){
  g.imageSmoothingEnabled=false;g.clearRect(0,0,e.w,e.h);
- if(sliceEffects)for(const s of e.stains){g.globalAlpha=Math.min(.7,s.life/4);g.fillStyle=s.c;for(const[x,y,z]of s.dots)g.fillRect(Math.round(x),Math.round(y),z*2,z*2);}
+ for(const s of e.stains){g.globalAlpha=Math.min(.7,s.life/4);g.fillStyle=s.c;for(const[x,y,z]of s.dots)g.fillRect(Math.round(x),Math.round(y),z*2,z*2);}
  g.globalAlpha=1;
  if(coach)coach(g,e);
  for(const o of e.objects){if(o.hold)continue;g.save();g.translate(Math.round(o.x),Math.round(o.y));drawBody(g,o);g.restore();}
- if(sliceEffects){for(const q of e.halves){g.save();g.translate(Math.round(q.x),Math.round(q.y));g.rotate(q.hr);g.rotate(q.cut);g.beginPath();g.rect(-q.r*2,q.side>0?0:-q.r*2,q.r*4,q.r*2);g.clip();g.rotate(-q.cut);drawBody(g,{...q,rot:q.rot0});g.restore();}
- for(const q of e.parts){g.globalAlpha=Math.min(1,q.life*2);g.fillStyle=q.c;g.fillRect(Math.round(q.x),Math.round(q.y),q.s,q.s);}}
+ for(const q of e.halves){g.save();g.translate(Math.round(q.x),Math.round(q.y));g.rotate(q.hr);g.rotate(q.cut);g.beginPath();g.rect(-q.r*2,q.side>0?0:-q.r*2,q.r*4,q.r*2);g.clip();g.rotate(-q.cut);drawBody(g,{...q,rot:q.rot0});g.restore();}
+ for(const q of e.parts){g.globalAlpha=Math.min(1,q.life*2);g.fillStyle=q.c;g.fillRect(Math.round(q.x),Math.round(q.y),q.s,q.s);}
  g.globalAlpha=1;
- if(sliceEffects&&e.trail.length>1){g.lineWidth=2;for(let i=1;i<e.trail.length;i++){const a=e.trail[i-1],b=e.trail[i];g.strokeStyle=`rgba(255,255,255,${Math.min(1,b.life*4)})`;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}}
+ if(pointerTrail&&e.trail.length>1){g.lineWidth=2;for(let i=1;i<e.trail.length;i++){const a=e.trail[i-1],b=e.trail[i];g.strokeStyle=`rgba(255,255,255,${Math.min(1,b.life*4)})`;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}}
  const L=e.laser;
  if(L.phase!=='idle'){
   const gx=e.coachX,gy=e.h-18;g.fillStyle='#444';g.fillRect(gx-4,gy-3,10,5);g.fillStyle='#f33';g.fillRect(gx+5,gy-2,3,3);

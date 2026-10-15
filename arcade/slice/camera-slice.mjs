@@ -27,7 +27,7 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
  }});
  const reportStreak=createFruitStreakReporter(ownerId);
  const coachArt=document.createElement('canvas');coachArt.width=64;coachArt.height=96;
- (async()=>{ // the user's own 64-bit coach, same loader as the home character
+ (async()=>{ // keep the user's coach visible below the thrown targets
   try{const A=window.GalaAvatar,{loadGala}=await import('/pod/identity.mjs'),m=await import('/war-room/coach-sprites.js'),c=await m.loadWarRoomCoaches(document);
    c.draw(A.draw,coachArt,loadGala(localStorage,A).look,{});}catch{const x=coachArt.getContext('2d');x.fillStyle='#bc89ff';x.fillRect(20,30,24,50);x.fillStyle='#fff';x.fillRect(24,36,6,6);x.fillRect(34,36,6,6);}
  })();
@@ -37,10 +37,9 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
   raf=requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;
   if(counting){laserIn-=dt;if(laserIn<=0&&e.laserStart(body.x,body.y)){laserIn=9+Math.random()*6;}}
   e.step(dt);
-  // Camera mode shows the tracked hand-energy trail as the only cut visual;
-  // scoring, hit classification, and object removal remain in the engine.
-  render(g,e,{sliceEffects:false,coach:(c)=>{c.imageSmoothingEnabled=false;c.drawImage(coachArt,W/2-32,H-96);}});
-  const effectStart=performance.now();handGlow.step(dt,now);renderHandGlow(g,handGlow.state);handGlow.measure(performance.now()-effectStart,now);
+  const effectStart=performance.now();handGlow.step(dt,now);
+  render(g,e,{pointerTrail:false,coach:(c)=>{c.imageSmoothingEnabled=false;c.drawImage(coachArt,W/2-32,H-96);}});
+  renderHandGlow(g,handGlow.state);handGlow.measure(performance.now()-effectStart,now);
  }
  raf=requestAnimationFrame(frame);
  return {
