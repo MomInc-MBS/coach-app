@@ -282,7 +282,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
    else if(error.code==='stale_release'){phase='stale';message=error.message;}
    else{phase='error';message=error.shown?error.message:error.name==='QuotaExceededError'?'Not enough free space. Free some up, then resume.':'Download stopped. Check your connection; it continues where it left off.';}
   // Keep saved bytes against this plan until the next worker plan replaces both plan and got.
-  }finally{controller=null;paint();if(menu.open)renderMenu();}
+  }finally{controller=null;paint();if(menu.open)renderMenu();else if(phase==='error'&&idle())openMenu(false);}
  }
  for(const box of [bar,settings,menuStatus])box.querySelector('[data-toggle]').onclick=()=>controller?controller.abort():void start();
  for(const box of [bar,settings,menuStatus])box.querySelector('[data-update]').onclick=()=>{

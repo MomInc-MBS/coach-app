@@ -180,6 +180,19 @@ test('a fresh installed-app launch reconciles old partial picks and automaticall
  }finally{await browser?.close();await server.close();}
 });
 
+test('a fresh installed-app launch with no saved selection automatically downloads the complete package',async()=>{
+ const asset=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');assert(asset,'fixture uses a Vault public asset');
+ const server=await serve({pkg:[asset]});let browser;
+ try{
+  browser=await launch();const context=await installed(browser,server.base);
+  const page=await home(context,server.base,'/pose.html',{displayMode:'standalone'});
+  await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
+  assert.equal(server.seen.filter(row=>row.pkg&&row.path===asset.url).length,1,'the complete-package default includes Vault on a fresh install');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('myr5-full-package-install-pending')),null,'pending clears only after the complete package is saved');
+  await context.close();
+ }finally{await browser?.close();await server.close();}
+});
+
 test('an installed app opened offline waits visibly, then starts the full package when connection returns',async()=>{
  const asset=PACKAGE.find(a=>a.group==='vault'&&a.url==='/modules/vault/vault-hall.mjs');assert(asset,'fixture uses a Vault public asset');
  const server=await serve({pkg:[asset]});let browser;
@@ -225,9 +238,9 @@ test('a real quota preflight error stays visible and Resume completes after spac
   const page=await home(context,server.base);await waitMenu(page);
   await page.getByRole('button',{name:'Download selected'}).click();
   await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Not enough free space'),null,{timeout:10000});
+  await page.waitForFunction(()=>document.getElementById('downloadsMenu')?.open&&document.querySelector('#downloadsMenu .downloads-status [data-text]')?.textContent.startsWith('Not enough free space'),null,{timeout:10000});
   assert.equal(server.seen.filter(row=>row.pkg).length,0,'quota is checked before requesting package files');
   await page.evaluate(()=>Object.defineProperty(navigator,'storage',{configurable:true,value:{estimate:async()=>({quota:1024*1024,usage:0}),persist:async()=>true}}));
-  // The modal covers the page-level bar; use its visible status control to resume.
   await page.locator('#downloadsMenu .downloads-status [data-toggle]').click();
   await page.waitForFunction(()=>document.querySelector('.full-download-bar [data-text]')?.textContent.startsWith('Ready offline'),null,{timeout:30000});
   assert.equal(server.seen.filter(row=>row.pkg&&row.path===asset.url).length,1,'Resume fetches and caches the asset');
