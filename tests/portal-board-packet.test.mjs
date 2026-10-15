@@ -30,8 +30,14 @@ test('compressed kit keeps every named part required by the cogs layout',async()
  assert.equal(json.meshes.length,113);
 });
 
-test('each runtime GLB is Meshopt decoded, with no obsolete cogs models',async()=>{
- for(const path of ['ice.glb','grass.glb','jelly.glb','wood.glb','cogs/door.glb']){
+test('restored board masters keep source detail; optimized door and grass still Meshopt decode',async()=>{
+ for(const [path,positions] of [['ice.glb',12712],['jelly.glb',10516],['wood.glb',15325]]){
+  const {json}=await glb(path);
+  assert.equal(json.meshes.flatMap(mesh=>mesh.primitives).reduce((sum,primitive)=>sum+json.accessors[primitive.attributes.POSITION].count,0),positions,path);
+  assert.deepEqual(json.extensionsUsed??[],[],`${path}: source master should not be quantized/packed`);
+  assert(json.images.every(image=>image.mimeType==='image/jpeg'),`${path}: source JPEG textures retained`);
+ }
+ for(const path of ['grass.glb','cogs/door.glb']){
   const {json}=await glb(path);assert.ok(json.extensionsUsed.includes('EXT_meshopt_compression'),path);
  }
  const files=await readdir(new URL('cogs/',root));

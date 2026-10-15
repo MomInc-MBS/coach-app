@@ -1,12 +1,16 @@
-# Pyramid food scanner GLB (run: blender -b -P scripts/build-pyramid-scanner.py -- food/pyramid-scanner.glb 0.2): decimate, split dials, add screen planes + lens node.
-# W3 compression (2026-09-23 fixed): npx @gltf-transform/cli webp (quality 80) → quantize (--quantize-position 16 for screen precision) → meshopt (level medium).
-# Result: 3.1 MB → 2.46 MB (WebP) → 1.77 MB (quantize with high precision) → 1.06 MB (meshopt); all 56k body vertices preserved; decoder wired in pose.html & food/pyramid-scanner.mjs.
-import bpy, bmesh, math, json, sys
+# Pyramid food scanner GLB: preserve the authored mesh (ratio 1.0), split dials, add screens + lens.
+# Run: blender -b -P scripts/build-pyramid-scanner.py -- food/pyramid-scanner.glb
+# Do not decimate or quantize this scanner; its controls and sculpted body stay at authored resolution.
+import bpy, bmesh, math, json, sys, hashlib
 from mathutils import Vector
 from mathutils.geometry import intersect_line_plane
 SRC=r"C:/Users/ianmy/Downloads/pyramid+nutrition+robot+3d+model.glb"
 OUT=sys.argv[sys.argv.index('--')+1]
-RATIO=float(sys.argv[sys.argv.index('--')+2])
+RATIO=float(sys.argv[sys.argv.index('--')+2]) if len(sys.argv)>sys.argv.index('--')+2 else 1.0
+if RATIO != 1.0:
+    raise ValueError('Quality-preserving pyramid build requires decimation ratio 1.0')
+with open(SRC,'rb') as source_file:
+    print('PYRAMID_SOURCE_SHA256',hashlib.sha256(source_file.read()).hexdigest())
 KNOB_R=0.046
 S=1.15/800  # ortho_scale / px, matches render.py
 SCREENS={  # name box nudged right to cover the bezel
