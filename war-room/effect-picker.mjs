@@ -42,16 +42,22 @@ async function paint(canvas,option) {
     else if(option.id==='floor')frame=9;
     if(option.asset&&columns){const size=100;spec.sx=(frame%columns)*size;spec.sy=Math.floor(frame/columns)*size;}
     if(option.id==='floor'){spec.sx=(frame%8)*100;spec.sy=Math.floor(frame/8)*100;}
-    ctx.clearRect(0,0,40,40);ctx.imageSmoothingEnabled=false;
     const cropX=spec.sx??sx,cropY=spec.sy??sy;
-    const scale=Math.min(34/(spec.sw||sw),34/(spec.sh||sh));
-    const w=(spec.sw||sw)*scale,h=(spec.sh||sh)*scale;
-    ctx.drawImage(image,cropX,cropY,spec.sw||sw,spec.sh||sh,(40-w)/2,(40-h)/2,w,h);
-    if(option.ecology?.kind==='plant'){
-      const pixels=ctx.getImageData(0,0,40,40),data=pixels.data;
-      for(let i=0;i<data.length;i+=4)if(data[i]===34&&data[i+1]===32&&data[i+2]===52)data[i+3]=0;
-      ctx.putImageData(pixels,0,0);
+    const tile=canvas.ownerDocument.createElement('canvas');tile.width=spec.sw||sw;tile.height=spec.sh||sh;
+    const tileCtx=tile.getContext('2d');tileCtx.drawImage(image,cropX,cropY,tile.width,tile.height,0,0,tile.width,tile.height);
+    const pixels=tileCtx.getImageData(0,0,tile.width,tile.height),data=pixels.data;
+    let left=tile.width,top=tile.height,right=-1,bottom=-1;
+    for(let y=0;y<tile.height;y++)for(let x=0;x<tile.width;x++){
+      const i=(y*tile.width+x)*4;
+      if(option.ecology?.kind==='plant'&&data[i]===34&&data[i+1]===32&&data[i+2]===52)data[i+3]=0;
+      if(data[i+3]>12){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
     }
+    if(right<left)return false;
+    tileCtx.putImageData(pixels,0,0);
+    const visibleW=right-left+1,visibleH=bottom-top+1,scale=Math.min(34/visibleW,34/visibleH);
+    const w=visibleW*scale,h=visibleH*scale;
+    ctx.clearRect(0,0,40,40);ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(tile,left,top,visibleW,visibleH,(40-w)/2,(40-h)/2,w,h);
     return true;
   } catch { ctx.clearRect(0,0,40,40);return false; }
 }
@@ -85,7 +91,7 @@ export function mountEffectPicker(anchor, {document:doc=anchor?.ownerDocument||g
       });
     }
     section.append(list);
-    const load=()=>{for(const id of group.options){const item=optionMap.get(id),canvas=section.querySelector(`[data-effect-thumb="${id}"]`);if(canvas&&!canvas.dataset.loaded&&!canvas.dataset.loading&&item){canvas.dataset.loading='true';void paint(canvas,item).then(ok=>{delete canvas.dataset.loading;if(ok)canvas.dataset.loaded='true';});}}};
+    const load=()=>{for(const id of group.options){const item=optionMap.get(id==='random'?group.defaultEffect:id),canvas=section.querySelector(`[data-effect-thumb="${id}"]`);if(canvas&&!canvas.dataset.loaded&&!canvas.dataset.loading&&item){canvas.dataset.loading='true';canvas.dataset.effectPreview=item.id;void paint(canvas,item).then(ok=>{delete canvas.dataset.loading;if(ok)canvas.dataset.loaded='true';});}}};
     section.addEventListener('toggle',()=>{if(section.open)load();});
   }
   for(const group of EFFECT_GROUPS){
