@@ -36,3 +36,11 @@ export function todayTiles(items,now=new Date()){
  for(const item of meals)for(const [k,v] of Object.entries(mealNutrients(item)))if(has(v))total[k]=(total[k]||0)+v;
  return pyramidTiles(meals.length?`TODAY · ${meals.length} MEAL${meals.length===1?'':'S'}`:'TODAY',total);
 }
+
+// Pocket pet (arcade/pyramid-jump): only on days the user took a food photo. meal-scanner sets the flag on
+// 'myr5:food-photo-ready'; the vault's own days['food-scan'] counts too (same local-day string).
+const FOOD_PHOTO_KEY='myr5-food-photo-day',localDay=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+export function markFoodPhotoToday(store=globalThis.localStorage,now=new Date()){try{store.setItem(FOOD_PHOTO_KEY,localDay(now));}catch{/* private mode: the pet just stays away */}}
+export function foodPhotoToday(store=globalThis.localStorage,now=new Date()){
+ try{const day=localDay(now);return store.getItem(FOOD_PHOTO_KEY)===day||JSON.parse(store.getItem('myr5-vault-v1')||'{}').days?.['food-scan']===day;}catch{return false;}
+}

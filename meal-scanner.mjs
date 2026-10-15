@@ -1,3 +1,4 @@
+import {markFoodPhotoToday} from './food/pyramid-tiles.mjs';
 export function mountMealScanner(){
  const $=id=>document.getElementById(id),stage=$('mealScanStage'),overlay=$('mealScanOverlay'),preview=$('foodPreview'),trigger=$('recognizeFood');
  let worker=null,photoUrl=null,selected=null,generation=0,timer=null,started=0;
@@ -27,7 +28,7 @@ export function mountMealScanner(){
   try{
    const bitmap=await createImageBitmap(selected);if(run!==generation){bitmap.close();return;}
    const canvas=document.createElement('canvas'),ratio=Math.min(1,768/Math.max(bitmap.width,bitmap.height));canvas.width=Math.max(1,Math.round(bitmap.width*ratio));canvas.height=Math.max(1,Math.round(bitmap.height*ratio));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-   notify('myr5:food-photo-ready'); // accepted, decoded photo: step out of the portal before recognition
+   markFoodPhotoToday();notify('myr5:food-photo-ready'); // accepted, decoded photo: step out of the portal before recognition
    worker??=new Worker('/food-worker.mjs',{type:'module'});
    worker.onerror=()=>{if(run===generation)error('Recognition is unavailable in this browser. Type the meal name below.');};
    worker.onmessage=({data})=>{
