@@ -37,7 +37,9 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
   raf=requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;
   if(counting){laserIn-=dt;if(laserIn<=0&&e.laserStart(body.x,body.y)){laserIn=9+Math.random()*6;}}
   e.step(dt);
-  render(g,e,{coach:(c)=>{c.imageSmoothingEnabled=false;c.drawImage(coachArt,W/2-32,H-96);}});
+  // Camera mode shows the tracked hand-energy trail as the only cut visual;
+  // scoring, hit classification, and object removal remain in the engine.
+  render(g,e,{sliceEffects:false,coach:(c)=>{c.imageSmoothingEnabled=false;c.drawImage(coachArt,W/2-32,H-96);}});
   const effectStart=performance.now();handGlow.step(dt,now);renderHandGlow(g,handGlow.state);handGlow.measure(performance.now()-effectStart,now);
  }
  raf=requestAnimationFrame(frame);
