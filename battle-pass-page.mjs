@@ -1,4 +1,4 @@
-import {COSMETIC_LEVEL_XP,cosmeticLevel,coachXpMultiplier} from './progression-rules.mjs';
+import {COSMETIC_LEVEL_XP,cosmeticLevel,coachXpMultiplier,DAILY_TRIO_BONUS} from './progression-rules.mjs';
 import {readPerformanceProgress} from './performance-progress.mjs';
 import {COACH_REQUIREMENTS,STARTER_COACH_IDS} from './performance-catalog.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
@@ -79,7 +79,7 @@ export function mountBattlePass(){
    const item=node('span',`${complete?'✓':'○'} ${label}`);item.dataset.complete=String(complete);quests.append(item);
   }
   const coaches=p.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length;
-  daily.replaceChildren(node('h3','TODAY / DAILY QUESTS'),quests,node('strong',workout&&meditation&&food?'✓ +500 XP EARNED':'ALL THREE +500 XP'),node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
+  daily.replaceChildren(node('h3','TODAY / DAILY QUESTS'),quests,node('strong',workout&&meditation&&food?`✓ +${DAILY_TRIO_BONUS} XP EARNED`:`ALL THREE +${DAILY_TRIO_BONUS} XP`),node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
  }
  function renderSummary(){
   const progress=node('progress');progress.max=rank.max?1:rank.need;progress.value=rank.max?1:rank.into;progress.setAttribute('aria-label','Progress to next cosmetic level');

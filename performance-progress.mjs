@@ -1,6 +1,6 @@
 import {EXERCISES} from './exercise-library.mjs';
 import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,EXCLUDED_COACH_IDS,PATH_INTRO_COACH_IDS,CHOOSABLE_TRACKS,normalizePaths,pathIntroCoachIds,matchingCoaches,exerciseDifficulty,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES} from './performance-catalog.mjs';
-import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier,DIFFICULTIES} from './progression-rules.mjs';
+import {holdXp,repXp,performanceMilestones,performanceWeaponTier,coachXpMultiplier,DIFFICULTIES,XP_SCALE,DAILY_TRIO_BONUS} from './progression-rules.mjs';
 export const PERFORMANCE_KEY='myr5-performance-progress-v2';
 export function performanceOwner(storage=globalThis.localStorage,account=globalThis.myr5AuthenticatedAccount){
  const id=account?.user?.id;if(id)return `account:${id}${account.dataEpoch!=null?`:${account.dataEpoch}`:''}`;
@@ -11,7 +11,7 @@ export function localDay(time=Date.now()){const date=new Date(time);return `${da
 // accessVersion 3: coaches are only the explicit starters plus earned coaches and the two chosen
 // path introductions. Older records also held every unplaced coach as an implicit starter.
 export const ACCESS_VERSION=3;
-const fresh=()=>({version:2,accessVersion:ACCESS_VERSION,paths:[],sessions:{},days:{},coaches:[...STARTER_COACH_IDS],goldenCoaches:[],weapons:{},ships:[],completions:{},totalXp:0,excludedCoaches:[]});
+const fresh=()=>({version:2,accessVersion:ACCESS_VERSION,xpScale:XP_SCALE,paths:[],sessions:{},days:{},coaches:[...STARTER_COACH_IDS],goldenCoaches:[],weapons:{},ships:[],completions:{},totalXp:0,excludedCoaches:[]});
 function scope(options={}){const storage=Object.hasOwn(options,'storage')?options.storage:globalThis.localStorage,account=Object.hasOwn(options,'account')?options.account:globalThis.myr5AuthenticatedAccount;return {storage,owner:options.owner??performanceOwner(storage,account)};}
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const finite=v=>Number.isFinite(v)&&v>=0;
@@ -19,7 +19,7 @@ const validDay=day=>typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)&&new 
 const validPaths=p=>Array.isArray(p)&&(p.length===0||(p.length===2&&new Set(p).size===2&&p.every(id=>CHOOSABLE_TRACKS.includes(id))));
 /** Shape check for a stored or synced performance record (client cache and server alike). */
 export function validPerformanceState(v){return validState(v);}
-function validState(v){return v?.version===2&&(v.accessVersion===undefined||v.accessVersion===ACCESS_VERSION)&&(v.paths===undefined||validPaths(v.paths))&&(v.activities===undefined||(object(v.activities)&&Object.values(v.activities).every(a=>object(a)&&['meditation','food'].includes(a.kind)&&validDay(a.day))))&&object(v.sessions)&&object(v.days)&&object(v.weapons)&&object(v.completions)&&Array.isArray(v.coaches)&&v.coaches.every(id=>COACHES.some(c=>c.id===id)||EXCLUDED_COACH_IDS.includes(id))&&new Set(v.coaches).size===v.coaches.length&&Array.isArray(v.goldenCoaches)&&v.goldenCoaches.every(id=>v.coaches.includes(id))&&Array.isArray(v.ships)&&v.ships.every(id=>SHIP_REQUIREMENTS.some(s=>s.id===id))&&Object.values(v.weapons).every(n=>Number.isInteger(n)&&n>=0&&n<=20)&&Object.values(v.completions).every(n=>Number.isSafeInteger(n)&&n>=0)&&Object.entries(v.days).every(([day,d])=>validDay(day)&&object(d)&&finite(d.workoutXp)&&['workout','meditation','food'].every(k=>typeof d[k]==='boolean'))&&Object.values(v.sessions).every(s=>object(s)&&validDay(s.day)&&finite(s.xp)&&finite(s.value)&&finite(s.continuous));}
+function validState(v){return v?.version===2&&(v.accessVersion===undefined||v.accessVersion===ACCESS_VERSION)&&(v.xpScale===undefined||v.xpScale===XP_SCALE)&&(v.paths===undefined||validPaths(v.paths))&&(v.activities===undefined||(object(v.activities)&&Object.values(v.activities).every(a=>object(a)&&['meditation','food'].includes(a.kind)&&validDay(a.day))))&&object(v.sessions)&&object(v.days)&&object(v.weapons)&&object(v.completions)&&Array.isArray(v.coaches)&&v.coaches.every(id=>COACHES.some(c=>c.id===id)||EXCLUDED_COACH_IDS.includes(id))&&new Set(v.coaches).size===v.coaches.length&&Array.isArray(v.goldenCoaches)&&v.goldenCoaches.every(id=>v.coaches.includes(id))&&Array.isArray(v.ships)&&v.ships.every(id=>SHIP_REQUIREMENTS.some(s=>s.id===id))&&Object.values(v.weapons).every(n=>Number.isInteger(n)&&n>=0&&n<=20)&&Object.values(v.completions).every(n=>Number.isSafeInteger(n)&&n>=0)&&Object.entries(v.days).every(([day,d])=>validDay(day)&&object(d)&&finite(d.workoutXp)&&['workout','meditation','food'].every(k=>typeof d[k]==='boolean'))&&Object.values(v.sessions).every(s=>object(s)&&validDay(s.day)&&finite(s.xp)&&finite(s.value)&&finite(s.continuous));}
 // Coaches a record has really earned, rebuilt from its own history: the explicit starters, the
 // session milestones recordPerformanceSession applies, and completed meditation days.
 const CADENCE_COUNT={sprint:CADENCE_MILESTONES.sprintRounds,gentle:CADENCE_MILESTONES.gentleActiveSeconds,pace:CADENCE_MILESTONES.paceActiveSeconds};
@@ -39,6 +39,8 @@ function earnedCoaches(state){
  * Pre-v3 records are rebuilt from earnedCoaches() plus the chosen paths, so implicit starters are
  * dropped while sessions, days, XP, weapons and ships are untouched. Uses only the record itself. */
 export function migratePerformanceAccess(state){
+ // XP rescale: a record without the xpScale marker holds x1 XP. Multiply once, then mark; later runs skip.
+ if(state.xpScale!==XP_SCALE){for(const d of Object.values(state.days))d.workoutXp*=XP_SCALE;for(const s of Object.values(state.sessions))s.xp*=XP_SCALE;state.xpScale=XP_SCALE;}
  state.excludedCoaches??=[];for(const id of EXCLUDED_COACH_IDS)if(!state.excludedCoaches.includes(id))state.excludedCoaches.push(id);
  state.paths??=[];
  if(state.accessVersion!==ACCESS_VERSION){
@@ -65,7 +67,7 @@ export function choosePerformancePaths(ids,options={}){
 }
 function save(state,options){const {storage,owner}=scope(options);if(!storage)throw Error('Progress storage is unavailable.');storage.setItem(`${PERFORMANCE_KEY}/${owner}`,JSON.stringify(state));if(typeof globalThis.CustomEvent==='function')globalThis.dispatchEvent?.(new CustomEvent('myr5:performance-progress',{detail:{owner,progress:state}}));return state;}
 function dayEntry(state,day){if(!validDay(day))throw RangeError('Invalid workout day.');return state.days[day]??=( {workoutXp:0,workout:false,meditation:false,food:false});}
-function recalculate(state){state.totalXp=Object.values(state.days).reduce((sum,d)=>sum+d.workoutXp*(d.meditation?2:1)+(d.workout&&d.meditation&&d.food?500:0),0);return state;}
+function recalculate(state){state.totalXp=Object.values(state.days).reduce((sum,d)=>sum+d.workoutXp*(d.meditation?2:1)+(d.workout&&d.meditation&&d.food?DAILY_TRIO_BONUS:0),0);return state;}
 export function recordDailyActivity(kind,{day=localDay(),id}={},options={}){if(!['meditation','food'].includes(kind))throw RangeError('Unknown daily activity.');const state=readPerformanceProgress(options);
  state.activities??={};if(id!=null){if(typeof id!=='string'||!id||['__proto__','constructor','prototype'].includes(id))throw RangeError('Invalid daily activity ID.');const key=`${kind}:${id}`;if(Object.hasOwn(state.activities,key))return state;state.activities[key]={kind,day};}
  dayEntry(state,day)[kind]=true;
@@ -128,7 +130,7 @@ export function mergeVerifiedPerformance(account,{storage=globalThis.localStorag
  const remote=account?.progress?.performance;if(!remote)return readPerformanceProgress({storage,account});
  if(!account?.user?.id||!Number.isSafeInteger(account.dataEpoch)||account.dataEpoch<1)throw RangeError('Verified account identity is required.');if(!validState(remote))throw RangeError('Invalid synced performance progress.');
  const options={storage,account},local=readPerformanceProgress(options),before=JSON.stringify(local),next=JSON.parse(before),theirs=migratePerformanceAccess(JSON.parse(JSON.stringify(remote)));
- next.sessions={...local.sessions,...remote.sessions};next.days={};
+ next.sessions={...local.sessions,...theirs.sessions};next.days={};
  for(const [day,d] of [...Object.entries(local.days),...Object.entries(remote.days)]){const entry=dayEntry(next,day);entry.food||=d.food;entry.meditation||=d.meditation;}
  for(const session of Object.values(next.sessions)){const entry=dayEntry(next,session.day);entry.workout=true;entry.workoutXp+=session.xp;}
  // Access is rebuilt from the merged history and paths; only non-introduction coaches carry over.

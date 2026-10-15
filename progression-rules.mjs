@@ -1,15 +1,15 @@
 // Confirmed workout philosophy. Shared pure rules for client, local history and server.
 // Counts are active exercise time/repetitions, never rest or camera wall-clock time.
 export const PROGRESSION_VERSION=2;
+// Every XP number below is the original (x1) design value times XP_SCALE. Level NUMBERS are unchanged:
+// unlocks key on level, seconds, reps and rounds, never on absolute XP.
+export const XP_SCALE=10;
+// Arcade bonus XP may add at most this share of a session's exercise base XP (before multipliers).
+export const BONUS_XP_SHARE=0.1;
 export const DIFFICULTIES=Object.freeze(['easy','medium','hard','expert']);
-export const HOLD_XP_PER_MINUTE=Object.freeze([
- Object.freeze([4,8,16]),Object.freeze([8,12,20]),
- Object.freeze([12,16,24]),Object.freeze([16,20,28]),
-]);
-export const REP_XP=Object.freeze([
- Object.freeze([1,2,4]),Object.freeze([2,3,5]),
- Object.freeze([3,4,6]),Object.freeze([4,5,7]),
-]);
+const scaled=rows=>Object.freeze(rows.map(r=>Object.freeze(r.map(n=>n*XP_SCALE))));
+export const HOLD_XP_PER_MINUTE=scaled([[4,8,16],[8,12,20],[12,16,24],[16,20,28]]);
+export const REP_XP=scaled([[1,2,4],[2,3,5],[3,4,6],[4,5,7]]);
 export const HOLD_BLOCK_SECONDS=15,HOLD_TARGET_SECONDS=600,HOLD_CAP_SECONDS=1800;
 export const HOLD_RECOVERY_SECONDS=15,WORKOUT_REST_SECONDS=30;
 export const GOLD_HOLD_SECONDS=600,REP_CAP=30;
@@ -24,16 +24,18 @@ export const COSMETIC_PACK_ODDS=Object.freeze({
  // Secret packs come only from secret achievements: legendary's size and 64-bit chance, double its texture chance (10 -> 20).
  secret:Object.freeze({color:60,'64-bit':20,texture:20}),
 });
-export const DAILY_MEDITATION_MULTIPLIER=2,DAILY_TRIO_BONUS=500;
-export const BENCHMARK=Object.freeze({sessions:120,activeMinutes:30,expertXpPerMinute:28,meditationMultiplier:DAILY_MEDITATION_MULTIPLIER,trioBonus:DAILY_TRIO_BONUS});
+export const DAILY_MEDITATION_MULTIPLIER=2,DAILY_TRIO_BONUS=500*XP_SCALE;
+export const BENCHMARK=Object.freeze({sessions:120,activeMinutes:30,expertXpPerMinute:28*XP_SCALE,meditationMultiplier:DAILY_MEDITATION_MULTIPLIER,trioBonus:DAILY_TRIO_BONUS});
 export const COSMETIC_XP_TARGET=BENCHMARK.sessions*(BENCHMARK.activeMinutes*BENCHMARK.expertXpPerMinute*BENCHMARK.meditationMultiplier+BENCHMARK.trioBonus);
+export const SPRINT_ROUND_XP=BENCHMARK.expertXpPerMinute*SPRINT_SECONDS/60,GENTLE_BLOCK_XP=XP_SCALE;
 export const COSMETIC_LEVEL_COUNT=250;
-const transitions=COSMETIC_LEVEL_COUNT-1,firstCost=40;
+const transitions=COSMETIC_LEVEL_COUNT-1,firstCost=40,baseTarget=COSMETIC_XP_TARGET/XP_SCALE;
 // Increasing per-level costs, exact 261,600 XP endpoint with meditation and all-three
 // completion on each benchmark training day. Additive coach bonuses
 // deliberately accelerate this conservative benchmark; achievements never require XP.
+// Built at the original scale then multiplied, so every threshold is exactly XP_SCALE x the old one.
 export const COSMETIC_LEVEL_XP=Object.freeze(Array.from({length:COSMETIC_LEVEL_COUNT},(_,n)=>
- firstCost*n+Math.floor((COSMETIC_XP_TARGET-firstCost*transitions)*n*(n-1)/(transitions*(transitions-1)))
+ XP_SCALE*(firstCost*n+Math.floor((baseTarget-firstCost*transitions)*n*(n-1)/(transitions*(transitions-1))))
 ));
 
 function nonnegative(value,name){if(!Number.isFinite(value)||value<0)throw RangeError(`Invalid ${name}.`);return value;}

@@ -1,3 +1,4 @@
+import {XP_SCALE} from '../progression-rules.mjs';
 import {test,describe,beforeEach,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -116,8 +117,8 @@ describe('legacy access migration',()=>{
   put(storage,owner,legacy({sessions:{s1:session},days:{'2026-01-02':{workoutXp:40,workout:true,meditation:false,food:false}},weapons:{crossbow:2},ships:['analytical'],completions:{'chest/reps/easy':1},totalXp:40}));
   const state=readPerformanceProgress({storage,owner});
   assert.deepEqual(new Set(state.coaches),new Set([...STARTER_COACH_IDS,id('06-ridge-triad--geometric_robot_3d_model1'),id('08-shard-asym--geometric_robot_3d_model'),id('04-crest-wedge--stylized_3d_character')]));
-  assert.deepEqual(state.sessions.s1,session);assert.equal(state.totalXp,40);assert.deepEqual(state.weapons,{crossbow:2});assert.deepEqual(state.ships,['analytical']);
-  assert.equal(state.days['2026-01-02'].workoutXp,40);assert.equal(state.accessVersion,3);assert.deepEqual(state.paths,[]);
+  assert.deepEqual(state.sessions.s1,{...session,xp:40*XP_SCALE});assert.equal(state.totalXp,40*XP_SCALE);assert.deepEqual(state.weapons,{crossbow:2});assert.deepEqual(state.ships,['analytical']);
+  assert.equal(state.days['2026-01-02'].workoutXp,40*XP_SCALE);assert.equal(state.accessVersion,3);assert.deepEqual(state.paths,[]);
  });
  test('unearned legacy coaches fall away with no sessions',()=>{
   put(storage,owner,legacy());
@@ -179,7 +180,7 @@ describe('owner-scoped workout paths',()=>{
   assert.deepEqual(chooseWorkoutPaths(['chest','yoga'],a),['chest','yoga']);
   assert.deepEqual(readSelectedTracks(a),['chest','yoga']);
   const state=readPerformanceProgress(a);
-  assert.deepEqual(earnedCoaches(state),intro(['chest','yoga']));assert.equal(state.totalXp,99);
+  assert.deepEqual(earnedCoaches(state),intro(['chest','yoga']));assert.equal(state.totalXp,99*XP_SCALE);
   assert.deepEqual(readSelectedTracks(b),[]);assert.deepEqual(readPerformanceProgress(b).coaches,['myr5',BLOB1]);
  });
  test('the choice ignores a poisoned global store and the legacy global key',()=>{

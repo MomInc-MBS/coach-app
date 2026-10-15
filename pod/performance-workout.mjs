@@ -1,5 +1,5 @@
 import {EXERCISES} from '../exercise-library.mjs';
-import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS} from '../progression-rules.mjs';
+import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS,SPRINT_ROUND_XP,GENTLE_BLOCK_XP,BONUS_XP_SHARE,XP_SCALE} from '../progression-rules.mjs';
 
 export function exerciseDifficulty(mode){
  const exercise=EXERCISES[mode];if(!exercise)return 'easy';
@@ -83,13 +83,13 @@ export class PerformanceWorkout {
    }
    // Movement must be observed. An unattended wall-clock cannot award a sprint.
    this.sprintSeconds+=moving?elapsed:0;this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;
-   if(this.sprintSeconds>=SPRINT_SECONDS){this.stage='sprint-rest';this.recoveryUntil=now+SPRINT_REST_SECONDS*1000;this.xpBase+=28*SPRINT_SECONDS/60;}
+   if(this.sprintSeconds>=SPRINT_SECONDS){this.stage='sprint-rest';this.recoveryUntil=now+SPRINT_REST_SECONDS*1000;this.xpBase+=SPRINT_ROUND_XP;}
    return null;
   }
-  this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;this.xpBase=Math.floor(this.activeSeconds/15);if(this.activeSeconds>=HOLD_TARGET_SECONDS)return this.finish();return null;
+  this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;this.xpBase=Math.floor(this.activeSeconds/15)*GENTLE_BLOCK_XP;if(this.activeSeconds>=HOLD_TARGET_SECONDS)return this.finish();return null;
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15)return null;
-  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+(this.bonusXp||0),earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
+  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+Math.min(this.bonusXp||0,this.xpBase*BONUS_XP_SHARE),xpScale:XP_SCALE,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }

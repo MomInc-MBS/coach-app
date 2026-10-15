@@ -1,5 +1,5 @@
 ﻿// User-facing rules come from the same constants as workout progression.
-import {HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,COSMETIC_LEVEL_COUNT} from './progression-rules.mjs';
+import {HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,COSMETIC_LEVEL_COUNT,DAILY_TRIO_BONUS} from './progression-rules.mjs';
 export const GUIDE=[
  ['train','Train','BUILD YOUR PERFORMANCE. EARN YOUR COACH.',[
   ['Holds',`Active holding earns XP in completed 15-second blocks. Pause or break the pose to recover for ${HOLD_RECOVERY_SECONDS} seconds. Rest earns no exercise XP. A break resets the uninterrupted attempt; earned XP stays. Hold 5 uninterrupted minutes to unlock the coach at that difficulty, and 10 uninterrupted minutes for gold. Change difficulty to start a new uninterrupted attempt.`],
@@ -14,7 +14,7 @@ export const GUIDE=[
   ['Ships','Complete Expert performance in the ship’s specified group and exercise type: 5 uninterrupted hold minutes or 15 working reps. Exact requirements appear under Achievements → Ships.']]],
  ['rewards','XP & packs','250 COSMETIC LEVELS.',[
   ['Cosmetic progression',`Workout XP advances ${COSMETIC_LEVEL_COUNT} levels of packs, colors, palettes, textures and finishes. Exercise performance unlocks coaches, weapons and ships. Each earned coach adds 25% to workout XP; those bonuses add together.`],
-  ['Meditation','Complete meditation to double all workout XP earned that local day, including XP earned before the meditation session. Workout + meditation + food grants a separate 500 XP once that day. The 500 XP bonus is not doubled.'],
+  ['Meditation',`Complete meditation to double all workout XP earned that local day, including XP earned before the meditation session. Workout + meditation + food grants a separate ${DAILY_TRIO_BONUS} XP once that day. The ${DAILY_TRIO_BONUS} XP bonus is not doubled.`],
   ['Rest victories','Defeat the first boss during rest timers each local day to earn one uncommon pack. Defeat five that day to earn one legendary pack as well. Each reward is granted once per day. Rest defeats do not unlock coaches.'],
   ['Coach characters','Every coach unlocks its matching 64-bit character at the same time. Customize its colors in the War Room mirror. Coach characters do not wear clothing.']]],
  ['combat','Damage','YOUR STREAK IS YOUR POWER.',[

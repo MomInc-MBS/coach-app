@@ -3,6 +3,7 @@
 // Optional art: arcade/slice/sprites/<type>.png = 8 rotation frames of 64px cells in one row (Tripo renders replace the procedural pixels).
 // [main, shade, light] per object id. Every id's art is arcade/slice/sprites/<id>.png (Tripo render) or, until it exists,
 // the canister placeholder sheet tinted with the main colour.
+import {XP_SCALE} from '../../progression-rules.mjs';
 export const TYPES={'asteroid-rock':['#8a7a68','#5e5246','#b9a88f'],'asteroid-ember':['#d0552a','#7a2a14','#ffb070'],'ice-comet':['#9fdcff','#4f9fd8','#ffffff'],'mini-planet':['#c060d8','#6a3a9c','#ffd27a'],moon:['#cfcfd8','#8d8d9a','#f4f4ff'],'sun-chunk':['#ffb400','#ff5a1f','#fff3a0'],'satellite-junk':['#9aa6b4','#4a5566','#e8f0ff'],'xp-star':['#ffe14a','#c8901a','#fffbd0'],'xp-orb':['#4affc8','#1a9c80','#d8fff4']};
 export const TYPE_IDS=Object.keys(TYPES).filter(k=>!k.startsWith('xp-'));
 export const BONUS_IDS=['xp-star','xp-orb'];
@@ -42,7 +43,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   if(kind==='slice'){const ang=Math.atan2(b.y-a.y,b.x-a.x),n=[-Math.sin(ang),Math.cos(ang)];for(const side of[-1,1])e.halves.push({...o,cut:ang,side,vx:o.vx*.5+n[0]*side*60,vy:o.vy*.5+n[1]*side*60,rot0:o.rot,hr:0,hvr:side*(2+rand()*4)});burst(o.x,o.y,o.type,8,60);}
   else burst(o.x,o.y,o.type,22,120);
   e.stains.push({c:TYPES[o.type][1],life:4,dots:Array.from({length:7},()=>[o.x+(rand()-.5)*20,o.y+(rand()-.5)*20,1+Math.floor(rand()*3)])}); // juice splat fades on the background
-  if(o.bonus){e.xp+=3;e.score+=15;pop('+3 XP',o.x,o.y-10,'#ffe14a');emit('bonus',{xp:3,x:o.x,y:o.y,kind});}
+  if(o.bonus){e.xp+=3*XP_SCALE;e.score+=15;pop(`+${3*XP_SCALE} XP`,o.x,o.y-10,'#ffe14a');emit('bonus',{xp:3*XP_SCALE,x:o.x,y:o.y,kind});}
   else{e.score+=10;emit('hit',{kind,x:o.x,y:o.y,type:o.type});}
   if(e.t-e.swipeAt>.45)e.swipeN=0;e.swipeAt=e.t;e.swipeN++;
   if(e.swipeN>=3){const bonus=10*(e.swipeN-2);e.score+=bonus;e.combo=e.swipeN;e.best=Math.max(e.best,e.combo);pop(`COMBO x${e.swipeN}`,w/2,h*.35,'#ff4fd8',true);emit('combo',{n:e.swipeN,bonus});}

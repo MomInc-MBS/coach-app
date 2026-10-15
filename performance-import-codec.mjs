@@ -1,6 +1,6 @@
 import {EXERCISES} from './exercise-library.mjs';
 import {COACHES} from './performance-catalog.mjs';
-import {DIFFICULTIES,holdXp,repXp} from './progression-rules.mjs';
+import {DIFFICULTIES,holdXp,repXp,SPRINT_ROUND_XP,GENTLE_BLOCK_XP} from './progression-rules.mjs';
 const keys=['version','kind','difficulty','maxContinuousSeconds','perDifficultyContinuous','holdBlocks','coachId','rounds'];
 function data(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||![Object.prototype,null].includes(Object.getPrototypeOf(raw)))throw Error('Invalid performance metadata.');const descriptors=Object.getOwnPropertyDescriptors(raw);if(Reflect.ownKeys(descriptors).some(k=>typeof k!=='string'||!Object.hasOwn(descriptors[k],'value')||!descriptors[k].enumerable))throw Error('Invalid performance metadata.');return Object.fromEntries(Object.entries(descriptors).map(([k,v])=>[k,v.value]));}
 const finite=(n,max)=>Number.isFinite(n)&&n>=0&&n<=max;
@@ -15,4 +15,4 @@ export function validateImportedPerformance(raw,snapshot){
  return {version:2,kind:p.kind,difficulty:p.difficulty,maxContinuousSeconds:p.maxContinuousSeconds,perDifficultyContinuous:Object.fromEntries(DIFFICULTIES.filter(d=>Object.hasOwn(continuous,d)).map(d=>[d,continuous[d]])),holdBlocks:blocks,coachId:p.coachId,rounds:p.rounds};
 }
 export function projectImportedPerformance(raw,snapshot){const p=data(raw);return validateImportedPerformance({version:2,kind:p.kind,difficulty:p.difficulty,maxContinuousSeconds:p.maxContinuousSeconds??0,perDifficultyContinuous:p.kind==='hold'?(p.perDifficultyContinuous??{[p.difficulty]:p.maxContinuousSeconds??0}):{},holdBlocks:p.holdBlocks??[],coachId:p.coachId??null,rounds:p.kind==='sprint'?(p.rounds??0):0},snapshot);}
-export function importedPerformanceXp(snapshot){const p=validateImportedPerformance(snapshot.performance,snapshot);if(p.kind==='hold')return p.holdBlocks.reduce((sum,b)=>sum+holdXp({difficulty:b.difficulty,from:b.activeStart,to:b.activeStart+15,continuousAtFrom:b.continuousStart}),0);if(p.kind==='reps')return repXp({difficulty:p.difficulty,to:Math.floor(snapshot.value)});if(p.kind==='sprint')return p.rounds*7;return Math.floor(Math.min(1800,snapshot.activeSeconds)/15);}
+export function importedPerformanceXp(snapshot){const p=validateImportedPerformance(snapshot.performance,snapshot);if(p.kind==='hold')return p.holdBlocks.reduce((sum,b)=>sum+holdXp({difficulty:b.difficulty,from:b.activeStart,to:b.activeStart+15,continuousAtFrom:b.continuousStart}),0);if(p.kind==='reps')return repXp({difficulty:p.difficulty,to:Math.floor(snapshot.value)});if(p.kind==='sprint')return p.rounds*SPRINT_ROUND_XP;return Math.floor(Math.min(1800,snapshot.activeSeconds)/15)*GENTLE_BLOCK_XP;}

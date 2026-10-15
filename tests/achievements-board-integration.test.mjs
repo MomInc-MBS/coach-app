@@ -1,3 +1,4 @@
+import {XP_SCALE} from '../progression-rules.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -11,7 +12,7 @@ import {nextPerformanceChallenge} from '../workout-route-ui.mjs';
 const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
 test('field manual explains performance unlocks and daily cosmetics without old daily category XP',()=>{
  const text=GUIDE.flatMap(r=>r[3].flat()).join(' ');
- for(const phrase of ['5 uninterrupted minutes','10 uninterrupted minutes','15 reps','250 levels','500 XP','one uncommon pack','one legendary pack','Rest defeats do not unlock coaches'])assert(text.includes(phrase),phrase);
+ for(const phrase of ['5 uninterrupted minutes','10 uninterrupted minutes','15 reps','250 levels',`${500*XP_SCALE} XP`,'one uncommon pack','one legendary pack','Rest defeats do not unlock coaches'])assert(text.includes(phrase),phrase);
  assert(!text.includes('100 XP for that category'));
  const hub=readFileSync(new URL('../coach-hub.mjs',import.meta.url),'utf8');assert(hub.includes("from './progression-guide.mjs'"));assert(hub.includes('for(const [label,text] of items)'),'weapon tab renders its explanatory paragraphs too');
 });

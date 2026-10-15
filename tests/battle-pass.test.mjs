@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {XP_SCALE as S} from '../progression-rules.mjs';
 
 // Node has no localStorage; one in-memory stand-in shared by every module under test.
 const memory=new Map();
@@ -61,9 +62,9 @@ const {COACH_REQUIREMENTS}=await import('../performance-catalog.mjs');
 test('cosmetic pass grants packs from XP once, never performance items from circuit steps',()=>{
  fresh();setSelectedTracks(['chest','quads']);
  const old=syncBattlePass({tracks:allSteps(99999)});assert.equal(old.granted.length,0);
- recordPerformanceSession({id:'saved-hold',mode:'horse',kind:'hold',difficulty:'easy',activeSeconds:15,continuousSeconds:15,xpBase:1,earnedCoachCount:0,day:'2026-10-04'});
+ recordPerformanceSession({id:'saved-hold',mode:'horse',kind:'hold',difficulty:'easy',activeSeconds:15,continuousSeconds:15,xpBase:S,earnedCoachCount:0,day:'2026-10-04'});
  recordDailyActivity('meditation',{id:'med',day:'2026-10-04'});recordDailyActivity('food',{id:'food',day:'2026-10-04'});
- assert.equal(readPerformanceProgress().totalXp,502);
+ assert.equal(readPerformanceProgress().totalXp,502*S);
  const first=syncBattlePass();assert.equal(first.granted.length,7);assert.ok(first.granted.every(item=>item.kind==='reward-pack'));
  assert.ok(first.granted.some(item=>item.tier==='rare'));assert.equal(syncBattlePass().granted.length,0);
  for(const kind of ['weapon','ship','boss-unlock'])assert.equal(ledger.grantedIds(kind).length,0);

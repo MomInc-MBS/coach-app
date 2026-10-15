@@ -14,7 +14,7 @@ test('XP rewards tab shows new cosmetic rules and updates daily rest victories w
  const fixture=await openAchievementFixture();try{
   const {page}=fixture,initial=await page.evaluate(()=>window.performanceProgress.readPerformanceProgress().coaches);
   await page.locator('[data-ach-tab=rewards]').click();let text=await page.locator('.ach-catalog').textContent();
-  for(const phrase of ['250','double today’s workout XP','separate 500 XP','one uncommon pack','five bosses','one legendary pack','once per day','0 / 5 daily boss defeats'])assert(text.includes(phrase),phrase);
+  for(const phrase of ['250','double today’s workout XP','separate 5000 XP','one uncommon pack','five bosses','one legendary pack','once per day','0 / 5 daily boss defeats'])assert(text.includes(phrase),phrase);
   await page.evaluate(()=>window.restRewards.recordRestBossDefeat('browser-defeat-1'));assert.match(await page.locator('.ach-catalog').textContent(),/1 \/ 5 daily boss defeats/);
   const progress=await page.evaluate(()=>{for(let i=2;i<=5;i++)window.restRewards.recordRestBossDefeat(`browser-defeat-${i}`);window.restRewards.recordRestBossDefeat('browser-defeat-5');return window.restRewards.readRestBossRewards();});
   assert.equal(progress.count,5);assert(progress.packs.every(p=>p.earned&&p.granted));assert.match(await page.locator('.ach-catalog').textContent(),/5 \/ 5 daily boss defeats/);

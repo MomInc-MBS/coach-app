@@ -1,6 +1,6 @@
 import {EXERCISES} from '../exercise-library.mjs';
 import {exerciseDifficulty} from '../performance-catalog.mjs';
-import {holdXp,repXp} from '../progression-rules.mjs';
+import {holdXp,repXp,GENTLE_BLOCK_XP} from '../progression-rules.mjs';
 import {importedPerformanceXp} from '../performance-import-codec.mjs';
 import {validateImportSnapshot} from '../workout-import-codec.mjs';
 import {readPerformanceProgress,recordPerformanceSession,recordDailyActivity,workoutEligibility,choosePerformancePaths} from '../performance-progress.mjs';
@@ -23,7 +23,7 @@ export function deriveAccountPerformance({workouts=[],breathing=[],meals=[],time
   if(w.performance_snapshot){try{const snapshot=validateImportSnapshot(JSON.parse(w.performance_snapshot));if(!snapshot.performance||snapshot.mode!==w.mode||snapshot.clientWorkoutId!==(w.client_workout_id??w.id)||snapshot.value!==w.value||snapshot.activeSeconds!==w.active||snapshot.completedAt!==w.completed_at)continue;const p=snapshot.performance;record={...p,id:w.client_workout_id??w.id,mode:w.mode,value:snapshot.value,activeSeconds:snapshot.activeSeconds,xpBase:importedPerformanceXp(snapshot),day};}catch{continue;}}
   else if(w.source==='server'){
    const difficulty=exerciseDifficulty(w.mode),kind=e.kind==='hold'?'hold':e.kind==='reps'&&e.group!=='cardio'?'reps':'gentle',active=Math.max(0,Math.min(1800,Number(w.active)||0)),value=Math.max(0,Number(w.value)||0);
-   let xpBase=kind==='reps'?repXp({difficulty,to:Math.floor(value)}):kind==='gentle'?Math.floor(active/15):0;
+   let xpBase=kind==='reps'?repXp({difficulty,to:Math.floor(value)}):kind==='gentle'?Math.floor(active/15)*GENTLE_BLOCK_XP:0;
    if(kind==='hold')for(let start=0;start+15<=active;start+=15)xpBase+=holdXp({difficulty,from:start,to:start+15,continuousAtFrom:0});
    record={id:w.id,mode:w.mode,kind,difficulty,value,activeSeconds:active,maxContinuousSeconds:0,perDifficultyContinuous:{},xpBase,day};
   }else continue;

@@ -1,3 +1,4 @@
+import {XP_SCALE} from './progression-rules.mjs';
 import {localDay,recordPerformanceSession,readPerformanceProgress} from './performance-progress.mjs';
 
 /** Only replay durable new-format completions for the requested progression owner.
@@ -11,7 +12,7 @@ export function savedPerformanceRecords(rows,{owner}={}){
   if(row?.status!=='completed'||!Number.isSafeInteger(row.completedAt)||row.completedAt<0||typeof row.id!=='string'||!row.id||seen.has(row.id)||!p||typeof p!=='object'||Array.isArray(p))continue;
   if(p.performanceOwner!==owner||row.progress.performanceOwner!=null&&row.progress.performanceOwner!==owner||p.id!=null&&p.id!==row.id||p.mode!==row.mode||p.preparation||p.earned===false||row.completion?.earned===false)continue;
   if(!['hold','reps','sprint','gentle','pace'].includes(p.kind)||!Number.isFinite(p.xpBase)||p.xpBase<0)continue;
-  seen.add(row.id);records.push({...p,id:row.id,completedAt:row.completedAt,day:p.day??localDay(row.completedAt)});
+  seen.add(row.id);records.push({...p,xpBase:p.xpScale===XP_SCALE?p.xpBase:p.xpBase*XP_SCALE,xpScale:XP_SCALE,id:row.id,completedAt:row.completedAt,day:p.day??localDay(row.completedAt)});
  }
  return records;
 }
