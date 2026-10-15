@@ -29,9 +29,9 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
  const emit=(type,data)=>onEvent(type,data);
  const pop=(text,x,y,c='#fff',big=false)=>e.pops.push({text,x,y,c,big,life:big?1.1:.8});
  function mk(type,x,y,vx,vy,r,bonus=false){const o={type,x,y,vx,vy,r,rot:rand()*TAU,vr:(rand()-.5)*8,bonus,alive:true,seed:Math.floor(rand()*1e6)};e.objects.push(o);return o;}
- // Parabola from the coach at the bottom toward the user: launch speed picks the apex, flight time picks the landing x.
- e.launch=()=>{const tx=w*(.15+rand()*.7),apex=h*(.45+rand()*.35),vy=-Math.sqrt(2*GRAVITY*apex)*e.speed,T=-2*vy/GRAVITY;
-  return mk(pick(TYPE_IDS),coachX,h-4,(tx-coachX)/T,vy,11+rand()*6);};
+ // Parabola from the coach at the bottom toward the user: same apex every wave; speed scales gravity so later waves fall faster, not higher.
+ e.launch=()=>{const tx=w*(.15+rand()*.7),apex=h*(.45+rand()*.35),g=GRAVITY*e.speed*e.speed,vy=-Math.sqrt(2*g*apex),T=-2*vy/g;
+  const o=mk(pick(TYPE_IDS),coachX,h-4,(tx-coachX)/T,vy,11+rand()*6);o.g=g;return o;};
  // Generic thrower (rest mode: coach throws DOWN from the top): e.spawn({type,x,y,vx,vy,r,bonus}); non-bonus objects feel gravity.
  e.spawn=({type=pick(TYPE_IDS),x,y,vx=0,vy=0,r=12,bonus=false})=>mk(type,x,y,vx,vy,r,bonus);
  e.dropBonus=()=>mk(pick(BONUS_IDS),w*(.1+rand()*.8),-12,(rand()-.5)*6,22+rand()*10,9,true);
@@ -62,11 +62,11 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   if(e.cool>0){e.cool-=dt;if(e.cool<=0)e.speed=Math.max(1,e.speed-.1);}
   else if(auto&&!e.over){
    if(mode==='martial'){e.spawnIn-=dt;if(e.spawnIn<=0&&!e.objects.some(o=>!o.bonus)){e.wave++;e.speed=Math.min(1.5,1+e.wave*.04);e.spawnWave();e.spawnIn=1.2;emit('wave',{wave:e.wave});}}
-   e.bonusIn-=dt;if(e.bonusIn<=0){e.dropBonus();e.bonusIn=mode==='hold'?2.5:6;}
+   e.bonusIn-=dt;if(e.bonusIn<=0){e.dropBonus();e.bonusIn=mode==='hold'?5+rand()*2:2+rand();}
   }
   for(const o of e.objects){
    if(o.hold){o.delay-=dt;if(o.delay<=0){o.hold=false;o.vx=o.vx0;o.vy=o.vy0;}continue;}
-   o.rot+=o.vr*dt;o.x+=o.vx*dt;o.y+=o.vy*dt;if(!o.bonus)o.vy+=GRAVITY*dt;
+   o.rot+=o.vr*dt;o.x+=o.vx*dt;o.y+=o.vy*dt;if(!o.bonus)o.vy+=(o.g||GRAVITY)*dt;
    if(o.vy>0&&o.y>h+o.r){o.alive=false;if(!o.bonus){emit('land',{x:o.x,type:o.type});if(strikes)strike();}} // a missed rock lands = strike
   }
   e.objects=e.objects.filter(o=>o.alive);

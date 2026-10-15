@@ -22,4 +22,10 @@ e3.hitSegment({x:0,y:100},{x:180,y:100});assert.equal(e3.combo,3);
 const e4=createSlice({auto:true,seed:6});let ended=false;e4.step(1.5);for(let i=0;i<3000&&!ended;i++){e4.step(1/60);ended=e4.cool>0;}assert.ok(ended&&e4.strikes===0&&!e4.over);
 // laser: moving = hit (strike), still = shield
 for(const[move,want]of[[1,'hit'],[0,'shield']]){const l=createSlice({auto:false});l.laserStart(90,200);for(let i=0;i<30;i++){l.feedMotion(move);l.step(1/20);}l.step(.1);assert.equal(l.laser.result,want);assert.equal(l.strikes,want==='hit'?1:0);}
+// speed ramp: later waves keep the same apex but come down faster
+const fly=sp=>{const f=createSlice({auto:false,seed:9});f.speed=sp;const q=f.launch();let top=1e9,t=0;while(f.objects.length&&t<10){f.step(1/120);t+=1/120;top=Math.min(top,q.y);}return {top,t};};
+const s1=fly(1),s15=fly(1.5);assert.ok(Math.abs(s1.top-s15.top)<3,'same apex');assert.ok(s15.t<s1.t*.75,'faster at 1.5x');
+// bonus drops: holds every 5-7s, martial every 2-3s (each reset of bonusIn is a new gap)
+for(const[mode,lo,hi]of[['hold',5,7],['martial',2,3]]){const f=createSlice({auto:true,mode,seed:11,strikes:false});let prev=f.bonusIn,gaps=[];for(let k=0;k<60*60;k++){f.step(1/60);if(f.bonusIn>prev)gaps.push(f.bonusIn);prev=f.bonusIn;}
+ assert.ok(gaps.length>3&&gaps.every(g=>g>=lo-.02&&g<=hi),mode+' gaps '+gaps.map(g=>g.toFixed(2)));}
 console.log('slice core ok');
