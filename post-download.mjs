@@ -21,6 +21,7 @@ const GROUPS=[
  ['starter','Starter: portal, pyramid, ship and worlds','The offline workout tracker, the quilt portal, the Food pyramid, the starter ship and its worlds, and the achievements art.'],
  ['grimoire-ice','Crystal grimoire portal','Crystal board art and its reflective color-matched wormhole.'],
  ['grimoire-grass','Grass grimoire portal','Grass and flower art with its dirt, roots and bugs wormhole.'],
+ ['grimoire-cogs','Cogs grimoire portal','Clockwork board parts, door art and its mechanical wormhole.'],
  ['grimoire-jelly','Jelly grimoire portal','Jelly board art and its bumpy color-matched wormhole.'],
  ['grimoire-wood','Wood grimoire portal','Wood board art and its ember, bark and charcoal wormhole.'],
  ['grimoire-pond','Pond grimoire portal','Pond poster art and its murky water, lily and koi wormhole.'],
@@ -125,6 +126,7 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
   const groups=plan?.groups||{},sizes=id=>groups[id];
   const bodies=SECTIONS.filter(section=>sizes(section.id));
   const current=new Map(boxes().map(box=>[box.dataset.group,box.checked])),expanded=menu.open&&!!list.querySelector('details')?.open;
+  const rendered=new Set();
   // A re-render keeps keyboard focus on the same row (e.g. the Starter row a scene asked for).
   const focused=list.contains(document.activeElement)&&document.activeElement.dataset,refocus=focused&&(focused.group?`[data-group="${focused.group}"]`:focused.all?`[data-all="${focused.all}"]`:null);
   list.querySelectorAll('.download-row,.download-bodies').forEach(node=>node.remove());
@@ -133,9 +135,15 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
     if(!bodies.length)continue;
     const wrap=document.createElement('div');wrap.className='download-bodies';
     wrap.innerHTML=row('*bodies',title,text)+'<details><summary>By workout section</summary>'+bodies.map(section=>row(section.id,section.name,section.row?`${sizes(section.id).files} bodies`:`${sizes(section.id).files} bodies, open to everyone`,'<em data-lock hidden>Locked · preview</em>')).join('')+'</details>';
-    wrap.querySelector('details').open=expanded;list.append(wrap);continue;
+    wrap.querySelector('details').open=expanded;list.append(wrap);for(const section of bodies)rendered.add(section.id);continue;
    }
-   if(sizes(id))list.insertAdjacentHTML('beforeend',row(id,title,text,id==='coach'||id==='starter'?'<em>Recommended</em>':''));
+   if(sizes(id)){list.insertAdjacentHTML('beforeend',row(id,title,text,id==='coach'||id==='starter'?'<em>Recommended</em>':''));rendered.add(id);}
+  }
+  // New release groups still appear under the full-package toggle even before this copy gains curated labels.
+  for(const id of Object.keys(groups))if(!rendered.has(id)){
+   const title=id.split('-').map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ');
+   list.insertAdjacentHTML('beforeend',row(id,title,'Additional public content included in the complete offline package.'));
+   rendered.add(id);
   }
   if(Object.keys(groups).length>1)list.insertAdjacentHTML('afterbegin',row('*everything','Complete public content package','Every public group, including Vault worlds and their assets.','<em>Recommended</em>'));
   // A re-render while the menu is up (a fresher plan) keeps what the user has toggled so far.
