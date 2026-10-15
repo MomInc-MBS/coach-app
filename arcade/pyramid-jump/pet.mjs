@@ -4,7 +4,7 @@ import {paperFor,readRecipe,topOf} from './logic.mjs';
 const STYLE=`
 #pyramidScanner .pj-layer{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 #pyramidScanner .pj-pet{position:absolute;left:0;top:0;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer;filter:drop-shadow(2px 3px 2px #30251988);touch-action:manipulation}
-#pyramidScanner .pj-pet svg{display:block;width:100%;height:100%;overflow:visible}
+#pyramidScanner .pj-pet svg{display:block;width:100%;height:100%;overflow:hidden}
 #pyramidScanner .pj-lip{position:absolute;left:-16px;right:-16px;bottom:-6px;height:20px;background:repeating-linear-gradient(90deg,#8b5bc7 0 9px,#d4a93a 9px 14px);border:2px solid #351344;border-radius:2px 2px 5px 5px}
 #pyramidScanner .pj-play{position:absolute;left:0;top:0;min-height:44px;padding:0 24px;border:2px solid #fff;border-radius:999px;background:#ff5d8f;color:#fff;font:800 15px/1 system-ui,sans-serif;letter-spacing:.12em;pointer-events:auto;box-shadow:0 2px 10px #0008;animation:pjPulse 1.6s ease-in-out infinite}
 @keyframes pjPulse{50%{box-shadow:0 2px 10px #0008,0 0 18px 6px #ff5d8fbb}}
