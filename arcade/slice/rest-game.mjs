@@ -1,7 +1,7 @@
 // Fruit Ninja rest mode: the coach (top) throws space junk at the user's character; swipe slices, tap explodes,
 // tilt (or arrow keys) dodges, holding still shields from the laser. Lazy-loaded by pod.mjs; engine = ./core.mjs.
 import {createSlice,render} from './core.mjs';
-import {createDodger,createSwipe,throwPlan,restTargetRadius,REST} from './rest-logic.mjs';
+import {createDodger,createSwipe,throwPlan,REST} from './rest-logic.mjs';
 import {subscribePhoneMotion,requestPhoneMotion} from '../../character-phone-sensor.mjs';
 import {performanceOwner} from '../../performance-progress.mjs';
 import {createQuestProgressReporter} from '../quest-progress-reporter.mjs';
@@ -28,7 +28,7 @@ export function mountRestGame(scene,{avatar,attackButton,feedback}){
  }
  function throwRock(){
   const p=throwPlan(e.wave,e.coachX,dodger.x),y0=coachY(),vy=40,D=floorY()-y0,T=(-vy+Math.sqrt(vy*vy+2*GRAV*D))/GRAV;
-  for(let i=0;i<p.count;i++)e.spawn({x:p.x+i*6,y:y0,vx:(p.aimX+(i?(i%2?1:-1)*22*i:0)-p.x)/T,vy,r:restTargetRadius(10+Math.random()*5)});
+  for(let i=0;i<p.count;i++)e.spawn({x:p.x+i*6,y:y0,vx:(p.aimX+(i?(i%2?1:-1)*22*i:0)-p.x)/T,vy,r:10+Math.random()*5});
   if(++throws%8===0)e.wave++;
   nextThrow=e.t+p.gap/1000;
  }

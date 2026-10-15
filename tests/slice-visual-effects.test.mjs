@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSlice,render} from '../arcade/slice/core.mjs';
+import {createSlice,render,TARGET_SIZE,TYPE_IDS} from '../arcade/slice/core.mjs';
 import {createHandGlow,renderHandGlow} from '../arcade/slice/hand-glow.mjs';
 import {XP_SCALE} from '../progression-rules.mjs';
 
@@ -9,6 +9,16 @@ function recordingContext(){
  return {calls,drawAlphas,get globalAlpha(){return alpha;},set globalAlpha(value){alpha=value;},clearRect(){calls.push('clear');},save(){stack.push(alpha);},restore(){alpha=stack.pop()??1;},translate(){},rotate(){},beginPath(){},rect(){calls.push('rect');},clip(){calls.push('clip');},
   moveTo(){},lineTo(){},stroke(){calls.push('stroke');},fillRect(){calls.push('fillRect');},fillText(){calls.push('text');},drawImage(){calls.push('image');drawAlphas.push(alpha);},setLineDash(){}};
 }
+
+test('all shared target creation paths apply the 2.5x display and collision radius once',()=>{
+ const e=createSlice({auto:false,seed:14}),launched=e.launch(),custom=e.spawn({type:TYPE_IDS[0],x:40,y:50,r:7}),defaulted=e.spawn({x:60,y:50}),bonus=e.dropBonus();
+ assert.ok(launched.r>=11*TARGET_SIZE&&launched.r<17*TARGET_SIZE,'launched target scales its randomized base radius');
+ assert.equal(custom.r,7*TARGET_SIZE);assert.equal(defaulted.r,12*TARGET_SIZE);assert.equal(bonus.r,9*TARGET_SIZE);
+ assert.ok([launched,custom,defaulted,bonus].every(o=>o.r>0));
+ // Hit-testing uses the same scaled radius that render() uses for visible width.
+ const target=e.spawn({x:90,y:50,r:7});assert.equal(e.hitSegment({x:target.x+target.r-.1,y:50},{x:target.x+target.r-.1,y:50},{kind:'explode'}),1);
+ assert.equal(target.alive,false);
+});
 
 test('camera slice hit, XP, combo and scoring remain active with visual effects rendered',()=>{
  const e=createSlice({auto:false,mode:'martial',seed:12});

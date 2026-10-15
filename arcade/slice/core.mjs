@@ -7,6 +7,7 @@ import {XP_SCALE} from '../../progression-rules.mjs';
 export const TYPES={'asteroid-rock':['#8a7a68','#5e5246','#b9a88f'],'asteroid-ember':['#d0552a','#7a2a14','#ffb070'],'ice-comet':['#9fdcff','#4f9fd8','#ffffff'],'mini-planet':['#c060d8','#6a3a9c','#ffd27a'],moon:['#cfcfd8','#8d8d9a','#f4f4ff'],'sun-chunk':['#ffb400','#ff5a1f','#fff3a0'],'satellite-junk':['#9aa6b4','#4a5566','#e8f0ff'],'xp-star':['#ffe14a','#c8901a','#fffbd0'],'xp-orb':['#4affc8','#1a9c80','#d8fff4']};
 export const TYPE_IDS=Object.keys(TYPES).filter(k=>!k.startsWith('xp-'));
 export const BONUS_IDS=['xp-star','xp-orb'];
+export const TARGET_SIZE=2.5;
 const GRAVITY=260,TAU=Math.PI*2,HALF_LIFE=1.25;
 export function rng(seed=1){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 export function distPointSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l)):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
@@ -29,7 +30,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   laser:{phase:'idle',t:0,tx:0,ty:0,samples:[],result:null,flash:0},cool:0,spawnIn:1,bonusIn:4,swipeAt:-9,swipeN:0,speed:1};
  const emit=(type,data)=>onEvent(type,data);
  const pop=(text,x,y,c='#fff',big=false)=>e.pops.push({text,x,y,c,big,life:big?1.1:.8});
- function mk(type,x,y,vx,vy,r,bonus=false){const o={type,x,y,vx,vy,r,rot:rand()*TAU,vr:(rand()-.5)*8,bonus,alive:true,seed:Math.floor(rand()*1e6)};e.objects.push(o);return o;}
+ function mk(type,x,y,vx,vy,r,bonus=false){const o={type,x,y,vx,vy,r:r*TARGET_SIZE,rot:rand()*TAU,vr:(rand()-.5)*8,bonus,alive:true,seed:Math.floor(rand()*1e6)};e.objects.push(o);return o;}
  // Parabola from the coach at the bottom toward the user: same apex every wave; speed scales gravity so later waves fall faster, not higher.
  e.launch=()=>{const tx=w*(.15+rand()*.7),apex=h*(.45+rand()*.35),g=GRAVITY*e.speed*e.speed,vy=-Math.sqrt(2*g*apex),T=-2*vy/g;
   const o=mk(pick(TYPE_IDS),coachX,h-4,(tx-coachX)/T,vy,11+rand()*6);o.g=g;return o;};

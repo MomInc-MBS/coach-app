@@ -1,6 +1,5 @@
 // Rest-mode (touch + tilt) pieces of Fruit Ninja rest. Pure logic, no DOM: the shared engine is arcade/slice/core.mjs.
-export const REST={dodgeSpeed:420,tiltGain:2.2,stillMotion:.9,laserTelegraph:1000,laserEvery:[9000,14000],throwEvery:[1400,700],strikesMax:3,firstThrowDelay:0,targetSize:2.5};
-export const restTargetRadius=baseRadius=>Math.max(0,Number(baseRadius)||0)*REST.targetSize;
+export const REST={dodgeSpeed:420,tiltGain:2.2,stillMotion:.9,laserTelegraph:1000,laserEvery:[9000,14000],throwEvery:[1400,700],strikesMax:3,firstThrowDelay:0};
 
 // Dodger: the user's character slides along the floor. gx (screen-right gravity, -1..1) from the phone, keys / drag as fallback.
 export function createDodger(width,margin=40){
