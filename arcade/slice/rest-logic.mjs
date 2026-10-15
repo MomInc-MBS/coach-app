@@ -21,12 +21,6 @@ export function throwPlan(wave,coachX,dodgerX,rand=Math.random){
  return {gap,x:coachX,aimX:dodgerX+spread,count:1+Math.floor(wave/3)};
 }
 
-// Shield: still means the recent phone motion (or finger motion fallback) stayed under the threshold for the whole beam window.
-export function createStillness(){
- let peak=0;
- return {reset(){peak=0;},sample(m){const v=Math.hypot(m.shake||0,(m.angularSpeed||0)*3,(m.dgx||0)*9);if(v>peak)peak=v;},get shielded(){return peak<REST.stillMotion;}};
-}
-
 // Swipe: pointer path -> segments to push through core.hitSegment; a path that never moves far is a tap.
 export function createSwipe(tapRadius=10){
  let last=null,start=null,far=false;

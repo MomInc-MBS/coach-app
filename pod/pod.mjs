@@ -98,6 +98,11 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   if(flow.phase!=='rest')return;speakChallenge();const now=Date.now();if(flow.shouldEndRest(now)){leave();return;}specialControls();const remaining=flow.remaining(now),next=route.suggestion();setFlipValue($('restTime'),clockDigits(remaining),'recovery remaining');$('nextSet').disabled=remaining>0||!next;$('nextSet').textContent=remaining?'Recovering…':awaitingRound?'Waiting to sync…':next?'Preview next round →':'Finished for today';if(!remaining&&!restCalled&&!document.hidden){restCalled=true;voice.say('Rest complete. Keep tapping to stay.',{interrupt:true});}
  }
 
+ // Fruit Ninja rest layer: lazy so the game stays out of the core bundle.
+ const SLICE_GAME='/arcade/slice/rest-game.mjs'; // variable path: esbuild leaves it alone, so the game stays out of the core bundle
+ let slice=null;
+ function startSlice(){import(SLICE_GAME).then(m=>{if(slice||flow.phase!=='rest')return;slice=m.mountRestGame(document.querySelector('.encounter'),{avatar:$('restAvatar'),attackButton:$('attackCoach'),feedback:$('restFeedback')});slice.start();}).catch(()=>{});}
+ function stopSlice(){slice?.stop();slice=null;}
  function enterRest(result=null){preparationRest=false;setPreparationControls(false);
   flow.kitLevel=combatLevel(result?.mode||currentMode||'squat');flow.beforeRestAttack(Date.now()); // real battle-pass level for this boss's track (D8/D22)
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
@@ -107,7 +112,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('setReceipt').textContent=result?`${result.name} · ${Math.round(result.value)} ${['hold','sprint','gentle'].includes(result.kind)||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps'}`:'Practice';
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent=Math.round(flow.damage)+' DAMAGE';paintHealth();
   syncCombat();
-  $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
+  $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();startSlice();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();
   clearInterval(restTimer);restTimer=setInterval(tick,250);tick();
   history.replaceState(null,'','#rest');window.myr5Creature?.play(result?'celebrate':'rest');
  }
@@ -148,7 +153,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  }
  function exitPreparation({resume=true}={}){
   if(!preparationRest)return;
-  preparationRest=false;delete document.body.dataset.preparationRest;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);
+  preparationRest=false;delete document.body.dataset.preparationRest;hand.leave();arena.stop();stopSlice();clearInterval(restTimer);clearTimeout(hitTimer);
   setPreparationControls(false);$('restScreen').hidden=true;$('homeScreen').hidden=false;document.body.dataset.screen='pod';
   const coachOverlay=document.getElementById('coachOverlay');if(coachOverlay&&card&&document.body.dataset.tracking==='true')coachOverlay.append(card);
   moveCoach();
@@ -163,7 +168,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
  async function interruptCurrent(m){exitPreparation({resume:false});const id=flow.active?.localId;let timer;try{if(id)await Promise.race([workouts.interrupt(id,{...flow.progress,performanceOwner:flow.active?.performanceOwner,performanceWorkout:flow.workout?.snapshot(),value:m?valueOf(m):0,activeSeconds:m?.active||0,elapsedSeconds:m?.elapsed||0}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Workout cleanup timed out. Reload Coach before starting again.')),5000);})]);}finally{clearTimeout(timer);if(flow.phase==='set')flow.leave();pausedLocal=null;workoutOwner.stop();route.render();circuit.render();}}
  // #150: the trips out of rest stop its timer first, so the idle end can't leave() under the tunnel.
  // #56: the ↗ exit goes home to the quilt (clears the hash, closes the route); "Next set →" stays in the pod.
- function leave({home=false}={}){exitPreparation({resume:false});pendingChallenge=null;hand.leave();arena.stop();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();if(home){history.replaceState(null,'',location.pathname+location.search);window.myr5Routes?.home?.();}else history.replaceState(null,'','#pod');$('start').disabled=!workoutEligibility(currentMode).allowed;route.render();circuit.render();$('start').focus();}
+ function leave({home=false}={}){exitPreparation({resume:false});pendingChallenge=null;hand.leave();arena.stop();stopSlice();clearInterval(restTimer);clearTimeout(hitTimer);voice.cancel();flow.leave();document.body.dataset.screen='pod';$('restScreen').hidden=true;$('homeScreen').hidden=false;moveCoach();if(home){history.replaceState(null,'',location.pathname+location.search);window.myr5Routes?.home?.();}else history.replaceState(null,'','#pod');$('start').disabled=!workoutEligibility(currentMode).allowed;route.render();circuit.render();$('start').focus();}
  document.querySelector('.encounter').addEventListener('pointerdown',()=>flow.touchRest(Date.now()),{passive:true});
  $('attackCoach').addEventListener('click',()=>{
   syncCombat();const now=Date.now(),hit=preparationRest?flow.preparationTap(now,true):flow.tap(now,true);if(!hit)return;
