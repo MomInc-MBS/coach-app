@@ -83,6 +83,9 @@ async function loadSprites() {
     sources.set('plant:fern', normalize(img.flowers, [12, 0, 12, 24], { key: [34, 32, 52], maxW: 36, maxH: 60 }));
     sources.set('plant:vine', normalize(img.flowers, [14 * 12, 0, 12, 24], { key: [34, 32, 52], maxW: 40, maxH: 60 }));
     sources.set('plant:flower', normalize(img.flowers, [48 * 12, 0, 12, 24], { key: [34, 32, 52], maxW: 42, maxH: 60 }));
+    sources.set('plant:grass', normalize(img.flowers, [0, 0, 12, 24], { key: [34, 32, 52], maxW: 40, maxH: 60 }));
+    sources.set('plant:reed', normalize(img.flowers, [6 * 12, 0, 12, 24], { key: [34, 32, 52], maxW: 40, maxH: 60 }));
+    sources.set('plant:mushroom', normalize(img.flowers, [70 * 12, 0, 12, 24], { key: [34, 32, 52], maxW: 42, maxH: 60 }));
   }
   if (img.foxIdle) sources.set('animal:fox:idle', buildAnimal(img.foxIdle, 6, 64, 36));
   if (img.foxRun) sources.set('animal:fox:run', buildAnimal(img.foxRun, 6, 64, 36));

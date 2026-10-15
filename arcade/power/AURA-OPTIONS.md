@@ -27,6 +27,9 @@ The War Room's **Auras** selector stores one device-local choice. **Random** sel
 | Fern growth | Existing `../hold/assets/flowers-plants_2.png`, cell 1; Flowers by SpiderDave, CC0. | Implemented |
 | Vine drift | Existing `../hold/assets/flowers-plants_2.png`, cell 14; same CC0 atlas. | Implemented |
 | Flower bloom | Existing `../hold/assets/flowers-plants_2.png`, cell 48; same CC0 atlas. | Implemented |
+| Fungi bloom | Existing `../hold/assets/flowers-plants_2.png`, cell 70; same CC0 atlas. | Implemented |
+| Grass growth | Existing `../hold/assets/flowers-plants_2.png`, cell 0; same CC0 atlas. | Implemented |
+| Reed growth | Existing `../hold/assets/flowers-plants_2.png`, cell 6; same CC0 atlas. | Implemented |
 | Rabbit companion | Existing `../hold/assets/rabbit/Rabbit/Rabbit_Idle.png` and `Rabbit_Run.png`; Animated Wild Animals by ScratchIO, CC0. | Implemented |
 | Fox companion | Existing `../hold/assets/fox/Fox/Fox_Idle.png` and `Fox_Run.png`; same CC0 collection. | Implemented |
 | Bear companion | Added `../hold/assets/bear/Bear/Bear_Idle.png` and `Bear_Run.png` from the collection's `All.zip`; 12 idle and 5 run frames, each 64x33. | Implemented |
@@ -41,6 +44,6 @@ The War Room's **Auras** selector stores one device-local choice. **Random** sel
 | Gold crystal shards | Added `../hold/assets/crystals/PNG/32x32/crystal-gold.png` from the archived CC0 Crystals pack. | Implemented |
 | Purple crystal shards | Added `../hold/assets/crystals/PNG/32x32/crystal-purple.png` from the archived CC0 Crystals pack. | Implemented |
 
-**Unavailable art:** Mushroom/fungi and other vine/rock biome paintings under `plan/assets-inbox/biomes/` have no verified license manifest and are not shipped or used as backdrops. These are intentionally not listed as selectable effects until their provenance is available. The CC0 animal source explicitly offers Bear.zip, Deer.zip, Wolf.zip, and Boar.zip; those four are included from its All.zip.
+Fern, vine, flower, mushroom, grass, and reed options use the existing CC0 Flowers atlas. No art was added from the unlicensed `plan/assets-inbox/biomes/` collection. The CC0 animal source explicitly offers Bear.zip, Deer.zip, Wolf.zip, and Boar.zip; those four are included from its All.zip.
 
 The effect pack source, author credits, and license evidence are recorded in `assets/SOURCE-LICENSES.md`; hold/ecology source evidence is in `../hold/assets/SOURCE-LICENSES.md`.
