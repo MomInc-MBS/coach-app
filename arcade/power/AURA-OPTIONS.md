@@ -1,6 +1,17 @@
 # War Room aura choices
 
-The War Room's **Auras** selector stores one device-local choice. **Random** selects a different effect for each rendered power burst from the implemented choices. The option IDs, labels, animation grids, and render layouts live in `aura-options.mjs`.
+The War Room stores a device-local effect choice for each exercise group in `myr5-exercise-effect-choices-v1`. Each group's **Random** choice resolves only within that group's pool; the 38 existing choices are partitioned by their exercise route instead of sharing one global selector. A legacy global choice migrates to its single compatible group and cannot override the other groups. Option IDs, labels, animation grids, and render layouts live in `aura-options.mjs`.
+
+| Exercise group | Assigned choices | Default route effect |
+|---|---|---|
+| Yoga & mobility | All 19 ecology choices plus Magic bubbles, Nebula, Phantom, Midnight | Fern |
+| Martial stances | Flame lash, Casting ring, Felspell | Casting ring |
+| Legs & hips | Classic, Fire spin, Vortex, Sunburn | Classic |
+| Arms & shoulders | Magic-eight trail, Weapon hit spark, Magic hit, Lightning arcs | Native lightning |
+| Floor exercises | Blue flame, Magic spell burst, Floor sparks | Native floor sparks |
+| Core & balance | Blizzard ice, Protection circle, Loading ring | Blizzard |
+
+New installs start each group at **Random**. The defaults above are safe fallbacks and the renderer's native route styles. The group metadata also includes **Random**, which is resolved at the start of an exercise and stays stable for that exercise.
 
 | Menu row | Asset and evidence | Status |
 |---|---|---|
@@ -24,6 +35,8 @@ The War Room's **Auras** selector stores one device-local choice. **Random** sel
 | Midnight | `assets/18_midnight_spritesheet.png`; same CC0 pack, 8×8. | Implemented |
 | Loading ring | `assets/15_loading_spritesheet.png`; same CC0 pack, 11×11. | Implemented |
 | Blizzard ice | Existing `../hold/assets/19_freezing_spritesheet.png`; Free Pixel Effects Pack, CC0, 10×10. | Implemented |
+| Lightning arcs | Native existing lightning renderer in `power.mjs`; no new asset. | Implemented |
+| Floor sparks | Native existing floor-contact renderer in `power.mjs`; uses detected support contacts. | Implemented |
 | Fern growth | Existing `../hold/assets/flowers-plants_2.png`, cell 1; Flowers by SpiderDave, CC0. | Implemented |
 | Vine drift | Existing `../hold/assets/flowers-plants_2.png`, cell 14; same CC0 atlas. | Implemented |
 | Flower bloom | Existing `../hold/assets/flowers-plants_2.png`, cell 48; same CC0 atlas. | Implemented |

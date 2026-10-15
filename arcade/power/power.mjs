@@ -2,7 +2,7 @@
 // progression rules and CC0 pixel effect sheets; no new rendering dependency.
 import { EXERCISES } from '../../exercise-library.mjs';
 import { REP_CAP, HOLD_BLOCK_SECONDS, HOLD_CAP_SECONDS, repRate } from '../../progression-rules.mjs';
-import { AURA_OPTIONS } from './aura-options.mjs';
+import { AURA_OPTIONS, effectGroupForExercise, readEffectChoices, resolveExerciseEffect } from './aura-options.mjs';
 
 export const POWER_STALE_MS = 1000;
 const REP_BANDS = Array.from({ length: REP_CAP - 1 }, (_, i) => i + 2)
@@ -108,8 +108,10 @@ export function powerProgress(workout = {}) {
 }
 
 export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } = {}) {
-  const state = { w, h, route: null, active: false, units: 0, maxUnits: REP_CAP, intensity: 0, tier: 0, pulse: 0, contacts: [], points: [], time: 0 };
+  const state = { w, h, route: null, effect: null, active: false, units: 0, maxUnits: REP_CAP, intensity: 0, tier: 0, pulse: 0, contacts: [], points: [], time: 0 };
   let sessionId = null, mode = null, workoutKind = null, baseline = false, lastUnits = 0;
+  let effectKey = null, effectRandomState = (Number(seed) >>> 0) || 0x9e3779b9;
+  const effectRandom = () => { effectRandomState ^= effectRandomState << 13; effectRandomState ^= effectRandomState >>> 17; effectRandomState ^= effectRandomState << 5; return (effectRandomState >>> 0) / 0x100000000; };
   let lastNow = null, poseAge = Infinity, suppressNextPulse = true;
   const emit = (type, payload) => { try { onEvent(type, payload); } catch { /* cosmetic observers never affect workout flow */ } };
   function clearVisible() { state.active = false; state.pulse = 0; state.contacts = []; state.points = []; }
@@ -119,7 +121,7 @@ export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } =
   }
   function hideForStale() { clearVisible(); poseAge = Infinity; lastNow = null; suppressNextPulse = true; }
   function reset() {
-    clearVisible(); clearProgress(); state.route = null; state.time = 0;
+    clearVisible(); clearProgress(); state.route = null; state.effect = null; state.time = 0; effectKey = null;
     sessionId = mode = null; lastNow = null; poseAge = Infinity; suppressNextPulse = true;
     return state;
   }
@@ -150,6 +152,12 @@ export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } =
       clearProgress(); clearVisible(); sessionId = nextSession; mode = nextMode; state.route = route;
       lastNow = null; poseAge = Infinity; suppressNextPulse = true;
     } else state.route = route;
+    const group = effectGroupForExercise(nextMode), choices = readEffectChoices();
+    const selection = group ? choices[group] : null, nextEffectKey = group ? `${group}:${selection}` : null;
+    if (newIdentity || nextEffectKey !== effectKey) {
+      state.effect = group ? resolveExerciseEffect(nextMode, choices, effectRandom) : null;
+      effectKey = nextEffectKey;
+    }
     if (!route) { clearVisible(); lastNow = now; poseAge = 0; return state; }
     if (lastNow != null && now <= lastNow) return state;
     const staleGap = lastNow != null && now - lastNow > POWER_STALE_MS;
@@ -317,6 +325,10 @@ export function renderPower(ctx, state) {
   const frame = Math.floor(state.time * 7);
   if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
     const source = auraSources.get(state.effect), cx = state.w * .5, cy = state.h * .48;
+    if (state.route === 'floor') {
+      for (const contact of state.contacts.slice(0, 4)) drawAuraFrame(layer, state.effect, frame + (contact.index ?? 0) * 7,
+        contact.x, contact.y, Math.min(36, state.w * .12), .78, 0);
+    } else {
     const anchors = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
       .map(index => pointPixel(state, index)).filter(Boolean);
     if (source.layout === 'circle') {
@@ -334,6 +346,7 @@ export function renderPower(ctx, state) {
           anchor.y + Math.sin(phase) * radiusY, size, .78, source.layout === 'orbit' ? phase : Math.sin(phase) * .25);
       }
     }
+    }
   } else if (state.route === 'aura') {
     for (const a of auraAccents(state)) drawSheetFrame(layer, 'brightfire', frame + a.index * 3, a.x, a.y,
       12 + Math.max(0, state.tier - 1) * 3, 0.9, a.angle);
@@ -346,7 +359,10 @@ export function renderPower(ctx, state) {
     }
   }
   if (state.pulse > 0) {
-    if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
+    if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect) && state.route === 'floor') {
+      for (const contact of state.contacts.slice(0, 4)) drawAuraFrame(layer, state.effect, frame + 23 + (contact.index ?? 0) * 7,
+        contact.x, contact.y, 18 + state.tier, .9 * state.pulse, 0);
+    } else if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
       drawAuraFrame(layer, state.effect, frame + 23, state.w * .5, state.h * .48,
         Math.min(state.w * .56, state.h * .42), .9 * state.pulse, 0);
     } else {
@@ -362,5 +378,5 @@ export function renderPower(ctx, state) {
   ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalCompositeOperation = 'source-over';
   // The wrapper applies the shared .3 effects-layer filter cap. This local alpha
   // keeps early rep accents readable while the composed ecology+power layer stays translucent.
-  ctx.globalAlpha = 0.65 + 0.35 * state.intensity; ctx.drawImage(renderPower.layer, 0, 0, width, height); ctx.restore();
+  ctx.globalAlpha = (0.65 + 0.35 * state.intensity) * Math.max(0, Math.min(1, state.alpha ?? 1)); ctx.drawImage(renderPower.layer, 0, 0, width, height); ctx.restore();
 }

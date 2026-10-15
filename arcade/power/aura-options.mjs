@@ -1,4 +1,7 @@
+import { EXERCISES } from '../../exercise-library.mjs';
+
 export const AURA_CHOICE_KEY = 'myr5-aura-choice-v1';
+export const EFFECT_CHOICES_KEY = 'myr5-exercise-effect-choices-v1';
 
 export const AURA_OPTIONS = Object.freeze([
   { id: 'random', label: 'Random · rotate effects' },
@@ -40,11 +43,97 @@ export const AURA_OPTIONS = Object.freeze([
   { id: 'crystal-green', label: 'Green crystal shards', ecology: { kind: 'mineral', variant: 'crystal', palette: 'green' } },
   { id: 'crystal-gold', label: 'Gold crystal shards', ecology: { kind: 'mineral', variant: 'crystal', palette: 'gold' } },
   { id: 'crystal-purple', label: 'Purple crystal shards', ecology: { kind: 'mineral', variant: 'crystal', palette: 'purple' } },
+  { id: 'lightning', label: 'Lightning arcs', route: 'lightning' },
+  { id: 'floor', label: 'Floor sparks', route: 'floor' },
 ]);
 
-const VALID = new Set(AURA_OPTIONS.map(option => option.id));
 export const ROTATING_AURAS = Object.freeze(AURA_OPTIONS.filter(option => option.id !== 'random').map(option => option.id));
+export const EFFECT_OPTION_BY_ID = new Map(AURA_OPTIONS.map(option => [option.id, option]));
 
+const ECOLOGY_IDS = AURA_OPTIONS.filter(option => option.ecology).map(option => option.id);
+const GROUPS = [
+  { id: 'yoga', label: 'Yoga & mobility', options: [...ECOLOGY_IDS, 'magicbubbles', 'nebula', 'phantom', 'midnight'], defaultEffect: 'fern' },
+  { id: 'stances', label: 'Martial stances', options: ['flamelash', 'casting', 'felspell'], defaultEffect: 'casting' },
+  { id: 'legs', label: 'Legs & hips', options: ['classic', 'firespin', 'vortex', 'sunburn'], defaultEffect: 'classic' },
+  { id: 'shoulders', label: 'Arms & shoulders', options: ['magic8', 'weaponhit', 'magichit', 'lightning'], defaultEffect: 'lightning' },
+  { id: 'floor', label: 'Floor exercises', options: ['bluefire', 'magicspell', 'floor'], defaultEffect: 'floor' },
+  { id: 'core', label: 'Core & balance', options: ['blizzard', 'protectioncircle', 'loading'], defaultEffect: 'blizzard' },
+].map(group => Object.freeze({ ...group, options: Object.freeze(['random', ...group.options]) }));
+
+export const EFFECT_GROUPS = Object.freeze(GROUPS);
+const GROUP_BY_ID = new Map(EFFECT_GROUPS.map(group => [group.id, group]));
+const HOME_GROUP = new Map(EFFECT_GROUPS.flatMap(group => group.options.filter(id => id !== 'random').map(id => [id, group.id])));
+const DEFAULT_CHOICES = Object.freeze(Object.fromEntries(EFFECT_GROUPS.map(group => [group.id, 'random'])));
+const VALID = new Set(AURA_OPTIONS.map(option => option.id));
+
+export function effectGroupForExercise(mode) {
+  const ex = typeof mode === 'string' ? EXERCISES[mode] : mode;
+  if (!ex || typeof ex !== 'object' || ['boxing', 'cardio'].includes(ex.group)) return null;
+  if (ex.kind === 'hold') {
+    if (ex.group === 'stances') return 'stances';
+    if (ex.group === 'core' || ex.group === 'balance') return 'core';
+    if (ex.group === 'yoga' || ex.group === 'legs') return 'yoga';
+  }
+  if (['pushup', 'bridge', 'plank', 'sideplank'].includes(ex.detector)) return 'floor';
+  if (ex.group === 'shoulders') return 'shoulders';
+  if (ex.group === 'legs' || ex.group === 'hips') return 'legs';
+  return null;
+}
+
+function validChoice(group, choice) { return GROUP_BY_ID.get(group)?.options.includes(choice) ?? false; }
+function choiceRecord(storage) {
+  try {
+    const raw = (storage ?? globalThis.localStorage)?.getItem(EFFECT_CHOICES_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data?.version === 1 && data.choices && typeof data.choices === 'object') {
+        return Object.fromEntries(EFFECT_GROUPS.map(group => [group.id,
+          validChoice(group.id, data.choices[group.id]) ? data.choices[group.id] : group.defaultEffect]));
+      }
+    }
+  } catch { /* fall through to safe defaults or one-group migration */ }
+  const choices = { ...DEFAULT_CHOICES };
+  try {
+    const legacy = (storage ?? globalThis.localStorage)?.getItem(AURA_CHOICE_KEY);
+    const group = HOME_GROUP.get(legacy);
+    if (group && validChoice(group, legacy)) choices[group] = legacy;
+  } catch { /* inaccessible storage uses defaults */ }
+  return choices;
+}
+
+export function readEffectChoices(storage) { return choiceRecord(storage); }
+
+export function saveEffectChoice(group, choice, { storage, target } = {}) {
+  if (!validChoice(group, choice)) return false;
+  try {
+    const store = storage ?? globalThis.localStorage;
+    if (!store?.setItem) return false;
+    const choices = choiceRecord(storage);
+    choices[group] = choice;
+    store.setItem(EFFECT_CHOICES_KEY, JSON.stringify({ version: 1, choices }));
+  } catch { return false; }
+  try { (target ?? globalThis.window)?.dispatchEvent?.(new CustomEvent('myr5:exercise-effect-choice-change', { detail: { group, choice } })); }
+  catch { /* Storage events synchronize other tabs. */ }
+  return true;
+}
+
+export function resolveEffectForGroup(group, choices = {}, random = Math.random) {
+  const definition = GROUP_BY_ID.get(group);
+  if (!definition) return null;
+  const choice = choices[group] ?? definition.defaultEffect;
+  if (choice !== 'random') return validChoice(group, choice) ? choice : definition.defaultEffect;
+  const variants = definition.options.filter(id => id !== 'random');
+  const value = Number(random());
+  const index = Math.min(variants.length - 1, Math.max(0, Math.floor((Number.isFinite(value) ? value : 0) * variants.length)));
+  return variants[index];
+}
+
+export function resolveExerciseEffect(mode, choices = {}, random = Math.random) {
+  return resolveEffectForGroup(effectGroupForExercise(mode), choices, random);
+}
+
+// Legacy global helpers stay for old clients; the new runtime reads only the
+// versioned per-exercise-group record above.
 export function readAuraChoice(storage) {
   try {
     const choice = (storage ?? globalThis.localStorage)?.getItem(AURA_CHOICE_KEY);

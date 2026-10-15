@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { AURA_OPTIONS, AURA_CHOICE_KEY, ROTATING_AURAS, readAuraChoice, resolveAuraChoice, saveAuraChoice } from '../arcade/power/aura-options.mjs';
+import { AURA_OPTIONS, AURA_CHOICE_KEY, EFFECT_CHOICES_KEY, EFFECT_GROUPS, ROTATING_AURAS,
+  effectGroupForExercise, readAuraChoice, readEffectChoices, resolveAuraChoice, resolveEffectForGroup,
+  resolveExerciseEffect, saveAuraChoice, saveEffectChoice } from '../arcade/power/aura-options.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 class MemoryStorage {
@@ -18,6 +20,7 @@ test('War Room aura choices include every shipped effect sheet with its actual f
     'flamelash', 'weaponhit', 'casting', 'magicspell', 'magic8', 'magichit', 'nebula', 'phantom', 'sunburn',
     'felspell', 'midnight', 'loading', 'blizzard', 'fern', 'vine', 'flower', 'mushroom', 'grass', 'reed', 'rabbit', 'fox', 'rock',
     'bear', 'deer', 'wolf', 'boar', 'crystal-blue', 'crystal-ice', 'crystal-red', 'crystal-green', 'crystal-gold', 'crystal-purple']) assert.ok(choices.has(id), `missing ${id}`);
+  assert.ok(choices.has('lightning') && choices.has('floor'));
   for (const option of AURA_OPTIONS.filter(item => item.asset)) {
     const assetRoot = option.id === 'blizzard' ? 'arcade/hold/assets' : 'arcade/power/assets';
     const bytes = await readFile(path.join(root, assetRoot, option.asset));
@@ -47,13 +50,59 @@ test('War Room aura choices include every shipped effect sheet with its actual f
     assert.equal(bytes.readUInt32BE(20), frameHeight, `${relative} frame height`);
   }
   assert.equal(ROTATING_AURAS.length, AURA_OPTIONS.length - 1);
-  assert.equal(AURA_OPTIONS.length, 39);
-  assert.equal(ROTATING_AURAS.length, 38);
+  assert.equal(AURA_OPTIONS.length, 41);
+  assert.equal(ROTATING_AURAS.length, 40);
   assert.deepEqual(AURA_OPTIONS.filter(item => ['mushroom', 'grass', 'reed'].includes(item.id)).map(({ id, label, ecology }) => [id, label, ecology]), [
     ['mushroom', 'Fungi bloom', { kind: 'plant', variant: 'mushroom' }],
     ['grass', 'Grass growth', { kind: 'plant', variant: 'grass' }],
     ['reed', 'Reed growth', { kind: 'plant', variant: 'reed' }],
   ]);
+});
+
+test('38 existing choices are partitioned by exercise with native route defaults', () => {
+  const assigned = EFFECT_GROUPS.flatMap(group => group.options.filter(id => !['random', 'lightning', 'floor'].includes(id))).sort();
+  const original = AURA_OPTIONS.filter(option => option.id !== 'random' && option.id !== 'lightning' && option.id !== 'floor').map(option => option.id).sort();
+  assert.deepEqual(assigned, original);
+  assert.deepEqual(EFFECT_GROUPS.map(({ id, label, defaultEffect }) => [id, label, defaultEffect]), [
+    ['yoga', 'Yoga & mobility', 'fern'], ['stances', 'Martial stances', 'casting'], ['legs', 'Legs & hips', 'classic'],
+    ['shoulders', 'Arms & shoulders', 'lightning'], ['floor', 'Floor exercises', 'floor'], ['core', 'Core & balance', 'blizzard'],
+  ]);
+  assert.equal(effectGroupForExercise('mountain'), 'yoga');
+  assert.equal(effectGroupForExercise('high-horse'), 'stances');
+  assert.equal(effectGroupForExercise('squat'), 'legs');
+  assert.equal(effectGroupForExercise('front-raise'), 'shoulders');
+  assert.equal(effectGroupForExercise('pushup'), 'floor');
+  assert.equal(effectGroupForExercise('glute-bridge'), 'floor');
+  assert.equal(effectGroupForExercise('high-plank'), 'core');
+  assert.equal(effectGroupForExercise('tree'), 'core');
+  assert.equal(effectGroupForExercise('boxing'), null);
+  assert.equal(effectGroupForExercise('jogging'), null);
+});
+
+test('exercise effect choices default random per group, save independently, migrate one compatible legacy value', () => {
+  const storage = new MemoryStorage();
+  assert.deepEqual(readEffectChoices(storage), { yoga: 'random', stances: 'random', legs: 'random', shoulders: 'random', floor: 'random', core: 'random' });
+  assert.equal(saveEffectChoice('legs', 'firespin', { storage, target: null }), true);
+  assert.equal(saveEffectChoice('shoulders', 'fern', { storage, target: null }), false);
+  assert.deepEqual(readEffectChoices(storage), { yoga: 'random', stances: 'random', legs: 'firespin', shoulders: 'random', floor: 'random', core: 'random' });
+  assert.equal(JSON.parse(storage.getItem(EFFECT_CHOICES_KEY)).version, 1);
+
+  const legacy = new MemoryStorage(); legacy.setItem(AURA_CHOICE_KEY, 'bluefire');
+  assert.deepEqual(readEffectChoices(legacy), { yoga: 'random', stances: 'random', legs: 'random', shoulders: 'random', floor: 'bluefire', core: 'random' });
+  const randomLegacy = new MemoryStorage(); randomLegacy.setItem(AURA_CHOICE_KEY, 'random');
+  assert.ok(Object.values(readEffectChoices(randomLegacy)).every(choice => choice === 'random'));
+});
+
+test('random resolves only inside its exercise group and specific choices stay specific', () => {
+  const choices = { yoga: 'random', stances: 'random', legs: 'random', shoulders: 'random', floor: 'random', core: 'random' };
+  assert.equal(resolveEffectForGroup('yoga', choices, () => 0), 'fern');
+  assert.equal(resolveEffectForGroup('yoga', choices, () => .999999), 'midnight');
+  assert.equal(resolveExerciseEffect('squat', choices, () => 0), 'classic');
+  assert.equal(resolveExerciseEffect('front-raise', choices, () => .999999), 'lightning');
+  assert.equal(resolveExerciseEffect('pushup', choices, () => 0), 'bluefire');
+  assert.equal(resolveExerciseEffect('tree', choices, () => .999999), 'loading');
+  choices.legs = 'vortex';
+  assert.equal(resolveExerciseEffect('squat', choices, () => .9), 'vortex');
 });
 
 test('aura preference defaults to Random, persists named choices and rotates deterministically', () => {

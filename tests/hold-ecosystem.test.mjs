@@ -167,7 +167,7 @@ test('same seed produces identical growth and bounded long-running entity/debris
   assert.deepEqual(a.state.debris, b.state.debris);
   assert.ok(a.state.entities.length <= MAX_ENTITIES);
   assert.ok(a.state.debris.length <= MAX_DEBRIS);
-  assert.ok(a.state.entities.every(e => ['fern', 'vine', 'flower', 'mushroom', 'grass', 'reed', 'rabbit', 'fox', 'rock', 'crystal'].includes(e.variant)));
+  assert.ok(a.state.entities.every(e => ['fern', 'vine', 'flower', 'mushroom', 'grass', 'reed', 'rabbit', 'fox', 'bear', 'deer', 'wolf', 'boar', 'rock', 'crystal'].includes(e.variant)));
 });
 
 test('plant sampling can grow every atlas-backed variant', () => {

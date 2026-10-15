@@ -23,6 +23,8 @@ test('retained power is isolated by actual owner and stale account events are re
   const storage = new MemoryStorage(), a = createRetainedPower({ storage, ownerId: 'account:a:3' });
   assert.equal(a.observe(detail('account:a:3', 'squat', 9)), true);
   assert.equal(a.read().equipped, 'aura');
+  assert.equal(a.read().styles.aura.group, 'legs');
+  assert.equal(a.read().styles.aura.mode, 'squat');
   assert.ok(storage.getItem(`${RETAINED_POWER_KEY}/account%3Aa%3A3`));
 
   a.setOwner('account:b:1');
@@ -30,6 +32,8 @@ test('retained power is isolated by actual owner and stale account events are re
   assert.equal(a.observe(detail('account:a:3', 'front-raise', 20)), false);
   assert.equal(a.observe(detail('account:b:1', 'front-raise', 2)), true);
   assert.equal(a.read().equipped, 'lightning');
+  assert.equal(a.read().styles.lightning.group, 'shoulders');
+  assert.equal(a.read().styles.lightning.mode, 'front-raise');
   a.setOwner('account:a:3');
   assert.equal(a.read().styles.aura.intensity, 9 / 30);
   a.setOwner('guest:unavailable');
@@ -154,7 +158,7 @@ test('corrupt storage is ignored and malformed styles are bounded', () => {
     lightning: { intensity: 1, tier: 3, units: 5, maxUnits: 20, kind: 'nonsense', updatedAt: 4 },
   } }));
   power.setOwner('guest:other'); power.setOwner(ownerId);
-  assert.deepEqual(power.read().styles.aura, { intensity: 1, tier: 6, units: 30, maxUnits: 30, kind: 'reps', updatedAt: 0 });
+  assert.deepEqual(power.read().styles.aura, { intensity: 1, tier: 6, units: 30, maxUnits: 30, kind: 'reps', group: 'legs', updatedAt: 0 });
   assert.equal(power.read().styles.lightning, undefined);
 });
 

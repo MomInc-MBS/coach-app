@@ -1,9 +1,13 @@
 // Owner-scoped cosmetic carryover. Progress always comes from the same
 // progression rules used by camera power; this module never awards workout XP.
 import { powerProgress, retainedPowerStyle } from './power.mjs';
+import { EXERCISES } from '../../exercise-library.mjs';
+import { EFFECT_GROUPS, effectGroupForExercise } from './aura-options.mjs';
 
 export const RETAINED_POWER_KEY = 'myr5-retained-character-power-v1';
 const STYLES = new Set(['aura', 'lightning', 'floor', 'blizzard']);
+const GROUPS = new Set(EFFECT_GROUPS.map(group => group.id));
+const STYLE_GROUPS = { aura: new Set(['legs', 'stances']), lightning: new Set(['shoulders']), floor: new Set(['floor']), blizzard: new Set(['core']) };
 const MAX_OWNER_LENGTH = 240;
 const empty = () => ({ version: 1, equipped: null, styles: {} });
 const finite = value => Number.isFinite(value);
@@ -25,8 +29,13 @@ function safeRecord(value) {
     const units = clamp(Math.floor(item.units), 0, maxUnits);
     const intensity = clamp(item.intensity, 0, 1);
     if (!units || !intensity) continue;
+    const mode = typeof item.mode === 'string' && EXERCISES[item.mode] && retainedPowerStyle(item.mode) === style ? item.mode : null;
+    const inferred = mode ? effectGroupForExercise(mode) : null;
+    const fallback = style === 'lightning' ? 'shoulders' : style === 'floor' ? 'floor' : style === 'blizzard' ? 'core' : 'legs';
+    const candidate = GROUPS.has(inferred) ? inferred : GROUPS.has(item.group) ? item.group : fallback;
+    const group = STYLE_GROUPS[style].has(candidate) ? candidate : fallback;
     result.styles[style] = { intensity, tier: clamp(Math.floor(item.tier), 0, 6), units, maxUnits,
-      kind: item.kind, updatedAt: clamp(item.updatedAt, 0, 1e15) };
+      kind: item.kind, group, ...(mode ? { mode } : {}), updatedAt: clamp(item.updatedAt, 0, 1e15) };
   }
   result.equipped = STYLES.has(value.equipped) && result.styles[value.equipped] ? value.equipped : null;
   return result;
@@ -69,6 +78,7 @@ export function createRetainedPower({ storage = globalThis.localStorage, ownerId
     const workout = detail?.workout;
     if (!workout || workout.ownerId !== owner || workout.stage !== 'working' || workout.paused === true) return false;
     const route = retainedPowerStyle(workout.mode);
+    const group = effectGroupForExercise(workout.mode);
     if (!route || (workout.kind === 'hold' && !['aura', 'blizzard'].includes(route))
       || (workout.kind === 'reps' && route === 'blizzard') || !['hold', 'reps'].includes(workout.kind)) return false;
     const progress = powerProgress(workout);
@@ -86,7 +96,7 @@ export function createRetainedPower({ storage = globalThis.localStorage, ownerId
     const current = record.styles[route];
     const now = finite(detail.now) ? Math.max(0, detail.now) : 0;
     if (!current) {
-      record.styles[route] = { ...progress, updatedAt: now };
+      record.styles[route] = { ...progress, ...(group ? { group } : {}), mode: workout.mode, updatedAt: now };
     } else {
       const better = progress.intensity > current.intensity
         || (progress.intensity === current.intensity && progress.tier > current.tier);
@@ -96,6 +106,8 @@ export function createRetainedPower({ storage = globalThis.localStorage, ownerId
         units: better ? progress.units : current.units,
         maxUnits: better ? progress.maxUnits : current.maxUnits,
         kind: better ? progress.kind : current.kind,
+        group: group ?? current.group,
+        mode: workout.mode,
         updatedAt: now,
       };
     }

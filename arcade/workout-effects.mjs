@@ -34,7 +34,7 @@ export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={},retryOp
   if(stopped||token!==epoch)return null;
   if(kind==='hold'){
    if(ecology)return ecology;
-   if(!ecologyLoading){if(!holdRetry.canStart())return null;holdRetry.start();const style=selectedHoldStyle;const pending=(async()=>{const mod=await (loaders.hold?loaders.hold(style):loadCameraHoldModule());holdRetry.succeed();if(stopped||token!==epoch||loadGeneration!==holdGeneration||style!==selectedHoldStyle||!lastDetail?.workout?.active)return null;ecology=mod.mountCameraHold({host,sound,onXp:()=>{},seed,style});return ecology;})();ecologyLoading=pending;pending.catch(()=>{if(ecologyLoading===pending&&token===epoch&&loadGeneration===holdGeneration){holdRetry.fail();ecologyLoading=null;}});}
+   if(!ecologyLoading){if(!holdRetry.canStart())return null;holdRetry.start();const style=selectedHoldStyle;const pending=(async()=>{const mod=await (loaders.hold?loaders.hold(style):loadCameraHoldModule());holdRetry.succeed();if(stopped||token!==epoch||loadGeneration!==holdGeneration||style!==selectedHoldStyle||!lastDetail?.workout?.active)return null;ecology=mod.mountCameraHold({host,sound,onXp:()=>{},seed,style,mode:lastDetail?.workout?.mode});return ecology;})();ecologyLoading=pending;pending.catch(()=>{if(ecologyLoading===pending&&token===epoch&&loadGeneration===holdGeneration){holdRetry.fail();ecologyLoading=null;}});}
    return ecologyLoading;
   }
   if(power)return power;

@@ -31,7 +31,7 @@ test('Fruit Ninja classifier excludes every hold while preserving boxing',()=>{
 test('a stale pending module cannot mount after invalidation; living holds retry ecology and power',async()=>{
  let releaseFirst;const firstImport=new Promise(resolve=>{releaseFirst=resolve;}),holdLoads=[];
  const mounted={hold:[],power:[]},calls=[];
- const moduleFor=kind=>({[kind==='hold'?'mountCameraHold':'mountCameraPower'](){const instance={pose:d=>calls.push([kind,'pose',d.workout.mode]),invalidate:()=>calls.push([kind,'invalidate']),stop:()=>calls.push([kind,'stop'])};mounted[kind].push(instance);return instance;}});
+ const moduleFor=kind=>({[kind==='hold'?'mountCameraHold':'mountCameraPower'](options){if(kind==='hold')calls.push([kind,'mount-mode',options.mode]);const instance={pose:d=>calls.push([kind,'pose',d.workout.mode]),invalidate:()=>calls.push([kind,'invalidate']),stop:()=>calls.push([kind,'stop'])};mounted[kind].push(instance);return instance;}});
  const loaders={hold:()=>{holdLoads.push(true);return holdLoads.length===1?firstImport:Promise.resolve(moduleFor('hold'));},power:()=>Promise.resolve(moduleFor('power'))};
  const runtime=mountWorkoutEffects({host:{},loaders});
  const make=(active,mode='mountain')=>({points:[],now:1,validHold:active,workout:{sessionId:'same-set',mode,kind:'hold',active}});
@@ -40,6 +40,7 @@ test('a stale pending module cannot mount after invalidation; living holds retry
  assert.equal(mounted.hold.length,0);assert.equal(mounted.power.length,0);
  runtime.pose(make(true));await new Promise(resolve=>setImmediate(resolve));
  assert.equal(mounted.hold.length,1);assert.equal(mounted.power.length,1);
+ assert.ok(calls.some(call=>call[0]==='hold'&&call[1]==='mount-mode'&&call[2]==='mountain'));
  assert.ok(calls.some(call=>call[0]==='hold'&&call[1]==='pose'&&call[2]==='mountain'));
  assert.ok(calls.some(call=>call[0]==='power'&&call[1]==='pose'&&call[2]==='mountain'));
  runtime.pose(make(true,'tree'));await new Promise(resolve=>setImmediate(resolve));

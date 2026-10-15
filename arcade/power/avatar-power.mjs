@@ -3,7 +3,8 @@
 import { renderPower } from './power.mjs';
 import { renderBlizzard } from '../hold/blizzard.mjs';
 import { renderEcosystem } from '../hold/render.mjs';
-import { AURA_OPTIONS, readAuraChoice, resolveAuraChoice } from './aura-options.mjs';
+import { AURA_OPTIONS, EFFECT_CHOICES_KEY, effectGroupForExercise, readEffectChoices, resolveEffectForGroup } from './aura-options.mjs';
+import { EXERCISES } from '../../exercise-library.mjs';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 function randomFor(seed = 1) {
@@ -12,6 +13,18 @@ function randomFor(seed = 1) {
     value ^= value << 13; value ^= value >>> 17; value ^= value << 5;
     return (value >>> 0) / 0x100000000;
   };
+}
+function currentExerciseMode() {
+  try {
+    const owner = globalThis.myr5WorkoutOwner?.snapshot?.();
+    return owner?.workout?.mode ?? owner?.mode ?? globalThis.myr5TestState?.motion?.mode ?? null;
+  } catch { return globalThis.myr5TestState?.motion?.mode ?? null; }
+}
+function fallbackGroup(style) {
+  return style === 'lightning' ? 'shoulders' : style === 'floor' ? 'floor' : style === 'blizzard' ? 'core' : style === 'aura' ? 'legs' : null;
+}
+function styleForGroup(group) {
+  return group === 'shoulders' ? 'lightning' : group === 'floor' ? 'floor' : group === 'core' ? 'blizzard' : 'aura';
 }
 
 /** Deterministic visible-time scheduler, exported for direct timing tests. */
@@ -148,8 +161,17 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
   const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: false, addEventListener() {}, removeEventListener() {} };
   const schedule = createAvatarPowerSchedule({ seed });
   const random = randomFor((Number(seed) ^ 0x41555241) >>> 0);
-  let auraChoice = readAuraChoice(), currentEffect = resolveAuraChoice(auraChoice, random);
+  let effectChoices = readEffectChoices(), previewGroup = null, currentEffect = null;
   let record = retained?.read?.() ?? { version: 1, equipped: null, styles: {} };
+  function activeGroup() {
+    const mode = currentExerciseMode();
+    if (mode && EXERCISES[mode]) return effectGroupForExercise(mode);
+    return record.styles?.[record.equipped]?.group ?? fallbackGroup(record.equipped) ?? 'legs';
+  }
+  function selectedEffect(group = previewGroup ?? activeGroup()) {
+    return group ? resolveEffectForGroup(group, effectChoices, random) : null;
+  }
+  currentEffect = selectedEffect();
   let fingerprint = JSON.stringify(record), width = 1, height = 1, dpr = 1, lastFrame = 0, lastSizeCheck = 0, time = 0, pulse = 0, previewRemaining = 0, wasActive = false, raf = 0, disposed = false;
   let resizeObserver = null;
 
@@ -169,12 +191,17 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     const nextFingerprint = JSON.stringify(next);
     if (nextFingerprint !== fingerprint) {
       record = next; fingerprint = nextFingerprint; schedule.reset(); pulse = 0; wasActive = false;
+      currentEffect = selectedEffect();
       ctx.clearRect(0, 0, width, height); canvas.style.display = 'none';
     }
   }
-  function choiceChanged() {
-    auraChoice = readAuraChoice(); currentEffect = resolveAuraChoice(auraChoice, random);
-    schedule.reset(); pulse = 1; previewRemaining = 2.4; wasActive = false;
+  function choiceChanged(event) {
+    effectChoices = readEffectChoices();
+    previewGroup = event?.detail?.group ?? null;
+    currentEffect = selectedEffect();
+    schedule.reset(); wasActive = false;
+    if (previewGroup) { pulse = 1; previewRemaining = 2.4; }
+    else pulse = 0;
   }
   function paint(now) {
     if (disposed) return;
@@ -185,24 +212,33 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     if (!resizeObserver && now - lastSizeCheck >= 500) { lastSizeCheck = now; resize(); }
     let stats = null;
     try { stats = globalThis.myr5Creature?.stats?.() ?? null; } catch { /* coach stats are an optional visibility hint */ }
-    const earned = !!record.styles?.[record.equipped];
+    const mode = currentExerciseMode();
+    if (previewRemaining <= 0 && mode && EXERCISES[mode] && !effectGroupForExercise(mode)) {
+      wasActive = false; pulse = 0; ctx.clearRect(0, 0, width, height); canvas.style.display = 'none'; return;
+    }
     const canShow = isVisible(card, stage, canvas, stats);
+    const hadPreview = previewRemaining > 0;
     previewRemaining = Math.max(0, previewRemaining - (canShow ? dt : 0));
+    if (hadPreview && previewRemaining === 0) { previewGroup = null; currentEffect = selectedEffect(); }
     const active = previewRemaining > 0 ? 1 : schedule.step(dt, canShow, reduced.matches);
     if (!active) { wasActive = false; pulse = 0; ctx.clearRect(0, 0, width, height); canvas.style.display = 'none'; return; }
     canvas.style.display = 'block';
     canvas.style.opacity = String(avatarLayerOpacity(document.body?.dataset?.tracking === 'true'));
     const reducedMotion = reduced.matches;
     time += reducedMotion ? 0 : dt;
-    if (!wasActive) { pulse = 1; currentEffect = resolveAuraChoice(auraChoice, random); }
+    if (!wasActive) { pulse = 1; currentEffect = selectedEffect(); }
     wasActive = true;
     pulse = Math.max(0, pulse - dt * 2.5);
-    const visualRecord = earned ? record : { equipped: 'aura', styles: { aura: { units: 1, maxUnits: 1, intensity: .38, tier: 1 } } };
+    const selectedStyle = styleForGroup(previewGroup ?? activeGroup());
+    const earnedStyle = record.styles?.[selectedStyle] ?? record.styles?.[record.equipped];
+    const visualRecord = earnedStyle
+      ? { equipped: selectedStyle, styles: { [selectedStyle]: earnedStyle } }
+      : { equipped: selectedStyle, styles: { [selectedStyle]: { units: 1, maxUnits: 1, intensity: .38, tier: 1 } } };
     const state = avatarPowerState(visualRecord, width, height, reducedMotion ? 0 : time,
       reducedMotion ? 0 : pulse, stats?.gesture === 'walk' || stats?.phoneMotionPhase === 'walk', stats?.powerAnchors);
     if (state?.blizzard && currentEffect !== 'classic') {
-      Object.assign(state, { w: width, h: height, route: record.equipped, active: true,
-        intensity: record.styles[record.equipped]?.intensity ?? 0, tier: record.styles[record.equipped]?.tier ?? 0,
+      Object.assign(state, { w: width, h: height, route: selectedStyle, active: true,
+        intensity: visualRecord.styles[selectedStyle]?.intensity ?? 0, tier: visualRecord.styles[selectedStyle]?.tier ?? 0,
         points: [] });
     }
     if (state) state.effect = currentEffect;
@@ -221,8 +257,8 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     lastFrame = 0;
   };
   document.addEventListener?.('visibilitychange', visibility);
-  globalThis.addEventListener?.('myr5:aura-choice-change', choiceChanged);
-  const storageChanged = event => { if (event?.key === 'myr5-aura-choice-v1') choiceChanged(); };
+  globalThis.addEventListener?.('myr5:exercise-effect-choice-change', choiceChanged);
+  const storageChanged = event => { if (event?.key === EFFECT_CHOICES_KEY) choiceChanged(); };
   globalThis.addEventListener?.('storage', storageChanged);
   globalThis.addEventListener?.('pagehide', stop, { once: true });
   raf = requestAnimationFrame(paint);
@@ -230,7 +266,7 @@ export function mountAvatarPower({ card, retained, sound: _sound, seed = 1 } = {
     if (disposed) return;
     disposed = true; cancelAnimationFrame(raf); resizeObserver?.disconnect();
     globalThis.removeEventListener?.('resize', resize); globalThis.removeEventListener?.('pagehide', stop);
-    globalThis.removeEventListener?.('myr5:aura-choice-change', choiceChanged);
+    globalThis.removeEventListener?.('myr5:exercise-effect-choice-change', choiceChanged);
     globalThis.removeEventListener?.('storage', storageChanged);
     document.removeEventListener?.('visibilitychange', visibility); schedule.dispose();
     ctx.clearRect(0, 0, width, height); canvas.remove();

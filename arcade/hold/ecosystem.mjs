@@ -12,7 +12,7 @@ function rng(seed = 1) {
   return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
 const PLANTS = ['fern', 'vine', 'flower', 'mushroom', 'grass', 'reed'];
-const ANIMALS = ['rabbit', 'fox'];
+const ANIMALS = ['rabbit', 'fox', 'bear', 'deer', 'wolf', 'boar'];
 const MINERALS = ['rock', 'crystal'];
 const COMPARABLE = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
 const TORSO = [11, 12, 23, 24];
@@ -41,7 +41,7 @@ function enoughPose(points) {
   return TORSO.filter(i => points.has(i)).length >= 2 && LIMBS.filter(i => points.has(i)).length >= 2 && points.size >= 4;
 }
 
-export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}, spawnEntities = true } = {}) {
+export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}, spawnEntities = true, ecology = null } = {}) {
   const rand = rng(seed), choose = list => list[Math.floor(rand() * list.length)];
   const state = { w, h, phase: 'waiting', stillSeconds: 0, groundY: h - 6, entities: [], debris: [] };
   let reference = null, previous = null, lastTimestamp = null, poseAge = Infinity;
@@ -97,10 +97,11 @@ export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}
   function spawnEntity(points) {
     if (state.entities.length >= MAX_ENTITIES) return;
     const anchor = pickAnchor(points), target = anchorTarget(anchor, points), roll = rand();
-    const kind = roll < 0.57 ? 'plant' : roll < 0.78 ? 'animal' : 'mineral';
-    const variant = kind === 'plant' ? choose(PLANTS) : kind === 'animal' ? choose(ANIMALS) : choose(MINERALS);
+    const kind = ['plant', 'animal', 'mineral'].includes(ecology?.kind) ? ecology.kind : roll < 0.57 ? 'plant' : roll < 0.78 ? 'animal' : 'mineral';
+    const variants = kind === 'plant' ? PLANTS : kind === 'animal' ? ANIMALS : MINERALS;
+    const variant = kind === ecology?.kind && variants.includes(ecology?.variant) ? ecology.variant : choose(variants);
     const e = {
-      id: nextId++, kind, variant, phase: 'landing', x: target.x, y: target.y - 22,
+      id: nextId++, kind, variant, ...(kind === 'mineral' && ['blue','ice','red','green','gold','purple'].includes(ecology?.palette) ? { palette: ecology.palette } : {}), phase: 'landing', x: target.x, y: target.y - 22,
       size: 16 + Math.floor(rand() * 37), facing: rand() < 0.5 ? -1 : 1,
       growth: 0, alpha: 0.2, phaseTime: 0, anchor,
     };
