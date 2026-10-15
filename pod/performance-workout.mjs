@@ -1,5 +1,5 @@
 import {EXERCISES} from '../exercise-library.mjs';
-import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS,SPRINT_ROUND_XP,GENTLE_BLOCK_XP,BONUS_XP_SHARE,XP_SCALE} from '../progression-rules.mjs';
+import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS,SPRINT_ROUND_XP,GENTLE_BLOCK_XP,clampBonusXp,XP_SCALE} from '../progression-rules.mjs';
 
 export function exerciseDifficulty(mode){
  const exercise=EXERCISES[mode];if(!exercise)return 'easy';
@@ -90,6 +90,6 @@ export class PerformanceWorkout {
  }
  finish(){
   if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15)return null;
-  this.finished=true;return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+Math.min(this.bonusXp||0,this.xpBase*BONUS_XP_SHARE),xpScale:XP_SCALE,earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
+  this.finished=true;const bonusXp=clampBonusXp(this.bonusXp,this.xpBase);return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+bonusXp,xpScale:XP_SCALE,...(bonusXp>0?{bonusXp}:{}),earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }

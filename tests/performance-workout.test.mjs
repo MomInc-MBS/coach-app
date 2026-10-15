@@ -145,7 +145,7 @@ test('legacy blockless paused XP is explicitly distinguished from complete paid-
 test('arcade bonus XP never exceeds BONUS_XP_SHARE of the exercise base, before multipliers',()=>{
  const make=bonus=>{const w=new PerformanceWorkout({mode:'high-horse',kind:'hold',difficulty:'expert'});w.update(hold(60),60000);w.bonusXp=bonus;return w;};
  const base=make(0).finish().xpBase;
- assert.equal(make(1e6).finish().xpBase,base*(1+BONUS_XP_SHARE));
+ assert.equal(make(1e6).finish().xpBase,base+Math.floor(base*BONUS_XP_SHARE));assert.equal(make(1e6).finish().bonusXp,Math.floor(base*BONUS_XP_SHARE));assert.equal('bonusXp' in make(0).finish(),false);
  assert.equal(make(1).finish().xpBase,base+1);
  assert.equal(make(1e6).finish().xpScale,S);
 });

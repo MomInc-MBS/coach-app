@@ -6,6 +6,9 @@ export const PROGRESSION_VERSION=2;
 export const XP_SCALE=10;
 // Arcade bonus XP may add at most this share of a session's exercise base XP (before multipliers).
 export const BONUS_XP_SHARE=0.1;
+// The one bonus clamp, shared by the client (finish) and the server (importedPerformanceXp).
+// Absent, garbage or negative -> 0; anything else is floored and capped at the share of the base.
+export function clampBonusXp(raw,base){const n=typeof raw==='number'&&Number.isFinite(raw)&&raw>0?Math.floor(raw):0;return Math.min(n,Math.floor(Math.max(0,Number(base)||0)*BONUS_XP_SHARE));}
 export const DIFFICULTIES=Object.freeze(['easy','medium','hard','expert']);
 const scaled=rows=>Object.freeze(rows.map(r=>Object.freeze(r.map(n=>n*XP_SCALE))));
 export const HOLD_XP_PER_MINUTE=scaled([[4,8,16],[8,12,20],[12,16,24],[16,20,28]]);

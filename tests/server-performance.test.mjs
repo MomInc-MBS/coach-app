@@ -8,7 +8,7 @@ import {importWorkout} from '../server/workout-import.mjs';
 import {readAccountPerformance,deriveAccountPerformance} from '../server/performance-progress.mjs';
 import {warRoomApi} from '../server/war-room.mjs';
 import {mergeVerifiedPerformance,recordPerformanceSession,readPerformanceProgress} from '../performance-progress.mjs';
-import {holdXp} from '../progression-rules.mjs';
+import {holdXp,BONUS_XP_SHARE,clampBonusXp} from '../progression-rules.mjs';
 let mf,db;before(async()=>{mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB']});db=await mf.getD1Database('DB');for(const name of(await readdir('drizzle')).filter(n=>n.endsWith('.sql')).sort())await db.batch((await readFile(`drizzle/${name}`,'utf8')).split('--> statement-breakpoint').map(s=>s.trim()).filter(Boolean).map(s=>db.prepare(s)));});after(()=>mf?.dispose());
 const completedAt=Date.parse('2026-10-04T12:00:00Z');
 function snapshot(mode='shallow-squat',performance={}){const kind=mode==='high-horse'?'hold':'reps',active=kind==='hold'?600:30;return {schemaVersion:1,clientWorkoutId:crypto.randomUUID(),mode,goal:kind==='hold'?600:8,restSeconds:30,startedAt:completedAt-active*1000,completedAt,value:kind==='hold'?active:8,activeSeconds:active,elapsedSeconds:active,performance:{version:2,kind,difficulty:'easy',maxContinuousSeconds:kind==='hold'?600:0,perDifficultyContinuous:kind==='hold'?{easy:600}:{},holdBlocks:kind==='hold'?Array.from({length:40},(_,i)=>({difficulty:'easy',activeStart:i*15,continuousStart:i*15})):[],coachId:'myr5',rounds:0,...performance}};}
@@ -19,3 +19,19 @@ test('hold gold requires reported uninterrupted difficulty evidence, never activ
 test('codec rejects arbitrary XP, excessive gold evidence and noncontiguous paid blocks',async()=>{await assert.rejects(prepareWorkoutImport({...snapshot(),performance:{...snapshot().performance,xpBase:999999}},{targetAccountId:'bad',targetDataEpoch:1}));const s=snapshot('high-horse');s.performance.perDifficultyContinuous.easy=601;await assert.rejects(prepareWorkoutImport(s,{targetAccountId:'bad',targetDataEpoch:1}));const wrong=snapshot('high-horse');wrong.performance.holdBlocks[1].activeStart=0;await assert.rejects(prepareWorkoutImport(wrong,{targetAccountId:'bad',targetDataEpoch:1}));});
 test('projection ignores client XP/coach claims and v2 carries fractional active tracking without changing v1',async()=>{const s=snapshot('high-horse');s.activeSeconds=600.5;s.elapsedSeconds=600.5;s.value=600.5;s.startedAt-=500;s.performance.maxContinuousSeconds=600.5;s.performance.perDifficultyContinuous.easy=600.5;const row={schemaVersion:1,status:'completed',clientWorkoutId:s.clientWorkoutId,mode:s.mode,goal:s.goal,restSeconds:s.restSeconds,startedAt:s.startedAt,completedAt:s.completedAt,completion:{value:s.value,activeSeconds:s.activeSeconds,elapsedSeconds:s.elapsedSeconds},progress:{performance:{...s.performance,xpBase:1e10,earnedCoachCount:49}}};const projected=snapshotFromCompletedWorkout(row);assert.equal(projected.activeSeconds,600.5);assert.equal(projected.performance.xpBase,undefined);assert.equal((await prepareWorkoutImport(projected,{targetAccountId:'fraction',targetDataEpoch:1})).digestVersion,2);});
 test('verified sync deduplicates remote IDs, preserves pending locals, and isolates account epochs',async()=>{const remote=await readAccountPerformance(db,'v2-owner'),map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)},account={user:{id:'v2-owner'},dataEpoch:1,progress:{performance:remote}};recordPerformanceSession({id:'pending',mode:'knee-pushup',kind:'reps',difficulty:'easy',value:1,xpBase:S,day:'2026-10-05'},{storage,account});const once=mergeVerifiedPerformance(account,{storage}),twice=mergeVerifiedPerformance(account,{storage});assert.equal(once.totalXp,519*S);assert.equal(twice.totalXp,519*S);assert.equal(Object.keys(twice.sessions).length,2);assert.equal(readPerformanceProgress({storage,account:{user:account.user,dataEpoch:2}}).totalXp,0);assert.throws(()=>mergeVerifiedPerformance({...account,progress:{performance:{version:2}}},{storage}));});
+test('server clamps the client bonusXp to the shared share of its own derived base, and sync keeps it',async()=>{
+ const base=9*S,cap=Math.floor(base*BONUS_XP_SHARE);
+ const total=async(owner,performance)=>{await importFor(owner,snapshot('shallow-squat',performance));return readAccountPerformance(db,owner);};
+ assert.equal((await total('bonus-none',{})).totalXp,base);
+ assert.equal((await total('bonus-ok',{bonusXp:5})).totalXp,base+5);
+ assert.equal((await total('bonus-forged',{bonusXp:999999})).totalXp,base+cap);
+ for(const [i,bad] of [-5,'9',null,NaN,1.5,Infinity].entries()){let t;try{t=(await total(`bonus-bad${i}`,{bonusXp:bad})).totalXp;}catch{t=base;}assert.ok(t>=base&&t<=base+cap,String(bad));}
+ const remote=await total('bonus-sync',{bonusXp:5}),account={user:{id:'bonus-sync'},dataEpoch:1,progress:{performance:remote}},map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};
+ const id=Object.keys(remote.sessions)[0];
+ recordPerformanceSession({id,mode:'shallow-squat',kind:'reps',difficulty:'easy',value:8,xpBase:base,day:remote.sessions[id].day},{storage,account});
+ assert.equal(mergeVerifiedPerformance(account,{storage}).totalXp,base+5);
+});
+test('clampBonusXp: absent, garbage and negative give 0; huge gives the cap',()=>{
+ for(const bad of [undefined,null,'9',-1,NaN,Infinity,{}])assert.equal(clampBonusXp(bad,100),0);
+ assert.equal(clampBonusXp(1e9,100),10);assert.equal(clampBonusXp(3.9,100),3);assert.equal(clampBonusXp(5,0),0);
+});
