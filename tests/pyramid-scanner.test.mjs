@@ -72,7 +72,7 @@ test('pyramid room reuses the Dr Girlfriend game wall pattern and both original 
  assert.match(source,/READ THE SOURCE\.<br>KEEP THE LABEL\./);
  assert.match(source,/releaseRoomStyle\(\)/);
   assert.match(source,/src="\/food\/drgf-paper-character\.png"/);
-  assert.match(source,/\.dg-pyramid-walker\{[^}]*animation:dg-pyramid-cross 10s linear infinite/);
+  assert.match(source,/\.dg-pyramid-walker\{[^}]*animation:dg-pyramid-cross 11s linear infinite/);
   assert.match(source,/@media\(prefers-reduced-motion:reduce\)\{#pyramidScanner \.dg-pyramid-walker\{animation:none/);
  assert.doesNotMatch(source,/https?:\/\/(?!www\.w3\.org)/i,'room CSS may embed its SVG texture, but must not request a remote asset');
 });
