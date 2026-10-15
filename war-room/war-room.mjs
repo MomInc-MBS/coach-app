@@ -42,7 +42,9 @@ function mountCharacterBay(){
  let bay=null,module=null,generation=0,effectPicker=null;
  const attachEffects=()=>{
   const pets=host.querySelector('[data-cage-section="pets"]');
-  if(pets&&!host.querySelector('.war-room-effects'))effectPicker=mountEffectPicker(pets);
+  if(!pets)return;
+  if(effectPicker?.element?.isConnected&&effectPicker.element.previousElementSibling===pets)return;
+  effectPicker?.dispose();effectPicker=mountEffectPicker(pets);
  };
  const effectObserver=new MutationObserver(attachEffects);effectObserver.observe(host,{childList:true,subtree:true});
  const close=()=>{generation++;effectObserver.disconnect();effectPicker?.dispose();effectPicker=null;bay?.dispose();bay=null;window.warRoomGala=null;};

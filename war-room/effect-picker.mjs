@@ -24,7 +24,7 @@ function sourceFor(option) {
   if (id==='lightning') return {url:'/arcade/power/assets/pixelated_tilesheet.png',sx:0,sy:0,sw:64,sh:64};
   if (id==='floor') return {url:'/arcade/power/assets/11_fire_spritesheet.png',sx:0,sy:0,sw:100,sh:100};
   // Random and Classic keep a real, familiar effect swatch without generating emoji art.
-  return {url:'/arcade/power/assets/9_brightfire_spritesheet.png',sx:0,sy:0,sw:100,sh:100};
+  return {url:'/arcade/power/assets/9_brightfire_spritesheet.png',sx:0,sy:0,sw:100,sh:100,frame:24};
 }
 function loadImage(url) {
   if(imageCache.has(url)) return imageCache.get(url);
@@ -32,12 +32,12 @@ function loadImage(url) {
   imageCache.set(url,promise);return promise;
 }
 async function paint(canvas,option) {
-  const ctx=canvas.getContext('2d');if(!ctx)return;
+  const ctx=canvas.getContext('2d');if(!ctx)return false;
   const spec=sourceFor(option);
   try {
-    const image=await loadImage(spec.url);if(!canvas.isConnected)return;
+    const image=await loadImage(spec.url);if(!canvas.isConnected)return false;
     const sx=spec.sx??0,sy=spec.sy??0,sw=spec.sw??image.naturalWidth,sh=spec.sh??image.naturalHeight;
-    let frame=0,columns=option.columns;
+    let frame=spec.frame??0,columns=option.columns;
     if(option.asset&&columns){const count=columns*(option.rows||columns);frame=Math.min(count-1,Math.floor(count/3));}
     else if(option.id==='floor')frame=9;
     if(option.asset&&columns){const size=100;spec.sx=(frame%columns)*size;spec.sy=Math.floor(frame/columns)*size;}
@@ -52,7 +52,8 @@ async function paint(canvas,option) {
       for(let i=0;i<data.length;i+=4)if(data[i]===34&&data[i+1]===32&&data[i+2]===52)data[i+3]=0;
       ctx.putImageData(pixels,0,0);
     }
-  } catch { ctx.clearRect(0,0,40,40); }
+    return true;
+  } catch { ctx.clearRect(0,0,40,40);return false; }
 }
 
 export function mountEffectPicker(anchor, {document:doc=anchor?.ownerDocument||globalThis.document}={}) {
@@ -83,7 +84,7 @@ export function mountEffectPicker(anchor, {document:doc=anchor?.ownerDocument||g
       });
     }
     section.append(list);
-    const load=()=>{for(const option of group.options){const item=optionMap.get(option),canvas=section.querySelector(`[data-effect-thumb="${option}"]`);if(canvas&&!canvas.dataset.loaded&&item){canvas.dataset.loaded='true';void paint(canvas,item);}}};
+    const load=()=>{for(const id of group.options){const item=optionMap.get(id),canvas=section.querySelector(`[data-effect-thumb="${id}"]`);if(canvas&&!canvas.dataset.loaded&&!canvas.dataset.loading&&item){canvas.dataset.loading='true';void paint(canvas,item).then(ok=>{delete canvas.dataset.loading;if(ok)canvas.dataset.loaded='true';});}}};
     section.addEventListener('toggle',()=>{if(section.open)load();});
   }
   for(const group of EFFECT_GROUPS){
