@@ -40,8 +40,25 @@ table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;p
 .controls-drawer[open] summary::before{content:'\25bc '}
 .controls-grid{display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
 .controls-grid h2{margin:0 0 6px;font:13px monospace;color:#f1ffcc;text-transform:uppercase;letter-spacing:.05em}
-.aura-controls{display:grid;grid-template-columns:minmax(90px,1fr) minmax(180px,2fr);gap:6px 12px;align-items:center;border:1px solid #356473;border-radius:8px;padding:10px;background:#09242e88}
-.aura-controls h2,.aura-controls .aura-help,.aura-controls #auraStatus{grid-column:1/-1}.aura-controls h2{margin:0}.aura-controls .aura-help,.aura-controls #auraStatus{margin:0;color:var(--muted);font-size:12px}.aura-controls label{font:12px monospace;color:var(--ink)}.aura-controls select{width:100%;min-height:44px;border:1px solid var(--accent);background:#102f39;color:var(--ink);padding:8px;font:14px system-ui,sans-serif}
+.war-room-effects{position:relative;flex:0 0 auto;align-self:center;font:12px monospace}
+.war-room-effects>summary{display:flex;align-items:center;justify-content:center;min-height:36px;min-width:62px;padding:4px 8px;border:1px solid #ff880088;color:#ffb65f;background:#211306;cursor:pointer;list-style:none;white-space:nowrap}
+.war-room-effects>summary::-webkit-details-marker,.effect-group>summary::-webkit-details-marker{display:none}
+.war-room-effects>summary::before{content:'> '}.war-room-effects[open]>summary{color:#ffe3ae;background:#48280c}
+.war-room-effects :focus-visible{outline:2px solid #fff0a8;outline-offset:2px}
+.effect-picker-menu{position:fixed;left:8px;bottom:calc(var(--myr5-bar,88px) + 54px + env(safe-area-inset-bottom));z-index:9;width:min(360px,calc(100vw - 16px));max-height:min(62dvh,520px);overflow:auto;padding:8px;border:1px solid #ff9a1f;border-radius:9px;background:#100e16f5;box-shadow:0 8px 30px #000b;overscroll-behavior:contain}
+.effect-group{border:1px solid #795125;border-radius:6px;margin:3px 0;background:#21190ff0}
+.effect-group>summary{padding:7px 9px;min-height:40px;color:#f5d9ab;font-weight:700;cursor:pointer;list-style:none}
+.effect-group>summary{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.effect-current{max-width:58%;overflow:hidden;color:#d4c2a7;font:10px/1.2 system-ui,sans-serif;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.effect-group[open]>summary{background:#51300f;color:#fff0cb}
+.effect-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0;padding:7px;border:0}
+.effect-choice-list legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.effect-choice{display:flex;align-items:center;gap:7px;min-width:0;min-height:48px;padding:4px;border:1px solid #624921;border-radius:5px;background:#17131c;color:#f4e8d2;font:11px/1.25 system-ui,sans-serif;cursor:pointer}
+.effect-choice:has(input:checked){border-color:#ffbf67;background:#40280f;box-shadow:inset 0 0 0 1px #ffbf67}
+.effect-choice input{flex:0 0 auto;width:17px;height:17px;margin:0;accent-color:#ff9a1f}
+.effect-thumb{flex:0 0 40px;width:40px;height:40px;border:1px solid #644927;background:#0e1117;image-rendering:pixelated}
+.effect-choice span{min-width:0;overflow-wrap:anywhere}
+.effect-picker-status{margin:7px 2px 2px;color:#dbd3c4;font:11px/1.35 system-ui,sans-serif}
 /* R18 H: the 3D bay buttons are an orange terminal in a translucent glass hologram panel (War Room page only: this file is not loaded elsewhere). */
 .war-room .cage-bays{gap:2px;padding:4px 6px;border:1px solid #ff880088;border-radius:8px;background:linear-gradient(#0a120e66,#04080acc),repeating-linear-gradient(0deg,#0000 0 2px,#ff880014 2px 3px);background-blend-mode:normal;backdrop-filter:blur(3px);box-shadow:0 0 14px #ff880055,inset 0 0 18px #ff880022}
 .war-room .cage-bays button{flex:1 1 auto;background:none;border:0;border-radius:0;box-shadow:none;color:#ff9a1f;font:700 .8125rem 'Courier New',monospace;letter-spacing:.04em;text-transform:uppercase;text-shadow:0 0 6px #ff8800aa;min-height:36px;padding:4px 6px;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;white-space:nowrap}
