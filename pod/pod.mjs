@@ -1,7 +1,7 @@
 import {captureRestBossContext,hasRestBossDefeat,readRestBossRewards,recordRestBossDefeatExclusive} from '../rest-boss-rewards.mjs';
 import {initRestArena} from './rest-arena.mjs';
 import {abilityFor} from './weapon-evolution.mjs';
-import {SetFlow,DEFAULT_GOALS,valueOf,bossHealthMax} from './set-flow.mjs';
+import {SetFlow,DEFAULT_GOALS,valueOf,bossHealthMax,shouldStartRestTargets} from './set-flow.mjs';
 import {SetEncouragement} from './encouragement.mjs';
 import {setFlipValue,clockDigits} from '../flip-display.mjs';
 import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
@@ -100,9 +100,24 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
 
  // Fruit Ninja rest layer: lazy so the game stays out of the core bundle.
  const SLICE_GAME='/arcade/slice/rest-game.mjs'; // variable path: esbuild leaves it alone, so the game stays out of the core bundle
- let slice=null;
- function startSlice(){import(SLICE_GAME).then(m=>{if(slice||flow.phase!=='rest')return;slice=m.mountRestGame(document.querySelector('.encounter'),{avatar:$('restAvatar'),attackButton:$('attackCoach'),feedback:$('restFeedback')});slice.start();}).catch(()=>{});}
- function stopSlice(){slice?.stop();slice=null;}
+ let slice=null,sliceLoadGeneration=0;
+ const restTargetsActive=()=>shouldStartRestTargets(flow.phase,preparationRest),sliceHost=()=>document.querySelector('.encounter');
+ function retrySlice(){if(!slice&&restTargetsActive())startSlice();}
+ function startSlice(){
+  if(slice||!restTargetsActive())return;
+  const generation=++sliceLoadGeneration;
+  import(SLICE_GAME).then(m=>{
+   if(generation!==sliceLoadGeneration||slice||!restTargetsActive())return;
+   const instance=m.mountRestGame(sliceHost(),{avatar:$('restAvatar'),attackButton:$('attackCoach'),feedback:$('restFeedback')});
+   slice=instance;instance.start();
+  }).catch(error=>{
+   if(generation!==sliceLoadGeneration||!restTargetsActive())return;
+   slice?.stop();slice=null;console.error('Rest targets failed to start',error);
+   $('restFeedback').textContent='Targets failed to load. Tap the scene to retry.';
+   sliceHost()?.addEventListener('pointerdown',retrySlice,{once:true});
+  });
+ }
+ function stopSlice(){sliceLoadGeneration++;sliceHost()?.removeEventListener('pointerdown',retrySlice);slice?.stop();slice=null;}
  function enterRest(result=null){preparationRest=false;setPreparationControls(false);
   flow.kitLevel=combatLevel(result?.mode||currentMode||'squat');flow.beforeRestAttack(Date.now()); // real battle-pass level for this boss's track (D8/D22)
   for(const id of ['settings','identity'])if($(id).open)$(id).close();
@@ -147,7 +162,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('setReceipt').textContent=w.nextStage==='working'?'Final warm-up complete':'Warm-up complete';
   $('earnedXp').textContent='NO XP';$('restFeedback').textContent='Recover, then training resumes automatically.';
   route.hideResult();setPreparationControls(true);$('damageTotal').textContent=Math.round(flow.damage)+' DAMAGE';paintHealth();syncCombat();
-  hand.enter();arena.start();paintGuest();updateProgress();moveCoach();
+  hand.enter();arena.start();startSlice();paintGuest();updateProgress();moveCoach();
   clearInterval(restTimer);restTimer=setInterval(tick,250);
   window.dispatchEvent(new CustomEvent('myr5:preparation-rest-start',{detail:{stage:w.stage,nextStage:w.nextStage,recoveryUntil:w.recoveryUntil}}));tick();
  }

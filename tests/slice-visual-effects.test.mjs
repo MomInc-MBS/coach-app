@@ -5,9 +5,9 @@ import {createHandGlow,renderHandGlow} from '../arcade/slice/hand-glow.mjs';
 import {XP_SCALE} from '../progression-rules.mjs';
 
 function recordingContext(){
- const calls=[];
- return {calls,clearRect(){calls.push('clear');},save(){},restore(){},translate(){},rotate(){},beginPath(){},rect(){calls.push('rect');},clip(){calls.push('clip');},
-  moveTo(){},lineTo(){},stroke(){calls.push('stroke');},fillRect(){calls.push('fillRect');},fillText(){calls.push('text');},drawImage(){calls.push('image');},setLineDash(){}};
+ const calls=[],drawAlphas=[],stack=[];let alpha=1;
+ return {calls,drawAlphas,get globalAlpha(){return alpha;},set globalAlpha(value){alpha=value;},clearRect(){calls.push('clear');},save(){stack.push(alpha);},restore(){alpha=stack.pop()??1;},translate(){},rotate(){},beginPath(){},rect(){calls.push('rect');},clip(){calls.push('clip');},
+  moveTo(){},lineTo(){},stroke(){calls.push('stroke');},fillRect(){calls.push('fillRect');},fillText(){calls.push('text');},drawImage(){calls.push('image');drawAlphas.push(alpha);},setLineDash(){}};
 }
 
 test('camera slice hit, XP, combo and scoring remain active with visual effects rendered',()=>{
@@ -24,12 +24,18 @@ test('camera slice hit, XP, combo and scoring remain active with visual effects 
  e.trail.push({x:10,y:10,life:.2},{x:20,y:20,life:.2});
  const camera=recordingContext();
  const oldDocument=globalThis.document;
- try{globalThis.document={createElement(){return {width:16,height:16,getContext(){return {fillRect(){}};}};}};render(camera,e,{pointerTrail:false});}
+ try{
+  globalThis.document={createElement(){return {width:16,height:16,getContext(){return {fillRect(){}};}};}};
+  e.step(.625);assert.ok(Math.abs(e.halves[0].life-.625)<1e-9,'half-life advances during the actual simulation step');
+  render(camera,e,{pointerTrail:false});
+ }
  finally{if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;}
  assert.ok(camera.calls.includes('clip'),'camera mode retains the split pieces');
  assert.ok(camera.calls.includes('fillRect'),'camera mode retains debris and stains');
  assert.equal(camera.calls.includes('stroke'),false,'camera mode omits only the old white pointer slash');
- const standalone=recordingContext();render(standalone,e);assert.ok(standalone.calls.includes('stroke'),'standalone mode retains its pointer slash');
+ assert.ok(camera.drawAlphas.some(alpha=>Math.abs(alpha-.5)<.02),'split halves render with mid-life fade alpha');
+ e.step(.625);assert.equal(e.halves.length,0,'expired halves are removed from the live list');
+ e.addTrail(10,10);e.addTrail(20,20);e.trail.forEach(point=>point.life=.2);const standalone=recordingContext();render(standalone,e);assert.ok(standalone.calls.includes('stroke'),'standalone mode retains its pointer slash');
 });
 
 test('camera mode keeps targets and break-apart art, hides only the old white slash, then paints hand glow',()=>{

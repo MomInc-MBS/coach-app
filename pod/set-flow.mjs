@@ -8,6 +8,7 @@ import {PerformanceWorkout} from './performance-workout.mjs';
 import {cosmeticLevel} from '../progression-rules.mjs';
 import {AbilityCooldown} from './weapon-evolution.mjs';
 export {bossHp as bossHealthMax} from '../combat-config.mjs';
+export const shouldStartRestTargets=(phase,preparationRest)=>phase==='rest'||preparationRest===true;
 export const DEFAULT_GOALS={...Object.fromEntries(Object.values(EXERCISES).map(m=>[m.id,m.defaultGoal])),squat:3,pushup:3,tree:9,warrior:9,horse:9,boxing:9,jogging:3,jumping:3};
 export const valueOf=m=>m.kind==='hold'?m.totalHold:m.kind==='pace'?(m.active??0):m.count;
 export function readProgress(raw){

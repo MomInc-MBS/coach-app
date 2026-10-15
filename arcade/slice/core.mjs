@@ -7,7 +7,7 @@ import {XP_SCALE} from '../../progression-rules.mjs';
 export const TYPES={'asteroid-rock':['#8a7a68','#5e5246','#b9a88f'],'asteroid-ember':['#d0552a','#7a2a14','#ffb070'],'ice-comet':['#9fdcff','#4f9fd8','#ffffff'],'mini-planet':['#c060d8','#6a3a9c','#ffd27a'],moon:['#cfcfd8','#8d8d9a','#f4f4ff'],'sun-chunk':['#ffb400','#ff5a1f','#fff3a0'],'satellite-junk':['#9aa6b4','#4a5566','#e8f0ff'],'xp-star':['#ffe14a','#c8901a','#fffbd0'],'xp-orb':['#4affc8','#1a9c80','#d8fff4']};
 export const TYPE_IDS=Object.keys(TYPES).filter(k=>!k.startsWith('xp-'));
 export const BONUS_IDS=['xp-star','xp-orb'];
-const GRAVITY=260,TAU=Math.PI*2;
+const GRAVITY=260,TAU=Math.PI*2,HALF_LIFE=1.25;
 export function rng(seed=1){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 export function distPointSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l)):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
 // Straight shot (punch, kick) vs looping shot (chop, hook, roundhouse): sideways bow of the last ~6 points relative to the chord.
@@ -40,7 +40,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
  function burst(x,y,type,n,spread){const cs=TYPES[type];for(let i=0;i<n;i++){const a=rand()*TAU,s=spread*(.3+rand());e.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:.5+rand()*.4,c:pick(cs),s:1+Math.floor(rand()*3)});}}
  function award(o,kind,a,b){
   o.alive=false;e.hits++;
-  if(kind==='slice'){const ang=Math.atan2(b.y-a.y,b.x-a.x),n=[-Math.sin(ang),Math.cos(ang)];for(const side of[-1,1])e.halves.push({...o,cut:ang,side,vx:o.vx*.5+n[0]*side*60,vy:o.vy*.5+n[1]*side*60,rot0:o.rot,hr:0,hvr:side*(2+rand()*4)});burst(o.x,o.y,o.type,8,60);}
+  if(kind==='slice'){const ang=Math.atan2(b.y-a.y,b.x-a.x),n=[-Math.sin(ang),Math.cos(ang)];for(const side of[-1,1])e.halves.push({...o,cut:ang,side,life:HALF_LIFE,vx:o.vx*.5+n[0]*side*60,vy:o.vy*.5+n[1]*side*60,rot0:o.rot,hr:0,hvr:side*(2+rand()*4)});burst(o.x,o.y,o.type,8,60);}
   else burst(o.x,o.y,o.type,22,120);
   e.stains.push({c:TYPES[o.type][1],life:4,dots:Array.from({length:7},()=>[o.x+(rand()-.5)*20,o.y+(rand()-.5)*20,1+Math.floor(rand()*3)])}); // juice splat fades on the background
   if(o.bonus){e.xp+=3*XP_SCALE;e.score+=15;pop(`+${3*XP_SCALE} XP`,o.x,o.y-10,'#ffe14a');emit('bonus',{xp:3*XP_SCALE,x:o.x,y:o.y,kind});}
@@ -71,7 +71,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
    if(o.vy>0&&o.y>h+o.r){o.alive=false;if(!o.bonus){emit('land',{x:o.x,type:o.type});if(strikes)strike();}} // a missed rock lands = strike
   }
   e.objects=e.objects.filter(o=>o.alive);
-  for(const q of e.halves){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=GRAVITY*dt;q.hr+=q.hvr*dt;}e.halves=e.halves.filter(q=>q.y<h+40);
+  for(const q of e.halves){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=GRAVITY*dt;q.hr+=q.hvr*dt;q.life-=dt;}e.halves=e.halves.filter(q=>q.life>0&&q.y<h+40);
   for(const q of e.parts){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=GRAVITY*.6*dt;q.life-=dt;}e.parts=e.parts.filter(q=>q.life>0);
   for(const q of e.stains)q.life-=dt;e.stains=e.stains.filter(q=>q.life>0);
   for(const q of e.trail)q.life-=dt;e.trail=e.trail.filter(q=>q.life>0);
@@ -111,7 +111,7 @@ export function render(g,e,{coach=null,pointerTrail=true}={}){
  g.globalAlpha=1;
  if(coach)coach(g,e);
  for(const o of e.objects){if(o.hold)continue;g.save();g.translate(Math.round(o.x),Math.round(o.y));drawBody(g,o);g.restore();}
- for(const q of e.halves){g.save();g.translate(Math.round(q.x),Math.round(q.y));g.rotate(q.hr);g.rotate(q.cut);g.beginPath();g.rect(-q.r*2,q.side>0?0:-q.r*2,q.r*4,q.r*2);g.clip();g.rotate(-q.cut);drawBody(g,{...q,rot:q.rot0});g.restore();}
+ for(const q of e.halves){g.save();g.globalAlpha=Math.min(1,q.life/HALF_LIFE);g.translate(Math.round(q.x),Math.round(q.y));g.rotate(q.hr);g.rotate(q.cut);g.beginPath();g.rect(-q.r*2,q.side>0?0:-q.r*2,q.r*4,q.r*2);g.clip();g.rotate(-q.cut);drawBody(g,{...q,rot:q.rot0});g.restore();}
  for(const q of e.parts){g.globalAlpha=Math.min(1,q.life*2);g.fillStyle=q.c;g.fillRect(Math.round(q.x),Math.round(q.y),q.s,q.s);}
  g.globalAlpha=1;
  if(pointerTrail&&e.trail.length>1){g.lineWidth=2;for(let i=1;i<e.trail.length;i++){const a=e.trail[i-1],b=e.trail[i];g.strokeStyle=`rgba(255,255,255,${Math.min(1,b.life*4)})`;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}}

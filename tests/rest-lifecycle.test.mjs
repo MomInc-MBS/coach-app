@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SetFlow,bossHealthMax} from '../pod/set-flow.mjs';
+import {readFileSync} from 'node:fs';
+import {SetFlow,bossHealthMax,shouldStartRestTargets} from '../pod/set-flow.mjs';
 import {DAY_MS} from '../combat.mjs';
 import {tapDamage} from '../combat-config.mjs';
 
@@ -23,6 +24,20 @@ test('touches count as activity without bypassing attack cooldown or manual rest
 test('a completed set starts the same rest grace period',()=>{
  const flow=new SetFlow();flow.start('squat',3,30);flow.consume({mode:'squat',name:'Squats',kind:'reps',count:3},1000);
  assert.equal(flow.shouldEndRest(33999),false);assert.equal(flow.shouldEndRest(34000),true);
+});
+test('rest targets start in earned rest and preparation recovery without changing workout phase',()=>{
+ const flow=new SetFlow();flow.start('squat',3,30);
+ assert.equal(flow.phase,'set');const prepXp=flow.xp;
+ assert.equal(shouldStartRestTargets(flow.phase,true),true,'preparation recovery leaves phase at set');assert.equal(flow.xp,prepXp);
+ flow.consume({mode:'squat',name:'Squats',kind:'reps',count:3},1000);
+ assert.equal(flow.phase,'rest');const earnedXp=flow.xp;
+ assert.equal(shouldStartRestTargets(flow.phase,false),true,'earned rest uses the ordinary rest phase');assert.equal(flow.xp,earnedXp,'target eligibility does not add workout XP');
+});
+test('preparation recovery entry starts the same lazy Rest target module',()=>{
+ const source=readFileSync(new URL('../pod/pod.mjs',import.meta.url),'utf8');
+ const start=source.indexOf('function enterPreparation(){'),end=source.indexOf('function exitPreparation(',start);
+ assert.ok(start>=0&&end>start);assert.match(source.slice(start,end),/startSlice\(\)/);
+ assert.match(source,/const restTargetsActive=\(\)=>shouldStartRestTargets\(flow\.phase,preparationRest\)/);
 });
 test('boss HP is level-scoped, persists across rests the same day, overkill floors at zero, and a new day is a fresh boss',()=>{
  const flow=new SetFlow(null,{now:0});const max=bossHealthMax(1);

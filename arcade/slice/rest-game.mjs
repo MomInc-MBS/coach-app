@@ -16,7 +16,7 @@ export function mountRestGame(scene,{avatar,attackButton,feedback}){
  const floorY=()=>e.h*.8,coachY=()=>e.h*.17;
  const toLogical=ev=>{const r=canvas.getBoundingClientRect();return {x:(ev.clientX-r.left)/r.width*e.w,y:(ev.clientY-r.top)/r.height*e.h};};
  function begin(){
-  const b=scene.getBoundingClientRect();k=b.width/W;const h=Math.round(W*b.height/b.width);
+  const b=scene.getBoundingClientRect();if(!(b.width>0&&b.height>0))throw new Error('Rest target canvas host has no visible size');k=b.width/W;const h=Math.round(W*b.height/b.width);
   canvas.width=W;canvas.height=h;
   e=createSlice({w:W,h,mode:'rest',auto:false,coachX:W/2,onEvent:(type,d)=>{
    if(type==='laser-hit')say('Zapped! Hold still to shield next time.');
