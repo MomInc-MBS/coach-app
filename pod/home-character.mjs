@@ -3,10 +3,14 @@ import {drawAnimatedWeapon} from './weapon-animator.mjs';
 import {abilityFor,evolution} from './weapon-evolution.mjs';
 import {createCharacterPhysics} from '../character-phone-physics.mjs';
 import {subscribePhoneMotion} from '../character-phone-sensor.mjs';
+import {createOptionalModuleLoader} from '../arcade/workout-effects-state.mjs';
 
 // R26: the War Room's coach body/pet (64-bit coach sprites in the saved coach's colours) stands here too. Loaded
 // lazily from the War Room bundle so the core app stays small; offline without it the Gala body shows.
 const COACH_SPRITES='/war-room/coach-sprites.js',RECIPE_KEY='myr5-recipe-v1',COACH_CHOICE='myr5-war-room-coaches-v2/';
+const loadPowerState=createOptionalModuleLoader('/arcade/power/avatar-power.mjs');
+const loadPowerRenderer=createOptionalModuleLoader('/arcade/power/power.mjs');
+const loadBlizzardRenderer=createOptionalModuleLoader('/arcade/hold/blizzard.mjs');
 export function mountHomeCharacter(){
  const host=document.getElementById('homeCharacter'),canvas=host.querySelector('canvas'),hud=document.getElementById('hud');
  const W=window.GalaWeapons,A=window.GalaAvatar,reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,7 +21,7 @@ export function mountHomeCharacter(){
  function clearPower(){powerActive=false;powerPulse=0;if(powerCtx)powerCtx.clearRect(0,0,160,168);if(powerCanvas)powerCanvas.style.display='none';}
  function resizePower(){if(!powerCanvas||!powerCtx)return;const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1)),width=Math.round(160*dpr),height=Math.round(168*dpr);if(powerCanvas.width!==width)powerCanvas.width=width;if(powerCanvas.height!==height)powerCanvas.height=height;powerCtx.setTransform(dpr,0,0,dpr,0,0);powerCtx.imageSmoothingEnabled=false;}
  function makePowerCanvas(){if(powerCanvas)return;powerCanvas=document.createElement('canvas');powerCanvas.className='myr5-home-power-overlay';powerCanvas.width=160;powerCanvas.height=168;powerCanvas.setAttribute('aria-hidden','true');Object.assign(powerCanvas.style,{filter:'none',opacity:'.55',pointerEvents:'none',zIndex:'2',display:'none',bottom:canvas.style.bottom||'',transform:canvas.style.transform||'translateX(-50%)'});const button=host.querySelector('button');if(button?.appendChild)button.appendChild(powerCanvas);else host.append(powerCanvas);powerCtx=powerCanvas.getContext('2d',{alpha:true});if(!powerCtx){powerCanvas.remove();powerCanvas=null;return;}resizePower();}
- function ensurePowerRenderer(){if(powerModule&&powerRenderer&&powerSchedule){makePowerCanvas();sync();return;}if(powerLoading)return;const token=++powerLoadToken;powerLoading=Promise.all([import('../arcade/power/avatar-power.mjs'),import('../arcade/power/power.mjs'),import('../arcade/hold/blizzard.mjs')]).then(([avatar,power,blizzard])=>{if(disposed||token!==powerLoadToken||!hasPower())return;powerModule=avatar;powerRenderer=power;blizzardModule=blizzard;powerSchedule=avatar.createAvatarPowerSchedule({seed:0x4d595235});makePowerCanvas();resize();sync();}).catch(()=>{}).finally(()=>{if(token===powerLoadToken)powerLoading=null;});}
+ function ensurePowerRenderer(){if(powerModule&&powerRenderer&&powerSchedule){makePowerCanvas();sync();return;}if(powerLoading)return;const token=++powerLoadToken;powerLoading=Promise.all([loadPowerState(),loadPowerRenderer(),loadBlizzardRenderer()]).then(([avatar,power,blizzard])=>{if(disposed||token!==powerLoadToken||!hasPower())return;powerModule=avatar;powerRenderer=power;blizzardModule=blizzard;powerSchedule=avatar.createAvatarPowerSchedule({seed:0x4d595235});makePowerCanvas();resize();sync();}).catch(()=>{}).finally(()=>{if(token===powerLoadToken)powerLoading=null;});}
  function requestPowerSnapshot(){if(typeof CustomEvent==='function')window.dispatchEvent(new CustomEvent('myr5:retained-character-power-request'));}
  function paintPower(now,reducedMotion=false){
   if(!powerCtx||!powerModule||!powerSchedule)return;

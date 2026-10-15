@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {mapPointToOverlay,mountWorkoutEffects} from '../arcade/workout-effects.mjs';
-import {workoutEffectsSnapshot,isMartialSliceExercise,holdStyleForExercise,latestRetainableWorkoutSnapshot,createOptionalRetry} from '../arcade/workout-effects-state.mjs';
+import {workoutEffectsSnapshot,isMartialSliceExercise,holdStyleForExercise,latestRetainableWorkoutSnapshot,createOptionalRetry,createOptionalModuleLoader} from '../arcade/workout-effects-state.mjs';
 import {createRetainedPower} from '../arcade/power/retained-power.mjs';
 
 test('overlay mapping contains letterboxed video, mirrors into host space, and keeps missing landmarks missing',()=>{
@@ -49,14 +49,16 @@ test('a stale pending module cannot mount after invalidation; living holds retry
 });
 
 test('a rejected optional import can retry on the next valid pose',async()=>{
- let holdLoads=0,powerLoads=0;const mounted=[];
+ let holdLoads=0,powerLoads=0,now=0;const mounted=[];
  const loaders={
   hold:async()=>{if(++holdLoads===1)throw Error('temporary hold fetch failure');return {mountCameraHold:()=>{const instance={pose:()=>{},invalidate:()=>{},stop:()=>{}};mounted.push('hold');return instance;}};},
   power:async()=>{if(++powerLoads===1)throw Error('temporary power fetch failure');return {mountCameraPower:()=>{const instance={pose:()=>{},invalidate:()=>{},stop:()=>{}};mounted.push('power');return instance;}};}
  };
- const runtime=mountWorkoutEffects({host:{},loaders}),detail={points:[],now:1,validHold:true,workout:{sessionId:'retry',mode:'mountain',kind:'hold',active:true}};
+ const runtime=mountWorkoutEffects({host:{},loaders,retryOptions:{now:()=>now,baseDelay:10,maxDelay:20,cooldown:100}}),detail={points:[],now:1,validHold:true,workout:{sessionId:'retry',mode:'mountain',kind:'hold',active:true}};
  runtime.pose(detail);await new Promise(resolve=>setImmediate(resolve));
  runtime.pose(detail);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(holdLoads,1,'repeated poses do not immediately retry a failed hold import');assert.equal(powerLoads,1,'repeated poses do not immediately retry a failed power import');
+ now=10;runtime.pose(detail);await new Promise(resolve=>setImmediate(resolve));
  assert.equal(holdLoads,2);assert.equal(powerLoads,2);assert.deepEqual(mounted.sort(),['hold','power']);runtime.stop();
 });
 
@@ -92,8 +94,11 @@ test('app wiring snapshots post-consume owner data and keeps retained modules op
  assert.doesNotMatch(source,/holdEffectStyle|HOLD_STYLE_KEY/,'hold style follows exercise metadata with no manual preference');
  assert.match(source,/ownerId:effectActive\?\.performanceOwner\?\?null/);
  assert.ok(source.indexOf('const pendingConsume=pod.consume')<source.indexOf('const effectDetail=workoutEffectsSnapshot'), 'effect state is captured after synchronous performance consumption');
- assert.match(source,/import\('\.\/arcade\/power\/retained-power\.mjs'\)/,'retained storage remains optional and lazy');
- assert.match(source,/import\('\.\/arcade\/quest-progress-reporter\.mjs'\)/,'offline quest maxima use the optional owner-scoped queue');
+ assert.match(source,/createOptionalModuleLoader\('\/arcade\/power\/retained-power\.mjs'\)/,'retained storage remains optional and lazy with a retryable absolute entry');
+ assert.match(source,/createOptionalModuleLoader\('\/arcade\/quest-progress-reporter\.mjs'\)/,'offline quest maxima use the retryable optional owner-scoped queue');
+ assert.match(source,/createOptionalModuleLoader\('\/arcade\/workout-effects\.mjs'\)/,'workout effects use a retryable optional entry module');
+ assert.match(source,/questReporterLoading\|\|!questReporterRetry\.canStart\(\)/,'repeated progress poses respect the quest import backoff');
+ assert.match(source,/workoutEffectsLoading\|\|!workoutEffectsRetry\.canStart\(\)/,'repeated camera poses respect the workout-effects import backoff');
  assert.match(source,/mountHomeCharacter\(\);\s*ensureRetainedPower\(\);/,'retained store boots without requiring a companion card');
  assert.match(source,/myr5:retained-character-power-request/,'home presentation can request a cached store snapshot after mounting');
  assert.match(source,/myr5:retained-character-power/,'cached and updated retained records are published to home presentation');
@@ -140,4 +145,17 @@ test('optional retries cool down after the bounded burst and become eligible aga
  let now=0;const retry=createOptionalRetry({now:()=>now,maxAttempts:2,baseDelay:10,maxDelay:20,cooldown:100});
  for(let i=0;i<2;i++){assert.equal(retry.canStart(),true);retry.start();retry.fail();if(i===0)now=10;}
  assert.equal(retry.canStart(),false);now=109;assert.equal(retry.canStart(),false);now=110;assert.equal(retry.canStart(),true);assert.equal(retry.attempts,0);
+});
+
+test('optional module loader cache-busts only after failure, deduplicates in-flight loads, and caches success',async()=>{
+ const urls=[];let finish;
+ const loader=createOptionalModuleLoader('https://myr5.test/arcade/optional.mjs',{importer:url=>{urls.push(url);if(urls.length<3)return Promise.reject(new Error('offline'));return new Promise(resolve=>finish=resolve);}});
+ await assert.rejects(loader(),/offline/);await assert.rejects(loader(),/offline/);
+ const pending=loader();assert.equal(loader(),pending,'concurrent callers share the in-flight promise');
+ await new Promise(resolve=>setImmediate(resolve));const loaded={ready:true};finish(loaded);assert.equal(await pending,loaded);
+ assert.equal(await loader(),loaded,'a successful optional module is cached');
+ assert.equal(urls.length,3,'success cache prevents another import');
+ assert.equal(new URL(urls[0]).search,'','the canonical URL is used on the first attempt');
+ const nonce1=new URL(urls[1]).searchParams.get('myr5_retry'),nonce2=new URL(urls[2]).searchParams.get('myr5_retry');
+ assert.ok(nonce1&&nonce2&&nonce1!==nonce2,'each rejected retry receives a fresh shared document nonce');
 });

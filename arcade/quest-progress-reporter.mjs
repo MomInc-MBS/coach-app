@@ -13,15 +13,20 @@ const RULES = Object.freeze({
 });
 const valid=(counter,value)=>{const r=RULES[counter];return !!r&&Number.isFinite(value)&&value>=r[0]&&value<=r[1]&&(!r[2]||Number.isSafeInteger(value));};
 const key=owner=>`myr5-quest-pending-v1/${encodeURIComponent(owner)}`;
+const IMPORT_NONCE_KEY=Symbol.for('myr5.quest-progress-import-nonce');
+function nextImportNonce(){
+ try{const n=(Number(globalThis[IMPORT_NONCE_KEY])||0)+1;globalThis[IMPORT_NONCE_KEY]=n;return n;}
+ catch{return `${Date.now()}-${Math.random().toString(36).slice(2)}`;}
+}
 
 export function createQuestProgressReporter(ownerId,{storage=globalThis.localStorage,currentOwner=performanceOwner,load=null,importer=url=>import(url),now=()=>Date.now(),baseDelay=1000,maxDelay=30000}={}){
  const memoryValues={};
  const confirmed={};
- let drainPromise=null,retryAt=0,retryDelay=baseDelay,loadedModule=null,loadPromise=null,importFailures=0,importNonce=0;
+ let drainPromise=null,retryAt=0,retryDelay=baseDelay,loadedModule=null,loadPromise=null,importFailures=0;
  const loadVault=()=>{
   if(loadedModule)return Promise.resolve(loadedModule);
   if(loadPromise)return loadPromise;
-  const url=importFailures===0?'../modules/vault/quest-progress.mjs':`../modules/vault/quest-progress.mjs?quest-retry=${++importNonce}`;
+  const url=importFailures===0?'/modules/vault/quest-progress.mjs':`/modules/vault/quest-progress.mjs?quest-retry=${nextImportNonce()}`;
   const pending=Promise.resolve().then(()=>load?load():importer(url)).then(module=>{loadedModule=module;return module;}).catch(error=>{importFailures++;throw error;}).finally(()=>{loadPromise=null;});
   loadPromise=pending;return pending;
  };

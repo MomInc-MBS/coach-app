@@ -1,8 +1,10 @@
 // Shared AR geometry and lazy wrapper lifecycle for optional workout effects.
 // Landmark coordinates stay normalized; geometry is mapped to the overlay that owns the video.
 export {workoutEffectsSnapshot} from './workout-effects-state.mjs';
-import {holdStyleForExercise} from './workout-effects-state.mjs';
+import {holdStyleForExercise,createOptionalRetry,createOptionalModuleLoader} from './workout-effects-state.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
+const loadCameraHoldModule=createOptionalModuleLoader('/arcade/hold/camera-hold.mjs');
+const loadCameraPowerModule=createOptionalModuleLoader('/arcade/power/camera-power.mjs');
 export function mapPointToOverlay(point,{videoWidth,videoHeight,hostWidth,hostHeight,mirrored=false}={}){
  if(!point||![point.x,point.y,videoWidth,videoHeight,hostWidth,hostHeight].every(Number.isFinite)||videoWidth<=0||videoHeight<=0||hostWidth<=0||hostHeight<=0)return null;
  const scale=Math.min(hostWidth/videoWidth,hostHeight/videoHeight),renderedWidth=videoWidth*scale,renderedHeight=videoHeight*scale;
@@ -22,20 +24,21 @@ export function createOverlayCanvas(host,className,{opacity=.3}={}){
  return {canvas,resize,dispose(){observer?.disconnect();canvas.remove();}};
 }
 
-export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={}}={}){
+export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={},retryOptions}={}){
  let ecology=null,power=null,ecologyLoading=null,powerLoading=null,session=null,stopped=false,epoch=0,holdGeneration=0,powerGeneration=0,lastDetail=null,selectedHoldStyle='living';
- const dropHold=()=>{holdGeneration++;ecology?.stop();ecology=null;ecologyLoading=null;};
- const drop=()=>{epoch++;dropHold();powerGeneration++;power?.stop();power=null;powerLoading=null;session=null;lastDetail=null;};
- function invalidate(){holdGeneration++;powerGeneration++;ecologyLoading=powerLoading=null;ecology?.invalidate();power?.invalidate();}
+ const holdRetry=createOptionalRetry(retryOptions),powerRetry=createOptionalRetry(retryOptions);
+ const dropHold=()=>{holdGeneration++;holdRetry.reset();ecology?.stop();ecology=null;ecologyLoading=null;};
+ const drop=()=>{epoch++;dropHold();powerGeneration++;powerRetry.reset();power?.stop();power=null;powerLoading=null;session=null;lastDetail=null;};
+ function invalidate(){holdGeneration++;powerGeneration++;holdRetry.reset();powerRetry.reset();ecologyLoading=powerLoading=null;ecology?.invalidate();power?.invalidate();}
  async function ensure(kind,token,loadGeneration){
   if(stopped||token!==epoch)return null;
   if(kind==='hold'){
    if(ecology)return ecology;
-   if(!ecologyLoading){const style=selectedHoldStyle;const pending=(async()=>{const mod=await (loaders.hold?loaders.hold(style):import('./hold/camera-hold.mjs'));if(stopped||token!==epoch||loadGeneration!==holdGeneration||style!==selectedHoldStyle||!lastDetail?.workout?.active)return null;ecology=mod.mountCameraHold({host,sound,onXp:()=>{},seed,style});return ecology;})();ecologyLoading=pending;pending.catch(()=>{if(ecologyLoading===pending&&token===epoch&&loadGeneration===holdGeneration)ecologyLoading=null;});}
+   if(!ecologyLoading){if(!holdRetry.canStart())return null;holdRetry.start();const style=selectedHoldStyle;const pending=(async()=>{const mod=await (loaders.hold?loaders.hold(style):loadCameraHoldModule());holdRetry.succeed();if(stopped||token!==epoch||loadGeneration!==holdGeneration||style!==selectedHoldStyle||!lastDetail?.workout?.active)return null;ecology=mod.mountCameraHold({host,sound,onXp:()=>{},seed,style});return ecology;})();ecologyLoading=pending;pending.catch(()=>{if(ecologyLoading===pending&&token===epoch&&loadGeneration===holdGeneration){holdRetry.fail();ecologyLoading=null;}});}
    return ecologyLoading;
   }
   if(power)return power;
-  if(!powerLoading){const pending=(async()=>{const mod=await (loaders.power?loaders.power():import('./power/camera-power.mjs'));if(stopped||token!==epoch||loadGeneration!==powerGeneration||!lastDetail?.workout?.active)return null;power=mod.mountCameraPower({host,sound,seed});return power;})();powerLoading=pending;pending.catch(()=>{if(powerLoading===pending&&token===epoch&&loadGeneration===powerGeneration)powerLoading=null;});}
+  if(!powerLoading){if(!powerRetry.canStart())return null;powerRetry.start();const pending=(async()=>{const mod=await (loaders.power?loaders.power():loadCameraPowerModule());powerRetry.succeed();if(stopped||token!==epoch||loadGeneration!==powerGeneration||!lastDetail?.workout?.active)return null;power=mod.mountCameraPower({host,sound,seed});return power;})();powerLoading=pending;pending.catch(()=>{if(powerLoading===pending&&token===epoch&&loadGeneration===powerGeneration){powerRetry.fail();powerLoading=null;}});}
   return powerLoading;
  }
  function pose(detail){

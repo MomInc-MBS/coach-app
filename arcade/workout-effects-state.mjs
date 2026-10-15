@@ -42,3 +42,20 @@ export function createOptionalRetry({now=()=>Date.now(),maxAttempts=3,baseDelay=
   get attempts(){return attempts;}
  };
 }
+
+const OPTIONAL_IMPORT_NONCE=Symbol.for('myr5.optional-import-nonce');
+function nextOptionalImportNonce(){const next=(Number(globalThis[OPTIONAL_IMPORT_NONCE])||0)+1;globalThis[OPTIONAL_IMPORT_NONCE]=next;return next;}
+/** Load one optional entry by absolute URL; cache success/in-flight work and
+ * query-bust only after a real rejection so a later caller can escape the
+ * browser's cached failed module entry without adding timer retries. */
+export function createOptionalModuleLoader(entryUrl,{importer=url=>import(url)}={}){
+ const base=new URL(entryUrl,globalThis.location?.href??import.meta.url).href;let loaded=null,inflight=null,failed=false;
+ return function loadOptionalModule(){
+  if(loaded)return Promise.resolve(loaded);
+  if(inflight)return inflight;
+  let url=base;
+  if(failed){const retry=new URL(base);retry.searchParams.set('myr5_retry',String(nextOptionalImportNonce()));url=retry.href;}
+  const task=Promise.resolve().then(()=>importer(url)).then(module=>{loaded=module;return module;},error=>{failed=true;throw error;}).finally(()=>{if(inflight===task)inflight=null;});
+  inflight=task;return task;
+ };
+}

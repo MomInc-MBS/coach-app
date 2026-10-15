@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 import {avatarPowerState} from '../arcade/power/avatar-power.mjs';
 
 const source=(await readFile(new URL('../pod/rest-arena.mjs',import.meta.url),'utf8'))
- .replace(/^import .*;\r?\n/gm,'').replace(/export const/g,'const').replace(/export function/g,'function');
+ .replace(/^import .*;\r?\n/gm,'').replace(/^const loadPowerState=.*$/m,"const loadPowerState=()=>import('../arcade/power/avatar-power.mjs')").replace(/^const loadPowerRenderer=.*$/m,"const loadPowerRenderer=()=>import('../arcade/power/power.mjs')").replace(/^const loadBlizzardRenderer=.*$/m,"const loadBlizzardRenderer=()=>import('../arcade/hold/blizzard.mjs')").replace(/export const/g,'const').replace(/export function/g,'function');
 function makeHarness({defer=false}={}){
  const listeners=new Map(),docListeners=new Map(),requests=[],paints=[],steps=[],mainDraws=[],states=[];let now=0,frameCallback=null,resolveAvatar,resolvePower,resolveBlizzard,createdCanvases=0;
  const artContext={clearRect(){},setTransform(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},arc(){},fill(){},save(){},restore(){},globalAlpha:1};

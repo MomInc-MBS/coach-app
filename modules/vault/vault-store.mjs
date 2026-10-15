@@ -78,7 +78,7 @@ export const state=()=>view();
 // {counter,n,key|ms} or queue [counter,n,key] in `myr5-vault-pending`, drained here at load.
 export function drainPending(){try{const q=JSON.parse(localStorage.getItem('myr5-vault-pending')||'[]');localStorage.removeItem('myr5-vault-pending');for(const [c,n,k] of Array.isArray(q)?q:[])bump(c,n,{key:k});}catch{/* none */}}
 /** Retry bounded game maxima whenever the Vault hall is entered, even if this module was already cached. */
-export function drainQuestPending(){return import('../../arcade/quest-progress-reporter.mjs').then(({drainQueuedQuestProgress})=>drainQueuedQuestProgress()).catch(()=>false);}
+export function drainQuestPending(options={}){return import('../../arcade/quest-progress-reporter.mjs').then(({drainQueuedQuestProgress})=>drainQueuedQuestProgress(options)).catch(()=>false);}
 if(typeof window!=='undefined'){
  window.addEventListener?.('myr5:vault-bump',e=>{const {counter,n,key,ms}=e.detail||{};if(typeof counter!=='string')return;ms!=null?addTime(counter,ms):bump(counter,n,{key});});
  drainPending();

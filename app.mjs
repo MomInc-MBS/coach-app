@@ -21,7 +21,7 @@ import {openGuestWorkoutAdapter} from './local-coach-runtime.mjs';
 import {ManualActiveClock,ManualStartGate} from './local-coach/manual-clock.mjs';
 import {mountPackLicenses} from './packs/pack-license-surface.mjs';
 import {mountCoachOverlay} from './coach-overlay.mjs';
-import {workoutEffectsSnapshot,isMartialSliceExercise,latestRetainableWorkoutSnapshot,createOptionalRetry} from './arcade/workout-effects-state.mjs';
+import {workoutEffectsSnapshot,isMartialSliceExercise,latestRetainableWorkoutSnapshot,createOptionalRetry,createOptionalModuleLoader} from './arcade/workout-effects-state.mjs';
 import {EXERCISES} from './exercise-library.mjs';
 import {physicalSound} from './audio/physical-sound.mjs';
 import {mountArmieInboxUI} from './armie-inbox-ui.mjs';
@@ -66,9 +66,14 @@ if(!voice.available){$('voiceType').textContent='Speech unavailable in this brow
 let pod=null,tracker=null,draw=null,api=null,files=null,stream=null,frame=0,generation=0;
 let workoutEffects=null,workoutEffectsLoading=null,workoutEffectsToken=0,latestWorkoutEffects=null,pendingRetainedDetail=null,retainedPower=null,avatarPower=null,avatarPowerCard=null,avatarPowerLoadingCard=null,avatarPowerFailedCard=null,retainedPowerLoading=null,retainedPowerToken=0,avatarPowerToken=0,retainedOwner=null;
 const retainedPowerRetry=createOptionalRetry(),avatarPowerRetry=createOptionalRetry();
+const loadRetainedPowerModule=createOptionalModuleLoader('/arcade/power/retained-power.mjs');
+const loadAvatarPowerModule=createOptionalModuleLoader('/arcade/power/avatar-power.mjs');
+const loadQuestProgressReporterModule=createOptionalModuleLoader('/arcade/quest-progress-reporter.mjs');
+const loadWorkoutEffectsModule=createOptionalModuleLoader('/arcade/workout-effects.mjs');
+const questReporterRetry=createOptionalRetry(),workoutEffectsRetry=createOptionalRetry();
 let questReporter=null,questReporterOwner=null,questReporterLoading=null,questReporterToken=0,pendingQuestDetails=new Map();
-function dropWorkoutEffects(){workoutEffectsToken++;workoutEffects?.stop();workoutEffects=null;workoutEffectsLoading=null;latestWorkoutEffects=null;}
-function invalidateWorkoutEffects(){workoutEffectsToken++;workoutEffectsLoading=null;workoutEffects?.invalidate();if(latestWorkoutEffects)latestWorkoutEffects={...latestWorkoutEffects,validHold:false,workout:{...latestWorkoutEffects.workout,active:false}};}
+function dropWorkoutEffects(){workoutEffectsToken++;workoutEffectsRetry.reset();workoutEffects?.stop();workoutEffects=null;workoutEffectsLoading=null;latestWorkoutEffects=null;}
+function invalidateWorkoutEffects(){workoutEffectsToken++;workoutEffectsRetry.reset();workoutEffectsLoading=null;workoutEffects?.invalidate();if(latestWorkoutEffects)latestWorkoutEffects={...latestWorkoutEffects,validHold:false,workout:{...latestWorkoutEffects.workout,active:false}};}
 function publishRetainedPower(){try{window.dispatchEvent(new CustomEvent('myr5:retained-character-power',{detail:{ownerId:retainedOwner??performanceOwner(),record:retainedPower?.read()??{version:1,equipped:null,styles:{}}}}));}catch{}}
 window.addEventListener('myr5:retained-character-power-request',()=>publishRetainedPower());
 function mountRetainedAvatar(card,avatarModule){
@@ -77,7 +82,7 @@ function mountRetainedAvatar(card,avatarModule){
  if(avatarPowerFailedCard===card&&!avatarPowerRetry.canStart())return;
  if(!avatarPowerRetry.canStart())return;
  avatarPowerRetry.start();const token=++avatarPowerToken;avatarPowerLoadingCard=card;
- Promise.resolve(avatarModule?avatarModule:import('./arcade/power/avatar-power.mjs')).then(module=>{
+ Promise.resolve(avatarModule?avatarModule:loadAvatarPowerModule()).then(module=>{
   if(token!==avatarPowerToken||!retainedPower||!card.isConnected||performanceOwner()!==retainedOwner)return;
   const mounted=module.mountAvatarPower({card,retained:retainedPower,sound:physicalSound,seed:0x4d595235});
   avatarPower=mounted;avatarPowerCard=card;avatarPowerRetry.succeed();if(avatarPowerFailedCard===card)avatarPowerFailedCard=null;
@@ -90,7 +95,7 @@ function ensureRetainedPower(card=document.querySelector('.myr5-companion-card')
  if(retainedPowerLoading)return;
  if(!retainedPowerRetry.canStart())return;
  retainedPowerRetry.start();const token=++retainedPowerToken;
- retainedPowerLoading=import('./arcade/power/retained-power.mjs').then(storeModule=>{
+ retainedPowerLoading=loadRetainedPowerModule().then(storeModule=>{
   if(token!==retainedPowerToken||performanceOwner()!==owner)return;
   let storage=null;try{storage=localStorage;}catch{}
   retainedPower=storeModule.createRetainedPower({storage,ownerId:owner});retainedOwner=owner;
@@ -99,7 +104,7 @@ function ensureRetainedPower(card=document.querySelector('.myr5-companion-card')
   const currentCard=card?.isConnected?card:document.querySelector('.myr5-companion-card');if(currentCard)mountRetainedAvatar(currentCard);
  }).catch(()=>{if(token===retainedPowerToken)retainedPowerRetry.fail();}).finally(()=>{if(token===retainedPowerToken)retainedPowerLoading=null;});
 }
-function syncRetainedPowerOwner(){retainedPowerToken++;retainedPowerLoading=null;pendingRetainedDetail=null;questReporter=null;questReporterOwner=null;questReporterLoading=null;questReporterToken++;pendingQuestDetails.clear();retainedPowerRetry.reset();const owner=performanceOwner();if(owner!==retainedOwner){retainedOwner=owner;avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;avatarPowerFailedCard=null;avatarPowerRetry.reset();if(retainedPower)retainedPower.setOwner(owner);publishRetainedPower();}ensureRetainedPower();}
+function syncRetainedPowerOwner(){retainedPowerToken++;retainedPowerLoading=null;pendingRetainedDetail=null;questReporter=null;questReporterOwner=null;questReporterLoading=null;questReporterToken++;pendingQuestDetails.clear();questReporterRetry.reset();retainedPowerRetry.reset();const owner=performanceOwner();if(owner!==retainedOwner){retainedOwner=owner;avatarPowerToken++;avatarPower?.stop();avatarPower=null;avatarPowerCard=null;avatarPowerLoadingCard=null;avatarPowerFailedCard=null;avatarPowerRetry.reset();if(retainedPower)retainedPower.setOwner(owner);publishRetainedPower();}ensureRetainedPower();}
 function routeQuestWorkoutProgress(detail){
  const ownerId=detail?.workout?.ownerId;
  if(!ownerId||ownerId!==performanceOwner())return;
@@ -111,14 +116,16 @@ function routeQuestWorkoutProgress(detail){
  const prior=previous?.workout?.kind==='reps'?Number(previous.workout.workingReps):Number(previous?.workout?.activeSeconds)||0;
  if(!previous||value>=prior)pendingQuestDetails.set(workout.mode,detail);
  if(questReporterOwner===ownerId&&questReporter){for(const queued of pendingQuestDetails.values())try{questReporter.recordWorkout(queued);}catch{}return;}
- if(questReporterLoading)return;
+ if(questReporterLoading||!questReporterRetry.canStart())return;
+ questReporterRetry.start();
  const loadingOwner=ownerId,token=++questReporterToken;
- questReporterLoading=import('./arcade/quest-progress-reporter.mjs').then(module=>{
+ questReporterLoading=loadQuestProgressReporterModule().then(module=>{
+  questReporterRetry.succeed();
   if(token!==questReporterToken||performanceOwner()!==loadingOwner)return;
   questReporter=module.createQuestProgressReporter(loadingOwner);questReporterOwner=loadingOwner;
   for(const queued of pendingQuestDetails.values())try{questReporter.recordWorkout(queued);}catch{}
   pendingQuestDetails.clear();
- }).catch(()=>{}).finally(()=>{if(token===questReporterToken)questReporterLoading=null;});
+ }).catch(()=>{if(token===questReporterToken)questReporterRetry.fail();}).finally(()=>{if(token===questReporterToken)questReporterLoading=null;});
 }
 function routeWorkoutEffects(detail){
  latestWorkoutEffects=detail;
@@ -129,14 +136,16 @@ function routeWorkoutEffects(detail){
  if(document.body.dataset.tracking!=='true'||document.hidden){workoutEffects?.invalidate();return;}
  if(!detail?.workout?.active){workoutEffects?.pose(detail);return;}
  if(workoutEffects){workoutEffects.pose(detail);return;}
- if(workoutEffectsLoading)return;
+ if(workoutEffectsLoading||!workoutEffectsRetry.canStart())return;
+ workoutEffectsRetry.start();
  const token=workoutEffectsToken;
- workoutEffectsLoading=import('./arcade/workout-effects.mjs').then(module=>{
+ workoutEffectsLoading=loadWorkoutEffectsModule().then(module=>{
+  workoutEffectsRetry.succeed();
   if(token!==workoutEffectsToken||document.body.dataset.tracking!=='true'||document.hidden||!latestWorkoutEffects?.workout?.active)return;
   const host=document.getElementById('coachOverlay');if(!host)return;
   const session=String(latestWorkoutEffects.workout.sessionId||'');let seed=2166136261;for(let i=0;i<session.length;i++)seed=Math.imul(seed^session.charCodeAt(i),16777619);
   workoutEffects=module.mountWorkoutEffects({host,sound:physicalSound,seed:seed>>>0});workoutEffects.pose(latestWorkoutEffects);
- }).catch(()=>{}).finally(()=>{if(token===workoutEffectsToken)workoutEffectsLoading=null;});
+ }).catch(()=>{if(token===workoutEffectsToken)workoutEffectsRetry.fail();}).finally(()=>{if(token===workoutEffectsToken)workoutEffectsLoading=null;});
 }
 // R9-OFFLINE: the pinned pose tracker, same-origin (scripts/mediapipe.mjs) and in the Starter download, so a set runs offline.
 const MEDIAPIPE='/vendor/mediapipe/0.10.14';

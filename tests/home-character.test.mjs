@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 import {avatarPowerState} from '../arcade/power/avatar-power.mjs';
 import {renderPower as renderPowerNative} from '../arcade/power/power.mjs';
-const source=(await readFile(new URL('../pod/home-character.mjs',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'').replace('export function','function');
+const source=(await readFile(new URL('../pod/home-character.mjs',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'').replace(/^const loadPowerState=.*$/m,"const loadPowerState=()=>import('../arcade/power/avatar-power.mjs')").replace(/^const loadPowerRenderer=.*$/m,"const loadPowerRenderer=()=>import('../arcade/power/power.mjs')").replace(/^const loadBlizzardRenderer=.*$/m,"const loadBlizzardRenderer=()=>import('../arcade/hold/blizzard.mjs')").replace('export function','function');
 const performerSource=await readFile(new URL('../pod/gala-performer.js',import.meta.url),'utf8');
 const phone=()=>({state:{x:80,y:0,angle:0,phase:'idle',pose:'idle',active:false,shipProgress:0},sample(){},step(){},resize(){},setRestCenter(){},reset(){}});
 const sensor=callback=>{sensor.last=callback;return()=>{};};

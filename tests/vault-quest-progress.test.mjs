@@ -49,7 +49,7 @@ test('a cached Vault store can drain game progress when the hall opens later',as
  memory.clear();globalThis.myr5AuthenticatedAccount={user:{id:'quest-vault-open'},dataEpoch:1};
  const activeOwner=performanceOwner(),pendingKey=`myr5-quest-pending-v1/${encodeURIComponent(activeOwner)}`;
  memory.set(pendingKey,JSON.stringify({ownerId:activeOwner,values:{'pyramid-level':7}}));
- assert.equal(await store.drainQuestPending(),true);
+ assert.equal(await store.drainQuestPending({load:async()=>bridge}),true);
  assert.equal(store.read().counters['pyramid-level'],7);
  assert.equal(memory.has(pendingKey),false,'confirmed queue drains on explicit hall-open retry');
 });

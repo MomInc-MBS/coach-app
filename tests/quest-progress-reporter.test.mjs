@@ -77,12 +77,20 @@ test('a rejected plain module URL retries with a unique query, then reuses the l
  const data=new Map();let now=0,owner='account:F';const urls=[],writes=[];
  const storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};
  const module={recordQuestProgress:event=>writes.push(event),questProgressStored:()=>true};
- const reporter=createQuestProgressReporter(owner,{storage,currentOwner:()=>owner,now:()=>now,baseDelay:1000,importer:async url=>{urls.push(url);if(urls.length===1)throw Error('cached module fetch rejection');return module;}});
+ const loader=async url=>{urls.push(url);if(!url.includes('?quest-retry='))throw Error('cached module fetch rejection');return module;};
+ const reporter=createQuestProgressReporter(owner,{storage,currentOwner:()=>owner,now:()=>now,baseDelay:1000,importer:loader});
  reporter.record('pyramid-level',5);await tick();
  now=1000;reporter.record('pyramid-level',5);await tick();
- assert.deepEqual(urls,['../modules/vault/quest-progress.mjs','../modules/vault/quest-progress.mjs?quest-retry=1']);
+ assert.equal(urls[0],'/modules/vault/quest-progress.mjs','the retry loader is independent of its bundled chunk path');
+ assert.match(urls[1],/^\/modules\/vault\/quest-progress\.mjs\?quest-retry=\d+$/);
+ const firstRetry=urls[1];
  assert.deepEqual(writes,[{ownerId:owner,counter:'pyramid-level',value:5}]);
  assert.equal(await reporter.drain(),true);assert.equal(urls.length,2,'successful module is cached by the same reporter');
+ owner='account:G';
+ const second=createQuestProgressReporter(owner,{storage,currentOwner:()=>owner,now:()=>now,baseDelay:1000,importer:loader});
+ second.record('pyramid-level',6);await tick();now=2000;second.record('pyramid-level',6);await tick();
+ assert.notEqual(urls[3],firstRetry,'new reporters in the same document never reuse a failed query URL');
+ assert.deepEqual(writes[1],{ownerId:owner,counter:'pyramid-level',value:6});
 });
 
 test('workout reporter retains final inactive credited yoga and Blizzard snapshots',async()=>{

@@ -1,6 +1,10 @@
 import {GALA_KEY,loadGala} from './identity.mjs';
 import {abilityFor,evolution} from './weapon-evolution.mjs';
 import {drawAnimatedWeapon} from './weapon-animator.mjs';
+import {createOptionalModuleLoader} from '../arcade/workout-effects-state.mjs';
+const loadPowerState=createOptionalModuleLoader('/arcade/power/avatar-power.mjs');
+const loadPowerRenderer=createOptionalModuleLoader('/arcade/power/power.mjs');
+const loadBlizzardRenderer=createOptionalModuleLoader('/arcade/hold/blizzard.mjs');
 export const MELEE=new Set(['rapier','greatsword','dagger','spear','trident','scythe','gauntlets']);
 export function equipmentProgress(value={}){return {activeDays:Math.max(0,Number(value.activeDays)||0),totalXp:Math.max(0,Number(value.activeDays)||0)*100,completedSets:Math.max(0,Number(value.completedSets)||0),strength:1+Math.floor(Math.max(0,Number(value.completedSets)||0)/4),...(value.trainingVersion===1?{trainingVersion:1,training:value.training}:{})};}
 
@@ -28,7 +32,7 @@ export function initRestArena(){
   if(powerModule&&powerRenderer&&blizzardModule&&powerSchedule){if(running)draw(performance.now());return;}
   if(powerLoading||!hasPower())return;
   const token=++powerLoadToken;
-  powerLoading=Promise.all([import('../arcade/power/avatar-power.mjs'),import('../arcade/power/power.mjs'),import('../arcade/hold/blizzard.mjs')])
+  powerLoading=Promise.all([loadPowerState(),loadPowerRenderer(),loadBlizzardRenderer()])
    .then(([avatar,power,blizzard])=>{if(token!==powerLoadToken||!hasPower())return;powerModule=avatar;powerRenderer=power;blizzardModule=blizzard;powerSchedule=avatar.createAvatarPowerSchedule({seed:0x525354});makePowerArt();resetPower();if(running)draw(performance.now());})
    .catch(()=>{}).finally(()=>{if(token===powerLoadToken)powerLoading=null;});
  }
