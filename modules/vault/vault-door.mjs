@@ -319,11 +319,27 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   const veil=document.createElement('div');veil.style.cssText='position:absolute;inset:0;background:radial-gradient(circle,#d9a8ff,#7a2fc4 55%,#2a0d4a);opacity:0;pointer-events:none';host.append(veil);S.veil=veil;wake();onEnter?.(api);
  }
  function finishDolly(){
-  import('./vault-hall.mjs').then(m=>{if(!m.enterHall)throw Error('no hall');return m.enterHall({host,door:api,goals:S.goals,read:S.read});})
-   .catch(()=>{S.dolly=null;S.veil?.remove();S.veil=null;S.view={head:'ERROR',lines:['THE HALL IS NOT','BUILT YET.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;wake();});
+  import('./vault-hall.mjs').then(async m=>{
+   if(!S.alive||!host.isConnected)return null;
+   if(!m.enterHall)throw Error('no hall');
+   const hall=await m.enterHall({host,door:api,goals:S.goals,read:S.read});
+   if(!S.alive||!host.isConnected){hall?.exit?.();return null;}
+   return hall;
+  })
+   .catch(error=>{
+    if(!S.alive||!host.isConnected){import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});return;}
+    S.dolly=null;S.veil?.remove();S.veil=null;
+    const hall=host.querySelector('.vh');
+    if(hall){const canvas=hall.querySelector('canvas');for(const kind of ['webgl2','webgl'])try{canvas?.getContext(kind)?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}hall.remove();}
+    S.view={head:'HALL OFFLINE',lines:['YOUR SECRETS ARE SAFE.','RETRY THE 3D HALL.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;
+    hallRetry?.remove();hallRetry=document.createElement('button');hallRetry.type='button';hallRetry.textContent='Retry 3D Hall';hallRetry.setAttribute('aria-label','Retry the 3D Achievement Hall');
+    hallRetry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:4;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
+    hallRetry.onclick=()=>{hallRetry?.remove();hallRetry=null;enter();};host.append(hallRetry);
+    console.error('Achievement Hall renderer failed; retry is available.',error);wake();
+   });
  }
  // --- on-demand loop
- let frame=0,awakeUntil=0,last=0;
+ let frame=0,awakeUntil=0,last=0,hallRetry=null;
  function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive){last=performance.now();frame=requestAnimationFrame(tick);}}
  const reduced=matchMedia?.('(prefers-reduced-motion: reduce)');
  function tick(now){
@@ -377,7 +393,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   project(u,v,z=0){const p=new THREE.Vector3(u-.5,.5-v,z);face.localToWorld(p);pivot.updateMatrixWorld(true);p.project(camera);const r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   projectWorld(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera),r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
-  dispose(){S.alive=false;cancelAnimationFrame(frame);ro.disconnect();for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);
+  dispose(){S.alive=false;cancelAnimationFrame(frame);ro.disconnect();import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);
    renderer.dispose();renderer.forceContextLoss();canvas.remove();},
  };
  return api;
@@ -388,12 +404,39 @@ export async function openVault(){
  let dlg=document.getElementById('vaultPanel');
  if(!dlg){dlg=document.createElement('dialog');dlg.id='vaultPanel';document.body.append(dlg);}
  dlg.style.cssText='position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#171020;color:#f6eddf;overflow:hidden';
+ dlg._vault?.dispose?.();dlg._vault=null;const generation=(dlg._vaultGeneration||0)+1;dlg._vaultGeneration=generation;
  dlg.replaceChildren();const host=document.createElement('div');host.style.cssText='position:absolute;inset:0';dlg.append(host);
+ const loading=document.createElement('div');loading.setAttribute('role','status');loading.textContent='Opening the Achievement Vault…';loading.style.cssText='position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#f6eddf;font:600 18px/1.5 system-ui';host.append(loading);
  const close=document.createElement('button');close.textContent='✕';close.setAttribute('aria-label','Close vault');close.style.cssText='position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;border-radius:22px;border:1px solid #7a2fc4;background:#171020cc;color:#ffd36e;font-size:18px';
  close.onclick=()=>dlg.close();dlg.append(close);
  if(!dlg.open)dlg.showModal?.();
- const [{GOALS},{view}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
- const api=await mountVaultDoor(host,{goals:GOALS,read:view});dlg._vault=api;
- dlg.addEventListener('close',()=>api.dispose(),{once:true});
+ dlg._vaultCloseHandler&&dlg.removeEventListener('close',dlg._vaultCloseHandler);
+ dlg._vaultCloseHandler=()=>{dlg._vaultGeneration++;dlg._vault?.dispose?.();dlg._vault=null;};
+ dlg.addEventListener('close',dlg._vaultCloseHandler,{once:true});
+ const retry=document.createElement('button');retry.type='button';retry.textContent='Retry 3D';retry.hidden=true;retry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:3;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
+ retry.addEventListener('click',()=>void mount());dlg.append(retry);
+ const mount=async()=>{
+  retry.disabled=true;retry.textContent='Opening…';retry.hidden=true;host.replaceChildren(loading);
+  try{
+   const [{GOALS},{view}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
+   const api=await mountVaultDoor(host,{goals:GOALS,read:view});
+   if(!dlg.open||dlg._vaultGeneration!==generation){api.dispose();return null;}
+   dlg._vault=api;loading.remove();return api;
+  }catch(error){
+   for(const canvas of host.querySelectorAll('canvas')){
+    for(const kind of ['webgl2','webgl','experimental-webgl'])try{canvas.getContext(kind)?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}
+   }
+   if(!dlg.open||dlg._vaultGeneration!==generation){host.replaceChildren();return null;}
+   host.replaceChildren();
+   const message=document.createElement('div');message.setAttribute('role','alert');message.style.cssText='position:absolute;inset:0;display:grid;place-content:center;gap:14px;padding:24px;text-align:center;color:#f6eddf;font:600 17px/1.5 system-ui';
+   const heading=document.createElement('strong');heading.textContent='The 3D Vault could not start.';
+   const detail=document.createElement('span');detail.textContent='Your earned secrets are safe. Retry when the device is ready.';
+   message.append(heading,detail);host.append(message);
+   retry.hidden=false;retry.disabled=false;retry.textContent='Retry 3D';
+   console.error('Achievement Vault renderer failed; retry is available.',error);
+   return null;
+  }
+ };
+ await mount();
  return dlg;
 }

@@ -289,17 +289,17 @@ async function loadBoardNow(id,load){
 // 3D over the flat board: while the portal is on screen (or about to be: mount), one build per board at a time. It takes over
 // only once it has drawn on a live context and no cut is open; a throw, a timeout or a lost context leaves the flat board (fell).
 function threeD(mounting=false){
- const id=boardId,make=BOARDS[id].create;
+ const id=boardId,make=BOARDS[id].create,generation=boardLoad;
  if(!make||gl3||!(boardShown||mounting)||pending3D.has(id)||art[id]==='flat'||lifecycle.signal.aborted)return ready3D;
  pending3D.add(id);portalHome.dataset.building=''; // portal.css keeps a hidden portal laid out meanwhile: effects measure the host as they build
  const build=make(boardHost);build.catch(()=>{}).finally(()=>{pending3D.delete(id);if(!pending3D.size)delete portalHome.dataset.building;});
  return ready3D=(async()=>{
   let created;
   try{created=await Promise.race([build,sleep(WAIT.threeD).then(()=>{throw new Error(`3D took over ${WAIT.threeD} ms`);})]);}
-  catch(error){build.then(late=>late.dispose(),()=>{});return fell(id,error);} // one that turns up late is released at once
+  catch(error){build.then(late=>late.dispose(),()=>{});if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted)return;return fell(id,error);} // stale builds cannot overwrite a newer board; late ones are released at once
   created.canvas.style.opacity='0'; // drawn but out of sight until it takes over (opacity, not visibility: its frame still reaches the screen)
   while((busy||phase)&&id===boardId&&!lifecycle.signal.aborted)await sleep(250); // ponytail: polls; a sequence ends within seconds
-  if(id!==boardId||gl3||lifecycle.signal.aborted){created.dispose();return;}
+  if(id!==boardId||generation!==boardLoad||gl3||lifecycle.signal.aborted){created.dispose();return;}
   if(created.canvas.getContext('webgl2')?.isContextLost()!==false){created.dispose();return fell(id,new Error('WebGL context lost before its first frame'));}
   if(id!=='quilt')created.setTint?.(boardTint(id),hasBoardTint(id));
   if(id==='cogs')created.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());
@@ -311,7 +311,7 @@ function threeD(mounting=false){
 function fell(id,error){
  console.warn(`${BOARDS[id].label} 3D is unavailable; its flat board stays.`,error);
  art[id]='flat';
- if(id===boardId&&id!=='quilt'&&!lifecycle.signal.aborted)status(`${BOARDS[id].label} is showing its flat art: its 3D didn't load.`); // the flat quilt is its own art
+ if(id===boardId&&id!=='quilt'&&!lifecycle.signal.aborted)status(`${BOARDS[id].label} is showing its flat art: its 3D didn't load.`,{label:'Retry 3D',run:()=>loadBoard(id)}); // the flat quilt is its own art
 }
 // Android drops live WebGL contexts under memory pressure: the flat board takes over at once and 3D gets one more try a
 // moment later; a second loss this session leaves the board flat.
@@ -354,6 +354,7 @@ function buildDom(){
   <canvas id="portalOverlay" aria-hidden="true"></canvas>
   <div id="portalObjects" aria-hidden="true"></div>
   <p id="portalStatus" role="status"></p>
+  <button id="portalRetry" type="button" hidden></button>
   <button id="portalSettingsButton" type="button" aria-label="Grimoire settings">GRIMOIRE</button>
   <button id="portalExitButton" type="button">Pod</button>`;
  document.body.append(portalHome);
@@ -372,6 +373,8 @@ function buildDom(){
  overlay=portalHome.querySelector('#portalOverlay');ctx=overlay.getContext('2d');
  objectsLayer=portalHome.querySelector('#portalObjects');
  statusEl=portalHome.querySelector('#portalStatus');
+ const retryBtn=portalHome.querySelector('#portalRetry');
+ retryBtn.addEventListener('click',()=>retryBtn._run?.(),{signal:lifecycle.signal});
  // W2-2A: the app's bottom bar (routes.mjs) is up on the quilt; its centre Portal button replaces the floating Menu
  // button, and the focus trap cycles the whole bar plus Pod (and Armie's inbox button, which stays live on the quilt).
  const barPortal=document.querySelector('.coach-dock [data-route="portal"]'),bar=barPortal?.closest('.coach-dock');
@@ -1029,7 +1032,11 @@ function tiltChip(dialog){
  };
  peerUi(dialog).append(chip); // hidden while a scene is peered at (portal.css): full screen offers it
 }
-function status(text){statusEl.textContent=text;}
+function status(text,action=null){
+ statusEl.textContent=text;
+ const button=portalHome?.querySelector('#portalRetry');
+ if(button){button.hidden=!action;button.textContent=action?.label||'';button._run=action?.run||null;}
+}
 
 // Layout size, not the on-screen box: the observer also fires as the portal is shown mid-dive (scaled), and a backing
 // store sized from the scaled box drew every later trail and outline shrunk toward the corner.
@@ -1869,10 +1876,26 @@ async function openInHole(id,menu,pts,face,current){
 // Vault secret: a finished board secret goes straight to the vault route and its 3D safe door (Ian 7 Oct: no flat door poster).
 // setVisible(false) hides the portal; every later show heals the board (glb host -> effect.healSecret) so the secret never lingers.
 function goVault(){const r=window.myr5Routes;return r?r.go('vault'):import('../routes.mjs').then(m=>m.mountRoutes().go('vault'));}
-function showVaultDoor(){
+async function showVaultDoor(secretId=boardId){
  if(!boardShown||!board)return;
  pointers.clear();clearTimeout(finalizeTimer);pendingStrokes=[];pendingTrailPts=[];lastTap=null;
- setVisible(false);void goVault();
+ // Free the portal's WebGL context before the door and hall allocate theirs. Keep the flat board
+ // and its chosen ID so returning to the portal can build the original 3D board again.
+ boardLoad++;const previous=gl3;gl3=null;board=base;delete art[boardId];
+ if(base?.canvas)base.canvas.style.visibility='';previous?.dispose();base?.resume();
+ setVisible(false);
+ try{
+  const store=await import('../vault/vault-store.mjs');await store.markSecret(secretId);
+ }catch(error){
+  console.error('Could not save the Achievement Vault secret.',error);
+  setVisible(true);status('The secret could not be saved yet. It has not been discarded; retry the Vault handoff.',{label:'Retry Save + Vault',run:()=>showVaultDoor(secretId)});return;
+ }
+ try{
+  await goVault();
+ }catch(error){
+  console.error('Could not open the Achievement Vault.',error);
+  setVisible(true);status('Your secret is saved. The Vault could not open; try again.',{label:'Retry Vault',run:()=>showVaultDoor(secretId)});
+ }
 }
 function toNorm(x,y){const r=board.patternRect();return[(x-r.left)/r.width,(y-r.top)/r.height];}
 function endPointer(e,cancel){ if(cancel) lastTap=null;
@@ -1960,7 +1983,7 @@ export async function mountPortal({visible=false}={}){
  if(menuBtn!==portalHome.querySelector('#portalExitButton'))menuBtn.addEventListener('click',()=>{if(busy)return;setVisible(!boardShown);},{signal:lifecycle.signal});
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  addEventListener('pagehide',grimFlush,{signal:lifecycle.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)grimFlush();else if(boardShown&&!visibleSince)visibleSince=Date.now();},{signal:lifecycle.signal});
- addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;import('../vault/vault-store.mjs').then(m=>m.markSecret(id)).catch(()=>{});showVaultDoor();},{signal:lifecycle.signal});
+ addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;void showVaultDoor(id);},{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
  wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL('',{activate:false});}); // compile/cache only; never switch a live phase's program

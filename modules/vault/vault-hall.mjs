@@ -205,7 +205,7 @@ export async function enterHall(arg=document.body){
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
  const vis=()=>{if(!document.hidden&&live&&!raf){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
  live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
-  archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();el.remove();delete window.myr5Hall;}};
+  archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();renderer.forceContextLoss();el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
  if(/[?&]debug/.test(location.search)||localStorage.myr5Debug)window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),earned:statues.filter(s=>s.earned).map(s=>s.i)}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
  statues.forEach(s=>setEarn(s,false));stream(0);refresh();raf=requestAnimationFrame(frame);

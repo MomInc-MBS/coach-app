@@ -29,12 +29,12 @@ async function withPortal(run){
   await run(browser,'http://127.0.0.1:'+server.address().port+'/__portal__');
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 }
-async function boot(browser,url,{claims='()=>false'}={}){
+async function boot(browser,url,{claims='()=>false',stub=true,board='__stub__',failWebGL=false}={}){
  const page=await browser.newPage({viewport:{width:375,height:812},hasTouch:true});
  page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));if(process.env.VAULT_DEBUG)page.on('console',m=>console.log('console:',m.text()));
- await page.addInitScript(c=>{window.__portalTestStubBoard=true;window.__labels=[];window.__went=[];window.myr5Routes={go:id=>window.__went.push(id)};window.__portalTestClaims=eval(c);const o=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(t,...r){window.__labels.push(t);return o.call(this,t,...r);};},claims);
- await page.goto(url+'?board=__stub__');
- await page.evaluate(async()=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();await window.portal.board('__stub__');window.portal.show();});
+ await page.addInitScript(({claims,stub,failWebGL})=>{window.__portalTestStubBoard=stub;window.__labels=[];window.__went=[];window.myr5Routes={go:id=>window.__went.push(id)};window.__portalTestClaims=eval(claims);if(failWebGL){window.__failWebGL=true;const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){if(window.__failWebGL&&/^webgl/i.test(String(kind)))return null;return get.call(this,kind,...args);};}const o=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(t,...r){window.__labels.push(t);return o.call(this,t,...r);};},{claims,stub,failWebGL});
+ await page.goto(url+'?board='+encodeURIComponent(board));
+ await page.evaluate(async(board)=>{const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');window.portal=await openQuiltPortal();await window.portal.board(board);window.portal.show();},board);
  await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden===false);
  return page;
 }
@@ -117,5 +117,78 @@ test('vault route: openVault mounts the real door and the CRT shows GOAL 01/NN w
  await page.screenshot({path:'.vault/shots/l0-vault-stub.png'});
  assert.deepEqual([out.route,out.open,out.id],['#vaultPanel',true,'vaultPanel']);
  assert.ok(out.canvas);assert.match(out.head,/^GOAL 01\/\d+ /);assert.ok(out.goals>=30);assert.ok(out.lines.length>0);
+ assert.deepEqual(page.errors,[]);
+}));
+
+test('Vault renderer failure leaves a retryable dialog and keeps earned secrets',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));
+ await page.addInitScript(()=>{
+  window.__failWebGL=true;
+  const original=HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext=function(kind,...args){if(window.__failWebGL&&/^webgl/i.test(String(kind)))return null;return original.call(this,kind,...args);};
+ });
+ await page.goto(url);
+ await page.evaluate(async()=>{const store=await import('/modules/vault/vault-store.mjs');store.markSecret('ice');const {openVault}=await import('/modules/vault/vault-door.mjs');await openVault();});
+ await page.locator('#vaultPanel [role="alert"]').waitFor();
+ assert.equal(await page.locator('#vaultPanel').evaluate(d=>d.open),true);
+ assert.equal(await page.locator('#vaultPanel button').filter({hasText:'Retry 3D'}).count(),1);
+ assert.equal(await page.evaluate(async()=>{const store=await import('/modules/vault/vault-store.mjs');return !!store.view().secrets.ice;}),true);
+ await page.evaluate(()=>{window.__failWebGL=false;});
+ await page.locator('#vaultPanel button').filter({hasText:'Retry 3D'}).click();
+ await page.waitForFunction(()=>!!document.querySelector('#vaultPanel')._vault?.info?.(),null,{timeout:30000});
+ assert.ok(await page.locator('#vaultPanel canvas').count());
+ await page.evaluate(()=>{window.__failWebGL=true;document.querySelector('#vaultPanel')._vault.enter();});
+ await page.locator('#vaultPanel button').filter({hasText:'Retry 3D Hall'}).waitFor({state:'visible',timeout:30000});
+ await page.evaluate(()=>{window.__failWebGL=false;});
+ await page.locator('#vaultPanel button').filter({hasText:'Retry 3D Hall'}).click();
+ await page.locator('#vaultPanel .vh canvas').waitFor({state:'attached',timeout:30000});
+ assert.equal(await page.evaluate(async()=>{const store=await import('/modules/vault/vault-store.mjs');return !!store.view().secrets.ice;}),true);
+ assert.deepEqual(page.errors,[]);
+}));
+
+test('closing the Vault while its 3D mount is pending disposes any late renderer',async()=>withPortal(async(browser,url)=>{
+ const page=await browser.newPage({viewport:{width:375,height:812}});page.errors=[];page.on('pageerror',e=>page.errors.push(e.message));
+ await page.goto(url);
+ await page.route('**/modules/vault/vault-goals.mjs',async route=>{await new Promise(r=>setTimeout(r,350));await route.continue();});
+ await page.evaluate(()=>{window.__openingVault=import('/modules/vault/vault-door.mjs').then(m=>m.openVault());});
+ await page.locator('#vaultPanel').waitFor({state:'attached'});
+ await page.locator('#vaultPanel[open]').waitFor();
+ await page.locator('#vaultPanel button[aria-label="Close vault"]').click();
+ await page.evaluate(()=>window.__openingVault);
+ assert.equal(await page.locator('#vaultPanel canvas').count(),0);
+ assert.equal(await page.locator('#vaultPanel').evaluate(d=>d._vault),null);
+ assert.deepEqual(page.errors,[]);
+}));
+
+test('all secret board IDs recover from a rejected Vault route without losing the secret',async()=>withPortal(async(browser,url)=>{
+ const page=await boot(browser,url);
+ await page.evaluate(()=>{window.__failVaultRoute=true;window.myr5Routes={go:id=>{window.__went.push(id);return window.__failVaultRoute?Promise.reject(Error('temporary route failure')):Promise.resolve();}};});
+ for(const id of ['pond','wood','ice','quilt','grass','jelly']){
+  await page.evaluate(board=>window.portal.secret(board),id);
+  await page.locator('#portalRetry').filter({hasText:'Retry Vault'}).waitFor({state:'visible'});
+  const saved=await page.evaluate(async board=>{const s=await import('/modules/vault/vault-store.mjs');return !!s.view().secrets[board];},id);
+  assert.equal(saved,true,`${id} is persisted before route handoff`);
+  await page.evaluate(()=>{window.__failVaultRoute=false;});
+  await page.locator('#portalRetry').filter({hasText:'Retry Vault'}).click();
+  await page.waitForFunction(()=>window.__went.length>0&&document.querySelector('#portalHome')?.hidden===true);
+  await page.evaluate(()=>{window.__failVaultRoute=true;window.portal.show();});
+ }
+ assert.deepEqual(page.errors,[]);
+}));
+
+test('Crystal 3D retry succeeds and the original board is rebuilt after the Vault handoff',async()=>withPortal(async(browser,url)=>{
+ const page=await boot(browser,url,{stub:false,board:'ice',failWebGL:true});
+ await page.locator('#portalRetry').filter({hasText:'Retry 3D'}).waitFor({state:'visible',timeout:30000});
+ assert.equal(await page.evaluate(()=>document.querySelector('#portalHome').dataset.art),'flat');
+ await page.evaluate(()=>{window.__failWebGL=false;});
+ await page.locator('#portalRetry').filter({hasText:'Retry 3D'}).click();
+ await page.waitForFunction(()=>document.querySelector('#portalHome')?.dataset.art==='3d',null,{timeout:30000});
+ await page.evaluate(()=>window.portal.secret('ice'));
+ await page.waitForFunction(()=>document.querySelector('#portalHome')?.hidden===true);
+ await page.waitForFunction(()=>window.__went.includes('vault'),null,{timeout:15000});
+ await page.evaluate(()=>window.portal.show());
+ await page.waitForFunction(()=>document.querySelector('#portalHome')?.dataset.art==='3d',null,{timeout:30000});
+ assert.deepEqual(await page.evaluate(()=>window.__went),['vault']);
+ assert.equal(await page.evaluate(async()=>{const store=await import('/modules/vault/vault-store.mjs');return !!store.view().secrets.ice;}),true);
  assert.deepEqual(page.errors,[]);
 }));

@@ -156,6 +156,8 @@ dialog.portal-ghost{display:block!important;z-index:36!important;pointer-events:
 @media (prefers-reduced-motion:reduce){.portal-glass:after,.portal-glass>b{animation:none}}
 #portalStatus{position:fixed;left:16px;right:16px;bottom:calc(108px + env(safe-area-inset-bottom));z-index:10;margin:0;text-align:center;color:#f5d9ff;font:13px/1.4 var(--font,system-ui);text-shadow:0 1px 3px #000}
 #portalStatus:empty{display:none}
+#portalRetry{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));z-index:11;transform:translateX(-50%);padding:9px 16px;border:1px solid #f5d9ff;border-radius:999px;background:#241331;color:#fff;font:600 14px/1.2 var(--font,system-ui);box-shadow:0 2px 10px #0008}
+#portalRetry[hidden]{display:none}
 #portalMenuButton{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10;min-height:48px;min-width:120px;padding:0 22px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 15px/1 var(--font,system-ui);backdrop-filter:blur(10px);box-shadow:0 6px 20px #0007}
 #portalExitButton{position:fixed;right:12px;top:max(12px,env(safe-area-inset-top));z-index:10;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #ffffff55;background:#1c1428e6;color:#f5eaff;font:600 14px/1 var(--font,system-ui)}
 /* R20 (Ian 2 Oct): the Grimoire opener is a metal key set into the top rail at the left, like the dock keys (raised on a
