@@ -16,7 +16,7 @@ test('War Room aura choices include every shipped effect sheet with its actual f
   const choices = new Set(AURA_OPTIONS.map(option => option.id));
   for (const id of ['random', 'classic', 'bluefire', 'magicbubbles', 'protectioncircle', 'vortex', 'firespin',
     'flamelash', 'weaponhit', 'casting', 'magicspell', 'magic8', 'magichit', 'nebula', 'phantom', 'sunburn',
-    'felspell', 'midnight', 'loading', 'blizzard', 'fern', 'vine', 'flower', 'rabbit', 'fox', 'rock',
+    'felspell', 'midnight', 'loading', 'blizzard', 'fern', 'vine', 'flower', 'mushroom', 'grass', 'reed', 'rabbit', 'fox', 'rock',
     'bear', 'deer', 'wolf', 'boar', 'crystal-blue', 'crystal-ice', 'crystal-red', 'crystal-green', 'crystal-gold', 'crystal-purple']) assert.ok(choices.has(id), `missing ${id}`);
   for (const option of AURA_OPTIONS.filter(item => item.asset)) {
     const assetRoot = option.id === 'blizzard' ? 'arcade/hold/assets' : 'arcade/power/assets';
@@ -47,6 +47,13 @@ test('War Room aura choices include every shipped effect sheet with its actual f
     assert.equal(bytes.readUInt32BE(20), frameHeight, `${relative} frame height`);
   }
   assert.equal(ROTATING_AURAS.length, AURA_OPTIONS.length - 1);
+  assert.equal(AURA_OPTIONS.length, 39);
+  assert.equal(ROTATING_AURAS.length, 38);
+  assert.deepEqual(AURA_OPTIONS.filter(item => ['mushroom', 'grass', 'reed'].includes(item.id)).map(({ id, label, ecology }) => [id, label, ecology]), [
+    ['mushroom', 'Fungi bloom', { kind: 'plant', variant: 'mushroom' }],
+    ['grass', 'Grass growth', { kind: 'plant', variant: 'grass' }],
+    ['reed', 'Reed growth', { kind: 'plant', variant: 'reed' }],
+  ]);
 });
 
 test('aura preference defaults to Random, persists named choices and rotates deterministically', () => {

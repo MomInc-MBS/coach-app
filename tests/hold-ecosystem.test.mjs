@@ -167,7 +167,16 @@ test('same seed produces identical growth and bounded long-running entity/debris
   assert.deepEqual(a.state.debris, b.state.debris);
   assert.ok(a.state.entities.length <= MAX_ENTITIES);
   assert.ok(a.state.debris.length <= MAX_DEBRIS);
-  assert.ok(a.state.entities.every(e => ['fern', 'vine', 'flower', 'rabbit', 'fox', 'rock', 'crystal'].includes(e.variant)));
+  assert.ok(a.state.entities.every(e => ['fern', 'vine', 'flower', 'mushroom', 'grass', 'reed', 'rabbit', 'fox', 'rock', 'crystal'].includes(e.variant)));
+});
+
+test('plant sampling can grow every atlas-backed variant', () => {
+  const variants = new Set();
+  for (let seed = 1; seed <= 80 && variants.size < 6; seed++) {
+    const e = createEcosystem({ seed }); accrue(e, 5000);
+    if (e.state.entities[0]?.kind === 'plant') variants.add(e.state.entities[0].variant);
+  }
+  assert.deepEqual([...variants].sort(), ['fern', 'flower', 'grass', 'mushroom', 'reed', 'vine']);
 });
 
 test('reset clears references, clocks, entities, and debris', () => {

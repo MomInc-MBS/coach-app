@@ -4,7 +4,7 @@ The selected image files below are used by `../render.mjs`. Each linked OpenGame
 
 | App files | Source and credited author | Page-stated license | Selected use |
 |---|---|---|---|
-| `flowers-plants_2.png` | [Flowers](https://opengameart.org/content/flowers), SpiderDave | CC0 | 936×24 RGB atlas. Cells 1, 14 and 48 (12×24 each) supply fern, vine and flower; the renderer keys the uniform RGB(34,32,52) background to transparency in its cached canvases. |
+| `flowers-plants_2.png` | [Flowers](https://opengameart.org/content/flowers), SpiderDave | CC0 | 936×24 RGB atlas. Cells 0, 1, 6, 14, 48 and 70 (12×24 each) supply grass, fern, reed, vine, flower and mushroom; the renderer keys the uniform RGB(34,32,52) background to transparency in its cached canvases. |
 | `rabbit/Rabbit/Rabbit_Idle.png`, `rabbit/Rabbit/Rabbit_Run.png` | [Animated Wild Animals](https://opengameart.org/content/animated-wild-animals), ScratchIO | CC0 | 32×26 frames: 10 idle and 6 run. |
 | `fox/Fox/Fox_Idle.png`, `fox/Fox/Fox_Run.png` | [Animated Wild Animals](https://opengameart.org/content/animated-wild-animals), ScratchIO | CC0 | 64×36 frames: 6 idle and 6 run. |
 | `rocks-original.png` | [Rocks (Rework)](https://opengameart.org/content/rocks-rework), patvanmackelberg and AntumDeluge | CC0 | 96×64 RGBA atlas. The renderer crops 32×32 cells 0, 2 and 4. |
