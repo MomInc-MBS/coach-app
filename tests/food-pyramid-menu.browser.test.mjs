@@ -20,7 +20,7 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,worker
   push:{environment:'preview',configured:false,schedulerActive:false},
   onboarding:{data:completeCoach(),revision:1,startDay:'2026-09-21',completedAt:1,targets:{day:3,date:'2026-09-23',reps:3,holdSeconds:9,proteinGrams:100,waterOz:100,goals:{}}}};
  const body=req=>new Promise(r=>{let data='';req.on('data',c=>data+=c);req.on('end',()=>r(data?JSON.parse(data):null));});
- const bundle=await build({entryPoints:['launch.mjs'],bundle:true,write:false,format:'esm',target:'es2022',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs']});
+ const bundle=await build({entryPoints:['launch.mjs'],bundle:true,write:false,format:'esm',target:'es2022',external:['./nutrition-data.mjs','./local-coach-runtime.mjs','./food/pyramid-scanner.mjs','/handborne/*']});
  const server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://local').pathname;
   if(path==='/__test__'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Test</title>');return;}
@@ -40,6 +40,8 @@ async function withFood(run,{reducedMotion='no-preference',signedIn=false,worker
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
   const context=await browser.newContext({serviceWorkers:'block',viewport:{width:375,height:812},hasTouch:true,reducedMotion});
   await context.addInitScript(guideSeen);await context.addInitScript(noTiltPermission);
+  // Guest probes are answered locally unless this device holds a Clerk sign-in (auth-client guestSkip), so the stub account marks one.
+  if(signedIn)await context.addInitScript(()=>localStorage.setItem('myr5-login-provider','clerk'));
   const base='http://127.0.0.1:'+server.address().port,page=await context.newPage(),warnings=[];
   page.on('console',msg=>{if(msg.type()==='warning')warnings.push(msg.text());});
   // Observe the text painted onto each screen texture, and capture the scene + camera for projections.
