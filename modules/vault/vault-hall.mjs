@@ -142,7 +142,7 @@ export async function enterHall(arg=document.body){
   grp.add(ped,cap,halo,beam);scene.add(grp);return {g,i,grp,halo,mat,bm,model:null,loading:0,tk:0,earned:false,anim:-1};});
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
  // Keep model decoding bounded on mobile while preserving the same five-statue resident window.
- const modelQueue=[];let activeModelLoads=0;const pumpModelLoads=()=>{while(activeModelLoads<1&&modelQueue.length{const job=modelQueue.shift();activeModelLoads++;Promise.resolve().then(job.run).catch(e=>console.warn('vault statue',e)).finally(()=>{activeModelLoads--;pumpModelLoads();});}};
+ const modelQueue=[];let activeModelLoads=0;const pumpModelLoads=()=>{while(activeModelLoads<1&&modelQueue.length){const job=modelQueue.shift();activeModelLoads++;Promise.resolve().then(job.run).catch(e=>console.warn('vault statue',e)).finally(()=>{activeModelLoads--;pumpModelLoads();});}};
  // Earn state: instant on load/refresh, 0.6 s sweep up the statue when newly earned while the hall is open.
  function setEarn(s,animate){const e=!!(s.g&&isEarned(s.g,state()));if(e===s.earned)return;s.earned=e;if(e&&animate&&s.model)s.anim=0;else{s.anim=-1;s.mat.uniforms.uEarn.value=e?1:0;}s.bm.uniforms.uC.value.set(e?'#ff9a2e':'#7a2fc4');}
  function freeModel(m){m.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}
