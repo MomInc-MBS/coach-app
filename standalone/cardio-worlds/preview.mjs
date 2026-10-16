@@ -3,14 +3,14 @@ import {createWorldScene} from './scene.mjs';
 import {createMotionDriver,startCameraTracking} from './tracking/motion.mjs';
 const $=s=>document.querySelector(s),canvas=$('#view'),video=$('#selfie');
 let saved=0;try{saved=Math.max(0,Math.min(2,Number(localStorage.getItem('myr5-cardio-worlds-v1'))||0));}catch{}
-let run=createWorldRun({unlocked:saved}),camera=null,controller=null,loading=false,coachMode=false,last=0,seenWorld=-1,noticeUntil=0,driver=createMotionDriver();
+let run=createWorldRun({unlocked:saved}),camera=null,controller=null,loading=false,coachMode=false,last=0,seenWorld=-1,seenPickup=0,noticeUntil=0,driver=createMotionDriver();
 let tracked={visible:false,jogging:false,calibrated:false,actions:[]};
 const scene=createWorldScene(canvas);
 const names=['Crown Foundry','Verdant Ruins','Neon Transit'];
 const descriptions=[
-  'An elevated metal catwalk inside curved gold ribs. Exposed pipes, cylindrical reactors, giant toothed flywheels and engraved alloy replace the square corridor. Clear spools and duck hanging machinery.',
-  'An open ravine crossed on cracked, uneven stone slabs. Stepped ziggurats, leaning guardian faces, hanging roots, rope rails and broad jungle canopies. Jump boulders and duck fallen branches.',
-  'A rail yard with six rails, gravel ballast and wooden sleepers. A raised station platform and curved canopy on one side; long train cars, signals and staggered city towers on the other.'
+  'An elevated alloy catwalk inside engraved gold ribs. Brushed reactors, exposed pipes, gauges, toothed flywheels, deck markings and contact shadows. Clear cable spools and duck hanging rotors.',
+  'Cracked bridge slabs cross an open ravine. Carved guardian faces, stepped ziggurats, mossy stone, fern clusters, roots, rope edges and layered canopies. Jump boulders and duck fallen branches.',
+  'Run up the gold-edged bus ramps, collect coins and gadgets across the roofs, then descend back into the rail yard. Detailed buses have tyres, window seals, doors, lights, vents and marked roof lanes.'
 ];
 const powerNames={magnet:'Coin magnet',shield:'Relic shield',doubleCoins:'Double coins',boost:'Dash aura',jetpack:'Jetpack',superJump:'Jump shoes',board:'Hoverboard',headstart:'Head start',scoreBoost:'Score x2',phase:'Phase aura',pogo:'Pogo launch',recovery:'Recovery wings',coinTier:'Triple-value coins'};
 function say(text){$('#message').textContent=text;noticeUntil=performance.now()+2500;}
@@ -34,17 +34,18 @@ $('#start').onclick=async()=>{
   finally{loading=false;$('#start').disabled=false;}
 };
 $('#coach').onclick=()=>{coachMode=!coachMode;scene.setCoach(coachMode);$('#coach').setAttribute('aria-pressed',String(coachMode));say(coachMode?'Coach material study - Sakura ink and textured cloth':'Back to motion-tracked run');};
-canvas.addEventListener('coin',()=>collectCoin(run));canvas.addEventListener('power',e=>{collectPower(run,e.detail);say(`${powerNames[e.detail]} collected`);});canvas.addEventListener('hit',()=>{const before=run.stumbles;hit(run);say(run.stumbles>before?'Stumble. Keep jogging!':'Protection absorbed the hit.');});
+canvas.addEventListener('hit',()=>{const before=run.stumbles;hit(run);say(run.stumbles>before?'Stumble. Keep jogging!':'Protection absorbed the hit.');});
 function frame(now){
   const dt=last?Math.min(.25,(now-last)/1000):0;last=now;
   const visible=!!camera&&driver.fresh(now)&&tracked.visible,moving=visible&&tracked.calibrated&&tracked.jogging&&!coachMode;
   if(camera&&!coachMode)advance(run,dt,{moving});
+  if((run.pickupSerial||0)!==seenPickup){seenPickup=run.pickupSerial||0;if(run.lastPickup)say(`${powerNames[run.lastPickup]} collected - active now`);}
   if(seenWorld!==run.world){seenWorld=run.world;$('#worldTitle').textContent=names[run.world];$('#worldCopy').textContent=descriptions[run.world];$('#chapter').textContent=`0${run.world+1} / ${names[run.world].toUpperCase()}`;nav();try{localStorage.setItem('myr5-cardio-worlds-v1',String(run.unlocked));}catch{say('Replay unlock lasts for this visit; browser storage is unavailable.');}}
   $('#distance').textContent=`${Math.floor(run.distance)} m`;$('#progress').textContent=`${Math.floor(run.distance)} / 600 M`;$('#bar').style.width=`${run.distance/6}%`;$('#coins').textContent=run.coins;$('#score').textContent=`${Math.floor(run.score)} SCORE`;
   $('#vortex').hidden=run.phase!=='wormhole';$('#buffs').replaceChildren(...Object.entries(run.powers).filter(([,n])=>n>0).map(([id,n])=>{const s=document.createElement('span');s.textContent=`${powerNames[id]} - ${n.toFixed(1)}s`;return s;}));
-  $('#pace').textContent=moving?'12 M/S - CONSTANT PACE':'MOTION REQUIRED';
+  $('#pace').textContent=moving?`12 M/S - ${run.elevation>.5?'ROOFTOP '+run.elevation.toFixed(1)+' M':'STREET LEVEL'}`:'MOTION REQUIRED';
   if(camera)$('#trackingStatus').textContent=!visible?'Move into camera view':!tracked.calibrated?'Calibrating...':tracked.jogging?'Jog detected':'Standing - run paused';
-  if(now>noticeUntil)$('#message').textContent=coachMode?'Coach art study':!camera?'Enable camera. Your movement drives the run.':!visible?'Head and shoulders must stay in view.':!tracked.calibrated?'Stand naturally while the camera calibrates.':run.phase==='portal'?'RAISE BOTH ARMS TO JUMP THROUGH THE PORTAL':!moving?'JOG TO RUN - lean to steer, arms up to jump, crouch to slide':run.distance>520?'Purple portal ahead. Get ready to raise both arms.':'Keep jogging. Follow the gold.';
+  if(now>noticeUntil)$('#message').textContent=coachMode?'Coach art study':!camera?'Enable camera. Your movement drives the run.':!visible?'Head and shoulders must stay in view.':!tracked.calibrated?'Stand naturally while the camera calibrates.':run.phase==='portal'?'RAISE BOTH ARMS TO JUMP THROUGH THE PORTAL':!moving?'JOG TO RUN - lean to steer, arms up to jump, crouch to slide':run.distance>520?'Purple portal ahead. Get ready to raise both arms.':run.elevation>2.8?'ON THE BUS ROOF - follow the gold trail':run.world===2&&run.distance>45&&run.distance<85?'CENTER LANE - run up the gold-edged bus ramp':'Keep jogging. Follow the gold.';
   scene.render(run,now/1000,moving&&run.phase==='run');requestAnimationFrame(frame);
 }
 // Read-only inspection; movement is accepted only from camera landmarks.

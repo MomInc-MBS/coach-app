@@ -1,14 +1,14 @@
-import {createHeadBob,createUpperBody,POSE_TUNING} from './pose-input.mjs';
+import {createPoseInput,POSE_TUNING} from './app/arcade/runner/pose-input.mjs';
+import {MovementSession} from './app/movement-engine.mjs';
 
 // Reuse the app's treadmill recognizers. No keyboard, touch or simulated-run fallback.
 export function createMotionDriver(){
-  const bob=createHeadBob(),body=createUpperBody();let lastBob=-Infinity,lastSeen=-Infinity;
-  return {get calibrated(){return body.calibrated},update(points,now,aspect=1){
+  const input=createPoseInput({Session:MovementSession});let lastSeen=-Infinity;
+  return {get calibrated(){return input.calibrated},update(points,now,aspect=1){
     const valid=[0,11,12].every(i=>points?.[i]&&Number.isFinite(points[i].x)&&Number.isFinite(points[i].y)&&(points[i].visibility??1)>=POSE_TUNING.minVisibility);
-    if(!valid)return {visible:false,calibrated:body.calibrated,jogging:false,actions:[]};
-    lastSeen=now;if(bob.update(points,now/1000,aspect))lastBob=now;
-    const actions=body.update(points,now/1000,aspect)||[];
-    return {visible:true,calibrated:body.calibrated,jogging:body.calibrated&&now-lastBob<POSE_TUNING.jogHold*1000,actions};
+    if(!valid)return {visible:false,calibrated:input.calibrated,jogging:false,actions:[]};
+    lastSeen=now;const result=input.update({points,now,width:aspect,height:1});
+    return {visible:true,calibrated:input.calibrated,jogging:input.calibrated&&result.jogging,actions:result.actions};
   },fresh(now){return now-lastSeen<750;}};
 }
 

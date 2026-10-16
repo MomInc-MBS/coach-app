@@ -1,6 +1,22 @@
 # Cool Cardio — three worlds
 
-Standalone design and playable art study, 16 October 2026. Branch `codex/cardio-worlds-1016`, snapshot base `d45e7d8` from the in-progress R-1017 integration. Recorded production base: `w/r1016 @ 0c4d4b2`, `https://myr5.mominc.online`, production version `ec2acab5`. This package changes no production entry points, build scripts, pose controls, accounts or workout XP. Merge after the other chat finishes. Recheck the latest live base before integration.
+Standalone design and playable art study, 16 October 2026. Branch `codex/cardio-worlds-1016`, snapshot base `d45e7d8` from the in-progress R-1017 integration. Production base recorded when this branch was created: `w/r1016 @ 0c4d4b2`, `https://myr5.mominc.online`, production version `ec2acab5`. This package changes no production entry points, build scripts, pose controls, accounts or workout XP. Merge after the other chat finishes. Recheck the latest live base before integration.
+
+## Revision 3: same jogging controls, traversable buses, working pickups
+
+The standalone now uses `createPoseInput({Session:MovementSession})` from the other game's full app movement path, copied with its dependencies from R-1017 `fe7f124`. This includes alternating-knee jogging in place, head-bob treadmill fallback, lean left/right and the existing jump/slide/side-step recognizers with unchanged tuning. Source snapshots live under `tracking/app/`; the live app files are not edited.
+
+Three authored metro bus routes have continuous approach ramps, roofs at 3.2 m, and descent ramps: centre lane 70?126 m, right lane 210?268 m, left lane 360?424 m. Run elevation follows these surfaces, raises the first-person camera, and filters ground hazards while on a roof. Side entry into a bus is blocked unless a high jump, phase or flight can reach it. Leaving a roof descends safely. Jump shoes support a high landing. The gold-edged ramps and coin trails show where to run up.
+
+Buses have separate tyres/hubs, doors, window seals, lights, grille, trim, roof vents and roof-lane markings. Rendering also adds gradient skies, soft contact shadows, machinery gauges, deck markings, guardian carvings, fern clusters, sill/awning details and rooftop equipment. Sakura remains the shared ink and grading pipeline.
+
+Pickups now live in the distance-crossing simulation instead of frame-dependent renderer hit tests. Every power in each area's kit appears on the authored course, with repeat opportunities and dedicated rooftop pickups. Powers have distinct 3D silhouettes and names: U-magnet, shield, winged relic, jetpack, shoes, hoverboard, phase rings, pogo stick, coins, score star and boost arrows. HUD timers plus first-person auras/board/shoes/jet/dash effects show active powers. There are no manual power activation buttons.
+
+- Foundry kit: opening head start, magnet, shield, dash, jump shoes, recovery wings.
+- Temple kit: magnet, phase, double coins, triple-value coins, recovery wings, shield, dash.
+- Metro kit: jetpack, jump shoes, magnet, hoverboard, score multiplier, pogo launch.
+
+Verification: 12 Node tests pass. This includes jogging with steady head/visible knees, the upper-body treadmill sequence, bus ascent/roof/descent, grounded side-entry prevention, jump-shoe roof landing, every area's pickup actually collected, effect activation and duplicate suppression, plus prior portal/unlock/power checks. Browser simulation from 69 m to 105 m reached roof height 3.2 m, collected 12 coins and activated jetpack. Renderer checked at desktop and 390 px mobile with no horizontal overflow or app errors. Camera capture remains unsupported in the collaborative browser; physical-phone tuning is not claimed.
 
 ## Revision 2: distinct architecture and motion-only play
 
@@ -29,7 +45,7 @@ Each area is 600 metres at the existing constant 12 m/s. About 50 seconds runnin
 | Verdant Ruins | Broken bridge slabs, stepped pyramids, guardian heads, branching canopy, rope and roots | Coins guide safe stone paths | Fallen lintels, roots, broken terraces | Alternating high/low routes and moving-stone timing | Temple iris opens onto violet space |
 | Neon Transit | First-person subway, rails and sleepers, long turquoise cars, pastel buildings, wires and signage | Stationary cars establish lane silhouettes | Track barriers and overhead signals | Train gaps, ramps and rooftop coin arcs | Tunnel resolves into a suspended portal |
 
-The playable study now demonstrates distinct architecture and themed hazard silhouettes, textured surfaces, coins, pickups and portals. Moving stones, ramps, rooftop traversal, moving train collision and animated machinery remain production additions. Decorative trains are not yet colliders. Final obstacle generation must join the existing runner's seeded safe-route generator instead of deploying the study's repeated layout.
+The playable study now demonstrates distinct architecture and themed hazard silhouettes, textured surfaces, coins, pickups and portals. Moving stones, moving train collision and animated machinery remain production additions. Bus ramps and rooftop traversal are implemented in revision 3. Decorative trains are not yet colliders. Final obstacle generation must join the existing runner's seeded safe-route generator instead of deploying the study's repeated layout.
 
 ## Portal choreography
 
@@ -51,7 +67,7 @@ On **arrival**, persist the highest unlocked world and light its replay button. 
 | Head start · once at opening | Skip opening 150 m only | Portal glide; no exercise XP for skipped distance |
 | Score ×2 · 15 s | Double arcade score only | Star above score counter |
 
-The lab implements effects in state, coin collision, jump height, flight and hazard protection. The full character VFX listed here are production art direction; only the geometric coach shading study is present. Powers share consistent icons/names across worlds, with temple relic shells and transit gadget shells. Stacking changes separate systems; collecting the same timed power refreshes its timer rather than multiplying indefinitely. Portal entry always needs a deliberate jump even during flight/dash. No power buys exercise completion or increases XP.
+The lab implements effects in course simulation, coin collection, jump height, flight and hazard protection, with first-person active-power art. The full character VFX listed here are production art direction; the geometric coach shading study remains a placeholder for the final coach asset. Powers share consistent icons/names across worlds, with temple relic shells and transit gadget shells. Stacking changes separate systems; collecting the same timed power refreshes its timer rather than multiplying indefinitely. Portal entry always needs a deliberate jump even during flight/dash. No power buys exercise completion or increases XP.
 
 Reference inventory also includes Temple Run's invisibility/coin-value progression and consumable resurrection, plus Subway's pogo launch and opening boosters. Map invisibility to a phase aura (timed hazard bypass), coin-value progression to arcade coin tiers, and pogo to one automatic high launch. Resurrection should become a one-use stumble recovery because Cool Cardio hazards do not kill the run. These equivalents are included in the standalone state and try-power controls; production still needs their final character animation assets. The runnable set now also includes phase aura (8 s), pogo launch (one high jump plus a five-coin burst), recovery wings (30 s, absorbs one stumble) and triple-value coins (20 s). These use MYR5 timing and the same constant pace. Thematic variants such as mega head start use the same underlying opening-boost ability.
 
@@ -70,7 +86,7 @@ Run locally: `python -m http.server 8876 --directory standalone/cardio-worlds`, 
 
 ## Motion-only standalone path
 
-`tracking/pose-input.mjs` is copied from the app's R-1017 runner. `tracking/motion.mjs` reuses its head-bob and upper-body recognizers with their exported tuning unchanged. Enable motion tracking opens the front camera and runs the same locally vendored MediaPipe pose model (CPU delegate to avoid another graphics context).
+`tracking/app/` is copied from the app's R-1017 movement engine and runner pose module. `tracking/motion.mjs` calls the full shared input path, including knee steps, with its exported tuning unchanged. Enable motion tracking opens the front camera and runs the same locally vendored MediaPipe pose model (CPU delegate to avoid another graphics context).
 
 - Natural head bob gates forward movement at constant 12 m/s.
 - Both arms up plus shoulder lift trigger the floaty jump and portal entry.
@@ -82,10 +98,10 @@ Run locally: `python -m http.server 8876 --directory standalone/cardio-worlds`, 
 
 ## Verified standalone checks
 
-- Six Node tests pass, including a landmark-driven treadmill integration sequence: standing stays at zero distance, head bob advances, lean steers, arms jump, crouch slides, stopping halts movement and missing landmarks invalidate tracking. Existing portal, unlock, power and constant-pace tests still pass.
+- Twelve Node tests pass, including a landmark-driven treadmill integration sequence: standing stays at zero distance, head bob advances, lean steers, arms jump, crouch slides, stopping halts movement and missing landmarks invalidate tracking. Existing portal, unlock, power and constant-pace tests still pass.
 - Real locally bundled MediaPipe WASM/model successfully created in the collaborative browser and processed a blank image (zero poses, as expected); the model closed afterward.
 - Browser camera capture returned `Not supported` in this environment. Physical-camera recognition and phone tuning are NOT claimed. Camera failure leaves distance at zero with a retry message.
 - All three revised worlds visually inspected. Mobile CSS viewport 390x844 has no horizontal overflow. There are zero manual movement buttons and zero power-activation buttons. No-keyboard/swipe source path verified.
 
 Run locally: `python -m http.server 8876 --directory standalone/cardio-worlds`, then open `http://127.0.0.1:8876`. Phone camera requires an HTTPS origin (or localhost on that phone). Production integration will use the app's existing HTTPS camera path.
-Run checks: `node --test standalone/cardio-worlds/worlds.test.mjs standalone/cardio-worlds/tracking/motion.test.mjs`.
+Run checks: `node --test standalone/cardio-worlds/worlds.test.mjs standalone/cardio-worlds/course.test.mjs standalone/cardio-worlds/tracking/motion.test.mjs`.

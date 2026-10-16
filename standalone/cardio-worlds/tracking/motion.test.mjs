@@ -23,3 +23,12 @@ test('camera landmarks drive treadmill jog, lean, jump, crouch and stop',()=>{
   const stoppedAt=run.distance;feed(1,{});assert.equal(run.distance,stoppedAt);
   state=driver.update(null,now+50);assert.equal(state.visible,false);assert.equal(state.jogging,false);assert.equal(driver.fresh(now+1000),false);
 });
+test('jogging in place counts alternating visible knees with a steady head',()=>{
+  const driver=createMotionDriver();let state;
+  for(let i=0;i<100;i++){
+    const now=i*50,p=pose(now/1000),lift=i>35?.06*Math.sin(now/1000*Math.PI*4):0;
+    p[25]={x:.57,y:.85+lift,visibility:1};p[26]={x:.43,y:.85-lift,visibility:1};
+    state=driver.update(p,now,4/3);
+  }
+  assert.ok(state.calibrated);assert.equal(state.jogging,true);
+});
