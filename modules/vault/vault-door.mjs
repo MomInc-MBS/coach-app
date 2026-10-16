@@ -87,8 +87,9 @@ function studioEnv(){
  envTex=tex(c);envTex.mapping=THREE.EquirectangularReflectionMapping;return envTex;
 }
 // MOM logo (white-on-clear PNG) as an engraved decal: dark cut with a gold lip, or plain gold.
-async function logoTexture(engrave){
+async function logoTexture(engrave,signal){
  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=LOGO;}).catch(()=>null);
+ if(signal?.aborted){const error=new Error('Vault mount canceled');error.name='AbortError';throw error;}
  const w=512,h=Math.round(w*(img?img.height/img.width:72/363)),c=ctxOf(w,h),pass=(dx,dy,col,a)=>{
   const t=ctxOf(w,h);if(img)t.drawImage(img,8,8,w-16,h-16);t.globalCompositeOperation='source-in';t.fillStyle=col;t.fillRect(0,0,w,h);
   c.globalAlpha=a;c.drawImage(t.canvas,dx,dy);c.globalAlpha=1;
@@ -123,19 +124,25 @@ export function blocked(u,v,r=0){
 
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
-export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false;
+export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal,signal}={}){
+ let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false,abortListener=null;
  let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
  const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
+ firstFrame.catch(()=>{});
  const ownedTextures=new Set(),sharedGeometry=new Set();
  const cleanup=()=>{
-  if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);
+  if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);if(abortListener)signal?.removeEventListener('abort',abortListener);
   if(hallSession){hallSession=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});}
   if(scene)scene.traverse(o=>{try{if(o.geometry&&!sharedGeometry.has(o.geometry))o.geometry.dispose();}catch{}for(const m of [].concat(o.material||[]))try{m?.dispose?.();}catch{}});
   for(const t of ownedTextures)try{t.dispose();}catch{}ownedTextures.clear();
   if(renderer){try{renderer.dispose();}catch{}try{renderer.forceContextLoss();}catch{}}canvas?.remove();
  };
+ let rejectAbort;const abortPromise=new Promise((_,reject)=>{rejectAbort=reject;});abortPromise.catch(()=>{});
+ abortListener=()=>{const error=new Error('Vault mount canceled');error.name='AbortError';if(!firstFrameSettled){firstFrameSettled=true;rejectFirstFrame(error);}cleanup();rejectAbort(error);};
+ const waitForMount=promise=>signal?Promise.race([promise,abortPromise]):promise;
  try{
+ if(signal?.aborted)abortListener();else signal?.addEventListener('abort',abortListener,{once:true});
+ if(signal?.aborted)throw new Error('Vault mount canceled');
  stage='renderer';renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -176,7 +183,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  for(const sx of [-1,1])for(const sy of [-1,1])mk(new THREE.CylinderGeometry(.022,.022,.03,8).rotateX(Math.PI/2),metal(GOLD,.9,.3),root,new THREE.Vector3(sx*.6,sy*.6,.025));
  stage='doorway-texture';const screenTex=doorwayTexture();ownedTextures.add(screenTex);const screenMat=new THREE.MeshBasicMaterial({map:screenTex,toneMapped:false}),doorway=new THREE.Mesh(new THREE.PlaneGeometry(HOLE,HOLE),screenMat);doorway.position.z=-.2;root.add(doorway);
  // the door slab: Ian's painted art, cropped square, duotoned to MOM purple/gold
- stage='door-art';const doorGltf=await load(DOOR_GLB).catch(()=>null),art=doorGltf?.scene.getObjectByProperty('isMesh',true)?.material.map?.clone();if(art)ownedTextures.add(art);
+ stage='door-art';const doorGltf=await waitForMount(load(DOOR_GLB).catch(()=>null)),art=doorGltf?.scene.getObjectByProperty('isMesh',true)?.material.map?.clone();if(art)ownedTextures.add(art);
  const side=metal('#2c2e3a',.9,.4),back=metal('#4a4d5e',.9,.35);
  const front=new THREE.MeshStandardMaterial({color:'#fff',metalness:.35,roughness:.55,envMap:studioEnv(),envMapIntensity:.7,map:art||null});
  if(art){art.repeat.set(1,-1024/IMG_H);art.offset.set(0,(Y0+1024)/IMG_H);art.wrapS=art.wrapT=THREE.ClampToEdgeWrapping;art.needsUpdate=true;}
@@ -189,7 +196,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const S={goals,read,idx:0,total:0,progress:0,open:0,opening:false,target:0,flySpin:0,phase:0,pomega:0,drag:new Map(),weld:[],sparks:[],heads:new Map(),glitch:0,alive:true,knob:{last:null,acc:0,total:0},fly:{last:null,total:0}};
  const parts={gears:[],pipes:[],valves:[],lights:[],lamps:[],bolts:[],pistons:[],weights:[],pulleys:[],spin:[]},rest=[];
  // kit parts from the old door layout, cropped to the square, kept clear of the new controls
- stage='door-kit';const [layout,kit]=await Promise.all([fetch(LAYOUT).then(r=>{if(!r.ok)throw new Error('layout HTTP '+r.status);return r.json();}),load(KIT_GLB)]).catch(e=>{console.warn('vault door kit',e);return [null,null];});kit?.scene?.traverse(o=>{if(o.geometry)sharedGeometry.add(o.geometry);});
+ stage='door-kit';const [layout,kit]=await waitForMount(Promise.all([fetch(LAYOUT).then(r=>{if(!r.ok)throw new Error('layout HTTP '+r.status);return r.json();}),load(KIT_GLB)]).catch(e=>{if(e?.name==='AbortError')throw e;console.warn('vault door kit',e);return [null,null];}));kit?.scene?.traverse(o=>{if(o.geometry)sharedGeometry.add(o.geometry);});
  const mats=new Map(),matFor=(src,kind)=>{const k=src.material.uuid+kind;let m=mats.get(k);if(!m){m=src.material.clone();m.envMap=studioEnv();m.envMapIntensity=1.1;m.metalness=.9;m.roughness=.34;m.map=src.material.map;
   m.color.set(kind==='plate'?'#8a8da2':kind==='pipe'?'#c9a8ff':kind==='light'?'#ffffff':'#ffd9a0');if(kind==='pipe'){m.emissive.set(PURPLE);m.emissiveMap=m.map;m.emissiveIntensity=.9;}if(kind==='light'){m.emissive.set(GOLD);m.emissiveMap=m.map;m.emissiveIntensity=0;}mats.set(k,m);}return m;};
  let topZ=.03;
@@ -224,7 +231,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  }
  if(!S.flyG){const g=new THREE.Group();g.position.copy(at(L.fly.u,L.fly.v,.05));g.add(new THREE.Mesh(new THREE.TorusGeometry(L.fly.r,.02,8,36),metal(GOLD,.9,.3)));face.add(g);S.flyG=g;S.bossLogo=mk(new THREE.CylinderGeometry(.062,.062,.02,28).rotateX(Math.PI/2),metal('#2a1d3c',.8,.4),g,new THREE.Vector3(0,0,.01));}
  const mount=new THREE.Group();face.add(mount);S.mount=mount;
- stage='door-markings';const [engr,gold]=await Promise.all([logoTexture(true),logoTexture(false)]);ownedTextures.add(engr.t);ownedTextures.add(gold.t);
+ stage='door-markings';const [engr,gold]=await waitForMount(Promise.all([logoTexture(true,signal),logoTexture(false,signal)]));ownedTextures.add(engr.t);ownedTextures.add(gold.t);
  // logo plate (engraved) + CRT bezel/screen
  const plate=mk(new THREE.BoxGeometry(L.logo.w,L.logo.h,.02),metal('#2b1f3a',.75,.45),face,at(L.logo.u,L.logo.v,.012));
  const decal=new THREE.Mesh(new THREE.PlaneGeometry(L.logo.w*.9,L.logo.w*.9*engr.aspect),new THREE.MeshBasicMaterial({map:engr.t,transparent:true,depthWrite:false,toneMapped:false}));decal.position.copy(at(L.logo.u,L.logo.v,.024));face.add(decal);
@@ -417,7 +424,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
   dispose(){if(cleaned)return;S.alive=false;for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
  };
- stage='first-render';await firstFrame;stage='ready';
+ stage='first-render';await firstFrame;stage='ready';if(abortListener)signal?.removeEventListener('abort',abortListener);
  return api;
  }catch(error){cleanup();try{error.vaultStage=stage;}catch{}throw error;}
 }
@@ -427,14 +434,15 @@ export async function openVault(){
  let dlg=document.getElementById('vaultPanel');
  if(!dlg){dlg=document.createElement('dialog');dlg.id='vaultPanel';document.body.append(dlg);}
  dlg.style.cssText='position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#171020;color:#f6eddf;overflow:hidden';
- dlg._vault?.dispose?.();dlg._vault=null;const generation=(dlg._vaultGeneration||0)+1;dlg._vaultGeneration=generation;
+ dlg._vaultMountAbort?.abort();dlg._vaultMountAbort=null;dlg._vault?.dispose?.();dlg._vault=null;const generation=(dlg._vaultGeneration||0)+1;dlg._vaultGeneration=generation;
+ const mountController=new AbortController();dlg._vaultMountAbort=mountController;
  dlg.replaceChildren();const host=document.createElement('div');host.style.cssText='position:absolute;inset:0';dlg.append(host);
  const loading=document.createElement('div');loading.setAttribute('role','status');loading.textContent='Opening the Achievement Vault…';loading.style.cssText='position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#f6eddf;font:600 18px/1.5 system-ui';host.append(loading);
  const close=document.createElement('button');close.textContent='✕';close.setAttribute('aria-label','Close vault');close.style.cssText='position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;border-radius:22px;border:1px solid #7a2fc4;background:#171020cc;color:#ffd36e;font-size:18px';
  close.onclick=()=>dlg.close();dlg.append(close);
  if(!dlg.open)dlg.showModal?.();
  dlg._vaultCloseHandler&&dlg.removeEventListener('close',dlg._vaultCloseHandler);
- dlg._vaultCloseHandler=()=>{dlg._vaultGeneration++;dlg._vault?.dispose?.();dlg._vault=null;};
+ dlg._vaultCloseHandler=()=>{dlg._vaultGeneration++;mountController.abort();if(dlg._vaultMountAbort===mountController)dlg._vaultMountAbort=null;dlg._vault?.dispose?.();dlg._vault=null;};
  dlg.addEventListener('close',dlg._vaultCloseHandler,{once:true});
  const retry=document.createElement('button');retry.type='button';retry.textContent='Retry 3D';retry.hidden=true;retry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:3;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
  retry.addEventListener('click',()=>void mount());dlg.append(retry);
@@ -457,7 +465,7 @@ export async function openVault(){
   retry.disabled=true;retry.textContent='Opening…';retry.hidden=true;host.replaceChildren(loading);
   try{
    const [{GOALS},{view}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
-   const api=await mountVaultDoor(host,{goals:GOALS,read:view,onFatal:error=>{dlg._vault=null;showFailure(error);}});
+   const api=await mountVaultDoor(host,{goals:GOALS,read:view,signal:mountController.signal,onFatal:error=>{dlg._vault=null;showFailure(error);}});
    if(!dlg.open||dlg._vaultGeneration!==generation){api.dispose();return null;}
    dlg._vault=api;loading.remove();return api;
   }catch(error){
