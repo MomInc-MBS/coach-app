@@ -141,16 +141,18 @@ export async function enterHall(arg=document.body){
   const beam=new THREE.Mesh(beamG,bm);beam.position.y=.5+1.05;beam.scale.y=-1;
   grp.add(ped,cap,halo,beam);scene.add(grp);return {g,i,grp,halo,mat,bm,model:null,loading:0,tk:0,earned:false,anim:-1};});
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+ // Keep model decoding bounded on mobile while preserving the same five-statue resident window.
+ const modelQueue=[];let activeModelLoads=0;const pumpModelLoads=()=>{while(activeModelLoads<1&&modelQueue.length{const job=modelQueue.shift();activeModelLoads++;Promise.resolve().then(job.run).catch(e=>console.warn('vault statue',e)).finally(()=>{activeModelLoads--;pumpModelLoads();});}};
  // Earn state: instant on load/refresh, 0.6 s sweep up the statue when newly earned while the hall is open.
  function setEarn(s,animate){const e=!!(s.g&&isEarned(s.g,state()));if(e===s.earned)return;s.earned=e;if(e&&animate&&s.model)s.anim=0;else{s.anim=-1;s.mat.uniforms.uEarn.value=e?1:0;}s.bm.uniforms.uC.value.set(e?'#ff9a2e':'#7a2fc4');}
  function freeModel(m){m.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}
  function drop(s){if(!s.model)return;s.grp.remove(s.model);freeModel(s.model);s.model=null;}
- async function load(s){if(s.model||s.loading)return;const tk=s.loading=++s.tk;try{const m=(await loader.loadAsync(FILES[s.i])).scene;
+ function load(s){if(s.model||s.loading)return;const tk=s.loading=++s.tk;modelQueue.push({run:async()=>{if(s.loading!==tk||!live||!want.includes(s.i)){if(s.loading===tk)s.loading=0;return;}try{const m=(await loader.loadAsync(FILES[s.i])).scene;
   // Original materials are never shown: free them right away, wear the hologram.
   m.traverse(o=>{if(!o.isMesh)return;for(const mm of[].concat(o.material)){for(const v of Object.values(mm))if(v?.isTexture)v.dispose();mm.dispose();}o.material=s.mat;});
   if(s.loading!==tk||s.model||!live||!want.includes(s.i)){freeModel(m);return;}
   const box=new THREE.Box3().setFromObject(m),sz=box.getSize(new THREE.Vector3()),k=TOP/Math.max(sz.y,.001),c=box.getCenter(new THREE.Vector3());m.scale.setScalar(k);m.position.set(-c.x*k,.5-box.min.y*k,-c.z*k);
-  s.model=m;s.grp.add(m);}catch(e){console.warn('vault statue',e);}finally{if(s.loading===tk)s.loading=0;}}
+  s.model=m;s.grp.add(m);}catch(e){throw e;}finally{if(s.loading===tk)s.loading=0;}}});pumpModelLoads();}
  let want=[];function stream(c){want=residentWindow(c,N);statues.forEach(s=>{if(want.includes(s.i))load(s);else{s.loading=0;drop(s);}});}
  // Walk state (ported from lilboyfriend).
  let fixT=-1,route=0,target=0,vel=0,held=0,cur=-1,insp=-1,blend=0,nextI=-1,started=performance.now(),last=started,raf=0,reached=false;
