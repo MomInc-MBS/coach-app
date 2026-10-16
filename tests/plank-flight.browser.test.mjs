@@ -57,6 +57,14 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
   await page.getByRole('button',{name:'Finish workout',exact:true}).click();
   await page.waitForFunction(()=>window.myr5TestState.phase==='idle',null,{timeout:15000});assert.equal(await page.locator('.plank-flight').count(),0);
   assert.equal(await page.evaluate(()=>document.querySelector('#v').srcObject),null);
+  await page.locator('#plankFlight').click();await page.waitForFunction(()=>!!window.myr5PlankFlight?.active);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.motion.flightPose?.calibrated??false),false,'re-entry starts a new calibration');
+  await page.setViewportSize({width:812,height:375});
+  assert.ok(await page.locator('.plank-flight').evaluate(el=>el.getBoundingClientRect().width<=innerWidth+1));
+  await page.screenshot({path:'D:/outputs/plank-joyride-20261016/shots/actual-app-calibration-landscape.png'});
+  await page.getByRole('button',{name:'End workout and turn camera off',exact:true}).click();
+  await page.waitForFunction(()=>window.myr5TestState.phase==='idle');assert.equal(await page.locator('.plank-flight').count(),0);
+  assert.equal(await page.evaluate(()=>document.querySelector('#v').srcObject),null);
   const flightErrors=errors.filter(e=>/plank|flight|undefined.*(?:run|pose)/i.test(e));assert.deepEqual(flightErrors,[],errors.join('\n'));
  }catch(error){if(page){await mkdir('D:/outputs/plank-joyride-20261016/shots',{recursive:true});await page.screenshot({path:'D:/outputs/plank-joyride-20261016/shots/browser-failure.png'}).catch(()=>{});const diagnostic=await page.evaluate(()=>({state:window.myr5TestState,run:window.myr5PlankFlight?.active?.run?.phase,status:document.querySelector('#status')?.textContent,mode:document.querySelector('#movement')?.value,text:document.body.innerText.slice(-1800)})).catch(()=>({}));await writeFile('D:/outputs/plank-joyride-20261016/browser-diagnostic.json',JSON.stringify({diagnostic,errors},null,2));console.error(JSON.stringify(diagnostic));}throw error;}
  finally{await browser?.close();await new Promise(r=>server.close(r));}

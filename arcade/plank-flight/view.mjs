@@ -145,6 +145,7 @@ function buildDom(host, onAction) {
         .filter(i => i && (i.equipable !== false || ['vehicle', 'cosmetic'].includes(i.kind)));
       content = `<p class="pf-eyebrow">YOUR FLIGHT SETUP</p><h2>Choose equipment</h2><p>Your choices affect the game route only.</p><div class="pf-list">${itemsOwned.length ? itemsOwned.map(i => listButton(i, 'equip', equipped.has(i.id) ? 'aria-pressed="true"' : '')).join('') : '<p class="pf-empty">Equipment you own will appear here.</p>'}</div><button class="pf-link" type="button" data-act="back">Back</button>`;
     }
+    if(name==='welcome')content+='<button class="pf-link" type="button" data-act="exit">End workout and turn camera off</button>';
     if(['pause','results'].includes(name))content+='<p class="pf-smallprint" data-progression></p>';
     panel.innerHTML = `<div class="pf-panel-scroll"><button type="button" class="pf-close" data-act="close-panel" aria-label="Close menu">×</button>${content}</div>`;
     panel.hidden = false;
