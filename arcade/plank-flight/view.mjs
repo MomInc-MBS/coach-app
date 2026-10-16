@@ -214,7 +214,7 @@ function buildDom(host, onAction) {
       }
       const pace = run.pace;
       const pacePanel = hud.querySelector('[data-pace]');
-      const hasPace = pace && typeof pace === 'object' && (pace.kind || pace.label || Number.isFinite(+pace.remaining));
+      const hasPace = pose.calibrated && ['flying','paused'].includes(run.phase) && pace && typeof pace === 'object' && (pace.kind || pace.label || Number.isFinite(+pace.remaining));
       pacePanel.hidden = !hasPace;
       if (hasPace) {
         const isRest = value => /rest|recover/i.test(String(value ?? ''));
@@ -225,7 +225,7 @@ function buildDom(host, onAction) {
         pacePanel.querySelector('[data-pace-current]').textContent = currentCue;
         pacePanel.querySelector('[data-pace-next]').textContent = nextCue;
         pacePanel.querySelector('[data-pace-remaining]').textContent = String(Math.max(0, Math.ceil(finite(pace.remaining))));
-        pacePanel.querySelector('[data-pace-credit]').textContent = resting ? 'Recovery · workout credit paused · flight continues' : (pace.transitioning ? 'Changing posture' : 'Hold a comfortable position');
+        pacePanel.querySelector('[data-pace-credit]').textContent = frame.paused ? 'Paused · posture timer stopped' : resting ? (pose.resting ? 'Recovery · workout credit paused · flight continues' : 'Lower fully to rest · flight continues') : pose.resting ? 'Resting · rise when ready' : (pace.transitioning ? 'Changing posture' : 'Hold a comfortable position');
         pacePanel.classList.toggle('is-rest', resting);
         pacePanel.classList.toggle('is-transitioning', !!pace.transitioning);
       }

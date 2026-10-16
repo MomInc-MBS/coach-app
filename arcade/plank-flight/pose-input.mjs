@@ -125,6 +125,19 @@ export function createPlankInput(options = {}) {
     model.left = residual(A); model.right = residual(B);
     return model.left >= T.minLeanRange && model.right <= -T.minLeanRange;
   }
+  function leanLimit(height, steer) {
+    // The bottom extends below the old active-low coordinate (zero). Use the
+    // observed joint envelope rather than treating every negative old height as
+    // low-neutral: that would reject a valid bottom-to-middle diagonal, freeze
+    // the pace target there, and make following that target unable to recover.
+    const side = steer >= 0 ? 'left' : 'right', mixed = anchors[`mixed-${side}`];
+    const bottom = anchors.bottom.height, middle = mixed.height;
+    const midLean = Math.abs(mixed.steer);
+    const observed = height <= middle
+      ? midLean * clamp((height - bottom) / (middle - bottom), 0, 1)
+      : midLean + (1 - midLean) * clamp((height - middle) / (1 - middle), 0, 1);
+    return Math.max(.18, observed) + .15;
+  }
   function stageReason(f) {
     const S = stage(), H = anchors.high;
     if (S === 'high') return '';
@@ -209,9 +222,9 @@ export function createPlankInput(options = {}) {
       }
       if (c.height > 1.22 || Math.abs(c.steer) > 1.3)
         return invalid(now, 'Return within your calibrated comfortable range.');
-      // Only high/mid side lean and low-neutral were observed. Never fabricate
-      // calibration evidence for a deep push-up combined with an extreme lean.
-      if (Math.abs(c.steer) > Math.max(.18, clamp(c.height * 2, 0, 1)) + .15)
+      // Interpolate within observed bottom/mixed/high combinations; do not
+      // extrapolate a full side lean into the unobserved deep-rest corner.
+      if (Math.abs(c.steer) > leanLimit(c.height, c.steer))
         return invalid(now, 'Ease toward the middle before lowering further.');
       const restFraction = (c.height - anchors.bottom.height) / (anchors.mid.height - anchors.bottom.height);
       resting = restFraction <= (resting ? T.restExitFraction : T.restEnterFraction);

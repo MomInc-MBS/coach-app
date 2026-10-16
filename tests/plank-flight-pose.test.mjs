@@ -305,3 +305,35 @@ test('movement evidence independently rejects contradictory resting credit flags
   assert.equal(s.totalHold,.1);assert.equal(s.active,.1);assert.equal(s.hold,0);assert.equal(s.flightEligible,false);
  }
 });
+
+test('paced rest-to-lean and lean-to-rest diagonals stay inside the measured joint envelope',()=>{
+ // The browser fixture inverts the new piecewise height map and absolute steer
+ // map. This path formerly stopped around height .3, freezing the pace target.
+ const fromTarget=({x,y})=>({y:y>=.5?.49-(y-.5)*.22:.78-y*.58,lean:-x/.8*.065});
+ for(const x of [-.55,.55]){
+  const d=driver();d.calibrate();d.settle(stages.bottom);
+  const s={started:null,hold:0,totalHold:0,active:0,bestHold:0};
+  for(const backwards of [false,true]){
+   for(let i=0;i<=30;i++){
+    const f=backwards?1-i/30:i/30,target={x:x*f,y:.04+(.6-.04)*f};
+    const p=d.tick(fromTarget(target),50);
+    assert.equal(p.controlValid,true,`x=${x},return=${backwards},fraction=${f}: ${p.reason}`);
+    applyFlightEvidence(s,p,p.timestamp,{allowed:true});
+   }
+   if(!backwards)for(let i=0;i<10;i++){
+    const p=d.tick(fromTarget({x,y:.6}));assert.equal(p.controlValid,true);applyFlightEvidence(s,p,p.timestamp,{allowed:true});
+   }
+  }
+  assert.ok(s.totalHold>.5,'the valid active portion can earn hold credit');
+  assert.equal(s.flightPose.resting,true);assert.equal(s.flightPose.exerciseEligible,false);
+ }
+});
+
+test('the joint envelope keeps bottom extreme leans invalid and uses each measured side separately',()=>{
+ const d=driver();
+ for(const[name,spec]of Object.entries(stages))d.settle(name==='mixed-left'?{...spec,lean:.04}:spec,8);
+ const allowed=d.settle({y:.49,lean:.04});assert.equal(allowed.controlValid,true);
+ const tooFar=d.tick({y:.49,lean:.06});assert.equal(tooFar.controlValid,false);assert.match(tooFar.reason,/middle/);
+ const right=d.settle({y:.49,lean:-.055});assert.equal(right.controlValid,true);
+ const deep=d.tick({y:.78,lean:-.065});assert.equal(deep.controlValid,false);assert.equal(deep.exerciseEligible,false);
+});
