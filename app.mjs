@@ -302,7 +302,7 @@ for(const type of ['input','change'])document.addEventListener(type,event=>{
   if(!ACTIVE_PHASES.has(state.phase)||!frozenSettings||!FROZEN_SETTINGS.includes(event.target?.id))return;
   event.stopImmediatePropagation();event.target.value=frozenSettings[event.target.id];
 },true);
-window.addEventListener('myr5:route-leave',event=>{if(event.detail?.id==='library'&&event.detail.reason==='workout-begin')return;if(ACTIVE_PHASES.has(state.phase))void stop('Workout stopped. Your progress is saved.',{home:false});});
+window.addEventListener('myr5:route-leave',event=>{if(['library','workout'].includes(event.detail?.id)&&event.detail.reason==='workout-begin')return;if(ACTIVE_PHASES.has(state.phase))void stop('Workout stopped. Your progress is saved.',{home:false});});
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
 async function start(){
   if(document.hidden)return;

@@ -1,6 +1,12 @@
 # Cool Cardio — three worlds
 
-Standalone design and playable art study, 16 October 2026. Branch `codex/cardio-worlds-1016`, snapshot base `d45e7d8` from the in-progress R-1017 integration. Production base recorded when this branch was created: `w/r1016 @ 0c4d4b2`, `https://myr5.mominc.online`, production version `ec2acab5`. This package changes no production entry points, build scripts, pose controls, accounts or workout XP. Merge after the other chat finishes. Recheck the latest live base before integration.
+Release candidate integrated into the actual Cool Cardio app on `codex/cardio-worlds-1016`, after merging the verified Release 34 base `codex/plank-flight-1016 @ 3c070b6`. Target: `https://myr5.mominc.online/pose`. Website Coach Armie has a separate Sakura update on `codex/armie-sakura-1016`, based on website main `cf0be546`, target `https://mominc.online/tv/?ch=armie`. Deployment is gated on Ian's requested independent Astra review.
+
+Production runtime lives in `arcade/runner/worlds/` and uses the app's original MovementSession and pose input directly. It retains the actual canonical Coach Armie model, throw combat, stopping/catching behavior, workout ownership and XP finish path. The standalone remains a design sandbox, not a separate production game.
+
+Current verification: 58 pure simulation/movement/regression tests pass; full production build and Wrangler dry run pass; actual-app Plank Flight regression passes after integration. Earlier treadmill and seven graphics-context/vault browser checks also passed. Final world portals, roof pickups, saved unlock and restart browser verification and independent review are recorded in the release handoff. Software-rendered desktop browser timings do not establish physical-phone camera accuracy or FPS.
+
+Historical design revisions below describe the original isolated study; integrated behavior above supersedes older references to production being untouched.
 
 ## Revision 3: same jogging controls, traversable buses, working pickups
 
@@ -33,7 +39,7 @@ The requested Sakana/Sakura/Sacramento reference is Little Boyfriend's **Sakura 
 
 The reference games are Temple Run's jungle-temple atmosphere and Subway Surfers' rail-yard language, viewed in first person. This prototype builds original geometry and layouts rather than using their game assets or logos. It is an art and mechanics study, not a completed recreation of either game.
 
-Apply the same renderer to the **coach game** as well: keep Armie's existing identity, rig, animations and game rules; shade skin in warm cream, costume in muted violet, trim in gold, and silhouette in lavender ink. Use neutral light so facial expressions read on a phone. The lab's Coach view is a small geometric material/lighting study, not the final coach model. At integration, apply the pipeline to the existing maze/chase coach scene; do not re-enable the retired workout coach overlay.
+Apply the same renderer to the **coach game** as well: keep Armie's existing identity, rig, animations and game rules; shade skin in warm cream, costume in muted violet, trim in gold, and silhouette in lavender ink. Use neutral light so facial expressions read on a phone. The abandoned geometric coach study has been removed. Production applies Sakura to the existing Cool Cardio coach scene; the website update applies it to chase, maze, lab, intro and transparent coach overlays.
 
 ## Route and level design
 

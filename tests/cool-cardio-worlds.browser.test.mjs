@@ -31,14 +31,14 @@ test('Sakura Cool Cardio: actual app motion, gated portals, replay save and roof
   const path=new URL(req.url,'http://local').pathname;if(path==='/__test__'){res.writeHead(200,{'Content-Type':'text/html'});res.end('<!doctype html><title>Test</title>');return;}
   if(path.startsWith('/api/')){res.writeHead(path==='/api/auth/config'?200:401,{'Content-Type':'application/json'});res.end(JSON.stringify(path==='/api/auth/config'?{enabled:false}:{error:'Sign in'}));return;}
   try{const file=resolve(root,'.'+(path==='/'?'/pose.html':path));if(!file.startsWith(root+sep))throw Error();const body=await readFile(file);res.writeHead(200,{'Content-Type':TYPES[extname(file)]||'application/octet-stream'});res.end(body);}catch{res.writeHead(404);res.end();}
- });await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+ });await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=process.env.CARDIO_LIVE_URL||'http://127.0.0.1:'+server.address().port;
  await mkdir(SHOTS,{recursive:true});
  let browser;try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
   const context=await browser.newContext({viewport:{width:412,height:915},deviceScaleFactor:2.6,isMobile:true,hasTouch:true,permissions:['camera'],serviceWorkers:'block'});
   const page=await context.newPage();await context.addInitScript(guideSeen);
   await page.route('**/vendor/mediapipe/0.10.14/vision_bundle.mjs',route=>route.fulfill({contentType:'text/javascript',body:FAKE_VISION}));
-  await page.goto(base+'/__test__');
+  await page.goto(base+(process.env.CARDIO_LIVE_URL?'/privacy.html':'/__test__'));
   await page.evaluate(async intake=>{const [{openLocalCoach},{chooseWorkoutPaths}]=await Promise.all([import('/local-coach-runtime.mjs'),import('/chosen-styles.mjs')]);const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();chooseWorkoutPaths(['quads','martial-arts']);},completeCoach());
   await page.goto(base+'/pose.html#pod');
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
@@ -92,8 +92,11 @@ test('Sakura Cool Cardio: actual app motion, gated portals, replay save and roof
   assert.equal(await page.locator('.runner-layer').count(),0);
   await page.locator('#leaveRest').click();await page.waitForFunction(()=>!document.getElementById('homeScreen').hidden);
   await page.goto(base+'/pose.html#pod');await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
-  await page.evaluate(()=>window.myr5Routes.go('pod'));await page.waitForFunction(()=>document.getElementById('portalHome')?.hidden!==false);
+  await page.waitForFunction(()=>!!window.myr5Portal&&!window.myr5Portal.disposed);
+  await page.evaluate(()=>window.myr5Routes.go('workout'));await page.locator('#portalWorkoutHome').waitFor({state:'visible'});
   await key.click();await page.waitForFunction(()=>!!window.myr5Runner?.active,null,{timeout:30000});
+  await page.waitForTimeout(1200);assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'tracking','workout modal handoff keeps the workout active');
+  assert.equal(await page.locator('#portalWorkoutHome[open]').count(),0,'camera entry closes its launching modal so Stop remains tappable');
   assert.equal(await page.evaluate(()=>window.myr5Runner.active.worldRun.unlocked),2);
   assert.equal(await page.locator('select[aria-label="Replay unlocked area"] option:disabled').count(),0);
   await page.selectOption('select[aria-label="Replay unlocked area"]','2');assert.equal(await page.evaluate(()=>window.myr5Runner.active.worldRun.world),2);

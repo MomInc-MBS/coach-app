@@ -26,6 +26,8 @@ export function mountCameraWorkout({video,counter,onStop,onAdjust=()=>{}}){
  return {show({status='',reps=false}){statusLine.textContent=status;statusLine.hidden=!status;adjust.hidden=!reps;},
  setActive(next){if(next===active)return;active=next;
  if(next){
+  // The camera stage lives outside this modal; close it so Stop remains tappable.
+  const workoutHome=document.getElementById('portalWorkoutHome');if(workoutHome?.open){workoutHome.dataset.workoutBegin='true';workoutHome.close();}
   anchors=[video,counter].map(node=>{const marker=document.createComment('camera-workout-return');node.before(marker);return [node,marker];});
   stage.prepend(video);stop.append(counter);stage.hidden=false;stage.inert=false;document.body.dataset.cameraWorkout='true';
   inert=[...document.body.children].filter(node=>node!==stage).map(node=>[node,node.inert]);for(const [node] of inert)node.inert=true;
