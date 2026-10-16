@@ -59,3 +59,26 @@ test('createPower shows at start, includes boxing/cardio, and warm-up stage grow
   }
   assert.equal(run('squat', 'preparation-rest', 0).active, false);
 });
+
+import { auraLevel } from '../arcade/power/aura-growth.mjs';
+test('discrete aura levels: L1 at start, L3 after a set\'s worth of reps, event on change, hysteresis on the way down', () => {
+  const bus = new EventTarget(), prior = globalThis.dispatchEvent;
+  globalThis.dispatchEvent = e => bus.dispatchEvent(e);
+  const seen = [];
+  const on = e => seen.push(e.detail.level);
+  bus.addEventListener('myr5:aura-level', on);
+  const g = createGrowth();
+  g.update({ now: 0, points: pose(), kind: 'reps', units: 0 });
+  assert.equal(g.state.auraLevel, 1);
+  let now = 0, reps = 0;
+  while (g.state.auraLevel < 3 && reps < 30) { reps++; now += 1500; g.update({ now, points: pose(), kind: 'reps', units: reps }); }
+  assert.equal(g.state.auraLevel, 3);
+  assert.ok(reps >= 5 && reps <= 12, 'L3 within a normal set, took ' + reps);
+  assert.deepEqual(seen, [1, 2, 3]);
+  assert.equal(auraLevel(T.LEVELS[2] - 0.05, 3), 3, 'still L3 just under the threshold');
+  assert.equal(auraLevel(T.LEVELS[2] - 0.05, 2), 2, 'but not gained there');
+  g.reset();
+  assert.equal(g.state.auraLevel, 0);
+  assert.equal(seen.at(-1), 0);
+  globalThis.dispatchEvent = prior;
+});

@@ -15,6 +15,10 @@ export const AURA_TUNING = Object.freeze({
   IDLE_GRACE_S: 1.2,    // seconds of no progress before decay starts
   DECAY_PER_SEC: 0.1,   // decay toward START (never to nothing while the exercise is active)
   EASE_PER_SEC: 9,      // drawn level chases the goal at this rate (smooth, but a step is seen within ~0.1 s)
+  // Discrete aura levels (1 = the aura is on, 2, 3 = the 3D coach joins). Thresholds on the growth goal (0..1).
+  // L3 is about 8 good reps (~12 s of steady work) or ~13 s of valid hold from a fresh start: roughly mid-set.
+  LEVELS: [0.26, 0.6, 0.92],
+  LEVEL_HYST: 0.15,     // goal must fall this far below a threshold to lose that level (no flicker on a short pause)
   MAX: 1,
   PULSE_FALL_PER_SEC: 2.5,
   MAX_DT_S: 0.25,
@@ -34,12 +38,23 @@ function torso(points) {
   return L.length ? Math.max(0.05, Math.max(...L)) : 0.25;
 }
 
+/** Discrete level for a growth goal, with hysteresis from the previous level. */
+export function auraLevel(goal, previous = 0, T = AURA_TUNING) {
+  let level = 0;
+  T.LEVELS.forEach((at, i) => { if (goal >= at - 1e-9 || (previous > i && goal >= at - T.LEVEL_HYST)) level = i + 1; });
+  return level;
+}
+function announce(level, previous) {
+  try { if (typeof CustomEvent === 'function' && globalThis.dispatchEvent) globalThis.dispatchEvent(new CustomEvent('myr5:aura-level', { detail: { level, previous } })); } catch { /* cosmetic */ }
+}
+
 export function createGrowth(tuning = AURA_TUNING) {
   const T = { ...AURA_TUNING, ...tuning };
-  const s = { level: 0, goal: 0, pulse: 0, speed: 0, started: false, bumps: 0 };
+  const s = { level: 0, goal: 0, pulse: 0, speed: 0, started: false, bumps: 0, auraLevel: 0 };
+  const setAura = next => { if (next !== s.auraLevel) { const previous = s.auraLevel; s.auraLevel = next; announce(next, previous); } };
   let prev = null, lastNow = null, lastGain = 0, lastBurst = -Infinity, lastUnits = null, burstArmed = true;
 
-  function reset() { Object.assign(s, { level: 0, goal: 0, pulse: 0, speed: 0, started: false, bumps: 0 }); prev = lastNow = lastUnits = null; lastGain = 0; lastBurst = -Infinity; burstArmed = true; return s; }
+  function reset() { Object.assign(s, { level: 0, goal: 0, pulse: 0, speed: 0, started: false, bumps: 0 }); setAura(0); prev = lastNow = lastUnits = null; lastGain = 0; lastBurst = -Infinity; burstArmed = true; return s; }
   function bump(amount, now) { s.goal = Math.min(T.MAX, s.goal + amount); lastGain = now; s.pulse = 1; s.bumps++; }
 
   /** kind: 'hold' | 'reps' | 'move' (pace / steps). units: counted reps. valid: hold is valid. points: normalized landmarks. */
@@ -69,6 +84,7 @@ export function createGrowth(tuning = AURA_TUNING) {
       if (speed >= T.MOVE_MIN && dt) { s.goal = Math.min(T.MAX, s.goal + T.MOVE_PER_SEC * Math.min(1, speed / T.MOVE_CAP) * dt); lastGain = now; }
     }
     if (dt && (now - lastGain) / 1000 > T.IDLE_GRACE_S) s.goal = Math.max(T.START, s.goal - T.DECAY_PER_SEC * dt);
+    setAura(auraLevel(s.goal, s.auraLevel, T));
     return s;
   }
 
