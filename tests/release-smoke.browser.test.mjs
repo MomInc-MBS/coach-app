@@ -118,7 +118,7 @@ test('2. every gesture id reaches its documented destination, and the quilt retu
   // cut with the quilt as the wall round them; R7 (Ian 29 Sept): seen through it they show no Close, and Escape leaves.
   const DIALOG_CASES=[
    ['up','#mealsPanel',null],
-   ['down','.ach-board',null],
+   ['down','#battlePassPanel',null], // R-1017: the one achievements page
    ['vdiamond','#accountPanel',null],
    ['hdiamond','#spotifyPanel',null], // R25: Spotify DJ, in the sideways diamond's cut
    ['line-lr','.meditation-panel','.meditation-panel [data-meditation-close]'],
@@ -307,7 +307,7 @@ const DIALOG_ROUTES=[
  // R7-DOCKREM: no dock key routes to Settings any more (the far-left key opens the customizer instead), so
  // #settings lights nothing, like history/install/meditate/ship/select below.
  ['history','#historyPanel',null],['install','#installPanel',null],['settings','#settings',null],
- ['achievements','.ach-board','achievements'],['meditate','.meditation-panel',null],
+ ['achievements','#battlePassPanel','achievements'],['meditate','.meditation-panel',null],
  ['ship','dialog.ship-view',null],['select','dialog.ship-view',null],
 ];
 test('6. every route opens from its #hash with the bar visible, lit and tappable, and phone back closes it',{timeout:180000},async()=>{

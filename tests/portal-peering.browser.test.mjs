@@ -61,7 +61,7 @@ test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r)
 // scene shows nothing but itself (no title, Close or label; its own objects still take a tap); full screen brings them back.
 const SHAPED=[
  ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#pyramidScanner canvas'],
- ['down','.ach-board','down-achievements','.ach-close','.ach-head h1','.ach-boss'],
+// R-1017: Achievements is one page now (constellation on top of the XP flight, #battlePassPanel), a flat framed menu.
  // Records peers into the 3D classroom; its whiteboard opens the full panel. R25: the sideways diamond opens Spotify DJ in
  // its own cut instead (portal-dj-diamond.browser.test.mjs).
  ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],
@@ -172,7 +172,7 @@ test("R7 (Ian 29 Sept): with its Close hidden, a peered menu still lets you out:
   await page.evaluate(()=>window.run);await page.waitForTimeout(800);
  };
  try{
-  for(const [id,sel,exit] of [['up','#mealsPanel','Escape'],['down','.ach-board','back'],['vdiamond','#accountPanel','portal key'],['oval','dialog.ship-view','Escape'],['up','#mealsPanel','back'],['oval','dialog.ship-view','portal key']]){
+  for(const [id,sel,exit] of [['up','#mealsPanel','Escape'],['down','#battlePassPanel','back'],['vdiamond','#accountPanel','portal key'],['oval','dialog.ship-view','Escape'],['up','#mealsPanel','back'],['oval','dialog.ship-view','portal key']]){
    await open(id,sel);
    if(exit==='Escape')await page.keyboard.press('Escape');
    else if(exit==='back')await page.goBack();
@@ -180,13 +180,12 @@ test("R7 (Ian 29 Sept): with its Close hidden, a peered menu still lets you out:
    await page.waitForFunction(sel=>!document.querySelector(sel).open,sel,{timeout:10000}).catch(e=>{throw new Error(`${id}: ${exit} did not close it`,{cause:e});});
    await quiltHome(page);
   }
-  // A boss's detail card is hidden while peered, so a tap on the boss steps in to show it (a pyramid screen or dial alike).
-  await open('down','.ach-board');
+  // R-1017: a boss on the one achievements page still opens its requirements card.
+  await open('down','#battlePassPanel');
   await page.evaluate(()=>document.querySelector('.ach-board .ach-boss:not([disabled])').click());
-  await page.waitForFunction(()=>document.querySelector('.ach-board.portal-fullscreen')&&!document.querySelector('.ach-detail').hidden,null,{timeout:5000});
-  assert.equal(await shown(page,'.ach-detail'),true,'the card shows, full screen');
+  await page.waitForFunction(()=>!document.querySelector('.ach-detail').hidden,null,{timeout:5000});
   await page.goBack();
-  await page.waitForFunction(()=>!document.querySelector('.ach-board').open,null,{timeout:10000});
+  await page.waitForFunction(()=>!document.querySelector('#battlePassPanel').open,null,{timeout:10000});
   await quiltHome(page);
  }finally{await context.close();}
 });
@@ -220,8 +219,8 @@ test('R21 Cogs frame handover returns through manufactured seams and heals the b
   await page.evaluate(async()=>{await window.myr5Portal.board('cogs');if(document.querySelector('#portalHome').dataset.art!=='3d')throw Error('Mechanical board must render in 3D');const board=window.myr5Portal.current();window.__cogsCuts=[];const cut=board.cut;board.cut=function(points,...args){window.__cogsCuts.push(points);return cut.call(this,points,...args);};window.__cogsExpected=(await import('/modules/portal/portal-shapes.mjs')).SHAPES.down[0].points.map(([u,v])=>{const p=board.patternRect(),f=board.faceRect();return [(p.left+p.width*u-f.left)/f.width,(p.top+p.height*v-f.top)/f.height];});window.run=window.myr5Portal.open('up');});
   await page.evaluate(()=>window.run);
   await page.locator('#coachDock [data-route="achievements"]').click();
-  await page.waitForSelector('.ach-board[open]');
-  await page.locator('.ach-close').focus();await page.keyboard.press('Enter');
+  await page.waitForSelector('#battlePassPanel[open]');
+  await page.locator('#battlePassPanel .pass-close').focus();await page.keyboard.press('Enter');
   await page.waitForFunction(()=>!document.querySelector('#portalHome').hidden&&!document.querySelector('.portal-glass')&&!document.querySelector('#portalChrome').matches(':popover-open'),null,{timeout:20000});
   const result=await page.evaluate(()=>({cuts:window.__cogsCuts,expected:window.__cogsExpected,board:document.querySelector('#portalHome').dataset.board}));
   assert.equal(result.board,'cogs');assert.ok(result.cuts.length>=2,'entry and handover return both cut the actual board');
