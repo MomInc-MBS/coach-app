@@ -2,6 +2,7 @@ import {EXERCISES} from '../exercise-library.mjs';
 import {holdXp,repXp,HOLD_TARGET_SECONDS,HOLD_CAP_SECONDS,HOLD_RECOVERY_SECONDS,WORKOUT_REST_SECONDS,REP_CAP,PREPARATION_REPS,SECOND_PREPARATION_TEMPO_SECONDS,SPRINT_ROUNDS,SPRINT_SECONDS,SPRINT_REST_SECONDS,HOLD_BLOCK_SECONDS,SPRINT_ROUND_XP,GENTLE_BLOCK_XP,clampBonusXp,XP_SCALE} from '../progression-rules.mjs';
 
 export function exerciseDifficulty(mode){
+ if(mode==='plank-flight')return 'easy';
  const exercise=EXERCISES[mode];if(!exercise)return 'easy';
  const rows=Object.values(EXERCISES).filter(row=>row.group===exercise.group&&row.kind===exercise.kind);
  const index=rows.findIndex(row=>row.id===mode);

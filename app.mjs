@@ -217,6 +217,8 @@ const releaseOwner=()=>{pod?.workoutOwner?.stop();};
 let manual=null,manualFrame=0,disposed=false,workoutTransition=Promise.resolve(),cameraStartTransition=Promise.resolve(),cameraAcquisition=null;
 const manualStartGate=new ManualStartGate();
 let session=new MovementSession('squat');
+let plankFlight=null,plankLoading=false;
+function dropPlankFlight(){plankFlight?.stop();plankFlight=null;session.flightAllowed=false;session.flightEligible=false;}
 const state={version:'pod-1',phase:'idle',frames:0,poses:0,inferenceMs:0,rate:0,camera:null,delegate:null,error:null,motion:session.snapshot()};
 window.myr5TestState=state;
 const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>{if(EXERCISES[session.mode]?.endless&&state.phase==='tracking'){void finishEndless();return;}void stop();voice.say('Stopped.',{interrupt:true});},
@@ -286,6 +288,7 @@ function renderMotion(m){
   if(tools){const cameraStage=document.getElementById('cameraWorkout');if(state.phase==='tracking'&&cameraStage&&tools.parentElement!==cameraStage)cameraStage.append(tools);else if(state.phase!=='tracking'&&tools.parentElement===cameraStage)document.getElementById('bar').after(tools);tools.hidden=!['tracking','manual'].includes(state.phase);for(const button of tools.querySelectorAll('button')){const label=button.textContent;button.hidden=label==='Finish working set'?workout?.stage?.startsWith('preparation-'):label==='Break hold'?workout?.kind!=='hold'||workout.paused:label==='Resume hold'||label==='More recovery'?workout?.kind!=='hold'||!workout.paused:false;}const variation=tools.querySelector('[data-hold-variation]');if(variation){variation.hidden=true;variation.querySelector('select').disabled=true;}const recovery=tools.querySelector('[data-hold-recovery]');if(recovery){recovery.hidden=!workout?.paused;recovery.textContent=`Recovery · ${Math.ceil(Math.max(0,(workout?.recoveryUntil-Date.now())/1000))}s. Resume whenever ready.`;}}
 }
 function stop(message='Stopped. Your results stay here until the next start.',{interrupt=true,home=true}={}){
+  dropPlankFlight();
   if(state.phase==='manual'||state.phase==='manual-starting')return pauseManualWhenReady({home});
   const unfinished=interrupt&&['camera','model','tracking','preparation-rest'].includes(state.phase);
   voice.cancel();
@@ -377,9 +380,10 @@ async function loop(run){
       state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;syncMask();
       const p=result.landmarks[0]?.slice(0,27);
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
+      session.flightAllowed=session.mode==='plank-flight'&&plankFlight?.creditAllowed===true;
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
       // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
-      const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,frameMs:frameTime(now),mask:readMask(result),counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0};
+      const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,frameMs:frameTime(now),mask:readMask(result),counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0,flightPose:state.motion.flightPose??null};
       window.dispatchEvent(new CustomEvent('myr5:pose',{detail:poseDetail}));
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);
@@ -412,6 +416,19 @@ $('duration').addEventListener('change',()=>resetMovement());
   if(ACTIVE_PHASES.has(state.phase)||document.hidden)return;window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind:'switch'}}));
   back=back||$('movement').value;coolKey=true;$('movement').value='jogging';$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));Promise.resolve(start()).finally(()=>{if(document.body.dataset.tracking!=='true')void restore();});});
  new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')void restore();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});}
+// Plank Flight uses normal path eligibility; the dedicated key explains a locked core path.
+{let previous=null,entered=false;
+ const restore=async()=>{await workoutTransition;if(!previous||state.phase!=='idle')return;const was=previous;previous=null;entered=false;$('movement').value=was;$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));};
+ $('plankFlight').addEventListener('click',()=>{
+  if(ACTIVE_PHASES.has(state.phase)||document.hidden)return;
+  const access=pathAccess('plank-flight');if(!access.allowed){status(access.reason);voice.say(access.reason,{interrupt:true});return;}
+  if(!$('movement').querySelector('option[value="plank-flight"]')){const option=document.createElement('option');option.value='plank-flight';option.textContent='Plank Flight';$('movement').append(option);}
+  previous=$('movement').value;entered=false;$('movement').value='plank-flight';$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));Promise.resolve(start()).finally(()=>{if(state.phase==='idle')void restore();});
+ });
+ new MutationObserver(()=>{$('plankFlight').disabled=document.body.dataset.tracking==='true';
+  if(document.body.dataset.tracking==='true')entered=true;
+  if(entered&&previous&&state.phase==='idle')void restore();
+ }).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});}
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
 $('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
@@ -472,6 +489,7 @@ mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase=
  if(!MOVEMENTS[row.mode])return;
  // Cool Cardio is open on every path: re-run it through the COOL CARDIO key (sets coolKey, restores the dial after).
  if(EXERCISES[row.mode]?.runner){$('coolCardio').click();return;}
+ if(EXERCISES[row.mode]?.flight){$('plankFlight').click();return;}
  if(!canUseWorkout(row.mode)){status(workoutPathAccess(row.mode).reason);return;}
  $('movement').value=row.mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
  void library.introduce(row.mode);
@@ -529,7 +547,30 @@ async function finishEndless(){try{if(await pod?.finishWorking?.(state.motion,Da
    import('./arcade/runner/runner.mjs').then(async m=>{const gpu=claimGraphics('runner',{keep:['coach']});await gpu.ready;if(runner||document.body.dataset.tracking!=='true'){gpu();return;}try{runner=m.mountRunner({host,Session:MovementSession,ownerId:pod?.flow?.active?.performanceOwner??'guest',sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n),onCaught:()=>{void finishEndless();}});}catch(error){gpu();throw error;}const stop=runner.stop;runner.stop=()=>{stop();gpu();};}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
   runner.pose(event.detail);});
  new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
- window.myr5Runner={get active(){return runner},drop};}
+window.myr5Runner={get active(){return runner},drop};}
+
+// The mode's movement snapshot is shared by flight and hold accounting before consume().
+window.addEventListener('myr5:pose',event=>{
+ if(session.mode!=='plank-flight'||state.phase!=='tracking')return;
+ if(plankFlight){plankFlight.pose(event.detail);return;}
+ const host=document.getElementById('cameraWorkout');if(!host||plankLoading)return;plankLoading=true;
+ const ticket=generation,exercise=session.mode,ownerId=pod?.flow?.active?.performanceOwner??performanceOwner();
+ import('./arcade/plank-flight/flight.mjs').then(async m=>{
+  const gpu=claimGraphics('plank-flight',{keep:['coach']});await gpu.ready;
+  if(ticket!==generation||exercise!==session.mode||state.phase!=='tracking'||performanceOwner()!==ownerId){gpu();return;}
+  try{plankFlight=m.mountPlankFlight({host,ownerId,owner:()=>performanceOwner(),sound:k=>physicalSound.play(k),onExit:()=>{void finishEndless();},onRecalibrate:()=>{session.flightInput?.reset();session.flightLast=null;session.flightEligible=false;session.hold=0;}});}catch(error){gpu();throw error;}
+  const stopFlight=plankFlight.stop;plankFlight.stop=()=>{stopFlight();gpu();};
+  plankFlight.pose(event.detail);
+ }).catch(error=>{status('Plank Flight could not start: '+error.message);console.warn('Plank Flight startup',error);}).finally(()=>{plankLoading=false;});
+});
+document.addEventListener('click',event=>{
+ const button=event.target?.closest?.('.workout-performance-controls button');if(!button||!plankFlight)return;
+ if(button.textContent.trim()==='Break hold')plankFlight.action('pause');
+ if(button.textContent.trim()==='Resume hold')plankFlight.action('resume');
+},true);
+window.addEventListener('myr5:movement-configured',dropPlankFlight);
+window.addEventListener('myr5:account-ready',dropPlankFlight);
+window.myr5PlankFlight={get active(){return plankFlight},drop:dropPlankFlight};
 
 let cinematics={play(){}};
 let optionalLoaded=false;

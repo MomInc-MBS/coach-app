@@ -5,6 +5,8 @@ import {createHeadBob} from './arcade/runner/pose-input.mjs';
 import {evaluateMovement,JOINTS} from './movement-rules.mjs';
 import {PoseClassifier} from './pose-classifier.mjs';
 import POSE_SAMPLES from './pose-samples.mjs';
+import {createPlankInput} from './arcade/plank-flight/pose-input.mjs';
+import {applyFlightEvidence} from './arcade/plank-flight/movement.mjs';
 const LEGACY_MOVEMENTS = {
   squat: { name: 'Squats', kind: 'reps', hint: 'Keep shoulders and hips visible. Start standing tall. Feet can stay outside the picture.' },
   pushup: { name: 'Push-ups', kind: 'reps', hint: 'Place the camera beside you. Start at the top with your arm visible.' },
@@ -68,6 +70,7 @@ export class MovementSession {
     this.mode=mode;this.duration=Number(options.duration)||0;this.count=0;this.elapsed=0;this.hold=0;this.totalHold=0;this.bestHold=0;this.active=0;this.speed=0;this.bestSpeed=0;
     this.started=null;this.last=null;this.complete=false;this.eventTimes=[];this.side=null;this.calibration=[];this.base=null;this.filtered={};this.phase='ready';this.phaseSince=null;this.lastRep=-Infinity;this.dt=0;this.lastMatch=null;
     this.candidate=null;this.missAt=null;this.previousMatch=false;this.hands={};this.kneeArmed={left:false,right:false};this.lastStep=-Infinity;this.bob=null;
+    this.flightInput=mode==='plank-flight'?createPlankInput():null;this.flightPose=null;this.flightLast=null;this.flightEligible=false;this.flightAllowed=false;
     this.message=MOVEMENTS[mode].hint;this.measurement='';this.tracking=false;this.progress=0;this.setupProgress=0;this.setupReason='';this.jointReadings='';
     // A recorded samples file switches this exercise's reps to the k-NN classifier; {samples:null} forces the rules.
     const samples='samples' in options?options.samples:POSE_SAMPLES[mode];
@@ -267,6 +270,7 @@ export class MovementSession {
     this.message=this.phase==='air'?'Body rise detected. Return to your starting height.':'Ready for the next estimated jump.';this.measurement='Estimated from body rise; landing cannot be verified without feet.';this.progress=clamp(lift/.4,0,1);
   }
   update(raw,timestamp,aspect=1,world=null){
+    if(this.flightInput){const pose=this.flightInput.update({points:raw,world,width:aspect,height:1,now:timestamp});applyFlightEvidence(this,pose,timestamp,{allowed:this.flightAllowed});return this.snapshot();}
     const t=timestamp/1000;if(!Number.isFinite(t))return this.snapshot();
     if(this.last!==null&&t<=this.last)return this.snapshot();
     const gap=this.last===null?0:t-this.last;const dt=gap>MAX_FRAME_GAP?0:gap;this.last=t;this.dt=dt;
@@ -293,6 +297,6 @@ export class MovementSession {
     this.eventTimes=this.eventTimes.filter(t=>now-t<=10);
     return {mode:this.mode,name:MOVEMENTS[this.mode].name,kind:MOVEMENTS[this.mode].kind,count:this.count,elapsed:this.elapsed,remaining:this.duration?Math.max(0,this.duration-this.elapsed):null,
       hold:this.hold,totalHold:this.totalHold,bestHold:this.bestHold,active:this.active,speed:this.speed,bestSpeed:this.bestSpeed,cadence:window>=2?this.eventTimes.length*60/window:0,
-      complete:this.complete,tracking:this.tracking,calibrated:!!this.base,setupProgress:this.setupProgress,phase:this.phase,message:this.message,measurement:this.measurement,progress:this.progress,side:this.side,jointReadings:this.jointReadings};
+      complete:this.complete,tracking:this.tracking,calibrated:!!this.base,setupProgress:this.setupProgress,phase:this.phase,message:this.message,measurement:this.measurement,progress:this.progress,side:this.side,jointReadings:this.jointReadings,...(this.flightPose?{flightPose:this.flightPose}: {})};
   }
 }

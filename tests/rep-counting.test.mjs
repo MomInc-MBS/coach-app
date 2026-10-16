@@ -11,7 +11,8 @@ import {REP_CYCLES,ENGINE,LIBRARY,random,syntheticRecording} from './pose-fixtur
 const LEGACY=['squat','pushup','tree','warrior','horse'];
 test('every camera exercise that counts on the rules has a data row',()=>{
  for(const m of Object.values(EXERCISES)){
-  if(LEGACY.includes(m.id)||['boxing','march'].includes(m.detector))continue;
+  // Plank Flight has a calibrated two-axis controller and dedicated credit integration tests.
+  if(LEGACY.includes(m.id)||['boxing','march','plank-flight'].includes(m.detector))continue;
   assert.ok(RULES[m.id]??RULES[m.detector],m.id);
  }
 });
