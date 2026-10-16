@@ -209,7 +209,7 @@ function fillTextures(){$('textureId').replaceChildren();textureGrid.replaceChil
  const locked=idLocked(t.id),button=document.createElement('button'),preview=document.createElement('img'),name=document.createElement('span');button.type='button';button.dataset.texture=t.id;button.setAttribute('aria-label',`${t.displayName}${locked?', locked':''}`);button.setAttribute('aria-pressed',String(materialChoice().textureId===t.id));preview.src=texturePreviewDataURL(t.familyId);preview.alt='';name.textContent=t.displayName;button.append(preview,name);if(locked){const icon=document.createElement('i');icon.className='texture-tile-lock';icon.textContent='🔒';icon.setAttribute('aria-hidden','true');button.append(icon);}button.onclick=()=>{const select=$('textureId') as HTMLSelectElement;select.value=t.id;select.dispatchEvent(new Event('change',{bubbles:true}));};textureGrid.append(button);
 }}
 fillBodies();fillTextures();
-$('panel-textures').prepend(textureGrid);
+$('panel-textures').querySelector('.panel-heading')!.after(textureGrid); // grid sits under the Textures heading
 void loadCoachSpritePreviews(document).then(previews=>{
  spritePreviews=previews;fillBodySprites();
  if(bodyGrid.childElementCount)($('body') as HTMLSelectElement).parentElement!.after(bodyGrid);
