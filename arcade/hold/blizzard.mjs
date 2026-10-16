@@ -73,14 +73,14 @@ function readReducedMotion() {
   try { return !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches; } catch { return false; }
 }
 
-export function createBlizzard({ w = 360, h = 640, seed = 1 } = {}) {
-  const stillness = createEcosystem({ w, h, seed, spawnEntities: false });
+export function createBlizzard({ w = 360, h = 640, seed = 1, stillSeconds = STILL_SECONDS } = {}) {
+  const stillness = createEcosystem({ w, h, seed, spawnEntities: false, stillSeconds });
   const reducedMotion = readReducedMotion();
   const rand = seeded(seed ^ 0xB11A2D);
   const count = reducedMotion ? 16 : 32;
   const snow = Array.from({ length: Math.min(MAX_SNOW, count) }, () => ({ x: 0, y: 0, size: 1 + Math.floor(rand() * 3), alpha: 0 }));
   const paths = snow.map(() => ({ phase: rand() * Math.PI * 2, rx: 0.35 + rand() * 0.75, ry: 0.35 + rand() * 0.8, speed: (2.8 + rand() * 2.8) * (reducedMotion ? 0.28 : 1), direction: rand() < 0.5 ? -1 : 1, alpha: 0.3 + rand() * 0.42 }));
-  const state = { w, h, phase: 'waiting', stillSeconds: 0, iceEdges: [], snow };
+  const state = { w, h, phase: 'waiting', stillSeconds: 0, still: stillSeconds, iceEdges: [], snow };
   let currentPoints = new Map(), currentContacts = [], origin = { x: w / 2, y: h / 2, rx: w * 0.12, ry: h * 0.2 };
   let elapsed = 0, fadeSpeed = reducedMotion ? 0.65 : 1.35;
 
@@ -117,7 +117,7 @@ export function createBlizzard({ w = 360, h = 640, seed = 1 } = {}) {
     if (ready) {
       if (!wasGrowing) { state.iceEdges.length = 0; state.phase = 'growing'; }
       currentContacts = supportContacts(mode, points, w, h);
-      const age = Math.max(0, state.stillSeconds - STILL_SECONDS);
+      const age = Math.max(0, state.stillSeconds - stillSeconds);
       state.iceEdges = graphEdges(currentPoints, currentContacts, age);
       placeSnow(Math.min(1, 0.38 + age * (reducedMotion ? 0.1 : 0.18)));
     } else {
@@ -135,7 +135,7 @@ export function createBlizzard({ w = 360, h = 640, seed = 1 } = {}) {
     state.stillSeconds = stillness.state.stillSeconds;
     if (state.phase === 'growing' && stillness.state.phase !== 'growing') fade();
     if (state.phase === 'growing') {
-      placeSnow(Math.min(1, 0.38 + Math.max(0, state.stillSeconds - STILL_SECONDS) * (reducedMotion ? 0.1 : 0.18)));
+      placeSnow(Math.min(1, 0.38 + Math.max(0, state.stillSeconds - stillSeconds) * (reducedMotion ? 0.1 : 0.18)));
     } else if (state.phase === 'retreating') {
       for (const edge of state.iceEdges) edge.alpha = Math.max(0, edge.alpha - fadeSpeed * Math.min(0.05, raw));
       for (const flake of snow) flake.alpha = Math.max(0, flake.alpha - fadeSpeed * Math.min(0.05, raw));
@@ -214,7 +214,7 @@ function drawIceEdge(ctx, edge) {
 
 function drawContactAccent(ctx, state, edge) {
   if (!freezeImage || edge.growth <= 0) return;
-  const frame = Math.floor(Math.max(0, state.stillSeconds - STILL_SECONDS) * 2) % 10;
+  const frame = Math.floor(Math.max(0, state.stillSeconds - (state.still ?? STILL_SECONDS)) * 2) % 10;
   const sprite = spriteCache.get(frame);
   if (!sprite) return;
   ctx.globalAlpha = Math.min(0.55, edge.growth * 0.5, clamp(edge.alpha, 0, 1) * 0.6);
