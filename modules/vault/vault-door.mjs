@@ -402,7 +402,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   project(u,v,z=0){const p=new THREE.Vector3(u-.5,.5-v,z);face.localToWorld(p);pivot.updateMatrixWorld(true);p.project(camera);const r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   projectWorld(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera),r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
-  dispose(){if(cleaned)return;S.alive=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});window.removeEventListener('myr5:vault-earned',refresh);for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
+  dispose(){if(cleaned)return;S.alive=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
  };
  return api;
  }catch(error){cleanup();try{error.vaultStage=stage;}catch{}throw error;}
