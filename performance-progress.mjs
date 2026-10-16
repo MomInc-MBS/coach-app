@@ -119,7 +119,15 @@ export function recordPerformanceSession(record,options={}){
  }
  return save(recalculate(state),options);
 }
-export const unlockedCoachIds=(options={})=>readPerformanceProgress(options).coaches;
+/** One workout (any, incl. Cool Cardio), one meditation and one food log open every coach, path and movement.
+ * Derived from the stored sessions/days, so it persists and syncs exactly like the rest of progress. */
+export function unlockStatus(state){
+ const days=Object.values(state?.days??{}),workout=Object.keys(state?.sessions??{}).length>0||days.some(d=>d.workout),meditation=days.some(d=>d.meditation),food=days.some(d=>d.food);
+ return {workout,meditation,food,done:workout&&meditation&&food};
+}
+export const everythingUnlocked=(options={})=>unlockStatus(readPerformanceProgress(options)).done;
+/** Owned coaches; the unlock rule opens all of them (XP multipliers still use only earned coaches). */
+export const unlockedCoachIds=(options={})=>{const s=readPerformanceProgress(options);return unlockStatus(s).done?COACHES.map(c=>c.id).filter(id=>!EXCLUDED_COACH_IDS.includes(id)):s.coaches;};
 export const coachAccess=(id,options={})=>unlockedCoachIds(options).includes(id);
 export const goldenCoach=(id,options={})=>readPerformanceProgress(options).goldenCoaches.includes(id);
 export const weaponTierFor=(type,options={})=>readPerformanceProgress(options).weapons[type]??0;
