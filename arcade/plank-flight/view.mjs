@@ -145,6 +145,7 @@ function buildDom(host, onAction) {
         .filter(i => i && (i.equipable !== false || ['vehicle', 'cosmetic'].includes(i.kind)));
       content = `<p class="pf-eyebrow">YOUR FLIGHT SETUP</p><h2>Choose equipment</h2><p>Your choices affect the game route only.</p><div class="pf-list">${itemsOwned.length ? itemsOwned.map(i => listButton(i, 'equip', equipped.has(i.id) ? 'aria-pressed="true"' : '')).join('') : '<p class="pf-empty">Equipment you own will appear here.</p>'}</div><button class="pf-link" type="button" data-act="back">Back</button>`;
     }
+    if(['pause','results'].includes(name))content+='<p class="pf-smallprint" data-progression></p>';
     panel.innerHTML = `<div class="pf-panel-scroll"><button type="button" class="pf-close" data-act="close-panel" aria-label="Close menu">×</button>${content}</div>`;
     panel.hidden = false;
     panel.dataset.view = name;
@@ -250,9 +251,11 @@ function buildDom(host, onAction) {
       const achievementText = achievementNames.length ? achievementNames.join(', ') : '0';
       const daily = profile.dailyComponents ?? {};
       const dailyText = `${Math.max(0, Math.floor(finite(daily.progress)))}/5 · ${Math.max(0, Math.floor(finite(daily.totalDays)))} days · ${Math.max(0, Math.floor(finite(daily.rewards)))} rewards`;
-      const missionStars = objectives.filter(m => m.complete || m.done).length;
-      const rankText = `RANK ${rank} · PRESTIGE ${prestige} · ${rankStars}/3 STARS${upgradesText} · MISSION STARS ${missionStars} · ACHIEVEMENTS ${achievementText} · DAILY COMPONENTS ${dailyText}`;
-      const eventText = run.event ? ` · EVENT TRACK ${Math.max(0, Math.floor(finite(run.eventTokens)))} TOKENS` : '';
+      const missionStars = objectives.filter(m => m.complete || m.done).reduce((total,m)=>total+finite(m.stars,1),0);
+      const rankText = `RANK ${rank} · ${rankStars}/3 STARS${upgradesText}`;
+      const progression=panel.querySelector('[data-progression]');
+      if(progression)progression.textContent=`Rank ${rank} · Prestige ${prestige} · Flight mission stars ${missionStars}. Achievements: ${achievementText}. Component days: ${dailyText}. Original MYR5 reward: 100 device coins every five qualifying days; consecutive days are not required.`;
+      const eventText = run.event ? ` · EVENT TRACK ${Math.floor(finite(run.eventRewardProgress))}/${Math.floor(finite(run.eventRewardTarget,3))}${run.eventRewardClaimed ? ' · CACHE EARNED' : ' · 15 COIN CACHE'}` : '';
       mission.hidden = false;
       mission.textContent = `${rankText}${objective ? ` · GOAL ${objective.label ?? objective.name ?? title(objective.id)}${objective.target != null ? ` ${finite(objective.progress).toFixed(1)}/${objective.target}` : ''}` : ''}${eventText}`;
       if (run.phase === 'crashed' && (panel.hidden || panelName !== 'crashed')) renderPanel('crashed', frame, run);

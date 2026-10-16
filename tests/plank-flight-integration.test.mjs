@@ -109,14 +109,20 @@ async function runtimeHarness(body){
  const replacements={performance:{now:()=>clock},document:{hidden:false},indexedDB,
   requestAnimationFrame:fn=>{frames.set(++id,fn);return id;},cancelAnimationFrame:rid=>frames.delete(rid)};
  for(const key of keys)Object.defineProperty(globalThis,key,{value:replacements[key],configurable:true,writable:true});
- let selected='guest:audit-'+crypto.randomUUID();const original=selected;
- const runtime=mountPlankFlight({host:{},ownerId:original,owner:()=>selected});
+ let selected='guest:audit-'+crypto.randomUUID(),exits=0;const original=selected;
+ const runtime=mountPlankFlight({host:{},ownerId:original,owner:()=>selected,onExit:()=>{exits++;}});
  const step=ms=>{clock+=ms;const callbacks=[...frames.values()];frames.clear();for(const fn of callbacks)fn(clock);};
  const flush=async()=>{await runtime.settled;await new Promise(resolve=>setImmediate(resolve));};
- try{await body({runtime,step,flush,original,switchOwner:()=>{selected='guest:other-'+crypto.randomUUID();},get clock(){return clock;}});}
+ try{await body({runtime,step,flush,original,switchOwner:()=>{selected='guest:other-'+crypto.randomUUID();},get exits(){return exits;},get clock(){return clock;}});}
  finally{runtime.stop();await flush();for(const key of keys){const descriptor=before.get(key);if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}
 }
 const accepted={height01:.5,steer:0,controlValid:true,exerciseEligible:true,calibrated:true,prompt:'ready'};
+
+test('a stale exit save cannot finish another workout or owner session',async()=>{
+ await runtimeHarness(async h=>{h.runtime.action('exit');h.runtime.stop();await h.flush();assert.equal(h.exits,0);});
+ await runtimeHarness(async h=>{h.runtime.action('exit');h.switchOwner();await h.flush();assert.equal(h.exits,0);});
+ await runtimeHarness(async h=>{h.runtime.action('exit');await h.flush();assert.equal(h.exits,1);});
+});
 
 test('runtime freshness, hidden tab and manual pause independently prohibit workout credit',async()=>{
  await runtimeHarness(async({runtime,step})=>{

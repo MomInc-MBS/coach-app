@@ -42,7 +42,7 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
     if(name==='spin'){if(run.phase!=='finalized'){say('End the flight to open your token reward.');return;}const rid=run.runId;pending(w=>w.spin(rid));return;}
     if(name==='retry-save'){pending();return;}
     if(name==='finish'){finish();return;}
-    if(name==='exit'){finish();void saveQueue.then(()=>{if(outbox.size||finalizations.size){say('Coins are waiting to save. Try End workout again to retry.');return;}onExit();});return;}
+    if(name==='exit'){finish();void saveQueue.then(()=>{if(!current())return;if(outbox.size||finalizations.size){say('Coins are waiting to save. Try End workout again to retry.');return;}onExit();});return;}
     if(name==='new-run'||name==='restart'){restart();return;}
     if(name==='recalibrate'){manualPause=false;countdownUntil=0;commandFlight(run,'pause');pose=null;onRecalibrate();return;}
     if(name==='pause'){manualPause=true;countdownUntil=0;commandFlight(run,'pause');return;}
