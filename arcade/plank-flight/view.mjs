@@ -196,6 +196,15 @@ function buildDom(host, onAction) {
       hud.querySelector('[data-bank-coins]').textContent = `${banked}${pending > 0 ? ` · +${pending}` : ''}`;
       const wallet = panel.querySelectorAll('[data-wallet-value]');
       for (const target of wallet) if (target.textContent !== String(banked)) target.textContent = String(banked);
+      if(panelName==='results'){
+        const tokens=Math.max(0,Math.floor(finite(frame.profile?.tokens)));
+        let reward=panel.querySelector('[data-act="spin"]');
+        if(tokens&&!reward){reward=document.createElement('button');reward.type='button';reward.className='pf-primary';reward.dataset.act='spin';reward.addEventListener('click',()=>action('spin'));panel.querySelector('[data-act="menu-shop"]')?.before(reward);}
+        if(reward){reward.hidden=!tokens;reward.textContent=`Open your reward · ${tokens}`;}
+        const totals=panel.querySelectorAll('.pf-result-grid strong');
+        if(totals[2])totals[2].textContent=String(Math.floor(finite(frame.profile?.stars)));
+        if(totals[3])totals[3].textContent=`${Math.floor(finite(frame.profile?.bestDistance))} m`;
+      }
       const promptTarget = panel.querySelector('[data-prompt-text]');
       const promptText = frame.message || pose.prompt || (panelName === 'pause' ? 'Your flight and exercise progress are paused together.' : 'Bring your shoulders, elbows and wrists into view. Keep a comfortable plank and follow the simple prompts.');
       if (promptTarget && promptTarget.textContent !== promptText) promptTarget.textContent = promptText;
