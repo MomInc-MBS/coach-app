@@ -92,8 +92,7 @@ test('Sakura Cool Cardio: actual app motion, gated portals, replay save and roof
   assert.equal(await page.locator('.runner-layer').count(),0);
   await page.locator('#leaveRest').click();await page.waitForFunction(()=>!document.getElementById('homeScreen').hidden);
   await page.goto(base+'/pose.html#pod');await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
-  await page.waitForFunction(()=>!!window.myr5Portal&&!window.myr5Portal.disposed);
-  await page.evaluate(()=>window.myr5Routes.go('workout'));await page.locator('#portalWorkoutHome').waitFor({state:'visible'});
+  await page.evaluate(async()=>{const{ensurePortalMounted}=await import('/modules/portal/portal-entry.mjs');await ensurePortalMounted();window.myr5Routes.go('workout');});await page.locator('#portalWorkoutHome').waitFor({state:'visible'});
   await key.click();await page.waitForFunction(()=>!!window.myr5Runner?.active,null,{timeout:30000});
   await page.waitForTimeout(1200);assert.equal(await page.evaluate(()=>window.myr5TestState.phase),'tracking','workout modal handoff keeps the workout active');
   assert.equal(await page.locator('#portalWorkoutHome[open]').count(),0,'camera entry closes its launching modal so Stop remains tappable');
