@@ -28,10 +28,10 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
   try{const file=resolve(root,'.'+(path==='/pose'?'/pose.html':path));if(!file.startsWith(root+sep))throw Error();const data=await readFile(file);res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.wasm':'application/wasm','.webmanifest':'application/manifest+json'})[extname(file)]??'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end();}
  });await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser,page;
  try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
-  const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],serviceWorkers:'block'});page=await context.newPage();page.on('pageerror',e=>errors.push(e.stack??e.message));await context.addInitScript(guideSeen);
+  const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],serviceWorkers:'block'});await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));page=await context.newPage();page.on('pageerror',e=>errors.push(e.stack??e.message));await context.addInitScript(guideSeen);
   await page.route('**/vendor/mediapipe/0.10.14/vision_bundle.mjs',route=>route.fulfill({contentType:'text/javascript',body:trackerModule}));
   const external=process.env.PLANK_LIVE_URL;
-  const base=external||'http://127.0.0.1:'+server.address().port;await page.goto(base+(external?'/onboarding.html':'/__test__'));
+  const base=external||'http://127.0.0.1:'+server.address().port;await page.goto(base+(external?'/privacy.html':'/__test__'));
   await page.evaluate(async intake=>{const{openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();const{chooseWorkoutPaths}=await import('/chosen-styles.mjs');chooseWorkoutPaths(['yoga','chest']);},completeCoach());
   await page.goto(base+'/pose#pod');await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
   await page.evaluate(async()=>{const{chooseWorkoutPaths}=await import('/chosen-styles.mjs');chooseWorkoutPaths(['yoga','chest'],{reset:true});});
