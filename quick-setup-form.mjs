@@ -12,7 +12,8 @@ export function mountQuickSetup(host,initial,{save,label='Start my coach',change
   input.name=key;input.required=key!=='limits';input.value=key==='limits'?data.answers.armie?.q3||'':data.profile[key]??'';controls[key]=input;label.append(input);form.append(label);
   if(key==='limits'){
     const noLimitsBtn=node('button','No limits');noLimitsBtn.type='button';noLimitsBtn.className='no-limits-btn';
-    noLimitsBtn.addEventListener('click',()=>{input.value='None';paint();});
+    const sync=()=>{const on=/^none\.?$/i.test(input.value.trim());noLimitsBtn.setAttribute('aria-pressed',String(on));noLimitsBtn.textContent=on?'✓ No limits':'No limits';noLimitsBtn.style.outline=on?'2px solid #b8e9cf':'';};
+    noLimitsBtn.addEventListener('click',()=>{input.value=/^none\.?$/i.test(input.value.trim())?'':'None';paint();});input.addEventListener('input',sync);form.addEventListener('input',sync);noLimitsBtn.addEventListener('click',sync);sync();
     label.append(noLimitsBtn);
   }
  }

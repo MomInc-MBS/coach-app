@@ -11,7 +11,7 @@ export function initCinematics({voice}={}){
  const read=(store,key)=>{try{return store.getItem(key);}catch{return null;}};
  const lowMotion=()=>{try{return reduced.matches||JSON.parse(read(localStorage,'myr5-motion-v1')||'{}')?.reduced===true;}catch{return reduced.matches;}};
  let enabled=read(localStorage,'myr5-cinematics-v1')!=='off',active=null,frame=0,lastScreen=body.dataset.screen,disposed=false;
- if(!document.getElementById('coach-cinematics-style')){const sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href=new URL('cinematics.css',import.meta.url).href;document.head.append(sheet);}
+ if(!document.getElementById('coach-cinematics-style')){const sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href='/creature/cinematics.css';document.head.append(sheet);}
  const layer=document.createElement('section');layer.className='coach-film';layer.hidden=true;
  layer.setAttribute('aria-label','Coach cinematic');layer.innerHTML='<div class="film-doors" aria-hidden="true"><div class="film-door film-door-left"><div class="film-door-brand"><img alt=""></div></div><div class="film-door film-door-right"><div class="film-door-brand"><img alt=""></div></div></div><div class="film-top"><span class="film-label"></span><button type="button" class="film-skip">Skip intro →</button></div><div class="film-scan" aria-hidden="true"></div><div class="film-copy"><p class="film-beat"></p><h1 class="film-title"></h1><p class="film-detail"></p><div class="film-progress" aria-hidden="true"><i></i></div></div>';
  for(const side of ['left','right'])layer.querySelector(`.film-door-${side} img`).src=new URL('../pod/mom-inc-mark.png',import.meta.url).href;
