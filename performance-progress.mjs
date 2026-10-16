@@ -51,8 +51,7 @@ export function migratePerformanceAccess(state){
  state.goldenCoaches=state.goldenCoaches.filter(id=>state.coaches.includes(id));
  return state;
 }
-const openEverything=state=>{if(unlockStatus(state).done)state.coaches=COACHES.map(c=>c.id).filter(id=>!EXCLUDED_COACH_IDS.includes(id));return state;};
-export function readPerformanceProgress(options={}){try{const {storage,owner}=scope(options),value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return validState(value)?openEverything(recalculate(migratePerformanceAccess(value))):fresh();}catch{return fresh();}}
+export function readPerformanceProgress(options={}){try{const {storage,owner}=scope(options),value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return validState(value)?recalculate(migratePerformanceAccess(value)):fresh();}catch{return fresh();}}
 /** One-time choice of exactly 2 paths (chosen-styles ids) for the options owner; grants and persists
  * their introductory coaches. The same pair is a no-op, a different pair needs options.reset. A reset
  * swaps the introductions (still exactly two) and never revokes earned coaches. */
@@ -127,7 +126,8 @@ export function unlockStatus(state){
  return {workout,meditation,food,done:workout&&meditation&&food};
 }
 export const everythingUnlocked=(options={})=>unlockStatus(readPerformanceProgress(options)).done;
-export const unlockedCoachIds=(options={})=>readPerformanceProgress(options).coaches;
+/** Owned coaches; the unlock rule opens all of them (XP multipliers still use only earned coaches). */
+export const unlockedCoachIds=(options={})=>{const s=readPerformanceProgress(options);return unlockStatus(s).done?COACHES.map(c=>c.id).filter(id=>!EXCLUDED_COACH_IDS.includes(id)):s.coaches;};
 export const coachAccess=(id,options={})=>unlockedCoachIds(options).includes(id);
 export const goldenCoach=(id,options={})=>readPerformanceProgress(options).goldenCoaches.includes(id);
 export const weaponTierFor=(type,options={})=>readPerformanceProgress(options).weapons[type]??0;

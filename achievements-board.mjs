@@ -1,6 +1,6 @@
 import {COACHES,COACH_REQUIREMENTS,STARTER_COACH_IDS,PATH_INTRO_COACH_IDS,WEAPON_GROUPS,SHIP_REQUIREMENTS,CADENCE_MILESTONES,exerciseDifficulty} from './performance-catalog.mjs';
 import {EXERCISES,FOCUS_GROUPS} from './exercise-library.mjs';
-import {readPerformanceProgress} from './performance-progress.mjs';
+import {readPerformanceProgress,unlockStatus} from './performance-progress.mjs';
 import {DIFFICULTIES} from './progression-rules.mjs';
 import {SHIP_CATALOG} from './modules/ships/ship-catalog.mjs';
 export {selectedTracks} from './battle-pass.mjs';
@@ -24,7 +24,7 @@ export function coachRequirements(id){
  return {starter:false,difficulty:r.difficulty,groups:r.groups,unlock:`${intro}${difficultyName(r.difficulty)} · ${r.groups.map(groupName).join(' / ')}: ${options.join(' OR ')}.`,gold:kinds.includes('hold')?'Complete a 10-minute uninterrupted hold at this difficulty in one of these groups. Breaks and difficulty changes restart the uninterrupted attempt.':'Once unlocked, select this coach and complete a 10-minute uninterrupted hold to earn its golden version.',exercises:exercises.map(e=>e.name)};
 }
 export function bossStates(progress=readPerformanceProgress()){
- return BOSSES.map(b=>({...b,state:progress.coaches?.includes(b.id)?'done':'locked',golden:progress.goldenCoaches?.includes(b.id)===true,requirements:coachRequirements(b.id)}));
+ return BOSSES.map(b=>({...b,state:(progress.coaches?.includes(b.id)||unlockStatus(progress).done)?'done':'locked',golden:progress.goldenCoaches?.includes(b.id)===true,requirements:coachRequirements(b.id)}));
 }
 export function weaponRequirements(group){
  return {group,name:groupName(group),weapons:WEAPON_GROUPS[group]||[],blocks:DIFFICULTIES.map((difficulty,i)=>({difficulty,first:i*5+1,last:i*5+5})),hold:'1 uninterrupted minute: first tier in the difficulty block. 3 minutes: second tier. 5 minutes: coach clear; repeating it adds one tier. 10 minutes: finish the five-tier block and earn gold.',reps:'8 reps: first tier in the difficulty block. 12 reps: second tier. 15 reps: coach clear; repeating it adds one tier. One working set per muscle group per day.'};
