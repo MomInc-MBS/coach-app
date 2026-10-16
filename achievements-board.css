@@ -105,7 +105,28 @@ html[data-public-state] .ach-board .ach-parallax{transition:transform .9s cubic-
 .launch-panel .ach-board .ach-head h1{font-size:20px;line-height:1.2}
 .launch-panel .ach-board .ach-head p{font-size:13px;line-height:1.3}
 /* The section menu is part of the game screen: a compact CRT strip along the bottom of the flight. */
-.pass-crt-rack.pass-hud{position:absolute;z-index:6;left:50%;bottom:8px;transform:translateX(-50%);width:min(380px,calc(100% - 16px));grid-template-columns:40px minmax(0,1fr) 40px;margin:0}
+.pass-crt-rack.pass-hud{position:relative;z-index:6;flex:none;box-sizing:border-box;height:var(--pass-hud-h);width:min(380px,calc(100% - 16px));grid-template-columns:40px minmax(0,1fr) 40px;margin:0 auto;padding:6px 0}
+/* R-1017: the game fills the panel. Three bands in the game frame: a slim top HUD (score, level bar, daily chip), the
+   scrolling flight, the CRT strip. The ship canvas covers only the middle band, so no scene label or node draws under a HUD. */
+#battlePassPanel .pass-map-shell{display:flex;flex-direction:column;--pass-top-h:58px;--pass-hud-h:100px;margin:4px 5px 5px}
+#battlePassPanel .pass-map-viewport{flex:1;min-height:0;height:auto}
+#battlePassPanel .pass-scene{top:var(--pass-top-h);bottom:auto;height:calc(100% - var(--pass-top-h) - var(--pass-hud-h))}
+#battlePassPanel .pass-top-hud{position:relative;z-index:7;flex:none;box-sizing:border-box;height:var(--pass-top-h);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:4px 8px;border-bottom:1px solid #477785;background:#06101c}
+#battlePassPanel .pass-flight-score{grid-row:1;grid-column:1;justify-content:flex-start;gap:12px;padding:0;border:0;background:none;font-size:.66rem}
+#battlePassPanel .pass-summary{grid-row:2;grid-column:1/-1;display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:0;border:0;background:none}
+#battlePassPanel .pass-summary>*{grid-column:auto;grid-row:auto;flex:none}
+#battlePassPanel .pass-summary strong{font-size:.72rem}#battlePassPanel .pass-summary span,#battlePassPanel .pass-summary b{justify-self:start;font-size:.58rem;white-space:nowrap}#battlePassPanel .pass-summary progress{flex:1 1 auto;min-width:30px;width:auto;height:5px}
+#battlePassPanel .pass-daily{grid-row:1;grid-column:2;display:block;margin:0;padding:0;border:0;background:none}
+#battlePassPanel .pass-daily-chip{display:flex;gap:6px;align-items:center;min-height:24px;padding:2px 8px;border:1px solid #548b85;border-left:3px solid #86debb;border-radius:3px;background:#0d2230;color:#adf0c7;font-size:.6rem;letter-spacing:.06em;white-space:nowrap;cursor:pointer;list-style:none}
+#battlePassPanel .pass-daily-chip::-webkit-details-marker{display:none}
+#battlePassPanel .pass-daily-chip::after{content:'\25BE';color:#86debb}
+#battlePassPanel .pass-daily-chip strong{color:#ffe4a0;font-size:.6rem}
+#battlePassPanel .pass-daily[open]{grid-area:auto;position:absolute;top:4px;right:8px;z-index:8;width:min(330px,calc(100% - 16px));box-sizing:border-box;padding:0 0 8px;border:1px solid #548b85;background:#0b1c2af7;box-shadow:0 8px 24px #000c}
+#battlePassPanel .pass-daily[open] .pass-daily-chip{border:0;border-bottom:1px solid #548b85;border-radius:0}
+#battlePassPanel .pass-daily[open] .pass-daily-chip::after{content:'\25B4'}
+#battlePassPanel .pass-daily .pass-quests{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px;padding:8px 8px 4px}
+#battlePassPanel .pass-daily small{display:block;padding:0 8px;font-size:.6rem;color:#b6d9e8}
+#battlePassPanel .pass-daily-chip:focus-visible{outline:3px solid #f8db83;outline-offset:2px}
 .pass-hud .pass-crt-entry{min-height:58px}
 #battlePassPanel:has(.ach-board.zoomed) .pass-hud,#battlePassPanel[data-hyper] .pass-hud .pass-crt-switch{visibility:hidden}
 #battlePassPanel[data-hyper] .pass-crt-entry{box-shadow:0 0 0 2px #b9faff,0 0 22px #60e6ff}

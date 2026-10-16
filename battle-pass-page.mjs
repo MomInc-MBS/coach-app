@@ -35,16 +35,19 @@ export function mountBattlePass(){
  const dialog=node('dialog',null,'launch-panel battle-pass-page');dialog.id='battlePassPanel';dialog.setAttribute('aria-labelledby','battlePassTitle');
  const header=node('header',null,'pass-header'),heading=node('h2','ACHIEVEMENTS / XP FLIGHT');heading.id='battlePassTitle';
  const close=node('button','CLOSE','pass-close');close.type='button';close.onclick=()=>dialog.close();header.append(heading,close);
- const daily=node('section',null,'pass-daily'),summary=node('section',null,'pass-summary');
+ // R-1017: the game fills the panel. Score, level bar and the daily quests (a one-line chip that expands) ride in a slim
+ // band across the top of the game screen; the CRT section menu is a band along its bottom. Nothing in the scene draws under either.
+ const daily=node('details',null,'pass-daily'),summary=node('section',null,'pass-summary'),topHud=node('div',null,'pass-top-hud');
  const shell=node('section',null,'pass-map-shell');shell.setAttribute('aria-label','Continuous cosmetic reward flight map');
  const viewport=node('div',null,'pass-map-viewport');viewport.tabIndex=0;viewport.setAttribute('role','region');viewport.setAttribute('aria-label','The coach constellation at the top, then all 250 levels down to level 1 at the bottom. Scroll to inspect.');
  const route=node('div',null,'pass-route');viewport.append(route);
  const canvas=node('canvas',null,'pass-scene');canvas.setAttribute('aria-hidden','true');
- shell.append(viewport,canvas,previewRack);
+ shell.append(topHud,viewport,canvas,previewRack);
  const flightScore=node('div',null,'pass-flight-score');flightScore.setAttribute('aria-label','Asteroid flight score');
  const hits=node('strong'),score=node('strong'),multiplier=node('strong');
  flightScore.append(hits,score,multiplier);flightScore.title='Each hit earns the current multiplier in flight points, then increases it by one. An asteroid passing the bottom resets the multiplier to ×1.';
- dialog.append(header,flightScore,daily,summary,shell);document.body.append(dialog);
+ topHud.append(flightScore,summary,daily);
+ dialog.append(header,shell);document.body.append(dialog);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const scene=mountLevelMapScene(canvas,{ship:selectedShip(),reducedMotion:reduced.matches,onScore:state=>{
   hits.textContent=`HITS ${format(state.hits)}`;score.textContent=`SCORE ${format(state.score)}`;multiplier.textContent=`×${format(state.multiplier)}`;
@@ -85,7 +88,10 @@ export function mountBattlePass(){
    const item=node('span',`${complete?'✓':'○'} ${label}`);item.dataset.complete=String(complete);quests.append(item);
   }
   const coaches=p.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length;
-  daily.replaceChildren(node('h3','TODAY / DAILY QUESTS'),quests,node('strong',workout&&meditation&&food?`✓ +${DAILY_TRIO_BONUS} XP EARNED`:`ALL THREE +${DAILY_TRIO_BONUS} XP`),node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
+  const done=[workout,meditation,food].filter(Boolean).length,chip=node('summary',null,'pass-daily-chip');
+  chip.append(node('span',`DAILY ${done}/3`),node('strong',done===3?`✓ +${DAILY_TRIO_BONUS} XP EARNED`:`ALL THREE +${DAILY_TRIO_BONUS} XP`));
+  chip.setAttribute('aria-label',`Today's daily quests, ${done} of 3 done. Show details`);
+  daily.replaceChildren(chip,quests,node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
  }
  function renderSummary(){
   const progress=node('progress');progress.max=rank.max?1:rank.need;progress.value=rank.max?1:rank.into;progress.setAttribute('aria-label','Progress to next cosmetic level');
@@ -181,7 +187,7 @@ export function mountBattlePass(){
  const stopPointer=()=>{activePointer=null;flightScroll.stop();scene.stopFiring();};
  shell.addEventListener('pointerdown',e=>{
   if(jump&&!e.target.closest('button'))endJump();
-  if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,[contenteditable]'))return;
+  if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,summary,[contenteditable],.pass-top-hud,.pass-hud'))return;
   e.preventDefault();activePointer=e.pointerId;shell.setPointerCapture(e.pointerId);
   scene.aim(e.clientX,e.clientY);flightScroll.aim(e.clientY);scene.startFiring();
  });
