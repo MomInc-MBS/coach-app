@@ -38,6 +38,7 @@ test('published releases notify each device once, retry failures, and respect di
   assert.equal((await DB.prepare('SELECT count(*) n FROM release_push_deliveries WHERE endpoint=?').bind(endpoints[1]).first()).n,0);
   release={...release,id:'future-build-4'};assert.equal((await runReleasePush(env,now+420000)).sent,1);
   releaseStatus=302;await assert.rejects(()=>runReleasePush(env),/Could not check/);
+  assert.equal((await runReleasePush(env,now+450000,{id:'passed-in-build',title:'Passed in'})).releaseId,'passed-in-build'); // main Worker passes RELEASE: no self-fetch, so the 302 above is not hit
   releaseStatus=200;release={id:'',title:'Invalid'};await assert.rejects(()=>runReleasePush(env),/Invalid published/);
   release={id:'future-build-5',title:'Coach update'};providerStatus=410;
   assert.equal((await runReleasePush(env,now+480000)).failed,1);

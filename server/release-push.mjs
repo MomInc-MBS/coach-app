@@ -2,13 +2,14 @@ import {db} from './db.mjs';
 import {sendPush} from './push.mjs';
 import {epochFencedBatch} from './remote-epochs.mjs';
 const stale=error=>['target_epoch_mismatch','stale_delivery'].includes(error?.code);
-export async function runReleasePush(env,now=Date.now()){
+export async function runReleasePush(env,now=Date.now(),published=null){ // published: the main Worker passes RELEASE (a Worker can't fetch its own custom domain)
  if(!env.RELEASE_ORIGIN||!env.VAPID_PUBLIC_KEY||!env.VAPID_PRIVATE_KEY)return {sent:0,failed:0,configured:false};
  const startedAt=Date.now(),origin=new URL(env.RELEASE_ORIGIN);
  if(origin.protocol!=='https:'||origin.username||origin.password)throw Error('Invalid release origin.');
- const response=await fetch(new URL('/api/releases/current',origin).href,{redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(15000)});
+ let release=published;
+ if(!release){const response=await fetch(new URL('/api/releases/current',origin).href,{redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(15000)});
  if(!response.ok)throw Error('Could not check the published Coach release.');
- const release=await response.json();if(typeof release?.id!=='string'||!/^[-a-zA-Z0-9_.]{1,200}$/.test(release.id)||typeof release.title!=='string'||!release.title.trim())throw Error('Invalid published Coach release.');
+ release=await response.json();}if(typeof release?.id!=='string'||!/^[-a-zA-Z0-9_.]{1,200}$/.test(release.id)||typeof release.title!=='string'||!release.title.trim())throw Error('Invalid published Coach release.');
  const database=db(env),retryBefore=now-120000;
  const rows=(await database.prepare("SELECT s.endpoint,s.user_id,s.data,s.created_at,COALESCE(e.epoch,1) AS data_epoch FROM subscriptions s LEFT JOIN account_data_epochs e ON e.owner_id=s.user_id LEFT JOIN release_push_deliveries d ON d.endpoint=s.endpoint AND d.release_id=? WHERE d.endpoint IS NULL OR (d.status!='sent' AND d.updated_at<?) ORDER BY s.created_at,s.endpoint LIMIT 50").bind(release.id,retryBefore).all()).results;
  let sent=0,failed=0;
