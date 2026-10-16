@@ -8,6 +8,8 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {orientMatrix} from '../portal/portal-board-glb.mjs';
 import {applyTorque,stepTrain,gearsFromLayout,hitGear,nearestPipe,wiggleStep,wiggleKick,valveAngle,lightLevel,heatColor,beadAlpha,stepSpark,KNOBS,pistonExt} from '../portal/portal-board-cogs.mjs';
+import {releaseGraphics,waitForGraphicsRelease} from '../graphics-lifecycle.mjs';
+import {exitHall} from './vault-hall.mjs';
 
 const BOARD='/pod/worlds/boards/cogs/',DOOR_GLB=BOARD+'door.glb',KIT_GLB=BOARD+'parts-kit.glb',LAYOUT=BOARD+'door-layout.json',LOGO='/pod/mom-inc-engrave.png';
 const TAU=Math.PI*2,PURPLE='#7a2fc4',GOLD='#ffd36e',WALL='#171020',CREAM='#f6eddf',ORANGE='#ff9a2b';
@@ -133,10 +135,13 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const cleanup=()=>{
   if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);if(abortListener)signal?.removeEventListener('abort',abortListener);
   if(S)S.alive=false;for(const f of cleanupCallbacks)try{f();}catch{}cleanupCallbacks.clear();
-  if(hallSession){hallSession=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});}
+  if(hallSession){hallSession=false;try{exitHall();}catch{}}
   if(scene)scene.traverse(o=>{try{if(o.geometry&&!sharedGeometry.has(o.geometry))o.geometry.dispose();}catch{}for(const m of [].concat(o.material||[]))try{m?.dispose?.();}catch{}});
   for(const t of ownedTextures)try{t.dispose();}catch{}ownedTextures.clear();
-  if(renderer){try{renderer.dispose();}catch{}try{renderer.forceContextLoss();}catch{}}canvas?.remove();
+  if(renderer){
+   const ownedRenderer=renderer,ownedCanvas=canvas;renderer=null;
+   void releaseGraphics(ownedCanvas,ownedRenderer.getContext?.(),()=>{try{ownedRenderer.dispose();}catch{}try{ownedRenderer.forceContextLoss();}catch{}});
+  }canvas?.remove();
  };
  let rejectAbort;const abortPromise=new Promise((_,reject)=>{rejectAbort=reject;});abortPromise.catch(()=>{});
  abortListener=()=>{const error=new Error('Vault mount canceled');error.name='AbortError';if(!firstFrameSettled){firstFrameSettled=true;rejectFirstFrame(error);}cleanup();rejectAbort(error);};
@@ -144,6 +149,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  try{
  if(signal?.aborted)abortListener();else signal?.addEventListener('abort',abortListener,{once:true});
  if(signal?.aborted)throw new Error('Vault mount canceled');
+ stage='graphics-release';await waitForMount(waitForGraphicsRelease());if(signal?.aborted)throw new Error('Vault mount canceled');
  stage='renderer';renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;

@@ -1,6 +1,7 @@
 // Achievement Vault atomic hall: purple screen -> shrink -> a straight hall of coach statues, one per goal
 // (easy -> hard). Walk/inspect feel ported from play/lilboyfriend (eased route, drag/wheel/keys/held arrows,
 // nearest-exhibit inspect). Lazy: loaded only by the vault door. AGPL-3.0-or-later.
+import {releaseGraphics,waitForGraphicsRelease} from '../graphics-lifecycle.mjs';
 export const GAP=6, ROOT='/creature/models/roster/', TOP=1.55;
 // One statue per goal. Coaches are chosen by unlock level, highest first, working down (only as many as there are
 // goals); the hall then runs low -> high so the last goal ('unlocked-everything') wears the highest-level coach.
@@ -96,6 +97,7 @@ export async function enterHall(arg=document.body){
  const archiveBinding=archiveOpen?bindArchiveDialog({dialog:archiveDialog,openButton:archiveOpen,closeButton:archiveClose}):null;
  const paintArchive=()=>{const rows=readArchive();if(archiveOpen)archiveOpen.hidden=!rows.length;if(!rows.length){archiveBinding?.close();return;}archiveList.innerHTML=rows.map(row=>{const opened=row.packId&&safe(()=>rewardPacks?.openedPack(row.packId),false);const pack=archivePackLabel(row,!!opened);return `<li><strong>${esc(row.title)}</strong><small>${row.date?`Earned ${esc(row.date)}`:'Earned date unavailable'}${row.tier?` · ${esc(row.tier)}`:''}${pack?` · ${pack}`:''}</small></li>`;}).join('');};
  archiveOpen?.addEventListener('click',paintArchive);paintArchive();
+ await waitForGraphicsRelease();
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
  const scene=new THREE.Scene();scene.background=new THREE.Color('#050210');
  const camera=new THREE.PerspectiveCamera(60,1,.1,140);
@@ -207,7 +209,8 @@ export async function enterHall(arg=document.body){
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
  const vis=()=>{if(!document.hidden&&live&&!raf){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
  live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
-  archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());renderer.dispose();renderer.forceContextLoss();el.remove();delete window.myr5Hall;}};
+  archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());
+  void releaseGraphics(canvas,renderer.getContext?.(),()=>{renderer.dispose();renderer.forceContextLoss();});el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
  if(/[?&]debug/.test(location.search)||localStorage.myr5Debug)window.myr5Hall={debug:()=>({route,target,insp,cur,nextI,n:N,resident:statues.filter(s=>s.model).map(s=>s.i),earned:statues.filter(s=>s.earned).map(s=>s.i)}),go:r=>{target=clamp(r,0,limit);},jump:r=>{route=target=clamp(r,0,limit);vel=0;},skip:()=>{started-=4000;},at:x=>{fixT=x;},refresh};
  statues.forEach(s=>setEarn(s,false));stream(0);refresh();
