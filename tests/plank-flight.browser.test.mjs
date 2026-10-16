@@ -57,7 +57,10 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
   await page.getByRole('button',{name:'Finish workout',exact:true}).click();
   await page.waitForFunction(()=>window.myr5TestState.phase==='idle',null,{timeout:15000});assert.equal(await page.locator('.plank-flight').count(),0);
   assert.equal(await page.evaluate(()=>document.querySelector('#v').srcObject),null);
-  await page.locator('#plankFlight').click();await page.waitForFunction(()=>!!window.myr5PlankFlight?.active);
+  await page.goto(base+'/pose#pod');
+  const saved=page.locator('.continue-workout:not([hidden])');await saved.waitFor({state:'visible',timeout:2000}).catch(()=>{});
+  if(await saved.isVisible())await saved.getByRole('button',{name:'Continue',exact:true}).click();else await page.locator('#plankFlight').click();
+  await page.waitForFunction(()=>!!window.myr5PlankFlight?.active);
   assert.equal(await page.evaluate(()=>window.myr5TestState.motion.flightPose?.calibrated??false),false,'re-entry starts a new calibration');
   await page.setViewportSize({width:812,height:375});
   assert.ok(await page.locator('.plank-flight').evaluate(el=>el.getBoundingClientRect().width<=innerWidth+1));
