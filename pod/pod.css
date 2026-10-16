@@ -98,7 +98,7 @@ body:not(:has(#portalHome:not([hidden]))):not([data-screen=rest]) .app-update-ba
 /* FULL WORKOUT switchboard: one brushed-metal plate, bat-handle toggles (same metal as .cb-switch), engraved plates, amber lamps */
 .fw-menu{background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(#5a4b5a,#34293b 40%,#2a2131);border:2px solid #14101a;box-shadow:inset 0 1px #d4bdca77,inset 0 -3px #0007,0 14px 34px #000c;color:#eadde6;padding-top:14px}
 .fw-menu .fw-bar{position:relative;padding:0 16px}.fw-screw{position:absolute;top:50%;width:9px;height:9px;margin-top:-4px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#dccbd4,#6e5f6c 60%,#382d3a);box-shadow:0 1px 2px #000a;pointer-events:none}.fw-screw:before{content:'';position:absolute;left:1px;right:1px;top:4px;height:1px;background:#2a2030;transform:rotate(35deg)}.fw-screw.l{left:0}.fw-screw.r{right:0}
-.fw-menu button:not(.fw-start){min-height:44px;border:1px solid #0d0a10;border-radius:7px;background:linear-gradient(#524352,#30273a);box-shadow:inset 0 1px #d4bdca66,inset 0 -2px #0006,0 3px 0 #140f19;color:#d9c9d3;letter-spacing:.12em;text-transform:uppercase;font-size:11px;transition:transform .07s}.fw-menu button:not(.fw-start):active{transform:translateY(2px);box-shadow:inset 0 1px #d4bdca44,0 1px 0 #140f19}
+.fw-menu button:not(.fw-start):not(.fw-plug):not(.fw-hub){min-height:44px;border:1px solid #0d0a10;border-radius:7px;background:linear-gradient(#524352,#30273a);box-shadow:inset 0 1px #d4bdca66,inset 0 -2px #0006,0 3px 0 #140f19;color:#d9c9d3;letter-spacing:.12em;text-transform:uppercase;font-size:11px;transition:transform .07s}.fw-menu button:not(.fw-start):not(.fw-plug):not(.fw-hub):active{transform:translateY(2px);box-shadow:inset 0 1px #d4bdca44,0 1px 0 #140f19}
 .fw-menu .fw-count{text-align:center;font:700 11px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 .fw-style{border:1px solid #14101a;background:linear-gradient(#3b2f41,#2b2232);box-shadow:inset 0 1px #d4bdca33,0 2px 0 #140f19}.fw-style>summary{min-height:48px}
 .fw-plate{padding:4px 10px;border:1px solid #0d0a10;border-radius:4px;background:linear-gradient(#b9a9b3,#7d6e7a);color:#2a2030;text-shadow:0 1px #ffffff55;font:800 12px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;box-shadow:inset 0 1px #fff8}
@@ -112,3 +112,28 @@ body:not(:has(#portalHome:not([hidden]))):not([data-screen=rest]) .app-update-ba
 .fw-locked .fw-tog{filter:brightness(.55) saturate(.5)}.fw-guard{position:absolute;inset:-1px;z-index:2;display:grid;place-items:center;border:1px solid #0d0a10;border-radius:7px;background:repeating-linear-gradient(45deg,#8a7a28 0 5px,#2a2412 5px 10px);color:#ffe9a0;font:800 8px/1 ui-monospace,monospace;letter-spacing:.1em;text-shadow:0 1px #000}
 .fw-locked small{color:#c9b0bd}.fw-menu .fw-style-bar{gap:6px}.fw-menu .fw-style-bar button{flex:1}
 @media (prefers-reduced-motion:reduce){.fw-tog:before,.fw-menu button{transition:none}}
+/* FULL WORKOUT power bus + cables + level ladder */
+.fw-body{position:relative}.fw-wires{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
+.fw-w-sh{fill:none;stroke:#0b0810;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}.fw-w{fill:none;stroke:#8a7b88;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.fw-w.on{stroke:#ffb42e;filter:drop-shadow(0 0 3px #ffb42e)}
+.fw-power{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 22px;border:2px solid #14101a;border-radius:10px;background:repeating-linear-gradient(90deg,#ffffff0d 0 1px,#0000 1px 4px),linear-gradient(#6a5a6a,#3a2e42);box-shadow:inset 0 1px #e6d3de88,inset 0 -3px #0008,0 4px 0 #140f19}
+.fw-power .fw-screw.l{left:7px}.fw-power .fw-screw.r{right:7px}.fw-power .fw-screw{top:50%}
+.fw-hub{flex:none;width:64px;height:64px;margin:0 auto;border-radius:50%!important;border:3px solid #14101a!important;background:radial-gradient(circle at 38% 30%,#e8dbe3,#8c7b88 45%,#3a2e3c)!important;box-shadow:inset 0 2px #fffa,inset 0 -4px #0008,0 4px 0 #140f19!important;color:#2a2030!important;font:700 30px/1 system-ui!important;letter-spacing:0!important;display:grid;place-items:center}
+.fw-hub[data-lit=true]{color:#ffb42e!important;text-shadow:0 0 10px #ffb42e;background:radial-gradient(circle at 38% 30%,#4a3a2a,#2a1d17 60%,#150f0b)!important;box-shadow:inset 0 2px #ffd36e55,0 0 18px #ffb42e99,0 4px 0 #140f19!important}
+.fw-bay{height:210px}
+.fw-pick{flex:1;min-width:0;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font:700 11px ui-monospace,monospace;letter-spacing:.06em;color:var(--gold);text-transform:uppercase}
+.fw-socket{flex:none;position:relative;width:30px;height:30px;margin-right:2px;border-radius:50%;border:2px solid #0d0a10;background:radial-gradient(circle,#050308 35%,#4a3d4c 40%,#2c2330);box-shadow:inset 0 2px 4px #000,0 1px #ffffff22}
+.fw-style[data-power=on] .fw-socket{box-shadow:inset 0 2px 4px #000,0 0 10px #ffb42e}.fw-spark:after{content:'';position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,#fff8c8,#ffb42e66 40%,#0000 70%);animation:fwspark .5s ease-out both}
+@keyframes fwspark{from{transform:scale(.2);opacity:1}to{transform:scale(1.5);opacity:0}}
+.fw-style>summary{padding-right:8px}.fw-hint{margin:2px 0 8px;padding:6px 8px;border-radius:6px;background:#0005;color:#e8cf86;font-size:12px}
+.fw-plug{position:absolute;left:0;top:0;z-index:5;width:44px;height:44px;padding:0;border:0;background:none;touch-action:none;cursor:grab;will-change:transform}
+.fw-plug i{position:absolute;left:12px;top:2px;width:20px;height:40px;border-radius:5px 5px 9px 9px;border:1px solid #0d0a10;background:linear-gradient(90deg,#6b5d69,#f4ebf0 45%,#857583);box-shadow:0 3px 5px #000a}
+.fw-plug i:before{content:'';position:absolute;left:3px;right:3px;bottom:-9px;height:10px;background:linear-gradient(90deg,#9a8a96,#fff 50%,#9a8a96);border-radius:0 0 3px 3px;box-shadow:inset 0 -3px #0005}
+.fw-plug:focus-visible{outline:3px solid var(--gold);outline-offset:-2px;border-radius:10px}.fw-plug[aria-pressed=true] i{background:linear-gradient(90deg,#8a6a2a,#ffe9a0 45%,#a8802f)}
+.fw-capped i{background:repeating-linear-gradient(45deg,#8a7a28 0 5px,#2a2412 5px 10px)!important;filter:grayscale(.4)}.fw-capped i:after{content:'LOCK';position:absolute;inset:12px -6px auto;text-align:center;font:800 8px/1 ui-monospace,monospace;color:#ffe9a0;background:#000a;border-radius:3px;padding:2px 0}
+.fw-row.fw-dead{opacity:.55}.fw-row.fw-dead .fw-tog{filter:brightness(.6)}
+.fw-lv{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:4px;border-radius:50%;background:#0006;color:var(--gold);font:700 11px ui-monospace,monospace}
+.fw-tog:before,.fw-lamp{transition-delay:calc(var(--d,0)*55ms)}.fw-lamp{transition:background .15s,box-shadow .15s}
+.fw-style:not([data-power=on]) .fw-row:has(input:checked) .fw-lamp{background:radial-gradient(circle at 35% 30%,#6d5a50,#2a1d17);box-shadow:inset 0 1px #fff3}
+.fw-style.fw-pulse[data-power=on] .fw-row:has(input:checked) .fw-lamp{animation:fwlamp .45s both;animation-delay:calc(var(--r)*80ms)}
+@keyframes fwlamp{from{background:#2a1d17;box-shadow:none;transform:scale(.6)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.fw-style.fw-pulse .fw-lamp{animation:none!important}.fw-spark:after{animation:none;opacity:.6}.fw-tog:before,.fw-lamp{transition:none;transition-delay:0s}}

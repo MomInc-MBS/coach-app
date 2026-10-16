@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildFullWorkout,circuitExercises,FULL_WORKOUT} from '../full-workout.mjs';
+import {buildFullWorkout,circuitExercises,FULL_WORKOUT,styleLadder,maxLevel,tapLevel,sectionPicks} from '../full-workout.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 
 const all=circuitExercises().map(e=>e.id);
@@ -36,4 +36,21 @@ test('shuffle is deterministic per seed and differs across seeds',()=>{
 test('empty and single selections are valid',()=>{
  assert.deepEqual(buildFullWorkout([],{seed:1}),[]);
  assert.equal(buildFullWorkout(['squat'],{seed:1}).length,1);
+});
+
+test('level ladder: tapping N engages 1..N, tapping a lower engaged switch drops to it, dead rungs ignore taps',()=>{
+ assert.equal(tapLevel(0,3),3);assert.equal(tapLevel(3,7),7);assert.equal(tapLevel(7,2),1,'flipping engaged switch 2 down leaves only 1');
+ assert.equal(tapLevel(1,1),0);assert.equal(tapLevel(2,6,3),2,'rung above the unlock cap is dead');
+});
+
+test('one exercise per powered section at its top engaged level',()=>{
+ const all=()=>true,legs=styleLadder('legs');
+ assert.deepEqual(sectionPicks({powered:new Set(['legs','chest']),levels:{legs:3,chest:0},canUse:all}),[legs[2].id],'chest is plugged but has no switch on');
+ assert.deepEqual(sectionPicks({powered:new Set(),levels:{legs:3},canUse:all}),[],'unplugged contributes nothing');
+ assert.deepEqual(sectionPicks({powered:new Set(['legs']),levels:{legs:99},canUse:all}),[legs.at(-1).id],'level clamps to the ladder');
+ const cap=id=>legs.slice(0,2).some(e=>e.id===id);
+ assert.equal(maxLevel('legs',cap),2);
+ assert.deepEqual(sectionPicks({powered:new Set(['legs']),levels:{legs:6},canUse:cap}),[legs[1].id],'locked rungs stay dead');
+ const picks=sectionPicks({powered:new Set(['legs','boxing','yoga']),levels:{legs:2,boxing:1,yoga:4},canUse:all});
+ assert.equal(picks.length,3);assert.equal(buildFullWorkout(picks,{seed:3}).filter(s=>s.type==='exercise').length,3);
 });

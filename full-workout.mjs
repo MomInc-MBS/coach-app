@@ -37,3 +37,18 @@ export function buildFullWorkout(ids,{seed=Date.now(),knobs=FULL_WORKOUT}={}){
  });
  return steps;
 }
+
+// ---- power + level ladder ----
+// A style (focus group) is powered by its plug. Inside a powered style the exercises are a level ladder, easiest first
+// (library order). Level L means switches 1..L are engaged; the circuit uses the exercise at switch L, one per style.
+export const styleLadder=style=>circuitExercises().filter(e=>e.group===style);
+/** Highest level reachable: the leading run of unlocked exercises (a locked rung kills every rung above it). */
+export function maxLevel(style,canUse){const l=styleLadder(style);let n=0;while(n<l.length&&canUse(l[n].id))n++;return n;}
+/** Tap switch k (1-based): an off switch engages 1..k; an engaged switch drops the ladder to k-1. Dead switches (above max) do nothing. */
+export function tapLevel(level,k,max=Infinity){if(k>max||k<1)return level;return k<=level?k-1:k;}
+/** One exercise per powered style at its engaged level; unpowered or level-0 styles contribute none. */
+export function sectionPicks({powered,levels,canUse}){
+ const out=[];
+ for(const style of powered){const l=styleLadder(style),lv=Math.min(levels[style]??0,maxLevel(style,canUse));if(lv>=1)out.push(l[lv-1].id);}
+ return out;
+}
