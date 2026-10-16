@@ -3,6 +3,6 @@
 .coach-reminder-plan .coach-tone{margin:0 0 12px;font-size:.85rem;opacity:.85}.account-settings{background:#081611;border:1px solid #5f9371;padding:12px;color:#ccffd9;font-family:ui-monospace,monospace}@media(max-width:380px){.coach-mission{padding:12px}.mission-streak strong{font-size:3rem}.mission-readouts{font-size:.8rem}.guide-track{grid-template-columns:1fr}.guide-track>strong{grid-column:auto}}@media(prefers-reduced-motion:reduce){.coach-mission *{animation:none!important;transition:none!important}}
 
 /* R-1016: the portal's tilt chip sits on the dock edge and covered panel text (Reminders); hide it while a panel dialog is open. */
-body:has(dialog.launch-panel[open]) .portal-tilt-chip{display:none}
+body:has(dialog.launch-panel[open]) .portal-tilt-chip{display:none!important}
 .mission-guest{margin:8px 0 0;padding:8px 10px;background:#160f25;border-left:3px solid #ba9bff;font-size:.9rem}
 .how-to-play .guide-start{position:sticky;bottom:0;padding:10px 14px;background:#07140d;border-top:1px solid #405b48}.how-to-play .guide-start button{width:100%;min-height:52px;font-weight:700;font-size:1.05rem}
