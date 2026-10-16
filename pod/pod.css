@@ -83,3 +83,74 @@ body:not([data-cinematic=pre]) #view .coach-mount,body[data-cinematic=pre] #view
 /* The one-time "Updated" notice sits above the bar, which on the pod is exactly where BEGIN is: off the quilt it sits
    over the viewing port instead, clear of BEGIN below and of the downloads bar (.full-download-bar) at the top. */
 body:not(:has(#portalHome:not([hidden]))):not([data-screen=rest]) .app-update-banner{top:calc(128px + env(safe-area-inset-top));bottom:auto}
+/* FULL WORKOUT circuit dropdown + runner overlay */
+#podFullWorkout{position:static}.fw-menu .fw-bar,.fw-menu .fw-style-bar{display:flex;gap:8px;margin:0 0 8px}.fw-menu button{min-height:34px;padding:0 12px;border:1px solid #6a537b;border-radius:8px;background:#3b2b49;color:var(--cream);font:700 12px/1 var(--font)}
+.fw-menu .fw-bar button{flex:1}.fw-menu .fw-count{margin:0 0 8px;font-size:12px;color:var(--gold)}
+.fw-style{margin:4px 0;border:1px solid #4a3858;border-radius:10px;padding:0 10px}.fw-style>summary{min-height:38px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-weight:700;list-style:none}.fw-style>summary::-webkit-details-marker{display:none}.fw-style>summary span{font-size:11px;color:var(--gold)}
+.fw-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:36px}.fw-row input{width:20px;height:20px;accent-color:var(--gold)}.fw-row small{flex-basis:100%;margin:-4px 0 6px 28px;font-size:11px;color:#bca6c9}.fw-locked{opacity:.5}
+.fw-menu .fw-start{width:100%;min-height:48px;margin-top:10px;background:linear-gradient(#e0b04a,#a87a1f);color:#1b1022;border-color:#f5d27a;font-size:14px;letter-spacing:.08em}.fw-menu .fw-start:disabled{opacity:.4}
+#fullWorkoutHud{position:fixed;z-index:2147483000;left:0;right:0;top:0;font:14px/1.4 var(--font);color:var(--cream)}
+#fullWorkoutHud[data-mode=exercise]{pointer-events:none}#fullWorkoutHud .fw-top{pointer-events:auto;display:flex;align-items:center;gap:10px;margin:6px;padding:6px 10px;border:1px solid #a387b5;border-radius:10px;background:#1d1426e6}.fw-top span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fw-top button{min-height:32px;padding:0 12px;border-radius:8px;border:1px solid #6a537b;background:#3b2b49;color:var(--cream)}
+#fullWorkoutHud[data-mode=break],#fullWorkoutHud[data-mode=summary]{bottom:0;display:grid;place-items:center;background:#0b0712f2}
+.fw-panel{width:min(92vw,420px);max-height:92dvh;overflow:auto;text-align:center}.fw-panel h2{margin:0 0 6px}.fw-panel button{min-height:44px;margin:6px 4px;padding:0 18px;border:1px solid #a387b5;border-radius:10px;background:#3b2b49;color:var(--cream);font-weight:700}
+.fw-eyebrow{margin:0;color:var(--gold);letter-spacing:.2em;font:700 12px ui-monospace,monospace}.fw-clock{font:700 72px/1.1 ui-monospace,monospace;color:var(--gold)}.fw-big{font-size:22px;font-weight:700;margin:2px 0}.fw-sub{margin:0 0 10px;color:#bca6c9}
+.fw-panel ol{text-align:left;padding-left:24px}.fw-panel li span{float:right;color:var(--gold)}
+/* FULL WORKOUT switchboard: one brushed-metal plate, bat-handle toggles (same metal as .cb-switch), engraved plates, amber lamps */
+.fw-menu{background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(#5a4b5a,#34293b 40%,#2a2131);border:2px solid #14101a;box-shadow:inset 0 1px #d4bdca77,inset 0 -3px #0007,0 14px 34px #000c;color:#eadde6;padding-top:14px}
+.fw-menu .fw-bar{position:relative;padding:0 16px}.fw-screw{position:absolute;top:50%;width:9px;height:9px;margin-top:-4px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#dccbd4,#6e5f6c 60%,#382d3a);box-shadow:0 1px 2px #000a;pointer-events:none}.fw-screw:before{content:'';position:absolute;left:1px;right:1px;top:4px;height:1px;background:#2a2030;transform:rotate(35deg)}.fw-screw.l{left:0}.fw-screw.r{right:0}
+.fw-menu button:not(.fw-start):not(.fw-plug):not(.fw-hub){min-height:44px;border:1px solid #0d0a10;border-radius:7px;background:linear-gradient(#524352,#30273a);box-shadow:inset 0 1px #d4bdca66,inset 0 -2px #0006,0 3px 0 #140f19;color:#d9c9d3;letter-spacing:.12em;text-transform:uppercase;font-size:11px;transition:transform .07s}.fw-menu button:not(.fw-start):not(.fw-plug):not(.fw-hub):active{transform:translateY(2px);box-shadow:inset 0 1px #d4bdca44,0 1px 0 #140f19}
+.fw-menu .fw-count{text-align:center;font:700 11px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.fw-style{border:1px solid #14101a;background:linear-gradient(#3b2f41,#2b2232);box-shadow:inset 0 1px #d4bdca33,0 2px 0 #140f19}.fw-style>summary{min-height:48px}
+.fw-plate{padding:4px 10px;border:1px solid #0d0a10;border-radius:4px;background:linear-gradient(#b9a9b3,#7d6e7a);color:#2a2030;text-shadow:0 1px #ffffff55;font:800 12px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;box-shadow:inset 0 1px #fff8}
+.fw-row{position:relative;min-height:48px;padding:0 4px;border-top:1px solid #ffffff10;gap:10px;cursor:pointer}.fw-row input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}.fw-row input:disabled{cursor:not-allowed}
+.fw-name{flex:1;min-width:0}
+.fw-lamp{flex:none;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6d5a50,#2a1d17);border:1px solid #0d0a10;box-shadow:inset 0 1px #fff3}.fw-row:has(input:checked) .fw-lamp{background:radial-gradient(circle at 35% 30%,#fff2b8,#ffb42e 55%,#a85a00);box-shadow:0 0 8px #ffb42ecc,inset 0 1px #fff8}
+.fw-tog{position:relative;flex:none;order:3;width:44px;height:48px;border:1px solid #0d0a10;border-radius:7px;background:linear-gradient(#524352,#30273a);box-shadow:inset 0 1px #d4bdca66,inset 0 -2px #0006,0 3px 0 #140f19}
+.fw-tog:before{content:'';position:absolute;left:calc(50% - 4px);top:calc(50% - 21px);width:8px;height:21px;border-radius:4px 4px 2px 2px;background:linear-gradient(90deg,#6b5d69,#f4ebf0 45%,#857583);box-shadow:2px 2px 3px #0009;transform-origin:50% 100%;transform:translateY(0) scaleY(-1);transition:transform .14s cubic-bezier(.3,1.5,.5,1)}
+.fw-tog:after{content:'';position:absolute;left:calc(50% - 7px);top:calc(50% - 7px);width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#dccbd4,#6e5f6c 60%,#382d3a);box-shadow:0 2px 3px #000a}
+.fw-row input:checked~.fw-tog:before{transform:scaleY(1)}.fw-row input:focus-visible~.fw-tog{outline:3px solid var(--gold);outline-offset:2px}
+.fw-locked .fw-tog{filter:brightness(.55) saturate(.5)}.fw-guard{position:absolute;inset:-1px;z-index:2;display:grid;place-items:center;border:1px solid #0d0a10;border-radius:7px;background:repeating-linear-gradient(45deg,#8a7a28 0 5px,#2a2412 5px 10px);color:#ffe9a0;font:800 8px/1 ui-monospace,monospace;letter-spacing:.1em;text-shadow:0 1px #000}
+.fw-locked small{color:#c9b0bd}.fw-menu .fw-style-bar{gap:6px}.fw-menu .fw-style-bar button{flex:1}
+@media (prefers-reduced-motion:reduce){.fw-tog:before,.fw-menu button{transition:none}}
+/* FULL WORKOUT power bus + cables + level ladder */
+.fw-body{position:relative}.fw-wires{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
+.fw-power{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 22px;border:2px solid #14101a;border-radius:10px;background:repeating-linear-gradient(90deg,#ffffff0d 0 1px,#0000 1px 4px),linear-gradient(#6a5a6a,#3a2e42);box-shadow:inset 0 1px #e6d3de88,inset 0 -3px #0008,0 4px 0 #140f19}
+.fw-power .fw-screw.l{left:7px}.fw-power .fw-screw.r{right:7px}.fw-power .fw-screw{top:50%}
+.fw-hub{flex:none;width:64px;height:64px;margin:0 auto;border-radius:50%!important;border:3px solid #14101a!important;background:radial-gradient(circle at 38% 30%,#e8dbe3,#8c7b88 45%,#3a2e3c)!important;box-shadow:inset 0 2px #fffa,inset 0 -4px #0008,0 4px 0 #140f19!important;color:#2a2030!important;font:700 30px/1 system-ui!important;letter-spacing:0!important;display:grid;place-items:center}
+.fw-hub[data-lit=true]{color:#ffb42e!important;text-shadow:0 0 10px #ffb42e;background:radial-gradient(circle at 38% 30%,#4a3a2a,#2a1d17 60%,#150f0b)!important;box-shadow:inset 0 2px #ffd36e55,0 0 18px #ffb42e99,0 4px 0 #140f19!important}
+.fw-bay{height:210px}
+.fw-pick{flex:1;min-width:0;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font:700 11px ui-monospace,monospace;letter-spacing:.06em;color:var(--gold);text-transform:uppercase}
+.fw-socket{flex:none;position:relative;width:30px;height:30px;margin-right:2px;border-radius:50%;border:2px solid #0d0a10;background:radial-gradient(circle,#050308 35%,#4a3d4c 40%,#2c2330);box-shadow:inset 0 2px 4px #000,0 1px #ffffff22}
+.fw-style[data-power=on] .fw-socket{box-shadow:inset 0 2px 4px #000,0 0 10px #ffb42e}.fw-spark:after{content:'';position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,#fff8c8,#ffb42e66 40%,#0000 70%);animation:fwspark .5s ease-out both}
+@keyframes fwspark{from{transform:scale(.2);opacity:1}to{transform:scale(1.5);opacity:0}}
+.fw-style>summary{padding-right:8px}.fw-hint{margin:2px 0 8px;padding:6px 8px;border-radius:6px;background:#0005;color:#e8cf86;font-size:12px}
+.fw-plug{position:absolute;left:0;top:0;z-index:5;width:44px;height:44px;padding:0;border:0;background:none;touch-action:none;cursor:grab;will-change:transform}
+.fw-plug i{position:absolute;left:12px;top:2px;width:20px;height:40px;border-radius:5px 5px 9px 9px;border:1px solid #0d0a10;background:linear-gradient(90deg,#6b5d69,#f4ebf0 45%,#857583);box-shadow:0 3px 5px #000a}
+.fw-plug i:before{content:'';position:absolute;left:3px;right:3px;bottom:-9px;height:10px;background:linear-gradient(90deg,#9a8a96,#fff 50%,#9a8a96);border-radius:0 0 3px 3px;box-shadow:inset 0 -3px #0005}
+.fw-plug:focus-visible{outline:3px solid var(--gold);outline-offset:-2px;border-radius:10px}.fw-plug[aria-pressed=true] i{background:linear-gradient(90deg,#8a6a2a,#ffe9a0 45%,#a8802f)}
+.fw-capped i{background:repeating-linear-gradient(45deg,#8a7a28 0 5px,#2a2412 5px 10px)!important;filter:grayscale(.4)}.fw-capped i:after{content:'LOCK';position:absolute;inset:12px -6px auto;text-align:center;font:800 8px/1 ui-monospace,monospace;color:#ffe9a0;background:#000a;border-radius:3px;padding:2px 0}
+.fw-row.fw-dead{opacity:.55}.fw-row.fw-dead .fw-tog{filter:brightness(.6)}
+.fw-lv{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:4px;border-radius:50%;background:#0006;color:var(--gold);font:700 11px ui-monospace,monospace}
+.fw-tog:before,.fw-lamp{transition-delay:calc(var(--d,0)*55ms)}.fw-lamp{transition:background .15s,box-shadow .15s}
+.fw-style:not([data-power=on]) .fw-row:has(input:checked) .fw-lamp{background:radial-gradient(circle at 35% 30%,#6d5a50,#2a1d17);box-shadow:inset 0 1px #fff3}
+.fw-style.fw-pulse[data-power=on] .fw-row:has(input:checked) .fw-lamp{animation:fwlamp .45s both;animation-delay:calc(var(--r)*80ms)}
+@keyframes fwlamp{from{background:#2a1d17;box-shadow:none;transform:scale(.6)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.fw-style.fw-pulse .fw-lamp{animation:none!important}.fw-spark:after{animation:none;opacity:.6}.fw-tog:before,.fw-lamp{transition:none;transition-delay:0s}}
+
+/* cord channel: a 64px gutter on the right carries every cable; sockets and the hub sit in it, labels never get crossed */
+.fw-body{padding-right:64px}
+.fw-power{position:sticky;top:-2px;z-index:6;margin-right:-64px;padding:8px 4px 8px 14px;min-height:72px}
+.fw-pw-l{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}.fw-pw-l .fw-count{margin:0;text-align:left;font-size:10px}
+.fw-hub{width:56px;height:56px;margin:0!important;font-size:26px!important}
+.fw-power .fw-screw.r{display:none}
+.fw-bay{height:200px;margin-right:-64px}
+.fw-style>summary{position:relative}.fw-socket{position:absolute;right:-48px;top:50%;margin:-15px 0 0}
+.fw-cord path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.fw-c-sh{stroke:#000;stroke-opacity:.45;stroke-width:11;transform:translate(2px,3px)}
+.fw-c-jk{stroke:#221a28;stroke-width:7}
+.fw-c-hl{stroke:#8d7f8c;stroke-opacity:.8;stroke-width:1.8;transform:translate(-1.6px,-1.6px)}
+.fw-c-pl{stroke:#ffc24a;stroke-width:2.4;stroke-dasharray:5 26;opacity:0;filter:drop-shadow(0 0 3px #ffb42e)}
+.fw-cord.on .fw-c-jk{stroke:#2e2018}.fw-cord.on .fw-c-hl{stroke:#ffb42e;stroke-opacity:.55}.fw-cord.on .fw-c-pl{opacity:1;animation:fwpulse 1.1s linear infinite}
+@keyframes fwpulse{to{stroke-dashoffset:-31}}
+@media (prefers-reduced-motion:reduce){.fw-cord.on .fw-c-pl{animation:none;stroke-dasharray:none;opacity:.5}}
+.fw-menu,.fw-menu *{-webkit-user-select:none;user-select:none}

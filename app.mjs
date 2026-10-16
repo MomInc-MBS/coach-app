@@ -33,6 +33,7 @@ import {mountMenuLifecycle} from './menu-lifecycle.mjs';
 import {mountPhoneOrientation} from './modules/phone-orientation.mjs';
 import {mountPhysicalSoundUI} from './audio/sound-ui.mjs';
 import {mountPageMusic} from './audio/page-music.mjs';
+import {mountFullWorkout} from './full-workout-ui.mjs';
 import {mountPodChrome} from './modules/pod-chrome.mjs';
 import {ensurePortalMounted} from './modules/portal/portal-entry.mjs';
 // W2-2A: hash routes + the bottom bar (launch.mjs boots the deep link once the panels exist).
@@ -269,6 +270,7 @@ function stop(message='Stopped. Your results stay here until the next start.',{i
   voice.cancel();
   generation++;release();controls(false);state.phase='idle';status(message);$('countState').textContent='Camera stopped';$('detail').textContent='Camera off · Tracker closed';
   // #19/#56: a set cut short by STOP also goes home; the pod offers it back with its Continue popup.
+  if(unfinished)window.dispatchEvent(new Event('myr5:workout-stopped'));
   if(unfinished)workoutTransition=Promise.resolve().then(()=>pod?.interruptCurrent(state.motion)).catch(error=>{status(error.message);}).finally(()=>{releaseOwner();controls(false);if(home)window.myr5Routes?.home?.();});
   return workoutTransition;
 }
@@ -325,7 +327,7 @@ async function start(){
     status(MOVEMENTS[session.mode].hint);voice.say(MOVEMENTS[session.mode].hint,{interrupt:true});loop(run);
   }catch(error){
     if(run!==generation){void pod.interruptCurrent(state.motion).catch(()=>{});return;}
-    generation++;release();try{await timeout(pod.interruptCurrent(state.motion),5000,'Workout cleanup timed out.');}catch{}releaseOwner();state.phase='error';controls(false);state.error=error.message;
+    generation++;release();try{await timeout(pod.interruptCurrent(state.motion),5000,'Workout cleanup timed out.');}catch{}releaseOwner();state.phase='error';window.dispatchEvent(new Event('myr5:workout-stopped'));controls(false);state.error=error.message;
     status(error.name==='NotAllowedError'?'Allow camera access for this site, then tap Begin.':error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';
   }finally{settleCameraStart();}
 }
@@ -429,6 +431,7 @@ window.myr5CreatePackControl=async options=>{
 resetMovement();watchUnlock();
 const canUseWorkout=mode=>workoutPathAccess(mode).allowed;
 initHardware({canUse:canUseWorkout});
+mountFullWorkout({canUse:canUseWorkout,reason:mode=>workoutPathAccess(mode).reason,select:(mode,goal)=>{$('movement').value=mode;$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));pod.setGoal(goal);},start:()=>start(),leaveRest:()=>pod.leave(),voice});
 soundSwitch();
  const library=initLibrary({movements:MOVEMENTS,voice,canUse:canUseWorkout,onLocked:()=>showUnlockGate({onCardio:()=>$('coolCardio').click()}),onOpen:()=>stop('Workout stopped for the library. Your results are kept.',{home:false}),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(false);},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 function refreshWorkoutPaths(){for(const option of $('movement').options){const allowed=canUseWorkout(option.value);option.disabled=!allowed;option.textContent=option.textContent.replace(/ · locked$/,'')+(allowed?'':' · locked');}if(!ACTIVE_PHASES.has(state.phase)&&!canUseWorkout($('movement').value)){const first=Object.keys(MOVEMENTS).find(canUseWorkout);if(first){$('movement').value=first;resetMovement();}}if(!ACTIVE_PHASES.has(state.phase))controls(false);library.refreshAccess();}
