@@ -184,3 +184,20 @@ test('a retained Vault API is inert after close and cannot restart rendering or 
  const state=await page.evaluate(()=>({alive:window.__retainedVaultApi.state.alive,canvases:document.querySelectorAll('#vaultPanel canvas').length,halls:document.querySelectorAll('.vh').length,active:window.__gpuProbe.active}));
  assert.deepEqual(state,{alive:false,canvases:0,halls:0,active:0});assert.deepEqual(page.errors,[]);
 }));
+
+test('a Vault opened by route while another 3D screen holds the only context claims it, then hands it back on close',async()=>withMobilePage(async page=>{
+ await page.evaluate(async()=>{
+  await window.__armDelayedLoss();window.__gpuProbe.cap=1; // iOS-like: nothing left for the Vault while the portal board lives
+  const {openQuiltPortal}=await import('/modules/portal/portal-entry.mjs');
+  window.portal=await openQuiltPortal();await window.portal.board('ice');window.portal.show();
+ });
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.dataset.art==='3d',null,{timeout:30000});
+ assert.equal((await probe(page)).active,1,'the 3D portal board holds the only context');
+ await page.evaluate(()=>import('/modules/vault/vault-door.mjs').then(m=>m.openVault()));
+ await page.waitForFunction(()=>!!document.querySelector('#vaultPanel')?._vault?.info?.(),null,{timeout:30000}).catch(async error=>assert.fail(`vault did not mount: ${await page.locator('#vaultPanel').innerText()} ${error.message}`));
+ assert.equal((await probe(page)).denied,0,'the board gave its context back before the Vault asked');
+ assert.equal(await page.evaluate(()=>document.getElementById('portalHome').dataset.art),'flat','the board waits flat under the Vault');
+ await page.locator('#vaultPanel').evaluate(d=>d.close());
+ await page.waitForFunction(()=>document.getElementById('portalHome')?.dataset.art==='3d'&&window.__gpuProbe.active===1,null,{timeout:30000});
+ assert.deepEqual(page.errors,[]);
+}));

@@ -9,6 +9,9 @@
 import {offAxis} from '../portal/peer.mjs'; // #135: tilt looks round the ship through the portal window
 import {initialScene,recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,coachBand,shipPoseAbove,measureShip,openCustomizer} from './ship-scene-domain.mjs';
 import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
+import {claimGraphics} from '../graphics-lifecycle.mjs';
+// Ship scenes keep the 3D coach (it rides the beam) and take the hidden portal board's context until they close.
+const shipGpu=async()=>{const release=claimGraphics('ship',{keep:['coach']});await release.ready;return release;};
 
 const HASH = '#ship';
 const RECIPE_KEY = 'myr5-recipe-v1';
@@ -33,9 +36,9 @@ async function mountRealShip({ stage, bridge, ship, tint = null }) {
  const [THREE, { GLTFLoader }] = await Promise.all([import('three'), import('three/addons/loaders/GLTFLoader.js')]);
  const canvas = document.createElement('canvas'); canvas.className = 'ship-view-canvas'; stage.append(canvas);
  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(34, 1, .1, 400);
- let renderer;
+ let renderer;const gpu = await shipGpu();
  try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }); }
- catch (error) { canvas.remove(); throw error; }
+ catch (error) { gpu(); canvas.remove(); throw error; }
  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15; renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
  const space = createCoachPreviewSpace(THREE, { pixelRatio: renderer.getPixelRatio() });
  scene.background = space.background; scene.fog = space.fog; scene.add(space.group);
@@ -49,8 +52,8 @@ async function mountRealShip({ stage, bridge, ship, tint = null }) {
  let disposed = false;
  let loaded;
  try { loaded = await new GLTFLoader().loadAsync(bridge.getShipUrl(ship)); }
- catch (error) { observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); throw error; }
- if (disposed) { disposeModel(loaded.scene); observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
+ catch (error) { observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); gpu(canvas); canvas.remove(); throw error; }
+ if (disposed) { disposeModel(loaded.scene); observer.disconnect(); space.dispose(); renderer.dispose(); renderer.forceContextLoss(); gpu(canvas); canvas.remove(); throw new DOMException('Ship view closed', 'AbortError'); }
  const box = new THREE.Box3().setFromObject(loaded.scene), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
  loaded.scene.position.sub(center);
  const group = new THREE.Group(), model = new THREE.Group(), fit = 2.25 / (Math.max(size.x, size.y, size.z) || 1); model.rotation.y = SHIP_FACING; model.add(loaded.scene); applyShipTint(model, tint); group.add(model); group.scale.setScalar(fit);
@@ -75,7 +78,7 @@ async function mountRealShip({ stage, bridge, ship, tint = null }) {
  return {
   dispose() {
    if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect();
-   space.dispose(); disposeModel(scene); renderer.dispose(); renderer.forceContextLoss(); canvas.remove();
+   space.dispose(); disposeModel(scene); renderer.dispose(); renderer.forceContextLoss(); gpu(canvas); canvas.remove();
    bridge.dispose?.();
   }
  };
@@ -113,8 +116,9 @@ async function showStarter({ signedIn, owned, isCurrent, always = false }) {
  try {
   if ((always || !starterEntranceDone) && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
-   if (!isCurrent()) return;
-   const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true });
+   const gpu = await shipGpu();
+   if (!isCurrent()) { gpu(); return; }
+   const scene = realShip = mountShipScene({ host: stage, assetBridge: bridge, ship: STARTER_SHIP, starter: true, gpu });
    // Offered (W2-2O): the arrival scene steps aside (its beam and status), leaving the plain backdrop, the coach and the offer.
    // No ship to tap either way (#148): the plain customizer button shows too.
    if (await scene.ready) { if (isCurrent()) starterEntranceDone = true; return true; }
@@ -227,8 +231,9 @@ async function showShip({ getBridge, ownedShipIds, mountArrival, entrance, owner
   const shipId = owned.includes(custom.ship) ? custom.ship : owned.includes(scene.ship) ? scene.ship : owned[0];
   if (always && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
    const { mountShipScene } = await import('./ship-intro.mjs');
-   if (!isCurrent()) { bridge.dispose?.(); return; }
-   const intro = mountShipScene({ host: stage, assetBridge: bridge, ship: shipId });
+   const gpu = await shipGpu();
+   if (!isCurrent()) { gpu(); bridge.dispose?.(); return; }
+   const intro = mountShipScene({ host: stage, assetBridge: bridge, ship: shipId, gpu });
    realShip = { dispose() { intro.dispose(); bridge.dispose?.(); } };
    const arrived = await intro.ready; if (!isCurrent()) return;
    if (!arrived) throw new Error('Ship arrival did not complete'); // the owned ship failed: fall back to the starter below

@@ -523,7 +523,7 @@ export async function playDropPod(config){
 <div class="drop-pod-actions"><button type="button" class="secondary" data-exit>Exit</button><button type="button" data-next>Open another</button></div>`;
  document.body.append(dlg);
  const $=sel=>dlg.querySelector(sel),flash=$('.drop-pod-flash');
- let phase=startPhase({reduced}),world=null,renderer=null,raf=0,disposed=false,gen=0,fullscreenTried=false,items=null,pending=null,THREE=null;
+ let phase=startPhase({reduced}),world=null,renderer=null,releaseGpu=null,raf=0,disposed=false,gen=0,fullscreenTried=false,items=null,pending=null,THREE=null;
  const go=event=>{phase=advance(phase,event);dlg.dataset.phase=phase;};
  const setTier=name=>{const t=TIERS[name]?name:'uncommon';dlg.dataset.tier=t;dlg.style.setProperty('--pack',TIERS[t].color);$('.drop-pod-caption').textContent=t==='secret'?'Secret transmission':'Incoming drop pod';};
  const applyRewardPresentation=targetWorld=>{
@@ -539,7 +539,7 @@ export async function playDropPod(config){
 
  function exit(){
   if(disposed)return;disposed=true;cancelAnimationFrame(raf);removeEventListener('resize',onResize);
-  world?.dispose();renderer?.dispose();renderer?.forceContextLoss?.();leaveFullscreen();dlg.close();dlg.remove();style.remove();
+  world?.dispose();renderer?.dispose();renderer?.forceContextLoss?.();releaseGpu?.(renderer?.domElement);releaseGpu=null;leaveFullscreen();dlg.close();dlg.remove();style.remove();
   try{onExit?.();}catch(error){console.error(error);}
  }
  const onResize=()=>world?.resize();addEventListener('resize',onResize);
@@ -611,6 +611,8 @@ export async function playDropPod(config){
   if(mine!==gen)return;
   if(!THREE){await fallbackReveal();return;}
   if(!renderer){
+   // Full-screen: every other app renderer (3D coach, portal board) gives its context back until the pod closes.
+   if(!releaseGpu){releaseGpu=(await import('./modules/graphics-lifecycle.mjs')).claimGraphics('drop-pod');await releaseGpu.ready;if(disposed||mine!==gen)return;}
    try{renderer=new THREE.WebGLRenderer({canvas:$('canvas'),antialias:true,alpha:false,powerPreference:'high-performance'});}catch(error){console.error(error);renderer=null;}
    if(!renderer){await fallbackReveal();return;}
    renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;

@@ -18,14 +18,15 @@ export async function mountFirstShipArrival({host,assetBridge,isCurrent = () => 
  const ship = assetBridge.ownedShipIds().find(id => !hasSeenShipReveal(id));
  if (!ownerId || !ship) return null;
  // Optional scene code must not become a core-only offline startup dependency.
- const {mountShipScene} = await import('./ship-intro.mjs');
- if (!isCurrent() || globalThis.myr5AuthenticatedAccount?.user?.id !== ownerId) throw new DOMException('Ship arrival cancelled', 'AbortError');
+ const [{mountShipScene},{claimGraphics}] = await Promise.all([import('./ship-intro.mjs'),import('../graphics-lifecycle.mjs')]);
+ const gpu = claimGraphics('ship',{keep:['coach']});await gpu.ready; // the hidden portal board yields; the coach rides the beam
+ if (!isCurrent() || globalThis.myr5AuthenticatedAccount?.user?.id !== ownerId) {gpu();throw new DOMException('Ship arrival cancelled', 'AbortError');}
  let scene, disposed = false;
  const complete = event => {
   if (!disposed && scene && event.detail?.ownerId === ownerId && event.detail?.ship === ship) acceptShipRevealComplete(event);
  };
  window.addEventListener('myr5:ship-scene-ready', complete);
- try { scene = mountShipScene({host,assetBridge,ship}); }
+ try { scene = mountShipScene({host,assetBridge,ship,gpu}); }
  catch (error) { window.removeEventListener('myr5:ship-scene-ready', complete); throw error; }
  return {
   ready: scene.ready.finally(() => window.removeEventListener('myr5:ship-scene-ready', complete)),
