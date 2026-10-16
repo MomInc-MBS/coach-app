@@ -17,6 +17,7 @@ import {remoteReminders,reminderService,ensureReminderMigration,queueReminderRec
 import {MODES,uuid,cleanText,fail,mealInput,progress,} from './domain.mjs';
 import {runReminders} from './push.mjs';
 import {runArmieLetterPushes} from './armie-scheduler.mjs';
+import {runReleasePush} from './release-push.mjs';
 import {RELEASE} from '../release-info.mjs';
 import {trainingFromDaily} from '../weapon-training.mjs';
 import {combatProgress,startBreathing,completeBreathing} from './combat.mjs';
@@ -191,5 +192,5 @@ async function api(request,env,ctx){const u=new URL(request.url),p=u.pathname,me
 }
 export default {
  async fetch(request,env,ctx){try{const url=new URL(request.url);if(url.pathname==='/repair-coach')return new Response(RECOVERY_HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});if(url.pathname.startsWith('/api/'))return await api(request,env,ctx);if(url.pathname==='/health'){let reminders=null;if(remoteReminders(env)){try{const status=await reminderService(env,'health','/internal/status');reminders={available:true,configured:status.configured,schedulerActive:status.schedulerActive};}catch{reminders={available:false,configured:false,schedulerActive:false};}}else{const tick=await db(env).prepare("SELECT value FROM system WHERE key='scheduler_tick'").first().catch(()=>null),age=tick?Math.floor((Date.now()-Number(tick.value))/1000):null;reminders={mode:'worker-cron',lastTickAgeS:age,active:age!==null&&age<300};}return json({ok:true,app:'MYR5 Coach',reminders});}if(url.pathname==='/')return Response.redirect(new URL('/pose.html',url),302);if(url.pathname==='/icons/coach-512.png'&&env.ASSETS){const canonical=new URL(url);canonical.pathname='/icons/myr5-alien-512.png';return env.ASSETS.fetch(new Request(canonical,request));}if(env.ASSETS)return env.ASSETS.fetch(request);return new Response('Not found',{status:404});}catch(e){if(e.code==='target_epoch_mismatch'&&!e.status)e.status=409;if(!e.status)console.error('Coach request failed',e.message);return json({error:e.status?e.message:'Could not complete this request. Please try again.',...(e.status&&e.code?{code:e.code}:{})},e.status||500);}},
- async scheduled(event,env,ctx){if(!remoteReminders(env)){ctx.waitUntil(runReminders(env));ctx.waitUntil(runArmieLetterPushes(env));}ctx.waitUntil(deliverCoachArmyOutbox(db(env),env));}
+ async scheduled(event,env,ctx){if(!remoteReminders(env)){ctx.waitUntil(runReminders(env));ctx.waitUntil(runArmieLetterPushes(env));ctx.waitUntil(runReleasePush(env));}ctx.waitUntil(deliverCoachArmyOutbox(db(env),env));}
 };
