@@ -44,9 +44,10 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
     if(name==='finish'){finish();return;}
     if(name==='exit'){finish();void saveQueue.then(()=>{if(!current())return;if(outbox.size||finalizations.size){say('Coins are waiting to save. Try End workout again to retry.');return;}onExit();});return;}
     if(name==='new-run'||name==='restart'){restart();return;}
-    if(name==='recalibrate'){manualPause=false;countdownUntil=0;commandFlight(run,'pause');pose=null;onRecalibrate();return;}
+    if(name==='recalibrate'){error='';manualPause=false;countdownUntil=0;commandFlight(run,'pause');pose=null;onRecalibrate();return;}
     if(name==='pause'){manualPause=true;countdownUntil=0;commandFlight(run,'pause');return;}
     if(['start','resume','revive'].includes(name)){
+      if(name==='start'&&!renderFailed&&current()&&(!pose?.controlValid||!pose?.calibrated)){error='';manualPause=false;countdownUntil=0;return;}
       if(renderFailed||!current()||!pose?.controlValid||!pose?.calibrated){say('Complete the position check first.');return;}
       if(name==='revive'&&run.phase!=='crashed')return;
       manualPause=false;countdownUntil=performance.now()+3000;

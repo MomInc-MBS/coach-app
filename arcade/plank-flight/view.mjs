@@ -155,13 +155,13 @@ function buildDom(host, onAction) {
       if (act === 'menu-shop') { action('pause', { reason: 'menu' }); renderPanel('shop', latest, run); return; }
       if (act === 'menu-loadout') { action('pause', { reason: 'menu' }); renderPanel('loadout', latest, run); return; }
       if (act === 'back') { renderPanel(run.phase === 'finalized' ? 'results' : 'pause', latest, run); return; }
-      if (act === 'close-panel') { panel.hidden = true; return; }
+      if (act === 'close-panel') { if(panelName==='welcome')panelName='calibration';panel.hidden = true; return; }
       if (act === 'menu') { action('pause', { reason: 'menu' }); renderPanel('pause', latest, run); return; }
-      if (act === 'start') { action('start'); return; }
+      if (act === 'start') { panelName='calibration';panel.hidden=true;action('start');return; }
       if (act === 'resume') { panel.hidden = true; action('resume'); return; }
       if (act === 'revive') { panel.hidden = true; action('revive'); return; }
       if (act === 'finish') { action('finish'); return; }
-      if (act === 'recalibrate') { action('recalibrate'); renderPanel(run.phase === 'ready' ? 'welcome' : 'pause', latest, run); return; }
+      if (act === 'recalibrate') { action('recalibrate');panelName='calibration';panel.hidden=true;return; }
       if (act === 'buy' || act === 'equip') { action(act, { id: button.dataset.id }); return; }
       if (act === 'event') { action('event', { enabled: true }); panel.hidden = true; return; }
       if (act === 'spin' || act === 'headstart' || act === 'final-blast') { action(act); return; }
@@ -174,7 +174,7 @@ function buildDom(host, onAction) {
     if (!button || panel.contains(button)) return;
     const act = button.dataset.act;
     if (act === 'pause' || act === 'menu') { action('pause', { reason: 'user' }); renderPanel('pause', latest, currentRun); }
-    if (act === 'recalibrate') { action('recalibrate'); renderPanel(currentRun.phase === 'ready' ? 'welcome' : 'pause', latest, currentRun); }
+    if (act === 'recalibrate') { action('recalibrate');panelName='calibration';panel.hidden=true; }
     if (act === 'resume') { action('resume'); panel.hidden = true; }
     if (act === 'exit') action('exit');
   });
@@ -187,6 +187,7 @@ function buildDom(host, onAction) {
       const notice = hud.querySelector('[data-notice]');
       const message = frame.message || pose.prompt || '';
       const bad = !pose.controlValid || frame.paused;
+      host.classList.toggle('plank-flight-calibrating',!pose.calibrated&&['ready','paused'].includes(run.phase));
       notice.hidden = !bad;
       notice.textContent = message || (frame.paused ? 'Paused safely' : 'Move into view');
       hud.querySelector('[data-message]').textContent = bad ? '' : (message || (pose.exerciseEligible ? 'Your position is in view' : 'Find a comfortable plank position'));
@@ -271,7 +272,7 @@ function buildDom(host, onAction) {
       if (run.phase === 'crashed' && (panel.hidden || panelName !== 'crashed')) renderPanel('crashed', frame, run);
       else if (run.phase === 'finalized' && (panel.hidden || !['results', 'shop', 'loadout'].includes(panelName))) renderPanel('results', frame, run);
       else if (run.phase === 'ready' && panel.hidden && panelName === 'welcome') renderPanel('welcome', frame, run);
-      else if ((run.phase === 'paused' || frame.paused) && panel.hidden) renderPanel('pause', frame, run);
+      else if (run.phase === 'paused' && panel.hidden && panelName!=='calibration') renderPanel('pause', frame, run);
       else if (run.phase === 'flying' && !frame.paused && ['welcome', 'pause', 'crashed'].includes(panelName)) panel.hidden = true;
       const buyButtons = panel.querySelectorAll('[data-act="buy"]');
       for (const button of buyButtons) {
@@ -321,7 +322,7 @@ function buildDom(host, onAction) {
       root.style.setProperty('--pf-fog', theme.fog);
       root.dataset.theme = theme.name;
     },
-    dispose() { root.remove(); host.classList.remove('plank-flight-host'); }
+    dispose() { root.remove(); host.classList.remove('plank-flight-host','plank-flight-calibrating'); }
   };
   panel.hidden = true;
   return ui;

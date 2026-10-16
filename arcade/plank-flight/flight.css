@@ -3,6 +3,7 @@
 .plank-flight-host #coachOverlay{visibility:hidden}
 .plank-flight-host>.workout-performance-controls{display:none!important}
 .plank-flight-host .camera-workout-counter,.plank-flight-host .camera-workout-status,.plank-flight-host .camera-workout-adjust{display:none!important}
+.plank-flight-host.plank-flight-calibrating>video{left:10%!important;right:auto!important;top:23%!important;bottom:auto!important;width:80%!important;max-width:none!important;height:52%!important;object-fit:contain!important;z-index:2!important;pointer-events:none}
 .plank-flight{--pf-accent:#20f0d0;--pf-warm:#e8fffc;--pf-alert:#ff2a5a;--pf-bg:#020a0a;position:absolute;inset:0;min-height:100%;overflow:hidden;color:#f5f6ff;background:radial-gradient(ellipse at 50% 36%,color-mix(in srgb,var(--pf-accent) 15%,transparent),transparent 52%),linear-gradient(180deg,var(--pf-bg),#03040b 76%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;touch-action:manipulation}
 .pf-canvas,.pf-fallback-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}.pf-fallback-canvas{display:none}.pf-fallback .pf-canvas{display:none}.pf-fallback .pf-fallback-canvas{display:block}
 .pf-hud{position:absolute;inset:0;z-index:3;pointer-events:none;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
