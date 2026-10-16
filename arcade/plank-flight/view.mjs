@@ -187,7 +187,7 @@ function buildDom(host, onAction) {
       const notice = hud.querySelector('[data-notice]');
       const message = frame.message || pose.prompt || '';
       const bad = !pose.controlValid || frame.paused;
-      notice.hidden = !bad && !message;
+      notice.hidden = !bad;
       notice.textContent = message || (frame.paused ? 'Paused safely' : 'Move into view');
       hud.querySelector('[data-message]').textContent = bad ? '' : (message || (pose.exerciseEligible ? 'Your position is in view' : 'Find a comfortable plank position'));
       hud.querySelector('[data-distance]').textContent = `${Math.floor(finite(run.distance))} m`;

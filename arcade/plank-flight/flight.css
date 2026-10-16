@@ -1,6 +1,8 @@
 .plank-flight-host{position:relative!important;overflow:hidden!important;isolation:isolate;background:var(--pf-bg,#06020a)!important;min-height:min(100dvh,900px)}
 .plank-flight-host>video{inset:auto!important;right:8px!important;bottom:max(76px,calc(env(safe-area-inset-bottom) + 68px))!important;left:auto!important;top:auto!important;width:76px!important;height:102px!important;max-width:22vw!important;aspect-ratio:3/4;object-fit:cover;z-index:6!important;border:2px solid #ffffffaa!important;border-radius:13px!important;box-shadow:0 5px 18px #000a!important;background:#05030a!important}
 .plank-flight-host #coachOverlay{visibility:hidden}
+.plank-flight-host>.workout-performance-controls{display:none!important}
+.plank-flight-host .camera-workout-counter,.plank-flight-host .camera-workout-status,.plank-flight-host .camera-workout-adjust{display:none!important}
 .plank-flight{--pf-accent:#20f0d0;--pf-warm:#e8fffc;--pf-alert:#ff2a5a;--pf-bg:#020a0a;position:absolute;inset:0;min-height:100%;overflow:hidden;color:#f5f6ff;background:radial-gradient(ellipse at 50% 36%,color-mix(in srgb,var(--pf-accent) 15%,transparent),transparent 52%),linear-gradient(180deg,var(--pf-bg),#03040b 76%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;touch-action:manipulation}
 .pf-canvas,.pf-fallback-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}.pf-fallback-canvas{display:none}.pf-fallback .pf-canvas{display:none}.pf-fallback .pf-fallback-canvas{display:block}
 .pf-hud{position:absolute;inset:0;z-index:3;pointer-events:none;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
