@@ -57,7 +57,8 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
   await page.getByRole('button',{name:'Finish workout',exact:true}).click();
   await page.waitForFunction(()=>window.myr5TestState.phase==='idle',null,{timeout:15000});assert.equal(await page.locator('.plank-flight').count(),0);
   assert.equal(await page.evaluate(()=>document.querySelector('#v').srcObject),null);
-  await page.goto(base+'/pose#pod');
+  await page.goto(base+'/pose?flight-reentry=1#pod');
+  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
   const saved=page.locator('.continue-workout:not([hidden])');await saved.waitFor({state:'visible',timeout:2000}).catch(()=>{});
   if(await saved.isVisible())await saved.getByRole('button',{name:'Continue',exact:true}).click();else await page.locator('#plankFlight').click();
   await page.waitForFunction(()=>!!window.myr5PlankFlight?.active);
