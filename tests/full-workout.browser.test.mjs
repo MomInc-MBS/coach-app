@@ -40,6 +40,7 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   await page.locator('#podFullWorkout>summary').click();
   for(const id of ['legs','boxing'])await page.locator(`.fw-style[data-style="${id}"]>summary`).click();
   await page.screenshot({path:resolve(SHOTS,'circuit-1-dropdown.png')});
+  await page.locator('.fw-style[data-style="boxing"]').screenshot({path:resolve(SHOTS,'switchboard-closeup.png')});
   const locked=await page.locator('.fw-row.fw-locked input').count();assert.ok(locked>0,'locked exercises are greyed');
   assert.equal(await page.locator('.fw-row.fw-locked input:not([disabled])').count(),0,'locked rows are disabled');
   assert.ok(await page.locator('.fw-row.fw-locked small').first().textContent(),'locked rows show the unlock hint');

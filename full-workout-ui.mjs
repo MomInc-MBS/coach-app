@@ -30,13 +30,13 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
   const open=menu.querySelector('details[open]')&&[...menu.querySelectorAll('details[open]')].map(d=>d.dataset.style),top=menu.scrollTop;
   const total=unlocked().length,count=selection().length;
   status.textContent=`${count}/${total}`;
-  menu.innerHTML=`<div class="fw-bar"><button type="button" data-all="1">Check all</button><button type="button" data-all="0">Uncheck all</button></div>
+  menu.innerHTML=`<div class="fw-bar"><i class="fw-screw l" aria-hidden="true"></i><button type="button" data-all="1">Check all</button><button type="button" data-all="0">Uncheck all</button><i class="fw-screw r" aria-hidden="true"></i></div>
    <p class="fw-count">${count} of ${total} unlocked exercises selected</p>
    ${circuitStyles().map(style=>{
     const ids=style.exercises.map(e=>e.id),n=ids.filter(isOn).length,usable=ids.filter(canUse).length;
-    return `<details class="fw-style" data-style="${style.id}"><summary>${esc(style.name)} <span>${n}/${usable||0}${usable<ids.length?` · ${ids.length-usable} locked`:''}</span></summary>
+    return `<details class="fw-style" data-style="${style.id}"><summary><span class="fw-plate">${esc(style.name)}</span> <span>${n}/${usable||0}${usable<ids.length?` · ${ids.length-usable} locked`:''}</span></summary>
      <div class="fw-style-bar"><button type="button" data-style-all="${style.id}" data-on="1">All</button><button type="button" data-style-all="${style.id}" data-on="0">None</button></div>
-     ${style.exercises.map(e=>{const ok=canUse(e.id);return `<label class="fw-row${ok?'':' fw-locked'}"><input type="checkbox" value="${e.id}"${isOn(e.id)?' checked':''}${ok?'':' disabled'}><span>${esc(e.name)}</span>${ok?'':`<small>${esc(reason(e.id)||'Locked')}</small>`}</label>`;}).join('')}
+     ${style.exercises.map(e=>{const ok=canUse(e.id);return `<label class="fw-row${ok?'':' fw-locked'}"><input type="checkbox" value="${e.id}"${isOn(e.id)?' checked':''}${ok?'':' disabled'}><i class="fw-lamp" aria-hidden="true"></i><span class="fw-name">${esc(e.name)}</span><i class="fw-tog" aria-hidden="true">${ok?'':'<b class="fw-guard">LOCK</b>'}</i>${ok?'':`<small>${esc(reason(e.id)||'Locked')}</small>`}</label>`;}).join('')}
     </details>`;}).join('')}
    <button type="button" class="fw-start" data-fw-start${count?'':' disabled'}>START FULL WORKOUT${count?` · ${count}`:''}</button>`;
   for(const d of menu.querySelectorAll('details'))if(open?.includes(d.dataset.style))d.open=true;
@@ -44,11 +44,12 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
  }
  menu.addEventListener('click',event=>{
   const b=event.target.closest('button');if(!b)return;
+  if(b.dataset.all||b.dataset.styleAll)window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind:'lever'}}));
   if(b.dataset.all)setAll(circuitExercises().map(e=>e.id),b.dataset.all==='1');
   else if(b.dataset.styleAll)setAll(circuitStyles().find(s=>s.id===b.dataset.styleAll).exercises.map(e=>e.id),b.dataset.on==='1');
   else if('fwStart' in b.dataset)begin();
  });
- menu.addEventListener('change',event=>{const i=event.target.closest('input[type=checkbox]');if(!i)return;checked??=new Set(unlocked().map(e=>e.id));i.checked?checked.add(i.value):checked.delete(i.value);save();render();});
+ menu.addEventListener('change',event=>{const i=event.target.closest('input[type=checkbox]');if(!i)return;checked??=new Set(unlocked().map(e=>e.id));i.checked?checked.add(i.value):checked.delete(i.value);save();window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind:'switch'}}));render();});
  details.addEventListener('keydown',event=>{if(event.key==='Escape'&&details.open){details.open=false;details.querySelector('summary').focus();}});
  document.addEventListener('pointerdown',event=>{if(details.open&&!details.contains(event.target))details.open=false;});
  const goals=document.getElementById('podGoals');
