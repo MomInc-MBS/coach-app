@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {claimGraphics} from '../graphics-lifecycle.mjs';
 
 const MODEL='/pod/rooms/console.glb',STYLE='/modules/rooms/reminders-computer.css';
 const MAX_SPIN=10,KEY_STEP=2,DRAG_DEG_PER_PX=.16,DRAG_SLOP=8;
@@ -67,7 +68,7 @@ function releaseObject(root){
 function releaseView(view){
  if(!view||view.disposed)return;view.disposed=true;cancelAnimationFrame(view.raf);view.resize?.disconnect();
  for(const [target,name,fn] of view.listeners)target.removeEventListener(name,fn);
- releaseObject(view.scene);view.renderer?.dispose();view.renderer?.forceContextLoss();
+ releaseObject(view.scene);view.renderer?.dispose();view.renderer?.forceContextLoss();view.releaseGpu?.(view.canvas);
  view.canvas?.remove();view.screen?.remove();
 }
 
@@ -145,6 +146,8 @@ export function mountRemindersComputer(panel=document.getElementById('remindersP
    useStyle(styleText,token);style=token.style;
    const manager=loadingManager(),loader=new GLTFLoader(manager),gltf=await loader.parseAsync(modelBytes,'');parsed=gltf.scene;
    if(!current(panel,token,mine)){releaseObject(parsed);return;}
+   const releaseGpu=claimGraphics('reminders',{keep:['portal']});await releaseGpu.ready; // the hidden 3D coach yields; back on close
+   if(!current(panel,token,mine)){releaseGpu();releaseObject(parsed);return;}
    const host=document.createElement('div');host.className='reminders-computer-stage';
    const children=[...panel.children].filter(node=>node!==offer&&node!==hint&&node.id!=='coachDock'&&!node.classList.contains('portal-peer-ui'));
    const originalNext=new Map(children.map(node=>[node,node.nextSibling]));
@@ -152,7 +155,7 @@ export function mountRemindersComputer(panel=document.getElementById('remindersP
    panel.prepend(host);host.append(document.createElement('canvas'));const canvas=host.firstElementChild;canvas.className='reminders-computer-canvas';canvas.setAttribute('aria-hidden','true');
    panel.append(screen);restoreChildren={screen,host,children,originalNext};wrapped=restoreChildren;
    const scene=new THREE.Scene();const model=new THREE.Group();model.position.copy(MODEL_CENTER);gltf.scene.position.sub(MODEL_CENTER);model.add(gltf.scene);scene.add(model);makeCords(scene);
-   const view={canvas,screen,renderer:null,scene,camera:null,model,resize:null,raf:0,listeners:[],disposed:false};active=view;token.view=view;parsed=null;
+   const view={releaseGpu,canvas,screen,renderer:null,scene,camera:null,model,resize:null,raf:0,listeners:[],disposed:false};active=view;token.view=view;parsed=null;
    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});view.renderer=renderer;
    renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);
    scene.add(new THREE.HemisphereLight(0xe8f8ff,0x241532,2.1));const keyLight=new THREE.DirectionalLight(0xffedcf,2.5);keyLight.position.set(-1.5,2,2.5);scene.add(keyLight);

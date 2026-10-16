@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {pyramidTiles,mealNutrients,todayTiles,foodPhotoToday} from './pyramid-tiles.mjs';
+import {claimGraphics} from '../modules/graphics-lifecycle.mjs';
 import {offAxis} from '../modules/portal/peer.mjs'; // #135: tilt looks round the pyramid through the portal window
 export {pyramidTiles} from './pyramid-tiles.mjs';
 
@@ -158,8 +159,11 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
  scene.add(new THREE.AmbientLight(0xffffff,0.95));
  const key=new THREE.DirectionalLight(0xffffff,0.75);key.position.set(0.6,1.4,1.2);scene.add(key);
  let renderer;
+ // The hidden 3D coach gives its context back first (the portal round Food keeps its board); it returns when Food closes.
+ const releaseGpu=claimGraphics('pyramid',{keep:['portal']});await releaseGpu.ready;
+ if(signal?.aborted){releaseGpu();host.remove();releaseRoomStyle();throw cancelled();}
  try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});}
- catch(error){host.remove();releaseRoomStyle();throw error;}
+ catch(error){releaseGpu();host.remove();releaseRoomStyle();throw error;}
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);
  renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none';renderer.domElement.setAttribute('aria-hidden','true');host.append(renderer.domElement);
  // Looks straight down -z; reframe() slides it back and down/up so the pyramid fills the free space.
@@ -183,7 +187,7 @@ export async function mountPyramidScanner(anchor,{getNutrition=()=>({name:null,n
   const dom=renderer.domElement;dom.removeEventListener('pointerdown',onDown);dom.removeEventListener('pointermove',onMove);dom.removeEventListener('pointerup',onUp);dom.removeEventListener('pointercancel',onUp);dom.removeEventListener('click',onClick);
   disposeTree(scene);
   for(const p of steamPool)if(!p.sprite.parent)p.sprite.material.dispose();
-  steamTex.dispose();renderer.dispose();renderer.forceContextLoss();host.remove();
+  steamTex.dispose();renderer.dispose();renderer.forceContextLoss();host.remove();releaseGpu(renderer.domElement);
  }
 
  // ---- Screens: "last meal" face (the meal being logged, else the newest saved one) or today's totals.

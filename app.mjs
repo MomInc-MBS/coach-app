@@ -1,3 +1,4 @@
+import {claimGraphics} from './modules/graphics-lifecycle.mjs';
 import {PoseFrameScheduler} from './pose-frame.mjs';
 import {mountCameraWorkout} from './camera-workout.mjs';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
@@ -500,7 +501,8 @@ async function finishEndless(){try{if(await pod?.finishWorking?.(state.motion,Da
  const drop=()=>{runner?.stop();runner=null;};
  window.addEventListener('myr5:pose',event=>{
   if(!runner){const host=document.getElementById('cameraWorkout');if(!eligible()||!host||loading||document.body.dataset.tracking!=='true')return;loading=true;
-   import('./arcade/runner/runner.mjs').then(m=>{if(!runner&&document.body.dataset.tracking==='true')runner=m.mountRunner({host,Session:MovementSession,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n),onCaught:()=>{void finishEndless();}});}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
+   // The hidden portal board yields its context to the corridor (the coach stays); it rebuilds after the run.
+   import('./arcade/runner/runner.mjs').then(async m=>{const gpu=claimGraphics('runner',{keep:['coach']});await gpu.ready;if(runner||document.body.dataset.tracking!=='true'){gpu();return;}try{runner=m.mountRunner({host,Session:MovementSession,sound:k=>physicalSound.play(k),onXp:n=>pod?.flow?.workout&&(pod.flow.workout.bonusXp=(pod.flow.workout.bonusXp||0)+n),onCaught:()=>{void finishEndless();}});}catch(error){gpu();throw error;}const stop=runner.stop;runner.stop=()=>{stop();gpu();};}).catch(error=>console.warn('Runner could not start.',error)).finally(()=>{loading=false;});return;}
   runner.pose(event.detail);});
  new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')drop();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
  window.myr5Runner={get active(){return runner},drop};}

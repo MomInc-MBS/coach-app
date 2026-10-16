@@ -4,11 +4,14 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {demoPose,DEMO_BONES} from './demo-poses.mjs';
 import {coachFetch} from './coach-net.mjs';
+import {claimGraphics} from './modules/graphics-lifecycle.mjs';
 export async function createHologram(host,name,{still=false}={}){
-  let renderer,controls,frame=0,observer,mixer,model,animateDemo=null,demoTime=0,disposed=false,playing=true;
+  let renderer,releaseGpu=null,controls,frame=0,observer,mixer,model,animateDemo=null,demoTime=0,disposed=false,playing=true;
   const scene=new THREE.Scene(),pivot=new THREE.Group();scene.add(pivot);
   function disposeObject(object){object.traverse(node=>{node.geometry?.dispose();if(node.material)for(const mat of [node.material].flat()){for(const value of Object.values(mat))if(value?.isTexture)value.dispose();mat.dispose();}});}
-  function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);disposeObject(scene);renderer?.dispose();renderer?.forceContextLoss();renderer?.domElement.remove();}
+  function dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();mixer?.stopAllAction();if(model)mixer?.uncacheRoot(model);disposeObject(scene);renderer?.dispose();renderer?.forceContextLoss();renderer?.domElement.remove();releaseGpu?.(renderer?.domElement);releaseGpu=null;}
+  // The hidden portal board yields (the 3D coach stays beside the demo); it rebuilds once this closes.
+  releaseGpu=claimGraphics('hologram',{keep:['coach']});await releaseGpu.ready;
   try{
     renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setClearColor(0x000000,0);host.append(renderer.domElement);
     const camera=new THREE.PerspectiveCamera(38,1,.01,100);controls=new OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableZoom=false;controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=12;controls.minPolarAngle=.15;controls.maxPolarAngle=Math.PI-.15;

@@ -19,7 +19,7 @@ import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
 import {mountPodChrome} from '../pod-chrome.mjs';
 import {paletteFor,paletteOptions} from './portal-tunnel-palettes.mjs';
-import {releaseGraphics,waitForGraphicsRelease,graphicsClaimed} from '../graphics-lifecycle.mjs';
+import {releaseGraphics,waitForGraphicsRelease,graphicsBlocked} from '../graphics-lifecycle.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dive into the wormhole (the destination appears from its core), the healed board fading back in, one touch ripple on
@@ -298,11 +298,11 @@ async function loadBoardNow(id,load){
 // only once it has drawn on a live context and no cut is open; a throw, a timeout or a lost context leaves the flat board (fell).
 function threeD(mounting=false){
  const id=boardId,make=BOARDS[id].create,generation=boardLoad;
- if(!make||gl3||!(boardShown||mounting)||pending3D.has(id)||art[id]==='flat'||lifecycle.signal.aborted||graphicsClaimed())return ready3D; // the Vault holds the GPU; graphics-free rebuilds
+ if(!make||gl3||!(boardShown||mounting)||pending3D.has(id)||art[id]==='flat'||lifecycle.signal.aborted||graphicsBlocked('portal'))return ready3D; // the Vault holds the GPU; graphics-free rebuilds
  pending3D.add(id);portalHome.dataset.building=''; // portal.css keeps a hidden portal laid out meanwhile: effects measure the host as they build
  return ready3D=(async()=>{
   await waitForGraphicsRelease();
-  if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted||gl3||(!boardShown&&!mounting)||graphicsClaimed())return;
+  if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted||gl3||(!boardShown&&!mounting)||graphicsBlocked('portal'))return;
   const build=make(boardHost);build.catch(()=>{});
   let created;
   try{created=await Promise.race([build,sleep(WAIT.threeD).then(()=>{throw new Error(`3D took over ${WAIT.threeD} ms`);})]);}
@@ -2018,8 +2018,8 @@ export async function mountPortal({visible=false}={}){
  boardBtn?.addEventListener('click',()=>setVisible(true),{signal:lifecycle.signal});
  addEventListener('pagehide',grimFlush,{signal:lifecycle.signal});document.addEventListener('visibilitychange',()=>{if(document.hidden)grimFlush();else if(boardShown&&!visibleSince)visibleSince=Date.now();},{signal:lifecycle.signal});
  addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;void showVaultDoor(id);},{signal:lifecycle.signal});
- // The Vault (any route, not only a secret) claims the GPU: hand the board back, rebuild 3D when it is free again.
- addEventListener('myr5:graphics-claim',e=>e.detail?.wait?.(releasePortalGraphics()),{signal:lifecycle.signal});
+ // A 3D screen (the Vault from any route, food pyramid, ...) claims the GPU: hand the board back, rebuild 3D when it is free again.
+ addEventListener('myr5:graphics-claim',e=>{if(!e.detail?.keep?.includes('portal'))e.detail?.wait?.(releasePortalGraphics());},{signal:lifecycle.signal});
  addEventListener('myr5:graphics-free',()=>{if(boardShown)threeD();},{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
