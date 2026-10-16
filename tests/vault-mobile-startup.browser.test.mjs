@@ -87,11 +87,11 @@ test('portal-to-vault and hall stay within Android two-context budget during del
  assert.equal((await probe(page)).active,1,'the board and tunnel release before the 3D door claims a context');
  await page.evaluate(()=>document.querySelector('#vaultPanel')._vault.enter());
  await page.waitForSelector('#vaultPanel .vh canvas',{state:'attached',timeout:30000});
- await waitForActive(page,2);
+ await waitForActive(page,1);
  const p=await probe(page);
  assert.equal(p.denied,0,'the vault door and hall must wait until portal contexts are actually released');
  assert.equal(p.peak,2,'portal tunnel plus door or door plus hall fit the device budget; all three must not overlap');
- assert.equal(p.active,2,'the door and hall own the two remaining contexts');
+ assert.equal(p.active,1,'the door parks its context while the full-screen hall runs');
  assert.deepEqual(page.errors,[]);
 }));
 

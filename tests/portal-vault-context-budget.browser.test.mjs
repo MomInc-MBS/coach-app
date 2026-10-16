@@ -78,7 +78,7 @@ test('six secret-board handoffs free portal GPU contexts, mount the Vault, then 
   await page.evaluate(()=>document.querySelector('#vaultPanel')._vault.enter());
   await page.waitForSelector('#vaultPanel .vh canvas',{state:'attached',timeout:45000});
   const state=await page.evaluate(async id=>{const s=await import('/modules/vault/vault-store.mjs');return {earned:!!s.view().secrets[id],active:window.__gpuBudget.active,denied:window.__gpuBudget.denied,denials:window.__gpuBudget.denials,canvas:!!document.querySelector('#vaultPanel canvas'),hall:!!document.querySelector('#vaultPanel .vh canvas')};},id);
-  assert.equal(state.earned,true,`${id} remains saved`);assert.equal(state.active,2,`${id} door and hall occupy two contexts`);assert.equal(state.canvas,true);assert.equal(state.hall,true);assert.equal(state.denied,0,`${id} does not exceed the cap: ${state.denials.join('\n')}`);
+  assert.equal(state.earned,true,`${id} remains saved`);assert.equal(state.active,1,`${id} the hall runs alone: the door parks its context behind it`);assert.equal(state.canvas,true);assert.equal(state.hall,true);assert.equal(state.denied,0,`${id} does not exceed the cap: ${state.denials.join('\n')}`);
 
   await page.evaluate(async()=>{const dlg=document.querySelector('#vaultPanel');const closed=new Promise(resolve=>dlg.addEventListener('close',resolve,{once:true}));dlg.close();await closed;window.portal.show();});
   await page.waitForFunction(()=>!document.getElementById('portalHome').hidden&&document.getElementById('portalHome').dataset.art==='3d',null,{timeout:45000});

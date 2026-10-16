@@ -42,6 +42,10 @@ export function wrapText(text,cols){
  }
  if(line)lines.push(line);return lines;
 }
+// How long a lost context may take to come back before the vault shows its failure screen.
+export const RESTORE_MS=3000;
+// Bottom offset (px) that clears the coach dock routes.mjs moves into the open dialog, so Retry stays tappable.
+export function aboveDock(gap=24){const r=document.getElementById('coachDock')?.getBoundingClientRect();return gap+(r&&r.height&&r.top<innerHeight?Math.max(0,innerHeight-r.top):0);}
 const safe=(f,...a)=>{try{return f?.(...a);}catch{return undefined;}};
 // What the CRT shows for goal i: header, wrapped clue, footer ({earned,progress have/need}).
 export function crtView(goals,i,state,cols=24){
@@ -127,7 +131,7 @@ export function blocked(u,v,r=0){
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
 export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal,signal}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false,abortListener=null,S=null;
+ let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,onContextRestored=null,loseExt=null,lost=false,parked=false,lostTimer=0,hallSession=false,abortListener=null,S=null;
  let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
  const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
  firstFrame.catch(()=>{});
@@ -153,6 +157,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  stage='renderer';renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+ loseExt=renderer.getContext().getExtension('WEBGL_lose_context');
  canvas=renderer.domElement;canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none';canvas.setAttribute('aria-label','Vault door');
  stage='scene';scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(32,1,.1,40),root=new THREE.Group();scene.add(root);
  scene.add(new THREE.HemisphereLight('#d9c8ff','#241532',1.1));
@@ -345,38 +350,71 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   if(!S.alive||S.dolly)return;S.dolly={t0:performance.now()};
   const veil=document.createElement('div');veil.style.cssText='position:absolute;inset:0;background:radial-gradient(circle,#d9a8ff,#7a2fc4 55%,#2a0d4a);opacity:0;pointer-events:none';host.append(veil);S.veil=veil;wake();onEnter?.(api);
  }
+ // The hall covers the whole screen, so the door parks its GPU context (released through the shared lifecycle) while the
+ // hall runs and restores it when the hall exits: door + hall never hold two full-screen MSAA contexts at once.
+ function hallOffline(error){
+  S.dolly=null;S.veil?.remove();S.veil=null;
+  const hall=host.querySelector('.vh');
+  if(hall){const canvas=hall.querySelector('canvas');for(const kind of ['webgl2','webgl'])try{canvas?.getContext(kind)?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}hall.remove();}
+  S.view={head:'HALL OFFLINE',lines:['YOUR SECRETS ARE SAFE.','RETRY THE 3D HALL.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;
+  hallRetry?.remove();hallRetry=document.createElement('button');hallRetry.type='button';hallRetry.textContent='Retry 3D Hall';hallRetry.setAttribute('aria-label','Retry the 3D Achievement Hall');
+  hallRetry.style.cssText=`position:absolute;left:50%;bottom:${aboveDock()}px;z-index:4;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui`;
+  hallRetry.onclick=()=>{hallRetry?.remove();hallRetry=null;enter();};host.append(hallRetry);
+  console.error('Achievement Hall renderer failed; retry is available.',error);unpark();
+ }
+ function unpark(){
+  if(!parked)return;parked=false;
+  if(lost){try{loseExt?.restoreContext();}catch{}armRestoreTimeout();}else wake();
+ }
+ const onHallExit=e=>{
+  if(!S.alive||!hallSession)return;hallSession=false;
+  if(e.detail?.error){hallOffline(e.detail.error);return;}
+  S.dolly=null;S.veil?.remove();S.veil=null;unpark(); // back at the open door, not a purple veil over a parked renderer
+ };
+ window.addEventListener('myr5:vault-hall-exit',onHallExit);cleanupCallbacks.add(()=>window.removeEventListener('myr5:vault-hall-exit',onHallExit));
  function finishDolly(){
   hallSession=true;
   import('./vault-hall.mjs').then(async m=>{
    if(!S.alive||!host.isConnected)return null;
    if(!m.enterHall)throw Error('no hall');
+   parked=true;cancelAnimationFrame(frame);frame=0;clearTimeout(lostTimer);reconnecting.hidden=true; // a parked door has no restore deadline
+   if(!lost)void releaseGraphics(canvas,renderer.getContext(),()=>loseExt?.loseContext()); // enterHall waits for this release
    const hall=await m.enterHall({host,door:api,goals:S.goals,read:S.read});
    if(!S.alive||!host.isConnected){hall?.exit?.();return null;}
    return hall;
   })
    .catch(error=>{
     if(!S.alive||!host.isConnected){import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});return;}
-    S.dolly=null;S.veil?.remove();S.veil=null;
-    const hall=host.querySelector('.vh');
-    if(hall){const canvas=hall.querySelector('canvas');for(const kind of ['webgl2','webgl'])try{canvas?.getContext(kind)?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}hall.remove();}
-    S.view={head:'HALL OFFLINE',lines:['YOUR SECRETS ARE SAFE.','RETRY THE 3D HALL.'],foot:'',earned:false};drawCrt(cc,CW_,CH_,S.view,0);crtTex.needsUpdate=true;
-    hallRetry?.remove();hallRetry=document.createElement('button');hallRetry.type='button';hallRetry.textContent='Retry 3D Hall';hallRetry.setAttribute('aria-label','Retry the 3D Achievement Hall');
-    hallRetry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:4;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
-    hallRetry.onclick=()=>{hallRetry?.remove();hallRetry=null;enter();};host.append(hallRetry);
-    console.error('Achievement Hall renderer failed; retry is available.',error);wake();
+    hallSession=false;hallOffline(error);
    });
  }
  // --- on-demand loop
  let awakeUntil=0,last=0,hallRetry=null;
- function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive){last=performance.now();frame=requestAnimationFrame(tick);}}
+ function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive&&!lost&&!parked){last=performance.now();frame=requestAnimationFrame(tick);}}
  const reduced=matchMedia?.('(prefers-reduced-motion: reduce)');
  const frameFailure=error=>{
   try{error.vaultStage=firstFrameSettled?'runtime-render':'first-render';}catch{}
   if(!firstFrameSettled){firstFrameSettled=true;rejectFirstFrame(error);return;}
   if(cleaned)return;S.alive=false;cleanup();onFatal?.(error);
  };
- onContextLost=event=>{event.preventDefault();frameFailure(new Error('WebGL context lost'));};canvas.addEventListener('webglcontextlost',onContextLost);
- host.append(canvas);
+ // Context loss is survivable: Android drops contexts on app switches and GPU pressure and gives them back. Pause, say so
+ // quietly, and let three.js rebuild on restore; only a context that stays gone past RESTORE_MS is a failure.
+ const reconnecting=document.createElement('div');reconnecting.setAttribute('role','status');reconnecting.textContent='Reconnecting 3D…';reconnecting.hidden=true;
+ reconnecting.style.cssText='position:absolute;left:50%;top:45%;transform:translateX(-50%);z-index:3;padding:10px 18px;border:1px solid #7a2fc4;border-radius:999px;background:#171020cc;color:#f6eddf;font:600 15px system-ui;pointer-events:none';
+ const armRestoreTimeout=()=>{clearTimeout(lostTimer);reconnecting.hidden=false;lostTimer=setTimeout(()=>{if(lost)frameFailure(new Error('WebGL context lost'));},RESTORE_MS);};
+ onContextLost=event=>{
+  event.preventDefault();lost=true;cancelAnimationFrame(frame);frame=0;
+  if(!parked)armRestoreTimeout();
+ };
+ onContextRestored=()=>{
+  lost=false;clearTimeout(lostTimer);reconnecting.hidden=true;
+  if(parked)return;
+  // three.js re-created its GL state on this event; canvas-backed textures re-upload on the next render.
+  crtTex.needsUpdate=glow.t.needsUpdate=bead.t.needsUpdate=true;wake();
+ };
+ canvas.addEventListener('webglcontextlost',onContextLost);canvas.addEventListener('webglcontextrestored',onContextRestored);
+ cleanupCallbacks.add(()=>{clearTimeout(lostTimer);canvas.removeEventListener('webglcontextrestored',onContextRestored);reconnecting.remove();});
+ host.append(canvas,reconnecting);
  function tick(now){
   frame=0;if(!S.alive)return;
   try{const rdt=Math.min(.5,(now-last)/1000||.016),dt=Math.min(.05,rdt);last=now;let busy=S.drag.size>0;
@@ -417,7 +455,8 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   const weldLive=S.sparks.length>0||S.weld.length>0||[...S.drag.values()].some(d=>d.weld);
   if(weldLive||S.weldWas)weldDraw(now);S.weldWas=weldLive;
   if(now<S.glitch){crt.position.x=(Math.random()-.5)*.006;drawCrt(cc,CW_,CH_,S.view,now/60|0);crtTex.needsUpdate=true;busy=true;}else if(crt.position.x!==at(L.crt.u,L.crt.v).x){crt.position.x=at(L.crt.u,L.crt.v).x;drawView();}
-  if(renderer.getContext().isContextLost())throw new Error('WebGL context lost');renderer.render(scene,camera);if(!firstFrameSettled){firstFrameSettled=true;resolveFirstFrame();}
+  if(renderer.getContext().isContextLost())return; // the webglcontextlost event (queued) decides what happens next
+  renderer.render(scene,camera);if(!firstFrameSettled){firstFrameSettled=true;resolveFirstFrame();}
   const go=busy||moving||wob||lit||weldLive||S.pomega>.05||now<awakeUntil;
   if(go)frame=requestAnimationFrame(tick);else renderer.shadowMap.enabled=false; // asleep: the canvas keeps its last (shadowed) frame
   }catch(error){frameFailure(error);}
@@ -452,7 +491,7 @@ export async function openVault(){
  dlg._vaultCloseHandler&&dlg.removeEventListener('close',dlg._vaultCloseHandler);
  dlg._vaultCloseHandler=()=>{dlg._vaultGeneration++;mountController.abort();if(dlg._vaultMountAbort===mountController)dlg._vaultMountAbort=null;dlg._vault?.dispose?.();dlg._vault=null;};
  dlg.addEventListener('close',dlg._vaultCloseHandler,{once:true});
- const retry=document.createElement('button');retry.type='button';retry.textContent='Retry 3D';retry.hidden=true;retry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:3;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
+ const retry=document.createElement('button');retry.type='button';retry.textContent='Retry 3D';retry.hidden=true;retry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:41;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
  retry.addEventListener('click',()=>void mount());dlg.append(retry);
  const showFailure=error=>{
   if(!dlg.open||dlg._vaultGeneration!==generation)return;
@@ -463,7 +502,7 @@ export async function openVault(){
   const safePart=(v,max)=>String(v||'').replace(/https?:\/\/\S+/gi,'[URL]').replace(/[\r\n\t]/g,' ').replace(/[^\x20-\x7e]/g,'?').slice(0,max);
   const diagnostic=document.createElement('small');diagnostic.textContent=`${safePart(error?.vaultStage||'open-vault',48)} · ${safePart(error?.name||'Error',48)}: ${safePart(error?.message||'Unknown startup error',180)}`;
   diagnostic.dataset.vaultDiagnostic='true';message.dataset.vaultErrorName=safePart(error?.name||'Error',48);message.dataset.vaultErrorStage=safePart(error?.vaultStage||'open-vault',48);message.dataset.vaultErrorMessage=safePart(error?.message||'Unknown startup error',180);
-  message.append(heading,detail,diagnostic);host.append(message);retry.hidden=false;retry.disabled=false;retry.textContent='Retry 3D';
+  message.append(heading,detail,diagnostic);host.append(message);retry.style.bottom=aboveDock()+'px';retry.hidden=false;retry.disabled=false;retry.textContent='Retry 3D';
   console.error('Achievement Vault renderer failed; retry is available.',error);
  };
  let mounting=null;

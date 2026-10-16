@@ -36,11 +36,13 @@ export function bindArchiveDialog({dialog,openButton,closeButton,documentRef=glo
  return {open,close,dispose(){openButton?.removeEventListener('click',onOpen);closeButton?.removeEventListener('click',onClose);documentRef?.removeEventListener('keydown',onKey);close();}};
 }
 let live=null;
-export function exitHall(){const l=live;live=null;if(!l)return;l.stop();window.dispatchEvent(new CustomEvent('myr5:vault-hall-exit'));}
+// error: the hall's context was lost and never came back; the door shows its Retry 3D Hall state.
+export function exitHall(error){const l=live;live=null;if(!l)return;l.stop();window.dispatchEvent(new CustomEvent('myr5:vault-hall-exit',{detail:error instanceof Error?{error}:{}}));}
 const CSS=`.vh{position:fixed;inset:0;z-index:7000;background:#08030f;overflow:hidden;touch-action:none;font:500 15px/1.4 system-ui;color:#fff4d6;user-select:none}
 .vh canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .vh-pur{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#b56bff,#7a2fc4 55%,#3a0f66);pointer-events:none}
 .vh-x{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top,0px));min-height:44px;padding:0 16px;border:2px solid #ffd36e;border-radius:22px;background:#171020cc;color:#ffd36e;font:800 14px system-ui;z-index:3}
+.vh-rc{position:absolute;left:50%;top:45%;transform:translateX(-50%);padding:10px 18px;border:1px solid #7a2fc4;border-radius:999px;background:#171020cc;color:#f6eddf;font:600 15px system-ui;z-index:4;pointer-events:none}.vh-rc[hidden]{display:none}
 .vh-pos{position:absolute;right:14px;top:calc(22px + env(safe-area-inset-top,0px));font:800 13px ui-monospace,monospace;color:#ff9c36;letter-spacing:.1em;z-index:3}
 .vh-arr{position:absolute;right:14px;bottom:calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;z-index:3}
 .vh-arr button{width:56px;height:56px;border-radius:28px;border:2px solid #ffd36e;background:#171020cc;color:#ffd36e;font-size:22px;touch-action:none}
@@ -92,13 +94,18 @@ export async function enterHall(arg=document.body){
  // L0's statueCoaches(goals) wins when present (ids or {id}); otherwise highest-unlock-level coaches, working down.
  const FILES=(safe(()=>goalsMod.statueCoaches(GOALS),null)||pickCoaches(N,COACH_REQUIREMENTS)).map(c=>coachPath(c.coachId||c.id||c));
  const el=document.createElement('div');el.className='vh';
- el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button>${readArchive().length?'<button class="vh-archive-open" type="button">Past achievements</button>':''}<div class="vh-pos"></div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div><section class="vh-archive" role="dialog" aria-modal="true" aria-labelledby="vh-archive-title" hidden><div class="vh-archive-panel" tabindex="-1"><button class="vh-archive-close" type="button" aria-label="Close past achievements">Close</button><h2 id="vh-archive-title">Past achievements</h2><ul></ul></div></section>`;
+ el.innerHTML=`<style>${CSS}</style><canvas></canvas><div class="vh-pur"></div><button class="vh-x" aria-label="Leave the hall">&larr; Exit</button>${readArchive().length?'<button class="vh-archive-open" type="button">Past achievements</button>':''}<div class="vh-pos"></div><div class="vh-rc" role="status" hidden>Reconnecting 3D…</div><div class="vh-arr"><button data-d="-1" aria-label="Walk forward">&#9650;</button><button data-d="1" aria-label="Walk back">&#9660;</button></div><div class="vh-card" hidden></div><section class="vh-archive" role="dialog" aria-modal="true" aria-labelledby="vh-archive-title" hidden><div class="vh-archive-panel" tabindex="-1"><button class="vh-archive-close" type="button" aria-label="Close past achievements">Close</button><h2 id="vh-archive-title">Past achievements</h2><ul></ul></div></section>`;
  host.append(el);const $=s=>el.querySelector(s),canvas=$('canvas'),card=$('.vh-card'),pur=$('.vh-pur'),pos=$('.vh-pos'),archiveDialog=$('.vh-archive'),archiveOpen=$('.vh-archive-open'),archiveClose=$('.vh-archive-close'),archiveList=$('.vh-archive-panel ul');
  const archiveBinding=archiveOpen?bindArchiveDialog({dialog:archiveDialog,openButton:archiveOpen,closeButton:archiveClose}):null;
  const paintArchive=()=>{const rows=readArchive();if(archiveOpen)archiveOpen.hidden=!rows.length;if(!rows.length){archiveBinding?.close();return;}archiveList.innerHTML=rows.map(row=>{const opened=row.packId&&safe(()=>rewardPacks?.openedPack(row.packId),false);const pack=archivePackLabel(row,!!opened);return `<li><strong>${esc(row.title)}</strong><small>${row.date?`Earned ${esc(row.date)}`:'Earned date unavailable'}${row.tier?` · ${esc(row.tier)}`:''}${pack?` · ${pack}`:''}</small></li>`;}).join('');};
  archiveOpen?.addEventListener('click',paintArchive);paintArchive();
  await waitForGraphicsRelease();
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
+ // Survive context loss like the door: pause, show a quiet status, resume when three.js has rebuilt; give up after 3 s.
+ let lost=false,lostTimer=0;const rc=$('.vh-rc');
+ const onLost=e=>{e.preventDefault();lost=true;cancelAnimationFrame(raf);raf=0;rc.hidden=false;clearTimeout(lostTimer);lostTimer=setTimeout(()=>{if(lost&&live)exitHall(Object.assign(new Error('WebGL context lost'),{vaultStage:'hall-runtime-render'}));},3000);};
+ const onRestored=()=>{lost=false;clearTimeout(lostTimer);rc.hidden=true;vis();};
+ canvas.addEventListener('webglcontextlost',onLost);canvas.addEventListener('webglcontextrestored',onRestored);
  const scene=new THREE.Scene();scene.background=new THREE.Color('#050210');
  const camera=new THREE.PerspectiveCamera(60,1,.1,140);
  const own=[],glow=(c,o=1)=>{const m=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,blending:THREE.AdditiveBlending,depthWrite:false});own.push(m);return m;};
@@ -185,7 +192,7 @@ export async function enterHall(arg=document.body){
  const resize=()=>{const w=el.clientWidth||innerWidth,h=el.clientHeight||innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
  addEventListener('resize',resize);resize();
  const look=new THREE.Vector3();
- function frame(now){raf=0;if(!live||document.hidden)return;const dt=Math.min(.05,(now-last)/1000);last=now;const t=fixT>=0?fixT:(now-started)/1000;uT.value=t;
+ function frame(now){raf=0;if(!live||document.hidden||lost||renderer.getContext().isContextLost())return;const dt=Math.min(.05,(now-last)/1000);last=now;const t=fixT>=0?fixT:(now-started)/1000;uT.value=t;
   // Entry: purple fades out, camera starts high + far and shrinks down into the hall with an FOV warp; streaks fade.
   const e=clamp((t-.3)/2.6,0,1),ease=1-Math.pow(1-e,3),inv=1-ease;pur.style.opacity=String(1-clamp((t-.7)/1.7,0,1));
   sm.opacity=Math.min(1,(1-e)*1.4);streaks.position.z=(t*40)%40;streaks.visible=e<1;pins.position.z=(t*46)%4.2*1+camera.position.z*0;pinM.opacity=Math.min(1,(1-e)*1.8);pins.visible=e<1;
@@ -207,8 +214,8 @@ export async function enterHall(arg=document.body){
   for(const a of atoms){a.g.rotation.y+=dt*.15;for(const r of a.rings){const u=r.userData,p=t*u.sp+u.ph;u.e.position.set(Math.cos(p)*u.rr,Math.sin(p)*u.rr,0);}}
   if(nextI>=0){nextLight.intensity=5+Math.sin(t*3)*2;nextM.opacity=.45+.25*Math.sin(t*3);const ph=(t%1.4)/1.4;pulse.scale.setScalar(1+ph*.9);pulseM.opacity=(1-ph)*.95;}
   renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
- const vis=()=>{if(!document.hidden&&live&&!raf){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
- live={stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
+ const vis=()=>{if(!document.hidden&&live&&!raf&&!lost){last=performance.now();raf=requestAnimationFrame(frame);}};document.addEventListener('visibilitychange',vis);
+ live={stop(){cancelAnimationFrame(raf);raf=0;clearTimeout(lostTimer);canvas.removeEventListener('webglcontextlost',onLost);canvas.removeEventListener('webglcontextrestored',onRestored);removeEventListener('resize',resize);removeEventListener('keydown',kd);removeEventListener('keyup',ku);document.removeEventListener('visibilitychange',vis);window.removeEventListener('myr5:vault-earned',refresh);
   archiveBinding?.dispose();archiveOpen?.removeEventListener('click',paintArchive);statues.forEach(s=>{s.loading=0;drop(s);});own.forEach(o=>o.dispose?.());
   void releaseGraphics(canvas,renderer.getContext?.(),()=>{renderer.dispose();renderer.forceContextLoss();});el.remove();delete window.myr5Hall;}};
  // Debug/test hooks.
