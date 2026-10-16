@@ -17,6 +17,8 @@ import {recordPerformanceSession,readPerformanceProgress,workoutEligibility,perf
 import {STARTER_COACH_IDS} from '../performance-catalog.mjs';
 import {HOLD_TARGET_SECONDS,REP_CAP} from '../progression-rules.mjs';
 import {mountShipBackdropMotion} from './ship-backdrop.mjs';
+import {coach3dEnabled} from '../coach3d-flag.mjs';
+import {mountRestCoachSprite} from './rest-coach-sprite.mjs';
 let voiceManifest=null;
 // Fetch the clips this set will say while the camera opens; sw.js stores /voice/* in the voice cache, so RobotAudio's later fetch is a hit.
 function warmVoice(goal){try{voiceManifest??=fetch(VOICE_MANIFEST).then(r=>r.json()).catch(()=>{voiceManifest=null;return null;});voiceManifest.then(m=>{if(!m)return;const say=['Get into position.',...Array.from({length:Math.min(60,Number(goal)||0)},(_,i)=>String(i+1))];for(const p of say){const u=m.phrases[p];if(u)fetch(u,{priority:'low'}).catch(()=>{});}});}catch{}}
@@ -51,6 +53,8 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   $('restAvatar').setAttribute('aria-label',name+' on the floating platform');$('identityStatus').textContent=look.linked?'Appearance saved':'Guest appearance';
  }
  function moveCoach(){
+  // 3D coach off (coach3d-flag.mjs): the rest scene shows the 64-bit coach sprite; the 3D card never enters it.
+  if(!coach3dEnabled()&&(flow.phase==='rest'||preparationRest)){mountRestCoachSprite($('restCoachMount'));$('restCoachLoading').hidden=true;return;}
   card??=document.querySelector('.myr5-companion-card');if(!card)return;
   if(observedCard!==card){observer.observe(card,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ready']});observedCard=card;}
   // Full-screen workout mode parks the card in #coachOverlay (created at runtime by camera-workout.mjs,

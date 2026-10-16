@@ -1,6 +1,7 @@
 // Full-body coach in the room during a tracked set: off frame until the first rep (or held second) counts,
 // then it walks in and wanders beside, behind and in front of the user. Kick it and it spins off, then walks back.
 import {CoachMotion,COACH} from './coach-hit.mjs';
+import {coach3dEnabled} from './coach3d-flag.mjs';
 const $=id=>document.getElementById(id);
 
 // D43.5: while a set is counting, the coach gives up frames before the counter does. window.myr5TestState.rate
@@ -21,6 +22,7 @@ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
 }
 
 export function mountCoachOverlay(){
+ if(!coach3dEnabled())return; // 3D coach off (coach3d-flag.mjs): nothing mounts, phone.js is never loaded for a workout
  let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,gesturePhase=null,walking=false,begun=false,loading=null,lastState=null;
  let capped=false,aboveSince=null,caps=0,pending=null,scheduled=0,animation=0,lastAnimation=0;
  async function ensureCard(){
@@ -108,6 +110,11 @@ export function mountCoachOverlay(){
  window.addEventListener('myr5:pose',onPose);
  function setTracking(busy){if(busy===tracking)return;tracking=busy;if(busy){begun=false;void enter();}else leave();}
  new MutationObserver(()=>setTracking(document.body.dataset.tracking==='true')).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+ // Preparation rest keeps data-tracking on (the camera set resumes after it) but moves the card to the rest scene.
+ // Without this the overlay kept walking/yawing the coach there: sideways, walk cycle looping. Park it like a set end,
+ // then take the card back when the set resumes (pod.mjs moves it into #coachOverlay before this event).
+ window.addEventListener('myr5:preparation-rest-start',()=>{if(tracking)leave();});
+ window.addEventListener('myr5:preparation-rest-end',()=>{if(tracking)void enter();});
  window.myr5CoachOverlay={
   start(){document.body.dataset.tracking='true';setTracking(true);},
   begin(){begun=true;motion?.begin();},
