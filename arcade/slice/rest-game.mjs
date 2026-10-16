@@ -13,11 +13,14 @@ export function mountRestGame(scene,{avatar,attackButton,feedback,sound=()=>{}})
  let e,dodger,plan=null,frame=0,last=0,nextThrow=0,nextLaser=0,throws=0,swallow=false,unsub=()=>{},k=1,runOwner=null,reportQuest=null;
  const phone={gx:0,motion:0},pointer={down:false,x:0,y:0,speed:0};
  const swipe=createSwipe(),say=t=>{if(feedback)feedback.textContent=t;};
- const floorY=()=>e.h*.8,coachY=()=>e.h*.17,gunTop=()=>e.h*.04,gunAt=()=>({x:e.coachX,y:gunTop(),flip:true});
+ // hudY: the rest HUD (.boss-status) overlays the top of the encounter, so the gun hangs just below it (measured in begin()).
+ let hudY=0;
+ const floorY=()=>e.h*.8,gunTop=()=>hudY+e.h*.04,coachY=()=>gunTop()+e.h*.13,gunAt=()=>({x:e.coachX,y:gunTop(),flip:true});
  const toLogical=ev=>{const r=canvas.getBoundingClientRect();return {x:(ev.clientX-r.left)/r.width*e.w,y:(ev.clientY-r.top)/r.height*e.h};};
  function begin(){
   const b=scene.getBoundingClientRect();if(!(b.width>0&&b.height>0))throw new Error('Rest target canvas host has no visible size');k=b.width/W;const h=Math.round(W*b.height/b.width);
   canvas.width=W;canvas.height=h;
+  const hud=scene.querySelector('.boss-status')?.getBoundingClientRect();hudY=hud&&hud.height>0?Math.max(0,(hud.bottom-b.top)/k):0;
   e=createSlice({w:W,h,mode:'rest',auto:false,coachX:W/2,onEvent:(type,d)=>{
    if(type==='hit')sound(d.kind==='slice'?'barrel-split':d.type==='barrel-fuel'||d.type==='barrel-toxic'?'blast-big':'blast');
    else if(type==='shot')sound('gun-shot');else if(type==='gun-aim')sound('gun-arm');else if(type==='chain')sound('blast');

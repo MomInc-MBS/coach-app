@@ -1,13 +1,15 @@
 // Rest scene coach while the 3D coach is off (coach3d-flag.mjs): the 64-bit coach sprite, front-facing, standing
-// still in front of the user. Same sprite source as the Fruit Ninja coach (camera-slice.mjs). Drawn once per call.
-export const REST_SPRITE={heightPct:62,bottomPct:2}; // tuning: share of the rest mount the sprite fills
+// still in front of the user, beside the MOM gun lane. Same sprite source as the Fruit Ninja coach (camera-slice.mjs). Drawn once per call.
+// The MOM gun (arcade/slice/rest-game.mjs) hangs top-centre and fires down the middle at the player, so the coach stands
+// right of that lane, facing us. No seated frame exists in war-room/coach-sprites.js, so he stands still.
+export const REST_SPRITE={heightPct:46,bottomPct:2,centerPct:70}; // tuning: size/feet/horizontal centre within the rest mount
 export function mountRestCoachSprite(mount){
  if(!mount)return null;
  let canvas=mount.querySelector('canvas.rest-coach-sprite');
  if(!canvas){
   canvas=document.createElement('canvas');canvas.className='rest-coach-sprite';canvas.width=64;canvas.height=96;canvas.setAttribute('aria-hidden','true');
   const aspect=64/96;
-  canvas.style.cssText=`position:absolute;left:50%;bottom:${REST_SPRITE.bottomPct}%;height:${REST_SPRITE.heightPct}%;aspect-ratio:${aspect};transform:translateX(-50%);image-rendering:pixelated;pointer-events:none;`;
+  canvas.style.cssText=`position:absolute;left:${REST_SPRITE.centerPct}%;bottom:${REST_SPRITE.bottomPct}%;height:${REST_SPRITE.heightPct}%;aspect-ratio:${aspect};transform:translateX(-50%);image-rendering:pixelated;pointer-events:none;`;
   mount.append(canvas);
  }
  (async()=>{
