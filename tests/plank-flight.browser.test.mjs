@@ -30,11 +30,15 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
  try{browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
   const context=await browser.newContext({viewport:{width:375,height:812},permissions:['camera'],serviceWorkers:'block'});page=await context.newPage();page.on('pageerror',e=>errors.push(e.stack??e.message));await context.addInitScript(guideSeen);
   await page.route('**/vendor/mediapipe/0.10.14/vision_bundle.mjs',route=>route.fulfill({contentType:'text/javascript',body:trackerModule}));
-  const base='http://127.0.0.1:'+server.address().port;await page.goto(base+'/__test__');
+  const external=process.env.PLANK_LIVE_URL;
+  const base=external||'http://127.0.0.1:'+server.address().port;await page.goto(base+(external?'/onboarding.html':'/__test__'));
   await page.evaluate(async intake=>{const{openLocalCoach}=await import('/local-coach-runtime.mjs');const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();const{chooseWorkoutPaths}=await import('/chosen-styles.mjs');chooseWorkoutPaths(['yoga','chest']);},completeCoach());
   await page.goto(base+'/pose#pod');await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
   await page.evaluate(async()=>{const{chooseWorkoutPaths}=await import('/chosen-styles.mjs');chooseWorkoutPaths(['yoga','chest'],{reset:true});});
   await page.locator('#plankFlight').click();
+  await page.waitForFunction(()=>!!window.myr5PlankFlight?.active);
+  await page.getByRole('button',{name:'Begin flight',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.pf-panel')?.hidden===true);
   await page.waitForFunction(()=>window.myr5PlankFlight?.active?.run?.phase==='flying',null,{timeout:45000});
   await page.waitForFunction(()=>window.myr5TestState.motion.totalHold>.5,null,{timeout:10000});
   assert.equal(await page.locator('.plank-flight').count(),1);assert.equal(await page.locator('.plank-flight canvas.pf-canvas').count(),1);
