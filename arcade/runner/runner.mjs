@@ -1,7 +1,7 @@
 // Cool Cardio runner over the camera workout: the 3D corridor fills the stage, the camera shrinks to a small mirrored
 // selfie inset, the counter/timer stays and a tap on it finishes the run. A skin and controller only: cardio XP and time
 // are still counted by performance-workout.mjs (endless gentle cardio); this reads pose events and nothing else.
-// Endless: courses chain and get harder. Traps and unhit projectiles are stumbles. Stop jogging and the speed ramps to 0
+// Endless: courses chain and get harder at one constant speed (treadmill: head bob runs, arms up jumps, crouch slides, lean steers). Traps and unhit projectiles are stumbles. Stop jogging and the speed ramps to 0
 // over 10 s while Coach closes in from behind; 10 s still and he catches you (onCaught finishes the set with its XP).
 // Coach also throws junk straight down the hall from the far end; punch or slice it for a small bonus (throws.mjs).
 // Lazy: app.mjs imports this only for Cool Cardio (external in scripts/build.mjs).
@@ -34,6 +34,12 @@ const CSS=`#cameraWorkout.runner-on>video{inset:auto;right:6px;bottom:max(6px,en
 #cameraWorkout .runner-say.pop{animation:runner-pop .42s cubic-bezier(.3,1.6,.5,1) both}
 @keyframes runner-pop{from{opacity:0;transform:translateY(-14px) scale(.6) rotate(-3deg)}to{opacity:1;transform:none}}
 #cameraWorkout .runner-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#cameraWorkout .runner-stopped{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none;background:#40000c80;text-align:center}
+#cameraWorkout .runner-stopped[hidden]{display:none}
+#cameraWorkout .runner-stopped b{font:900 clamp(40px,13vw,72px)/.95 system-ui,sans-serif;color:#fff;-webkit-text-stroke:3px #ff0030;text-shadow:0 0 18px #ff0030,0 6px 0 #5a0010;letter-spacing:.02em;animation:runner-stop-pulse .8s ease-in-out infinite alternate}
+#cameraWorkout .runner-stopped span{font:800 18px/1.2 system-ui,sans-serif;color:#ffe3e8;text-shadow:0 2px 4px #000}
+@keyframes runner-stop-pulse{from{transform:scale(.96)}to{transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce){#cameraWorkout .runner-stopped b{animation:none}}
 @media(prefers-reduced-motion:reduce){#cameraWorkout .runner-say.pop,#cameraWorkout .runner-flash.on{animation:none}#cameraWorkout .runner-chaser{transition:none}}`;
 export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>{},seed=Date.now()>>>0}){
   const style=document.createElement('style');style.textContent=CSS;document.head.append(style);
@@ -41,7 +47,9 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
   const canvas=document.createElement('canvas');canvas.className='runner-view';const flash=document.createElement('div');flash.className='runner-flash';
   const chaser=document.createElement('div');chaser.className='runner-chaser';const coach=coachHand({size:Math.min(340,innerWidth*.9)});chaser.append(coach);layer.append(canvas,flash,chaser);
   const say=document.createElement('div');say.className='runner-say';say.setAttribute('aria-live','polite');say.hidden=true;
-  host.prepend(layer);host.append(say);host.classList.add('runner-on');
+  // Treadmill: no head bob for POSE_TUNING.jogHold s after the run starts = a big stop warning until you run again.
+  const stopped=document.createElement('div');stopped.className='runner-stopped';stopped.setAttribute('role','alert');stopped.hidden=true;stopped.innerHTML='<b>YOU ARE<br>STOPPED</b><span>Run to keep going</span>';
+  host.prepend(layer);host.append(say,stopped);host.classList.add('runner-on');
   const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(1.5,devicePixelRatio||1));
   const maze=createMazeScene(THREE),run=createRun(seed),body=createPoseInput({Session});
   const still=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -65,14 +73,14 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
   function feed(now){
     for(const f of run.feed.splice(0)){
       if(f.type==='stumble'){if(run.still<2)show(f.trap==='throw'?'Coach hit you.':pick(STUMBLE_LINES));flash.classList.remove('on');void flash.offsetWidth;flash.classList.add('on');sound('jelly');chatAt=now+6000;}
-      else if(f.type==='course'){show(`Hall ${f.level+1}. Faster.`);sound('lever');chatAt=now+6000;}
+      else if(f.type==='course'){show(`Hall ${f.level+1}. Harder.`);sound('lever');chatAt=now+6000;}
       else if(f.type==='warn'){show('Coach is right behind you. Jog!',4000);sound('crt');chatAt=now+6000;}
       else if(f.type==='caught'){show('Coach caught you.',6000);chaser.classList.add('caught');coach.coach.roll(true);sound('main-control');caughtAt=now;}
     }
     if(wasStill>=2&&run.still===0&&run.status==='running'){show('Coach falls back.');chatAt=now+6000;}
     wasStill=run.still;
     if(now>chatAt&&run.status==='running'){chatAt=now+7000+Math.random()*4000;
-      show(!body.calibrated?'Stand still. Coach measures.':!run.started?'Jog in place to run.':pick(RUN_LINES));}
+      show(!body.calibrated?'Coach measures. Keep going.':!run.started?'Run to start.':pick(RUN_LINES));}
   }
   function frame(now){
     // Wall-clock time (sub-stepped), so a slow phone neither slows the game nor stretches the 10 s stop clock.
@@ -82,13 +90,20 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
     for(let left=dt;left>1e-6;left-=.05){const d=Math.min(.05,left);step(run,d);throws.step(d,runSpeed(run),run.started&&run.status==='running',run.level);}feed(now);
     // The chaser climbs into view as the stop clock (or stumble pressure) brings Coach close.
     const chase=run.status==='caught'?1:Math.max(run.chase,(run.pressure-.3)*.5);chaser.style.setProperty('--chase',chase.toFixed(3));coach.coach.pressure(Math.max(chase,run.pressure));
+    stopped.hidden=!(run.started&&!run.jogging&&run.status==='running');
     if(caughtAt&&now-caughtAt>3200){caughtAt=0;onCaught();}
     const cw=host.clientWidth||innerWidth,ch=host.clientHeight||innerHeight;if(cw!==w||ch!==h){w=cw;h=ch;renderer.setSize(w,h,false);}
     maze.render(renderer,run,!still(),{pressure:Math.max(run.pressure,run.chase),before:(scene,camera)=>view.update(throws,posOf,coachAt(),camera,dt,now)});
   }
-  raf=requestAnimationFrame(frame);show('Stand still. Coach measures.',3000);
+  // Fallback controls: arrow keys / space, and swipes on the game (buttons keep their taps).
+  const KEYS={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'jump',' ':'jump',ArrowDown:'slide'};
+  const onKey=e=>{const a=KEYS[e.key];if(a&&!e.target?.closest?.('input,select,textarea,button')){e.preventDefault();input(run,a);}};
+  let swipe=null;const onDown=e=>{swipe=e.target?.closest?.('button,select,a,input')?null:{x:e.clientX,y:e.clientY};};
+  const onUp=e=>{if(!swipe)return;const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;swipe=null;if(Math.max(Math.abs(dx),Math.abs(dy))<40)return;input(run,Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'jump':'slide'));};
+  addEventListener('keydown',onKey);host.addEventListener('pointerdown',onDown);host.addEventListener('pointerup',onUp);
+  raf=requestAnimationFrame(frame);show('Coach measures. Keep going.',3000);
   return {run,maze,body,show,throws,screenOf:screen,
     pose(detail){const r=body.update(detail);run.jogging=r.jogging;for(const a of r.actions)input(run,a);lastPose=performance.now();
       if(run.status==='running')for(const s of strike(detail,{width:host.clientWidth||innerWidth,height:host.clientHeight||innerHeight}))throws.strike(s.a,s.b,s.kind,screen);return r;},
-    stop(){cancelAnimationFrame(raf);clearTimeout(hideTimer);view.dispose();coach.coach.destroy();renderer.dispose();renderer.forceContextLoss?.();layer.remove();say.remove();style.remove();host.classList.remove('runner-on');host.style.removeProperty('--runner-hue');}};
+    stop(){removeEventListener('keydown',onKey);host.removeEventListener('pointerdown',onDown);host.removeEventListener('pointerup',onUp);stopped.remove();cancelAnimationFrame(raf);clearTimeout(hideTimer);view.dispose();coach.coach.destroy();renderer.dispose();renderer.forceContextLoss?.();layer.remove();say.remove();style.remove();host.classList.remove('runner-on');host.style.removeProperty('--runner-hue');}};
 }

@@ -1,6 +1,7 @@
 // MYR5 movement rules. AGPL-3.0-or-later, like the accompanying test app.
 // These are counting/shape heuristics, not assessments of exercise technique.
 import {EXERCISES} from './exercise-library.mjs';
+import {createHeadBob} from './arcade/runner/pose-input.mjs';
 import {evaluateMovement,JOINTS} from './movement-rules.mjs';
 import {PoseClassifier} from './pose-classifier.mjs';
 import POSE_SAMPLES from './pose-samples.mjs';
@@ -66,7 +67,7 @@ export class MovementSession {
     if(!MOVEMENTS[mode])throw new Error('Unknown movement');
     this.mode=mode;this.duration=Number(options.duration)||0;this.count=0;this.elapsed=0;this.hold=0;this.totalHold=0;this.bestHold=0;this.active=0;this.speed=0;this.bestSpeed=0;
     this.started=null;this.last=null;this.complete=false;this.eventTimes=[];this.side=null;this.calibration=[];this.base=null;this.filtered={};this.phase='ready';this.phaseSince=null;this.lastRep=-Infinity;this.dt=0;this.lastMatch=null;
-    this.candidate=null;this.missAt=null;this.previousMatch=false;this.hands={};this.kneeArmed={left:false,right:false};this.lastStep=-Infinity;
+    this.candidate=null;this.missAt=null;this.previousMatch=false;this.hands={};this.kneeArmed={left:false,right:false};this.lastStep=-Infinity;this.bob=null;
     this.message=MOVEMENTS[mode].hint;this.measurement='';this.tracking=false;this.progress=0;this.setupProgress=0;this.setupReason='';this.jointReadings='';
     // A recorded samples file switches this exercise's reps to the k-NN classifier; {samples:null} forces the rules.
     const samples='samples' in options?options.samples:POSE_SAMPLES[mode];
@@ -240,6 +241,11 @@ export class MovementSession {
     this.measurement='Hand pace is relative to torso length. No punch-accuracy score.';this.progress=clamp(this.speed/5,0,1);
   }
   jogUpdate(f,t,dt){
+    // Cool Cardio on a treadmill: the console hides the knees, so a head bob is the step (keeps active time and XP counting).
+    if(!f.knees&&EXERCISES[this.mode]?.runner&&f.visible([0,11,12])){
+      this.tracking=true;this.bob??=createHeadBob();if(this.bob.update(f.p,t)){this.count++;this.eventTimes.push(t);this.lastStep=t;}
+      this.message='Counting head bobs (treadmill).';this.measurement='Estimated steps from head bob; knees are not tracked.';this.progress=clamp((t-this.lastStep)<1?1:0,0,1);return;
+    }
     if(!f.knees){this.lose(t,'Steps paused: '+(f.issues([11,12,23,24,25,26]).slice(0,2).join('; ')||'move a little closer')+'. Feet are not tracked.');return;}
     this.tracking=true;const l=f.sides.left,r=f.sides.right;
     for(const [name,a,b] of [['left',l,r],['right',r,l]]){

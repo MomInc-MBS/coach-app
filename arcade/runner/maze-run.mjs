@@ -1,6 +1,6 @@
 // Cardio runner rules, copied from the site's Coach Armie maze (tv/assets/armie-intro/maze-run.mjs) and made endless:
 // three lanes, the same three full-width traps and the 90 degree turn; no doors, no questions, no tap boost.
-// Cool Cardio: courses chain forever, each harder (more traps, tighter spacing, faster base speed, combos later).
+// Cool Cardio: courses chain forever, each harder (more traps, tighter spacing, combos later) at one constant speed.
 // A hit is a stumble, never the end: brief slow-down and coach pressure up; pressure decays as you clear traps.
 // Only stopping ends it: with no jogging the speed ramps to 0 over STOP.seconds while Coach closes in from behind;
 // a full STOP.seconds still and he catches you (status 'caught'). Jogging again ramps back to full speed.
@@ -11,7 +11,11 @@ export const STOP = {seconds:10, warn:5, rampUp:2}; // still seconds until caugh
 export const STUMBLE = {seconds:.9, slow:.3, pressure:.22, clearRelief:.07, decay:.012, floor:.08};
 const START = 12, RUNOUT = 14, MIN_GAP_S = 1.5;
 export function rng(seed){let a=(seed*2654435761+1013904223)>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
-export const courseSpeed = level => Math.min(7.2, 4.2 + .14*level);
+// Treadmill rule (Ian, R-1017): run speed is ONE constant. It never scales with effort or level; halls get harder by traps.
+// JUMP is floaty: long hang time, soft gravity (pow<1 flattens the top of the arc).
+export const RUN = {speed:5};
+export const JUMP = {seconds:1.5, peak:1.35, float:.5};
+export const courseSpeed = () => RUN.speed;
 export const trapCount = level => Math.min(18, 5 + level);
 export const gapSeconds = level => Math.max(MIN_GAP_S, 3.2 - .13*level);
 export const comboChance = level => level < 2 ? 0 : Math.min(.55, .12*(level-1));
@@ -58,7 +62,7 @@ export function runSpeed(run){
 export function upcoming(run) { return run.events.find(e=>!e.cleared) || null; }
 export function input(run, action) {
   if(run.status !== 'running' || run.paused) return;
-  if(action === 'jump') { if(run.jumpTime === 0 && run.slideTime === 0) run.jumpTime = .96; return; }
+  if(action === 'jump') { if(run.jumpTime === 0 && run.slideTime === 0) run.jumpTime = JUMP.seconds; return; }
   if(action === 'slide') { if(run.jumpTime === 0 && run.slideTime === 0) run.slideTime = .96; return; }
   if(action !== 'left' && action !== 'right') return;
   const next=upcoming(run);
@@ -94,7 +98,7 @@ export function step(run, delta) {
     if(!run.warned&&run.still>=STOP.warn){run.warned=true;run.feed.push({type:'warn'});}
     if(run.still>=STOP.seconds-1e-6){run.status='caught';run.feed.push({type:'caught'});return;}}
   run.duck=run.slideTime>0?Math.min(1,(.96-run.slideTime)/.1,run.slideTime/.12):0;
-  run.height=run.jumpTime>0?Math.sin((1-run.jumpTime/.96)*Math.PI)*1.35:0;
+  run.height=run.jumpTime>0?Math.pow(Math.sin((1-run.jumpTime/JUMP.seconds)*Math.PI),JUMP.float)*JUMP.peak:0;
   const next=upcoming(run), move=runSpeed(run)*dt;
   run.distance+=move;run.total+=move;
   // The pit is checked on every step while you are over it, not only at its lip.
