@@ -34,6 +34,7 @@ body[data-screen=rest]>.ship-header,body[data-screen=rest] #coachDock.coach-dock
 #restScreen .rest-clock small{font-size:12px}
 #restScreen .rest-clock strong{font:700 26px/1.1 var(--room-pixel)}
 #restScreen .hand-team{position:absolute;z-index:11;left:16px;bottom:calc(96px + env(safe-area-inset-bottom));margin:0;max-width:60%;background:#211830dd;padding:8px;border:1px solid #b2d2b3;border-radius:0;font:12px/1.3 var(--room-pixel)}
+body[data-screen=rest] .reward-pack-launch{bottom:calc(156px + env(safe-area-inset-bottom,0px))}
 #restScreen .hand-team #handTeamStatus{display:none}
 #restScreen .hand-team small{font-size:12px}
 #restScreen .rest-feedback{position:absolute;left:16px;right:16px;top:calc(185px + env(safe-area-inset-top));z-index:11;margin:0;min-height:0;text-align:center;font:14px/1.4 var(--room-pixel);text-shadow:2px 2px #211329;color:#fff5da;pointer-events:none}
