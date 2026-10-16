@@ -52,21 +52,22 @@ function upper(p,aspect,minVis){
   const X=i=>p[i].x*aspect,sw=Math.hypot(X(11)-X(12),p[11].y-p[12].y);if(sw<.03)return null;
   return {ok,X,sw,sx:(X(11)+X(12))/2,sy:(p[11].y+p[12].y)/2,ny:p[0].y};
 }
-// Head bob: a hysteresis peak tracker on (nose+shoulders)/2. Returns true once per bob cycle. Also used by movement-engine
+// Head bob: a hysteresis peak tracker on (nose+shoulders)/2. Returns true on each up/down reversal of the head. Also used by movement-engine
 // to keep Cool Cardio's active time (XP) counting when the knees are hidden by a treadmill console.
 export function createHeadBob(tuning=POSE_TUNING){
-  let v=null,ext=null,dir=0,lastRev=-Infinity,last=null;
+  let v=null,ext=null,dir=1,lastRev=-Infinity,last=null;
   return {update(points,t,aspect=1){
     const T=tuning.bob,f=upper(points,aspect,tuning.minVisibility);if(!f)return false;
     const dt=last===null?0:t-last;last=t;v=ema(v,(f.ny+f.sy)/2,dt,T.smooth);
     const h=T.min*f.sw;if(ext===null){ext=v;return false;}
     let rev=0;
-    if(dir===0){if(Math.abs(v-ext)>=h){dir=v>ext?1:-1;ext=v;}}
-    else if(dir*(v-ext)>0)ext=v;
+    if(dir*(v-ext)>0)ext=v;
     else if(Math.abs(v-ext)>=h){rev=dir;dir=-dir;ext=v;}
     if(!rev)return false;
-    const quick=t-lastRev<=T.maxHalf;lastRev=t;
-    return quick&&rev===1; // one per cycle: the head reached its low point and started back up
+    // Every quick reversal counts (about two per step). Below ~2x the cadence a tracker aliases the bob into a slower
+    // wave, so the window widens with the frame gap: a 2 updates/s phone still reads a runner as running.
+    const quick=t-lastRev<=Math.max(T.maxHalf,3*dt);lastRev=t;
+    return quick;
   }};
 }
 // Jump / slide / lean from the upper body, with a moving-safe baseline, smoothing, hysteresis, dwell and cooldowns.

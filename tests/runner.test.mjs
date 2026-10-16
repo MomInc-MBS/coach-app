@@ -166,6 +166,14 @@ test('treadmill: no bob for ~2 s = stopped; bobbing again = running',()=>{
   assert.ok(still.filter(([t])=>t<6.4).every(([,j])=>j),'still running inside the 2 s hold');
   assert.ok(still.filter(([t])=>t>7.3).every(([,j])=>!j),'stopped after ~2 s with no bob');
   feed(input,seq(8,9,RUNNING));assert.ok(input.jogging,'bob resumes running');
+  // Standing on a stopped belt with tracker jitter (+-0.004, about 2 cm) is still stopped.
+  let seed=1;const rnd=()=>((seed=seed*16807%2147483647)/2147483647-.5)*.008;
+  const jitter=seq(9,14,{}).map(([t,p])=>[t,p.map(q=>q.visibility?{...q,x:q.x+rnd(),y:q.y+rnd()}:q)]);
+  const js=feedJog(input,jitter);assert.ok(js.filter(([t])=>t>11.2).every(([,j])=>!j),'jitter is not a bob');
+});
+test('treadmill: a slow phone tracker (2 updates/s) still reads a runner as running',()=>{
+  const input=createPoseInput({Session:MovementSession});feed(input,seq(0,1.5,{bob:.035},2));
+  const states=feedJog(input,seq(1.5,20,{bob:.035},2));assert.ok(states.filter(([t])=>t>4).filter(([,j])=>j).length/states.filter(([t])=>t>4).length>=.9,'running at 2/s');
 });
 test('treadmill: arms up + shoulders up while running = one jump; arms up without the shrug is not',()=>{
   const input=treadInput();feed(input,seq(1.5,4,RUNNING));
