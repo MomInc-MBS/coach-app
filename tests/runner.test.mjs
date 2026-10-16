@@ -25,11 +25,11 @@ test('courses chain endlessly and stay deterministic',()=>{
   assert.deepEqual(R.courseFor(99,4),R.courseFor(99,4));
 });
 
-test('each course is harder: more traps, tighter spacing, faster, combos later',()=>{
+test('each course is harder: more traps, tighter spacing, combos later, at one constant speed',()=>{
   const stats=[0,3,6,10,16].map(level=>{let traps=0,gap=0,n=0,combos=0;for(let s=0;s<30;s++){const c=R.courseFor(s*31,level),t=c.events.filter(e=>e.type!=='turn');traps+=t.length;combos+=t.filter(e=>e.combo).length;
     for(let i=1;i<t.length;i++){gap+=t[i].at-t[i-1].at-(t[i-1].length||0);n++;}}return {level,traps:traps/30,gapS:gap/n/R.courseSpeed(level),speed:R.courseSpeed(level),combos};});
   for(let i=1;i<stats.length;i++){const p=stats[i-1],c=stats[i];
-    assert.ok(c.traps>p.traps,'more traps '+JSON.stringify(stats));assert.ok(c.gapS<p.gapS,'tighter '+JSON.stringify(stats));assert.ok(c.speed>p.speed,'faster');}
+    assert.ok(c.traps>p.traps,'more traps '+JSON.stringify(stats));assert.ok(c.gapS<p.gapS,'tighter '+JSON.stringify(stats));assert.equal(c.speed,R.RUN.speed,'constant speed, never faster');}
   assert.equal(stats[0].combos,0,'no combos on the first course');assert.ok(stats.at(-1).combos>0,'mixed combos later');
   const combo=R.courseFor(5,12).events.find(e=>e.combo);assert.ok(combo&&combo.type!=='pit','a combo follows a pit with a grid or platform');
 });
@@ -128,10 +128,86 @@ test('side step needs a planted foot: a wide two-foot stance does not steer',()=
   assert.equal(fired,0);
 });
 
-test('jump and crouch reuse the jump and squat detectors',()=>{
-  const input=createPoseInput({Session:MovementSession});feed(input,stand(0,1.5));
-  const up=feed(input,Array.from({length:12},(_,i)=>[1.5+i/30,body({rise:.06})]));
-  assert.ok(up.includes('jump'),'jump: '+up);feed(input,stand(1.9,3));
-  const down=feed(input,Array.from({length:12},(_,i)=>[3+i/30,body({drop:.07})]));
-  assert.ok(down.includes('slide'),'crouch: '+down);
+
+// ---- R-1017 treadmill: upper body only (legs hidden by the console), phone in front, portrait 480x640 ----
+// bob: head/shoulder vertical oscillation (height units) at 2.6 Hz; up: both arms overhead + shoulders shrugged;
+// crouch: head and shoulders drop; lean: 1 = player's right (image-left), -1 = player's left.
+function tread({t=0,bob=0,up=false,crouch=0,lean=0,hips=true}={}){
+  const p=Array.from({length:33},()=>({x:.5,y:.5,z:0,visibility:0})),b=bob*Math.sin(t*2.6*2*Math.PI)+crouch;
+  const set=(i,x,y)=>{p[i]={x,y,z:0,visibility:1};};
+  const lx=-.04*lean,shrug=up?.02:0;
+  set(0,.5+lx*1.2,.2+b);
+  for(const [side,s,e,w,h] of [[1,11,13,15,23],[-1,12,14,16,24]]){
+    const sy=.32+b-shrug-side*.03*lean;set(s,.5+lx+side*.12,sy);
+    set(e,.5+lx+side*.16,up?sy-.1:sy+.12);set(w,.5+lx+side*.15,up?sy-.22:sy+.08);
+    if(hips)set(h,.5+side*.07,.56+b*.5);
+  }
+  return p;
+}
+const seq=(from,to,opts={},fps=30)=>Array.from({length:Math.round((to-from)*fps)},(_,i)=>{const t=from+i/fps;return [t,tread({t,...(typeof opts==='function'?opts(t):opts)})];});
+const RUNNING={bob:.025};
+function treadInput(){const input=createPoseInput({Session:MovementSession});feed(input,seq(0,1.5,RUNNING));assert.ok(input.calibrated,'calibrates while running');return input;}
+const feedJog=(input,frames)=>{const out=[];for(const [t,points] of frames)out.push([t,input.update({points,width:W,height:H,now:t*1000}).jogging]);return out;};
+
+test('treadmill: head bob runs at 30/s and 10/s and never fires jump, slide or lean',()=>{
+  for(const fps of [30,10]){
+    const input=createPoseInput({Session:MovementSession});const acts=feed(input,seq(0,1.5,RUNNING,fps));
+    const states=feedJog(input,seq(1.5,12,RUNNING,fps));
+    assert.deepEqual(acts.concat(feed(input,[])),[],fps+'/s');
+    assert.ok(states.filter(([t])=>t>2.5).every(([,j])=>j),fps+'/s: running the whole time');
+    assert.deepEqual(feed(input,seq(12,20,RUNNING,fps)),[],fps+'/s: no actions while running');
+    // Without hips (console hides them) too.
+    const noHips=createPoseInput({Session:MovementSession});assert.deepEqual(feed(noHips,seq(0,10,{...RUNNING,hips:false},fps)),[],fps+'/s no hips');
+  }
+});
+test('treadmill: no bob for ~2 s = stopped; bobbing again = running',()=>{
+  const input=treadInput();feed(input,seq(1.5,5,RUNNING));assert.ok(input.jogging);
+  const still=feedJog(input,seq(5,8,{}));
+  assert.ok(still.filter(([t])=>t<6.4).every(([,j])=>j),'still running inside the 2 s hold');
+  assert.ok(still.filter(([t])=>t>7.3).every(([,j])=>!j),'stopped after ~2 s with no bob');
+  feed(input,seq(8,9,RUNNING));assert.ok(input.jogging,'bob resumes running');
+  // Standing on a stopped belt with tracker jitter (+-0.004, about 2 cm) is still stopped.
+  let seed=1;const rnd=()=>((seed=seed*16807%2147483647)/2147483647-.5)*.008;
+  const jitter=seq(9,14,{}).map(([t,p])=>[t,p.map(q=>q.visibility?{...q,x:q.x+rnd(),y:q.y+rnd()}:q)]);
+  const js=feedJog(input,jitter);assert.ok(js.filter(([t])=>t>11.2).every(([,j])=>!j),'jitter is not a bob');
+});
+test('treadmill: a slow phone tracker (2 updates/s) still reads a runner as running',()=>{
+  const input=createPoseInput({Session:MovementSession});feed(input,seq(0,1.5,{bob:.035},2));
+  const states=feedJog(input,seq(1.5,20,{bob:.035},2));assert.ok(states.filter(([t])=>t>4).filter(([,j])=>j).length/states.filter(([t])=>t>4).length>=.9,'running at 2/s');
+});
+test('treadmill: arms up + shoulders up while running = one jump; arms up without the shrug is not',()=>{
+  const input=treadInput();feed(input,seq(1.5,4,RUNNING));
+  assert.deepEqual(feed(input,seq(4,4.6,{...RUNNING,up:true})),['jump']);
+  assert.deepEqual(feed(input,seq(4.6,6,RUNNING)),[]);
+  assert.deepEqual(feed(input,seq(6,6.6,{...RUNNING,up:true})),['jump'],'rearms after arms come down');
+  feed(input,seq(6.6,8,RUNNING));
+  // Arms overhead, shoulders not raised (shrug removed by lowering the shoulders' rise): no jump.
+  const flat=createUpperBodyCheck(input);assert.equal(flat,0);
+});
+function createUpperBodyCheck(input){let fired=0;for(let i=0;i<20;i++){const t=8+i/30,p=tread({t,...RUNNING,up:true});for(const k of [11,12])p[k].y+=.02;for(const k of [13,14,15,16])p[k].y+=.02;
+  if(input.update({points:p,width:W,height:H,now:t*1000}).actions.includes('jump'))fired++;}return fired;}
+test('treadmill: crouch while running = one slide; the bob never slides',()=>{
+  const input=treadInput();feed(input,seq(1.5,4,RUNNING));
+  assert.deepEqual(feed(input,seq(4,4.6,{...RUNNING,crouch:.1})),['slide']);
+  assert.deepEqual(feed(input,seq(4.6,6,RUNNING)),[]);
+  assert.deepEqual(feed(input,seq(6,6.6,{...RUNNING,crouch:.1})),['slide']);
+});
+test('treadmill: lean right / left = one lane each, with or without hips in view, at 30/s and 10/s',()=>{
+  for(const hips of [true,false])for(const fps of [30,10]){
+    const input=createPoseInput({Session:MovementSession});feed(input,seq(0,1.5,{...RUNNING,hips},fps));feed(input,seq(1.5,3,{...RUNNING,hips},fps));
+    assert.deepEqual(feed(input,seq(3,3.8,{...RUNNING,hips,lean:1},fps)),['right'],`right hips=${hips} ${fps}/s`);
+    assert.deepEqual(feed(input,seq(3.8,5,{...RUNNING,hips},fps)),[]);
+    assert.deepEqual(feed(input,seq(5,5.8,{...RUNNING,hips,lean:-1},fps)),['left'],`left hips=${hips} ${fps}/s`);
+  }
+});
+test('treadmill: head bob keeps Cool Cardio steps (XP active time) counting when the knees are hidden',()=>{
+  const s=new MovementSession('jogging');let n=0;for(const [t,points] of seq(0,6,RUNNING))n=s.update(points,t*1000,A).count;
+  assert.ok(n>=10,'steps from head bob: '+n);
+  const m=new MovementSession('march');let k=0;for(const [t,points] of seq(0,6,RUNNING))k=m.update(points,t*1000,A).count;assert.equal(k,0,'other marches still need knees');
+});
+test('floaty jump: long hang time clears platforms; speed is the one constant',()=>{
+  const run=Object.assign(R.createRun(1),{jogging:true});R.step(run,.05);R.input(run,'jump');let air=0,peak=0;
+  for(let i=0;i<80;i++){R.step(run,.025);if(run.height>.65)air+=.025;peak=Math.max(peak,run.height);}
+  assert.ok(air>=1.1,'hang above platform height for '+air.toFixed(2)+' s');assert.ok(Math.abs(peak-R.JUMP.peak)<.01);
+  assert.equal(R.runSpeed(run),R.RUN.speed);
 });
