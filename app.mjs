@@ -221,7 +221,8 @@ async function showLensInfo(track){
   $('cameraDetails').textContent=JSON.stringify(report,null,2);
   // Send only the camera availability/settings shown above to the local test PC.
   // No camera images, body coordinates, or exercise history are sent.
-  fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
+  // Only the local dev server (serve.cjs) has this route; the Worker answers 404, so skip it elsewhere.
+  if(['localhost','127.0.0.1'].includes(location.hostname))fetch('/camera-info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)}).catch(()=>{});
 }
 function release(){
   dropWorkoutEffects();
