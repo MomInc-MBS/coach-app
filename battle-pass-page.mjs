@@ -2,10 +2,10 @@ import {COSMETIC_LEVEL_XP,cosmeticLevel,coachXpMultiplier,DAILY_TRIO_BONUS} from
 import {readPerformanceProgress} from './performance-progress.mjs';
 import {COACH_REQUIREMENTS,STARTER_COACH_IDS} from './performance-catalog.mjs';
 import {syncBattlePass} from './battle-pass.mjs';
-import {coachRequirements} from './achievements-board.mjs';
+import {coachRequirements,embedAchievements,BOSSES} from './achievements-board.mjs';
 import {CHAPTER_COUNT,chapterForLevel,chapterLevels,chapterWorld,chapterCoach,chapterConstellation} from './level-map-domain.mjs';
 import {mountLevelMapScene} from './level-map-scene.mjs';
-import {mountFlightScroll} from './flight-scroll.mjs';
+import {mountFlightScroll,sectionScrollTop,hyperDuration,hyperEase,FLIGHT_TUNING} from './flight-scroll.mjs';
 
 const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!=null)el.textContent=value;if(className)el.className=className;return el;};
 const localDay=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
@@ -23,40 +23,50 @@ function selectedShip(){
 const svgNode=(tag,attrs={})=>{const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));return el;};
 export function mountBattlePass(){
  if(document.getElementById('battlePassPanel'))return;
- const entry=document.getElementById('battlePassOpen');
- const previewRack=node('div',null,'pass-crt-rack');
+ // R-1017 one achievements page: the CRT is the in-game section menu (bottom of the flight screen). Its arrows pick a
+ // section (systems 1-25, then the coach constellation at the top); tapping the CRT hyper-jumps the ship there.
+ const entry=node('button',null,'battle-pass-entry pass-crt-entry');entry.type='button';entry.id='battlePassOpen';
+ const previewRack=node('div',null,'pass-crt-rack pass-hud');
  const previewPrev=node('button','◀','pass-crt-switch'),previewNext=node('button','▶','pass-crt-switch');
- for(const [button,label] of [[previewPrev,'Previous ten-level area'],[previewNext,'Next ten-level area']]){
+ for(const [button,label] of [[previewPrev,'Previous section'],[previewNext,'Next section']]){
   button.type='button';button.setAttribute('aria-label',label);
  }
- if(entry){entry.before(previewRack);previewRack.append(previewPrev,entry,previewNext);}
+ previewRack.append(previewPrev,entry,previewNext);
  const dialog=node('dialog',null,'launch-panel battle-pass-page');dialog.id='battlePassPanel';dialog.setAttribute('aria-labelledby','battlePassTitle');
- const header=node('header',null,'pass-header'),heading=node('h2','COSMOS / XP FLIGHT');heading.id='battlePassTitle';
+ const header=node('header',null,'pass-header'),heading=node('h2','ACHIEVEMENTS / XP FLIGHT');heading.id='battlePassTitle';
  const close=node('button','CLOSE','pass-close');close.type='button';close.onclick=()=>dialog.close();header.append(heading,close);
- const daily=node('section',null,'pass-daily'),summary=node('section',null,'pass-summary');
+ // R-1017: the game fills the panel. Score, level bar and the daily quests (a one-line chip that expands) ride in a slim
+ // band across the top of the game screen; the CRT section menu is a band along its bottom. Nothing in the scene draws under either.
+ const daily=node('details',null,'pass-daily'),summary=node('section',null,'pass-summary'),topHud=node('div',null,'pass-top-hud');
  const shell=node('section',null,'pass-map-shell');shell.setAttribute('aria-label','Continuous cosmetic reward flight map');
- const viewport=node('div',null,'pass-map-viewport');viewport.tabIndex=0;viewport.setAttribute('role','region');viewport.setAttribute('aria-label','All 250 levels, from level 1 at the bottom to level 250 at the top. Scroll to inspect.');
+ const viewport=node('div',null,'pass-map-viewport');viewport.tabIndex=0;viewport.setAttribute('role','region');viewport.setAttribute('aria-label','The coach constellation at the top, then all 250 levels down to level 1 at the bottom. Scroll to inspect.');
  const route=node('div',null,'pass-route');viewport.append(route);
  const canvas=node('canvas',null,'pass-scene');canvas.setAttribute('aria-hidden','true');
- shell.append(viewport,canvas);
+ shell.append(topHud,viewport,canvas,previewRack);
  const flightScore=node('div',null,'pass-flight-score');flightScore.setAttribute('aria-label','Asteroid flight score');
  const hits=node('strong'),score=node('strong'),multiplier=node('strong');
  flightScore.append(hits,score,multiplier);flightScore.title='Each hit earns the current multiplier in flight points, then increases it by one. An asteroid passing the bottom resets the multiplier to ×1.';
- dialog.append(header,flightScore,daily,summary,shell);document.body.append(dialog);
+ topHud.append(flightScore,summary,daily);
+ dialog.append(header,shell);document.body.append(dialog);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const scene=mountLevelMapScene(canvas,{ship:selectedShip(),reducedMotion:reduced.matches,onScore:state=>{
   hits.textContent=`HITS ${format(state.hits)}`;score.textContent=`SCORE ${format(state.score)}`;multiplier.textContent=`×${format(state.multiplier)}`;
   flightScore.dataset.multiplier=String(state.multiplier);
  }});
- let previewChapter=0,rank=null,performance=null,hasPreviewSelection=false,renderedLevel=0;
- const previewFocus=()=>hasPreviewSelection?previewChapter:chapterForLevel(rank.level);
+ let previewChapter=0,rank=null,performance=null,hasPreviewSelection=false,renderedLevel=0,board=null;
  function renderPreview(){
-  if(!entry||!rank)return;
+  if(!rank)return;
+  previewPrev.disabled=previewChapter===0;previewNext.disabled=previewChapter===CHAPTER_COUNT;
+  if(previewChapter===CHAPTER_COUNT){
+   const golden=performance?.goldenCoaches?.length||0;
+   entry.replaceChildren(node('strong','COACH CONSTELLATION'),node('small',`${performance?.coaches?.length||0} / ${BOSSES.length} COACHES · ${golden} GOLDEN`),node('small','» TAP TO HYPERJUMP'));
+   entry.setAttribute('aria-label','Hyperjump to the coach constellation');return;
+  }
   const world=chapterWorld(previewChapter),levels=chapterLevels(previewChapter,COSMETIC_LEVEL_XP);
   const current=previewChapter===chapterForLevel(rank.level);
   const line1=`SYSTEM ${String(previewChapter+1).padStart(2,'0')} / 25 · ${world.name.toUpperCase()}`;
   const line2=current?(rank.max?'LEVEL 250 COMPLETE':`LV ${rank.level} · ${Math.ceil(rank.next-rank.xp).toLocaleString()} XP TO NEXT`):`LEVELS ${levels[0].level}–${levels.at(-1).level} · ${format(levels[0].xp)}–${format(levels.at(-1).xp)} XP`;
-  const line3='10 COSMETIC PACKS · RARE + LEGENDARY';
+  const line3='10 PACKS · » TAP TO HYPERJUMP';
   entry.classList.add('pass-crt-entry');
   const meter=node('span',null,'pass-entry-meter');meter.setAttribute('aria-hidden','true');meter.style.setProperty('--pass-fill',`${current?(rank.max?100:Math.max(0,Math.min(100,rank.into/rank.need*100))):0}%`);
   const chart=svgNode('svg',{class:'pass-crt-chart',viewBox:'0 0 100 29','aria-hidden':'true',preserveAspectRatio:'none'});
@@ -68,8 +78,7 @@ export function mountBattlePass(){
    chart.append(svgNode('rect',{x:x-1.3,y:y-1.3,width:2.6,height:2.6,class:`pass-crt-dot ${level<rank.level?'is-earned':level===rank.level?'is-current':'is-locked'}`}));
   }
   entry.replaceChildren(node('strong',line1),node('small',line2),chart,node('small',line3),meter);
-  entry.setAttribute('aria-label',`Open full 250-level XP flight map at ${world.name}, levels ${levels[0].level} through ${levels.at(-1).level}`);
-  previewPrev.disabled=previewChapter===0;previewNext.disabled=previewChapter===CHAPTER_COUNT-1;
+  entry.setAttribute('aria-label',`Hyperjump to system ${previewChapter+1}, ${world.name}, levels ${levels[0].level} through ${levels.at(-1).level}`);
  }
  function renderDaily(p){
   const day=p.days?.[localDay()]||{};
@@ -79,7 +88,10 @@ export function mountBattlePass(){
    const item=node('span',`${complete?'✓':'○'} ${label}`);item.dataset.complete=String(complete);quests.append(item);
   }
   const coaches=p.coaches.filter(id=>!STARTER_COACH_IDS.includes(id)).length;
-  daily.replaceChildren(node('h3','TODAY / DAILY QUESTS'),quests,node('strong',workout&&meditation&&food?`✓ +${DAILY_TRIO_BONUS} XP EARNED`:`ALL THREE +${DAILY_TRIO_BONUS} XP`),node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
+  const done=[workout,meditation,food].filter(Boolean).length,chip=node('summary',null,'pass-daily-chip');
+  chip.append(node('span',`DAILY ${done}/3`),node('strong',done===3?`✓ +${DAILY_TRIO_BONUS} XP EARNED`:`ALL THREE +${DAILY_TRIO_BONUS} XP`));
+  chip.setAttribute('aria-label',`Today's daily quests, ${done} of 3 done. Show details`);
+  daily.replaceChildren(chip,quests,node('small',`Meditation doubles workout XP · coach multiplier ×${coachXpMultiplier(coaches)}`));
  }
  function renderSummary(){
   const progress=node('progress');progress.max=rank.max?1:rank.need;progress.value=rank.max?1:rank.into;progress.setAttribute('aria-label','Progress to next cosmetic level');
@@ -133,14 +145,6 @@ export function mountBattlePass(){
   for(let chapter=CHAPTER_COUNT-1;chapter>=0;chapter--)fragment.append(buildArea(chapter));
   route.replaceChildren(fragment);renderedLevel=rank.level;
  }
- function centerOn(target){
-  if(!target)return;
-  requestAnimationFrame(()=>{
-   if(!dialog.open)return;
-   const v=viewport.getBoundingClientRect(),t=target.getBoundingClientRect();
-   viewport.scrollTop+=t.top-v.top-(viewport.clientHeight-t.height)/2;
-  });
- }
  function render({resetPreview=false}={}){
   const p=readPerformanceProgress();performance=p;rank=cosmeticLevel(p.totalXp);
   if(resetPreview||!hasPreviewSelection)previewChapter=chapterForLevel(rank.level);
@@ -150,12 +154,40 @@ export function mountBattlePass(){
   }
  }
  previewPrev.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.max(0,previewChapter-1);renderPreview();};
- previewNext.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.min(CHAPTER_COUNT-1,previewChapter+1);renderPreview();};
+ previewNext.onclick=()=>{hasPreviewSelection=true;previewChapter=Math.min(CHAPTER_COUNT,previewChapter+1);renderPreview();};
+ // Content y (px down the scroller) of a section's marker: the constellation's top, your level, or a system's first level.
+ const contentY=el=>el.getBoundingClientRect().top-viewport.getBoundingClientRect().top+viewport.scrollTop;
+ function sectionTarget(chapter){
+  if(chapter===CHAPTER_COUNT)return 0;
+  const row=chapter===chapterForLevel(rank.level)?route.querySelector('[aria-current="step"]'):route.querySelector(`[data-level="${chapter*10+1}"]`);
+  return row?sectionScrollTop(contentY(row)+row.offsetHeight/2,viewport.clientHeight,viewport.scrollHeight):viewport.scrollTop;
+ }
+ // On open the ship rests just under the golden coach (the last one); flying up scrolls the constellation.
+ const coachStart=()=>board?sectionScrollTop(board.root.offsetTop+board.stage.offsetHeight*.85,viewport.clientHeight,viewport.scrollHeight,FLIGHT_TUNING.coachLine):0;
+ let jump=0;
+ const endJump=()=>{if(jump)cancelAnimationFrame(jump);jump=0;scene.setWarp(0);delete dialog.dataset.hyper;};
+ // Hyper-speed: the page rushes to the section (eased), the scene streaks at the scroll speed. Reduced motion: a cut.
+ function hyperJump(chapter){
+  endJump();stopPointer();
+  const from=viewport.scrollTop,to=sectionTarget(chapter),dist=to-from;
+  if(reduced.matches||Math.abs(dist)<2){viewport.scrollTop=to;return;}
+  const dur=hyperDuration(dist);let t0=null,last=from,lastT=0; // (performance is the progress object in this scope)
+  dialog.dataset.hyper='true';
+  const step=now=>{
+   if(t0===null)t0=lastT=now;
+   const u=Math.min(1,(now-t0)/dur),y=from+dist*hyperEase(u);viewport.scrollTop=y;
+   scene.setWarp(-(y-last)/Math.max(1,now-lastT));last=y;lastT=now;
+   if(u<1)jump=requestAnimationFrame(step);else endJump();
+  };
+  jump=requestAnimationFrame(step);
+ }
+ entry.onclick=()=>hyperJump(previewChapter);
  let activePointer=null;
  const flightScroll=mountFlightScroll(viewport);
  const stopPointer=()=>{activePointer=null;flightScroll.stop();scene.stopFiring();};
  shell.addEventListener('pointerdown',e=>{
-  if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,[contenteditable]'))return;
+  if(jump&&!e.target.closest('button'))endJump();
+  if(activePointer!==null||!e.isPrimary||e.button!==0||e.target.closest('button,a,input,textarea,select,summary,[contenteditable],.pass-top-hud,.pass-hud'))return;
   e.preventDefault();activePointer=e.pointerId;shell.setPointerCapture(e.pointerId);
   scene.aim(e.clientX,e.clientY);flightScroll.aim(e.clientY);scene.startFiring();
  });
@@ -165,19 +197,18 @@ export function mountBattlePass(){
  document.addEventListener('pointercancel',e=>{if(e.pointerId===activePointer)stopPointer();});
  window.addEventListener('blur',stopPointer);
   dialog.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.target.closest('button,input,textarea,select')){e.preventDefault();scene.fire();}});
- dialog.addEventListener('close',()=>{stopPointer();scene.stop();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:null}}));});
+ dialog.addEventListener('close',()=>{endJump();stopPointer();scene.stop();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:null}}));});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopPointer();scene.stop();}else if(dialog.open)scene.start();});
  window.addEventListener('resize',()=>{if(dialog.open)scene.resize();});
  const open=()=>{
   syncBattlePass();render();
   if(!dialog.open){scene.resetScore?.();dialog.showModal();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:'battlepass'}}));}
-  buildMap();
-  const targetChapter=previewFocus();
-  const target=targetChapter===chapterForLevel(rank.level)?route.querySelector('[aria-current="step"]'):route.querySelector(`[data-chapter="${targetChapter}"] [data-level="${targetChapter*10+8}"]`);
-  centerOn(target);scene.start();hasPreviewSelection=false;return dialog;
+  if(!board){board=embedAchievements(dialog,shell);viewport.prepend(board.root);}
+  buildMap();board.open();hasPreviewSelection=false;previewChapter=chapterForLevel(rank.level);renderPreview();
+  requestAnimationFrame(()=>{if(dialog.open)viewport.scrollTop=coachStart();});
+  scene.start();return dialog;
  };
- window.myr5Menus={...window.myr5Menus,battlePass:open};
- entry?.addEventListener('click',()=>window.myr5Routes?.go?window.myr5Routes.go('battlepass'):open());
+ window.myr5Menus={...window.myr5Menus,battlePass:open,achievements:open};
  window.addEventListener('myr5:performance-progress',()=>{syncBattlePass();render();});
  window.addEventListener('myr5:account-ready',()=>render());
  window.addEventListener('storage',()=>render());

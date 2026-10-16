@@ -54,7 +54,7 @@ test.after(async()=>{await browser?.close();await new Promise(r=>server.close(r)
 // scene shows nothing but itself (no title, Close or label; its own objects still take a tap); full screen brings them back.
 const SHAPED=[
  ['up','#mealsPanel','up-food','#mealsPanel [data-close]','#mealsPanel h2','#pyramidScanner canvas'],
- ['down','.ach-board','down-achievements','.ach-close','.ach-head h1','.ach-boss'],
+// R-1017: Achievements is one page now (constellation on top of the XP flight, #battlePassPanel), a flat framed menu.
  // Records peers into the 3D classroom; its whiteboard opens the full panel. Ian 26 Sept: the sideways diamond opens the
  // same tall diamond (the flat trace still reaches it).
  ['vdiamond','#accountPanel','vdiamond-leaderboard','#accountPanel [data-close]','#accountPanel h2','[data-room-board]'],

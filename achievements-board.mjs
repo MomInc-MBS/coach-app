@@ -3,6 +3,7 @@ import {EXERCISES,FOCUS_GROUPS} from './exercise-library.mjs';
 import {readPerformanceProgress,unlockStatus} from './performance-progress.mjs';
 import {DIFFICULTIES} from './progression-rules.mjs';
 import {SHIP_CATALOG} from './modules/ships/ship-catalog.mjs';
+import {asteroid,rock} from './space-rocks.mjs';
 export {selectedTracks} from './battle-pass.mjs';
 export const loadProgress=readPerformanceProgress;
 const IMAGE='/pod/worlds/achievements.jpg';
@@ -70,13 +71,14 @@ export function weaponTierSteps(group,difficulty,owned=0){
  if(pace)acts.push(group==='boxing'?['5 active minutes','Repeat 5 active minutes','Repeat 5 active minutes again','Repeat 5 active minutes again','Repeat 5 active minutes again']:['5 sprint rounds or 5 active minutes','Repeat a completed cardio set','Repeat a completed cardio set','Repeat a completed cardio set','Repeat a completed cardio set']);
  return Array.from({length:5},(_,i)=>({tier:index*5+i+1,text:acts.map(a=>a[i]).join(' · '),state:index*5+i+1<=owned?'done':index*5+i+1===owned+1?'next':'todo'}));
 }
-let dialog,stage,detail,artEl,bossesEl,layers,raf=0,t0=0,far,near,pages=[],page=0,selected=null;
+// dialog: the board's root (.ach-board); owner: the <dialog> that opens/closes it. R-1017: the board can live embedded at the
+// top of the XP flight page (embedAchievements), where the root is a plain section and the flight page's dialog is the owner.
+let dialog,owner,embedded=false,stageVisible=true,stage,detail,artEl,bossesEl,layers,raf=0,t0=0,far,near,pages=[],page=0,selected=null;
 const prefersReducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function element(tag,text,className){const el=document.createElement(tag);if(text)el.textContent=text;if(className)el.className=className;return el;}
 function line(label,text){const p=element('p');p.append(element('strong',`${label} `),document.createTextNode(text));return p;}
 const rand=(a,b)=>a+Math.random()*(b-a);
 const wrap=v=>v-Math.floor(v);
-const asteroid=(r0,r1)=>({r:rand(r0,r1),rot:rand(0,7),vr:rand(-.3,.3),verts:Array.from({length:8},()=>rand(.55,1))});
 // Far layer (unit 0..1 space, positions wrap): a dust field plus a few slow drifting stars and dark asteroids.
 function makeFar(){
  return {
@@ -91,18 +93,6 @@ function makeNear(){
   const alongX=Math.random()<.5,fwd=Math.random()<.5,a=fwd?-.2:1.2,b=fwd?1.2:-.2;
   return {x0:alongX?a:rand(-.1,1.1),y0:alongX?rand(-.1,1.1):a,x1:alongX?b:rand(-.1,1.1),y1:alongX?rand(-.1,1.1):b,dur:rand(6,14),phase:Math.random(),...asteroid(16,30)};
  });
-}
-function poly(ctx,cx,cy,r,rot,verts){
- ctx.beginPath();
- verts.forEach((v,i)=>{const a=rot+i/verts.length*Math.PI*2,x=cx+Math.cos(a)*r*v,y=cy+Math.sin(a)*r*v;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
- ctx.closePath();
-}
-// Irregular dark polygon with a lit rim (a directional gradient stroke) — cheap stand-in for a lit asteroid.
-function rock(ctx,cx,cy,r,rot,verts,alpha){
- ctx.globalAlpha=alpha;poly(ctx,cx,cy,r,rot,verts);ctx.fillStyle='#0c0818';ctx.fill();
- const g=ctx.createLinearGradient(cx-r,cy-r,cx+r*.2,cy+r*.2);
- g.addColorStop(0,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');
- ctx.strokeStyle=g;ctx.lineWidth=1.2;ctx.stroke();ctx.globalAlpha=1;
 }
 function drawFar(elapsed){
  const {ctx,w,h,field}=far,t=elapsed/1000;
@@ -129,13 +119,15 @@ function fitLayers(){
 }
 // One rAF loop for both canvases; stopped on dialog close and while the tab is hidden.
 function startLoop(){
- if(raf||prefersReducedMotion()||!dialog?.open||document.hidden)return;
- const tick=now=>{raf=requestAnimationFrame(tick);draw(now-t0);};
+ if(raf||prefersReducedMotion()||!owner?.open||document.hidden)return;
+ // Embedded: the drift layers only paint while the constellation is on screen (the flight game owns the frame budget).
+ const tick=now=>{raf=requestAnimationFrame(tick);if(stageVisible)draw(now-t0);};
  raf=requestAnimationFrame(tick);
 }
 function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;}
-function build(){
- dialog=document.createElement('dialog');dialog.className='ach-board';dialog.setAttribute('aria-label','Achievements');
+function build(host,detailHost=host){
+ embedded=!!host;
+ dialog=document.createElement(host?'section':'dialog');dialog.className=host?'ach-board ach-embed':'ach-board';dialog.setAttribute('aria-label','Achievements');owner=host||dialog;
  stage=element('div',null,'ach-stage');
  artEl=element('img',null,'ach-art ach-parallax');artEl.src=IMAGE;artEl.alt='Coach constellation';artEl.draggable=false;
  const layer=(tag,depth)=>{const el=element(tag,null,'ach-stars ach-parallax');el.dataset.depth=el.dataset.peerDepth=depth;el.setAttribute('aria-hidden','true');return el;};
@@ -147,8 +139,8 @@ function build(){
  detail=element('section',null,'ach-detail');detail.hidden=true;
  const starter=element('div',null,'ach-starter'),offer=element('button','Download the Starter pack');offer.type='button';starter.append(element('p','The constellation art comes with the Starter pack.'),offer);
  const close=element('button','✕','ach-close');close.type='button';close.setAttribute('aria-label','Close');
- dialog.append(stage,head,detail,starter,close);
- document.body.append(dialog);
+ if(host){detail.classList.add('ach-embed-detail');dialog.append(stage,head,starter);detailHost.append(detail);}
+ else{dialog.append(stage,head,detail,starter,close);document.body.append(dialog);}
  // W2-2O: the constellation is Starter-pack art. Without it (offline, not downloaded) the coaches glow on the plain
  // starfield and the pack is offered (achievements-board.css .no-art).
  artEl.addEventListener('error',()=>dialog.classList.add('no-art'),{once:true});
@@ -157,12 +149,13 @@ function build(){
  close.onclick=()=>dialog.close();
  stage.addEventListener('click',e=>{if(dialog.classList.contains('zoomed')&&!e.target.closest('.ach-boss'))unzoom();});
  // Escape peels off the zoom first; a second Escape closes.
- dialog.addEventListener('cancel',e=>{if(dialog.classList.contains('zoomed')){e.preventDefault();unzoom();}});
- dialog.addEventListener('close',()=>{unzoom();stopLoop();});
- new ResizeObserver(()=>{if(dialog.open&&!document.hidden){fitLayers();draw(performance.now()-t0);}}).observe(stage);
+ owner.addEventListener('cancel',e=>{if(dialog.classList.contains('zoomed')){e.preventDefault();unzoom();}});
+ owner.addEventListener('close',()=>{unzoom();stopLoop();});
+ if(host)new IntersectionObserver(([e])=>{stageVisible=e.isIntersecting;}).observe(stage);
+ new ResizeObserver(()=>{if(owner.open&&!document.hidden){fitLayers();draw(performance.now()-t0);}}).observe(stage);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLoop();});
  addEventListener('pagehide',stopLoop);
- for(const type of ['myr5:performance-progress','myr5:account-ready','myr5:account-cleared'])addEventListener(type,()=>{if(dialog.open&&!dialog.classList.contains('zoomed'))paint();});
+ for(const type of ['myr5:performance-progress','myr5:account-ready','myr5:account-cleared'])addEventListener(type,()=>{if(owner.open&&!dialog.classList.contains('zoomed'))paint();});
 }
 function paint(){
  const state=loadProgress(),byId=new Map(bossStates(state).map(b=>[b.id,b]));
@@ -206,6 +199,8 @@ function fillDetail(b,state){
 }
 function zoom(b,slot,btn){
  stage.querySelector('.ach-boss.selected')?.classList.remove('selected');btn.classList.add('selected');selected=btn;
+ // Embedded: bring the constellation's top into view first so the glide lands on screen.
+ const scroller=embedded&&dialog.parentElement;if(scroller)scroller.scrollTop=dialog.offsetTop;
  const r=stage.getBoundingClientRect(),[x,y,w,h]=slot.box;
  const cx=r.width*(x+w/2)/100,cy=r.height*(y+h/2)/100,scale=Math.min(4,Math.max(2,r.height*.26/(r.height*h/100)));
  const tx=r.width/2-cx,ty=r.height*.3-cy;
@@ -224,14 +219,20 @@ function unzoom(){
  for(const el of [artEl,bossesEl,layers?.far,layers?.mid,layers?.near])if(el)el.style.transform='';
  const wasZoomed=dialog.classList.contains('zoomed');
  dialog.classList.remove('zoomed');detail.hidden=true;stage.querySelector('.ach-boss.selected')?.classList.remove('selected');
- if(wasZoomed&&dialog.open&&selected?.isConnected)selected.focus({preventScroll:true});
+ if(wasZoomed&&owner.open&&selected?.isConnected)selected.focus({preventScroll:true});
  selected=null;
 }
 // Only an explicit open starts the loop; close, a hidden tab and pagehide stop it.
 export function openAchievements(){
+ if(embedded)return window.myr5Menus?.battlePass?.();
  if(!dialog)build();
  paint();
  if(!dialog.open)dialog.showModal();
  fitLayers();draw(performance.now()-t0);startLoop();
  return dialog;
+}
+// R-1017: one achievements page. Builds the board into the flight page's dialog; the caller places .root in its scroller.
+export function embedAchievements(host,detailHost=host){
+ if(!dialog)build(host,detailHost);
+ return {root:dialog,stage,open(){paint();fitLayers();draw(performance.now()-t0);startLoop();},unzoom};
 }

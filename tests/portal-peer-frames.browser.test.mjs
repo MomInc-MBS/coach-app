@@ -44,7 +44,7 @@ const quiltHome=page=>page.waitForFunction(()=>!document.getElementById('portalH
 // [id, dialog, its scene is up, its Close]
 const CUTS=[
  ['up','#mealsPanel',()=>document.querySelector('#pyramidScanner canvas')&&!document.querySelector('#pyramidScanner[data-loading]'),'#mealsPanel [data-close]'],
- ['down','.ach-board',()=>document.querySelector('.ach-board canvas'),'.ach-close'],
+// R-1017: Achievements is one page now (constellation on top of the XP flight, #battlePassPanel), a flat framed menu.
  ['vdiamond','#accountPanel',()=>document.querySelector('#accountPanel[data-room="ready"] .classroom-canvas'),'#accountPanel [data-close]'],
  ['oval','dialog.ship-view',()=>document.querySelector('.ship-view-stage .ship-scene[data-phase=ready]')&&!document.querySelector('.ship-scene-flash:popover-open'),'.ship-view-close'],
 ];

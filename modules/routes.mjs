@@ -35,8 +35,9 @@ export const ROUTES={
  // W2-2Q: the router is the one owner of the ship view's #ship/#select history (the view only keeps its own standalone).
  select:{label:'Coach arrival',dialog:'dialog.ship-view',shared:true,open:()=>whenOpen('dialog.ship-view',window.myr5Menus?.ship?.({entrance:'always',hash:'#select'}))},
  food:{label:'Food',dialog:'#mealsPanel',open:()=>typeof window.myr5Menus?.food==='function'?window.myr5Menus.food():panel('meals')},
- achievements:{label:'Achievements',dialog:'.ach-board',open:()=>window.myr5Menus?.achievements?.()},
- battlepass:{label:'Battle pass',dialog:'#battlePassPanel',open:()=>window.myr5Menus?.battlePass?.()},
+ // R-1017: one achievements page (constellation on top, XP flight below); #battlepass stays as an alias for old links.
+ achievements:{label:'Achievements',dialog:'#battlePassPanel',open:()=>window.myr5Menus?.achievements?.()},
+ battlepass:{label:'Achievements',dialog:'#battlePassPanel',shared:true,open:()=>window.myr5Menus?.battlePass?.()},
  // The existing opener owns workout shutdown, movement selection, and the hologram lifecycle.
  // Direct taps are adopted by the dialog observer; go('library') uses that same opener once.
  library:{label:'Movements',dialog:'#library',open(){$('openLibrary')?.click();return $('library');}},
