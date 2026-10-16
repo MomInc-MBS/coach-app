@@ -7,7 +7,7 @@ import {XP_SCALE} from '../progression-rules.mjs';
 function recordingContext(){
  const calls=[],drawAlphas=[],stack=[];let alpha=1;
  return {calls,drawAlphas,get globalAlpha(){return alpha;},set globalAlpha(value){alpha=value;},clearRect(){calls.push('clear');},save(){stack.push(alpha);},restore(){alpha=stack.pop()??1;},translate(){},rotate(){},beginPath(){},rect(){calls.push('rect');},clip(){calls.push('clip');},
-  moveTo(){},lineTo(){},stroke(){calls.push('stroke');},fillRect(){calls.push('fillRect');},fillText(){calls.push('text');},drawImage(){calls.push('image');drawAlphas.push(alpha);},setLineDash(){}};
+  moveTo(){},lineTo(){},closePath(){},arc(){},fill(){calls.push('fill');},stroke(){calls.push('stroke');},fillRect(){calls.push('fillRect');},fillText(){calls.push('text');},drawImage(){calls.push('image');drawAlphas.push(alpha);},setLineDash(){}};
 }
 
 test('all shared target creation paths apply the 2.5x display and collision radius once',()=>{
@@ -51,8 +51,8 @@ test('camera slice hit, XP, combo and scoring remain active with visual effects 
 test('camera mode keeps targets and break-apart art, hides only the old white slash, then paints hand glow',()=>{
  const points=Array.from({length:23},()=>({x:.5,y:.5,visibility:.9}));
  points[15]={x:.4,y:.5,visibility:.9};points[16]={x:.6,y:.5,visibility:.9};
- const fx=createHandGlow();fx.pose(points,{now:0,mapPoint:p=>({x:p.x*180,y:p.y*320})});
- for(let now=33;now<500;now+=33){points[15]={x:.4+now/10000,y:.5,visibility:.9};fx.pose(points,{now,mapPoint:p=>({x:p.x*180,y:p.y*320})});fx.step(.033,now);}
+ const fx=createHandGlow();fx.pose(points,{now:0});
+ for(let now=33;now<500;now+=33){points[15]={x:.2+now/600,y:.5,visibility:.9};fx.pose(points,{now});fx.step(.033,now);}
  const e=createSlice({auto:false,mode:'martial',seed:2});
  const sliced=e.spawn({x:40,y:80,vx:0,vy:0,r:12});e.hitSegment({x:30,y:80},{x:50,y:80});
  e.spawn({x:100,y:60,vx:0,vy:0,r:12});e.trail.push({x:10,y:10,life:.2},{x:20,y:20,life:.2});
@@ -62,9 +62,9 @@ test('camera mode keeps targets and break-apart art, hides only the old white sl
  assert.equal(e.halves.length,2);assert.ok(ctx.calls.includes('clip'),'split pieces remain visible');
  assert.ok(ctx.calls.includes('image'),'the unsliced target remains visible');
  assert.equal(ctx.calls.includes('stroke'),false,'only the old white pointer slash is hidden');
- renderHandGlow(ctx,fx.state);
- assert.ok(fx.state.hands.get('left').trail.length>1);
- assert.ok(ctx.calls.includes('stroke'),'the glowing hand trail is still drawn');
+ renderHandGlow(ctx,fx.state,{w:180,h:320});
+ assert.ok(fx.state.hands[0].count>1);
+ assert.ok(ctx.calls.includes('fill'),'the glowing hand ribbon is drawn');
  assert.ok(ctx.calls.includes('fillRect'),'the hand aura remains visible');
  assert.ok(!e.objects.includes(sliced),'hit targets still disappear after being cut');
 });

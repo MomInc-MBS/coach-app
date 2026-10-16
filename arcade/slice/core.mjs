@@ -54,6 +54,7 @@ export function createSlice({w=180,h=320,seed=1,mode='martial',auto=true,coachX=
   laser:{phase:'idle',t:0,tx:0,ty:0,samples:[],result:null,flash:0},cool:0,spawnIn:1,bonusIn:4,swipeAt:-9,swipeN:0,speed:1,
   gun:{phase:'idle',t:0,tx:coachX,ang:0,recoil:0,flash:0},shake:0,freeze:0,shots:0,lastShot:-9,fx:[],chain:[]};
  const emit=(type,data)=>onEvent(type,data);
+ e.resize=nh=>{if(nh>0)h=e.h=nh;}; // orientation change: the world keeps its width, height follows the host
  const pop=(text,x,y,c='#fff',big=false)=>e.pops.push({text,x,y,c,big,life:big?1.1:.8});
  function mk(type,x,y,vx,vy,r,bonus=false){const o={type,x,y,vx,vy,r:r*TARGET_SIZE,rot:rand()*TAU,vr:bonus?(rand()-.5)*8:(vx<0?-1:1)*(3+rand()*3),bonus,alive:true,seed:Math.floor(rand()*1e6),
    flight:0,T:0,wA:0,wF:0,wP:0,wOff:0,sc:bonus||mode==='rest'?1:GUN.scaleStart,trail:[],trailAt:0};o.vr=Math.max(-GUN.spinMax,Math.min(GUN.spinMax,o.vr));e.objects.push(o);return o;}
