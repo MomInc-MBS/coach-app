@@ -23,3 +23,20 @@ test('holding a stationary finger keeps scrolling; center and release stop movem
  scroll.aim(300);callback(80);assert.equal(viewport.scrollTop,968);
  scroll.stop();assert(cancelled);callback(100);assert.equal(viewport.scrollTop,968);
 });
+
+test('one achievements page: sections map to clamped scroll targets and hyper-jumps stay within the tuned time',async()=>{
+ const {flightSections,sectionScrollTop,hyperDuration,hyperEase,FLIGHT_TUNING}=await import('../flight-scroll.mjs');
+ const sections=flightSections(25);
+ assert.equal(sections.length,26);
+ assert.deepEqual(sections[0],{id:'system-1',chapter:0});
+ assert.deepEqual(sections.at(-1),{id:'coaches',chapter:null});
+ // A marker 5000px down a 600px screen lands at the land line; the top and the bottom clamp to the scroll range.
+ assert.equal(sectionScrollTop(5000,600,30000),5000-600*FLIGHT_TUNING.landLine);
+ assert.equal(sectionScrollTop(0,600,30000),0);
+ assert.equal(sectionScrollTop(29990,600,30000),29400);
+ assert.equal(sectionScrollTop(1000,600,30000,.6),640);
+ assert.equal(hyperDuration(10),FLIGHT_TUNING.hyperMinMs);
+ assert.equal(hyperDuration(-1e6),FLIGHT_TUNING.hyperMaxMs);
+ assert.equal(hyperDuration(28000),1000);
+ assert.equal(hyperEase(0),0);assert.equal(hyperEase(1),1);assert.equal(hyperEase(.5),.5);
+});

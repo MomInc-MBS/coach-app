@@ -5,7 +5,7 @@ import {mountLevelMapScene} from '../level-map-scene.mjs';
 test('ship follows a press and fires repeatedly only while held',()=>{
  const old={Image:globalThis.Image,document:globalThis.document,devicePixelRatio:globalThis.devicePixelRatio,requestAnimationFrame:globalThis.requestAnimationFrame,cancelAnimationFrame:globalThis.cancelAnimationFrame};
  const frames=[],scores=[];let next=0,laserOrigins=0,shipX=0;
- const ctx={save(){},restore(){},translate(x){shipX=x+24;},fillRect(){},beginPath(){},moveTo(_x,y){if(this.strokeStyle==='#b9faff'&&Math.abs(y-160.32)<.1)laserOrigins++;},lineTo(){},stroke(){},arc(){},closePath(){},fill(){},setTransform(){},clearRect(){},drawImage(){}};
+ const ctx={save(){},restore(){},createLinearGradient:()=>({addColorStop(){}}),translate(x){shipX=x+24;},fillRect(){},beginPath(){},moveTo(_x,y){if(this.strokeStyle==='#b9faff'&&Math.abs(y-160.32)<.1)laserOrigins++;},lineTo(){},stroke(){},arc(){},closePath(){},fill(){},setTransform(){},clearRect(){},drawImage(){}};
  try{
   globalThis.Image=class{complete=false;naturalWidth=0;set src(_){};};
   globalThis.document={hidden:false};globalThis.devicePixelRatio=1;
