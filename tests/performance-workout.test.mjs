@@ -62,10 +62,12 @@ test('preparation recovery expires without camera frames and the next tracker st
 test('ending a working set requires actual earned performance',()=>{
  const reps=new SetFlow();reps.start('squat',30,30,{performance:true,kind:'reps'});reps.workout.stage='working';
  assert.equal(reps.finishWorking({mode:'squat',kind:'reps',count:0},1000),null);
+ assert.match(reps.workout.instruction,/at least one rep/);
  assert.equal(reps.phase,'set');
  assert.equal(reps.finishWorking({mode:'squat',kind:'reps',count:1},1100)?.earned,true);
  const timed=new SetFlow();timed.start('high-horse',600,30,{performance:true,kind:'hold'});
  assert.equal(timed.finishWorking({mode:'high-horse',kind:'hold',totalHold:0,hold:0},1000),null);
+ assert.match(timed.workout.instruction,/15 active seconds/);
  assert.equal(timed.phase,'set');
  assert.equal(timed.finishWorking({mode:'high-horse',kind:'hold',totalHold:15,hold:15},16000)?.earned,true);
 });
