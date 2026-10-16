@@ -21,3 +21,17 @@ export function releaseGraphics(canvas,gl,release,{deadlineMs=250}={}){
 export async function waitForGraphicsRelease(){
  while(pending.size)await Promise.all([...pending]);
 }
+
+// A full-screen 3D owner (the Vault) claims the GPU: every other renderer that listens for 'myr5:graphics-claim' gives its
+// context back (detail.wait(promise) until the loss lands), and rebuilds on 'myr5:graphics-free' once the last claim ends.
+// iOS refuses new contexts while hidden ones (3D coach, portal board) still hold GPU memory.
+// Returns release(); await release.ready before creating the renderer.
+let claims=0;
+export function claimGraphics(owner){
+ claims++;let done=false;const waits=[];
+ const release=()=>{if(done)return;done=true;claims--;if(!claims)void waitForGraphicsRelease().then(()=>{if(!claims)dispatchEvent(new CustomEvent('myr5:graphics-free',{detail:{owner}}));});};
+ try{dispatchEvent(new CustomEvent('myr5:graphics-claim',{detail:{owner,wait:p=>waits.push(Promise.resolve(p).catch(()=>{}))}}));}catch{}
+ release.ready=Promise.all(waits).then(waitForGraphicsRelease);
+ return release;
+}
+export const graphicsClaimed=()=>claims>0;

@@ -8,7 +8,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {orientMatrix} from '../portal/portal-board-glb.mjs';
 import {applyTorque,stepTrain,gearsFromLayout,hitGear,nearestPipe,wiggleStep,wiggleKick,valveAngle,lightLevel,heatColor,beadAlpha,stepSpark,KNOBS,pistonExt} from '../portal/portal-board-cogs.mjs';
-import {releaseGraphics,waitForGraphicsRelease} from '../graphics-lifecycle.mjs';
+import {releaseGraphics,claimGraphics} from '../graphics-lifecycle.mjs';
 import {exitHall} from './vault-hall.mjs';
 
 const BOARD='/pod/worlds/boards/cogs/',DOOR_GLB=BOARD+'door.glb',KIT_GLB=BOARD+'parts-kit.glb',LAYOUT=BOARD+'door-layout.json',LOGO='/pod/mom-inc-engrave.png';
@@ -44,6 +44,9 @@ export function wrapText(text,cols){
 }
 // How long a lost context may take to come back before the vault shows its failure screen.
 export const RESTORE_MS=3000;
+// Renderer start (tuning knobs): attempts run in order after the GPU claim; a refused context waits retryMs and tries the
+// next, lighter one (iOS can refuse an antialiased high-DPR context while memory from a just-lost one is still freeing).
+export const VAULT_GL={attempts:[{antialias:true,pixelRatio:2,shadows:true},{antialias:false,pixelRatio:1,shadows:false}],retryMs:400};
 // Bottom offset (px) that clears the coach dock routes.mjs moves into the open dialog, so Retry stays tappable.
 export function aboveDock(gap=24){const r=document.getElementById('coachDock')?.getBoundingClientRect();return gap+(r&&r.height&&r.top<innerHeight?Math.max(0,innerHeight-r.top):0);}
 const safe=(f,...a)=>{try{return f?.(...a);}catch{return undefined;}};
@@ -131,7 +134,7 @@ export function blocked(u,v,r=0){
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
 export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal,signal}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,onContextRestored=null,loseExt=null,lost=false,parked=false,lostTimer=0,hallSession=false,abortListener=null,S=null;
+ let renderer=null,glAttempt=VAULT_GL.attempts[0],releaseClaim=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,onContextRestored=null,loseExt=null,lost=false,parked=false,lostTimer=0,hallSession=false,abortListener=null,S=null;
  let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
  const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
  firstFrame.catch(()=>{});
@@ -145,7 +148,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   if(renderer){
    const ownedRenderer=renderer,ownedCanvas=canvas;renderer=null;
    void releaseGraphics(ownedCanvas,ownedRenderer.getContext?.(),()=>{try{ownedRenderer.dispose();}catch{}try{ownedRenderer.forceContextLoss();}catch{}});
-  }canvas?.remove();
+  }canvas?.remove();releaseClaim?.();releaseClaim=null;
  };
  let rejectAbort;const abortPromise=new Promise((_,reject)=>{rejectAbort=reject;});abortPromise.catch(()=>{});
  abortListener=()=>{const error=new Error('Vault mount canceled');error.name='AbortError';if(!firstFrameSettled){firstFrameSettled=true;rejectFirstFrame(error);}cleanup();rejectAbort(error);};
@@ -153,10 +156,16 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  try{
  if(signal?.aborted)abortListener();else signal?.addEventListener('abort',abortListener,{once:true});
  if(signal?.aborted)throw new Error('Vault mount canceled');
- stage='graphics-release';await waitForMount(waitForGraphicsRelease());if(signal?.aborted)throw new Error('Vault mount canceled');
- stage='renderer';renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
- renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+ // Every other app renderer (3D coach, portal board/tunnel/peek) gives its context back first; they rebuild when the Vault closes.
+ stage='graphics-release';releaseClaim=claimGraphics('vault');await waitForMount(releaseClaim.ready);if(signal?.aborted)throw new Error('Vault mount canceled');
+ stage='renderer';
+ for(let i=0;!renderer;i++){
+  glAttempt=VAULT_GL.attempts[i];
+  try{renderer=new THREE.WebGLRenderer({antialias:glAttempt.antialias,alpha:false,powerPreference:'low-power'});}
+  catch(error){if(i>=VAULT_GL.attempts.length-1)throw error;console.warn('Vault renderer refused; trying lighter settings.',error);await waitForMount(new Promise(r=>setTimeout(r,VAULT_GL.retryMs)));if(signal?.aborted)throw new Error('Vault mount canceled');}
+ }
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,glAttempt.pixelRatio));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
+ renderer.shadowMap.enabled=glAttempt.shadows;renderer.shadowMap.type=THREE.PCFShadowMap;
  loseExt=renderer.getContext().getExtension('WEBGL_lose_context');
  canvas=renderer.domElement;canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none';canvas.setAttribute('aria-label','Vault door');
  stage='scene';scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(32,1,.1,40),root=new THREE.Group();scene.add(root);
@@ -418,7 +427,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  function tick(now){
   frame=0;if(!S.alive)return;
   try{const rdt=Math.min(.5,(now-last)/1000||.016),dt=Math.min(.05,rdt);last=now;let busy=S.drag.size>0;
-  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.enabled=glAttempt.shadows;
   // flywheel: follows the finger; unfinished turns spring back
   if(!S.drag.size&&!S.opening&&S.open<.02&&Math.abs(S.fly.total)>.01){S.fly={last:null,total:S.fly.total*Math.exp(-rdt*5)};S.progress=Math.abs(S.fly.total)/TAU;busy=true;}
   S.flyG.rotation.z=-S.fly.total;
