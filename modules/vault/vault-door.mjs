@@ -125,13 +125,14 @@ export function blocked(u,v,r=0){
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
 export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal,signal}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false,abortListener=null;
+ let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false,abortListener=null,S=null;
  let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
  const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
  firstFrame.catch(()=>{});
- const ownedTextures=new Set(),sharedGeometry=new Set();
+ const ownedTextures=new Set(),sharedGeometry=new Set(),cleanupCallbacks=new Set();
  const cleanup=()=>{
   if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);if(abortListener)signal?.removeEventListener('abort',abortListener);
+  if(S)S.alive=false;for(const f of cleanupCallbacks)try{f();}catch{}cleanupCallbacks.clear();
   if(hallSession){hallSession=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});}
   if(scene)scene.traverse(o=>{try{if(o.geometry&&!sharedGeometry.has(o.geometry))o.geometry.dispose();}catch{}for(const m of [].concat(o.material||[]))try{m?.dispose?.();}catch{}});
   for(const t of ownedTextures)try{t.dispose();}catch{}ownedTextures.clear();
@@ -193,7 +194,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  const trimMat=metal(GOLD,.9,.32);for(const [x,y,w,h] of [[0,.49,1,.02],[0,-.49,1,.02],[-.49,0,.02,1],[.49,0,.02,1]])mk(new THREE.BoxGeometry(w,h,.016),trimMat,face,new THREE.Vector3(x,y,.006),false);
  const hit=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({visible:false}));face.add(hit);
  // state
- const S={goals,read,idx:0,total:0,progress:0,open:0,opening:false,target:0,flySpin:0,phase:0,pomega:0,drag:new Map(),weld:[],sparks:[],heads:new Map(),glitch:0,alive:true,knob:{last:null,acc:0,total:0},fly:{last:null,total:0}};
+ S={goals,read,idx:0,total:0,progress:0,open:0,opening:false,target:0,flySpin:0,phase:0,pomega:0,drag:new Map(),weld:[],sparks:[],heads:new Map(),glitch:0,alive:true,knob:{last:null,acc:0,total:0},fly:{last:null,total:0}};
  const parts={gears:[],pipes:[],valves:[],lights:[],lamps:[],bolts:[],pistons:[],weights:[],pulleys:[],spin:[]},rest=[];
  // kit parts from the old door layout, cropped to the square, kept clear of the new controls
  stage='door-kit';const [layout,kit]=await waitForMount(Promise.all([fetch(LAYOUT).then(r=>{if(!r.ok)throw new Error('layout HTTP '+r.status);return r.json();}),load(KIT_GLB)]).catch(e=>{if(e?.name==='AbortError')throw e;console.warn('vault door kit',e);return [null,null];}));kit?.scene?.traverse(o=>{if(o.geometry)sharedGeometry.add(o.geometry);});
@@ -296,7 +297,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  // --- input
  const clientToUv=(e)=>pick(e.clientX,e.clientY);
  const angleOf=(u,v,c)=>Math.atan2(v-c.v,u-c.u);
- function setIdx(i){const n=S.goals.length;S.idx=wrapIndex(i,n);S.glitch=performance.now()+160;drawView();}
+ function setIdx(i){if(!S.alive)return;const n=S.goals.length;S.idx=wrapIndex(i,n);S.glitch=performance.now()+160;drawView();}
  function onDown(e){
   const p=clientToUv(e);canvas.setPointerCapture?.(e.pointerId);
   if(p.screen){S.drag.set(e.pointerId,{tap:'enter',x:e.clientX,y:e.clientY});return;}
@@ -327,14 +328,15 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   if(d.weld){if(!d.moved){if(d.gi>=0)applyTorque(parts.gears,d.gi,KNOBS.wiggleTapKick*6);else{const i=nearestPipe(parts.pipes,{w:1,h:1},d.u,d.v,KNOBS.wiggleMargin);if(i>=0)parts.pipes[i].omega+=KNOBS.wiggleTapKick;}}S.heads.delete(e.pointerId);spark(d.u,d.v,KNOBS.sparkReleaseCount);}
   wake();
  }
- canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);
+ const detachInput=()=>{canvas.removeEventListener('pointerdown',onDown);canvas.removeEventListener('pointermove',onMove);canvas.removeEventListener('pointerup',onUp);canvas.removeEventListener('pointercancel',onUp);};
+ canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);cleanupCallbacks.add(detachInput);
  // --- door open / close / enter
- function openDoor(){if(S.opening||S.target)return;S.opening=true;S.target=1;S.t0=performance.now();S.from=S.open;
+ function openDoor(){if(!S.alive||S.opening||S.target)return;S.opening=true;S.target=1;S.t0=performance.now();S.from=S.open;
   window.dispatchEvent(new CustomEvent('myr5:vault-door-open'));import('./vault-hall.mjs').catch(()=>{}); // warm the hall while the door swings
   import('./vault-store.mjs').then(m=>m.bump?.('door-open')).catch(()=>{});onOpen?.(api);wake();}
- function closeDoor(){S.dolly=null;S.veil?.remove();S.veil=null;S.target=0;S.t0=performance.now();S.from=S.open;S.opening=false;S.fly={last:null,total:0};S.progress=0;wake();}
+ function closeDoor(){if(!S.alive)return;S.dolly=null;S.veil?.remove();S.veil=null;S.target=0;S.t0=performance.now();S.from=S.open;S.opening=false;S.fly={last:null,total:0};S.progress=0;wake();}
  function enter(){
-  if(S.dolly)return;S.dolly={t0:performance.now()};
+  if(!S.alive||S.dolly)return;S.dolly={t0:performance.now()};
   const veil=document.createElement('div');veil.style.cssText='position:absolute;inset:0;background:radial-gradient(circle,#d9a8ff,#7a2fc4 55%,#2a0d4a);opacity:0;pointer-events:none';host.append(veil);S.veil=veil;wake();onEnter?.(api);
  }
  function finishDolly(){
@@ -422,7 +424,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   project(u,v,z=0){const p=new THREE.Vector3(u-.5,.5-v,z);face.localToWorld(p);pivot.updateMatrixWorld(true);p.project(camera);const r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   projectWorld(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera),r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
-  dispose(){if(cleaned)return;S.alive=false;for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
+  dispose(){if(cleaned)return;cleanup();},
  };
  stage='first-render';await firstFrame;stage='ready';if(abortListener)signal?.removeEventListener('abort',abortListener);
  return api;
