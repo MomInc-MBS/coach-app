@@ -66,9 +66,12 @@ const HOME_GROUP = new Map(EFFECT_GROUPS.flatMap(group => group.options.filter(i
 const DEFAULT_CHOICES = Object.freeze(Object.fromEntries(EFFECT_GROUPS.map(group => [group.id, 'random'])));
 const VALID = new Set(AURA_OPTIONS.map(option => option.id));
 
-export function effectGroupForExercise(mode) {
+/** camera: live camera effects also cover boxing (Arms & shoulders pick) and cardio (Legs & hips pick); saved avatar history still skips them. */
+export function effectGroupForExercise(mode, { camera = false } = {}) {
   const ex = typeof mode === 'string' ? EXERCISES[mode] : mode;
-  if (!ex || typeof ex !== 'object' || ['boxing', 'cardio'].includes(ex.group)) return null;
+  if (!ex || typeof ex !== 'object') return null;
+  if (ex.group === 'boxing') return camera ? 'shoulders' : null;
+  if (ex.group === 'cardio') return camera ? 'legs' : null;
   if (ex.kind === 'hold') {
     if (ex.group === 'stances') return 'stances';
     if (ex.group === 'core' || ex.group === 'balance') return 'core';
@@ -128,8 +131,8 @@ export function resolveEffectForGroup(group, choices = {}, random = Math.random)
   return variants[index];
 }
 
-export function resolveExerciseEffect(mode, choices = {}, random = Math.random) {
-  return resolveEffectForGroup(effectGroupForExercise(mode), choices, random);
+export function resolveExerciseEffect(mode, choices = {}, random = Math.random, opts) {
+  return resolveEffectForGroup(effectGroupForExercise(mode, opts), choices, random);
 }
 
 // Legacy global helpers stay for old clients; the new runtime reads only the

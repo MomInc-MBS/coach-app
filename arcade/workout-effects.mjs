@@ -16,14 +16,21 @@ export function mapPointsToOverlay(points,geometry){
  return Array.isArray(points)?points.map(point=>mapPointToOverlay(point,geometry)):null;
 }
 
-export function createOverlayCanvas(host,className,{opacity=.3}={}){
+export function createOverlayCanvas(host,className,{opacity=.3,max=.3}={}){
  const canvas=document.createElement('canvas');canvas.className=className;canvas.setAttribute('aria-hidden','true');
- canvas.style.cssText=`position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;z-index:0;opacity:${Math.max(0,Math.min(.3,opacity))}`;
+ canvas.style.cssText=`position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;z-index:0;opacity:${Math.max(0,Math.min(max,opacity))}`;
  const resize=()=>{const rect=host.getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}};
  host.prepend(canvas);resize();const observer=typeof ResizeObserver==='function'?new ResizeObserver(resize):null;observer?.observe(host);
  return {canvas,resize,dispose(){observer?.disconnect();canvas.remove();}};
 }
 
+/** Warm the right renderer module and sprite sheets for an exercise before its set starts. */
+export function preloadWorkoutEffects(mode){
+ const ex=EXERCISES[mode];if(!ex)return;
+ const stance=ex.kind==='hold'&&ex.group!=='stances';
+ (stance?loadCameraHoldModule():loadCameraPowerModule()).then(m=>m.preloadAuraForMode?.(mode)).catch(()=>{});
+ if(ex.kind==='hold')loadCameraPowerModule().then(m=>m.preloadAuraForMode?.(mode)).catch(()=>{});
+}
 export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={},retryOptions}={}){
  let ecology=null,power=null,ecologyLoading=null,powerLoading=null,session=null,stopped=false,epoch=0,holdGeneration=0,powerGeneration=0,lastDetail=null,selectedHoldStyle='living';
  const holdRetry=createOptionalRetry(retryOptions),powerRetry=createOptionalRetry(retryOptions);
@@ -54,7 +61,7 @@ export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={},retryOp
    if(selectedHoldStyle&&ecology)ecology.pose(detail);else if(selectedHoldStyle){const loadGeneration=holdGeneration;void ensure('hold',token,loadGeneration).then(instance=>{if(instance&&token===epoch&&loadGeneration===holdGeneration&&session===sessionKey&&lastDetail?.workout?.active)instance.pose(lastDetail);}).catch(()=>{});}
    if(selectedHoldStyle==='blizzard'){power?.invalidate();return;}
    if(power)power.pose(detail);else{const loadGeneration=powerGeneration;void ensure('power',token,loadGeneration).then(instance=>{if(instance&&token===epoch&&loadGeneration===powerGeneration&&session===sessionKey&&lastDetail?.workout?.active)instance.pose(lastDetail);}).catch(()=>{});}
-  }else if(workout.kind==='reps'){
+  }else if(['reps','gentle','sprint'].includes(workout.kind)){
    ecology?.invalidate();
    if(power){power.pose(detail);return;}
    const loadGeneration=powerGeneration;void ensure('power',token,loadGeneration).then(instance=>{if(instance&&token===epoch&&loadGeneration===powerGeneration&&session===sessionKey&&lastDetail?.workout?.active)instance.pose(lastDetail);}).catch(()=>{});

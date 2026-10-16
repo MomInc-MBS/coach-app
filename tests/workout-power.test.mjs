@@ -31,13 +31,15 @@ test('routes real exercise metadata to aura, lightning, floor, or no camera powe
   assert.equal(powerRoute('high-horse'), 'aura');
   assert.equal(powerRoute('tree'), null);
   assert.equal(powerRoute('wall-sit'), null);
-  assert.equal(powerRoute('jogging'), null);
-  assert.equal(powerRoute('boxing'), null);
+  assert.equal(powerRoute('jogging'), 'aura');   // R-1016: cardio and boxing grow auras too
+  assert.equal(powerRoute('boxing'), 'lightning');
   assert.equal(powerRoute('not-an-exercise'), null);
   assert.equal(retainedPowerStyle('high-plank'), 'blizzard');
   assert.equal(retainedPowerStyle('tree'), 'blizzard');
   assert.equal(retainedPowerStyle('high-horse'), 'aura');
   assert.equal(retainedPowerStyle('mountain'), null);
+  assert.equal(retainedPowerStyle('boxing'), null);
+  assert.equal(retainedPowerStyle('jogging'), null);
 });
 
 test('repetition progression starts at rep 1, follows repRate bands, and caps at REP_CAP', () => {
