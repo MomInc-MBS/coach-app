@@ -164,9 +164,12 @@ test('closing while a GLB is still loading disposes the late mount',async()=>wit
  await page.waitForRequest('**/pod/worlds/boards/cogs/door.glb',{timeout:15000});
  await page.locator('#vaultPanel[open]').waitFor();
  assert.equal((await probe(page)).active,1,'the mount acquired its renderer before loading the door asset');
- await page.locator('#vaultPanel').evaluate(d=>d.close());releaseAsset();
- await page.waitForFunction(()=>window.__gpuProbe.active===0,null,{timeout:30000});
- await page.waitForTimeout(200);
- const state=await page.evaluate(()=>({open:document.querySelector('#vaultPanel').open,api:!!document.querySelector('#vaultPanel')._vault,canvases:document.querySelectorAll('#vaultPanel canvas').length}));
- assert.deepEqual(state,{open:false,api:false,canvases:0});assert.deepEqual(page.errors,[]);
+ await page.locator('#vaultPanel').evaluate(d=>d.close());
+ await page.waitForFunction(()=>window.__gpuProbe.active===0,null,{timeout:15000});
+ const immediatelyClosed=await page.evaluate(()=>({open:document.querySelector('#vaultPanel').open,api:!!document.querySelector('#vaultPanel')._vault,canvases:document.querySelectorAll('#vaultPanel canvas').length}));
+ assert.deepEqual(immediatelyClosed,{open:false,api:false,canvases:0},'close aborts and frees the renderer while the asset response is still held');
+ releaseAsset();await page.waitForTimeout(250);
+ const afterLateResponse=await page.evaluate(()=>({open:document.querySelector('#vaultPanel').open,api:!!document.querySelector('#vaultPanel')._vault,canvases:document.querySelectorAll('#vaultPanel canvas').length,probe:window.__gpuProbe}));
+ assert.deepEqual({open:afterLateResponse.open,api:afterLateResponse.api,canvases:afterLateResponse.canvases},{open:false,api:false,canvases:0});
+ assert.equal(afterLateResponse.probe.active,0,'an aborted late response must not allocate another renderer');assert.deepEqual(page.errors,[]);
 }));
