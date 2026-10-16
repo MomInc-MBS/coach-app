@@ -8,10 +8,12 @@ export const ROPE={
  stiffness:.9,       // 0..1 how hard each pass pulls segments back to length
  sway:.07,           // idle sway (fraction of gravity) when no tilt reading exists
  swayHz:.45,
- fanDeg:12,          // loose cables fan out this many degrees apart around the gravity direction
- looseLength:88,     // px of a loose cable
- looseStagger:50,    // extra px on every other cable so plugs do not stack
- plugSlack:1.1,      // plugged cable length = distance * this (it sags under gravity)
+ fanDeg:8,           // loose cables fan out in two rings, this many degrees apart, from straight down toward the left
+ looseLength:100,     // px of a loose cable
+ looseStagger:70,    // extra px on every other cable so plugs do not stack
+ plugSlack:1.06,     // plugged cable length = distance * this (it sags under gravity)
+ slackSpread:.025,   // extra slack per cable (i%5) so the bundle in the gutter fans out a little
+ gutter:64,          // px of the right-hand cord channel plugged cables live in
  settleSteps:90,     // steps run at once for the static (reduced motion) pose
 };
 

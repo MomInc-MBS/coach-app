@@ -73,6 +73,11 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   assert.equal(await page.locator('[data-fw-status]').textContent(),'2 sections');
   await page.waitForTimeout(500);await shot('power-3-two-rows-powered.png');
 
+  // The cord channel is a gutter right of the labels, and the hub stays put while the board scrolls.
+  assert.ok(await page.evaluate(()=>{const sec=document.querySelector('.fw-style[data-style="legs"]').getBoundingClientRect(),sk=document.querySelector('[data-socket="legs"]').getBoundingClientRect();return sk.left>=sec.right-2;}),'sockets sit in the gutter, outside the rows');
+  await page.evaluate(()=>{document.querySelector('.fw-menu').scrollTop=500;});await page.waitForTimeout(300);
+  assert.ok(await page.evaluate(()=>{const m=document.querySelector('.fw-menu').getBoundingClientRect(),h=document.querySelector('.fw-hub').getBoundingClientRect();return h.top>=m.top&&h.bottom<=m.bottom;}),'hub is sticky at the top of the board');
+  await page.screenshot({path:resolve(SHOTS,'power-3b-scrolled-hub-sticky.png')});
   // Tilt: stub the orientation event; the loose cables swing toward the new down.
   await page.locator('.fw-style[data-style="legs"]>summary').click();await page.locator('.fw-style[data-style="boxing"]>summary').click();
   await page.evaluate(()=>{document.querySelector('.fw-menu').scrollTop=0;});

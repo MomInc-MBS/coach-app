@@ -46,10 +46,9 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
  }
  function render(){
   const open=[...menu.querySelectorAll('.fw-style[open]')].map(d=>d.dataset.style),top=menu.scrollTop;
-  menu.innerHTML=`<div class="fw-body"><svg class="fw-wires" aria-hidden="true">${styles.map(s=>`<path class="fw-w-sh" data-w="${s.id}"/><path class="fw-w" data-w2="${s.id}"/>`).join('')}</svg>
-   <div class="fw-power"><i class="fw-screw l"></i><span class="fw-plate">Power source</span><button type="button" class="fw-hub" data-hub aria-label="Power all sections" data-lit="false"><span aria-hidden="true">⏻</span></button><i class="fw-screw r"></i></div>
+  menu.innerHTML=`<div class="fw-body"><svg class="fw-wires" aria-hidden="true">${styles.map(s=>`<g class="fw-cord" data-w="${s.id}"><path class="fw-c-sh"/><path class="fw-c-jk"/><path class="fw-c-hl"/><path class="fw-c-pl"/></g>`).join('')}</svg>
+   <div class="fw-power"><i class="fw-screw l"></i><div class="fw-pw-l"><span class="fw-plate">Power source</span><p class="fw-count"></p></div><button type="button" class="fw-hub" data-hub aria-label="Power all sections" data-lit="false"><span aria-hidden="true">⏻</span></button><i class="fw-screw r"></i></div>
    <div class="fw-bay" aria-hidden="true"></div>
-   <p class="fw-count"></p>
    ${styles.map(style=>{
     const ids=style.exercises.map(e=>e.id),max=cap(style.id),on=st.powered.has(style.id),lv=lvl(style.id),capped=max===0,hint=capped?(reason(ids[0])||'Locked'):'';
     return `<details class="fw-style" data-style="${style.id}" data-power="${on&&connected.has(style.id)?'on':'off'}"${capped?' data-capped':''}><summary><span class="fw-plate">${esc(style.name)}</span><span class="fw-pick"></span><i class="fw-socket" data-socket="${style.id}"></i></summary>
@@ -66,17 +65,18 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
 
  // ---- power cables: one hub, one verlet rope per section, gravity from the app's tilt source ----
  const rig=(()=>{
-  const R={};let body,pos,raf=0,unsub=null,tilt=null,tiltAt=-1e9,grav={gx:0,gy:1},last=0,plugs={},paths={},paths2={};
+  const R={};let body,pos,raf=0,unsub=null,tilt=null,tiltAt=-1e9,grav={gx:0,gy:1},last=0,plugs={},paths={};
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const measure=()=>{
    body=menu.querySelector('.fw-body');if(!body)return false;const b=body.getBoundingClientRect(),c=e=>{const r=e.getBoundingClientRect();return {x:r.left+r.width/2-b.left,y:r.top+r.height/2-b.top};};
-   const hub=c(body.querySelector('.fw-hub'));pos={hub:{x:hub.x,y:hub.y+22},sock:{},b};
+   const hub=c(body.querySelector('.fw-hub'));pos={hub:{x:hub.x,y:hub.y+24},sock:{},b,bayBottom:body.querySelector('.fw-bay').getBoundingClientRect().bottom-b.top-6};
    for(const s of styles){const e=body.querySelector(`[data-socket="${s.id}"]`);pos.sock[s.id]=e&&e.offsetParent?c(e):null;}return true;};
-  const rebind=()=>{plugs={};paths={};paths2={};for(const s of styles){plugs[s.id]=menu.querySelector(`[data-plug="${s.id}"]`);paths[s.id]=menu.querySelector(`[data-w="${s.id}"]`);paths2[s.id]=menu.querySelector(`[data-w2="${s.id}"]`);}
+  const rebind=()=>{plugs={};paths={};for(const s of styles){plugs[s.id]=menu.querySelector(`[data-plug="${s.id}"]`);paths[s.id]=menu.querySelector(`[data-w="${s.id}"]`);}
    if(details.open){if(!measure())return;if(reduced())settle();else if(!raf)loop();}};
+  const slackOf=i=>ROPE.plugSlack+(i%5)*ROPE.slackSpread;
   const state=(s,i)=>R[s.id]??=(()=>{const hub=pos.hub,looseLen=ROPE.looseLength+(i%2)*ROPE.looseStagger,sock=pos.sock[s.id],on=st.powered.has(s.id)&&sock;
    const c={i,looseLen,len:looseLen,rope:makeRope(hub.x,hub.y,looseLen),pin:null,drag:null};
-   if(on){c.pin={...sock};c.len=dist(hub,sock)*ROPE.plugSlack;c.rope=makeRope(hub.x,hub.y,c.len);c.rope.pts.forEach((p,j,a)=>{const f=j/(a.length-1);p.x=p.px=hub.x+(sock.x-hub.x)*f;p.y=p.py=hub.y+(sock.y-hub.y)*f;});connected.add(s.id);paintPower(s.id);}
+   if(on){c.pin={...sock};c.len=dist(hub,sock)*slackOf(i);c.rope=makeRope(hub.x,hub.y,c.len);c.rope.pts.forEach((p,j,a)=>{const f=j/(a.length-1);p.x=p.px=hub.x+(sock.x-hub.x)*f;p.y=p.py=hub.y+(sock.y-hub.y)*f;});connected.add(s.id);paintPower(s.id);}
    return c;})();
   function tick(dt,t,instant){
    const target=tilt&&t-tiltAt<1500?tilt:{gx:Math.sin(t/1000*Math.PI*2*ROPE.swayHz)*ROPE.sway,gy:1};
@@ -87,16 +87,19 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
     else if(powered){
      c.pin??={...c.rope.pts.at(-1)};const f=instant?1:Math.min(1,dt*14);c.pin.x+=(sock.x-c.pin.x)*f;c.pin.y+=(sock.y-c.pin.y)*f;
      if(dist(c.pin,sock)<1.5){c.pin={...sock};if(!connected.has(s.id)){connected.add(s.id);home(s.id);}}
-     end=c.pin;len=Math.max(dist(hub,end)*ROPE.plugSlack,dist(hub,end)+6);
+     end=c.pin;len=Math.max(dist(hub,end)*slackOf(i),dist(hub,end)+6);
     }else{c.pin=null;if(connected.delete(s.id))paintPower(s.id);}
     c.len+=(len-c.len)*(instant?1:Math.min(1,dt*10));if(end)c.len=Math.max(c.len,dist(hub,end)+2);
-    const g=powered&&!c.drag?grav:rotate(grav,(i-(styles.length-1)/2)*ROPE.fanDeg);
+    const g=powered&&!c.drag?grav:rotate(grav,((i>>1)*2+(i&1))*ROPE.fanDeg);
     stepRope(c.rope,dt,g,{anchor:hub,end,length:c.len});
+    // The cord channel: plugged cords stay in the right gutter, loose ones inside the board above the rows. Physics still runs inside.
+    const W=pos.b.width,pts=c.rope.pts,plugged=end&&!c.drag,lo=plugged?W-ROPE.gutter+6:26,hi=W-(plugged?6:26);
+    for(let j=1;j<pts.length;j++){const q=pts[j];if(q.x<lo||q.x>hi){q.x=Math.min(hi,Math.max(lo,q.x));q.px=q.x;}if(!end&&!c.drag){const y=Math.min(pos.bayBottom,Math.max(hub.y+26,q.y));if(y!==q.y){q.y=y;q.py=y;}}}
    });
   }
   function draw(){
-   styles.forEach(s=>{const c=R[s.id];if(!c)return;const pts=c.rope.pts,e=pts.at(-1),q=pts.at(-2),a=Math.atan2(e.y-q.y,e.x-q.x)*180/Math.PI-90,d=ropePath(pts);
-    paths[s.id]?.setAttribute('d',d);paths2[s.id]?.setAttribute('d',d);paths2[s.id]?.classList.toggle('on',connected.has(s.id));
+   styles.forEach(s=>{const c=R[s.id];if(!c)return;const pts=c.rope.pts,e=pts.at(-1),q=pts.at(-2),a=Math.atan2(e.y-q.y,e.x-q.x)*180/Math.PI-90,d=ropePath(pts),g=paths[s.id];
+    g?.querySelectorAll('path').forEach(pa=>pa.setAttribute('d',d));g?.classList.toggle('on',connected.has(s.id));
     const p=plugs[s.id];if(p)p.style.transform=`translate(${(e.x-22).toFixed(1)}px,${(e.y-22).toFixed(1)}px) rotate(${a.toFixed(1)}deg)`;});
   }
   function frame(now){raf=0;if(!details.open||!body?.isConnected)return;const dt=Math.min(1/30,(now-(last||now))/1000||1/60);last=now;
@@ -131,7 +134,7 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
   else if(b.matches('[data-hub]')){const open=styles.filter(s=>cap(s.id)>0),all=open.every(s=>st.powered.has(s.id));open.forEach(s=>setPower(s.id,!all));}
   else if(b.matches('.fw-plug')){if(b.classList.contains('fw-capped'))menu.querySelector(`.fw-style[data-style="${b.dataset.plug}"]`).open=true;else if(event.detail===0)setPower(b.dataset.plug,!st.powered.has(b.dataset.plug));}
  });
- menu.addEventListener('pointerdown',event=>{const b=event.target.closest('.fw-plug');if(!b||b.classList.contains('fw-capped'))return;b.setPointerCapture?.(event.pointerId);rig.dragStart(b.dataset.plug,event);});
+ menu.addEventListener('pointerdown',event=>{const b=event.target.closest('.fw-plug');if(!b||b.classList.contains('fw-capped'))return;event.preventDefault();b.setPointerCapture?.(event.pointerId);rig.dragStart(b.dataset.plug,event);});
  menu.addEventListener('pointermove',event=>{const b=event.target.closest('.fw-plug');if(b)rig.dragMove(b.dataset.plug,event);});
  const release=event=>{const b=event.target.closest?.('.fw-plug');if(!b)return;const id=b.dataset.plug,r=rig.dragEnd(id);if(!r)return;setPower(id,r.moved?r.near:!st.powered.has(id));};
  menu.addEventListener('pointerup',release);menu.addEventListener('pointercancel',release);
