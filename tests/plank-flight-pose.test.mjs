@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createPlankInput, PLANK_TUNING, freshnessMs} from '../arcade/plank-flight/pose-input.mjs';
+import {applyFlightEvidence} from '../arcade/plank-flight/movement.mjs';
 
 // Synthetic geometry tests exercise the contract, not measured phone accuracy.
 function frame({y=.38, lean=0, world=true, posture='plank', mirrored=true, now=0, ...rest}={}) {
@@ -27,7 +28,7 @@ function frame({y=.38, lean=0, world=true, posture='plank', mirrored=true, now=0
 }
 const stages = {
   high:{y:.38},low:{y:.60},left:{y:.38,lean:.065},right:{y:.38,lean:-.065},
-  mid:{y:.49},'mixed-left':{y:.49,lean:.055},'mixed-right':{y:.49,lean:-.055},
+  mid:{y:.49},'mixed-left':{y:.49,lean:.055},'mixed-right':{y:.49,lean:-.055},bottom:{y:.78},
 };
 function driver(options={}) {
   const input=createPlankInput(options);let now=0;
@@ -65,7 +66,7 @@ test('pure lateral lean preserves height; pure depth preserves steering',()=>{
   const d=driver();d.calibrate();
   const left=d.settle({lean:.065});assert.ok(left.steer<-.98);assert.ok(left.height01>.99);assert.equal(left.leanSide,'left');
   const right=d.settle({lean:-.065});assert.ok(right.steer>.98);assert.ok(right.height01>.99);assert.equal(right.leanSide,'right');
-  const low=d.settle({y:.60});assert.ok(low.height01<.01);assert.ok(Math.abs(low.steer)<.01);
+  const low=d.settle({y:.60});assert.ok(Math.abs(low.height01-(.78-.60)/(.78-.49)*.5)<.01);assert.ok(Math.abs(low.steer)<.01);
   const mid=d.settle({y:.49});assert.ok(Math.abs(mid.height01-.5)<.01);assert.ok(Math.abs(mid.steer)<.01);
 });
 
@@ -176,10 +177,10 @@ test('uncalibrated deep/extreme lean is rejected rather than extrapolated',()=>{
 test('moderate calibrated cross-axis drift is separated by the joint mapping',()=>{
   const d=driver();
   const coupled={high:{y:.38,lean:0},low:{y:.60,lean:.018},left:{y:.37,lean:.065},right:{y:.39,lean:-.065},
-    mid:{y:.49,lean:.009},'mixed-left':{y:.48154,lean:.064},'mixed-right':{y:.49846,lean:-.046}};
+    mid:{y:.49,lean:.009},'mixed-left':{y:.48154,lean:.064},'mixed-right':{y:.49846,lean:-.046},bottom:{y:.78,lean:.009}};
   for(const [name,spec] of Object.entries(coupled)){assert.equal(d.input.stage,name);d.settle(spec,8);}
   assert.equal(d.input.calibrated,true);
-  const low=d.settle(coupled.low);assert.ok(low.height01<.01);assert.ok(Math.abs(low.steer)<.01);
+  const low=d.settle(coupled.bottom);assert.ok(low.height01<.01);assert.ok(Math.abs(low.steer)<.01);
   const left=d.settle(coupled.left);assert.ok(left.height01>.99);assert.ok(left.steer<-.98);
 });
 
@@ -220,4 +221,87 @@ test('calibration retains enough samples at the slowest accepted cadence',()=>{
   }
   assert.equal(d.input.calibrated,true);
   assert.equal(d.tick({},cadence).controlValid,true);
+});
+
+test('full bottom at the hand line maps low and never credits lying down despite flattering world evidence',()=>{
+ const d=driver();d.calibrate();d.settle();
+ const s={started:null,hold:0,totalHold:0,active:0,bestHold:0};
+ for(let i=0;i<8;i++){const p=d.tick();applyFlightEvidence(s,p,p.timestamp,{allowed:true});}
+ assert.ok(s.totalHold>0);const earned=s.totalHold;
+ for(let i=0;i<60;i++){
+  const p=d.tick(stages.bottom);assert.equal(p.controlValid,true);assert.equal(p.resting,true);assert.equal(p.posture,'rest');
+  assert.equal(p.exerciseEligible,false);assert.equal(p.supportHint,'unknown');
+  applyFlightEvidence(s,p,p.timestamp,{allowed:true});assert.equal(s.totalHold,earned);assert.equal(s.hold,0);
+ }
+ assert.ok(s.flightPose.height01<.001);assert.match(s.message,/resting.*paused/i);
+ const back=d.tick(stages.mid);assert.equal(back.resting,false);assert.equal(back.exerciseEligible,false);
+ applyFlightEvidence(s,back,back.timestamp,{allowed:true});assert.equal(s.totalHold,earned);
+ for(let i=0;i<8;i++){const p=d.tick(stages.mid);applyFlightEvidence(s,p,p.timestamp,{allowed:true});}
+ assert.ok(s.totalHold>earned);assert.ok(s.totalHold-earned<.8,'rest time is never caught up');
+});
+
+test('rest uses hysteresis on raw geometry, not a lagging filtered flight height',()=>{
+ const d=driver();d.calibrate();d.settle();
+ const atFraction=f=>({y:stages.bottom.y-(stages.bottom.y-stages.mid.y)*f});
+ let p=d.tick(atFraction(.16));assert.equal(p.resting,true);assert.equal(p.exerciseEligible,false);
+ for(const f of [.19,.24,.28,.18,.27,.20]){
+  p=d.tick(atFraction(f));assert.equal(p.controlValid,true);assert.equal(p.resting,true);assert.equal(p.exerciseEligible,false);
+ }
+ p=d.tick(atFraction(.32));assert.equal(p.resting,false);assert.equal(p.exerciseEligible,false,'fresh posture dwell required after rest');
+ p=d.tick(atFraction(.23));assert.equal(p.resting,false,'entry uses the smaller threshold');
+ p=d.tick(atFraction(.16));assert.equal(p.resting,true);assert.equal(p.exerciseEligible,false);
+});
+
+test('bottom can equal prior low and still preserves actual held-out middle and high anchors',()=>{
+ const d=driver();
+ for(const [name,spec]of Object.entries(stages))d.settle(name==='bottom'?stages.low:spec,8);
+ assert.equal(d.input.calibrated,true);
+ const bottom=d.settle(stages.low);assert.ok(bottom.height01<.01);assert.equal(bottom.resting,true);
+ const middle=d.settle(stages.mid);assert.ok(Math.abs(middle.height01-.5)<.01);assert.equal(middle.exerciseEligible,true);
+ assert.ok(d.settle(stages.high).height01>.99);
+});
+
+test('bottom must be distinct from middle and stable before calibration completes',()=>{
+ const d=driver();for(const[name,spec]of Object.entries(stages))if(name!=='bottom')d.settle(spec,8);
+ assert.equal(d.input.stage,'bottom');d.settle(stages.mid,20);assert.equal(d.input.calibrated,false);
+ for(let i=0;i<30;i++)d.tick({y:.77+(i%2?.02:-.02)});
+ assert.equal(d.input.stage,'bottom');assert.equal(d.input.calibrated,false);
+ d.settle(stages.bottom,10);assert.equal(d.input.calibrated,true);
+});
+
+test('visible upper-body bottom is valid rest with occluded lower joints but never rescues active credit',()=>{
+ const d=driver();d.calibrate();
+ let now=d.time();
+ for(const spec of [stages.bottom,stages.high])for(let i=0;i<8;i++){
+  const f=frame({...spec,now:now+=100});for(const id of [23,24,25,26])f.points[id].visibility=.1;
+  const p=d.input.update(f);assert.equal(p.controlValid,true);assert.equal(p.exerciseEligible,false);
+  assert.equal(p.resting,spec===stages.bottom);
+ }
+});
+
+test('rest does not reuse occluded upper joints and recovery does not grant fitness credit',()=>{
+ for(const joint of [11,12,13,14,15,16]){
+  const d=driver();d.calibrate();d.settle(stages.bottom);
+  const f=frame({...stages.bottom,now:d.time()+100});f.points[joint].visibility=.1;
+  const p=d.input.update(f);assert.equal(p.controlValid,false);assert.equal(p.exerciseEligible,false);assert.equal(p.posture,'unknown');
+  const recovered=d.input.update(frame({...stages.bottom,now:d.time()+200}));
+  assert.equal(recovered.controlValid,true);assert.equal(recovered.resting,true);assert.equal(recovered.exerciseEligible,false);
+ }
+});
+
+test('a resting baseline materially below its learned anchor invalidates calibration',()=>{
+ const d=driver();d.calibrate();d.settle(stages.bottom);
+ const shifted=d.tick({y:.815});assert.equal(shifted.calibrated,false);assert.equal(shifted.controlValid,false);
+ assert.equal(shifted.exerciseEligible,false);assert.match(shifted.reason,/baseline.*recalibrate/i);assert.equal(d.input.stage,'high');
+});
+
+test('movement evidence independently rejects contradictory resting credit flags',()=>{
+ for(const restingFields of [{resting:true},{posture:'rest'}]){
+  const s={started:null,hold:0,totalHold:0,active:0,bestHold:0};
+  const active={controlValid:true,calibrated:true,exerciseEligible:true};
+  applyFlightEvidence(s,active,0,{allowed:true});applyFlightEvidence(s,active,100,{allowed:true});
+  applyFlightEvidence(s,{...active,...restingFields},200,{allowed:true});
+  applyFlightEvidence(s,{...active,...restingFields},300,{allowed:true});
+  assert.equal(s.totalHold,.1);assert.equal(s.active,.1);assert.equal(s.hold,0);assert.equal(s.flightEligible,false);
+ }
 });

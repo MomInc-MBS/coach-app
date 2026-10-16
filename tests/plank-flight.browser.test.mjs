@@ -12,8 +12,12 @@ const trackerModule=`export const FilesetResolver={forVisionTasks:async()=>({})}
 export const PoseLandmarker={POSE_CONNECTIONS:[],createFromOptions:async()=>({detectForVideo(video){
  if(window.__flightMissing)return {landmarks:[],worldLandmarks:[]};
  const stage=window.myr5TestState?.motion?.flightPose?.stage||'high';
- const y={high:.38,low:.60,left:.38,right:.38,mid:.49,'mixed-left':.49,'mixed-right':.49,ready:.49}[stage]??.49;
- const lean={left:.065,right:-.065,'mixed-left':.055,'mixed-right':-.055}[stage]??0;
+ let y={high:.38,low:.60,left:.38,right:.38,mid:.49,'mixed-left':.49,'mixed-right':.49,bottom:.78,ready:.49}[stage]??.49;
+ let lean={left:.065,right:-.065,'mixed-left':.055,'mixed-right':-.055}[stage]??0;
+ if(stage==='ready'){
+  const target=window.myr5PlankFlight?.active?.run?.pace?.target;
+  if(target){y=target.y>=.5?.49-(target.y-.5)*.22:.78-target.y*.58;lean=-target.x/.8*.065;}
+ }
  const p=Array.from({length:33},()=>({x:.5,y:.5,visibility:.99})),w=Array.from({length:33},()=>({x:0,y:0,z:0}));
  for(const[s,e,h,hip,k,sign]of[[11,13,15,23,25,1],[12,14,16,24,26,-1]]){
  p[s]={x:.5+sign*.12+lean,y,visibility:.99};p[e]={x:.5+sign*.17+lean*.4,y:(y+.78)/2,visibility:.99};p[h]={x:.5+sign*.18,y:.78,visibility:.99};p[hip]={x:.5+sign*.07+lean*.3,y:y-.10,visibility:.99};p[k]={x:.5+sign*.035,y:y-.18,visibility:.99};
@@ -40,6 +44,10 @@ test('Plank Flight actual app path calibrates, credits only active pose, pauses,
   await page.getByRole('button',{name:'Begin flight',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('.pf-panel')?.hidden===true);
   await page.waitForFunction(()=>window.myr5PlankFlight?.active?.run?.phase==='flying',null,{timeout:45000});
+  await page.waitForFunction(()=>window.myr5TestState.motion.flightPose?.resting===true);
+  await page.waitForFunction(()=>window.myr5PlankFlight.active.run.time>.8);
+  assert.equal(await page.evaluate(()=>window.myr5TestState.motion.totalHold),0,'initial chest-down recovery earns no hold credit');
+  assert.ok((await page.locator('[data-pace-current]').textContent()).includes('REST'));
   await page.waitForFunction(()=>window.myr5TestState.motion.totalHold>.5,null,{timeout:10000});
   assert.equal(await page.locator('.plank-flight').count(),1);assert.equal(await page.locator('.plank-flight canvas.pf-canvas').count(),1);
   const before=await page.evaluate(()=>window.myr5TestState.motion.totalHold);await page.evaluate(()=>window.__flightMissing=true);

@@ -9,7 +9,8 @@ export function applyFlightEvidence(session, pose, timestamp, {allowed=false,max
   }
   session.flightLast=now;session.flightPose=pose;
   const dt=Number.isFinite(now)&&Number.isFinite(last)&&now>last&&now-last<=maxGap?now-last:0;
-  const eligible=!!(allowed&&pose?.exerciseEligible&&pose?.controlValid&&pose?.calibrated);
+  const resting=pose?.resting===true||pose?.posture==='rest';
+  const eligible=!!(allowed&&!resting&&pose?.exerciseEligible&&pose?.controlValid&&pose?.calibrated);
   const was=session.flightEligible===true;session.flightEligible=eligible;
   if(session.started===null&&pose?.calibrated)session.started=now;
   session.elapsed=session.started===null?0:Math.max(0,now-session.started);
@@ -19,7 +20,8 @@ export function applyFlightEvidence(session, pose, timestamp, {allowed=false,max
   session.phase=eligible?'holding':pose?.calibrated?'ready':'calibrating';
   session.setupProgress=pose?.calibrationProgress??0;session.progress=pose?.height01??0;
   session.message=(!pose?.controlValid?pose?.reason:null)||pose?.prompt||pose?.reason||(eligible?'Fly at your own pace.':'Get into position.');
-  if(pose?.controlValid&&!pose?.exerciseEligible)session.message='Practice only. Show your hips and knees for workout credit.';
+  if(pose?.controlValid&&!eligible&&resting)session.message='Resting position estimated. Flight continues; exercise credit is paused.';
+  else if(pose?.controlValid&&!pose?.exerciseEligible)session.message='Practice only. Show your hips and knees for workout credit.';
   session.measurement='Face-on pose estimate · arm pressure and floor contact are not measured.';
   return eligible;
 }

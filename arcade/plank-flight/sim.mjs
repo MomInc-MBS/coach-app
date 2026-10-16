@@ -1,4 +1,7 @@
 import {GADGETS, POWERUPS, UPGRADES, VEHICLES, vehicleById} from './catalog.mjs';
+import {createPaceSchedule,paceAt,segmentAt} from './pacing.mjs';
+
+export const PACED_FLIGHT_TUNING=Object.freeze({speed:15,verticalSpeed:1.35,lateralSpeed:1.25,gateLeadSeconds:.45,lookaheadSeconds:20});
 
 /**
  * Deterministic, renderer-independent Plank Flight rules.
@@ -117,7 +120,7 @@ function missionList(seed) {
 }
 
 /** Create a fresh mutable run with reproducible IDs and seeded course generation. */
-export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,cosmetic=null,event=false}={}) {
+export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,cosmetic=null,event=false,paced=false}={}) {
   const normalizedSeed = (Number(seed) >>> 0) || 1;
   const normalizedRunId = typeof runId === 'string' && runId ? runId : `flight-${normalizedSeed}`;
   const acceptedLoadout = normalizedLoadout(loadout, Boolean(event));
@@ -134,7 +137,9 @@ export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,c
     simTick:0, accumulator:0, graceUntil:0, nextPatternAt:FLIGHT_TUNING.firstGateDistance, patternIndex:0,
     safeRoute:[], gateGroups:new Map(), warnedGroups:new Set(), componentParts:0, componentMechDeployed:false,
     eventTokens:0, eventRewardProgress:0, eventRewardTarget:3, eventRewardClaimed:false, cleanGates:0, impactBuffer:effects.impactBuffer, lastCashDashCoinAt:-Infinity, crashEventEmitted:false, finishEventEmitted:false,
+    paced:Boolean(paced),paceSchedule:paced?createPaceSchedule(normalizedSeed):null,paceOrigin:0,nextPaceIndex:0,pace:null,
   };
+  if(run.paced){run.speed=PACED_FLIGHT_TUNING.speed;updatePace(run);}
   return run;
 }
 
@@ -188,16 +193,16 @@ function addGatePanel(run, pattern, geometry, kind) {
   const {x,y,w,h} = geometry;
   if (w <= 0.015 || h <= 0.015) return;
   addObject(run,{id:`${pattern.id}:panel:${pattern.panels++}`,type:kind,kind:'gate-panel',patternId:pattern.id,z:pattern.z,x,y,w,h,radius:0,active:true,
-    safePoint:clone(pattern.safePoint),gateStyle:pattern.style,basePanel:{x,y,w,h},warningLead:FLIGHT_TUNING.warningLead+run.effects.warningLead,laserState:'idle'});
+    safePoint:clone(pattern.safePoint),gateStyle:pattern.style,basePanel:{x,y,w,h},warningLead:(run.paced?run.speed*3:FLIGHT_TUNING.warningLead)+run.effects.warningLead,laserState:'idle'});
 }
 
 function makeGate(run, z, safePoint, index) {
   const id = `${run.runId}:gate:${index}`;
-  const hx = FLIGHT_TUNING.safeHalfWidth, hy = FLIGHT_TUNING.safeHalfHeight;
+  const hx = FLIGHT_TUNING.safeHalfWidth, hy = run.paced ? .24 : FLIGHT_TUNING.safeHalfHeight;
   const x = clamp(safePoint.x,-0.58,0.58), y = clamp(safePoint.y,0.08,0.92);
   const kind = index % 3 === 1 ? 'laser' : 'zapper';
   const pattern = {id,z,safePoint:{x,y},panels:0,style:['fixed','sweeping','orbiting'][index%3],kind};
-  const leftEdge = x-hx, rightEdge=x+hx, lowEdge=y-hy, highEdge=y+hy;
+  const leftEdge = x-hx, rightEdge=x+hx, lowEdge=run.paced?Math.max(0,y-hy):y-hy, highEdge=run.paced?Math.min(1,y+hy):y+hy;
   addGatePanel(run,pattern,{x:0,y:(highEdge+1)/2,w:1,h:(1-highEdge)/2},kind);
   addGatePanel(run,pattern,{x:0,y:lowEdge/2,w:1,h:lowEdge/2},kind);
   addGatePanel(run,pattern,{x:(-1+leftEdge)/2,y,w:(leftEdge+1)/2,h:hy},kind);
@@ -234,7 +239,7 @@ function addMissile(run, gate, index) {
 }
 
 function spawnExtras(run, gate, index) {
-  const z=gate.z+5, point=gate.safePoint;
+  const z=gate.z+(run.paced?-4:5), point=gate.safePoint;
   // The first three authored sectors guarantee a full component set on every seeded run.
   if (index < 3 || run.random() < run.effects.componentChance) {
     addObject(run,{id:`${gate.id}:component`,type:'component',kind:`core-${(run.componentParts+index)%3+1}`,z:gate.z-5,x:point.x,y:point.y,radius:0.13,value:1,active:true});
@@ -247,15 +252,49 @@ function spawnExtras(run, gate, index) {
   if (!run.vehicle && (missionVehicle || run.random() < 0.17)) {
     const options=VEHICLES.filter(vehicle=>vehicle.tier==='default');
     const pick=options[Math.floor(run.random()*options.length)];
-    addObject(run,{id:`${gate.id}:vehicle`,type:'vehicle',kind:pick.id,z:gate.z+10,x:point.x,y:point.y,radius:0.15,value:1,active:true});
+    addObject(run,{id:`${gate.id}:vehicle`,type:'vehicle',kind:pick.id,z:gate.z+(run.paced?-2:10),x:point.x,y:point.y,radius:0.15,value:1,active:true});
   }
   if ((run.event && index%2===0) || run.random()<run.effects.eventTokenChance) {
     addObject(run,{id:`${gate.id}:token`,type:'token',kind:'event-shard',z:gate.z+2,x:point.x,y:point.y,radius:0.12,value:1,active:true});
   }
   if (index%2===1 || run.random()<0.30) {
-    addObject(run,{id:`${gate.id}:npc`,type:'npc',kind:'coach-flyby',z:gate.z+7,x:point.x,y:point.y,radius:0.18,value:1,active:true});
+    addObject(run,{id:`${gate.id}:npc`,type:'npc',kind:'coach-flyby',z:gate.z+(run.paced?-1:7),x:point.x,y:point.y,radius:0.18,value:1,active:true});
   }
-  if (index%3===2) addMissile(run,gate,index);
+  if (index%3===2&&!run.paced) addMissile(run,gate,index);
+}
+
+const PACE_LABELS={rest:'Chest down · rest',top:'High plank',middle:'Middle push-up',left:'Lean left',right:'Lean right'};
+function updatePace(run){
+  if(!run.paced)return;
+  const p=paceAt(run.paceSchedule,run.time),kind=p.isRest?'rest':p.activeKind,nextKind=p.next.kind==='rest'?'rest':p.next.activeKind;
+  run.pace={kind,label:PACE_LABELS[kind],remaining:p.remaining,nextKind,nextLabel:PACE_LABELS[nextKind],target:p.target,
+    transitioning:p.transitioning,restShare:p.restShare,index:p.index,duration:p.segment.duration};
+}
+
+function ensurePacedCourse(run){
+  let guard=0;
+  while(guard++<12){
+    const segment=segmentAt(run.paceSchedule,run.nextPaceIndex);
+    if(segment.start>run.time+PACED_FLIGHT_TUNING.lookaheadSeconds)break;
+    const index=run.nextPaceIndex++,z=run.paceOrigin+(segment.end-PACED_FLIGHT_TUNING.gateLeadSeconds)*PACED_FLIGHT_TUNING.speed;
+    const gate=makeGate(run,z,segment.target,index);
+    run.gateGroups.get(gate.id).paceIndex=index;
+    const pattern=['ribbon','stair','wave','split'][index%4];
+    for(let at=segment.start+Math.max(1.35,segment.transitionSeconds+.45),coin=0;at<segment.end-.55;at+=.6,coin++){
+      addObject(run,{id:`${gate.id}:pace-coin:${coin}`,type:'coin',kind:'coin',pattern,z:run.paceOrigin+at*PACED_FLIGHT_TUNING.speed,
+        x:segment.target.x,y:segment.target.y,radius:.105,value:1,revealAt:Math.max(0,run.paceOrigin+(at-3)*PACED_FLIGHT_TUNING.speed),active:true,origin:'paced-course'});
+    }
+    spawnExtras(run,gate,index);
+    // The missile follows the previous active height into a neutral recovery bay.
+    // It cannot target the chest-down lane or demand a dodge during recovery.
+    if(segment.kind==='rest'&&index>=4&&index%4===0){
+      const at=segment.start+1.7;
+      addObject(run,{id:`${gate.id}:recovery-missile`,type:'missile',kind:'seeking-orb',patternId:null,z:run.paceOrigin+at*PACED_FLIGHT_TUNING.speed,
+        x:segment.fromTarget.x,y:Math.max(.5,segment.fromTarget.y),w:FLIGHT_TUNING.missileRadiusX,h:FLIGHT_TUNING.missileRadiusY,
+        state:'approach',warningLead:run.speed*3.4,lockDistance:run.speed*2.5,launchDistance:run.speed*.9,
+        targetX:null,targetY:null,restSafe:true,active:true,sourceIndex:index});
+    }
+  }
 }
 
 function spawnPattern(run) {
@@ -270,6 +309,7 @@ function spawnPattern(run) {
 }
 
 function ensureCourse(run) {
+  if(run.paced){ensurePacedCourse(run);return;}
   const limit=run.distance+FLIGHT_TUNING.spawnAhead;
   let guard=0;
   while (run.nextPatternAt <= limit && guard++ < 12) spawnPattern(run);
@@ -431,7 +471,7 @@ function updateThreatStates(run) {
       emit(run,'course',{entityId:object.patternId,kind:'hazard-warning',hazard:object.type,origin:'telegraph'});
     }
     if (object.type==='laser') {
-      object.laserState = ahead > object.warningLead ? 'idle' : ahead > 10 ? 'telegraph' : ahead > 3 ? 'charging' : ahead >= -1 ? 'active' : 'cooldown';
+      object.laserState = ahead > object.warningLead ? 'idle' : ahead > (run.paced?run.speed*1.5:10) ? 'telegraph' : ahead > (run.paced?run.speed*.5:3) ? 'charging' : ahead >= -1 ? 'active' : 'cooldown';
     } else if (object.type==='missile') {
       if (ahead <= object.warningLead && object.state==='approach') {
         object.state='warning';
@@ -439,7 +479,7 @@ function updateThreatStates(run) {
       }
       const slow=run.powerup?.family==='rocket-time' && run.time < run.powerup.until ? run.powerup.effect.threatSlow : 1;
       if (ahead <= object.lockDistance*slow && object.targetX===null) {
-        object.targetX=run.x; object.targetY=run.y; object.x=run.x; object.y=run.y; object.state='locked';
+        object.targetX=run.x; object.targetY=object.restSafe?Math.max(.5,run.y):run.y; object.x=object.targetX; object.y=object.targetY; object.state='locked';
         emit(run,'course',{entityId:object.id,kind:'missile-locked',targetX:object.targetX,targetY:object.targetY,origin:'telegraph'});
       }
       if (ahead <= object.launchDistance*slow && object.state==='locked') {
@@ -592,19 +632,20 @@ function stepFlight(run, dt, input) {
   const oldDistance=run.distance, oldX=run.x, oldY=run.y;
   const handling=currentVehicle(run)?.handling || {lateral:1,vertical:1,acceleration:1,damping:1,radius:0.085};
   run.level=Math.floor(run.distance/FLIGHT_TUNING.levelDistance);
-  run.speed=Math.min(FLIGHT_TUNING.maxSpeed,FLIGHT_TUNING.baseSpeed+run.level*FLIGHT_TUNING.speedPerLevel);
+  run.speed=run.paced?PACED_FLIGHT_TUNING.speed:Math.min(FLIGHT_TUNING.maxSpeed,FLIGHT_TUNING.baseSpeed+run.level*FLIGHT_TUNING.speedPerLevel);
   const rates=maxAxisRates(run), steer=clamp(input.steer,-1,1), height=clamp(virtual.height,0,1);
-  const desiredVx=steer*rates.x;
+  const desiredVx=run.paced?clamp(((input.resting?0:steer*.8)-run.x)*4,-PACED_FLIGHT_TUNING.lateralSpeed,PACED_FLIGHT_TUNING.lateralSpeed):steer*rates.x;
   const horizontalDamping=steer===0 ? handling.damping : 1;
   run.vx=moveToward(run.vx,desiredVx,FLIGHT_TUNING.horizontalAcceleration*handling.acceleration*horizontalDamping*dt);
   run.x=clamp(run.x+run.vx*dt,-1,1);
   if (run.x===-1 || run.x===1) run.vx=0;
-  const maxVy=FLIGHT_TUNING.baseVerticalSpeed*handling.vertical;
-  const vyAcceleration=((height-run.y)*FLIGHT_TUNING.verticalAcceleration-run.vy*1.55*handling.damping)*handling.acceleration*run.effects.verticalResponse;
+  const maxVy=run.paced?PACED_FLIGHT_TUNING.verticalSpeed:FLIGHT_TUNING.baseVerticalSpeed*handling.vertical;
+  const vyAcceleration=run.paced?((input.resting?0:height)-run.y)*8-run.vy*4:((height-run.y)*FLIGHT_TUNING.verticalAcceleration-run.vy*1.55*handling.damping)*handling.acceleration*run.effects.verticalResponse;
   run.vy=clamp(run.vy+vyAcceleration*dt+virtual.impulse,-maxVy,maxVy);
   run.y=clamp(run.y+run.vy*dt,0,1);
   if (run.y===0 || run.y===1) run.vy=0;
   run.time+=dt; run.distance+=run.speed*dt; run.score=Math.floor(run.distance); run.simTick++;
+  updatePace(run);
   if(run.vehicle)updateMissions(run,'vehicleTime',dt);
   run.level=Math.floor(run.distance/FLIGHT_TUNING.levelDistance);
   if (run.powerup?.family==='cash-dash' && run.time<run.powerup.until) spawnDashCoin(run);
@@ -629,11 +670,11 @@ function stepFlight(run, dt, input) {
 export function advanceFlight(run, dt, input={height01:0.5,steer:0,valid:false}) {
   if (!run || run.phase!=='flying') return run;
   if (!finite(dt) || dt<=0 || input?.valid!==true || !finite(input.height01) || !finite(input.steer)) return run;
-  const safeDt=Math.min(dt,FLIGHT_TUNING.maxFrameDelta);
+  const safeDt=Math.min(dt,run.paced ? .75 : FLIGHT_TUNING.maxFrameDelta);
   run.accumulator+=safeDt;
   const step=FLIGHT_TUNING.fixedStep;
   let ticks=0;
-  while (run.accumulator+1e-10>=step && run.phase==='flying' && ticks<7) {
+  while (run.accumulator+1e-10>=step && run.phase==='flying' && ticks<(run.paced?46:7)) {
     stepFlight(run,step,input);
     run.accumulator-=step; ticks++;
   }
@@ -642,6 +683,7 @@ export function advanceFlight(run, dt, input={height01:0.5,steer:0,valid:false})
 }
 
 function clearThreatHorizon(run, horizon=24) {
+  if(run.paced)horizon=Math.max(horizon,run.speed*3.2);
   for (const object of run.objects) {
     if (!object.active || object.z-run.distance>horizon) continue;
     if (object.type==='zapper'||object.type==='laser'||object.type==='missile') object.active=false;
@@ -661,6 +703,7 @@ export function commandFlight(run, command, payload={}) {
       run.vehicle=run.explicitVehicle || run.effects.initialVehicle || null;
       run.vehicleUntil=run.vehicle ? vehicleDuration(run,run.vehicle) : 0;
       run.vehicleHealth=vehicleHealthFor(run.vehicle);
+      if(run.paced)run.paceOrigin=run.distance-run.time*PACED_FLIGHT_TUNING.speed;
       run.phase='flying'; run.startedAt=run.time; run.accumulator=0; ensureCourse(run);
       emit(run,'course',{entityId:`${run.runId}:start`,kind:'run-start',origin:'lifecycle'});
       return true;
@@ -681,10 +724,12 @@ export function commandFlight(run, command, payload={}) {
       if (run.phase!=='ready' || run.headstartUsed) return false;
       run.headstartUsed=true; run.distance+=Math.max(0,Math.min(24,finite(payload.distance)?payload.distance:12));
       run.score=Math.floor(run.distance); run.nextPatternAt=run.distance+FLIGHT_TUNING.firstGateDistance;
+      if(run.paced)run.paceOrigin=run.distance;
       emit(run,'course',{entityId:`${run.runId}:headstart`,kind:'headstart',distance:run.distance,origin:'utility'}); return true;
     case 'final-blast':
       if (run.phase!=='crashed' || run.finalBlastUsed) return false;
-      run.finalBlastUsed=true; run.distance+=Math.max(0,Math.min(30,finite(payload.distance)?payload.distance:15));
+      {const jump=Math.max(0,Math.min(30,finite(payload.distance)?payload.distance:15));run.finalBlastUsed=true; run.distance+=jump;
+      if(run.paced){run.paceOrigin+=jump;for(const object of run.objects)object.z+=jump;for(const point of run.safeRoute)point.z+=jump;for(const group of run.gateGroups.values())group.z+=jump;}}
       run.score=Math.floor(run.distance);
       emit(run,'course',{entityId:`${run.runId}:final-blast`,kind:'final-blast',distance:run.distance,origin:'utility'}); return true;
     case 'event':
