@@ -173,3 +173,14 @@ test('closing while a GLB is still loading disposes the late mount',async()=>wit
  assert.deepEqual({open:afterLateResponse.open,api:afterLateResponse.api,canvases:afterLateResponse.canvases},{open:false,api:false,canvases:0});
  assert.equal(afterLateResponse.probe.active,0,'an aborted late response must not allocate another renderer');assert.deepEqual(page.errors,[]);
 }));
+
+test('a retained Vault API is inert after close and cannot restart rendering or enter the hall',async()=>withMobilePage(async page=>{
+ await page.evaluate(async()=>{await window.__armDelayedLoss();window.__openVault=()=>import('/modules/vault/vault-door.mjs').then(m=>m.openVault());await window.__openVault();window.__retainedVaultApi=document.querySelector('#vaultPanel')._vault;});
+ await page.waitForFunction(()=>!!document.querySelector('#vaultPanel')?._vault?.info?.(),null,{timeout:30000});
+ await page.locator('#vaultPanel').evaluate(d=>d.close());
+ await page.waitForFunction(()=>window.__gpuProbe.active===0,null,{timeout:15000});
+ await page.evaluate(()=>{const api=window.__retainedVaultApi;api.wake();api.enter();api.openDoor();api.goTo(1);});
+ await page.waitForTimeout(300);
+ const state=await page.evaluate(()=>({alive:window.__retainedVaultApi.state.alive,canvases:document.querySelectorAll('#vaultPanel canvas').length,halls:document.querySelectorAll('.vh').length,active:window.__gpuProbe.active}));
+ assert.deepEqual(state,{alive:false,canvases:0,halls:0,active:0});assert.deepEqual(page.errors,[]);
+}));
