@@ -20,7 +20,7 @@ export class PerformanceWorkout {
  constructor({mode,kind,difficulty=exerciseDifficulty(mode),cardio='gentle',snapshot=null}={}){
   // Cool Cardio (the runner) is endless gentle cardio: no sprint rounds, no 600 s finish; it ends on stop or when Coach catches you.
   this.mode=mode;this.endless=!!EXERCISES[mode]?.endless;this.kind=kind==='hold'?'hold':kind==='reps'?'reps':cardio==='sprint'&&!this.endless?'sprint':'gentle';this.difficulty=difficulty;
-  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;this.holdBlocks=[];
+  this.stage=this.kind==='reps'?'preparation-easy':'working';this.raw=0;this.baseline=0;this.value=0;this.activeSeconds=0;this.continuousSeconds=0;this.maxContinuousSeconds=0;this.xpBase=0;this.recoveryUntil=0;this.paused=false;this.finished=false;this.round=1;this.sprintSeconds=0;this.lastNow=null;this.lastMovementNow=-Infinity;this.lastPreparationRepAt=null;this.slowAccepted=0;this.perDifficultyContinuous={};this.lastCameraHold=0;this.continuousRawOffset=0;this.holdBlocks=[];this.notice='';this.noticeUntil=0;
   if(snapshot&&snapshot.mode===mode)Object.assign(this,snapshot,{finished:false,continuousSeconds:0,lastNow:null,lastCameraHold:0,continuousRawOffset:0});
   if(snapshot?.activeSeconds>=HOLD_BLOCK_SECONDS&&!Array.isArray(snapshot.holdBlocks))this.holdBlocks=null;
   if(!Object.keys(this.perDifficultyContinuous).length&&this.maxContinuousSeconds>0)this.perDifficultyContinuous[this.difficulty]=this.maxContinuousSeconds;
@@ -28,6 +28,7 @@ export class PerformanceWorkout {
  snapshot(){return Object.fromEntries(Object.entries(this).filter(([key])=>!['lastNow','lastMovementNow'].includes(key)));}
  get counting(){return !this.finished&&!this.paused&&this.stage!=='preparation-rest'&&this.stage!=='sprint-rest';}
  get instruction(){
+  if(this.notice&&Date.now()<this.noticeUntil)return this.notice;
   const variants=preparationVariants(this.mode);
   if(this.paused)return 'Shake out and recover. Resume whenever ready; recovery adds no XP.';
   if(this.stage==='preparation-easy')return `Warm up: ${PREPARATION_REPS} ${variants.easy?.name??this.mode}, full comfortable range. Good job, superstar. No XP for preparation.`;
@@ -90,7 +91,11 @@ export class PerformanceWorkout {
   this.activeSeconds+=moving?elapsed:0;this.value=this.activeSeconds;this.xpBase=Math.floor(this.activeSeconds/15)*GENTLE_BLOCK_XP;if(!this.endless&&this.activeSeconds>=HOLD_TARGET_SECONDS)return this.finish();return null;
  }
  finish(){
-  if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15)return null;
+  if(this.finished||this.stage.startsWith('preparation-')||this.xpBase<=0||this.kind==='reps'&&this.value<1||this.kind!=='reps'&&this.activeSeconds<15){
+   // Refusals are shown via `instruction` for 4 s so a tap on Finish never fails silently.
+   if(!this.finished){this.notice=this.stage.startsWith('preparation-')?'Finish the preparation set first.':this.kind==='reps'?'Do at least one rep before finishing the set.':this.kind!=='reps'&&this.activeSeconds<15?'Keep moving: 15 active seconds are needed before this set can be saved.':'Nothing to save yet.';this.noticeUntil=Date.now()+4000;}
+   return null;
+  }
   this.finished=true;const bonusXp=clampBonusXp(this.bonusXp,this.xpBase);return {mode:this.mode,kind:this.kind,difficulty:this.difficulty,value:this.value,activeSeconds:this.activeSeconds,maxContinuousSeconds:this.maxContinuousSeconds,perDifficultyContinuous:{...this.perDifficultyContinuous},...(this.kind==='hold'&&Array.isArray(this.holdBlocks)?{holdBlocks:this.holdBlocks.map(block=>({...block}))}:{}),xpBase:this.xpBase+bonusXp,xpScale:XP_SCALE,...(bonusXp>0?{bonusXp}:{}),earned:this.xpBase>0,preparation:false,working:true,rounds:this.kind==='sprint'?Math.min(SPRINT_ROUNDS,this.round):0};
  }
 }
