@@ -201,7 +201,10 @@ const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>
   onAdjust:delta=>{if(delta>=0||state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-function controls(busy){$('start').disabled=busy||!workoutPathAccess($('movement').value).allowed||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('coolCardio').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+// Cool Cardio runner is open to every path ONLY while started from the COOL CARDIO key; the library and BEGIN keep the path locks (Ian, 7 Oct).
+// var: controls() can run before this line during start-up.
+var coolKey=false;const pathAccess=mode=>coolKey&&EXERCISES[mode]?.runner?{allowed:true,path:null,reason:null}:workoutPathAccess(mode);
+function controls(busy){$('start').disabled=busy||!pathAccess($('movement').value).allowed||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('coolCardio').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -275,7 +278,7 @@ window.addEventListener('myr5:route-leave',event=>{if(event.detail?.id==='librar
 function timeout(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
 async function start(){
   if(document.hidden)return;
-  const access=workoutPathAccess($('movement').value);if(!access.allowed){status(access.reason);controls(false);return;}
+  const access=pathAccess($('movement').value);if(!access.allowed){status(access.reason);controls(false);return;}
   if(ACTIVE_PHASES.has(state.phase))stop('Switching workout input…');
   try{await Promise.all([workoutTransition,cameraStartTransition]);}catch{return;}
   if(document.hidden)return;
@@ -374,15 +377,15 @@ for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.create
 $('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
 $('goal').addEventListener('change',()=>resetMovement());
-$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!workoutPathAccess($('movement').value).allowed){const first=Object.keys(MOVEMENTS).find(mode=>workoutPathAccess(mode).allowed);if(first)$('movement').value=first;else{controls(false);status('Choose two workout paths to begin.');return;}}if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(active);if(active)library.introduce();});
+$('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!pathAccess($('movement').value).allowed){const first=Object.keys(MOVEMENTS).find(mode=>workoutPathAccess(mode).allowed);if(first)$('movement').value=first;else{controls(false);status('Choose two workout paths to begin.');return;}}if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(active);if(active)library.introduce();});
 $('duration').addEventListener('change',()=>resetMovement());
 // Cool Cardio key under the dials: runs the endless runner from any path/level, then puts the dials back (nothing saved changes).
 {let back=null;
  const restore=async()=>{if(!back)return;try{await workoutTransition;}catch{}await new Promise(r=>setTimeout(r,300));
-  if(!back||state.phase!=='idle')return;const was=back;back=null;$('movement').value=was;$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));};
+  if(!back||state.phase!=='idle')return;const was=back;back=null;coolKey=false;$('movement').value=was;$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));};
  $('coolCardio').addEventListener('click',()=>{
   if(ACTIVE_PHASES.has(state.phase)||document.hidden)return;window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind:'switch'}}));
-  back=back||$('movement').value;$('movement').value='jogging';$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));Promise.resolve(start()).finally(()=>{if(document.body.dataset.tracking!=='true')void restore();});});
+  back=back||$('movement').value;coolKey=true;$('movement').value='jogging';$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));Promise.resolve(start()).finally(()=>{if(document.body.dataset.tracking!=='true')void restore();});});
  new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')void restore();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});}
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});

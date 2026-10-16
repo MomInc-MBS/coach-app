@@ -162,6 +162,7 @@ describe('owner-scoped workout paths',()=>{
  test('movement access follows chosen paths and an actually owned coach',()=>{
   const storage=store(),options={storage,owner:'path-access'};
   assert.equal(workoutPathAccess('high-horse',options).allowed,false);
+  assert.equal(workoutPathAccess('jogging',options).allowed,false,'fresh guest: Cool Cardio stays locked in the library; only the COOL CARDIO key opens it (app.mjs)');
   chooseWorkoutPaths(['quads','martial-arts'],options);
   assert.equal(workoutPathAccess('high-horse',options).allowed,true);
   assert.equal(workoutPathAccess('squat',options).allowed,true);
