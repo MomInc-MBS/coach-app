@@ -83,3 +83,15 @@ body:not([data-cinematic=pre]) #view .coach-mount,body[data-cinematic=pre] #view
 /* The one-time "Updated" notice sits above the bar, which on the pod is exactly where BEGIN is: off the quilt it sits
    over the viewing port instead, clear of BEGIN below and of the downloads bar (.full-download-bar) at the top. */
 body:not(:has(#portalHome:not([hidden]))):not([data-screen=rest]) .app-update-banner{top:calc(128px + env(safe-area-inset-top));bottom:auto}
+/* FULL WORKOUT circuit dropdown + runner overlay */
+#podFullWorkout{position:static}.fw-menu .fw-bar,.fw-menu .fw-style-bar{display:flex;gap:8px;margin:0 0 8px}.fw-menu button{min-height:34px;padding:0 12px;border:1px solid #6a537b;border-radius:8px;background:#3b2b49;color:var(--cream);font:700 12px/1 var(--font)}
+.fw-menu .fw-bar button{flex:1}.fw-menu .fw-count{margin:0 0 8px;font-size:12px;color:var(--gold)}
+.fw-style{margin:4px 0;border:1px solid #4a3858;border-radius:10px;padding:0 10px}.fw-style>summary{min-height:38px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-weight:700;list-style:none}.fw-style>summary::-webkit-details-marker{display:none}.fw-style>summary span{font-size:11px;color:var(--gold)}
+.fw-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:36px}.fw-row input{width:20px;height:20px;accent-color:var(--gold)}.fw-row small{flex-basis:100%;margin:-4px 0 6px 28px;font-size:11px;color:#bca6c9}.fw-locked{opacity:.5}
+.fw-menu .fw-start{width:100%;min-height:48px;margin-top:10px;background:linear-gradient(#e0b04a,#a87a1f);color:#1b1022;border-color:#f5d27a;font-size:14px;letter-spacing:.08em}.fw-menu .fw-start:disabled{opacity:.4}
+#fullWorkoutHud{position:fixed;z-index:2147483000;left:0;right:0;top:0;font:14px/1.4 var(--font);color:var(--cream)}
+#fullWorkoutHud[data-mode=exercise]{pointer-events:none}#fullWorkoutHud .fw-top{pointer-events:auto;display:flex;align-items:center;gap:10px;margin:6px;padding:6px 10px;border:1px solid #a387b5;border-radius:10px;background:#1d1426e6}.fw-top span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fw-top button{min-height:32px;padding:0 12px;border-radius:8px;border:1px solid #6a537b;background:#3b2b49;color:var(--cream)}
+#fullWorkoutHud[data-mode=break],#fullWorkoutHud[data-mode=summary]{bottom:0;display:grid;place-items:center;background:#0b0712f2}
+.fw-panel{width:min(92vw,420px);max-height:92dvh;overflow:auto;text-align:center}.fw-panel h2{margin:0 0 6px}.fw-panel button{min-height:44px;margin:6px 4px;padding:0 18px;border:1px solid #a387b5;border-radius:10px;background:#3b2b49;color:var(--cream);font-weight:700}
+.fw-eyebrow{margin:0;color:var(--gold);letter-spacing:.2em;font:700 12px ui-monospace,monospace}.fw-clock{font:700 72px/1.1 ui-monospace,monospace;color:var(--gold)}.fw-big{font-size:22px;font-weight:700;margin:2px 0}.fw-sub{margin:0 0 10px;color:#bca6c9}
+.fw-panel ol{text-align:left;padding-left:24px}.fw-panel li span{float:right;color:var(--gold)}
