@@ -2,6 +2,7 @@
 // then it walks in and wanders beside, behind and in front of the user. Kick it and it spins off, then walks back.
 import {CoachMotion,COACH} from './coach-hit.mjs';
 import {coach3dEnabled,COACH_AURA_LEVEL,COACH_AURA_PLACE} from './coach3d-flag.mjs';
+import {mapPointToOverlay} from './arcade/workout-effects-state.mjs';
 const $=id=>document.getElementById(id);
 
 // D43.5: while a set is counting, the coach gives up frames before the counter does. window.myr5TestState.rate
@@ -14,11 +15,9 @@ const $=id=>document.getElementById(id);
 const COACH_CAP={minPoseHz:4,recoverMs:2000};
 const COACH_GESTURE={spun:'laugh',held:'wiggle',swiping:'swipe',impressed:'agree',laughing:'laugh'};
 
+// Same mapping as every effect layer (one mapper in workout-effects-state.mjs); unknown points stay invisible at 0,0.
 export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
- if(!point||!videoW||!videoH||!screenW||!screenH)return {x:0,y:0,visibility:0};
- const scale=Math.min(screenW/videoW,screenH/videoH),offX=(screenW-videoW*scale)/2,offY=(screenH-videoH*scale)/2;
- const px=mirrored?1-point.x:point.x;
- return {x:(offX+px*videoW*scale)/screenW,y:(offY+point.y*videoH*scale)/screenH,visibility:point.visibility??0};
+ return mapPointToOverlay(point,{videoWidth:videoW,videoHeight:videoH,hostWidth:screenW,hostHeight:screenH,mirrored})??{x:0,y:0,visibility:0};
 }
 
 export function mountCoachOverlay(){

@@ -4,6 +4,7 @@ import { EXERCISES } from '../../exercise-library.mjs';
 import { REP_CAP, HOLD_BLOCK_SECONDS, HOLD_CAP_SECONDS, repRate } from '../../progression-rules.mjs';
 import { createGrowth, SPARSE_BOOST } from './aura-growth.mjs';
 import { AURA_OPTIONS, EFFECT_GROUPS, effectGroupForExercise, readEffectChoices, resolveExerciseEffect } from './aura-options.mjs';
+import { AURA_BODY, LEG_SLOTS, ARM_SLOTS, bodyScale, sheetSprite, slotPx, circlePlacement, pulsePlacement } from './aura-anchor.mjs';
 
 export const POWER_STALE_MS = 1000;
 const REP_BANDS = Array.from({ length: REP_CAP - 1 }, (_, i) => i + 2)
@@ -112,7 +113,7 @@ export function powerProgress(workout = {}) {
 }
 
 export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } = {}) {
-  const state = { w, h, route: null, effect: null, active: false, units: 0, maxUnits: REP_CAP, intensity: 0, tier: 0, level: 0, pulse: 0, contacts: [], points: [], time: 0 };
+  const state = { w, h, route: null, effect: null, active: false, units: 0, maxUnits: REP_CAP, intensity: 0, tier: 0, level: 0, speed: 0, pulse: 0, contacts: [], points: [], time: 0 };
   const growth = createGrowth();
   let lastBumps = 0;
   let sessionId = null, mode = null, workoutKind = null, baseline = false, lastUnits = 0;
@@ -120,7 +121,7 @@ export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } =
   const effectRandom = () => { effectRandomState ^= effectRandomState << 13; effectRandomState ^= effectRandomState >>> 17; effectRandomState ^= effectRandomState << 5; return (effectRandomState >>> 0) / 0x100000000; };
   let lastNow = null, poseAge = Infinity, suppressNextPulse = true;
   const emit = (type, payload) => { try { onEvent(type, payload); } catch { /* cosmetic observers never affect workout flow */ } };
-  function clearVisible() { state.active = false; state.pulse = 0; state.level = 0; state.contacts = []; state.points = []; growth.reset(); lastBumps = 0; }
+  function clearVisible() { state.active = false; state.pulse = 0; state.level = 0; state.speed = 0; state.contacts = []; state.points = []; growth.reset(); lastBumps = 0; }
   function clearProgress() {
     state.units = 0; state.intensity = 0; state.tier = 0; state.maxUnits = REP_CAP;
     lastUnits = 0; baseline = false; workoutKind = null;
@@ -192,7 +193,7 @@ export function createPower({ w = 360, h = 640, seed = 1, onEvent = () => {} } =
     const exKind = EXERCISES[nextMode]?.kind;
     const growKind = workout.kind === 'hold' ? 'hold' : exKind === 'reps' ? 'reps' : 'move';
     growth.update({ now, points: clean, kind: growKind, units: progressFor(workout).units, valid: workout.validHold === true });
-    state.level = growth.state.level;
+    state.level = growth.state.level; state.speed = growth.state.speed;
     if (growKind === 'move' && growth.state.bumps > lastBumps) {
       state.pulse = 1; emit('pulse', { route: state.route, intensity: growth.state.goal, units: state.units, deltaUnits: 1, kind: 'move', difficulty: workout.difficulty });
     }
@@ -318,34 +319,42 @@ function drawPixelCrack(ctx, x, y, size, tier, time, seed) {
 }
 function pointPixel(state, index) {
   const points = state.points ?? [], p = points[index];
-  return visible(points, index) ? { x: p.x * state.w, y: p.y * state.h } : null;
+  return visible(points, index) ? { x: p.x * state.w, y: p.y * state.h, a: Number.isFinite(p.alpha) ? p.alpha : 1 } : null;
 }
-function auraAccents(state) {
-  const pts = [23, 24, 25, 26, 27, 28].map(i => [i, pointPixel(state, i)]).filter(([, p]) => p);
-  const count = Math.min(18, 3 + Math.floor(state.tier * 2.5));
-  const anchors = pts.length ? pts : [11, 12].map(i => [i, pointPixel(state, i)]).filter(([, p]) => p);
-  const out = [];
-  for (let i = 0; i < count && anchors.length; i++) {
-    const [index, p] = anchors[i % anchors.length], angle = (i * 2.399963229728653) + state.time * (0.25 + state.intensity * 0.2);
-    const radius = 9 + (i % 4) * (2.5 + state.tier * 0.6);
-    out.push({ index, x: p.x + Math.cos(angle) * radius, y: p.y + Math.sin(angle) * radius, angle });
+/** Floor contacts follow the drawn (filtered, predicted) landmark of the same index. */
+function contactPixel(state, contact) { return (contact.index != null && pointPixel(state, contact.index)) || contact; }
+// Classic fire: small flames pinned along the legs (each to its own bone slot), pushed out from the bone and
+// flickering around that spot. Sizes are torso multiples so the flames match the body near or far.
+const SLOT = { x: 0, y: 0, a: 0, dx: 0, dy: 1 };
+function auraAccents(state, torso) {
+  const count = Math.min(18, 3 + Math.floor(state.tier * 2.5)), out = [];
+  for (let i = 0; i < count; i++) {
+    if (!slotPx(state.points, LEG_SLOTS[i % LEG_SLOTS.length], state.w, state.h, SLOT)) continue;
+    const angle = (i * 2.399963229728653) + state.time * (0.25 + state.intensity * 0.2), side = i % 2 ? 1 : -1;
+    const push = torso * (0.07 + (i % 4) * (0.016 + state.tier * 0.004)), wobble = torso * 0.03;
+    out.push({ index: 23 + (i % 6), x: SLOT.x - SLOT.dy * push * side + Math.cos(angle) * wobble, y: SLOT.y + SLOT.dx * push * side + Math.sin(angle) * wobble, angle, a: SLOT.a });
   }
   return out;
 }
-function lightningAccents(state) {
-  const limbs = [11, 13, 15, 12, 14, 16].map(i => [i, pointPixel(state, i)]).filter(([, p]) => p);
+function lightningAccents(state, torso) {
   const count = Math.min(12, 2 + state.tier * 2), out = [];
-  for (let i = 0; i < count && limbs.length; i++) {
-    const [index, p] = limbs[i % limbs.length], phase = state.time * 4 + i * 1.37;
-    out.push({ index, x: p.x + Math.sin(phase) * (3 + state.tier), y: p.y + Math.cos(phase) * (2 + state.tier * 0.5), frame: Math.floor(state.time * 9 + i) % 8 });
+  for (let i = 0; i < count; i++) {
+    if (!slotPx(state.points, ARM_SLOTS[i % ARM_SLOTS.length], state.w, state.h, SLOT)) continue;
+    const phase = state.time * 4 + i * 1.37, j = torso * (0.02 + state.tier * 0.007);
+    out.push({ index: 11 + (i % 6), x: SLOT.x + Math.sin(phase) * j, y: SLOT.y + Math.cos(phase) * j * 0.6, frame: Math.floor(state.time * 9 + i) % 8, a: SLOT.a });
   }
   return out;
 }
-export function renderPower(ctx, raw) {
+const SPRITE = { x: 0, y: 0, a: 0, dx: 0, dy: 1, size: 0, rotation: 0 };
+/**
+ * opts.points: drawn landmarks (filtered + predicted, with per-point `alpha`) instead of state.points;
+ * opts.alpha: whole-layer fade (0..1). Sizes scale with the on-screen torso, not the canvas.
+ */
+export function renderPower(ctx, raw, opts = {}) {
   const level = raw?.level ?? raw?.intensity ?? 0;
   if (!ctx || !raw?.active || level <= 0) return;
   // Draw tier and intensity follow the shared growth level, not the XP ledger.
-  const state = { ...raw, intensity: level, tier: Math.max(1, Math.ceil(level * 6)) };
+  const state = { ...raw, points: opts.points ?? raw.points, intensity: level, tier: Math.max(1, Math.ceil(level * 6)) };
   const canvas = ctx.canvas;
   if (!canvas || typeof document === 'undefined') return;
   const width = Math.max(1, Math.ceil(state.w)), height = Math.max(1, Math.ceil(state.h));
@@ -356,62 +365,60 @@ export function renderPower(ctx, raw) {
   const layer = renderPower.layerContext;
   if (!layer) return;
   layer.clearRect(0, 0, width, height); layer.imageSmoothingEnabled = false; layer.globalCompositeOperation = 'source-over';
-  const frame = Math.floor(state.time * 7);
-  if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
-    const source = auraSources.get(state.effect), cx = state.w * .5, cy = state.h * .48;
+  const frame = Math.floor(state.time * 7), torso = bodyScale(state.points, state.w, state.h), T = AURA_BODY;
+  const sheet = state.effect && state.effect !== 'classic' && auraSources.has(state.effect);
+  if (sheet) {
+    const source = auraSources.get(state.effect);
     if (state.route === 'floor') {
-      for (const contact of state.contacts.slice(0, 4)) drawAuraFrame(layer, state.effect, frame + (contact.index ?? 0) * 7,
-        contact.x, contact.y, Math.min(90, state.w * .25) * (0.6 + 0.4 * level), .9, 0);
-    } else {
-    const anchors = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
-      .map(index => pointPixel(state, index)).filter(Boolean);
-    if (source.layout === 'circle') {
-      const size = Math.min(state.w * .86, state.h * .72) * (0.45 + 0.55 * level);
-      drawAuraFrame(layer, state.effect, frame, cx, state.h * .58, size, .76, state.time * .08);
+      for (const contact of state.contacts.slice(0, 4)) {
+        const c = contactPixel(state, contact);
+        drawAuraFrame(layer, state.effect, frame + (contact.index ?? 0) * 7, c.x, c.y, torso * T.FLOOR_SIZE * (0.6 + 0.4 * level), .9 * (c.a ?? 1), 0);
+      }
+    } else if (source.layout === 'circle') {
+      const c = circlePlacement(state.points, state.w, state.h, level);
+      drawAuraFrame(layer, state.effect, frame, c.x, c.y, c.size, .76, state.time * .08);
     } else {
       const full = state.effect === 'magicbubbles' ? 8 : source.layout === 'orbit' ? 5 : 4;
       const count = Math.max(1, Math.round(full * (0.3 + 0.7 * level)));
       for (let i = 0; i < count; i++) {
-        const anchor = anchors.length ? anchors[(i * 3 + Math.floor(state.time)) % anchors.length] : { x: cx, y: cy };
-        const phase = state.time * (source.layout === 'orbit' ? .8 : .35) + i * 2.399963229728653;
-        const radiusX = state.w * (source.layout === 'orbit' ? .15 : .08);
-        const radiusY = state.h * (source.layout === 'orbit' ? .11 : .055);
-        const size = Math.min(state.w * .38, state.h * .24) * (source.layout === 'orbit' ? .9 : 1) * (0.6 + 0.4 * level);
-        drawAuraFrame(layer, state.effect, frame + i * 7, anchor.x + Math.cos(phase) * radiusX,
-          anchor.y + Math.sin(phase) * radiusY, size, .78, source.layout === 'orbit' ? phase : Math.sin(phase) * .25);
+        if (!sheetSprite(state.points, i, source.layout, state.time, state.w, state.h, torso, level, SPRITE)) continue;
+        drawAuraFrame(layer, state.effect, frame + i * 7, SPRITE.x, SPRITE.y, SPRITE.size, .78 * SPRITE.a, SPRITE.rotation);
       }
     }
-    }
   } else if (state.route === 'aura') {
-    for (const a of auraAccents(state)) drawSheetFrame(layer, 'brightfire', frame + a.index * 3, a.x, a.y,
-      16 + Math.max(0, state.tier - 1) * 3.4, 0.95, a.angle);
+    for (const a of auraAccents(state, torso)) drawSheetFrame(layer, 'brightfire', frame + a.index * 3, a.x, a.y,
+      torso * (0.107 + Math.max(0, state.tier - 1) * 0.023), 0.95 * a.a, a.angle);
   } else if (state.route === 'lightning') {
-    for (const a of lightningAccents(state)) drawSheetFrame(layer, 'lightning', a.frame, a.x, a.y, 15 + state.tier * 2.6, 0.95, 0);
+    for (const a of lightningAccents(state, torso)) drawSheetFrame(layer, 'lightning', a.frame, a.x, a.y, torso * (0.1 + state.tier * 0.017), 0.95 * a.a, 0);
   } else if (state.route === 'floor') {
-    for (const c of state.contacts.slice(0, 4)) {
-      drawPixelCrack(layer, c.x, c.y, 11 + state.tier * 1.6, state.tier, state.time, c.index);
-      drawSheetFrame(layer, 'fire', frame + c.index * 4, c.x, c.y, 18 + state.tier * 2.6, 0.95, 0);
+    for (const contact of state.contacts.slice(0, 4)) {
+      const c = contactPixel(state, contact);
+      drawPixelCrack(layer, c.x, c.y, torso * (0.073 + state.tier * 0.011), state.tier, state.time, contact.index);
+      drawSheetFrame(layer, 'fire', frame + contact.index * 4, c.x, c.y, torso * (0.12 + state.tier * 0.017), 0.95 * (c.a ?? 1), 0);
     }
   }
   if (state.pulse > 0) {
-    if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect) && state.route === 'floor') {
-      for (const contact of state.contacts.slice(0, 4)) drawAuraFrame(layer, state.effect, frame + 23 + (contact.index ?? 0) * 7,
-        contact.x, contact.y, 50 + state.tier * 5, .9 * state.pulse, 0);
-    } else if (state.effect && state.effect !== 'classic' && auraSources.has(state.effect)) {
-      drawAuraFrame(layer, state.effect, frame + 23, state.w * .5, state.h * .48,
-        Math.min(state.w * .56, state.h * .42), .9 * state.pulse, 0);
+    if (sheet && state.route === 'floor') {
+      for (const contact of state.contacts.slice(0, 4)) {
+        const c = contactPixel(state, contact);
+        drawAuraFrame(layer, state.effect, frame + 23 + (contact.index ?? 0) * 7, c.x, c.y, torso * (0.33 + state.tier * 0.033), .9 * state.pulse, 0);
+      }
+    } else if (sheet) {
+      const p = pulsePlacement(state.points, state.w, state.h);
+      drawAuraFrame(layer, state.effect, frame + 23, p.x, p.y, p.size, .9 * state.pulse, 0);
     } else {
-      const accents = state.route === 'lightning' ? lightningAccents(state).slice(0, 4) : state.route === 'aura' ? auraAccents(state).slice(0, 6) : state.contacts.slice(0, 4);
-      for (const p of accents) {
-        const point = Number.isFinite(p.x) ? p : { x: p.x, y: p.y };
-        if (state.route === 'floor' && p.index != null) drawSheetFrame(layer, 'fire', frame + 9, point.x, point.y, 15 + state.tier * 1.5, 0.9 * state.pulse, 0);
-        else if (state.route === 'lightning') drawSheetFrame(layer, 'lightning', frame % 8, point.x, point.y, 15 + state.tier * 1.4, 0.9 * state.pulse, 0);
-        else drawSheetFrame(layer, 'brightfire', frame + 17, point.x, point.y, 16 + state.tier * 1.6, 0.9 * state.pulse, 0);
+      const accents = state.route === 'lightning' ? lightningAccents(state, torso).slice(0, 4) : state.route === 'aura' ? auraAccents(state, torso).slice(0, 6)
+        : state.contacts.slice(0, 4).map(contact => ({ ...contactPixel(state, contact), index: contact.index }));
+      for (const point of accents) {
+        if (state.route === 'floor' && point.index != null) drawSheetFrame(layer, 'fire', frame + 9, point.x, point.y, torso * (0.1 + state.tier * 0.01), 0.9 * state.pulse, 0);
+        else if (state.route === 'lightning') drawSheetFrame(layer, 'lightning', frame % 8, point.x, point.y, torso * (0.1 + state.tier * 0.009), 0.9 * state.pulse, 0);
+        else drawSheetFrame(layer, 'brightfire', frame + 17, point.x, point.y, torso * (0.107 + state.tier * 0.011), 0.9 * state.pulse, 0);
       }
     }
   }
   ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalCompositeOperation = 'source-over';
   // The wrapper applies the shared .3 effects-layer filter cap. This local alpha
   // keeps early rep accents readable while the composed ecology+power layer stays translucent.
-  ctx.globalAlpha = (0.7 + 0.3 * level) * Math.max(0, Math.min(1, state.alpha ?? 1)); ctx.drawImage(renderPower.layer, 0, 0, width, height); ctx.restore();
+  const fade = Math.max(0, Math.min(1, opts.alpha ?? state.alpha ?? 1));
+  ctx.globalAlpha = (0.7 + 0.3 * level) * fade; ctx.drawImage(renderPower.layer, 0, 0, width, height); ctx.restore();
 }

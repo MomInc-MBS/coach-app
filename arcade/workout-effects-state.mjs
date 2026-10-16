@@ -1,9 +1,26 @@
 // Tiny core-safe workout effect snapshot builder. Keep this independent from
 // optional Canvas2D renderer modules so first-run offline app boot stays intact.
+// The one video->overlay mapper (object-fit:contain, mirror once in math). Lives in this core-safe module so the
+// bundled coach overlay and the lazy effect modules share it; workout-effects.mjs re-exports it.
+export function videoRectInOverlay({videoWidth,videoHeight,hostWidth,hostHeight}={}){
+ if(![videoWidth,videoHeight,hostWidth,hostHeight].every(Number.isFinite)||videoWidth<=0||videoHeight<=0||hostWidth<=0||hostHeight<=0)return null;
+ const scale=Math.min(hostWidth/videoWidth,hostHeight/videoHeight),w=videoWidth*scale,h=videoHeight*scale;
+ return {x:(hostWidth-w)/2/hostWidth,y:(hostHeight-h)/2/hostHeight,w:w/hostWidth,h:h/hostHeight};
+}
+export function mapPointToOverlay(point,geometry={}){
+ if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y))return null;
+ const r=videoRectInOverlay(geometry);if(!r)return null;
+ const px=geometry.mirrored?1-point.x:point.x;
+ return {x:r.x+px*r.w,y:r.y+point.y*r.h,visibility:Number.isFinite(point.visibility)?point.visibility:0};
+}
+export function mapPointsToOverlay(points,geometry){
+ return Array.isArray(points)?points.map(point=>mapPointToOverlay(point,geometry)):null;
+}
+
 export function workoutEffectsSnapshot({pose={},motion={},workout=null,sessionId=null,ownerId=null,mode=null,tracking=false,visible=true,canCount=false,workingSet=false}={}){
  const active=!!(tracking&&visible&&motion.tracking===true&&workingSet&&workout&&workout.counting&&!workout.finished);
  return {
-  points:pose.points??null,world:pose.world??null,width:pose.width,height:pose.height,mirrored:!!pose.mirrored,now:pose.now,
+  points:pose.points??null,world:pose.world??null,width:pose.width,height:pose.height,mirrored:!!pose.mirrored,now:pose.now,frameMs:Number.isFinite(pose.frameMs)?pose.frameMs:pose.now,mask:pose.mask??null,
   validHold:!!(active&&motion.kind==='hold'&&motion.progress===1&&canCount),
   workout:{sessionId:sessionId??null,ownerId:ownerId??null,mode:workout?.mode??mode??null,kind:workout?.kind??motion.kind??null,stage:workout?.stage??null,paused:workout?.paused===true,active,
    workingReps:Number.isFinite(workout?.value)?workout.value:0,activeSeconds:Number.isFinite(workout?.activeSeconds)?workout.activeSeconds:0,difficulty:workout?.difficulty??'easy'}
