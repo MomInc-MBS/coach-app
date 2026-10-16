@@ -3,7 +3,7 @@
 // and the server can persist and derive them from the same record.
 import {CHOOSABLE_TRACKS,COACH_REQUIREMENTS,normalizePaths} from './performance-catalog.mjs';
 import {EXERCISES} from './exercise-library.mjs';
-import {readPerformanceProgress,choosePerformancePaths} from './performance-progress.mjs';
+import {readPerformanceProgress,choosePerformancePaths,unlockStatus} from './performance-progress.mjs';
 export {CHOOSABLE_TRACKS};
 export const GROUP_PATH=Object.freeze({chest:'chest',legs:'quads',hips:'glutes',shoulders:'arms-shoulders',core:'yoga',balance:'yoga',yoga:'yoga',stances:'martial-arts',boxing:'martial-arts',cardio:'cardio'});
 const pathTrack=path=>path==='arms-shoulders'?'arms':path;
@@ -17,7 +17,7 @@ export function workoutPathAccess(mode,options={}){
  const group=EXERCISES[mode]?.group,path=GROUP_PATH[group];
  if(!path)return {allowed:false,path:null,reason:'Choose a movement in an available workout path.'};
  const progress=readPerformanceProgress(options);
- if(progress.paths.includes(path))return {allowed:true,path,reason:null};
+ if(unlockStatus(progress).done||progress.paths.includes(path))return {allowed:true,path,reason:null};
  const owned=new Set(progress.coaches);
  if(COACH_REQUIREMENTS.some(coach=>owned.has(coach.id)&&coach.tracks.includes(pathTrack(path))))return {allowed:true,path,reason:null};
  return {allowed:false,path,reason:`${path.replaceAll('-',' ')} is locked. Choose it as one of your two paths or earn its coach.`};

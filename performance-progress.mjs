@@ -51,7 +51,8 @@ export function migratePerformanceAccess(state){
  state.goldenCoaches=state.goldenCoaches.filter(id=>state.coaches.includes(id));
  return state;
 }
-export function readPerformanceProgress(options={}){try{const {storage,owner}=scope(options),value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return validState(value)?recalculate(migratePerformanceAccess(value)):fresh();}catch{return fresh();}}
+const openEverything=state=>{if(unlockStatus(state).done)state.coaches=COACHES.map(c=>c.id).filter(id=>!EXCLUDED_COACH_IDS.includes(id));return state;};
+export function readPerformanceProgress(options={}){try{const {storage,owner}=scope(options),value=JSON.parse(storage?.getItem(`${PERFORMANCE_KEY}/${owner}`)||'null');return validState(value)?openEverything(recalculate(migratePerformanceAccess(value))):fresh();}catch{return fresh();}}
 /** One-time choice of exactly 2 paths (chosen-styles ids) for the options owner; grants and persists
  * their introductory coaches. The same pair is a no-op, a different pair needs options.reset. A reset
  * swaps the introductions (still exactly two) and never revokes earned coaches. */
@@ -119,6 +120,13 @@ export function recordPerformanceSession(record,options={}){
  }
  return save(recalculate(state),options);
 }
+/** One workout (any, incl. Cool Cardio), one meditation and one food log open every coach, path and movement.
+ * Derived from the stored sessions/days, so it persists and syncs exactly like the rest of progress. */
+export function unlockStatus(state){
+ const days=Object.values(state?.days??{}),workout=Object.keys(state?.sessions??{}).length>0||days.some(d=>d.workout),meditation=days.some(d=>d.meditation),food=days.some(d=>d.food);
+ return {workout,meditation,food,done:workout&&meditation&&food};
+}
+export const everythingUnlocked=(options={})=>unlockStatus(readPerformanceProgress(options)).done;
 export const unlockedCoachIds=(options={})=>readPerformanceProgress(options).coaches;
 export const coachAccess=(id,options={})=>unlockedCoachIds(options).includes(id);
 export const goldenCoach=(id,options={})=>readPerformanceProgress(options).goldenCoaches.includes(id);

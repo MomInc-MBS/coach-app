@@ -2,6 +2,7 @@ import {PoseFrameScheduler} from './pose-frame.mjs';
 import {mountCameraWorkout} from './camera-workout.mjs';
 import { MovementSession, MOVEMENTS } from './movement-engine.mjs';
 import { initLibrary } from './menu.mjs';
+import {showUnlockGate,watchUnlock} from './unlock-gate.mjs';
 import {CoachVoice,CueEvents} from './coach.mjs';
 import {mountCoachVoiceSettings} from './coach-voice-settings.mjs';
 import {initPod} from './pod/pod.mjs';
@@ -204,7 +205,7 @@ const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60))
 // Cool Cardio runner is open to every path ONLY while started from the COOL CARDIO key; the library and BEGIN keep the path locks (Ian, 7 Oct).
 // var: controls() can run before this line during start-up.
 var coolKey=false;const pathAccess=mode=>coolKey&&EXERCISES[mode]?.runner?{allowed:true,path:null,reason:null}:workoutPathAccess(mode);
-function controls(busy){$('start').disabled=busy||!pathAccess($('movement').value).allowed||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('coolCardio').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+function controls(busy){$('start').disabled=busy||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('coolCardio').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -375,7 +376,7 @@ async function loop(run){
   }catch(error){if(run!==generation)return;generation++;release();controls(false);await pod.interruptCurrent(state.motion).catch(()=>{});releaseOwner();voice.cancel();state.phase='error';state.error=error.message;status('Tracking stopped: '+error.message);voice.say($('status').textContent,{interrupt:true});$('detail').textContent='Camera off · Tracker closed';}
 }
 for(const [id,config] of Object.entries(MOVEMENTS)){const option=document.createElement('option');option.value=id;option.textContent=config.name;$('movement').appendChild(option);}
-$('start').addEventListener('click',()=>{$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
+$('start').addEventListener('click',()=>{if(!pathAccess($('movement').value).allowed){showUnlockGate({onCardio:()=>$('coolCardio').click()});return;}$('camera').value==='manual'?start():library.introduce();});$('stop').addEventListener('click',async()=>{if(state.phase==='manual'){await pauseManualUi();return;}void stop();voice.say('Stopped.',{interrupt:true});});
 $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset. Return to your starting position.',{interrupt:true});});
 $('goal').addEventListener('change',()=>resetMovement());
 $('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!pathAccess($('movement').value).allowed){const first=Object.keys(MOVEMENTS).find(mode=>workoutPathAccess(mode).allowed);if(first)$('movement').value=first;else{controls(false);status('Choose two workout paths to begin.');return;}}if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(active);if(active)library.introduce();});
@@ -425,11 +426,11 @@ window.myr5CreatePackControl=async options=>{
   const {createIsolatedPackControl}=await import('./packs/isolated-pack-control.mjs');
   return createIsolatedPackControl({...options,workoutOwner:pod.workoutOwner});
 };
-resetMovement();
+resetMovement();watchUnlock();
 const canUseWorkout=mode=>workoutPathAccess(mode).allowed;
 initHardware({canUse:canUseWorkout});
 soundSwitch();
- const library=initLibrary({movements:MOVEMENTS,voice,canUse:canUseWorkout,onOpen:()=>stop('Workout stopped for the library. Your results are kept.',{home:false}),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(false);},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
+ const library=initLibrary({movements:MOVEMENTS,voice,canUse:canUseWorkout,onLocked:()=>showUnlockGate({onCardio:()=>$('coolCardio').click()}),onOpen:()=>stop('Workout stopped for the library. Your results are kept.',{home:false}),onSelect:mode=>{$('movement').value=mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(false);},onStart:()=>{if(!document.hidden)start();},camera:()=>$('camera').value,movement:()=>$('movement').value});
 function refreshWorkoutPaths(){for(const option of $('movement').options){const allowed=canUseWorkout(option.value);option.disabled=!allowed;option.textContent=option.textContent.replace(/ · locked$/,'')+(allowed?'':' · locked');}if(!ACTIVE_PHASES.has(state.phase)&&!canUseWorkout($('movement').value)){const first=Object.keys(MOVEMENTS).find(canUseWorkout);if(first){$('movement').value=first;resetMovement();}}if(!ACTIVE_PHASES.has(state.phase))controls(false);library.refreshAccess();}
 window.addEventListener('myr5:performance-progress',refreshWorkoutPaths);window.addEventListener('myr5:account-ready',refreshWorkoutPaths);refreshWorkoutPaths();
 $('variationName').addEventListener('click',()=>library.introduce($('movement').value));

@@ -3,7 +3,7 @@ import {EXERCISES,FOCUS_GROUPS,GROUP_EXERCISES,focusFor} from './exercise-librar
 import {movementSetup} from './movement-setup.mjs';
 import {WORKOUT_KINDS,workoutKind,workoutChoices,workoutLevel} from './workout-levels.mjs';
 const $=id=>document.getElementById(id);
-export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice,canUse=()=>true}){
+export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,voice,canUse=()=>true,onLocked}){
  const dialog=$('library');let hands=null,viewer=null,viewerGeneration=0,handGeneration=0,introGeneration=0,introTimer=null,resolveWait=null,introducing=false,selected='squat',page=0,filter='legs',kind='reps';
  const kindLabel=document.createElement('label');kindLabel.className='library-kind';kindLabel.textContent='Training type';const kindSelect=document.createElement('select');kindSelect.id='libraryKind';for(const item of WORKOUT_KINDS){const o=document.createElement('option');o.value=item.id;o.textContent=item.name;kindSelect.append(o);}kindLabel.append(kindSelect);$('libraryFocus').closest('label').before(kindLabel);kindSelect.value=kind;kindSelect.onchange=()=>{kind=kindSelect.value;page=0;paginate();};
  // The setup is terminal text on the hologram glass, never a separate panel.
@@ -70,7 +70,7 @@ export function initLibrary({movements,onOpen,onSelect,onStart,camera,movement,v
    if(run!==handGeneration||!dialog.open){control.stop();return;}$('toggleHands').disabled=false;$('toggleHands').textContent='Disable exercise gestures';$('toggleHands').setAttribute('aria-pressed','true');
   }catch(error){if(run===handGeneration){stopHands(error.message);speak('Gesture tracking unavailable. Touch controls are ready.',{interrupt:true});}}
  });
- $('openLibrary').addEventListener('click',()=>{onOpen();const current=movement(),first=Object.keys(EXERCISES).find(id=>canUse(id));if(!first)return;selection(canUse(current)?current:first);home();refreshAccess();dialog.showModal();speak('Choose your movement.',{interrupt:true});});
+ $('openLibrary').addEventListener('click',()=>{onOpen();const current=movement(),first=Object.keys(EXERCISES).find(id=>canUse(id));if(!first){onLocked?.();return;}selection(canUse(current)?current:first);home();refreshAccess();dialog.showModal();speak('Choose your movement.',{interrupt:true});});
  $('startFromLibrary').addEventListener('click',()=>introduce(selected));
  $('closeLibrary').addEventListener('click',()=>{cancelIntro();dialog.close();speak('Library closed.',{interrupt:true});});
  $('backLibrary').addEventListener('click',()=>{home();speak('Movement library.',{interrupt:true});});
