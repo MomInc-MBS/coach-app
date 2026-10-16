@@ -180,3 +180,15 @@ test('deeper main controls leave ordinary coach clicks at their original pitch',
  sound.play('main-control');const deep=sound.context.nodes.filter(n=>n.kind==='buffer-source').at(-1);assert.ok(deep.playbackRate.value<.8);
  sound.play('mechanical');const normal=sound.context.nodes.filter(n=>n.kind==='buffer-source').at(-1);assert.ok(normal.playbackRate.value>.95);sound.dispose();
 });
+
+test('blaster cues synthesise, explosions stack up to three booms and ask the music to duck',()=>{
+ const ducks=[],windowRef={dispatchEvent:e=>ducks.push(e.detail)};globalThis.CustomEvent??=class{constructor(type,init){this.type=type;this.detail=init?.detail;}};
+ const sound=new PhysicalSound({AudioContextClass:Context,storage:storage(),documentRef:{hidden:false},windowRef});
+ sound.context=new Context();sound.master=sound.context.createGain();sound.duck=sound.context.createGain();
+ for(const kind of ['gun-arm','gun-shot','barrel-split','blast','blast-big']){sound.stopAll();sound.last.clear();sound.play(kind);assert.equal(sound.voices.size,1,kind);}
+ sound.stopAll();ducks.length=0;
+ for(let i=0;i<5;i++){sound.last.delete('blast');sound.play('blast');}
+ assert.equal(sound.voices.size,3,'combo of booms is capped at three overlapping');
+ assert.ok(ducks.length>=3&&ducks.every(d=>d.to<1&&d.release>0),'each blast ducks the music');
+ sound.dispose();
+});

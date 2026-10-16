@@ -8,6 +8,7 @@ import {GALA_KEY,loadGala,importGala,loadPower,POWERS} from './identity.mjs';
 import {mountWorkoutRoute} from '../workout-route-ui.mjs';
 import {mountCircuitUI} from '../circuit-ui.mjs';
 import {ROUTE_LINES,exerciseFamily} from '../workout-route.mjs';
+import {physicalSound} from '../audio/physical-sound.mjs';
 import {VOICE_MANIFEST} from '../robot-audio.mjs';
 import {WorkoutSessionOwner} from './workout-session-owner.mjs';
 import {combatLevel} from '../battle-pass.mjs';
@@ -108,7 +109,7 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   const generation=++sliceLoadGeneration;
   import(SLICE_GAME).then(m=>{
    if(generation!==sliceLoadGeneration||slice||!restTargetsActive())return;
-   const instance=m.mountRestGame(sliceHost(),{avatar:$('restAvatar'),attackButton:$('attackCoach'),feedback:$('restFeedback')});
+   const instance=m.mountRestGame(sliceHost(),{avatar:$('restAvatar'),attackButton:$('attackCoach'),feedback:$('restFeedback'),sound:k=>physicalSound.play(k)});
    slice=instance;instance.start();
   }).catch(error=>{
    if(generation!==sliceLoadGeneration||!restTargetsActive())return;
