@@ -124,12 +124,13 @@ export function blocked(u,v,r=0){
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
 export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null;
+ let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null,hallSession=false;
  let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
  const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
  const ownedTextures=new Set(),sharedGeometry=new Set();
  const cleanup=()=>{
   if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);
+  if(hallSession){hallSession=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});}
   if(scene)scene.traverse(o=>{try{if(o.geometry&&!sharedGeometry.has(o.geometry))o.geometry.dispose();}catch{}for(const m of [].concat(o.material||[]))try{m?.dispose?.();}catch{}});
   for(const t of ownedTextures)try{t.dispose();}catch{}ownedTextures.clear();
   if(renderer){try{renderer.dispose();}catch{}try{renderer.forceContextLoss();}catch{}}canvas?.remove();
@@ -330,6 +331,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   const veil=document.createElement('div');veil.style.cssText='position:absolute;inset:0;background:radial-gradient(circle,#d9a8ff,#7a2fc4 55%,#2a0d4a);opacity:0;pointer-events:none';host.append(veil);S.veil=veil;wake();onEnter?.(api);
  }
  function finishDolly(){
+  hallSession=true;
   import('./vault-hall.mjs').then(async m=>{
    if(!S.alive||!host.isConnected)return null;
    if(!m.enterHall)throw Error('no hall');
@@ -413,7 +415,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   project(u,v,z=0){const p=new THREE.Vector3(u-.5,.5-v,z);face.localToWorld(p);pivot.updateMatrixWorld(true);p.project(camera);const r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   projectWorld(x,y,z){const p=new THREE.Vector3(x,y,z).project(camera),r=canvas.getBoundingClientRect();return {x:r.left+(p.x+1)/2*r.width,y:r.top+(1-p.y)/2*r.height};},
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
-  dispose(){if(cleaned)return;S.alive=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
+  dispose(){if(cleaned)return;S.alive=false;for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
  };
  stage='first-render';await firstFrame;stage='ready';
  return api;
