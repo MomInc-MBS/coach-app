@@ -33,7 +33,7 @@ const catalogTrack=path=>path==='arms-shoulders'?'arms':path;
 export const normalizePaths=ids=>[...new Set((Array.isArray(ids)?ids:[]).map(id=>PATH_TRACK_ALIASES[id]??id).filter(id=>CHOOSABLE_TRACKS.includes(id)))];
 export const WEAPON_GROUPS={chest:['crossbow','cannon'],legs:['greatsword','hammer'],hips:['scythe','halberd'],core:['mace','tome'],shoulders:['bow','trident'],balance:['axe','sabre'],yoga:['staff','wand'],stances:['dagger','spear'],boxing:['gauntlets','rapier'],cardio:['chakram','flail']};
 export const STARTER_COACH_IDS=Object.freeze(['myr5','roster/23-blob-texture-bodies--blob_creature_3d_model']);
-export function exerciseDifficulty(mode){const e=EXERCISES[mode];if(!e)return 'easy';const rows=GROUP_EXERCISES[e.group].filter(x=>x.kind===e.kind);return ['easy','medium','hard','expert'][Math.min(3,Math.floor(rows.indexOf(e)*4/rows.length))];}
+export function exerciseDifficulty(mode){if(mode==='plank-flight')return 'easy';const e=EXERCISES[mode];if(!e)return 'easy';const rows=GROUP_EXERCISES[e.group].filter(x=>x.kind===e.kind);return ['easy','medium','hard','expert'][Math.min(3,Math.floor(rows.indexOf(e)*4/rows.length))];}
 export const COACH_REQUIREMENTS=placements.filter(p=>!STARTER_COACH_IDS.includes(p.id)).map(p=>({...p,name:coachName(p.id),groups:p.tracks.flatMap(t=>groups[t])}));
 // One introductory coach per path: the first easy coach whose primary track it is.
 export const PATH_INTRO_COACH_IDS=Object.freeze(Object.fromEntries(CHOOSABLE_TRACKS.map(path=>[path,COACH_REQUIREMENTS.find(c=>c.tracks[0]===catalogTrack(path)&&c.difficulty==='easy').id])));
