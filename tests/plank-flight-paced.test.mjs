@@ -20,6 +20,8 @@ test('100 seeded fast courses remain traversable through active/rest transitions
   follow(run,64);
   if(run.phase!=='flying'||[...run.gateGroups.values()].some(g=>g.hit)||run.events.some(e=>e.type==='hit'))failures.push({seed,time:run.time,phase:run.phase,x:run.x,y:run.y,pace:run.pace,hits:run.events.filter(e=>['hit','crash'].includes(e.type))});
   assert.equal(run.speed,PACED_FLIGHT_TUNING.speed);
+  const restShare=run.observedRestSeconds/run.observedControlSeconds;
+  assert.ok(restShare>=.4&&restShare<=.6,`seed${seed}: estimated rest share ${restShare}`);
  }
  assert.deepEqual(failures,[]);
 });

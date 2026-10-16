@@ -137,7 +137,7 @@ export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,c
     simTick:0, accumulator:0, graceUntil:0, nextPatternAt:FLIGHT_TUNING.firstGateDistance, patternIndex:0,
     safeRoute:[], gateGroups:new Map(), warnedGroups:new Set(), componentParts:0, componentMechDeployed:false,
     eventTokens:0, eventRewardProgress:0, eventRewardTarget:3, eventRewardClaimed:false, cleanGates:0, impactBuffer:effects.impactBuffer, lastCashDashCoinAt:-Infinity, crashEventEmitted:false, finishEventEmitted:false,
-    paced:Boolean(paced),paceSchedule:paced?createPaceSchedule(normalizedSeed):null,paceOrigin:0,nextPaceIndex:0,pace:null,
+    paced:Boolean(paced),paceSchedule:paced?createPaceSchedule(normalizedSeed):null,paceOrigin:0,nextPaceIndex:0,pace:null,observedRestSeconds:0,observedControlSeconds:0,
   };
   if(run.paced){run.speed=PACED_FLIGHT_TUNING.speed;updatePace(run);}
   return run;
@@ -645,6 +645,7 @@ function stepFlight(run, dt, input) {
   run.y=clamp(run.y+run.vy*dt,0,1);
   if (run.y===0 || run.y===1) run.vy=0;
   run.time+=dt; run.distance+=run.speed*dt; run.score=Math.floor(run.distance); run.simTick++;
+  if(run.paced){run.observedControlSeconds+=dt;if(input.resting===true)run.observedRestSeconds+=dt;}
   updatePace(run);
   if(run.vehicle)updateMissions(run,'vehicleTime',dt);
   run.level=Math.floor(run.distance/FLIGHT_TUNING.levelDistance);
