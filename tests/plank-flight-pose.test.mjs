@@ -337,3 +337,16 @@ test('the joint envelope keeps bottom extreme leans invalid and uses each measur
  const right=d.settle({y:.49,lean:-.055});assert.equal(right.controlValid,true);
  const deep=d.tick({y:.78,lean:-.065});assert.equal(deep.controlValid,false);assert.equal(deep.exerciseEligible,false);
 });
+
+test('interpolating observed bottom, mixed and high-side poses stays valid in both directions',()=>{
+ for(const sign of [-1,1]){
+  const d=driver();d.calibrate();
+  const knots=[{y:.78,lean:0},{y:.49,lean:.055*sign},{y:.38,lean:.065*sign},
+   {y:.49,lean:.055*sign},{y:.78,lean:0}];
+  for(let segment=1;segment<knots.length;segment++)for(let i=0;i<=20;i++){
+   const a=knots[segment-1],b=knots[segment],f=i/20;
+   const p=d.tick({y:a.y+(b.y-a.y)*f,lean:a.lean+(b.lean-a.lean)*f},50);
+   assert.equal(p.controlValid,true,`side=${sign},segment=${segment},fraction=${f}: ${p.reason}`);
+  }
+ }
+});
