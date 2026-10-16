@@ -129,7 +129,7 @@ export function mountCoachOverlay(){
   auraTimer=setTimeout(()=>{if(!auraOn)leave();},COACH_AURA_PLACE.leaveMs);
  }
  window.addEventListener('myr5:aura-level',event=>{
-  if(!aura||!tracking)return;const level=Number(event.detail?.level)||0;
+  if(!aura||!tracking||document.body.dataset.screen==='rest')return;const level=Number(event.detail?.level)||0;
   if(level>=COACH_AURA_LEVEL&&!auraOn)void auraEnter();else if(level<COACH_AURA_LEVEL&&auraOn)auraLeave();
  });
  new MutationObserver(()=>setTracking(document.body.dataset.tracking==='true')).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
@@ -139,6 +139,7 @@ export function mountCoachOverlay(){
  window.addEventListener('myr5:preparation-rest-start',()=>{auraOn=false;auraRun++;clearTimeout(auraTimer);if(tracking)leave();});
  window.addEventListener('myr5:preparation-rest-end',()=>{if(tracking&&!aura)void enter();});
  window.myr5CoachOverlay={
+  aura:()=>({mode:aura,on:auraOn,tracking,box:box?.style.cssText??null}),
   start(){document.body.dataset.tracking='true';setTracking(true);},
   begin(){begun=true;motion?.begin();},
   pose(screenPoints){if(!motion||!box)return;apply(motion.update(screenPoints,performance.now()));},
