@@ -127,8 +127,15 @@ function routeQuestWorkoutProgress(detail){
   pendingQuestDetails.clear();
  }).catch(()=>{if(token===questReporterToken)questReporterRetry.fail();}).finally(()=>{if(token===questReporterToken)questReporterLoading=null;});
 }
+let preloadedEffectMode=null;
+function preloadEffectsFor(mode){
+ if(!mode||mode===preloadedEffectMode)return;preloadedEffectMode=mode;
+ loadWorkoutEffectsModule().then(module=>module.preloadWorkoutEffects?.(mode)).catch(()=>{preloadedEffectMode=null;});
+}
+window.addEventListener('myr5:exercise-selected',()=>setTimeout(()=>preloadEffectsFor($('movement')?.value),0));
 function routeWorkoutEffects(detail){
  latestWorkoutEffects=detail;
+ if(document.body.dataset.tracking==='true')preloadEffectsFor(detail?.workout?.mode);
  routeQuestWorkoutProgress(detail);
  if(detail?.workout?.ownerId&&detail.workout.ownerId===performanceOwner())ensureRetainedPower();
  pendingRetainedDetail=latestRetainableWorkoutSnapshot(pendingRetainedDetail,detail,retainedOwner??performanceOwner());

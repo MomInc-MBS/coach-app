@@ -1,4 +1,7 @@
 import {createPower,renderPower} from './power.mjs';
+import {AURA_TUNING} from './aura-growth.mjs';
+export {preloadAuraForMode} from './power.mjs';
+const AURA_LAYER_OPACITY=AURA_TUNING.LAYER_OPACITY;
 import {createOverlayCanvas,mapPointsToOverlay} from '../workout-effects.mjs';
 
 const LOGICAL_WIDTH=360,MAX_GAIN=.045;
@@ -12,7 +15,7 @@ function makeCue(sound,payload){
 
 export function mountCameraPower({host,sound,seed=Date.now()}={}){
  if(!host)throw new TypeError('A camera overlay host is required.');
- const layer=createOverlayCanvas(host,'workout-power-canvas',{opacity:.3}),canvas=layer.canvas,ctx=canvas.getContext('2d',{alpha:true});
+ const layer=createOverlayCanvas(host,'workout-power-canvas',{opacity:AURA_LAYER_OPACITY,max:1}),canvas=layer.canvas,ctx=canvas.getContext('2d',{alpha:true});
  let engine=null,w=LOGICAL_WIDTH,h=1,raf=0,lastFrame=0,disposed=false,resizeObserver=null,voice=null;
  const stopVoice=()=>{voice?.stop?.(.025);voice=null;};
  function makeEngine(){engine=createPower({w,h,seed,onEvent(type,payload){if(type==='pulse'){stopVoice();voice=makeCue(sound,payload);}}});}

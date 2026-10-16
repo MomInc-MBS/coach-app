@@ -33,7 +33,7 @@ function workout(mode, now, overrides = {}) {
     workingReps: 1, activeSeconds: 15, validHold: true, ...overrides } };
 }
 
-test('camera power applies the current exercise group choice and leaves cardio/boxing without effects', () => withStorage(new MemoryStorage(), () => {
+test('camera power applies the current exercise group choice, including boxing and cardio', () => withStorage(new MemoryStorage(), () => {
   const storage = globalThis.localStorage;
   assert.equal(saveEffectChoice('legs', 'firespin', { storage, target: null }), true);
   assert.equal(saveEffectChoice('shoulders', 'magic8', { storage, target: null }), true);
@@ -45,8 +45,9 @@ test('camera power applies the current exercise group choice and leaves cardio/b
   engine.pose(workout('pushup', 30)); assert.equal(engine.state.effect, 'bluefire'); assert.equal(engine.state.route, 'floor');
   assert.ok(engine.state.contacts.length, 'floor variation retains actual support contacts');
   engine.pose(workout('high-plank', 40)); assert.equal(engine.state.effect, 'protectioncircle'); assert.equal(engine.state.route, null);
-  engine.pose(workout('boxing', 50)); assert.equal(engine.state.effect, null); assert.equal(engine.state.route, null);
-  engine.pose(workout('jogging', 60)); assert.equal(engine.state.effect, null); assert.equal(engine.state.route, null);
+  // R-1016: boxing rides the Arms & shoulders pick, cardio the Legs & hips pick.
+  engine.pose(workout('boxing', 50)); assert.equal(engine.state.effect, 'magic8'); assert.equal(engine.state.route, 'lightning');
+  engine.pose(workout('jogging', 60)); assert.equal(engine.state.effect, 'firespin'); assert.equal(engine.state.route, 'aura');
 }));
 
 function spawnSelected(ecology) {

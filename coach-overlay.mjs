@@ -1,6 +1,7 @@
 // Full-body coach in the room during a tracked set: off frame until the first rep (or held second) counts,
 // then it walks in and wanders beside, behind and in front of the user. Kick it and it spins off, then walks back.
 import {CoachMotion,COACH} from './coach-hit.mjs';
+import {coach3dEnabled,COACH_AURA_LEVEL,COACH_AURA_PLACE} from './coach3d-flag.mjs';
 const $=id=>document.getElementById(id);
 
 // D43.5: while a set is counting, the coach gives up frames before the counter does. window.myr5TestState.rate
@@ -21,8 +22,9 @@ export function videoToScreen(point,{videoW,videoH,screenW,screenH,mirrored}){
 }
 
 export function mountCoachOverlay(){
+ const aura=!coach3dEnabled(); // aura mode (default): the coach only appears at aura level 3 (coach3d-flag.mjs)
  let overlay=null,box=null,card=null,motion=null,tracking=false,boxH=0,gesturePhase=null,walking=false,begun=false,loading=null,lastState=null;
- let capped=false,aboveSince=null,caps=0,pending=null,scheduled=0,animation=0,lastAnimation=0;
+ let capped=false,aboveSince=null,caps=0,pending=null,scheduled=0,animation=0,lastAnimation=0,auraOn=false,auraTimer=0,auraRun=0;
  async function ensureCard(){
   card=document.querySelector('.myr5-companion-card');if(card)return;
   loading??=(async()=>{
@@ -52,9 +54,10 @@ export function mountCoachOverlay(){
  function leave(){
   cancelAnimationFrame(scheduled);cancelAnimationFrame(animation);animation=0;scheduled=0;pending=null;motion=null;lastState=null;walk(false);window.myr5Creature?.face?.(0);window.myr5Creature?.setMaxFps?.(null);if(!card)return;
   card.style.cssText='';if(box)box.style.visibility=box.style.display='';
-  const mount=document.body.dataset.screen==='rest'?$('restCoachMount'):$('coachMount');
+  // Aura mode: the rest scene shows the 64-bit sprite (pod.mjs), so the 3D card parks in the pod mount instead.
+  const toRest=document.body.dataset.screen==='rest'&&!aura,mount=toRest?$('restCoachMount'):$('coachMount');
   if(mount&&card.parentElement!==mount)mount.append(card);
-  window.myr5Creature?.stage(document.body.dataset.screen==='rest'?'encounter':'pod');
+  window.myr5Creature?.stage(toRest?'encounter':'pod');
  }
  function place(state){
   if(!box)return;
@@ -106,9 +109,37 @@ export function mountCoachOverlay(){
  }
  function onPose(event){pending=event.detail;scheduled||=requestAnimationFrame(flush);}
  window.addEventListener('myr5:pose',onPose);
- function setTracking(busy){if(busy===tracking)return;tracking=busy;if(busy){begun=false;void enter();}else leave();}
+ function setTracking(busy){if(busy===tracking)return;tracking=busy;if(busy){begun=false;if(!aura)void enter();}else{auraOn=false;auraRun++;clearTimeout(auraTimer);leave();}}
+ // Aura mode: he joins at COACH_AURA_LEVEL (small, bottom-right, facing us, a greeting then idle) and fades out when the
+ // level drops, at rest, or at set end. Assets load on the first entrance, never before.
+ async function auraEnter(){
+  const run=++auraRun;auraOn=true;
+  await ensureCard();if(run!==auraRun||!auraOn||!tracking||!card)return;
+  ensureOverlay();if(!box)return;if(card.parentElement!==box)box.append(card);
+  clearTimeout(auraTimer);
+  const P=COACH_AURA_PLACE,h=Math.round(innerHeight*P.heightPct),w=Math.round(h*COACH.boxWidth);
+  box.style.transition='none';box.style.visibility='visible';box.style.display='';
+  box.style.cssText+=`;left:${Math.round(innerWidth*(1-P.rightPct)-w)}px;top:${Math.round(innerHeight*(1-P.bottomPct)-h)}px;width:${w}px;height:${h}px;transform-origin:50% 100%;transform:scale(.55);opacity:0`;
+  window.myr5Creature?.stage('overlay');window.myr5Creature?.walk?.(false);window.myr5Creature?.face?.(0);window.myr5Creature?.play('greet');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(run!==auraRun)return;box.style.transition=`opacity ${P.enterMs}ms ease-out,transform ${P.enterMs}ms cubic-bezier(.2,.9,.3,1.25)`;box.style.opacity='1';box.style.transform='scale(1)';}));
+ }
+ function auraLeave(){
+  auraOn=false;auraRun++;clearTimeout(auraTimer);if(!box||!card)return;
+  box.style.transition=`opacity ${COACH_AURA_PLACE.leaveMs}ms ease-in,transform ${COACH_AURA_PLACE.leaveMs}ms ease-in`;box.style.opacity='0';box.style.transform='scale(.55)';
+  auraTimer=setTimeout(()=>{if(!auraOn)leave();},COACH_AURA_PLACE.leaveMs);
+ }
+ window.addEventListener('myr5:aura-level',event=>{
+  if(!aura||!tracking||document.body.dataset.screen==='rest')return;const level=Number(event.detail?.level)||0;
+  if(level>=COACH_AURA_LEVEL&&!auraOn)void auraEnter();else if(level<COACH_AURA_LEVEL&&auraOn)auraLeave();
+ });
  new MutationObserver(()=>setTracking(document.body.dataset.tracking==='true')).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});
+ // Preparation rest keeps data-tracking on (the camera set resumes after it) but moves the card to the rest scene.
+ // Without this the overlay kept walking/yawing the coach there: sideways, walk cycle looping. Park it like a set end,
+ // then take the card back when the set resumes (pod.mjs moves it into #coachOverlay before this event).
+ window.addEventListener('myr5:preparation-rest-start',()=>{auraOn=false;auraRun++;clearTimeout(auraTimer);if(tracking)leave();});
+ window.addEventListener('myr5:preparation-rest-end',()=>{if(tracking&&!aura)void enter();});
  window.myr5CoachOverlay={
+  aura:()=>({mode:aura,on:auraOn,tracking,box:box?.style.cssText??null}),
   start(){document.body.dataset.tracking='true';setTracking(true);},
   begin(){begun=true;motion?.begin();},
   pose(screenPoints){if(!motion||!box)return;apply(motion.update(screenPoints,performance.now()));},

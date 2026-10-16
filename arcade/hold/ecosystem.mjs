@@ -41,11 +41,12 @@ function enoughPose(points) {
   return TORSO.filter(i => points.has(i)).length >= 2 && LIMBS.filter(i => points.has(i)).length >= 2 && points.size >= 4;
 }
 
-export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}, spawnEntities = true, ecology = null } = {}) {
+export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}, spawnEntities = true, ecology = null, stillSeconds = STILL_SECONDS } = {}) {
+  const STILL = stillSeconds; // default 5 s; the camera layer passes a short first-growth time so something shows at once
   const rand = rng(seed), choose = list => list[Math.floor(rand() * list.length)];
   const state = { w, h, phase: 'waiting', stillSeconds: 0, groundY: h - 6, entities: [], debris: [] };
   let reference = null, previous = null, lastTimestamp = null, poseAge = Infinity;
-  let nextGrowth = STILL_SECONDS, nextId = 1, elapsed = 0, growthOrdinal = 0;
+  let nextGrowth = STILL, nextId = 1, elapsed = 0, growthOrdinal = 0;
 
   const emit = (type, payload) => { try { onEvent(type, payload); } catch { /* cosmetic observers cannot break tracking */ } };
   function beginDeparture() {
@@ -66,7 +67,7 @@ export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}
     reference = previous = null;
     lastTimestamp = null;
     poseAge = Infinity;
-    nextGrowth = STILL_SECONDS;
+    nextGrowth = STILL;
     if (depart) beginDeparture(); else state.phase = 'waiting';
   }
   function getGround(points) {
@@ -160,7 +161,7 @@ export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}
     const moved = movementDetected(current, now);
     if (moved) {
       beginDeparture(); state.stillSeconds = 0;
-      nextGrowth = STILL_SECONDS; growthOrdinal = 0;
+      nextGrowth = STILL; growthOrdinal = 0;
       reference = new Map(current); previous = new Map(current); lastTimestamp = now; poseAge = 0;
       return state;
     }
@@ -173,7 +174,7 @@ export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}
     const dt = (now - lastTimestamp) / 1000;
     state.stillSeconds += dt;
     previous = new Map(current); lastTimestamp = now; poseAge = 0;
-    if (state.stillSeconds >= STILL_SECONDS - 1e-9) {
+    if (state.stillSeconds >= STILL - 1e-9) {
       state.phase = 'growing';
       if (spawnEntities) {
         while (state.stillSeconds >= nextGrowth - 1e-9 && state.entities.length < MAX_ENTITIES) {
@@ -237,7 +238,7 @@ export function createEcosystem({ w = 360, h = 640, seed = 1, onEvent = () => {}
   }
   function reset() {
     state.phase = 'waiting'; state.stillSeconds = 0; state.entities.length = 0; state.debris.length = 0;
-    reference = previous = null; lastTimestamp = null; poseAge = Infinity; nextGrowth = STILL_SECONDS; growthOrdinal = 0; elapsed = 0;
+    reference = previous = null; lastTimestamp = null; poseAge = Infinity; nextGrowth = STILL; growthOrdinal = 0; elapsed = 0;
     state.groundY = h - 6;
     return state;
   }
