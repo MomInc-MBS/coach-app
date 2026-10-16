@@ -3,9 +3,10 @@
 import {seamlessLoopBuffer} from './loop-seam.mjs';
 export const SOUND_PREF_KEY='myr5.physicalSound.v1';
 const clamp=(n,a=0,b=1)=>Math.min(b,Math.max(a,n));
-const RATE={'main-control':38,mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,'pond-slosh':1100,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800,'electric':110,bloop:160,'signal':250,'whiteboard':450};
-const GROUP={'main-control':'mechanical',water:'water','water-slosh':'water','pond-slosh':'water',wood:'wood','wood-scrape':'wood',grass:'grass','grass-tinkle':'tinkle'};
-const SAMPLE={'main-control':'mechanical',mechanical:'mechanical-click',switch:'metal-switch',dial:'mechanical',lever:'switch',ice:'ice-crack',jelly:'jelly-squish',water:'water-splash','water-slosh':'water-slosh','pond-slosh':'water-slosh',grass:'grass-rustle','grass-tinkle':'grass-tinkle',cogs:'cogs-ratchet',wood:'wood-tap','wood-scrape':'wood-scrape',quilt:'cloth-rustle',transit:'portal-transit',dialup:'dialup',crt:'crt-tap','pod-hum':'pod-hum',breeze:'breeze',waterfall:'waterfall',electric:'electric',bloop:'bloop',signal:'signal',whiteboard:'whiteboard'};
+const RATE={'main-control':38,mechanical:38,switch:90,dial:45,lever:80,crt:65,ice:250,jelly:220,water:280,'water-slosh':900,'pond-slosh':1100,grass:300,'grass-tinkle':1200,cogs:180,wood:250,'wood-scrape':300,quilt:220,drag:160,transit:800,dialup:1800,'electric':110,bloop:160,'signal':250,'whiteboard':450,'gun-arm':120,'gun-shot':80,blast:60,'blast-big':90,'barrel-split':80};
+const GROUP={'main-control':'mechanical',water:'water','water-slosh':'water','pond-slosh':'water',wood:'wood','wood-scrape':'wood','gun-arm':'gun-arm',grass:'grass','grass-tinkle':'tinkle'};
+const SAMPLE={'main-control':'mechanical',mechanical:'mechanical-click',switch:'metal-switch',dial:'mechanical',lever:'switch',ice:'ice-crack',jelly:'jelly-squish',water:'water-splash','water-slosh':'water-slosh','pond-slosh':'water-slosh',grass:'grass-rustle','grass-tinkle':'grass-tinkle',cogs:'cogs-ratchet',wood:'wood-tap','wood-scrape':'wood-scrape',quilt:'cloth-rustle',transit:'portal-transit',dialup:'dialup',crt:'crt-tap','pod-hum':'pod-hum',breeze:'breeze',waterfall:'waterfall',electric:'electric',bloop:'bloop',signal:'signal',whiteboard:'whiteboard','gun-arm':'gun-arm','gun-shot':'gun-shot',blast:'blast','blast-big':'blast-big','barrel-split':'barrel-split'};
+const LIMIT={blast:3,'blast-big':2,'gun-shot':3,'barrel-split':3}; // overlapping booms for a combo, the next steals the oldest
 const safeStorage=()=>{try{return globalThis.localStorage;}catch{return null;}};
 
 export function readSoundPrefs(storage=safeStorage()){
@@ -59,7 +60,7 @@ export class PhysicalSound{
  sourceNoise(){const s=this.context.createBufferSource();s.buffer=this.noiseBuffer();return s;}
  voice(kind,seconds,build){
   const c=this.context;if(!c||c.state!=='running'||this.document?.hidden||this.muted||!this.volume)return;
-  const group=GROUP[kind]||kind,limit=['mechanical','dial','lever','switch'].includes(group)?4:group==='tinkle'||group==='transit'||group==='dialup'?1:2;
+  const group=GROUP[kind]||kind,limit=LIMIT[group]||(['mechanical','dial','lever','switch'].includes(group)?4:group==='tinkle'||group==='transit'||group==='dialup'?1:2);
   while([...this.voices].filter(v=>v.group===group).length>=limit)[...this.voices].find(v=>v.group===group).stop(.06);
   while(this.voices.size>=12)this.voices.values().next().value.stop();
   const output=c.createGain(),nodes=[];output.connect(this.duck);let stopped=false;
@@ -81,7 +82,7 @@ export class PhysicalSound{
   src.connect(filter).connect(gain).connect(output);src.start(start);src.stop(start+duration+.02);nodes.push(src,filter,gain);
  }
  synth(kind){
-  const v=(duration,fn)=>this.voice(kind,duration,fn),pitch=()=>.94+Math.random()*.12;
+  const v=(duration,fn)=>this.voice(kind,duration,fn),pitch=()=>.94+Math.random()*.12,w=()=>.85+Math.random()*.3,j=()=>.85+Math.random()*.3;
   switch(kind){
    case 'main-control':return v(.15,x=>{this.tone(x,220*pitch(),.11,.17,'triangle',85);this.noiseBurst(x,.065,.08,800,240);});
    case 'mechanical':return v(.12,x=>{this.tone(x,960*pitch(),.07,.17,'triangle',460);this.noiseBurst(x,.065,.08,1800,650);});
@@ -93,6 +94,16 @@ export class PhysicalSound{
    case 'signal':return v(.32,x=>{this.tone(x,660,.07,.018,'sine',660);this.tone(x,880,.07,.012,'sine',880,.17);});
    case 'whiteboard':return v(.85,x=>{this.noiseBurst(x,.26,.035,1300,900);for(let i=0;i<4;i++){this.tone(x,1900+i*210,.09,.055,'sine',3300-i*190,.10+i*.16);this.noiseBurst(x,.07,.018,3200,1700,.11+i*.16);}});
    case 'crt':return v(.16,x=>{this.tone(x,90,.13,.12,'sine',54);this.noiseBurst(x,.08,.045,2000,400);});
+   // MOM Inc. blaster: transient (timing) + body + sub weight + debris tail. Pitch/level jitter per layer so repeats do not fatigue.
+   case 'gun-arm':return v(.14,x=>{this.noiseBurst(x,.03,.1*j(),2600,900);this.tone(x,520*w(),.05,.08*j(),'square',380,.04);});
+   case 'gun-shot':return v(.28,x=>{this.noiseBurst(x,.025,.32*j(),3200,600);this.tone(x,180*w(),.14,.22*j(),'triangle',60);this.tone(x,70,.12,.14*j(),'sine',35);this.noiseBurst(x,.18,.07*j(),900,200,.03);});
+   case 'blast':case 'blast-big':{const big=kind==='blast-big';return v(big?.95:.65,x=>{
+    this.noiseBurst(x,.02,.34*j(),2800,700);if(big)this.noiseBurst(x,.03,.2*j(),2000,500,.06);
+    this.tone(x,140*w(),big?.5:.32,.26*j(),'sawtooth',38);this.tone(x,110*w(),big?.44:.28,.2*j(),'triangle',40);this.tone(x,big?48:55,big?.45:.3,.18*j(),'sine',big?24:28);
+    for(let i=0,n=big?5:4;i<n;i++)this.noiseBurst(x,.04,(.05+Math.random()*.04)*j(),1400,500,.12+Math.random()*.33);
+    if(big)this.noiseBurst(x,.3,.04*j(),3000,1500,.05);
+    this.window?.dispatchEvent?.(new CustomEvent('myr5:sfx-duck',{detail:{to:.45,seconds:.05,release:big?.5:.35}}));});}
+   case 'barrel-split':return v(.32,x=>{this.noiseBurst(x,.06,.14*j(),1800,400);this.tone(x,220*w(),.12,.12*j(),'triangle',90);this.noiseBurst(x,.08,.06*j(),4500,1200,.02);});
    case 'ice':return v(.5,x=>{this.noiseBurst(x,.17,.16,5500,1700);this.tone(x,980*pitch(),.32,.08,'sine',460,.025);this.noiseBurst(x,.08,.045,4500,1000,.16);});
    case 'jelly':return v(.46,x=>{this.noiseBurst(x,.28,.16,350,130);this.tone(x,180*pitch(),.32,.16,'sine',65);this.tone(x,95,.16,.075,'sine',45,.1);});
    case 'water':return v(.65,x=>{this.noiseBurst(x,.44,.23,1900,250);this.tone(x,410,.23,.08,'sine',110,.04);this.noiseBurst(x,.22,.09,900,160,.2);});
@@ -123,7 +134,7 @@ export class PhysicalSound{
   const duration=Math.min(buffer.duration,kind==='pond-slosh'?.38:3)/(kind==='main-control'?.76:1);
   this.voice(kind,duration,({c,t,output,nodes})=>{
    const source=c.createBufferSource(),gain=c.createGain();source.buffer=buffer;source.playbackRate.value=(kind==='main-control'?.76:1)*(.97+Math.random()*.06);
-   const level=kind==='pond-slosh'?.16:kind==='dialup'?.13:kind==='signal'?.09:kind==='electric'?.12:kind==='bloop'?.16:kind==='whiteboard'?.4:kind==='grass-tinkle'?.04:kind==='grass'?.4:kind==='transit'?.72:.68;
+   const level=kind==='blast'?.7:kind==='blast-big'?.75:kind==='gun-shot'?.6:kind==='pond-slosh'?.16:kind==='dialup'?.13:kind==='signal'?.09:kind==='electric'?.12:kind==='bloop'?.16:kind==='whiteboard'?.4:kind==='grass-tinkle'?.04:kind==='grass'?.4:kind==='transit'?.72:.68;
    gain.gain.setValueAtTime(.0001,t);gain.gain.linearRampToValueAtTime(level,t+.008);gain.gain.setValueAtTime(level,t+Math.max(.009,duration-.05));gain.gain.linearRampToValueAtTime(.0001,t+duration);
    source.connect(gain).connect(output);source.start(t);source.stop(t+duration+.01);nodes.push(source,gain);
   });

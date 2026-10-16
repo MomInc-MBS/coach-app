@@ -31,7 +31,7 @@ const MIX_KINDS=['ice','crackle','water'];
 const BED_BOARD_GAIN=.5;
 
 export function createPageMusic({sound=physicalSound,documentRef=globalThis.document,windowRef=globalThis.window,fetchRef=(...a)=>globalThis.fetch(...a),pathname=globalThis.location?.pathname||''}={}){
- let scene=null,hold=false,djActive=false,holdTimer=0,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
+ let speaking=false,scene=null,hold=false,djActive=false,holdTimer=0,ctx=null,out=null,duck=null,armed=false,want=undefined,epoch=0,cur=null,cut=null,manifest=null,manifestP=null,noise=null,warned=false;
  const buffers=new Map(),log=[];
  const warn=e=>{if(!warned){warned=true;console.warn('page music:',e?.message||e);}};
  const note=(what,param,v0,v1,t0,t1)=>{log.push({what,v0,v1,t0,t1});if(log.length>60)log.shift();};
@@ -156,7 +156,8 @@ export function createPageMusic({sound=physicalSound,documentRef=globalThis.docu
   documentRef.addEventListener('pointerdown',unlock,true);documentRef.addEventListener('keydown',unlock,true);
   documentRef.addEventListener('visibilitychange',()=>{if(!ctx)return;if(documentRef.hidden)void ctx.suspend();else if(!muted())void ctx.resume();});
   windowRef.addEventListener('myr5:sound-settings',()=>{level();if(!muted()&&ctx?.state==='suspended'&&!documentRef.hidden)void ctx.resume();});
-  windowRef.addEventListener('myr5:response',e=>{if(!duck)return;const p=duckPlan(e.detail?.state==='speaking');ramp(duck.gain,'duck',p.to,ctx.currentTime,p.seconds);});
+  windowRef.addEventListener('myr5:response',e=>{speaking=e.detail?.state==='speaking';if(!duck)return;const p=duckPlan(speaking);ramp(duck.gain,'duck',p.to,ctx.currentTime,p.seconds);});
+  windowRef.addEventListener('myr5:sfx-duck',e=>{if(!duck)return;const d=e.detail||{},t=ctx.currentTime;ramp(duck.gain,'duck',d.to??.5,t,d.seconds??.05);setTimeout(()=>{if(duck)ramp(duck.gain,'duck',duckPlan(speaking).to,ctx.currentTime,d.release??.35);},Math.ceil((d.seconds??.05)*1000));}); // explosions pop out of the music
   windowRef.addEventListener('myr5:route',sync);
   windowRef.addEventListener('myr5:music-scene',e=>{scene=e.detail?.scene||null;sync();});
   windowRef.addEventListener('myr5:dj-active',e=>{djActive=!!e.detail?.active;sync();});

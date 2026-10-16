@@ -1,4 +1,4 @@
-// Camera-workout overlay for the slice engine: the coach throws space junk, tracked limbs slice or explode it.
+// Camera-workout overlay for the slice engine: the MOM Inc. gun fires barrels at you, tracked limbs slice or explode them.
 // Lazy: app.mjs imports this only for martial arts and holds (external in scripts/build.mjs, optional asset).
 import {createSlice,render,pathKind} from './core.mjs';
 import {createHandGlow,renderHandGlow} from './hand-glow.mjs';
@@ -21,16 +21,13 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
  canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none';host.append(canvas);
  const g=canvas.getContext('2d');
  const e=createSlice({w:W,h:H,seed,mode,strikes:mode==='martial',onEvent(type,d){
-  if(type==='hit')sound(d.kind==='slice'?'ice':'wood');else if(type==='bonus'){sound('dial');onXp(d.xp);}
+  if(type==='hit')sound(d.kind==='slice'?'barrel-split':d.type==='barrel-fuel'||d.type==='barrel-toxic'?'blast-big':'blast');
+  else if(type==='shot')sound('gun-shot');else if(type==='gun-aim')sound('gun-arm');else if(type==='chain')sound('blast');
+  else if(type==='bonus'){sound('dial');onXp(d.xp);}
   else if(type==='combo'){sound('lever');reportStreak(d.n);}else if(type==='strike')sound('jelly');
   else if(type==='laser-aim')sound('crt');else if(type==='laser-shield')sound('switch');else if(type==='laser-hit')sound('main-control');
  }});
  const reportStreak=createFruitStreakReporter(ownerId);
- const coachArt=document.createElement('canvas');coachArt.width=64;coachArt.height=96;
- (async()=>{ // keep the user's coach visible below the thrown targets
-  try{const A=window.GalaAvatar,{loadGala}=await import('/pod/identity.mjs'),m=await import('/war-room/coach-sprites.js'),c=await m.loadWarRoomCoaches(document);
-   c.draw(A.draw,coachArt,loadGala(localStorage,A).look,{});}catch{const x=coachArt.getContext('2d');x.fillStyle='#bc89ff';x.fillRect(20,30,24,50);x.fillStyle='#fff';x.fillRect(24,36,6,6);x.fillRect(34,36,6,6);}
- })();
  const hist=new Map(),prevBody={pts:null,t:0},handGlow=createHandGlow();let last=performance.now(),raf=0,laserIn=7,counting=false,body={x:W/2,y:H*.6};
  const onVisibility=()=>{if(document.visibilityState==='hidden')handGlow.clear();};document.addEventListener('visibilitychange',onVisibility);
  function frame(now){
@@ -38,7 +35,7 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
   if(counting){laserIn-=dt;if(laserIn<=0&&e.laserStart(body.x,body.y)){laserIn=9+Math.random()*6;}}
   e.step(dt);
   const effectStart=performance.now();handGlow.step(dt,now);
-  render(g,e,{pointerTrail:false,coach:(c)=>{c.imageSmoothingEnabled=false;c.drawImage(coachArt,W/2-32,H-96);}});
+  render(g,e,{pointerTrail:false});
   renderHandGlow(g,handGlow.state);handGlow.measure(performance.now()-effectStart,now);
  }
  raf=requestAnimationFrame(frame);
@@ -60,9 +57,9 @@ export function mountCameraSlice({host,mode='martial',sound=()=>{},onXp=()=>{},o
     const p=sp[i];if(p.v<SEEN){hist.delete(i);continue;}
     const q=toL(p),h=hist.get(i)||[];h.push({...q,t});if(h.length>6)h.shift();hist.set(i,h);
     if(h.length<2)continue;const a=h[h.length-2],dtp=t-a.t;
-    if(dtp<=0||dtp>.5||Math.hypot(q.x-a.x,q.y-a.y)/H/dtp<FAST)continue;
+    const spd=dtp>0?Math.hypot(q.x-a.x,q.y-a.y)/H/dtp:0;if(dtp<=0||dtp>.5||spd<FAST)continue;
     e.addTrail(a.x,a.y);e.addTrail(q.x,q.y);
-    e.hitSegment(a,q,{kind:pathKind(h),pad:4});
+    e.hitSegment(a,q,{kind:pathKind(h),pad:4,speed:spd});
    }
   },
   stop(){cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',onVisibility);handGlow.clear();canvas.remove();}
