@@ -123,11 +123,13 @@ export function blocked(u,v,r=0){
 
 // --- The scene -----------------------------------------------------------------------------------------
 // host: element to fill. goals/read: the vault contract. onEnter(api): the doorway was tapped. Resolves to the door api.
-export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen}={}){
- let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer';
+export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen,onFatal}={}){
+ let renderer=null,scene=null,ro=null,canvas=null,frame=0,cleaned=false,stage='renderer',onContextLost=null;
+ let firstFrameSettled=false,resolveFirstFrame,rejectFirstFrame;
+ const firstFrame=new Promise((resolve,reject)=>{resolveFirstFrame=resolve;rejectFirstFrame=reject;});
  const ownedTextures=new Set(),sharedGeometry=new Set();
  const cleanup=()=>{
-  if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();
+  if(cleaned)return;cleaned=true;cancelAnimationFrame(frame);ro?.disconnect();if(onContextLost)canvas?.removeEventListener('webglcontextlost',onContextLost);
   if(scene)scene.traverse(o=>{try{if(o.geometry&&!sharedGeometry.has(o.geometry))o.geometry.dispose();}catch{}for(const m of [].concat(o.material||[]))try{m?.dispose?.();}catch{}});
   for(const t of ownedTextures)try{t.dispose();}catch{}ownedTextures.clear();
   if(renderer){try{renderer.dispose();}catch{}try{renderer.forceContextLoss();}catch{}}canvas?.remove();
@@ -136,7 +138,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  stage='renderer';renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(WALL);
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
- canvas=renderer.domElement;canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none';canvas.setAttribute('aria-label','Vault door');host.append(canvas);
+ canvas=renderer.domElement;canvas.style.cssText='display:block;width:100%;height:100%;touch-action:none';canvas.setAttribute('aria-label','Vault door');
  stage='scene';scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(32,1,.1,40),root=new THREE.Group();scene.add(root);
  scene.add(new THREE.HemisphereLight('#d9c8ff','#241532',1.1));
  const sun=new THREE.DirectionalLight('#fff0d8',2.6);sun.position.set(-.9,1.4,3);sun.castShadow=true;sun.shadow.normalBias=.01;sun.shadow.bias=-.0005;
@@ -351,8 +353,16 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
  let awakeUntil=0,last=0,hallRetry=null;
  function wake(){awakeUntil=performance.now()+1500;if(!frame&&S.alive){last=performance.now();frame=requestAnimationFrame(tick);}}
  const reduced=matchMedia?.('(prefers-reduced-motion: reduce)');
+ const frameFailure=error=>{
+  try{error.vaultStage=firstFrameSettled?'runtime-render':'first-render';}catch{}
+  if(!firstFrameSettled){firstFrameSettled=true;rejectFirstFrame(error);return;}
+  if(cleaned)return;S.alive=false;cleanup();onFatal?.(error);
+ };
+ onContextLost=event=>{event.preventDefault();frameFailure(new Error('WebGL context lost'));};canvas.addEventListener('webglcontextlost',onContextLost);
+ host.append(canvas);
  function tick(now){
-  frame=0;if(!S.alive)return;const rdt=Math.min(.5,(now-last)/1000||.016),dt=Math.min(.05,rdt);last=now;let busy=S.drag.size>0;
+  frame=0;if(!S.alive)return;
+  try{const rdt=Math.min(.5,(now-last)/1000||.016),dt=Math.min(.05,rdt);last=now;let busy=S.drag.size>0;
   renderer.shadowMap.enabled=true;
   // flywheel: follows the finger; unfinished turns spring back
   if(!S.drag.size&&!S.opening&&S.open<.02&&Math.abs(S.fly.total)>.01){S.fly={last:null,total:S.fly.total*Math.exp(-rdt*5)};S.progress=Math.abs(S.fly.total)/TAU;busy=true;}
@@ -390,9 +400,10 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   const weldLive=S.sparks.length>0||S.weld.length>0||[...S.drag.values()].some(d=>d.weld);
   if(weldLive||S.weldWas)weldDraw(now);S.weldWas=weldLive;
   if(now<S.glitch){crt.position.x=(Math.random()-.5)*.006;drawCrt(cc,CW_,CH_,S.view,now/60|0);crtTex.needsUpdate=true;busy=true;}else if(crt.position.x!==at(L.crt.u,L.crt.v).x){crt.position.x=at(L.crt.u,L.crt.v).x;drawView();}
-  renderer.render(scene,camera);
+  if(renderer.getContext().isContextLost())throw new Error('WebGL context lost');renderer.render(scene,camera);if(!firstFrameSettled){firstFrameSettled=true;resolveFirstFrame();}
   const go=busy||moving||wob||lit||weldLive||S.pomega>.05||now<awakeUntil;
   if(go)frame=requestAnimationFrame(tick);else renderer.shadowMap.enabled=false; // asleep: the canvas keeps its last (shadowed) frame
+  }catch(error){frameFailure(error);}
  }
  stage='layout';ro=new ResizeObserver(layout2);ro.observe(host);layout2();stage='ready';
  const api={
@@ -404,6 +415,7 @@ export async function mountVaultDoor(host,{goals=[],read=()=>({}),onEnter,onOpen
   info:()=>({idx:S.idx,open:S.open,progress:S.progress,shadows:renderer.shadowMap.enabled,awake:!!frame,view:S.view,kitParts:parts.gears.length+parts.pipes.length+parts.valves.length+parts.lights.length}),
   dispose(){if(cleaned)return;S.alive=false;import('./vault-hall.mjs').then(m=>m.exitHall?.()).catch(()=>{});for(const t of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.removeEventListener(t,t==='pointerdown'?onDown:t==='pointermove'?onMove:onUp);cleanup();},
  };
+ stage='first-render';await firstFrame;stage='ready';
  return api;
  }catch(error){cleanup();try{error.vaultStage=stage;}catch{}throw error;}
 }
@@ -424,6 +436,18 @@ export async function openVault(){
  dlg.addEventListener('close',dlg._vaultCloseHandler,{once:true});
  const retry=document.createElement('button');retry.type='button';retry.textContent='Retry 3D';retry.hidden=true;retry.style.cssText='position:absolute;left:50%;bottom:24px;z-index:3;transform:translateX(-50%);padding:12px 20px;border:1px solid #d4a4ff;border-radius:999px;background:#251334;color:#fff;font:600 16px system-ui';
  retry.addEventListener('click',()=>void mount());dlg.append(retry);
+ const showFailure=error=>{
+  if(!dlg.open||dlg._vaultGeneration!==generation)return;
+  host.replaceChildren();
+  const message=document.createElement('div');message.setAttribute('role','alert');message.style.cssText='position:absolute;inset:0;display:grid;place-content:center;gap:14px;padding:24px;text-align:center;color:#f6eddf;font:600 17px/1.5 system-ui';
+  const heading=document.createElement('strong');heading.textContent='The 3D Vault could not start.';
+  const detail=document.createElement('span');detail.textContent='Your earned secrets are safe. Retry when the device is ready.';
+  const safePart=(v,max)=>String(v||'').replace(/https?:\/\/\S+/gi,'[URL]').replace(/[\r\n\t]/g,' ').replace(/[^\x20-\x7e]/g,'?').slice(0,max);
+  const diagnostic=document.createElement('small');diagnostic.textContent=`${safePart(error?.vaultStage||'open-vault',48)} · ${safePart(error?.name||'Error',48)}: ${safePart(error?.message||'Unknown startup error',180)}`;
+  diagnostic.dataset.vaultDiagnostic='true';message.dataset.vaultErrorName=safePart(error?.name||'Error',48);message.dataset.vaultErrorStage=safePart(error?.vaultStage||'open-vault',48);message.dataset.vaultErrorMessage=safePart(error?.message||'Unknown startup error',180);
+  message.append(heading,detail,diagnostic);host.append(message);retry.hidden=false;retry.disabled=false;retry.textContent='Retry 3D';
+  console.error('Achievement Vault renderer failed; retry is available.',error);
+ };
  let mounting=null;
  const mount=()=>{
   if(mounting)return mounting;
@@ -431,7 +455,7 @@ export async function openVault(){
   retry.disabled=true;retry.textContent='Opening…';retry.hidden=true;host.replaceChildren(loading);
   try{
    const [{GOALS},{view}]=await Promise.all([import('./vault-goals.mjs'),import('./vault-store.mjs')]);
-   const api=await mountVaultDoor(host,{goals:GOALS,read:view});
+   const api=await mountVaultDoor(host,{goals:GOALS,read:view,onFatal:error=>{dlg._vault=null;showFailure(error);}});
    if(!dlg.open||dlg._vaultGeneration!==generation){api.dispose();return null;}
    dlg._vault=api;loading.remove();return api;
   }catch(error){
@@ -439,16 +463,7 @@ export async function openVault(){
     for(const kind of ['webgl2','webgl','experimental-webgl'])try{canvas.getContext(kind)?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}
    }
    if(!dlg.open||dlg._vaultGeneration!==generation){host.replaceChildren();return null;}
-   host.replaceChildren();
-   const message=document.createElement('div');message.setAttribute('role','alert');message.style.cssText='position:absolute;inset:0;display:grid;place-content:center;gap:14px;padding:24px;text-align:center;color:#f6eddf;font:600 17px/1.5 system-ui';
-   const heading=document.createElement('strong');heading.textContent='The 3D Vault could not start.';
-   const detail=document.createElement('span');detail.textContent='Your earned secrets are safe. Retry when the device is ready.';
-   const safePart=(v,max)=>String(v||'').replace(/https?:\/\/\S+/gi,'[URL]').replace(/[\r\n\t]/g,' ').replace(/[^\x20-\x7e]/g,'?').slice(0,max);
-   const diagnostic=document.createElement('small');diagnostic.textContent=`${safePart(error?.vaultStage||'open-vault',48)} · ${safePart(error?.name||'Error',48)}: ${safePart(error?.message||'Unknown startup error',180)}`;
-   diagnostic.dataset.vaultDiagnostic='true';message.dataset.vaultErrorName=safePart(error?.name||'Error',48);message.dataset.vaultErrorStage=safePart(error?.vaultStage||'open-vault',48);message.dataset.vaultErrorMessage=safePart(error?.message||'Unknown startup error',180);
-   message.append(heading,detail,diagnostic);host.append(message);
-   retry.hidden=false;retry.disabled=false;retry.textContent='Retry 3D';
-   console.error('Achievement Vault renderer failed; retry is available.',error);
+   showFailure(error);
    return null;
   }
   })().finally(()=>{mounting=null;});
