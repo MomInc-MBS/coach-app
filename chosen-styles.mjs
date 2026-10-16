@@ -15,6 +15,7 @@ export const readSelectedTracks=(options={})=>readPerformanceProgress(options).p
 /** A selected path is open; an already owned coach also keeps every one of its mapped paths open. */
 export function workoutPathAccess(mode,options={}){
  const group=EXERCISES[mode]?.group,path=GROUP_PATH[group];
+ if(EXERCISES[mode]?.runner)return {allowed:true,path,reason:null}; // Cool Cardio is open to every user and coach path
  if(!path)return {allowed:false,path:null,reason:'Choose a movement in an available workout path.'};
  const progress=readPerformanceProgress(options);
  if(progress.paths.includes(path))return {allowed:true,path,reason:null};

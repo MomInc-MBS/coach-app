@@ -77,3 +77,12 @@
 
 @media(max-width:370px){.control-board{padding:10px 9px 2px}.control-board .cb-dial{--size:68px}.control-board .cb-knob{--size:52px}.control-board .cb-scale{width:52px}.control-board .cb-key{width:58px}.control-board #variationName{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.control-board *,.control-board *:before,.control-board *:after{transition:none!important}}
+
+/* Cool Cardio key: its own pressable metal bar under the dials, reachable on every coach path */
+.control-board .cb-cardio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:9px;padding:6px 10px;border:1px solid #120d16;border-radius:7px;background:linear-gradient(#716070,#4a3b4b);box-shadow:inset 0 1px #dcc4cf99,inset 0 -2px #291f2d,0 4px 0 #140f19;color:var(--cb-ink);font:700 12px/1 var(--cb-mono);letter-spacing:.16em;transition:transform .07s,box-shadow .07s}
+.control-board .cb-cardio small{font:inherit;font-size:9px;color:var(--cb-gold);letter-spacing:.2em}
+.control-board .cb-cardio-led{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffe9a8,#ffb42e 60%,#6b3d00);box-shadow:0 0 6px #ffd36e}
+.control-board .cb-cardio:active:not(:disabled){transform:translateY(3px);box-shadow:inset 0 1px #dcc4cf55,0 1px 0 #140f19}
+.control-board .cb-cardio:disabled{opacity:.55}
+.control-board .cb-cardio:focus-visible{outline:3px solid var(--cb-gold);outline-offset:2px}
+@media(max-width:370px){.control-board .cb-cardio{letter-spacing:.1em;font-size:11px}}

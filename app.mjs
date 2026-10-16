@@ -201,7 +201,7 @@ const cameraWorkout=mountCameraWorkout({video:v,counter:$('primary'),onStop:()=>
   onAdjust:delta=>{if(delta>=0||state.phase!=='tracking'||state.motion.kind!=='reps')return;session.count=Math.max(0,session.count+delta);state.motion=session.snapshot();renderMotion(state.motion);}});
 function status(text){if($('status').textContent!==text)$('status').textContent=text;}
 const clock=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
-function controls(busy){$('start').disabled=busy||!workoutPathAccess($('movement').value).allowed||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
+function controls(busy){$('start').disabled=busy||!workoutPathAccess($('movement').value).allowed||pod?.canStart($('movement').value)===false;$('camera').disabled=busy;$('coolCardio').disabled=busy;$('stop').disabled=!busy;$('stop').hidden=!busy;$('goal').disabled=busy;$('restDuration').disabled=busy;$('movement').disabled=busy;$('duration').disabled=busy;$('reset').disabled=busy;$('widest').disabled=busy||!stream||state.phase!=='tracking';document.body.dataset.tracking=String(busy);cameraWorkout.setActive(busy&&state.phase==='tracking');$('previewLabel').textContent=state.phase==='tracking'?'TRACKING':'CAMERA';}
 async function refreshLenses(){
   const cameras=await listCameras(),selected=$('camera').value;
   $('camera').querySelectorAll('option[data-device]').forEach(o=>o.remove());
@@ -376,6 +376,14 @@ $('reset').addEventListener('click',()=>{resetMovement();voice.say('Count reset.
 $('goal').addEventListener('change',()=>resetMovement());
 $('movement').addEventListener('change',event=>{const active=state.phase==='tracking';if(!workoutPathAccess($('movement').value).allowed){const first=Object.keys(MOVEMENTS).find(mode=>workoutPathAccess(mode).allowed);if(first)$('movement').value=first;else{controls(false);status('Choose two workout paths to begin.');return;}}if(!event.detail?.automatic)window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();controls(active);if(active)library.introduce();});
 $('duration').addEventListener('change',()=>resetMovement());
+// Cool Cardio key under the dials: runs the endless runner from any path/level, then puts the dials back (nothing saved changes).
+{let back=null;
+ const restore=async()=>{if(!back)return;try{await workoutTransition;}catch{}await new Promise(r=>setTimeout(r,300));
+  if(!back||state.phase!=='idle')return;const was=back;back=null;$('movement').value=was;$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));};
+ $('coolCardio').addEventListener('click',()=>{
+  if(ACTIVE_PHASES.has(state.phase)||document.hidden)return;window.dispatchEvent(new CustomEvent('myr5:hardware-detent',{detail:{kind:'switch'}}));
+  back=back||$('movement').value;$('movement').value='jogging';$('movement').dispatchEvent(new CustomEvent('change',{bubbles:true,detail:{automatic:true}}));Promise.resolve(start()).finally(()=>{if(document.body.dataset.tracking!=='true')void restore();});});
+ new MutationObserver(()=>{if(document.body.dataset.tracking!=='true')void restore();}).observe(document.body,{attributes:true,attributeFilter:['data-tracking']});}
 function soundSwitch(){$('toggleVoice').textContent=voice.enabled?'ON':'OFF';$('toggleVoice').dataset.on=String(voice.enabled);$('toggleVoice').setAttribute('aria-checked',String(voice.enabled));}
 $('toggleVoice').addEventListener('click',()=>{voice.setEnabled(!voice.enabled);soundSwitch();voice.say(voice.enabled?'Voice on.':'Voice off.',{interrupt:true});});
 $('testVoice').addEventListener('click',()=>{voice.setEnabled(true);soundSwitch();voice.say('Coach ready. Move at your own pace. One. Two. Three. Thirty seconds left.',{interrupt:true});});
