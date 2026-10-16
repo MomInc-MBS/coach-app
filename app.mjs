@@ -442,8 +442,10 @@ window.addEventListener('pagehide',()=>{avatarPowerToken++;avatarPower?.stop();a
 window.addEventListener('pageshow',event=>{if(event.persisted)ensureRetainedPower();});
 // #19: today's newest paused/interrupted workout is offered by a Continue popup on the pod page (never the quilt).
 // A saved manual row can start a new camera session without deleting its old local record.
-mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,canContinue:row=>workoutPathAccess(row.mode),onContinue:row=>{
+mountContinueWorkout({unfinished:()=>workouts.unfinished(),idle:()=>state.phase==='idle',label:row=>row.metadata?.name||MOVEMENTS[row.mode]?.name||row.mode,canContinue:row=>EXERCISES[row.mode]?.runner?{allowed:true,path:null,reason:null}:workoutPathAccess(row.mode),onContinue:row=>{
  if(!MOVEMENTS[row.mode])return;
+ // Cool Cardio is open on every path: re-run it through the COOL CARDIO key (sets coolKey, restores the dial after).
+ if(EXERCISES[row.mode]?.runner){$('coolCardio').click();return;}
  if(!canUseWorkout(row.mode)){status(workoutPathAccess(row.mode).reason);return;}
  $('movement').value=row.mode;window.dispatchEvent(new Event('myr5:exercise-selected'));resetMovement();
  void library.introduce(row.mode);
