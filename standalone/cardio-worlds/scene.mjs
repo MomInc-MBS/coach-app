@@ -1,11 +1,11 @@
 import * as T from './vendor/three.module.js';
 import {Pipeline} from './sakura/post.js';
 import {createSurfaceTexture} from './textures.mjs';
-import {METRO_BUSES,courseCoins,coursePickups,jumpHeight} from './course.mjs';
+import {METRO_BUSES,courseCoins,coursePickups,courseHazards,jumpHeight} from './course.mjs';
 import {powerModel} from './power-art.mjs';
 
 // The same depth-ink/grade/FXAA pipeline used by Little Boyfriend; one renderer for runner and coach.
-export function createWorldScene(canvas){
+export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}={}){
   const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
   const scene=new T.Scene(), camera=new T.PerspectiveCamera(65,1,.25,210);
   const pipeline=new Pipeline(renderer,scene,camera,{pixelBudget:1.5e6});
@@ -26,7 +26,7 @@ export function createWorldScene(canvas){
   const sphere=(x,y,z,r,c,p)=>mesh(new T.SphereGeometry(r,10,7),c,x,y,z,p);
   const cylinder=(x,y,z,r,h,c,p,kind)=>mesh(new T.CylinderGeometry(r,r,h,12),c,x,y,z,p,kind);
   function branch(a,b,r,c,p,kind='wood'){const av=new T.Vector3(...a),bv=new T.Vector3(...b),m=cylinder(...av.clone().add(bv).multiplyScalar(.5).toArray(),r,av.distanceTo(bv),c,p,kind);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),bv.sub(av).normalize());return m;}
-  let segments=[],coins=[],obstacles=[],pickups=[],portal,coach,powerRig,world=-1;let routeVehicles=[],vfx={};
+  let segments=[],coins=[],obstacles=[],pickups=[],portal,coach,powerRig,world=-1,loop=-1;let routeVehicles=[],vfx={},coinInstances,coinStamps;const coinTransform=new T.Object3D();
   const extras=[];
   const palettes=[{sky:0x8f80b1,fog:0xc2accc,ground:0x4d365d,wall:0x80668e,trim:0xe5ba65},{sky:0xb9d6ba,fog:0xc4d4b4,ground:0x9b9675,wall:0xb6a47f,trim:0xd6c893},{sky:0xa5bcdc,fog:0xcfc9de,ground:0x777485,wall:0xf0c7bc,trim:0xe6b65f}];
   function disposeWorld(){for(const resource of extras.splice(0))resource.dispose();root.clear();geos.splice(0).forEach(g=>g.dispose());coins=[];obstacles=[];pickups=[];segments=[];routeVehicles=[];vfx={};}
@@ -70,8 +70,20 @@ export function createWorldScene(canvas){
     const art=document.createElement('canvas');art.width=64;art.height=64;const ctx=art.getContext('2d'),gradient=ctx.createRadialGradient(32,32,2,32,32,32);gradient.addColorStop(0,'#241d3d80');gradient.addColorStop(1,'#241d3d00');ctx.fillStyle=gradient;ctx.fillRect(0,0,64,64);
     const texture=new T.CanvasTexture(art),material=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false});extras.push(texture,material);const m=new T.Mesh(new T.PlaneGeometry(w,d),material);geos.push(m.geometry);m.rotation.x=-Math.PI/2;m.position.set(x,.035,z);parent.add(m);
   }
-  function build(index){
-    world=index;disposeWorld();surface=['metal','stone','plaster'][index];const p=palettes[index];const sky=document.createElement('canvas');sky.width=4;sky.height=256;const sc=sky.getContext('2d'),sg=sc.createLinearGradient(0,0,0,256);sg.addColorStop(0,['#8272a5','#91b7ab','#91adcb'][index]);sg.addColorStop(.6,['#c4a7c3','#d2d8ad','#d8c7cf'][index]);sg.addColorStop(1,'#f7dbc2');sc.fillStyle=sg;sc.fillRect(0,0,4,256);const skyMap=new T.CanvasTexture(sky);skyMap.colorSpace=T.SRGBColorSpace;extras.push(skyMap);scene.background=skyMap;scene.fog=new T.Fog(p.fog,35,155);
+  // Static scenery retains its geometry detail but shares one draw call per material/section.
+  function batchStatic(group){
+    group.updateMatrixWorld(true);const inverse=group.matrixWorld.clone().invert(),batches=new Map();
+    group.traverse(o=>{if(!o.isMesh||o.material.transparent||Array.isArray(o.material))return;const g=o.geometry.clone().applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,o.matrixWorld)),key=o.material.uuid;
+      if(!batches.has(key))batches.set(key,{material:o.material,position:[],normal:[],uv:[],index:[],objects:[]});
+      const b=batches.get(key),offset=b.position.length/3,position=g.attributes.position,normal=g.attributes.normal,uv=g.attributes.uv;
+      for(let i=0;i<position.count;i++){b.position.push(position.getX(i),position.getY(i),position.getZ(i));b.normal.push(normal?.getX(i)||0,normal?.getY(i)||0,normal?.getZ(i)||0);b.uv.push(uv?.getX(i)||0,uv?.getY(i)||0);}
+      if(g.index)for(let i=0;i<g.index.count;i++)b.index.push(offset+g.index.getX(i));else for(let i=0;i<position.count;i++)b.index.push(offset+i);
+      b.objects.push(o);g.dispose();
+    });
+    for(const b of batches.values()){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(b.position,3));g.setAttribute('normal',new T.Float32BufferAttribute(b.normal,3));g.setAttribute('uv',new T.Float32BufferAttribute(b.uv,2));g.setIndex(b.index);geos.push(g);for(const o of b.objects)o.removeFromParent();group.add(new T.Mesh(g,b.material));}
+  }
+  function build(index,round=0){
+    world=index;loop=round;disposeWorld();surface=['metal','stone','plaster'][index];const p=palettes[index];const sky=document.createElement('canvas');sky.width=4;sky.height=256;const sc=sky.getContext('2d'),sg=sc.createLinearGradient(0,0,0,256);sg.addColorStop(0,['#8272a5','#91b7ab','#91adcb'][index]);sg.addColorStop(.6,['#c4a7c3','#d2d8ad','#d8c7cf'][index]);sg.addColorStop(1,'#f7dbc2');sc.fillStyle=sg;sc.fillRect(0,0,4,256);const skyMap=new T.CanvasTexture(sky);skyMap.colorSpace=T.SRGBColorSpace;extras.push(skyMap);scene.background=skyMap;scene.fog=new T.Fog(p.fog,35,155);
     // Three different spatial languages: cylindrical foundry, open ravine ruins, asymmetric rail yard.
     if(index===1){box(0,-9,-65,200,.5,220,0x365f60,root,'moss');}
     else if(index===2)box(0,-.55,-65,200,.7,220,0x8b8295,root,'ballast');
@@ -128,7 +140,7 @@ export function createWorldScene(canvas){
         const canopy=mesh(new T.CylinderGeometry(2.5,2.5,15,16,1,true,Math.PI/2,Math.PI),0x8fa9b7,-6.5,4.5,0,g,'metal');canopy.rotation.x=Math.PI/2;
         for(const z of [-6,6]){cylinder(-6.3,2.3,z,.12,4.6,0x5a506c,g,'metal');box(-6.3,3.8,z,1.5,.5,.15,s%2?0xe8b77e:0x86ceca,g,'metal');}
         if(s%2===1)train(5.7,-4,g);
-        if(s%3===1)train(-2.8,-4,g);
+        // Playable lanes are reserved for authored, collidable route geometry.
         for(const side of [-1,1]){
           const h=7+(s*7+(side+1)*3)%13,x=side*(11+(s%2)*3);
           box(x,h/2-1,-3,4,h,12,s%3===0?0xe9ccbd:0xb3b6d0,g,'plaster');
@@ -145,19 +157,22 @@ export function createWorldScene(canvas){
       const c=mesh(new T.CylinderGeometry(.22,.22,.075,16),0xffd269,item.lane*2.8,item.height,-item.distance);c.rotation.x=Math.PI/2;c.userData=item;coins.push(c);
       const stamp=mesh(new T.TorusGeometry(.13,.025,4,12),0xf6e5aa,0,.045,0,c,'gold');stamp.rotation.x=Math.PI/2;
     }
-    for(let i=0;i<12;i++){
-      const lane=(i*7%3)-1,z=-22-i*13;const g=new T.Group();root.add(g);g.position.set(lane*2.8,0,z);g.userData={lane,offset:22+i*13,type:i%3===1?'slide':'jump',serial:-1};
+    if(coins.length){
+      coinInstances=new T.InstancedMesh(coins[0].geometry,coins[0].material,coins.length);coinStamps=new T.InstancedMesh(coins[0].children[0].geometry,coins[0].children[0].material,coins.length);coinInstances.frustumCulled=coinStamps.frustumCulled=false;root.add(coinInstances,coinStamps);for(const c of coins)c.removeFromParent();
+    }
+    for(const [i,item] of courseHazards(index,round).entries()){
+      const g=new T.Group();root.add(g);g.position.set(item.lane*2.8,item.elevation||0,-item.distance);g.userData=item;
       if(index===0){
-        if(i%3===1){const rotor=cylinder(0,2.55,0,.45,2.6,p.trim,g,'gold');rotor.rotation.z=Math.PI/2;branch([-1.1,0,0],[-1.1,2.6,0],.09,0x80668e,g,'metal');}
-        else{const spool=cylinder(0,.55,0,.55,2.5,0x8c6ba8,g,'metal');spool.rotation.z=Math.PI/2;for(const x of [-1.1,1.1]){const cap=cylinder(x,.55,0,.75,.12,p.trim,g,'gold');cap.rotation.z=Math.PI/2;}}
+        if(item.type==='slide'){const rotor=cylinder(0,1.5,0,.45,2.6,p.trim,g,'gold');rotor.rotation.z=Math.PI/2;branch([-1.1,0,0],[-1.1,1.5,0],.09,0x80668e,g,'metal');}
+        else{const spool=cylinder(0,.4,0,.4,2.5,0x8c6ba8,g,'metal');spool.rotation.z=Math.PI/2;for(const x of [-1.1,1.1]){const cap=cylinder(x,.4,0,.45,.12,p.trim,g,'gold');cap.rotation.z=Math.PI/2;}}
       }else if(index===1){
-        if(i%3===1){branch([-1.5,2.4,-.4],[1.5,2.7,.4],.35,0x725242,g);branch([.7,2.6,0],[1.1,3.25,-.1],.12,0x725242,g);}
-        else{const rock=mesh(new T.DodecahedronGeometry(.85),0x8e8770,0,.45,0,g,'stone');rock.scale.set(1.5,.7,.8);rock.rotation.z=i*.4;}
+        if(item.type==='slide'){branch([-1.5,1.4,-.4],[1.5,1.4,.4],.35,0x725242,g);branch([.7,1.4,0],[1.1,2.1,-.1],.12,0x725242,g);}
+        else{const rock=mesh(new T.DodecahedronGeometry(.85),0x8e8770,0,.25,0,g,'stone');rock.scale.set(1.5,.7,.8);rock.rotation.z=i*.4;}
       }else{
-        if(i%3===1){box(0,2.5,0,2.5,.5,.25,0x86ceca,g,'metal');branch([-1.1,0,0],[-1.1,2.6,0],.08,0x62526e,g,'metal');}
-        else{box(0,.5,0,2.5,1,.3,0xd48288,g,'metal');for(let q=0;q<4;q++){const stripe=box(-.9+q*.6,.5,.18,.18,.85,.03,0xffdf9d,g,'gold');stripe.rotation.z=-.4;}}
+        if(item.type==='slide'){box(0,1.3,0,2.5,.5,.25,0x86ceca,g,'metal');branch([-1.1,0,0],[-1.1,1.5,0],.08,0x62526e,g,'metal');}
+        else{box(0,.425,0,2.5,.85,.3,0xd48288,g,'metal');for(let q=0;q<4;q++){const stripe=box(-.9+q*.6,.425,.18,.18,.75,.03,0xffdf9d,g,'gold');stripe.rotation.z=-.4;}}
       }
-      obstacles.push(g);
+      batchStatic(g);obstacles.push(g);
     }
     const labels={headstart:'HEAD START',magnet:'MAGNET',shield:'SHIELD',boost:'DASH',superJump:'JUMP SHOES',recovery:'WINGS',phase:'PHASE',doubleCoins:'COIN x2',coinTier:'COIN x3',jetpack:'JETPACK',board:'BOARD',scoreBoost:'SCORE x2',pogo:'POGO'};
     for(const item of coursePickups(index)){
@@ -167,6 +182,7 @@ export function createWorldScene(canvas){
       const art=document.createElement('canvas');art.width=256;art.height=64;const ctx=art.getContext('2d');ctx.fillStyle='#30213ee8';ctx.fillRect(0,0,256,64);ctx.fillStyle='#fff0c2';ctx.font='bold 26px sans-serif';ctx.textAlign='center';ctx.fillText(labels[item.kind],128,42);
       const texture=new T.CanvasTexture(art);texture.colorSpace=T.SRGBColorSpace;const material=new T.SpriteMaterial({map:texture,depthTest:false});extras.push(texture,material);const badge=new T.Sprite(material);badge.scale.set(1.65,.41,1);badge.position.y=.9;m.add(badge);
     }
+    for(const g of segments)batchStatic(g);for(const g of routeVehicles)batchStatic(g);
     powerRig=new T.Group();root.add(powerRig);
     for(const id of ['shield','board','superJump','magnet','boost','phase','jetpack','recovery']){const group=new T.Group();powerRig.add(group);vfx[id]=group;}
     for(const id of ['shield','phase','recovery']){const r=mesh(new T.TorusGeometry(.95,.025,5,40),id==='phase'?0xc39afa:0xffd269,0,0,-1.2,vfx[id],'gold');r.scale.y=.8;}
@@ -183,34 +199,38 @@ export function createWorldScene(canvas){
     const disk=mesh(new T.CircleGeometry(2.6,60),0x6a3d99,0,0,-.1,portal);disk.material=new T.MeshBasicMaterial({color:0x8651d5,transparent:true,opacity:.78,side:T.DoubleSide});extras.push(disk.material);
     for(let i=0;i<12;i++){const a=i/12*Math.PI*2;mesh(new T.OctahedronGeometry(.13),0xffe6b6,Math.cos(a)*3.2,Math.sin(a)*3.2,0,portal);}
     coach=new T.Group();root.add(coach);coach.visible=false;
-    // A toy-like coach study: all body pieces receive the Sakura pipeline, no extra context.
-    sphere(0,2.35,0,.65,0xead3ba,coach);box(0,1.35,0,1.25,1.2,.65,0x9a75b5,coach);
-    for(const side of [-1,1]){box(side*.36,.35,0,.4,.8,.45,0x675072,coach);sphere(side*.83,1.5,0,.24,0xead3ba,coach);box(side*.75,1.8,0,.32,.65,.38,0x9a75b5,coach);sphere(side*.23,2.45,.57,.085,0x39324f,coach);}
-    box(0,2.06,.62,.27,.06,.03,0x8c5269,coach);box(0,2.94,0,1.15,.2,.8,0xd8b166,coach);
+    // Production supplies the existing Coach Armie asset; there is no substitute character.
+    if(coachFactory){const target=coach;coachFactory(T).then(model=>{if(target.parent!==root){model.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();const mm=Array.isArray(o.material)?o.material:[o.material];mm.forEach(m=>{m.map?.dispose();m.dispose();});}});return;}target.add(model.group);model.group.scale.setScalar(3);model.group.rotation.z=-Math.PI/2;model.group.position.y=1.8;target.userData.tick=model.tick;model.group.traverse(o=>{if(o.isMesh){geos.push(o.geometry);const mm=Array.isArray(o.material)?o.material:[o.material];mm.forEach(m=>{extras.push(m);if(m.map)extras.push(m.map);});}});}).catch(()=>{});}
+
   }
   let coachMode=false;
   function render(run,time,active){
-    if(world!==run.world)build(run.world);const d=run.distance;
+    if(world!==run.world||loop!==(run.loop||0))build(run.world,run.loop||0);const d=run.distance;
     for(let i=0;i<segments.length;i++)segments[i].position.z=-i*18+(d%18);
     const quiet=matchMedia('(prefers-reduced-motion:reduce)').matches;
     const flight=run.powers?.jetpack>0;
     camera.position.lerp(new T.Vector3(coachMode?0:run.lane*2.8,coachMode?2.7:1.8+(run.elevation||0)+(flight?3:jumpHeight(run))-(run.slide>0?.85:0),coachMode?6:3),.18);
     camera.lookAt(coachMode?0:camera.position.x*.7,coachMode?1.5:camera.position.y-.08,coachMode?-3:-40);
     if(!quiet&&active&&!coachMode)camera.rotation.z=Math.sin(time*9)*.008;
-    coach.visible=coachMode;coach.position.set(0,0,-2);coach.rotation.y=Math.sin(time*.5)*.25;
+    coach.visible=coachMode;coach.position.set(0,0,-2);coach.rotation.y=Math.sin(time*.5)*.25;coach.userData.tick?.(time*1000,{pressure:.3});
     portal.visible=run.distance>470&&!coachMode;portal.position.z=-Math.max(3,600-d);portal.rotation.z=quiet?0:time*.2;
     portal.children[0].scale.setScalar(1+Math.sin(time*3)*.025);
     for(const g of routeVehicles)g.position.z=d-(g.userData.route.rampEnd+g.userData.route.roofEnd)/2;
     powerRig.visible=!coachMode;powerRig.position.copy(camera.position);powerRig.quaternion.copy(camera.quaternion);
     for(const [id,fx] of Object.entries(vfx)){fx.visible=!!run.powers[id];if(!quiet)fx.rotation.z=Math.sin(time*2)*.03;}
-    for(const c of coins){c.position.set(c.userData.lane*2.8,c.userData.height,d-c.userData.distance);c.rotation.y=time*2;c.visible=!coachMode&&!run.collected[c.userData.id]&&c.position.z<4&&c.position.z>-160;}
-    for(const o of obstacles){const z=-((o.userData.offset-d)%160+160)%160;o.position.z=z;o.visible=!coachMode&&d<555&&(run.elevation||0)<.5;const serial=Math.floor((d-o.userData.offset)/160);if(active&&z>-1&&z<1&&run.lane===o.userData.lane&&o.userData.serial!==serial&&o.visible){o.userData.serial=serial;if(!flight&&!run.powers?.boost&&!run.powers?.phase&&!(o.userData.type==='jump'?run.jump>0:run.slide>0))canvas.dispatchEvent(new CustomEvent('hit'));}}
+    for(let i=0;i<coins.length;i++){
+      const c=coins[i],z=d-c.userData.distance,visible=!coachMode&&!run.collected[c.userData.id]&&z<4&&z>-160;
+      coinTransform.position.set(c.userData.lane*2.8,c.userData.height,z);coinTransform.rotation.set(Math.PI/2,time*2,0);coinTransform.scale.setScalar(visible?1:0);coinTransform.updateMatrix();coinInstances.setMatrixAt(i,coinTransform.matrix);
+      coinTransform.rotation.set(Math.PI,time*2,0);coinTransform.position.z+=.045;coinTransform.updateMatrix();coinStamps.setMatrixAt(i,coinTransform.matrix);
+    }
+    if(coinInstances){coinInstances.instanceMatrix.needsUpdate=true;coinStamps.instanceMatrix.needsUpdate=true;}
+    for(const o of obstacles){o.position.z=d-o.userData.distance;o.visible=!coachMode&&o.position.z<4&&o.position.z>-160;}
     for(const p of pickups){p.position.z=d-p.userData.distance;p.rotation.y=quiet?0:Math.sin(time)*.3;p.position.y=p.userData.height+(quiet?0:Math.sin(time*2)*.12);p.visible=!coachMode&&!run.collected[p.userData.id]&&p.position.z<4&&p.position.z>-160;}
-    pipeline.render();
+    beforeRender(scene,camera);pipeline.render();
   }
   function resize(){const {width,height}=canvas.parentElement.getBoundingClientRect();camera.aspect=width/height;camera.updateProjectionMatrix();pipeline.setSize(width,height);}
   const observer=new ResizeObserver(resize);observer.observe(canvas.parentElement);resize();
-  return {render,setCoach(value){coachMode=value;},dispose(){observer.disconnect();disposeWorld();for(const m of mats.values())m.dispose();for(const t of textures.values())t.dispose();pipeline.dispose();renderer.dispose();renderer.forceContextLoss();}};
+  return {scene,camera,stats:()=>({...pipeline.sceneStats}),render,setCoach(value){coachMode=value;},dispose(){observer.disconnect();disposeWorld();for(const m of mats.values())m.dispose();for(const t of textures.values())t.dispose();pipeline.dispose();renderer.dispose();renderer.forceContextLoss();}};
 }
 
 

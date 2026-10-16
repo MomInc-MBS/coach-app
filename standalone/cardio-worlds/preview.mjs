@@ -33,7 +33,6 @@ $('#start').onclick=async()=>{
   }catch(error){const unsupported=/not supported/i.test(error.message);stopCamera(unsupported?'This browser cannot capture camera video. Open this page in a camera-enabled browser.':`Camera unavailable: ${error.message}. Allow camera access and retry.`);noticeUntil=Infinity;}
   finally{loading=false;$('#start').disabled=false;}
 };
-$('#coach').onclick=()=>{coachMode=!coachMode;scene.setCoach(coachMode);$('#coach').setAttribute('aria-pressed',String(coachMode));say(coachMode?'Coach material study - Sakura ink and textured cloth':'Back to motion-tracked run');};
 canvas.addEventListener('hit',()=>{const before=run.stumbles;hit(run);say(run.stumbles>before?'Stumble. Keep jogging!':'Protection absorbed the hit.');});
 function frame(now){
   const dt=last?Math.min(.25,(now-last)/1000):0;last=now;
