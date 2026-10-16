@@ -5,6 +5,7 @@ import {RELEASE} from './release-info.mjs';
 import {mountSettingsCrt} from './settings-crt.mjs';
 import {mountAppleBasicShare} from './apple-basic-share.mjs';
 import {dailyGuideDue,markDailyGuide,guideOwner} from './daily-guide.mjs';
+import {signInPath} from './auth-paths.mjs';
 import {COACHES,SITUATIONS,getCoach} from './creature/source/creator/coaching.ts';
 
 // #107/#120: military-satcom frame, usable on any dialog. Adds a top SATCOM status strip (an
@@ -59,9 +60,15 @@ export function mountCoachHub({api}){
  // W2-2M #117: the pod is only the viewing port, the control board and BEGIN. The daily-orders card lives at the
  // top of Reminders (bar), where ARM goes to the arming switch; the pod's other extras (#podExtras) go to Records.
  document.querySelector('#remindersPanel header').after(hub);
- hub.querySelector('.mission-arm').onclick=()=>form.elements.enabled.focus();
+ // Guests can't be reached by reminders: say so and offer sign-in instead of silently focusing a checkbox.
+ hub.querySelector('.mission-arm').onclick=()=>{
+  if(window.myr5AuthenticatedAccount)return form.elements.enabled.focus();
+  let note=hub.querySelector('.mission-guest');
+  if(!note){note=document.createElement('p');note.className='mission-guest';note.setAttribute('role','status');note.append('Reminders need an account so MOM can reach you. ');const link=document.createElement('a');link.href=signInPath('/pose.html?panel=reminders');link.textContent='Sign in to arm reminders';link.style.color='#b8e9cf';note.append(link);hub.querySelector('.mission-arm').after(note);}
+  note.scrollIntoView({block:'nearest'});
+ };
  document.querySelector('#accountPanel header').after(document.getElementById('podExtras'));
- const dialog=document.createElement('dialog');dialog.className='how-to-play terminal-menu';dialog.setAttribute('aria-labelledby','howToPlayTitle');dialog.innerHTML='<header><h2 id="howToPlayTitle">MOM://FIELD MANUAL</h2><button type="button" data-close-guide>Close</button></header><div role="tablist" aria-label="How to play"></div><section role="tabpanel" tabindex="0"></section>';
+ const dialog=document.createElement('dialog');dialog.className='how-to-play terminal-menu';dialog.setAttribute('aria-labelledby','howToPlayTitle');dialog.innerHTML='<header><h2 id="howToPlayTitle">MOM://FIELD MANUAL</h2><button type="button" data-close-guide>Close</button></header><div role="tablist" aria-label="How to play"></div><section role="tabpanel" tabindex="0"></section><footer class="guide-start"><button type="button" class="primary-action" data-guide-start style="width:100%;min-height:52px;font:700 1.05rem inherit">Start a workout</button></footer>';
  document.body.append(dialog);const tabs=dialog.querySelector('[role=tablist]'),panel=dialog.querySelector('[role=tabpanel]');let current=0,opener=null;
  function choose(index,focus=false){current=(index+guide.length)%guide.length;for(const [i,tab] of [...tabs.children].entries()){tab.setAttribute('aria-selected',String(i===current));tab.tabIndex=i===current?0:-1;}const [id,,title,items]=guide[current];panel.id='guide-panel';panel.setAttribute('aria-labelledby','guide-tab-'+id);panel.replaceChildren();const h=document.createElement('h3');h.textContent=title;panel.append(h);
   if(id==='weapons')for(const track of Object.values(TRAINING_TRACKS)){const row=document.createElement('div');row.className='guide-track';const label=document.createElement('strong');label.textContent=track.name;row.append(label);for(const type of track.weapons){const item=document.createElement('span'),canvas=document.createElement('canvas');canvas.width=40;canvas.height=72;canvas.setAttribute('aria-hidden','true');window.GalaWeapons.draw(canvas.getContext('2d'),{type,tier:4});item.append(canvas,document.createTextNode(window.GalaWeapons.types.find(w=>w.id===type).name));row.append(item);}panel.append(row);}
@@ -69,6 +76,8 @@ export function mountCoachHub({api}){
  }
  guide.forEach(([id,label],index)=>{const button=document.createElement('button');button.type='button';button.id='guide-tab-'+id;button.setAttribute('role','tab');button.setAttribute('aria-controls','guide-panel');button.textContent=label;button.onclick=()=>choose(index);tabs.append(button);});
  tabs.onkeydown=event=>{const move={ArrowRight:current+1,ArrowLeft:current-1,Home:0,End:guide.length-1};if(Object.hasOwn(move,event.key)){event.preventDefault();choose(move[event.key],true);}};
+ // Primary action for a first-timer: leave the manual and land on the pod's BEGIN button (opening the pod from the quilt if needed).
+ dialog.querySelector('[data-guide-start]').onclick=()=>{dialog.close();const centre=document.querySelector('.dock-portal');if(centre?.getAttribute('aria-label')==='Open workout pod')centre.click();setTimeout(()=>{const go=document.getElementById('start');go?.scrollIntoView({block:'center'});go?.focus({preventScroll:true});},400);};
  function openGuide(){opener=document.activeElement;choose(0);dialog.showModal();tabs.children[0].focus();}
  hub.querySelector('.mission-guide').onclick=openGuide;
  // How to Play opens by itself once per local day, at the first app opening that day for this account (or the
@@ -79,9 +88,9 @@ export function mountCoachHub({api}){
   const owner=guideOwner();if(guideTried.has(owner)||!dailyGuideDue({owner}))return;guideTried.add(owner);
   const started=Date.now(),attempt=()=>{
    if(guideOwner()!==owner)return;
-   const busy=document.querySelector('dialog[open]')||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||document.body.dataset.cinematic;
+   const busy=document.querySelector('dialog[open]')||window.myr5Packs?.due?.()||document.body.dataset.tracking==='true'||document.body.dataset.screen==='rest'||document.body.dataset.cinematic;
    // The starter quilt checks for open dialogs before it appears: give it the first word (up to 5 s).
-   const settled=document.getElementById('portalHome')?.hidden===false||Date.now()-started>=5000;
+   const settled=document.getElementById('portalHome')?.hidden===false||Date.now()-started>=15000;
    if(busy||!settled){setTimeout(attempt,busy?1000:250);return;}
    if(!dailyGuideDue({owner}))return;markDailyGuide({owner});openGuide();
   };

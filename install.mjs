@@ -28,7 +28,7 @@ async function prepare(){
   if(raw)history.replaceState(null,'',location.pathname+location.search);
   await prepareOfflineApp();
   ready=true;button.disabled=false;button.textContent=ios?'Add Coach to Home Screen':'Install Coach';status.textContent='';
-  if(ios)guide();
+  if(ios)guide();else setTimeout(()=>{if(!prompt)guide();},2500); // no install prompt (desktop/unsupported browser): show the steps instead of a dead button
  }catch(error){status.textContent=error.message;button.textContent='Retry';button.disabled=false;}
 }
 if(isInstalled()){await saveInstalledRun().catch(()=>{});setupAllowed();location.replace('/onboarding.html?from=install'+location.hash);}else await prepare();

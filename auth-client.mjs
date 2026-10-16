@@ -137,6 +137,8 @@ export async function authFetch(path,options={}){
   const config=await boundedAuthWait(authSettings(),ticket.signal); // 5s timeout
   transitions.assertCurrent(ticket);
   const provider=localStorage.getItem('myr5-login-provider');
+  // Guest probes (guestSkip): with Clerk on and no Clerk sign-in on this device the server can only answer 401, so answer it locally and keep the network log clean.
+  if(options.guestSkip&&config.enabled&&provider!=='clerk')return new Response(JSON.stringify({error:'Sign in to save your progress.'}),{status:401,headers:{'Content-Type':'application/json'}});
   if(config.enabled&&provider==='clerk'){
     const clerk=await boundedAuthWait(loadLogin(),ticket.signal,20000); // 20s timeout
     transitions.assertCurrent(ticket);
