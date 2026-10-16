@@ -58,6 +58,27 @@ $('camera').querySelector('option[value="manual"]')?.remove();
 if($('camera').value==='manual')$('camera').value='user';
 const poseFrames=new PoseFrameScheduler(v);
 const schedulePose=run=>poseFrames.schedule(()=>{if(run===generation&&state.phase==='tracking')void loop(run);});
+// Capture time of the frame being detected (rVFC metadata, performance.now() clock) so effect layers can filter on
+// real frame spacing and predict across the inference lag. Falls back to the detect time.
+function frameTime(now){const m=poseFrames.frame;for(const t of [m?.captureTime,m?.presentationTime])if(Number.isFinite(t)&&t<=now&&now-t<500)return t;return now;}
+// Optional person mask for the aura silhouette tier: only while an aura layer asks (globalThis.myr5AuraWantsMask,
+// set by its quality ladder), downsampled once here to ~96 px wide while the MPMask is still valid.
+let maskTracker=null,maskOn=false,maskSetting=null;const maskBuf={w:0,h:0,data:null};
+function syncMask(){
+  const want=!!globalThis.myr5AuraWantsMask;if(maskTracker!==tracker){maskTracker=tracker;maskOn=false;}
+  if(want===maskOn||maskSetting||typeof tracker?.setOptions!=='function')return;
+  const t=tracker;maskSetting=Promise.resolve().then(()=>t.setOptions({outputSegmentationMasks:want})).then(()=>{if(maskTracker===t)maskOn=want;},()=>{globalThis.myr5AuraWantsMask=false;}).finally(()=>{maskSetting=null;});
+}
+function readMask(result){
+  const masks=result?.segmentationMasks,m=masks?.[0];if(!m)return null;
+  try{
+    const W=m.width,H=m.height,step=Math.max(1,Math.ceil(W/96)),w=Math.floor(W/step),h=Math.floor(H/step);
+    if(!maskBuf.data||maskBuf.w!==w||maskBuf.h!==h){maskBuf.w=w;maskBuf.h=h;maskBuf.data=new Uint8ClampedArray(w*h);}
+    const src=m.getAsFloat32Array(),d=maskBuf.data;
+    for(let y=0,k=0;y<h;y++){const row=y*step*W;for(let x=0;x<w;x++)d[k++]=src[row+x*step]*255;}
+    return maskBuf;
+  }catch{return null;}finally{for(const mask of masks)try{mask.close();}catch{}}
+}
 const voice=new CoachVoice(text=>{$('coachCaption').textContent=text;if(!$('restScreen').hidden)$('restFeedback').textContent=text;},text=>$('voiceType').textContent=text),cues=new CueEvents();
 mountCoachVoiceSettings({voice,settings:$('settings'),testButton:$('testVoice')});
 document.addEventListener('pointerdown',()=>voice.unlock(),{capture:true});
@@ -350,12 +371,12 @@ async function loop(run){
           else if(probe.tracker){blindSince=now;let detected=false;try{detected=probe.tracker.detectForVideo(v,now).landmarks.length>0;}catch{closeProbe();}if(detected){await toCpu(run,'GPU blind while CPU sees a pose');if(run===generation)schedulePose(run);return;}}
         }
       }
-      state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;
+      state.frames++;frames++;timing+=elapsed;state.poses=result.landmarks.length;syncMask();
       const p=result.landmarks[0]?.slice(0,27);
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
       // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
-      const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0};
+      const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,frameMs:frameTime(now),mask:readMask(result),counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0};
       window.dispatchEvent(new CustomEvent('myr5:pose',{detail:poseDetail}));
       const cueMotion=['hold','pace'].includes(state.motion.kind)?{...state.motion,remaining:Math.max(0,pod.goal()-(state.motion.kind==='hold'?state.motion.totalHold:state.motion.active))}:state.motion;
       const events=cues.update(cueMotion,now),encouragement=pod.encouragement(state.motion,now,events);if(encouragement)events.push(encouragement);

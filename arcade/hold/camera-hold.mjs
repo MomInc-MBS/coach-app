@@ -6,15 +6,18 @@ import {createGrowth,AURA_TUNING} from '../power/aura-growth.mjs';
 export {preloadAuraForMode} from '../power/power.mjs';
 const AURA_LAYER_OPACITY=AURA_TUNING.LAYER_OPACITY;
 import {EFFECT_OPTION_BY_ID,effectGroupForExercise,readEffectChoices,resolveExerciseEffect} from '../power/aura-options.mjs';
-import {createOverlayCanvas,mapPointsToOverlay} from '../workout-effects.mjs';
+import {createOverlayCanvas,mapPointsToOverlay,effectQuality} from '../workout-effects.mjs';
+import {createAuraBody} from '../power/aura-body.mjs';
 
 const LOGICAL_WIDTH=360;
 function randomFor(seed=1){let value=(Number(seed)>>>0)||0x9e3779b9;return()=>{value^=value<<13;value^=value>>>17;value^=value<<5;return(value>>>0)/0x100000000;};}
-export function mountCameraHold({host,sound=()=>{},onXp=()=>{},seed=Date.now(),style='living',mode=null}={}){
+export function mountCameraHold({host,sound=()=>{},onXp=()=>{},seed=Date.now(),style='living',mode=null,quality=effectQuality}={}){
  if(!host)throw new TypeError('A camera overlay host is required.');
  const holdStyle=style==='blizzard'?'blizzard':'living';
  const layer=createOverlayCanvas(host,'hold-ecosystem-canvas',{opacity:AURA_LAYER_OPACITY,max:1}),canvas=layer.canvas,ctx=canvas.getContext('2d',{alpha:true});
  const growth=createGrowth();let poseAt=-Infinity,holdValid=false;
+ // Sheet auras on a hold share the power layer's body anchoring: filtered + predicted points, glow, fade out.
+ const body=createAuraBody({host,quality});const aura={w:LOGICAL_WIDTH,h:1,route:'aura',active:false,level:0,speed:0,pulse:0,contacts:[],points:[],time:0,effect:null};
  let engine=null,w=LOGICAL_WIDTH,h=1,raf=0,lastFrame=0,lastPose=null,disposed=false,resizeObserver=null,selectedMode=mode,effectChoices=readEffectChoices();
  const random=randomFor(seed);let selectedEffect=resolveExerciseEffect(selectedMode,effectChoices,random);preloadAura(selectedEffect);
  const createEngine=()=>holdStyle==='blizzard'?createBlizzard({w,h,seed,stillSeconds:AURA_TUNING.HOLD_FIRST_S}):createEcosystem({w,h,seed,stillSeconds:AURA_TUNING.HOLD_FIRST_S,ecology:EFFECT_OPTION_BY_ID.get(selectedEffect)?.ecology??null});
@@ -25,21 +28,26 @@ export function mountCameraHold({host,sound=()=>{},onXp=()=>{},seed=Date.now(),s
   if(changed){engine?.reset();engine=createEngine();}
   ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.imageSmoothingEnabled=false;
  }
- function map(detail){
-  const rect=host.getBoundingClientRect();return mapPointsToOverlay(detail.points,{videoWidth:detail.width,videoHeight:detail.height,hostWidth:w,hostHeight:h,mirrored:detail.mirrored,hostCssWidth:rect.width,hostCssHeight:rect.height});
- }
+ const geometryOf=detail=>({videoWidth:detail.width,videoHeight:detail.height,hostWidth:w,hostHeight:h,mirrored:detail.mirrored});
+ function map(detail){return mapPointsToOverlay(detail.points,geometryOf(detail));}
  function paint(now){
-  if(disposed)return;const dt=lastFrame?Math.max(0,(now-lastFrame)/1000):0;lastFrame=now;
+  if(disposed)return;const dt=lastFrame?Math.max(0,(now-lastFrame)/1000):0;if(lastFrame)quality.frame(now-lastFrame);lastFrame=now;
   engine.step(dt);growth.step(dt);ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.clearRect(0,0,w,h);
   const option=EFFECT_OPTION_BY_ID.get(selectedEffect),fade=holdStyle==='blizzard'
     ? Math.max(0,...(engine.state.iceEdges??[]).map(edge=>edge.alpha??0),...(engine.state.snow??[]).map(flake=>flake.alpha??0))
     : Math.max(0,...(engine.state.entities??[]).map(entity=>entity.alpha??0));
   if(option?.ecology)renderEcosystem(ctx,engine.state);
   else if(holdStyle==='blizzard'&&selectedEffect==='blizzard')renderBlizzard(ctx,engine.state);
-  else if(option?.asset&&holdValid&&now-poseAt<1000){
-   // Sheet auras grow on the shared hold clock (visible at once), not on the slow ecology spawn.
-   renderPower(ctx,{w,h,route:'aura',active:true,level:growth.state.level,pulse:0,contacts:[],points:lastPose?.points??[],time:now/1000,effect:selectedEffect});
+  else if(option?.asset){
+   // Sheet auras grow on the shared hold clock (visible at once), not on the slow ecology spawn; they fade out
+   // (~250 ms) when the hold breaks or tracking stops instead of vanishing.
+   const live=holdValid&&now-poseAt<1000;
+   if(live){aura.active=true;aura.level=growth.state.level;aura.speed=growth.state.speed;aura.effect=selectedEffect;}
+   aura.w=w;aura.h=h;aura.time=now/1000;
+   const points=body.points(now),fadeAlpha=body.draw(now,live?aura:null,points);
+   if(fadeAlpha>0&&aura.active)renderPower(ctx,aura,{points,alpha:fadeAlpha});else if(fadeAlpha<=0)aura.active=false;
   }
+  if(!option?.asset&&body.alpha>0)body.draw(now,null,body.points(now));
   raf=requestAnimationFrame(paint);
  }
  resize();
@@ -50,6 +58,7 @@ export function mountCameraHold({host,sound=()=>{},onXp=()=>{},seed=Date.now(),s
   resize();const points=map(detail),nextMode=detail.workout?.mode??selectedMode;
   if(nextMode!==selectedMode){selectedMode=nextMode;selectedEffect=resolveExerciseEffect(selectedMode,effectChoices,random);preloadAura(selectedEffect);engine?.reset();engine=createEngine();}
   lastPose={points,now:detail.now,validHold:!!detail.validHold,mode:selectedMode};
+  body.pose(points,Number.isFinite(detail.frameMs)?detail.frameMs:detail.now,detail.mask,geometryOf(detail));
   poseAt=performance.now();holdValid=lastPose.validHold;
   if(holdValid)growth.update({now:detail.now,points,kind:'hold',valid:true});else growth.reset();
   engine.pose(lastPose);
@@ -59,6 +68,6 @@ export function mountCameraHold({host,sound=()=>{},onXp=()=>{},seed=Date.now(),s
  globalThis.addEventListener?.('myr5:exercise-effect-choice-change',choiceChanged);
  const storageChanged=event=>{if(event?.key==='myr5-exercise-effect-choices-v1')choiceChanged();};
  globalThis.addEventListener?.('storage',storageChanged);
- function stop(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();window.removeEventListener('resize',resize);globalThis.removeEventListener?.('myr5:exercise-effect-choice-change',choiceChanged);globalThis.removeEventListener?.('storage',storageChanged);engine?.reset();layer.dispose();}
+ function stop(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();window.removeEventListener('resize',resize);globalThis.removeEventListener?.('myr5:exercise-effect-choice-change',choiceChanged);globalThis.removeEventListener?.('storage',storageChanged);engine?.reset();body.dispose();layer.dispose();}
  return {get engine(){return engine;},pose,stop,invalidate,get effect(){return selectedEffect;}};
 }

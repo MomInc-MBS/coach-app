@@ -1,8 +1,9 @@
 import {createPower,renderPower} from './power.mjs';
 import {AURA_TUNING} from './aura-growth.mjs';
+import {createAuraBody} from './aura-body.mjs';
 export {preloadAuraForMode} from './power.mjs';
 const AURA_LAYER_OPACITY=AURA_TUNING.LAYER_OPACITY;
-import {createOverlayCanvas,mapPointsToOverlay} from '../workout-effects.mjs';
+import {createOverlayCanvas,mapPointsToOverlay,effectQuality} from '../workout-effects.mjs';
 
 const LOGICAL_WIDTH=360,MAX_GAIN=.045;
 function makeCue(sound,payload){
@@ -13,10 +14,13 @@ function makeCue(sound,payload){
  return sound.voice('workout-power',.2,args=>sound.tone(args,start,.16,level,route==='floor'?'triangle':'sine',end));
 }
 
-export function mountCameraPower({host,sound,seed=Date.now()}={}){
+export function mountCameraPower({host,sound,seed=Date.now(),quality=effectQuality}={}){
  if(!host)throw new TypeError('A camera overlay host is required.');
  const layer=createOverlayCanvas(host,'workout-power-canvas',{opacity:AURA_LAYER_OPACITY,max:1}),canvas=layer.canvas,ctx=canvas.getContext('2d',{alpha:true});
+ // Glow under the sprites; both draw from the same filtered + predicted landmarks so they stay on the body together.
+ const body=createAuraBody({host,quality});
  let engine=null,w=LOGICAL_WIDTH,h=1,raf=0,lastFrame=0,disposed=false,resizeObserver=null,voice=null;
+ const shown={active:false};let fade=0; // last active engine state, kept to fade out instead of a hard clear
  const stopVoice=()=>{voice?.stop?.(.025);voice=null;};
  function makeEngine(){engine=createPower({w,h,seed,onEvent(type,payload){if(type==='pulse'){stopVoice();voice=makeCue(sound,payload);}}});}
  function resize(){
@@ -27,9 +31,15 @@ export function mountCameraPower({host,sound,seed=Date.now()}={}){
   ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.imageSmoothingEnabled=false;
  }
  function paint(now){
-  if(disposed)return;const dt=lastFrame?Math.max(0,(now-lastFrame)/1000):0;lastFrame=now;
-  engine.step(dt);ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.clearRect(0,0,w,h);renderPower(ctx,engine.state);
-  if(engine.state.active)canvas.style.display='block';else canvas.style.display='none';
+  if(disposed)return;const dt=lastFrame?Math.max(0,(now-lastFrame)/1000):0;
+  if(lastFrame)quality.frame(now-lastFrame);lastFrame=now;
+  engine.step(dt);
+  const state=engine.state;if(state.active)Object.assign(shown,state);
+  const points=body.points(now);
+  fade=body.draw(now,state,points);
+  ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.clearRect(0,0,w,h);
+  if(fade>0&&shown.active){shown.time=state.time;shown.pulse=state.active?state.pulse:0;renderPower(ctx,shown,{points,alpha:fade});}
+  canvas.style.display=fade>0?'block':'none';
   raf=requestAnimationFrame(paint);
  }
  resize();
@@ -37,11 +47,13 @@ export function mountCameraPower({host,sound,seed=Date.now()}={}){
  raf=requestAnimationFrame(paint);
  function pose(detail={}){
   if(disposed)return;resize();
-  const rect=host.getBoundingClientRect(),points=mapPointsToOverlay(detail.points,{videoWidth:detail.width,videoHeight:detail.height,hostWidth:w,hostHeight:h,mirrored:detail.mirrored,hostCssWidth:rect.width,hostCssHeight:rect.height});
+  const geometry={videoWidth:detail.width,videoHeight:detail.height,hostWidth:w,hostHeight:h,mirrored:detail.mirrored};
+  const points=mapPointsToOverlay(detail.points,geometry);
   engine.pose({points,now:detail.now,workout:{...detail.workout,validHold:!!detail.validHold}});
-  if(detail.workout?.active)canvas.style.display='block';else{stopVoice();canvas.style.display='none';}
+  body.pose(points,Number.isFinite(detail.frameMs)?detail.frameMs:detail.now,detail.mask,geometry);
+  if(!detail.workout?.active)stopVoice();
  }
- function invalidate(){if(disposed)return;engine.invalidate();stopVoice();canvas.style.display='none';}
- function stop(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();window.removeEventListener('resize',resize);stopVoice();engine?.reset();layer.dispose();}
- return {get engine(){return engine;},pose,stop,invalidate};
+ function invalidate(){if(disposed)return;engine.invalidate();stopVoice();}
+ function stop(){if(disposed)return;disposed=true;cancelAnimationFrame(raf);resizeObserver?.disconnect();window.removeEventListener('resize',resize);stopVoice();engine?.reset();body.dispose();layer.dispose();}
+ return {get engine(){return engine;},get body(){return body;},pose,stop,invalidate};
 }

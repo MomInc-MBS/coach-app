@@ -2,20 +2,10 @@
 // Landmark coordinates stay normalized; geometry is mapped to the overlay that owns the video.
 export {workoutEffectsSnapshot} from './workout-effects-state.mjs';
 import {holdStyleForExercise,createOptionalRetry,createOptionalModuleLoader} from './workout-effects-state.mjs';
+export {mapPointToOverlay,mapPointsToOverlay,videoRectInOverlay} from './workout-effects-state.mjs';
 import {EXERCISES} from '../exercise-library.mjs';
 const loadCameraHoldModule=createOptionalModuleLoader('/arcade/hold/camera-hold.mjs');
 const loadCameraPowerModule=createOptionalModuleLoader('/arcade/power/camera-power.mjs');
-export function mapPointToOverlay(point,{videoWidth,videoHeight,hostWidth,hostHeight,mirrored=false}={}){
- if(!point||![point.x,point.y,videoWidth,videoHeight,hostWidth,hostHeight].every(Number.isFinite)||videoWidth<=0||videoHeight<=0||hostWidth<=0||hostHeight<=0)return null;
- const scale=Math.min(hostWidth/videoWidth,hostHeight/videoHeight),renderedWidth=videoWidth*scale,renderedHeight=videoHeight*scale;
- const offsetX=(hostWidth-renderedWidth)/2,offsetY=(hostHeight-renderedHeight)/2,px=mirrored?1-point.x:point.x;
- return {x:(offsetX+px*renderedWidth)/hostWidth,y:(offsetY+point.y*renderedHeight)/hostHeight,visibility:Number.isFinite(point.visibility)?point.visibility:0};
-}
-
-export function mapPointsToOverlay(points,geometry){
- return Array.isArray(points)?points.map(point=>mapPointToOverlay(point,geometry)):null;
-}
-
 export function createOverlayCanvas(host,className,{opacity=.3,max=.3}={}){
  const canvas=document.createElement('canvas');canvas.className=className;canvas.setAttribute('aria-hidden','true');
  canvas.style.cssText=`position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;z-index:0;opacity:${Math.max(0,Math.min(max,opacity))}`;
@@ -71,3 +61,34 @@ export function mountWorkoutEffects({host,sound=()=>{},seed=1,loaders={},retryOp
  function setHoldStyle(style){const next=style===null?null:style==='blizzard'?'blizzard':'living';if(next===selectedHoldStyle)return selectedHoldStyle;selectedHoldStyle=next;dropHold();return selectedHoldStyle;}
  return {pose,stop,invalidate,setHoldStyle,get holdStyle(){return selectedHoldStyle;},get active(){return !!(ecology||power);}};
 }
+
+// Shared frame-time monitor for the camera effect layers (power, hold, slice can all report into it).
+// Q3 silhouette mask + wisps, Q2 bone glow + flame particles, Q1 bone glow only, Q0 sprites only.
+// Rolling mean of rAF frame intervals: step down when it passes DOWN_MS, step up after UP_HOLD_MS under UP_MS.
+// Q3 must be earned (start at START) and once dropped from Q3 the session stays at Q2 or below.
+export const EFFECT_QUALITY=Object.freeze({START:2,MAX:3,WINDOW:60,DOWN_MS:28,UP_MS:20,UP_HOLD_MS:3000,DOWN_HOLD_MS:500,SESSION_CAP_MS:5000,SESSION_CAP_FPS_MS:50});
+export function createQualityMonitor(T=EFFECT_QUALITY){
+ const ring=new Float32Array(T.WINDOW);let n=0,i=0,sum=0,tier=T.START,cap=T.MAX,goodFor=0,badFor=0,slowFor=0,pinned=null;const listeners=new Set();
+ const set=next=>{next=Math.max(0,Math.min(cap,next));if(next===tier)return;const prev=tier;tier=next;goodFor=badFor=0;for(const fn of listeners)try{fn(tier,prev);}catch{}};
+ return {
+  frame(ms){
+   if(pinned!=null||!(ms>0)||ms>250)return tier; // pinned (debug), tab switches and first frames are not frame cost
+   sum-=n===T.WINDOW?ring[i]:0;ring[i]=ms;sum+=ms;i=(i+1)%T.WINDOW;if(n<T.WINDOW)n++;
+   const avg=sum/n;if(n<Math.min(15,T.WINDOW))return tier;
+   if(avg>T.DOWN_MS){badFor+=ms;goodFor=0;if(badFor>=T.DOWN_HOLD_MS){if(tier===3)cap=2;set(tier-1);}}
+   else if(avg<T.UP_MS){goodFor+=ms;badFor=0;if(goodFor>=T.UP_HOLD_MS)set(tier+1);}
+   else{goodFor=0;badFor=0;}
+   if(avg>T.SESSION_CAP_FPS_MS){slowFor+=ms;if(slowFor>=T.SESSION_CAP_MS){cap=Math.max(0,Math.min(cap,tier)-1);slowFor=0;set(tier);}}else slowFor=0;
+   return tier;
+  },
+  get tier(){return tier;},get average(){return n?sum/n:0;},get cap(){return cap;},
+  onChange(fn){listeners.add(fn);return()=>listeners.delete(fn);},
+  /** Debug / test: hold a tier (0..3), or null to let the ladder run again. */
+  pin(next=null){pinned=next==null?null:Math.max(0,Math.min(T.MAX,next|0));if(pinned!=null){const keep=cap;cap=T.MAX;set(pinned);cap=keep;}},
+  reset(){n=i=0;sum=0;tier=T.START;cap=T.MAX;goodFor=badFor=slowFor=0;ring.fill(0);}
+ };
+}
+export const effectQuality=createQualityMonitor();
+globalThis.myr5EffectQuality=effectQuality;
+// Phone debugging: ?auraq=0..3 holds a quality tier for the session.
+try{const q=new URLSearchParams(globalThis.location?.search??'').get('auraq');if(q!=null&&q!=='')effectQuality.pin(Number(q));}catch{}
