@@ -3,6 +3,8 @@ import {z} from 'zod';
 import {IMPORT_LEDGER_STORES,importLedgerTables,readImportLedger,deleteImportLedger,createImportLedger} from './import-ledger.mjs';
 import {EXERCISES,validateOnboarding} from '../onboarding-domain.mjs';
 
+// Tuning knob: slow first launches (cold IndexedDB, throttled CPU, parallel tabs) need well over 3 s to open. Real failures (VersionError, blocked upgrade, quota) still reject immediately or at this deadline.
+export const LOCAL_COACH_OPEN_TIMEOUT_MS=15000;
 export const LOCAL_COACH_SCHEMA_VERSION=1;
 export const LOCAL_COACH_LAYOUT_VERSION=2;
 export const LOCAL_COACH_EXPORT_VERSION=1;
@@ -95,7 +97,7 @@ function createId(cryptoObject){
 
 export async function openLocalCoach({
  name=DEFAULT_LOCAL_COACH_DB,
- openTimeoutMs=3000,
+ openTimeoutMs=LOCAL_COACH_OPEN_TIMEOUT_MS,
  indexedDB=globalThis.indexedDB,
  IDBKeyRange=globalThis.IDBKeyRange,
  cryptoObject=globalThis.crypto,

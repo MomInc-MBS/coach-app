@@ -87,7 +87,8 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
  // Any part of the app (e.g. the ship scene, when its pack isn't installed yet) can open the menu,
  // optionally pointing at one group (a scene without its Starter art: 'starter', picked for them) or one
  // signed section's button.
- window.myr5Packs=Object.freeze({open(sectionId){
+ // due(): the first-open Downloads menu is open or about to open, so other first-screen popups wait their turn.
+ window.myr5Packs=Object.freeze({due:()=>wantMenu||menu.open,open(sectionId){
   openMenu(false);
   const id=typeof sectionId==='string'&&/^[a-z0-9-]+$/.test(sectionId)?sectionId:null,group=id&&list.querySelector(`[data-group="${id}"]`);
   if(group&&!group.disabled){group.checked=true;sync();}
@@ -206,7 +207,8 @@ const status='<p role="status" data-text></p><progress max="1" value="0" aria-la
   write(localStorage,CHOSEN,picked.length===all.length?null:JSON.stringify(picked));
   menu.close('download');void start();
  };
- menu.querySelector('[data-later]').onclick=()=>menu.close('later');
+ // "Not now" (the first-open label) really pauses the auto-started package: the bar keeps Resume. Plain "Close" (menu opened from Settings) leaves a running download alone.
+ menu.querySelector('[data-later]').onclick=()=>{if(autoMenu&&controller)controller.abort();menu.close('later');};
  menu.addEventListener('close',()=>{
   if(menu.returnValue==='busy'){wantMenu=autoMenu;restorePortal=false;return;}
   // First open: the quilt waited for this menu (app.mjs skips it while a dialog is open).
