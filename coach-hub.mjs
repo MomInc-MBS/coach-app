@@ -66,6 +66,7 @@ export function mountCoachHub({api}){
   let note=hub.querySelector('.mission-guest');
   if(!note){note=document.createElement('p');note.className='mission-guest';note.setAttribute('role','status');note.append('Reminders need an account so MOM can reach you. ');const link=document.createElement('a');link.href=signInPath('/pose.html?panel=reminders');link.textContent='Sign in to arm reminders';link.style.color='#b8e9cf';note.append(link);hub.querySelector('.mission-arm').after(note);}
   note.scrollIntoView({block:'nearest'});
+  note.querySelector('a').focus();
  };
  document.querySelector('#accountPanel header').after(document.getElementById('podExtras'));
  const dialog=document.createElement('dialog');dialog.className='how-to-play terminal-menu';dialog.setAttribute('aria-labelledby','howToPlayTitle');dialog.innerHTML='<header><h2 id="howToPlayTitle">MOM://FIELD MANUAL</h2><button type="button" data-close-guide>Close</button></header><div role="tablist" aria-label="How to play"></div><section role="tabpanel" tabindex="0"></section><footer class="guide-start"><button type="button" class="primary-action" data-guide-start>Start a workout</button></footer>';

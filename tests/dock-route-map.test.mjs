@@ -20,3 +20,9 @@ test('the far-left dock key keeps the gear icon and class, but routes to the coa
  assert.equal(typeof ROUTES.customizeCoach.open,'function');
  assert.equal(ROUTES.customizeCoach.nav,undefined,'not the plain nav that #customize uses (that lands on the public War Room)');
 });
+
+test('a second tap on an open dock key closes its dialog instead of doing nothing',async()=>{
+ const hub=await readFile(new URL('../coach-hub.mjs',import.meta.url),'utf8');
+ assert.match(shell,/button\.onclick=\(event\)=>\{if\(panel\.open\)\{event\.stopPropagation\(\);panel\.close\(\);button\.setAttribute\('aria-expanded','false'\);return;\}/,'the active key toggles its panel shut and stops the router from re-opening it');
+ assert.match(hub,/note\.querySelector\('a'\)\.focus\(\);/,'a repeat ARM tap moves focus to the sign-in link');
+});
