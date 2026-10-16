@@ -1,4 +1,5 @@
 import {portalWindow,lensPts,shapeOutlinePts} from './portal-apertures.mjs';
+import {createTiltLook} from '../../character-phone-sensor.mjs';
 export {portalWindow,lensPts} from './portal-apertures.mjs';
 // Portal home board: the quilt cloth board replaces the app home menu. Tracing one of the eight
 // stitched shapes cuts that shape out of the 3D board — the piece falls in, neon liquid glass glows
@@ -911,14 +912,15 @@ function burst(kind){
 }
 
 // ---- #135 #126 looking round the scene behind the window ------------------------------------------------------------
-// The eye follows the phone's tilt from a baseline caught when the destination opens (clamped to PEER.deg, smoothed, and
-// drifting back to centre once the phone has been held still for stillMs), or, on flat menus with no tilt, a finger drag
+// The eye follows the phone's tilt from a baseline caught when the destination opens (createTiltLook: gravity-based,
+// clamped, smoothed here, and re-centring on whatever hold the phone settles at; knobs in character-phone-sensor TILT), or, on flat menus with no tilt, a finger drag
 // (springing back on release). It slides each destination's layers against the fixed frame (depths below) and drives the
 // 3D scenes' off-axis cameras through peer.mjs. iOS asks once, from a chip on the first 3D destination (never a modal),
 // and the answer is kept. Off under reduced motion and in camera-only mode (D24); paused while the page is hidden.
 // dead (R7, Ian's Android): a new reading must move the eye by this share of full tilt (about half a degree) or it is
 // sensor noise and ignored, so a phone held still lets the look-around stop instead of restyling every frame.
-const PEER={deg:12,smoothMs:110,stillMs:1500,drift:.015,dragPx:160,dead:.04};
+const PEER={smoothMs:110,dragPx:160,dead:.04};
+const peerTilt=createTiltLook();
 const TILT_KEY='myr5.tiltPermission';
 // Any framed destination can mark its own layers data-peer-depth="far|mid|near": they slide PEER_LAYER px at full tilt
 // (far with the eye, near against it), times the destination's strength; the dialog also carries --peer-x/--peer-y
@@ -942,7 +944,7 @@ const PEER_DEPTH=[
    ['.meditation-panel',{move:2,strength:.6,chip:true}], // #127: the still room peers in too, gentler
 ];
 const PEER_2D={move:4};
-const peer={dialog:null,cfg:null,els:[],depths:[],flatEls:[],x:0,y:0,tx:0,ty:0,base:null,prev:null,stillT:0,raf:0,last:0,drag:null,sensor:false,ctl:null,watch:null};
+const peer={dialog:null,cfg:null,els:[],depths:[],flatEls:[],x:0,y:0,tx:0,ty:0,raf:0,last:0,drag:null,sensor:false,ctl:null,watch:null};
 const clamp1=v=>Math.max(-1,Math.min(1,v));
 function tiltAccess(){
  if(typeof DeviceOrientationEvent==='undefined')return 'none';
@@ -953,7 +955,7 @@ function peerOn(dialog){
  peerOff();
  if(prefersReducedMotion()||document.body.dataset.cameraWorkout==='true')return;
  const cfg=peerCfg(dialog),signal=(peer.ctl=new AbortController()).signal;
- Object.assign(peer,{dialog,cfg,x:0,y:0,tx:0,ty:0,base:null,drag:null,sensor:false});
+ Object.assign(peer,{dialog,cfg,x:0,y:0,tx:0,ty:0,drag:null,sensor:false});peerTilt.reset();
  refreshPeerTargets(dialog,cfg);
  peer.watch=new MutationObserver(()=>{if(peer.dialog!==dialog)return;refreshPeerTargets(dialog,cfg);kickPeer();});
  peer.watch.observe(dialog,{subtree:true,childList:true,attributes:true,attributeFilter:['data-peer-depth']});
@@ -969,8 +971,8 @@ function peerOn(dialog){
   dialog.addEventListener('pointermove',e=>{if(peer.sensor||document.hidden)return;const r=dialog.getBoundingClientRect();peer.tx=clamp1((e.clientX-r.left-r.width/2)/(r.width*.45));peer.ty=clamp1((e.clientY-r.top-r.height/2)/(r.height*.45));kickPeer();},{signal,passive:true});
   dialog.addEventListener('pointerleave',()=>{if(!peer.sensor){peer.tx=peer.ty=0;kickPeer();}},{signal,passive:true});
  }
- document.addEventListener('visibilitychange',()=>{peer.base=null;if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;peer.last=0;}else kickPeer();},{signal});
- addEventListener('orientationchange',()=>{peer.base=null;},{signal});
+ document.addEventListener('visibilitychange',()=>{peerTilt.reset();if(document.hidden){cancelAnimationFrame(peer.raf);peer.raf=0;peer.last=0;}else kickPeer();},{signal});
+ addEventListener('orientationchange',()=>peerTilt.reset(),{signal});
 }
 function peerOff(){
  peer.ctl?.abort();peer.ctl=null;peer.watch?.disconnect();peer.watch=null;cancelAnimationFrame(peer.raf);peer.raf=0;
@@ -992,16 +994,11 @@ function refreshPeerTargets(dialog=peer.dialog,cfg=peer.cfg){
  peer.flatEls=framed?.direct&&dialog.classList.contains('portal-fullscreen')&&!cfg.scene
   ?[...dialog.children].filter(el=>el.id!=='coachDock'&&!el.matches('.portal-peer-ui')):[];
 }
-const wrap180=a=>((a+180)%360+360)%360-180;
 function onOrient(e){
- if(e.beta==null||e.gamma==null||!peer.dialog)return;
- const now=performance.now(),b=e.beta,g=e.gamma;peer.sensor=true;peer.drag=null;
- if(!peer.base){peer.base={b,g};peer.prev={b,g};peer.stillT=now;}
- if(Math.abs(b-peer.prev.b)+Math.abs(g-peer.prev.g)>.6)peer.stillT=now;
- peer.prev={b,g};
- if(now-peer.stillT>PEER.stillMs){peer.base.b+=wrap180(b-peer.base.b)*PEER.drift;peer.base.g+=wrap180(g-peer.base.g)*PEER.drift;}
- let dB=clamp1(wrap180(b-peer.base.b)/PEER.deg),dG=clamp1(wrap180(g-peer.base.g)/PEER.deg);
- if((screen.orientation?.angle||0)%180)[dB,dG]=[dG,-dB];
+ if(!peer.dialog)return;
+ const t=peerTilt.read(e,performance.now());if(!t)return;
+ peer.sensor=true;peer.drag=null;
+ const dG=t.x,dB=t.y;
  if(Math.abs(dG-peer.tx)+Math.abs(dB-peer.ty)<PEER.dead)return;
  // As through a real window: turn the phone's face to the left (its right edge back) and the eye is now to the window's
  // right, so the pyramid shows its right side (Ian); tip the top edge back and the eye drops below it.
@@ -1633,7 +1630,7 @@ async function startTunnel(ph,poly,color,all){
  gl.uniform3fv(u.uCore,all?[1,1,1]:rgb(core).map(v=>v*.5+.5));
  const [cx,cy]=centroidOf(poly).map((v,i)=>v-(i?top:left)),xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),R=.5*Math.min(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
  // ponytail: hardwareConcurrency is a coarse low-end hint (and capped on some browsers); the measured-frame check below is the real guard.
- let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,tilt=null,tilt0=null;
+ let pr=Math.min(devicePixelRatio||1,(navigator.hardwareConcurrency||8)<=4?1:1.5),lite=false,travel=.3,last=ph.t0,tilt=null;
  const par=[0,0],slow=[],rest=[-.35*w,-.55*h],light=[...rest]; // #125 the specular follows the finger, else sits up-left (and leans with tilt)
  const size=()=>{
   bindPhaseProgram();
@@ -1647,7 +1644,7 @@ async function startTunnel(ph,poly,color,all){
   gl.uniform1f(u.uT,travel);gl.uniform1f(u.uSpin,reduced?0:(age*.000225)%(2*Math.PI));gl.uniform1f(u.uSweep,reduced?.45:-.35+1.7*((age/3200)%1));
   gl.uniform2f(u.uC,(cx+par[0])*pr,(cy+par[1])*pr);gl.uniform2f(u.uLP,light[0]*pr,light[1]*pr);gl.drawArrays(gl.TRIANGLES,0,3);
  };
- onTilt=e=>{if(e.gamma==null)return;tilt0??=[e.gamma,e.beta];tilt=[-(e.gamma-tilt0[0])*R*.012,-(e.beta-tilt0[1])*R*.012];};
+ const look=createTiltLook();onTilt=e=>{const t=look.read(e,performance.now());if(t)tilt=[-t.x*R*.2,-t.y*R*.2];};
  const frame=now=>{
   if(cancelled||!ph.glass.isConnected||capturedSignal?.aborted||gl.isContextLost())return;
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;

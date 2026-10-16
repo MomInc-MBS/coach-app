@@ -151,7 +151,7 @@ test('#134 #131 R7: Food, Achievements, Leaderboard and the ship open in their c
    assert.equal(await flowing(page),true,`${id}: the energy still flows in full screen`);
    assert.equal(await shown(page,title),true,`${id}: full screen shows its own title`);
    assert.equal(await fullyVisible(page,close),true,`${id}: full screen shows its own Close`);
-   await tilt(page,0);await page.waitForTimeout(400);await tilt(page,14);await page.waitForTimeout(1000);
+   await tilt(page,0);await page.waitForTimeout(400);await tilt(page,30);await page.waitForTimeout(1000);
    assert.ok(await eyeX(page)>.8,`${id}: the tilt still looks round the scene in full screen`);
    await tilt(page,0);await page.waitForTimeout(600);
    await page.screenshot({path:resolve(FRAMES,`r7-peer-${frame}-full.png`)});
@@ -266,7 +266,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   const before=await fixed(),eye=()=>page.evaluate(async()=>{const {eye}=await import('/modules/portal/peer.mjs');return {...eye};});
   await tilt(page,0);await settled(page); // the baseline, caught at the first reading
   const shots=[];
-  for(const [gamma,label] of [[-14,'left'],[0,'level'],[14,'right']]){
+  for(const [gamma,label] of [[-30,'left'],[0,'level'],[30,'right']]){
    await tilt(page,gamma);await settled(page);
    const e=await eye();
    if(gamma)assert.ok(Math.sign(e.x)===Math.sign(gamma)&&Math.abs(e.x)>.8,`gamma ${gamma}: the eye moves ${label} (${e.x})`);else assert.ok(Math.abs(e.x)<.1,`level: the eye is back in the middle (${e.x})`);
@@ -294,7 +294,7 @@ test('#135 tilt looks round the pyramid through the triangle (the cut stays put)
   const p=still.page;
   await p.evaluate(()=>window.myr5Portal.open('up'));
   await p.waitForFunction(()=>document.querySelector('#mealsPanel.portal-shaped'),null,{timeout:30000});
-  await tilt(p,0);await settled(p);await tilt(p,14);await settled(p);
+  await tilt(p,0);await settled(p);await tilt(p,30);await settled(p);
   assert.deepEqual(await p.evaluate(async()=>{const {eye}=await import('/modules/portal/peer.mjs');return {...eye};}),{x:0,y:0},'reduced motion: no look-around');
   assert.equal(await p.evaluate(()=>document.querySelectorAll('.portal-aura *').length>0&&document.getAnimations().filter(a=>a.effect?.target?.closest?.('.portal-aura')).length),0,'reduced motion: a still rim');
   await p.screenshot({path:resolve(FRAMES,'134-food-reduced-motion.png')});

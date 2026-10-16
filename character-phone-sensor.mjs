@@ -1,5 +1,32 @@
 // Full gravity is independent of the decorative, calibrated room parallax.
 export function screenGravity(x,y,angle=0){const a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return {gx:x*c+y*s,gy:-x*s+y*c};}
+// Look-around tilt for every room, the ship, the pod and the customizer. Read from the gravity vector, not raw
+// beta/gamma deltas: held upright (beta near 90, how iPhones are held) gamma is gimbal-locked, so any small twist
+// swings it tens of degrees, and it wraps at +-90 (or flips by 180 with beta past vertical); gravity is smooth through both.
+// The angle the phone is held at is zero and that zero follows the hold (time-based, ~95% in recentreS), so the
+// view settles wherever it is held. Real phones need tuning: maxDeg = tilt for full look, deadDeg = ignored wobble,
+// gain = output at full look (1 = each consumer's full px), recentreS = seconds to re-centre on a new hold.
+export const TILT={gain:1,maxDeg:18,deadDeg:1.5,recentreS:3};
+const wrap180=a=>((a+180)%360+360)%360-180;
+export function createTiltLook(view=globalThis,knobs=TILT){
+ let base=null,at=0;
+ const out=d=>{const m=Math.max(0,Math.abs(d)-knobs.deadDeg);return Math.sign(d)*knobs.gain*Math.min(1,m/(knobs.maxDeg-knobs.deadDeg));};
+ return {
+  reset(){base=null;},
+  /** {x,y} in -gain..gain (x right, y top edge back), or null for an empty reading. now: ms, defaults to the event's. */
+  read(event,now=event?.timeStamp??0){
+   if(!Number.isFinite(event?.beta)||!Number.isFinite(event?.gamma))return null;
+   const b=event.beta*Math.PI/180,g=event.gamma*Math.PI/180,deg=180/Math.PI;
+   const {gx,gy}=screenGravity(Math.cos(b)*Math.sin(g),Math.sin(b),view?.screen?.orientation?.angle??view?.orientation??0),gz=Math.cos(b)*Math.cos(g);
+   const roll=Math.atan2(gx,Math.hypot(gy,gz))*deg,pitch=Math.atan2(gy,gz)*deg;
+   if(!base){base={roll,pitch};at=now;}
+   // dt capped so a pause in events (hidden page, test gaps) is not counted as a long hold.
+   const k=1-Math.exp(-Math.min(.1,Math.max(0,(now-at)/1000))*3/knobs.recentreS);at=now;
+   base.roll+=(roll-base.roll)*k;base.pitch+=wrap180(pitch-base.pitch)*k;
+   return {x:out(roll-base.roll),y:out(wrap180(pitch-base.pitch))};
+  }
+ };
+}
 export function createPhoneMotionSource(view=globalThis.window,doc=view?.document){
  const listeners=new Set();let running=false,motionAt=-Infinity,lastAngle=null,lastAt=0,lastGravity=null,permission=null;
  const now=()=> (view.performance?.now?.()??Date.now())/1000;
