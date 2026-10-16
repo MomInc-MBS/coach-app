@@ -143,7 +143,7 @@ test('D36/#35 dials open Log by hand, Water and Today; a spin or the indicator f
  // Today's dial sits on the back: its label still takes keyboard focus.
  await page.getByRole('button',{name:'Today',exact:true}).focus();await page.keyboard.press('Enter');
  await page.waitForFunction(()=>document.getElementById('foodDialTitle').textContent==='Today');
- assert.match(await page.locator('#foodDialBody').innerText(),/Sign in to see today’s meals/);
+ assert.match(await page.locator('#foodDialBody').innerText(),/No meals logged today yet/);
  await page.locator('#foodDialBack').click();
  await page.waitForFunction(()=>document.getElementById('foodDial').hidden&&!document.getElementById('mealsPanel').dataset.dial);
  // #35: a clear swipe spins the pyramid round to its other face.
@@ -335,3 +335,17 @@ test('portal Food peers at the whole pyramid until a decoded photo enters fullsc
  await page.evaluate(()=>{window.foodPortalRun=window.myr5Portal.open('up');});await ready(page);await page.evaluate(()=>window.foodPortalRun);
  assert.equal(await page.locator('#mealsPanel').evaluate(el=>el.classList.contains('portal-shaped')&&!el.classList.contains('portal-fullscreen')),true,'reopen starts in the classroom view');
  },{worker:BURGER_WORKER}));
+
+test('guest typed meal saves on this phone, shows in today, and the lit dock FOOD closes Food',async()=>withFood(async page=>{
+ await page.evaluate(()=>window.myr5Menus.food());await ready(page);
+ await page.getByRole('button',{name:'Log by hand',exact:true}).click();
+ await page.waitForFunction(()=>!document.getElementById('mealConfirmation').hidden&&document.activeElement?.id==='mealName');
+ await page.locator('#mealName').fill('oatmeal with banana');
+ await page.locator('#saveMeal').click();
+ await page.waitForFunction(()=>/saved/i.test(document.getElementById('mealStatus').textContent));
+ assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-guest-meals-v1')).length),1);
+ await page.waitForFunction(()=>/oatmeal with banana/.test(document.getElementById('mealList').textContent));
+ await page.waitForFunction(()=>window.pyramidPaint.FOOD==='oatmeal with banana'||window.pyramidPaint.FOOD==='TODAY · 1 MEAL',null,{timeout:10000});
+ await page.locator('#coachDock [data-panel="meals"]').click();
+ await page.waitForFunction(()=>!document.getElementById('mealsPanel').open);
+}));
