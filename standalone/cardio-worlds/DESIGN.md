@@ -2,6 +2,15 @@
 
 Standalone design and playable art study, 16 October 2026. Branch `codex/cardio-worlds-1016`, snapshot base `d45e7d8` from the in-progress R-1017 integration. Recorded production base: `w/r1016 @ 0c4d4b2`, `https://myr5.mominc.online`, production version `ec2acab5`. This package changes no production entry points, build scripts, pose controls, accounts or workout XP. Merge after the other chat finishes. Recheck the latest live base before integration.
 
+## Revision 2: distinct architecture and motion-only play
+
+Ian corrected the first study: the worlds read as the same level recoloured. Only the Sakura art treatment should be shared. This revision replaces the common corridor/arch geometry, adds procedural surface textures, and removes manual movement controls. Production code is still untouched.
+
+- Foundry: curved gold ribs, cylindrical reactors, exposed pipes, giant toothed flywheels, elevated metal catwalk; spool and rotor hazards.
+- Temple: irregular stone slabs over a ravine, stepped ziggurats, leaning carved guardian faces, exposed roots, branching canopy and rope edges; boulder and fallen-log hazards.
+- Metro: six rails, gravel and wooden sleepers, a raised platform and curved canopy on one side, train storage and staggered urban buildings on the other; signal and track-barrier hazards.
+- Original deterministic canvas textures cover brushed metal, engraved gold, cracked masonry, organic moss, bark/grain, chipped plaster and angular gravel. Textures remain inside the shared Sakura ink/grade pipeline.
+
 ## Visual direction
 
 The requested Sakana/Sakura/Sacramento reference is Little Boyfriend's **Sakura Crossing** pipeline. Reuse `sakura/post.js`, `quad.js`, `palette.js`: depth-curvature ink, lilac shadows, warm sunlight, restrained saturation, soft distance haze and FXAA. MIT attribution is included. Vendored Three.js matches that pipeline. No remote asset or CDN dependency.
@@ -16,11 +25,11 @@ Each area is 600 metres at the existing constant 12 m/s. About 50 seconds runnin
 
 | Area | Look | First 150 m | 150–360 m | 360–555 m | Exit |
 | --- | --- | --- | --- | --- | --- |
-| Crown Foundry | Purple enamel and gold metal, segmented floor, gilded ribs, machinery silhouettes, observation windows | Single-lane blocks, generous gaps | Alternate jump bars and overhead slide beams | Lane–jump–slide combinations | Gold runway frames an enormous purple aperture |
-| Verdant Ruins | Carved sandstone arches, teal canopy, moss, hanging roots, ravine fog | Coins guide safe stone paths | Fallen lintels, roots, broken terraces | Alternating high/low routes and moving-stone timing | Temple iris opens onto violet space |
+| Crown Foundry | Curved gold ribs, enamel cylinders, toothed flywheels, pipes and elevated catwalk | Single-lane blocks, generous gaps | Alternate jump bars and overhead slide beams | Lane–jump–slide combinations | Gold runway frames an enormous purple aperture |
+| Verdant Ruins | Broken bridge slabs, stepped pyramids, guardian heads, branching canopy, rope and roots | Coins guide safe stone paths | Fallen lintels, roots, broken terraces | Alternating high/low routes and moving-stone timing | Temple iris opens onto violet space |
 | Neon Transit | First-person subway, rails and sleepers, long turquoise cars, pastel buildings, wires and signage | Stationary cars establish lane silhouettes | Track barriers and overhead signals | Train gaps, ramps and rooftop coin arcs | Tunnel resolves into a suspended portal |
 
-The playable study demonstrates repeated arches/buildings, coins, jump/slide obstacles, pickups and portals. Ravines, moving stones, ramps, rooftop traversal, moving train collision and animated machinery are specified production additions, not implemented geometry in this study. Decorative trains are not yet colliders. Final obstacle generation must join the existing runner's seeded safe-route generator instead of deploying the study's repeated layout.
+The playable study now demonstrates distinct architecture and themed hazard silhouettes, textured surfaces, coins, pickups and portals. Moving stones, ramps, rooftop traversal, moving train collision and animated machinery remain production additions. Decorative trains are not yet colliders. Final obstacle generation must join the existing runner's seeded safe-route generator instead of deploying the study's repeated layout.
 
 ## Portal choreography
 
@@ -59,8 +68,24 @@ Sources checked: [Imangi's Temple Run description](https://imangistudios.com/the
 
 Run locally: `python -m http.server 8876 --directory standalone/cardio-worlds`, then open `http://127.0.0.1:8876`. Run logic checks: `node --test standalone/cardio-worlds/worlds.test.mjs`.
 
+## Motion-only standalone path
+
+`tracking/pose-input.mjs` is copied from the app's R-1017 runner. `tracking/motion.mjs` reuses its head-bob and upper-body recognizers with their exported tuning unchanged. Enable motion tracking opens the front camera and runs the same locally vendored MediaPipe pose model (CPU delegate to avoid another graphics context).
+
+- Natural head bob gates forward movement at constant 12 m/s.
+- Both arms up plus shoulder lift trigger the floaty jump and portal entry.
+- Crouch triggers slide; body lean changes lane.
+- No head bob for the existing hold period pauses forward movement. Missing/stale landmarks stop movement; there is no automatic running fallback.
+- The standalone removes keyboard/swipe listeners, directional/jump/slide buttons, debug action methods, power activation buttons and the portal shortcut. Camera start/stop and unlocked-world selection remain menu actions.
+- Camera tracks and model close on stop, navigation, visibility change, error or startup cancellation. No frames upload to a service.
+- In the eventual production merge, preserve the app's own pose event bus, stop/catch rules and workout XP; integrate the new art into that existing motion loop instead of adding a second camera pipeline.
+
 ## Verified standalone checks
 
-- Five Node logic checks pass: gated portal/arrival unlock/loop; constant speed and shields; separate coin/score boosts and opt-in headstart; invalid inputs and lane clamps; phase/pogo/recovery/coin-tier behavior.
-- Collaborative browser: Run and right steer respond; actual Jump button enters portal; wormhole arrives in jungle, then metro; unlock 2 survives reload and all replay buttons enable. Test advanced distance at the portal through the explicit lab debug surface.
-- Render inspected at desktop 1280x800 and mobile CSS viewport 390x844; no horizontal overflow. This is browser emulation, not a physical-phone performance check. Software-WebGL ReadPixels stall warnings appear during screenshots; no app runtime exception after loading the finished files.
+- Six Node tests pass, including a landmark-driven treadmill integration sequence: standing stays at zero distance, head bob advances, lean steers, arms jump, crouch slides, stopping halts movement and missing landmarks invalidate tracking. Existing portal, unlock, power and constant-pace tests still pass.
+- Real locally bundled MediaPipe WASM/model successfully created in the collaborative browser and processed a blank image (zero poses, as expected); the model closed afterward.
+- Browser camera capture returned `Not supported` in this environment. Physical-camera recognition and phone tuning are NOT claimed. Camera failure leaves distance at zero with a retry message.
+- All three revised worlds visually inspected. Mobile CSS viewport 390x844 has no horizontal overflow. There are zero manual movement buttons and zero power-activation buttons. No-keyboard/swipe source path verified.
+
+Run locally: `python -m http.server 8876 --directory standalone/cardio-worlds`, then open `http://127.0.0.1:8876`. Phone camera requires an HTTPS origin (or localhost on that phone). Production integration will use the app's existing HTTPS camera path.
+Run checks: `node --test standalone/cardio-worlds/worlds.test.mjs standalone/cardio-worlds/tracking/motion.test.mjs`.
