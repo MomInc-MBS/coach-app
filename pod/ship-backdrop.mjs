@@ -1,11 +1,11 @@
-import {requestPhoneMotion} from '../character-phone-sensor.mjs';
+import {requestPhoneMotion,createTiltLook} from '../character-phone-sensor.mjs';
 /** Keep the decorative pod scene moving only while the pod page is the visible workspace. */
 export function mountShipBackdropMotion({root=document.getElementById('podShipBackdrop'),body=document.body,doc=document}={}){
  if(!root||!body||!doc)return ()=>{};
  const reduce=doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)');
  const view=doc.defaultView,tiltKey='myr5.tiltPermission';
- let tiltFrame=0,nx=0,ny=0,bx=0,by=0,cx=0,cy=0,bt=0,ct=0,lastFrame=0,sensorBase=null,sensorActive=false;
- const clamp=v=>Math.max(-1,Math.min(1,v));
+ let tiltFrame=0,nx=0,ny=0,bx=0,by=0,cx=0,cy=0,bt=0,ct=0,lastFrame=0,sensorActive=false;
+ const look=createTiltLook(view);
  const clearTilt=()=>{nx=ny=bx=by=cx=cy=bt=ct=0;body.style.setProperty('--pod-bg-x','0px');body.style.setProperty('--pod-bg-y','0px');body.style.setProperty('--pod-bg-tilt','0deg');body.style.setProperty('--pod-controls-x','0px');body.style.setProperty('--pod-controls-y','0px');body.style.setProperty('--pod-controls-tilt','0deg');};
  const tickTilt=now=>{
   tiltFrame=0;if(root.dataset.motionRunning!=='true'){lastFrame=0;clearTilt();return;}
@@ -21,17 +21,15 @@ export function mountShipBackdropMotion({root=document.getElementById('podShipBa
  const pointerMove=event=>{if(root.dataset.motionRunning!=='true')return;const w=Math.max(1,doc.documentElement.clientWidth),h=Math.max(1,doc.documentElement.clientHeight);nx=Math.max(-1,Math.min(1,(event.clientX/w-.5)*2));ny=Math.max(-1,Math.min(1,(event.clientY/h-.5)*2));kickTilt();};
  const pointerLeave=()=>{nx=ny=0;kickTilt();};
  const orientation=event=>{
-  if(root.dataset.motionRunning!=='true'||event.beta==null||event.gamma==null)return;
-  if(!sensorBase)sensorBase={beta:event.beta,gamma:event.gamma};
-  let x=clamp((event.gamma-sensorBase.gamma)/22),y=clamp((event.beta-sensorBase.beta)/22);
-  if((view?.screen?.orientation?.angle||0)%180)[x,y]=[y,-x];
-  nx=x;ny=y;kickTilt();
+  if(root.dataset.motionRunning!=='true')return;
+  const t=look.read(event,view.performance.now());if(!t)return;
+  nx=t.x;ny=t.y;kickTilt();
  };
  const startSensor=()=>{
   if(sensorActive||!view?.DeviceOrientationEvent)return;
-  view.addEventListener('deviceorientation',orientation);sensorActive=true;sensorBase=null;
+  view.addEventListener('deviceorientation',orientation);sensorActive=true;look.reset();
  };
- const stopSensor=()=>{if(sensorActive)view?.removeEventListener('deviceorientation',orientation);sensorActive=false;sensorBase=null;};
+ const stopSensor=()=>{if(sensorActive)view?.removeEventListener('deviceorientation',orientation);sensorActive=false;look.reset();};
  const requestSensor=async()=>{
   const api=view?.DeviceOrientationEvent;
   if(!api?.requestPermission)return;

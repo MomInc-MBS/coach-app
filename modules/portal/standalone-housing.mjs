@@ -1,5 +1,5 @@
 import {readLook,applyLookVars,stripSeq} from './portal-look.mjs';
-import {requestPhoneMotion} from '../../character-phone-sensor.mjs';
+import {requestPhoneMotion,createTiltLook} from '../../character-phone-sensor.mjs';
 
 const BOLTS=[[0,0],[1,0],[0,1],[1,1],[0,.33],[0,.67],[1,.33],[1,.67]];
 export const frameMarkup=()=>`<div class="portal-frame" aria-hidden="true"><span class="portal-energy">${'<span><span></span></span>'.repeat(4)}</span>${BOLTS.map(([x,y])=>`<i style="--x:${x};--y:${y}"></i>`).join('')}<b>MOM INC</b></div><div class="portal-standalone-aura" aria-hidden="true"></div>`;
@@ -22,19 +22,19 @@ export async function mountStandaloneHousing({content=document.querySelector('.e
  const updateLook=()=>paintHousing(chrome,doc);
  face();updateLook();
  if(chrome.showPopover){if(!chrome.matches(':popover-open'))chrome.showPopover();}else chrome.removeAttribute('popover');
- const reduced=view?.matchMedia?.('(prefers-reduced-motion: reduce)');let raf=0,tx=0,ty=0,x=0,y=0,disposed=false,sensorBase=null;
+ const reduced=view?.matchMedia?.('(prefers-reduced-motion: reduce)');let raf=0,tx=0,ty=0,x=0,y=0,disposed=false,last=0;const look=createTiltLook(view);
  const requestTilt=()=>{if(!disposed&&!raf&&!doc.hidden&&!reduced?.matches)raf=requestAnimationFrame(step);};
  const pointer=e=>{if(disposed||reduced?.matches||doc.hidden)return;tx=Math.max(-1,Math.min(1,(e.clientX/Math.max(1,view.innerWidth)-.5)*2));ty=Math.max(-1,Math.min(1,(e.clientY/Math.max(1,view.innerHeight)-.5)*2));requestTilt();};
- const step=()=>{raf=0;x+=(tx-x)*.055;y+=(ty-y)*.055;content.style.setProperty('--editor-peer-x',(x*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-y',(y*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-tilt',(x*.65).toFixed(2)+'deg');if(Math.abs(tx-x)+Math.abs(ty-y)>.01)raf=requestAnimationFrame(step);};
- const orientation=event=>{if(disposed||reduced?.matches||doc.hidden||event.beta==null||event.gamma==null)return;if(!sensorBase)sensorBase={beta:event.beta,gamma:event.gamma};tx=Math.max(-1,Math.min(1,(event.gamma-sensorBase.gamma)/15));ty=Math.max(-1,Math.min(1,(event.beta-sensorBase.beta)/15));requestTilt();};
+ const step=now=>{raf=0;const k=last?1-Math.exp(-Math.min(100,now-last)/300):.055;last=now;x+=(tx-x)*k;y+=(ty-y)*k;content.style.setProperty('--editor-peer-x',(x*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-y',(y*2.5).toFixed(2)+'px');content.style.setProperty('--editor-peer-tilt',(x*.65).toFixed(2)+'deg');if(Math.abs(tx-x)+Math.abs(ty-y)>.01)raf=requestAnimationFrame(step);else last=0;};
+ const orientation=event=>{if(disposed||reduced?.matches||doc.hidden)return;const t=look.read(event,view.performance.now());if(!t)return;tx=t.x;ty=t.y;requestTilt();};
  const allowTilt=async()=>{try{const granted=await requestPhoneMotion();if(disposed)return;if(granted){view.addEventListener('deviceorientation',orientation);chip?.remove();}}catch{}}
  const chip=view?.DeviceOrientationEvent?.requestPermission?doc.createElement('button'):null;
  if(chip){chip.type='button';chip.className='editor-tilt-request';chip.textContent='Enable tilt';chip.setAttribute('aria-label','Enable device tilt to look around');(doc.querySelector('.view-buttons')||doc.querySelector('.preview-toolbar')||content).append(chip);chip.addEventListener('click',allowTilt);}
  else if(view?.DeviceOrientationEvent)view.addEventListener('deviceorientation',orientation);
  const resize=()=>face(),storage=e=>{if(!e.key||e.key.startsWith('myr5.portal'))updateLook();};
  const clearPeer=()=>{tx=ty=x=y=0;content.style.removeProperty('--editor-peer-x');content.style.removeProperty('--editor-peer-y');content.style.removeProperty('--editor-peer-tilt');};
- const onVisibility=()=>{if(doc.hidden){clearPeer();cancelAnimationFrame(raf);raf=0;}else requestTilt();};
- const onReduced=()=>{if(reduced.matches){clearPeer();cancelAnimationFrame(raf);raf=0;}else requestTilt();};
+ const onVisibility=()=>{look.reset();if(doc.hidden){clearPeer();cancelAnimationFrame(raf);raf=0;last=0;}else requestTilt();};
+ const onReduced=()=>{if(reduced.matches){clearPeer();cancelAnimationFrame(raf);raf=0;last=0;}else requestTilt();};
  const dispose=()=>{if(disposed)return;disposed=true;cancelAnimationFrame(raf);doc.removeEventListener('visibilitychange',onVisibility);view?.removeEventListener('pagehide',pagehide);view?.removeEventListener('pointermove',pointer);view?.removeEventListener('resize',resize);view?.removeEventListener('storage',storage);view?.removeEventListener('focus',updateLook);view?.removeEventListener('deviceorientation',orientation);reduced?.removeEventListener?.('change',onReduced);chip?.remove();clearPeer();chrome.hidePopover?.();chrome.remove();links.forEach(link=>link.remove());};
  const pagehide=event=>{if(!event.persisted)dispose();};
  view?.removeEventListener('pagehide',beforeReady);view?.addEventListener('pagehide',pagehide);view?.addEventListener('pointermove',pointer,{passive:true});view?.addEventListener('resize',resize);view?.addEventListener('storage',storage);view?.addEventListener('focus',updateLook);doc.addEventListener('visibilitychange',onVisibility);reduced?.addEventListener?.('change',onReduced);
