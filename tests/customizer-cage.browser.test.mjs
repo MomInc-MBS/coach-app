@@ -47,6 +47,8 @@ test('customizer shares the current six-button dock and saved metal housing at p
   assert.deepEqual(state.routes,['customizeCoach','food','portal','scoreboard','achievements','reminders']);assert.ok(state.icons.every(Boolean),'all six controls use current icons');assert.equal(state.current,'customizeCoach');assert.equal(state.metal,'#654321');assert.match(await page.locator('.portal-standalone-aura').evaluate(el=>getComputedStyle(el).backgroundImage),/25, 180, 120/,'actual feathered aura uses saved Strip');
   assert.ok(Math.abs(state.frame.x-15)<1&&Math.abs(state.frame.y-15)<1&&Math.abs(state.frame.width-345)<1&&Math.abs(state.frame.height-(height-30-88))<1,'editor housing follows 15px rails above the 88px console');assert.ok(state.dock.left===0&&state.dock.right===375&&state.dock.bottom===height&&state.dock.height===88,'shared console sits beneath the housing: '+JSON.stringify(state.dock));assert.ok(state.links.every(link=>link.hit),'all current dock controls stay tappable');
   for(const link of state.links.filter(link=>link.route!=='customizeCoach'))assert.ok(link.href?.startsWith('/pose.html'),'dock returns to real main routes');
+  assert.equal(await page.locator('#coachDock [data-route="customizeCoach"]').getAttribute('href'),null,'the current Customize control is not a self-link');
+  assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('[role=tabpanel]')].filter(p=>!p.querySelector('h2')).map(p=>p.id)),[],'every customizer tab has a panel heading');
  }
 });
 
