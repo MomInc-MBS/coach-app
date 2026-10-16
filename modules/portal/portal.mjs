@@ -18,6 +18,7 @@ import {pointInPolygon} from './portal-cut.mjs';
 import {eye} from './peer.mjs';
 import {mountPodChrome} from '../pod-chrome.mjs';
 import {paletteFor,paletteOptions} from './portal-tunnel-palettes.mjs';
+import {releaseGraphics,waitForGraphicsRelease} from '../graphics-lifecycle.mjs';
 
 // Portal sequence timings (ms): the cut piece falling in, the minimum live-glass loading phase, the
 // dive into the wormhole (the destination appears from its core), the healed board fading back in, one touch ripple on
@@ -261,6 +262,12 @@ function loadBoard(id){
  const load=++boardLoad,run=loadQueue.then(()=>load===boardLoad?loadBoardNow(id,load):null);
  loadQueue=run.catch(()=>{});return run;
 }
+function disposeBoard(value){
+ if(!value)return Promise.resolve();
+ const gl=value.glContext||null;
+ if(!gl){try{value.dispose();}catch{}return Promise.resolve();}
+ return releaseGraphics(value.canvas,gl,()=>value.dispose());
+}
 async function loadBoardNow(id,load){
  const label=BOARDS[id].label;
  status(`Loading ${label} board…`);
@@ -276,7 +283,7 @@ async function loadBoardNow(id,load){
  if(load!==boardLoad){next.dispose();return null;}
  clearTimeout(finalizeTimer);pendingStrokes=[];
  pointers.forEach((_,pid)=>board?.release(pid));pointers.clear();
- const old=[gl3,base];gl3=null;base=board=next;lastTap=null;for(const b of old)b?.dispose();
+ const old=[gl3,base];gl3=null;base=board=next;lastTap=null;for(const b of old)void disposeBoard(b);
  if(!boardShown)base.pause();
  portalHome.style.background=base.background||''; // the canvases are transparent; the board colour lives here, behind the glass
  portalHome.dataset.board=boardId=id;portalHome.dataset.art='flat';
@@ -292,21 +299,23 @@ function threeD(mounting=false){
  const id=boardId,make=BOARDS[id].create,generation=boardLoad;
  if(!make||gl3||!(boardShown||mounting)||pending3D.has(id)||art[id]==='flat'||lifecycle.signal.aborted)return ready3D;
  pending3D.add(id);portalHome.dataset.building=''; // portal.css keeps a hidden portal laid out meanwhile: effects measure the host as they build
- const build=make(boardHost);build.catch(()=>{}).finally(()=>{pending3D.delete(id);if(!pending3D.size)delete portalHome.dataset.building;});
  return ready3D=(async()=>{
+  await waitForGraphicsRelease();
+  if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted||gl3||(!boardShown&&!mounting))return;
+  const build=make(boardHost);build.catch(()=>{});
   let created;
   try{created=await Promise.race([build,sleep(WAIT.threeD).then(()=>{throw new Error(`3D took over ${WAIT.threeD} ms`);})]);}
-  catch(error){build.then(late=>late.dispose(),()=>{});if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted)return;return fell(id,error);} // stale builds cannot overwrite a newer board; late ones are released at once
+  catch(error){build.then(late=>{void disposeBoard(late);},()=>{});if(generation!==boardLoad||id!==boardId||lifecycle.signal.aborted)return;return fell(id,error);} // stale builds cannot overwrite a newer board; late ones are released at once
   created.canvas.style.opacity='0'; // drawn but out of sight until it takes over (opacity, not visibility: its frame still reaches the screen)
   while((busy||phase)&&id===boardId&&!lifecycle.signal.aborted)await sleep(250); // ponytail: polls; a sequence ends within seconds
-  if(id!==boardId||generation!==boardLoad||gl3||lifecycle.signal.aborted){created.dispose();return;}
-  if(created.canvas.getContext('webgl2')?.isContextLost()!==false){created.dispose();return fell(id,new Error('WebGL context lost before its first frame'));}
+  if(id!==boardId||generation!==boardLoad||gl3||lifecycle.signal.aborted||(!boardShown&&!mounting)){await disposeBoard(created);return;}
+  if(created.canvas.getContext('webgl2')?.isContextLost()!==false){await disposeBoard(created);return fell(id,new Error('WebGL context lost before its first frame'));}
   if(id!=='quilt')created.setTint?.(boardTint(id),hasBoardTint(id));
   if(id==='cogs')created.setBackplateTint?.(cogsBackplateTint(),hasCogsBackplateTint());
   gl3=board=created;created.canvas.style.opacity='';if(base.canvas)base.canvas.style.visibility='hidden';
   if(boardShown)created.resume();else created.pause(); // resume draws a fresh frame now it's in sight
   art[id]='3d';portalHome.dataset.art='3d';
- })();
+ })().finally(()=>{pending3D.delete(id);if(!pending3D.size)delete portalHome.dataset.building;});
 }
 function fell(id,error){
  console.warn(`${BOARDS[id].label} 3D is unavailable; its flat board stays.`,error);
@@ -317,7 +326,7 @@ function fell(id,error){
 // moment later; a second loss this session leaves the board flat.
 function lost3D(){
  const id=boardId,dead=gl3;gl3=null;board=base;
- if(base.canvas)base.canvas.style.visibility='';base.resume();portalHome.dataset.art='flat';dead.dispose();
+ if(base.canvas)base.canvas.style.visibility='';base.resume();portalHome.dataset.art='flat';void disposeBoard(dead);
  if((losses[id]=(losses[id]||0)+1)>1)return fell(id,new Error('WebGL context lost again'));
  art[id]='lost';setTimeout(()=>threeD(),1000);
 }
@@ -1549,6 +1558,23 @@ function tunnelGL(material='',{activate=true}={}) {
  if(activate){gl.useProgram(selected.program);owner.active=selected;owner.u=selected.u;}
  return owner;
 }
+// A secret handoff immediately allocates the Vault's own renderer. Drop the portal's offscreen
+// WebGL2 context first; hidden canvases still count against mobile GPU context/memory budgets.
+async function releaseTunnel(){
+ const owner=tunnel;if(!owner)return;
+ tunnel=null;
+ const {gl,canvas}=owner;
+ owner.programs.clear();owner.active=null;
+ try{if(owner.texture)gl.deleteTexture(owner.texture);}catch{}
+ owner.texture=null;
+ await releaseGraphics(canvas,gl,()=>gl.getExtension('WEBGL_lose_context')?.loseContext());
+ canvas.remove();
+}
+function stopWormhole(){
+ if(!wormhole)return;
+ const current=wormhole;wormhole=null;
+ current.ph.stop?.();current.el.remove();
+}
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 const easeInOut=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // PORTAL-PEEK (R17, on by default; localStorage.myr5PortalPeek="0" is the kill switch): the destination rendered offscreen (portal-peek.mjs)
@@ -1558,7 +1584,7 @@ function startPeek(ph,{gl,active:{program,u}},w,h){
  let flag=null;try{flag=localStorage.getItem('myr5PortalPeek');}catch{}
  if(!ph.peek||flag==='0')return null;
  const s={peek:null,tex:null,on:0,n:0,dead:false};
- import('./portal-peek.mjs').then(m=>m.openPeek(ph.peek,w,h)).then(peek=>{
+ import('./portal-peek.mjs').then(m=>m.openPeek(ph.peek,w,h,{shouldOpen:()=>!s.dead&&!gl.isContextLost()})).then(peek=>{
   if(!peek)return;if(s.dead||gl.isContextLost())return peek.dispose();
   s.peek=peek;s.tex=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,s.tex);
   for(const k of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,k,gl.CLAMP_TO_EDGE);
@@ -1882,8 +1908,15 @@ async function showVaultDoor(secretId=boardId){
  // Free the portal's WebGL context before the door and hall allocate theirs. Keep the flat board
  // and its chosen ID so returning to the portal can build the original 3D board again.
  boardLoad++;const previous=gl3;gl3=null;board=base;delete art[boardId];
- if(base?.canvas)base.canvas.style.visibility='';previous?.dispose();base?.resume();
+ if(base?.canvas)base.canvas.style.visibility='';base?.resume();
  setVisible(false);
+ stopWormhole();
+ // setVisible(false) stops any active portal-peek source before the Vault claims a WebGL context.
+ const boardGl=previous?.glContext||null;
+ const boardRelease=previous?releaseGraphics(previous.canvas,boardGl,()=>previous.dispose()):Promise.resolve();
+ await Promise.all([boardRelease,releaseTunnel()]);
+ await waitForGraphicsRelease();
+ try{const peek=await import('./portal-peek.mjs');await peek.releasePeekRendererIfIdle();}catch{}
  try{
   const store=await import('../vault/vault-store.mjs');await store.markSecret(secretId);
  }catch(error){
@@ -1986,7 +2019,7 @@ export async function mountPortal({visible=false}={}){
  addEventListener('myr5:portal-secret',e=>{const id=e.detail?.board||boardId;void showVaultDoor(id);},{signal:lifecycle.signal});
  await loadBoard(initialBoardId());
  await Promise.race([threeD(true),sleep(WAIT.mount)]); // come up in 3D when it's quick; never wait on a stalled one
- wirePointerEvents();(window.requestIdleCallback||setTimeout)(()=>{if(!lifetime.signal.aborted)tunnelGL('',{activate:false});}); // compile/cache only; never switch a live phase's program
+ wirePointerEvents(); // Allocate the tunnel only when a transition actually needs it.
  resizeOverlay();overlayObserver=new ResizeObserver(resizeOverlay);overlayObserver.observe(portalHome);
  setVisible(visible&&initialVisible());
  // Back from a 'nav' portal via the bfcache: drop the stale glass and hole.
@@ -2001,7 +2034,7 @@ export async function mountPortal({visible=false}={}){
  document.addEventListener('close',scheduleIdle,{capture:true,signal:lifecycle.signal});
  window.myr5Portal={
   get disposed(){return lifetime.signal.aborted;},
-  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();gl3?.dispose();base?.dispose();gl3=base=board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;tunnel?.gl.getExtension('WEBGL_lose_context')?.loseContext();tunnel=null;for(const cancel of flashes)cancel();window.myr5Portal=null;},
+  dispose(){if(lifetime.signal.aborted)return;clearTimeout(idleTimer);idleTimer=0;idleCycle=null;setVisible(false);fading.length=0;boardLoad++;lifecycle.abort();overlayObserver?.disconnect();void disposeBoard(gl3);base?.dispose();gl3=base=board=null;menuChosen=true;menuSheet.close();menuSheet.remove();restoreWorkoutHome();workoutHome?.close();workoutHome?.remove();portalHome.remove();chrome.remove();energyAnims.length=0;void releaseTunnel();void import('./portal-peek.mjs').then(m=>m.releasePeekRendererIfIdle()).catch(()=>{});for(const cancel of flashes)cancel();window.myr5Portal=null;},
   secret:id=>window.dispatchEvent(new CustomEvent('myr5:portal-secret',{detail:{board:id||boardId}})), // debug/test: same event the boards fire
   show:()=>setVisible(true),
   hide:()=>setVisible(false),

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {recipeShipTint,applyShipTint,SHIP_ANCHOR_Y,SHIP_FACING,SHIP_REST_Z,shipPoseAbove,measureShip} from '../ships/ship-scene-domain.mjs';
 import {STARTER_WONDERS,backgroundForDay,starterWonderUrl} from '../../meditation-backgrounds.mjs';
 import {createCoachPreviewSpace} from '../../coach-preview-space.mjs';
+import {releaseGraphics} from '../graphics-lifecycle.mjs';
 
 export const RT_SCALE=Object.freeze({high:1,medium:.55,low:.35});
 export const MAX_RT_DIM=2048,MAX_DPR=1.5;
@@ -25,7 +26,7 @@ export function peekQuality(){
 /** One render target, reused; resize() reallocates only when the size changes, render() never allocates. */
 export function createPortalPeek({renderer,quality='medium'}){
  const rt=new THREE.WebGLRenderTarget(16,16,{depthBuffer:true}),scale=RT_SCALE[quality]||RT_SCALE.medium;
- let source=null,pixels=new Uint8Array(16*16*4);
+ let source=null,pixels=new Uint8Array(16*16*4),disposed=false;activePeeks++;
  const peek={
   target:rt,texture:rt.texture,width:16,height:16,
   setSource(next){source=typeof next==='function'?{render:next}:next;if(source?.camera)peek.resize(peek.cssW||16,peek.cssH||16);},
@@ -46,19 +47,27 @@ export function createPortalPeek({renderer,quality='medium'}){
   // The wormhole draws in its own WebGL2 context, so the frame crosses over as pixels (bottom row first, linear RGB).
   lost:()=>renderer.getContext().isContextLost(),
   read(){renderer.readRenderTargetPixels(rt,0,0,peek.width,peek.height,pixels);return pixels;},
-  dispose(){source?.dispose?.();source=null;rt.dispose();},
+  dispose(){if(disposed)return;disposed=true;source?.dispose?.();source=null;rt.dispose();activePeeks=Math.max(0,activePeeks-1);releasePeekRendererIfIdle();},
  };
  return peek;
 }
 
 // One three.js context for the page's life (like the tunnel's), created on the first peek.
 let shared=null;
+let activePeeks=0;
 export function peekRenderer(){
  if(shared&&!shared.getContext().isContextLost())return shared;
  const canvas=document.createElement('canvas');
  try{shared=new THREE.WebGLRenderer({canvas,alpha:false,antialias:false,powerPreference:'low-power'});}catch{return shared=null;}
  canvas.addEventListener('webglcontextlost',()=>{if(shared?.domElement===canvas)shared=null;});
  return shared;
+}
+// A stopped peek no longer needs its GPU context. Keep the shared renderer only while a phase uses it.
+export function releasePeekRendererIfIdle(){
+ if(activePeeks||!shared)return false;
+ const renderer=shared;shared=null;
+ const gl=renderer.getContext(),canvas=renderer.domElement;
+ return releaseGraphics(canvas,gl,()=>{renderer.dispose();renderer.forceContextLoss();}).then(()=>{canvas.remove();return true;});
 }
 
 // scene.background with CSS "cover" (three stretches a background texture to the viewport otherwise).
@@ -115,11 +124,14 @@ async function meditationSource(){
 export const PEEK_SOURCES=Object.freeze({select:shipSource,meditate:meditationSource});
 
 /** For portal.mjs: a peek for `route` sized to a w x h CSS px window, or null (switched off, low end, no source, no WebGL). */
-export async function openPeek(route,w,h){
+export async function openPeek(route,w,h,{shouldOpen=()=>true}={}){
  const quality=peekQuality(),load=PEEK_SOURCES[route];
  if(!quality||!load)return null;
- const renderer=peekRenderer();if(!renderer)return null;
+ let source;
+ try{source=await load();}catch(error){console.warn('Portal peek unavailable',error);return null;}
+ if(!shouldOpen()){source?.dispose?.();return null;}
+ const renderer=peekRenderer();if(!renderer){source?.dispose?.();return null;}
  const peek=createPortalPeek({renderer,quality});
- try{peek.resize(w,h);peek.setSource(await load());}catch(error){peek.dispose();console.warn('Portal peek unavailable',error);return null;}
+ try{peek.resize(w,h);peek.setSource(source);}catch(error){peek.dispose();console.warn('Portal peek unavailable',error);return null;}
  return peek;
 }

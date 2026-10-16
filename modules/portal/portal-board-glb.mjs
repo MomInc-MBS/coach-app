@@ -271,6 +271,7 @@ export async function createGlbBoard(host,{effect,knobs=GLB}={}){
  const claimed=new Map();
  return {
   canvas,
+  glContext:renderer.getContext(),
   background:effect.background||'#17111e',
   faceRect:faceRectClient,
   cut,heal,

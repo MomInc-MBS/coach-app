@@ -420,6 +420,7 @@ export async function createQuiltBoardGL(host,{knobs=QUILT}={}){
  }
  return {
   canvas,
+  glContext:renderer.getContext(),
   background:BACKGROUND,
   faceRect:quiltRect,
   cut,heal,
