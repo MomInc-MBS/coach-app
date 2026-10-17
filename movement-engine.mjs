@@ -270,7 +270,7 @@ export class MovementSession {
     this.message=this.phase==='air'?'Body rise detected. Return to your starting height.':'Ready for the next estimated jump.';this.measurement='Estimated from body rise; landing cannot be verified without feet.';this.progress=clamp(lift/.4,0,1);
   }
   update(raw,timestamp,aspect=1,world=null){
-    if(this.flightInput){const pose=this.flightInput.update({points:raw,world,width:aspect,height:1,now:timestamp});applyFlightEvidence(this,pose,timestamp,{allowed:this.flightAllowed});return this.snapshot();}
+    if(this.flightInput){const pose=this.flightInput.update({points:raw,world,width:aspect,height:1,now:timestamp,portalRest:this.flightPortalRest===true});applyFlightEvidence(this,pose,timestamp,{allowed:this.flightAllowed&&!this.flightPortalRest});return this.snapshot();}
     const t=timestamp/1000;if(!Number.isFinite(t))return this.snapshot();
     if(this.last!==null&&t<=this.last)return this.snapshot();
     const gap=this.last===null?0:t-this.last;const dt=gap>MAX_FRAME_GAP?0:gap;this.last=t;this.dt=dt;

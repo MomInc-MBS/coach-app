@@ -1,5 +1,6 @@
 import {GADGETS, POWERUPS, UPGRADES, VEHICLES, vehicleById} from './catalog.mjs';
 import {createPaceSchedule,paceAt,segmentAt} from './pacing.mjs';
+import {BIOMES,BIOME_SECONDS,PORTAL_REST_SECONDS,biomeAt} from './biomes.mjs';
 
 export const PACED_FLIGHT_TUNING=Object.freeze({speed:15,verticalSpeed:1.35,lateralSpeed:1.25,gateLeadSeconds:.45,lookaheadSeconds:20});
 
@@ -120,7 +121,7 @@ function missionList(seed) {
 }
 
 /** Create a fresh mutable run with reproducible IDs and seeded course generation. */
-export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,cosmetic=null,event=false,paced=false}={}) {
+export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,cosmetic=null,event=false,paced=false,biomes=false}={}) {
   const normalizedSeed = (Number(seed) >>> 0) || 1;
   const normalizedRunId = typeof runId === 'string' && runId ? runId : `flight-${normalizedSeed}`;
   const acceptedLoadout = normalizedLoadout(loadout, Boolean(event));
@@ -138,6 +139,8 @@ export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,c
     safeRoute:[], gateGroups:new Map(), warnedGroups:new Set(), componentParts:0, componentMechDeployed:false,
     eventTokens:0, eventRewardProgress:0, eventRewardTarget:3, eventRewardClaimed:false, cleanGates:0, impactBuffer:effects.impactBuffer, lastCashDashCoinAt:-Infinity, crashEventEmitted:false, finishEventEmitted:false,
     paced:Boolean(paced),paceSchedule:paced?createPaceSchedule(normalizedSeed):null,paceOrigin:0,nextPaceIndex:0,pace:null,observedRestSeconds:0,observedControlSeconds:0,
+    biomes:Boolean(biomes&&paced),biomeIndex:0,biomeStartedAt:0,paceTimeOrigin:0,portalRest:false,
+    biome:biomes&&paced?biomeAt():null,biomeEffects:{speedUntil:0,magnetUntil:0,liftUntil:0},lastBiomePickup:null,
   };
   if(run.paced){run.speed=PACED_FLIGHT_TUNING.speed;updatePace(run);}
   return run;
@@ -197,7 +200,7 @@ function addGatePanel(run, pattern, geometry, kind) {
 }
 
 function makeGate(run, z, safePoint, index) {
-  const id = `${run.runId}:gate:${index}`;
+  const id = run.biomes?`${run.runId}:biome:${run.biomeIndex}:gate:${index}`:`${run.runId}:gate:${index}`;
   const hx = FLIGHT_TUNING.safeHalfWidth, hy = run.paced ? .24 : FLIGHT_TUNING.safeHalfHeight;
   const x = clamp(safePoint.x,-0.58,0.58), y = clamp(safePoint.y,0.08,0.92);
   const kind = index % 3 === 1 ? 'laser' : 'zapper';
@@ -266,7 +269,7 @@ function spawnExtras(run, gate, index) {
 const PACE_LABELS={rest:'Chest down · rest',top:'High plank',middle:'Middle push-up',left:'Lean left',right:'Lean right'};
 function updatePace(run){
   if(!run.paced)return;
-  const p=paceAt(run.paceSchedule,run.time),kind=p.isRest?'rest':p.activeKind,nextKind=p.next.kind==='rest'?'rest':p.next.activeKind;
+  const p=paceAt(run.paceSchedule,Math.max(0,run.time-run.paceTimeOrigin)),kind=p.isRest?'rest':p.activeKind,nextKind=p.next.kind==='rest'?'rest':p.next.activeKind;
   run.pace={kind,label:PACE_LABELS[kind],remaining:p.remaining,nextKind,nextLabel:PACE_LABELS[nextKind],target:p.target,
     transitioning:p.transitioning,restShare:p.restShare,index:p.index,duration:p.segment.duration};
 }
@@ -275,8 +278,10 @@ function ensurePacedCourse(run){
   let guard=0;
   while(guard++<12){
     const segment=segmentAt(run.paceSchedule,run.nextPaceIndex);
-    if(segment.start>run.time+PACED_FLIGHT_TUNING.lookaheadSeconds)break;
+    if(segment.start>run.time-run.paceTimeOrigin+PACED_FLIGHT_TUNING.lookaheadSeconds||run.biomes&&segment.start>=BIOME_SECONDS)break;
     const index=run.nextPaceIndex++,z=run.paceOrigin+(segment.end-PACED_FLIGHT_TUNING.gateLeadSeconds)*PACED_FLIGHT_TUNING.speed;
+    if(run.biomes&&segment.end>BIOME_SECONDS)continue;
+    const objectStart=run.objects.length;
     const gate=makeGate(run,z,segment.target,index);
     run.gateGroups.get(gate.id).paceIndex=index;
     const pattern=['ribbon','stair','wave','split'][index%4];
@@ -285,16 +290,55 @@ function ensurePacedCourse(run){
         x:segment.target.x,y:segment.target.y,radius:.105,value:1,revealAt:Math.max(0,run.paceOrigin+(at-3)*PACED_FLIGHT_TUNING.speed),active:true,origin:'paced-course'});
     }
     spawnExtras(run,gate,index);
+    if(run.biomes){
+      const pickup=BIOMES[run.biomeIndex%BIOMES.length].pickups[index%3];
+      addObject(run,{id:`${gate.id}:biome-pickup`,type:'biome-pickup',kind:pickup.id,name:pickup.name,benefit:pickup.benefit,shape:pickup.shape,
+        biomeId:run.biome.id,z:gate.z-3,x:segment.target.x,y:segment.target.y,w:.13,h:.13,active:true,origin:'biome'});
+    }
     // The missile follows the previous active height into a neutral recovery bay.
     // It cannot target the chest-down lane or demand a dodge during recovery.
     if(segment.kind==='rest'&&index>=4&&index%4===0){
       const at=segment.start+1.7;
       addObject(run,{id:`${gate.id}:recovery-missile`,type:'missile',kind:'seeking-orb',patternId:null,z:run.paceOrigin+at*PACED_FLIGHT_TUNING.speed,
         x:segment.fromTarget.x,y:Math.max(.5,segment.fromTarget.y),w:FLIGHT_TUNING.missileRadiusX,h:FLIGHT_TUNING.missileRadiusY,
-        state:'approach',warningLead:run.speed*3.4,lockDistance:run.speed*2.5,launchDistance:run.speed*.9,
+        state:'approach',warningLead:PACED_FLIGHT_TUNING.speed*3.4,lockDistance:PACED_FLIGHT_TUNING.speed*2.5,launchDistance:PACED_FLIGHT_TUNING.speed*.9,
         targetX:null,targetY:null,restSafe:true,active:true,sourceIndex:index});
     }
+    if(run.biomes){
+      for(const object of run.objects.slice(objectStart)){
+        object.arrivalTime=run.paceTimeOrigin+(object.z-run.paceOrigin)/PACED_FLIGHT_TUNING.speed;
+        if(finite(object.revealAt))object.revealTime=run.paceTimeOrigin+(object.revealAt-run.paceOrigin)/PACED_FLIGHT_TUNING.speed;
+      }
+      const arrivalTime=run.paceTimeOrigin+segment.end-PACED_FLIGHT_TUNING.gateLeadSeconds;
+      run.gateGroups.get(gate.id).arrivalTime=arrivalTime;run.safeRoute.at(-1).arrivalTime=arrivalTime;
+    }
   }
+  if(run.biomes)retimeCourse(run);
+}
+
+// Future objects retain their authored arrival seconds through boosts. The
+// speed integral changes distance/score and visible travel, never posture time.
+function routeDistanceAt(run,at){
+  const seconds=at-run.time;
+  return run.distance+15*seconds+5*Math.max(0,Math.min(at,run.biomeEffects.speedUntil)-run.time);
+}
+function retimeCourse(run){
+  for(const object of run.objects)if(finite(object.arrivalTime)&&object.arrivalTime>=run.time){
+    object.z=routeDistanceAt(run,object.arrivalTime);
+    if(finite(object.revealTime))object.revealAt=routeDistanceAt(run,object.revealTime);
+  }
+  for(const group of run.gateGroups.values())if(finite(group.arrivalTime)&&group.arrivalTime>=run.time)group.z=routeDistanceAt(run,group.arrivalTime);
+  for(const point of run.safeRoute)if(finite(point.arrivalTime)&&point.arrivalTime>=run.time)point.z=routeDistanceAt(run,point.arrivalTime);
+}
+function updateBiome(run){
+  if(!run.biomes)return;
+  run.biome=biomeAt(run.biomeIndex,run.time-run.biomeStartedAt,{portal:run.portalRest,restElapsed:run.biome?.restElapsed??0});
+}
+function enterPortal(run){
+  run.portalRest=true;run.phase='portal';run.accumulator=0;run.vx=0;run.vy=0;
+  run.objects=[];run.gateGroups.clear();run.safeRoute=[];run.foldPreview=null;
+  updateBiome(run);
+  emit(run,'course',{kind:'biome-portal',biome:run.biome.id,next:run.biome.nextId,origin:'biome'});
 }
 
 function spawnPattern(run) {
@@ -340,6 +384,22 @@ function collect(run, object) {
   if (object.type==='powerup' && run.vehicle) return false;
   object.active=false; object.collected=true; run.collectedIds.add(object.id);
   switch (object.type) {
+    case 'biome-pickup': {
+      const pickup=BIOMES.flatMap(b=>b.pickups).find(p=>p.id===object.kind);
+      if(!run.biomes||!pickup)return false;
+      const effect=pickup.benefit;
+      if(effect==='speed')run.biomeEffects.speedUntil=run.time+4;
+      if(effect==='magnet')run.biomeEffects.magnetUntil=run.time+8;
+      if(effect==='shield')run.shield=Math.min(run.effects.maxShield,run.shield+1);
+      if(effect==='lift')run.biomeEffects.liftUntil=run.time+8;
+      if(effect==='coins'||effect==='lift'){
+        const amount=effect==='coins'?12:6;run.coins+=amount;updateMissions(run,'coins',amount);
+        emit(run,'coin',{id:`${run.runId}:coin:${object.id}`,entityId:object.id,amount,origin:'biome'});
+      }
+      run.lastBiomePickup={id:pickup.id,name:pickup.name,benefit:effect,until:run.time+3};
+      emit(run,'powerup',{entityId:object.id,kind:pickup.id,benefit:effect,origin:'biome'});updateMissions(run,'pickups',1);
+      return true;
+    }
     case 'coin': {
       const amount=Math.max(1,Math.floor(object.value||1)+run.effects.coinBonus+(run.powerup?.family==='cash-dash'?1:0));
       run.coins+=amount;
@@ -465,7 +525,9 @@ function updateThreatStates(run) {
       object.x=b.x+(vertical ? object.gateStyle==='orbiting'?.035*Math.cos(phase):0 : Math.sign(b.x-point.x)*.075*outward);
       object.y=b.y+(vertical ? Math.sign(b.y-point.y)*.055*outward : object.gateStyle==='orbiting'?.035*Math.cos(phase):0);
     }
-    const ahead=object.z-run.distance;
+    // Canonical15-unit distance preserves authored warning/charge seconds when
+    // biome boosts alter actual travel distance. Collision/render still use z.
+    const ahead=run.biomes&&finite(object.arrivalTime)?(object.arrivalTime-run.time)*PACED_FLIGHT_TUNING.speed:object.z-run.distance;
     if ((object.type==='zapper'||object.type==='laser') && ahead <= object.warningLead && ahead >= -1 && !run.warnedGroups.has(object.patternId)) {
       run.warnedGroups.add(object.patternId);
       emit(run,'course',{entityId:object.patternId,kind:'hazard-warning',hazard:object.type,origin:'telegraph'});
@@ -500,7 +562,7 @@ function spawnDashCoin(run) {
 }
 
 const isHazard = object => ['zapper','laser','missile'].includes(object.type);
-const contactPriority = object => ['powerup','vehicle','component'].includes(object.type) ? 0 : isHazard(object) ? 2 : 1;
+const contactPriority = object => ['powerup','vehicle','component','biome-pickup'].includes(object.type) ? 0 : isHazard(object) ? 2 : 1;
 
 // Intersect the swept player with the object's complete depth slab and 2D
 // collision region. Looking only at its central z plane misses lateral entries.
@@ -510,7 +572,8 @@ function contactTime(run,object,from,to,after=0) {
   let hx,hy;
   if (isHazard(object)) {hx=object.w+radius;hy=object.h+radius;}
   else if (object.type==='coin') {
-    const magnet=run.powerup?.family==='cash-dash' ? run.powerup.effect.magnetRadius : run.effects.magnetRadius;
+    const magnet=Math.max(run.powerup?.family==='cash-dash' ? run.powerup.effect.magnetRadius : run.effects.magnetRadius,
+      run.biomes&&run.time<run.biomeEffects.magnetUntil ? .65 : 0);
     hx=hy=(object.radius||.09)+magnet;
   } else hx=hy=(object.radius||.12)+radius;
   for (const [a,b,center,half] of [[from.z,to.z,object.z,FLIGHT_TUNING.playerDepth],[from.x,to.x,object.x,hx],[from.y,to.y,object.y,hy]]) {
@@ -627,12 +690,14 @@ function vehicleControls(run,input,dt) {
 }
 
 function stepFlight(run, dt, input) {
+  if(run.biomes)retimeCourse(run);
   expireProtection(run);
   const virtual=vehicleControls(run,input,dt);
   const oldDistance=run.distance, oldX=run.x, oldY=run.y;
   const handling=currentVehicle(run)?.handling || {lateral:1,vertical:1,acceleration:1,damping:1,radius:0.085};
   run.level=Math.floor(run.distance/FLIGHT_TUNING.levelDistance);
-  run.speed=run.paced?PACED_FLIGHT_TUNING.speed:Math.min(FLIGHT_TUNING.maxSpeed,FLIGHT_TUNING.baseSpeed+run.level*FLIGHT_TUNING.speedPerLevel);
+  const boost=run.biomes&&dt>0?5*Math.min(dt,Math.max(0,run.biomeEffects.speedUntil-run.time))/dt:0;
+  run.speed=run.paced?PACED_FLIGHT_TUNING.speed+boost:Math.min(FLIGHT_TUNING.maxSpeed,FLIGHT_TUNING.baseSpeed+run.level*FLIGHT_TUNING.speedPerLevel);
   const rates=maxAxisRates(run), steer=clamp(input.steer,-1,1), height=clamp(virtual.height,0,1);
   const desiredVx=run.paced?clamp(((input.resting?0:steer*.8)-run.x)*4,-PACED_FLIGHT_TUNING.lateralSpeed,PACED_FLIGHT_TUNING.lateralSpeed):steer*rates.x;
   const horizontalDamping=steer===0 ? handling.damping : 1;
@@ -647,6 +712,7 @@ function stepFlight(run, dt, input) {
   run.time+=dt; run.distance+=run.speed*dt; run.score=Math.floor(run.distance); run.simTick++;
   if(run.paced){run.observedControlSeconds+=dt;if(input.resting===true)run.observedRestSeconds+=dt;}
   updatePace(run);
+  updateBiome(run);
   if(run.vehicle)updateMissions(run,'vehicleTime',dt);
   run.level=Math.floor(run.distance/FLIGHT_TUNING.levelDistance);
   if (run.powerup?.family==='cash-dash' && run.time<run.powerup.until) spawnDashCoin(run);
@@ -665,10 +731,15 @@ function stepFlight(run, dt, input) {
   updateMissions(run,'distance',Math.max(0,run.distance-oldDistance));
   for (const object of run.objects) if (object.active && object.z < run.distance-FLIGHT_TUNING.playerDepth-2) object.active=false;
   run.objects=run.objects.filter(object=>object.active || object.z>=run.distance-8);
+  if(run.biomes&&run.time-run.biomeStartedAt>=BIOME_SECONDS-1e-8)enterPortal(run);
 }
 
 /** Advance only on fresh, valid controls. Invalid pose freezes physics and all collectible credit. */
 export function advanceFlight(run, dt, input={height01:0.5,steer:0,valid:false}) {
+  if(run?.portalRest&&run.phase==='portal'){
+    if(finite(dt)&&dt>0){run.biome.restElapsed+=Math.min(dt,1);updateBiome(run);}
+    return run;
+  }
   if (!run || run.phase!=='flying') return run;
   if (!finite(dt) || dt<=0 || input?.valid!==true || !finite(input.height01) || !finite(input.steer)) return run;
   const safeDt=Math.min(dt,run.paced ? .75 : FLIGHT_TUNING.maxFrameDelta);
@@ -676,7 +747,8 @@ export function advanceFlight(run, dt, input={height01:0.5,steer:0,valid:false})
   const step=FLIGHT_TUNING.fixedStep;
   let ticks=0;
   while (run.accumulator+1e-10>=step && run.phase==='flying' && ticks<(run.paced?46:7)) {
-    stepFlight(run,step,input);
+    const actualStep=run.biomes?Math.min(step,Math.max(0,run.biomeStartedAt+BIOME_SECONDS-run.time)):step;
+    stepFlight(run,actualStep,input);
     run.accumulator-=step; ticks++;
   }
   if (run.accumulator<0) run.accumulator=0;
@@ -697,6 +769,15 @@ function clearThreatHorizon(run, horizon=24) {
 export function commandFlight(run, command, payload={}) {
   if (!run || run.phase==='finalized') return false;
   switch (command) {
+    case 'continue-biome':
+      if(!run.biomes||!run.portalRest||run.phase!=='portal'||run.biome.restElapsed<PORTAL_REST_SECONDS-1e-8)return false;
+      run.biomeIndex++;run.biomeStartedAt=run.time;run.paceTimeOrigin=run.time;run.paceOrigin=run.distance;
+      run.paceSchedule=createPaceSchedule((run.seed+Math.imul(run.biomeIndex,0x9e3779b9))>>>0);run.nextPaceIndex=0;
+      run.portalRest=false;run.phase='paused';run.accumulator=0;run.x=0;run.y=.04;run.vx=0;run.vy=0;
+      run.biomeEffects={speedUntil:0,magnetUntil:0,liftUntil:0};run.lastBiomePickup=null;
+      run.vehicleControl=null;run.foldPreview=null;run.biome=biomeAt(run.biomeIndex);run.warnedGroups.clear();
+      updatePace(run);ensureCourse(run);
+      emit(run,'course',{kind:'biome-continue',biome:run.biome.id,origin:'biome'});return true;
     case 'start':
       if (run.phase!=='ready') return false;
       run.loadout=normalizedLoadout(run.loadout,run.event); run.upgrades=normalizeUpgrades(run.upgrades); run.effects=effectsFor(run.loadout,run.upgrades);
@@ -740,7 +821,7 @@ export function commandFlight(run, command, payload={}) {
       emit(run,'course',{entityId:`${run.runId}:event-mode:${run.continuation}`,kind:'event-mode',enabled:run.event,origin:'utility'}); return true;
     case 'finish':
       if (run.phase==='finalized') return false;
-      run.phase='finalized'; run.accumulator=0;
+      run.phase='finalized'; run.portalRest=false;updateBiome(run);run.accumulator=0;
       if (!run.finishEventEmitted) { run.finishEventEmitted=true; emit(run,'course',{entityId:`${run.runId}:finish`,kind:'run-finish',coins:run.coins,distance:run.distance,origin:'lifecycle'}); }
       return true;
     default: return false;

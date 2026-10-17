@@ -181,6 +181,10 @@ export function createPlankInput(options = {}) {
         return invalid(now, 'Waiting for a newer camera frame.');
       }
       const dt = lastTime === null ? 0 : now - lastTime; lastTime = now;
+      // An explicit portal bay permits moving arms away from the calibrated
+      // hands. Keep anchors, never control/credit; validate the original camera
+      // and hand baseline again on the first frame after leaving the bay.
+      if(detail.portalRest===true){filtered=null;postureSince=null;resting=false;samples=[];return result(now,{reason:'Portal recovery. Relax your hands; return into view when ready.'});}
       if (dt > T.maxGapMs) {
         if (dt > T.resetGapMs) clearCalibration();
         return invalid(now, 'Camera paused. Hold steady while tracking returns.');

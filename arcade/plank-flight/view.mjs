@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { themeFor } from '../runner/themes.mjs';
 import { releaseGraphics } from '../../modules/graphics-lifecycle.mjs';
+import {createBiomeScene} from './biome-scene.mjs';
+import {BIOMES,PORTAL_REST_SECONDS} from './biomes.mjs';
+import {biomeTheme,COCKPIT_MARKUP,pickupGeometry} from './biome-visuals.mjs';
 
 const STYLE_ID = 'plank-flight-style';
 const SEGMENT_LENGTH = 12;
@@ -85,6 +88,7 @@ function buildDom(host, onAction) {
   const hud = document.createElement('div');
   hud.className = 'pf-hud';
   hud.innerHTML = `
+    <div class="pf-cockpit" hidden>${COCKPIT_MARKUP}</div>
     <header class="pf-topbar">
       <div class="pf-brand"><span class="pf-brand-mark" aria-hidden="true">✦</span><span>PLANK FLIGHT</span></div>
       <div class="pf-top-actions"><button type="button" class="pf-icon-button" data-act="recalibrate" aria-label="Recheck your form" title="Recheck form">↻</button><button type="button" class="pf-icon-button" data-act="pause" aria-label="Pause flight" title="Pause">Ⅱ</button><button type="button" class="pf-icon-button" data-act="exit" aria-label="Exit and turn camera off" title="Exit">×</button></div>
@@ -101,7 +105,10 @@ function buildDom(host, onAction) {
       <div class="pf-pace-time"><strong data-pace-remaining>0</strong><span>SEC</span></div>
       <div class="pf-pace-next"><span class="pf-pace-eyebrow">NEXT</span><strong data-pace-next></strong></div>
     </section>
+    <div class="pf-biome" data-biome-hud hidden><div><span data-biome-name></span><strong data-biome-section></strong></div><b data-biome-time></b><small data-biome-pickups></small></div>
     <div class="pf-live-mission" data-mission hidden></div>
+    <div class="pf-turn" data-turn hidden aria-live="polite"></div>
+    <div class="pf-pickup-toast" data-pickup-toast hidden role="status"></div>
     <div class="pf-fold-preview" data-fold-preview hidden role="status" aria-live="polite" aria-atomic="true"><i aria-hidden="true"></i><span>Next spot</span></div>
     <div class="pf-notice" data-notice aria-hidden="true" hidden></div>
     <span class="pf-sr" data-announcement role="status" aria-live="polite" aria-atomic="true"></span>
@@ -150,13 +157,15 @@ function buildDom(host, onAction) {
         .filter(i => i && (i.equipable !== false || ['vehicle', 'cosmetic'].includes(i.kind)));
       content = `<p class="pf-eyebrow">YOUR FLIGHT SETUP</p><h2>Choose equipment</h2><p>Your choices affect the game route only.</p><div class="pf-list">${itemsOwned.length ? itemsOwned.map(i => listButton(i, 'equip', equipped.has(i.id) ? 'aria-pressed="true"' : '')).join('') : '<p class="pf-empty">Equipment you own will appear here.</p>'}</div><button class="pf-link" type="button" data-act="back">Back</button>`;
     }
-    if(name==='welcome')content+='<button class="pf-link" type="button" data-act="exit">End workout and turn camera off</button>';
+    if(name==='portal')content=`<div class="pf-portal-seal" aria-hidden="true">MOM<br>INC.</div><p class="pf-eyebrow">BIOME ${Math.floor(finite(run.biome?.index))+1} COMPLETE · SAFE PORTAL BAY</p><h2>Shake it out.</h2><p>Lower down, relax your hands and shake your arms out. Flight and exercise credit are paused. Take as long as you need.</p><p class="pf-next-world">NEXT / ${esc(run.biome?.nextName ?? 'Your next world')}</p><button class="pf-primary" type="button" data-act="continue-biome">Continue to next biome</button><p class="pf-smallprint" data-portal-wait>Rest for a moment before continuing.</p><button class="pf-secondary" type="button" data-act="finish">Finish this flight</button><button class="pf-link" type="button" data-act="exit">End workout and turn camera off</button>`;
+    if(name==='welcome')content+='<p class="pf-smallprint">Six worlds · 90 seconds each · three sections · a shake-out portal between worlds. The route turns for you; keep facing your camera.</p><button class="pf-link" type="button" data-act="exit">End workout and turn camera off</button>';
     if(['pause','results'].includes(name))content+='<p class="pf-smallprint" data-progression></p>';
     panel.innerHTML = `<div class="pf-panel-scroll"><button type="button" class="pf-close" data-act="close-panel" aria-label="Close menu">×</button>${content}</div>`;
     panel.hidden = false;
     panel.dataset.view = name;
     panel.querySelectorAll('[data-act]').forEach(button => button.addEventListener('click', () => {
       const act = button.dataset.act;
+      if(act==='continue-biome'){action(act);if(run.phase!=='portal'){panelName='calibration';panel.hidden=true;}return;}
       if (act === 'menu-shop') { action('pause', { reason: 'menu' }); renderPanel('shop', latest, run); return; }
       if (act === 'menu-loadout') { action('pause', { reason: 'menu' }); renderPanel('loadout', latest, run); return; }
       if (act === 'back') { renderPanel(run.phase === 'finalized' ? 'results' : 'pause', latest, run); return; }
@@ -189,6 +198,26 @@ function buildDom(host, onAction) {
       latest = frame;
       currentRun = run;
       const pose = frame.pose ?? {};
+      const biome=run.biome;
+      root.dataset.biome=biome?.id??'';
+      root.dataset.section=String(biome?.section??0);
+      root.dataset.phase=run.phase;
+      const biomeHud=hud.querySelector('[data-biome-hud]');
+      biomeHud.hidden=!biome;
+      hud.querySelector('.pf-cockpit').hidden=biome?.id!=='asteroid';
+      if(biome){
+        hud.querySelector('[data-biome-name]').textContent=biome.name;
+        hud.querySelector('[data-biome-section]').textContent=`${biome.section+1}/3 · ${biome.sectionName}`;
+        hud.querySelector('[data-biome-time]').textContent=`${Math.ceil(biome.remaining)}s`;
+        const definition=BIOMES.find(b=>b.id===biome.id);
+        hud.querySelector('[data-biome-pickups]').textContent=definition?.pickups.map(p=>p.name).join(' · ')??'';
+      }
+      const turn=hud.querySelector('[data-turn]');
+      turn.hidden=!biome?.turn?.active||run.phase!=='flying';
+      turn.textContent=biome?.id==='asteroid'?'HYPERSPACE · NEXT SECTOR':'AUTO TURN · KEEP FACING CAMERA';
+      const pickup=hud.querySelector('[data-pickup-toast]');
+      pickup.hidden=!run.lastBiomePickup||run.lastBiomePickup.until<=run.time;
+      if(!pickup.hidden)pickup.textContent=`${run.lastBiomePickup.name} · ${({speed:'SPEED BOOST',magnet:'COIN PULL',shield:'SHIELD',coins:'COIN CACHE',lift:'LIFT + COINS'})[run.lastBiomePickup.benefit]??'ACTIVE'}`;
       const notice = hud.querySelector('[data-notice]');
       const message = frame.message || pose.prompt || '';
       const bad = !pose.controlValid || frame.paused;
@@ -291,11 +320,14 @@ function buildDom(host, onAction) {
       const eventText = run.event ? ` · EVENT TRACK ${Math.floor(finite(run.eventRewardProgress))}/${Math.floor(finite(run.eventRewardTarget,3))}${run.eventRewardClaimed ? ' · CACHE EARNED' : ' · 15 COIN CACHE'}` : '';
       mission.hidden = false;
       mission.textContent = `${rankText}${objective ? ` · GOAL ${objective.label ?? objective.name ?? title(objective.id)}${objective.target != null ? ` ${finite(objective.progress).toFixed(1)}/${objective.target}` : ''}` : ''}${eventText}`;
-      if (run.phase === 'crashed' && (panel.hidden || panelName !== 'crashed')) renderPanel('crashed', frame, run);
+      if (run.phase === 'portal' && (panel.hidden || panelName !== 'portal')) renderPanel('portal', frame, run);
+      else if (run.phase === 'crashed' && (panel.hidden || panelName !== 'crashed')) renderPanel('crashed', frame, run);
       else if (run.phase === 'finalized' && (panel.hidden || !['results', 'shop', 'loadout'].includes(panelName))) renderPanel('results', frame, run);
       else if (run.phase === 'ready' && panel.hidden && panelName === 'welcome') renderPanel('welcome', frame, run);
       else if (run.phase === 'paused' && panel.hidden && panelName!=='calibration') renderPanel('pause', frame, run);
       else if (run.phase === 'flying' && !frame.paused && ['welcome', 'pause', 'crashed'].includes(panelName)) panel.hidden = true;
+      const portalContinue=panel.querySelector('[data-act="continue-biome"]');
+      if(portalContinue){const wait=Math.max(0,Math.ceil(PORTAL_REST_SECONDS-finite(biome?.restElapsed)));portalContinue.disabled=wait>0;const text=panel.querySelector('[data-portal-wait]');if(text)text.textContent=wait?`Shake your arms out · ${wait}s`:'Ready when you are. Return into view; the next flight starts after a position check and countdown.';}
       const buyButtons = panel.querySelectorAll('[data-act="buy"]');
       for (const button of buyButtons) {
         const item = Array.isArray(frame.shopItems) ? frame.shopItems.find(v => v.id === button.dataset.id) : null;
@@ -350,10 +382,10 @@ function buildDom(host, onAction) {
   return ui;
 }
 
-function makeScene(THREE, theme) {
+function makeScene(THREE, theme, biome=null) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(theme.bg);
-  scene.fog = new THREE.Fog(theme.fog, 18, 88);
+  scene.fog = new THREE.Fog(theme.fog, biome&&['rainbow','asteroid','tropical','loopway'].includes(biome.id)?40:18, biome?126:88);
   const camera = new THREE.PerspectiveCamera(76, 1, .08, 130);
   const hemi = new THREE.HemisphereLight(theme.hemi[0], theme.hemi[1], 1.15);
   const key = new THREE.PointLight(theme.light, 18, 28, 1.7); key.position.set(0, 4.3, -13);
@@ -368,7 +400,7 @@ function makeScene(THREE, theme) {
   const sharedGeo = { wall: new THREE.BoxGeometry(5.6, .14, SEGMENT_LENGTH), floor: new THREE.BoxGeometry(5.6, .16, SEGMENT_LENGTH), side: new THREE.BoxGeometry(.14, 4.5, SEGMENT_LENGTH), rail: new THREE.BoxGeometry(.07, .08, SEGMENT_LENGTH), window: new THREE.BoxGeometry(.025, 1.15, 3.1), lamp: new THREE.BoxGeometry(1.1, .035, .55), rush: new THREE.BoxGeometry(.035, .04, 2.1) };
   sharedGeo.windowFrame = new THREE.BoxGeometry(.07, 1.24, .07);
   const corridor = [];
-  for (let i = 0; i < SEGMENT_COUNT; i++) {
+  for (let i = 0; i < (biome ? 0 : SEGMENT_COUNT); i++) {
     const group = new THREE.Group();
     const mesh = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); group.add(m); return m; };
     mesh(sharedGeo.floor, floorMat, 0, -.08, 0);
@@ -384,6 +416,8 @@ function makeScene(THREE, theme) {
     }
     scene.add(group); corridor.push(group);
   }
+  const biomeScene=biome?createBiomeScene(THREE,{id:biome.id,section:biome.section}):null;
+  if(biomeScene)scene.add(biomeScene.group);
   const mats = {
     coin: new THREE.MeshBasicMaterial({ color: '#ffe275', toneMapped: false }),
     zapper: new THREE.MeshBasicMaterial({ color: '#ffbd45', transparent: true, opacity: .78, toneMapped: false, side: THREE.DoubleSide }),
@@ -404,13 +438,21 @@ function makeScene(THREE, theme) {
     component: new THREE.TorusGeometry(.4, .1, 6, 16), token: new THREE.CylinderGeometry(.32, .32, .08, 12), npc: new THREE.IcosahedronGeometry(.43, 1)
   };
   const detailGeo = new THREE.TorusGeometry(.62, .035, 4, 20);
+  const pickupGeos=pickupGeometry(THREE);
+  if(biome){
+    const hazardColors={tropical:'#c07835',castle:'#e75524',rainbow:'#dfb8ff',loopway:'#a17b3d',laboratory:'#f9dd38',asteroid:'#7d8ba5'};
+    mats.zapper.color.set(hazardColors[biome.id]??'#ffbd45');
+    mats.zapper.opacity=['rainbow','asteroid'].includes(biome.id)?.28:.65;
+    if(biome.id==='asteroid'){mats.laser.color.set('#ff3c48');mats.missile.color.set('#7af7a5');}
+  }
   const objectSlots = [];
   for (let i = 0; i < OBJECT_LIMIT; i++) {
     const group = new THREE.Group();
     const main = new THREE.Mesh(geos.coin, mats.coin);
     const detail = new THREE.Mesh(detailGeo, mats.detail);
+    const pickupMat=new THREE.MeshStandardMaterial({color:theme.neon.warm,emissive:theme.neon.rail,emissiveIntensity:.22,roughness:biome?.id==='rainbow'?.12:.65,metalness:biome?.id==='rainbow'?.8:.15});
     group.add(main, detail); group.visible = false; scene.add(group);
-    objectSlots.push({ group, main, detail });
+    objectSlots.push({ group, main, detail,pickupMat });
   }
   const aperture = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.1, 32), new THREE.MeshBasicMaterial({ color: theme.neon.rail, transparent: true, opacity: .7, toneMapped: false, side: THREE.DoubleSide }));
   aperture.position.set(0, 2.1, -4.2); scene.add(aperture);
@@ -427,11 +469,14 @@ function makeScene(THREE, theme) {
     rush.add(streak);
   }
   rush.visible = false; scene.add(rush);
-  return { scene, camera, hemi, key, fill, corridor, objectSlots, aperture, exhaust, exhaustGeo, exhaustMat, rush, mats, geos, detailGeo, sharedGeo, wallMat, floorMat, wallMap, railMat, glassMat, glowMat, theme };
+  return { scene, camera, hemi, key, fill, corridor, objectSlots, aperture, exhaust, exhaustGeo, exhaustMat, rush, mats, geos, detailGeo, sharedGeo, wallMat, floorMat, wallMap, railMat, glassMat, glowMat, theme,biomeScene,pickupGeos };
 }
 
 function releaseScene(view) {
   if (!view) return;
+  view.biomeScene?.dispose();
+  for(const geometry of Object.values(view.pickupGeos??{}))geometry.dispose();
+  for(const slot of view.objectSlots??[])slot.pickupMat?.dispose();
   const { scene, mats, geos, detailGeo, sharedGeo, wallMat, floorMat, wallMap, railMat, glassMat, glowMat, aperture, exhaustGeo, exhaustMat } = view;
   scene.traverse(o => { if (o.isInstancedMesh) o.dispose?.(); });
   for (const mesh of [aperture]) { mesh.geometry.dispose(); mesh.material.dispose(); }
@@ -536,7 +581,7 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     setSize();
-    view = makeScene(THREE, themeFor(0));
+    view = makeScene(THREE, run.biome?biomeTheme(run.biome.id):themeFor(0),run.biome);
   } catch (error) { showFallback(error); }
   const onContextLost = event => { event.preventDefault(); showFallback('graphics context lost'); onAction('pause', { reason: 'graphics-lost' }); };
   ui.canvas.addEventListener('webglcontextlost', onContextLost, false);
@@ -549,10 +594,10 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
     if (stopped) return;
     try {
       ui.update(frame, run);
-      const theme = themeFor(Math.max(0, Math.floor(finite(run.level))));
+      const theme = run.biome?biomeTheme(run.biome.id):themeFor(Math.max(0, Math.floor(finite(run.level))));
       if (theme !== latestTheme) {
         latestTheme = theme; ui.setTheme(theme);
-        if (view && view.theme !== theme.name) { releaseScene(view); view = makeScene(THREE, theme); }
+        if (view && view.theme.name !== theme.name) { releaseScene(view); view = makeScene(THREE, theme,run.biome); }
       }
       const speed = Math.max(.05, finite(run.speed, 1));
       const selected = frame.profile?.selectedCosmetic;
@@ -581,7 +626,7 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
         ttc = Math.max(0, closest.ahead / speed);
         const state = String(closest.object.state ?? closest.object.kind ?? '').toLowerCase();
         const laserState = String(closest.object.laserState ?? '').toLowerCase();
-        label = closest.object.type === 'missile' ? (state.includes('lock') ? 'MISSILE LOCK' : state.includes('warn') ? 'MISSILE WARNING' : 'MISSILE ALERT') : closest.object.type === 'laser' ? (laserState === 'charging' ? 'LASER CHARGING' : laserState === 'active' ? 'LASER ACTIVE' : 'LASER AHEAD') : 'ENERGY FIELD';
+        label = closest.object.type === 'missile' ? (run.biome?.id==='asteroid'?'DODGE MISSILE · REST LOW':state.includes('lock') ? 'MISSILE LOCK' : state.includes('warn') ? 'MISSILE WARNING' : 'MISSILE ALERT') : closest.object.type === 'laser' ? (run.biome?.id==='asteroid'?'DODGE LASER · FOLLOW YOUR GATE':laserState === 'charging' ? 'LASER CHARGING' : laserState === 'active' ? 'LASER ACTIVE' : 'LASER AHEAD') : 'ENERGY FIELD';
         if (finite(run.effects?.warningLead) > 0) label = `SIGNAL · ${label}`;
         warning = `${label} · ${ttc.toFixed(1)}s`;
       }
@@ -611,6 +656,14 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
         const playerX = finite(run.x), playerY = finite(run.y, .5);
         camera.position.set(playerX * 2.12, .35 + playerY * 3.35, 0);
         camera.lookAt(camera.position.x, camera.position.y, -18);
+        const turn=run.biome?.turn;
+        const turnWave=turn?.active&&!mediaReduce?.matches?Math.sin(Math.PI*turn.progress):0;
+        const hyperspace=run.biome?.id==='asteroid'&&turnWave>0;
+        const boosted=finite(run.biomeEffects?.speedUntil)>run.time;
+        camera.fov=76+(hyperspace?turnWave*13:boosted&&!mediaReduce?.matches?4:0);camera.updateProjectionMatrix();
+        // Scenery bends; player hit geometry and camera facing remain aligned.
+        view.biomeScene?.update({distance:run.distance,time:run.time,section:run.biome?.section??0,speed,boost:boosted,turn:mediaReduce?.matches?null:turn});
+        if(view.biomeScene)view.biomeScene.group.rotation.y=turnWave*finite(turn?.direction,1)*.06;
         const offset = ((finite(run.distance) % SEGMENT_LENGTH) + SEGMENT_LENGTH) % SEGMENT_LENGTH;
         view.corridor.forEach((segment, index) => { segment.position.z = offset - (index * SEGMENT_LENGTH + SEGMENT_LENGTH / 2); });
         view.aperture.position.set(camera.position.x, camera.position.y, -4.5);
@@ -622,12 +675,14 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
           const ahead = finite(object.z) - finite(run.distance);
           const slot = view.objectSlots[slotIndex++];
           if (ahead < -.5 || ahead > 76) { slot.group.visible = false; continue; }
-          const type = ['coin', 'zapper', 'laser', 'missile', 'vehicle', 'powerup', 'component', 'token', 'npc'].includes(object.type) ? object.type : 'component';
+          const type = ['coin', 'zapper', 'laser', 'missile', 'vehicle', 'powerup', 'component', 'token', 'npc','biome-pickup'].includes(object.type) ? object.type : 'component';
           slot.group.visible = true;
           slot.group.position.set(finite(object.x) * 2.12, .35 + finite(object.y, .5) * 3.35, -ahead);
           slot.group.scale.set(1, 1, 1);
           const previewCoin = type === 'coin' && Number.isFinite(Number(object.revealAt)) && ahead > 3;
-          slot.main.geometry = view.geos[type]; slot.main.material = previewCoin ? view.mats.coinPreview : view.mats[type];
+          const themedPickup=type==='biome-pickup';
+          slot.main.geometry = themedPickup?(view.pickupGeos[object.shape]??view.pickupGeos[object.benefit]??view.geos.powerup):view.geos[type]; slot.main.material = themedPickup?slot.pickupMat:previewCoin ? view.mats.coinPreview : view.mats[type];
+          if(themedPickup){const colors={speed:'#ffb841',magnet:'#63efff',shield:'#9cff9e',coins:'#ffe56a',lift:'#f7a9ff'};slot.pickupMat.color.set(colors[object.benefit]??theme.neon.warm);}
           slot.detail.material = view.mats.detail;
           const w = Math.max(.01, 2 * finite(object.w, .18) * 2.12);
           const h = Math.max(.01, 2 * finite(object.h, .18) * 3.35);
@@ -635,21 +690,23 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
           else if (type === 'laser' || type === 'zapper') {
             slot.main.scale.set(w, h, 1); slot.detail.visible = false;
           } else {
-            slot.main.scale.set(1, 1, 1); slot.detail.visible = ['missile', 'vehicle', 'powerup', 'component', 'token'].includes(type);
+            slot.main.scale.set(1, 1, 1); slot.detail.visible = ['missile', 'vehicle', 'powerup', 'component', 'token','biome-pickup'].includes(type);
             slot.detail.geometry = view.detailGeo; slot.detail.scale.set(.82, .82, .82);
           }
           slot.main.rotation.set(0, 0, type === 'missile' ? Math.PI / 2 : 0);
+          if(themedPickup)slot.main.rotation.y=run.time*.9;
           slot.detail.rotation.set(0, 0, 0);
         }
         for (; slotIndex < view.objectSlots.length; slotIndex++) view.objectSlots[slotIndex].group.visible = false;
         view.hemi.intensity = mediaReduce?.matches ? .9 : 1.15;
         view.fill.color.set(theme.neon.rail);
         view.fill.position.set(camera.position.x, camera.position.y, -21);
-        const visualRush = Boolean(run.powerup?.effect?.visualRush) && finite(run.time) < finite(run.powerup.until);
+        const visualRush = boosted||hyperspace||(Boolean(run.powerup?.effect?.visualRush) && finite(run.time) < finite(run.powerup.until));
         view.rush.visible = visualRush;
         view.rush.position.set(camera.position.x, camera.position.y, 0);
+        view.rush.scale.z=hyperspace?5:1;
         view.mats.rush.opacity = mediaReduce?.matches ? .32 : .25 + .12 * (0.5 + 0.5 * Math.sin(finite(run.time) * 9));
-        view.exhaust.visible = Boolean(run.vehicle || run.powerup);
+        view.exhaust.visible = Boolean(run.vehicle || run.powerup||boosted||finite(run.biomeEffects?.liftUntil)>run.time);
         view.exhaust.scale.setScalar(visualRush ? 1.35 : 1);
         view.exhaust.position.set(camera.position.x, camera.position.y - .22, -.35);
         renderer.render(view.scene, camera);
