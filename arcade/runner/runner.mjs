@@ -44,10 +44,10 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
     else if(event.type==='dodge')show('Clear dodge!',850);
     else if(event.type==='punch')show('Smashed!',850);
   }
-  for(const event of run.feed.splice(0)){if(event.type==='warn')show('Coach is right behind you. Jog!',4000);if(event.type==='caught'){show('Coach caught you.',6000);chaser.classList.add('caught');caughtAt=now;}}
+  for(const event of run.feed.splice(0)){if(event.type==='warn')show(`${["Armie's shadow",'The monkey','The officer'][worldRun.world]} is right behind you. Jog!`,4000);if(event.type==='caught'){show(`${["Armie's shadow",'The monkey','The officer'][worldRun.world]} caught you.`,6000);chaser.classList.add('caught');caughtAt=now;}}
   const chase=run.status==='caught'?1:Math.max(run.chase,(run.pressure-.3)*.5);chaser.style.setProperty('--chase',chase.toFixed(3));worldRun.chase=chase;worldRun.pressure=run.pressure;worldRun.bumpCount=worldRun.stumbles;shadow.style.setProperty('--bumps',String(worldRun.stumbles));stopped.hidden=!(run.started&&!run.jogging&&run.status==='running');vortex.hidden=worldRun.phase!=='wormhole';
   if(worldRun.phase==='portal'&&say.hidden)show(worldRun.leg===0?'Halfway! Raise both arms to return through the portal.':'Raise both arms to enter the next world.',4000);
-  title.textContent=WORLDS[worldRun.world].name;route.textContent=`Pass ${worldRun.leg+1}/2 ? ${worldRun.leg?'Return':'Outbound'} ? ${Math.floor(worldRun.distance)} / 600 m${worldRun.elevation>.5?' - Rooftop':''}`;score.textContent=`${worldRun.coins} coins / ${Math.floor(worldRun.score)} score`;
+  title.textContent=WORLDS[worldRun.world].name;route.textContent=`Pass ${worldRun.leg+1}/2 | ${worldRun.leg?'Return':'Outbound'} | ${Math.floor(worldRun.distance)} / 600 m${worldRun.elevation>.5?' - Rooftop':''}`;score.textContent=`${worldRun.coins} coins / ${Math.floor(worldRun.score)} score`;
   const text=Object.entries(worldRun.powers).filter(([,n])=>n>0).map(([id,n])=>`${NAMES[id]} - ${Math.ceil(n)}s`).join('|');if(text!==lastBuffs){lastBuffs=text;buffs.replaceChildren(...text.split('|').filter(Boolean).map(t=>{const s=el('span');s.textContent=t;return s;}));}
   try{maze.render(worldRun,now/1000,run.started&&run.status==='running'&&worldRun.phase==='run');}catch(error){cancelAnimationFrame(raf);run.paused=true;show('Graphics interrupted. Finish this set and reopen Cool Cardio.',60000);console.warn('Cool Cardio rendering stopped:',error);}
   if(caughtAt&&now-caughtAt>3200){caughtAt=0;onCaught();}

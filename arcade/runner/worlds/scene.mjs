@@ -86,10 +86,10 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
     pursuer=new T.Group();pursuer.name=['armie-shadow','temple-monkey','metro-cop'][index];root.add(pursuer);pursuer.userData.limbs=[];
     const ink=0x252235;
     if(index===0){
-      const art=document.createElement('canvas');art.width=512;art.height=768;const c=art.getContext('2d');c.fillStyle='#171222c4';c.strokeStyle=c.fillStyle;c.lineCap='round';
+      const art=document.createElement('canvas');art.width=512;art.height=768;const c=art.getContext('2d');c.fillStyle='#07050bf2';c.strokeStyle=c.fillStyle;c.lineCap='round';
       // Five distinct splayed fingers, palm and forearm. The long shadow reaches forward from behind.
-      c.beginPath();c.ellipse(256,425,106,143,0,0,Math.PI*2);c.fill();
-      for(const [x,y,w] of [[84,253,37],[160,118,31],[245,71,32],[330,116,30],[408,210,29]]){c.lineWidth=w*2;c.beginPath();c.moveTo(256+(x-256)*.45,389);c.lineTo(x,y);c.stroke();}
+      c.beginPath();c.ellipse(256,463,101,119,0,0,Math.PI*2);c.fill();
+      for(const [x,y,startX,startY,w] of [[38,311,179,443,28],[137,119,202,393,27],[250,49,247,367,29],[362,115,293,391,26],[470,235,331,439,24]]){c.lineWidth=w*2;c.beginPath();c.moveTo(startX,startY);c.lineTo(x,y);c.stroke();}
       c.beginPath();c.moveTo(193,480);c.lineTo(181,768);c.lineTo(331,768);c.lineTo(317,480);c.fill();
       const texture=new T.CanvasTexture(art),material=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:T.DoubleSide});extras.push(texture,material);handShadow=new T.Mesh(new T.PlaneGeometry(7,13),material);geos.push(handShadow.geometry);handShadow.rotation.x=-Math.PI/2;handShadow.position.set(0,.065,-3);pursuer.add(handShadow);
     }else{
@@ -228,7 +228,7 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
     coach=new T.Group();root.add(coach);coach.visible=false;
     // Foundry Armie is exclusively a projected shadow, never a visible hand model.
     buildPursuer(index);
-    exitTunnel=new T.Group();exitTunnel.name='exit-tunnel';root.add(exitTunnel);exitTunnel.position.set(0,2.7,10);box(0,-2.82,7,8.6,.2,24,p.ground,exitTunnel,surface);
+    exitTunnel=new T.Group();exitTunnel.name='exit-tunnel';root.add(exitTunnel);exitTunnel.position.set(0,2.7,10);box(0,-2.82,7,8.6,.2,24,index===0?0xdac7a1:p.ground,exitTunnel,index===0?'stone':surface);
     for(let q=0;q<5;q++){const r=mesh(new T.TorusGeometry(3-q*.17,.075,5,32),q%2?0xf1c4ff:0xb17aee,0,0,q*2.2,exitTunnel,'gold');r.rotation.z=q*.3;}
     burst=new T.Group();burst.name='course-event-burst';root.add(burst);burst.visible=false;
     const shardGeo=new T.OctahedronGeometry(.16),shardMat=new T.MeshBasicMaterial({color:0xffcf82});geos.push(shardGeo);extras.push(shardMat);
