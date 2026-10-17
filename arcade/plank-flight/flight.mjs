@@ -78,5 +78,5 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
   return {run,action,get poseResult(){return pose},get creditAllowed(){return current()&&!renderFailed&&!manualPause&&!countdownUntil&&!document.hidden&&!pose?.resting&&pose?.posture!=='rest'&&run.phase==='flying'&&performance.now()-lastPose<=PLANK_TUNING.freshnessMs;},
     pose(detail){pose=detail?.flightPose??detail?.motion?.flightPose??null;lastPose=performance.now();if(!pose?.controlValid&&run.phase==='flying'){commandFlight(run,'pause');countdownUntil=0;}},
     stop(){if(dead)return;finish();dead=true;cancelAnimationFrame(raf);view.stop();void saveQueue.finally(()=>{wallet?.close();wallet=null;});},
-    get settled(){return saveQueue;}};
+    get renderStats(){return view.stats??null;},get settled(){return saveQueue;}};
 }

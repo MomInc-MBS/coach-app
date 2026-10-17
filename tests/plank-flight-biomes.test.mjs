@@ -17,7 +17,7 @@ test('six original biome definitions have three sections and three distinct bene
  for(let index=0;index<6;index++){
   const b=BIOMES[index];assert.equal(b.sections.length,3);assert.equal(b.pickups.length,3);assert.match(b.name,/MYR5|MOM Inc/);
   assert.equal(new Set(b.pickups.map(p=>p.benefit)).size,3);
-  for(const pickup of b.pickups)assert.ok(['speed','magnet','shield','coins','lift'].includes(pickup.benefit));
+  for(const pickup of b.pickups)assert.ok(['speed','magnet','shield','coins','lift','rainbow'].includes(pickup.benefit));
   for(const [elapsed,section]of [[0,0],[29.99,0],[30,1],[59.99,1],[60,2],[90,2]]){
    const state=biomeAt(index,elapsed);assert.equal(state.section,section);assert.equal(state.remaining,90-elapsed);
   }
@@ -74,10 +74,37 @@ test('all biome benefits collect once, grant no attack projectile, and never for
   if(pickup.benefit==='shield')assert.equal(run.shield,1);
   if(pickup.benefit==='magnet')assert.ok(run.biomeEffects.magnetUntil>run.time);
   if(pickup.benefit==='speed')assert.ok(run.biomeEffects.speedUntil>run.time);
+  if(pickup.benefit==='rainbow')assert.equal(run.biomeEffects.rainbowUntil,run.time+6);
   if(pickup.benefit==='coins')assert.equal(run.coins-before,12);
   if(pickup.benefit==='lift'){assert.equal(run.coins-before,6);assert.ok(run.biomeEffects.liftUntil>run.time);assert.equal(run.y,.4);}
   const coins=run.coins;inject(run,pickup);advanceFlight(run,1/60,{valid:true,height01:.4,steer:0});assert.equal(run.coins,coins);
   assert.ok(!run.objects.some(o=>o.type==='projectile'));
+ }
+});
+
+test('Rainbow Mode blocks every hazard without spending shields or vehicles, then exits safely and expires',()=>{
+ const rainbow=BIOMES[2].pickups.find(p=>p.benefit==='rainbow');
+ assert.ok(BIOMES[1].pickups.some(p=>p.benefit==='speed'),'castle includes genuine speed boost');
+ for(const reverse of [false,true]){
+  const run=start({vehicle:'foundry-walker'});run.objects=[];run.nextPaceIndex=1000;run.y=.4;run.shield=1;
+  inject(run,rainbow);
+  const hazard=(id,type,z=run.distance+.1)=>({id,type,active:true,z,x:0,y:.4,w:.5,h:.5,laserState:'active',warningLead:50,
+   state:'launched',targetX:0,targetY:.4,lockDistance:20,launchDistance:10});
+  run.objects.push(...['zapper','laser','missile'].map(type=>hazard(type,type)));
+  if(reverse)run.objects.reverse();
+  advanceFlight(run,1/60,{valid:true,height01:.4,steer:0});
+  const until=run.biomeEffects.rainbowUntil,health=run.vehicleHealth;
+  assert.equal(run.shield,1);assert.equal(run.vehicle,'foundry-walker');assert.equal(health,2);
+  assert.equal(run.hits,0);assert.ok(!run.events.some(e=>e.type==='hit'||e.type==='crash'));
+  assert.equal(run.speed,15);assert.equal(run.y,.4);assert.equal(run.coins,0);
+  assert.ok(!run.events.some(e=>e.type==='xp'));
+  run.time=until-.005;run.objects=[hazard('expiry-overlap','zapper',run.distance)];
+  advanceFlight(run,1/60,{valid:true,height01:.4,steer:0});
+  assert.equal(run.biomeEffects.rainbowUntil,0);assert.equal(run.hits,0);assert.equal(run.shield,1);assert.equal(run.vehicleHealth,health);
+  assert.equal(run.objects.find(o=>o.id==='expiry-overlap')?.active,false);
+  run.time=run.graceUntil+.1;run.objects=[hazard('later','zapper')];
+  advanceFlight(run,1/60,{valid:true,height01:.4,steer:0});
+  assert.equal(run.vehicleHealth,health-1,'ordinary collision protection resumes after timed rainbow expiry');
  }
 });
 

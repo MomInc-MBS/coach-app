@@ -79,6 +79,7 @@ export function createBiomeScene(THREE,{id='tropical',section=0}={}){
 
   const palette=['#ff2738','#ff8a24','#ffe629','#38ed72','#24dff0','#3478ff','#bd55ff'];
   const cubeMat=material('MeshStandardMaterial',{color:biome.mid,roughness:.76,metalness:.08});
+  const palmLeafMat=material('MeshStandardMaterial',{color:'#35a94d',roughness:.9,flatShading:true});
   const loopStoneMat=material('MeshStandardMaterial',{color:'#74523b',roughness:.92,flatShading:true});
   const rockMat=material('MeshStandardMaterial',{color:biome.dark,roughness:.9,flatShading:true});
   const glowMat=material('MeshBasicMaterial',{color:biome.glow});
@@ -105,7 +106,7 @@ export function createBiomeScene(THREE,{id='tropical',section=0}={}){
     addInstances(chunk,postGeo,colors.mid,[{x:-3.55,y:1.35,z:-4.8,s:[.8,2.8,.8]},{x:3.6,y:1.45,z:-9,s:[.8,3,.8]}]);
     const fronds=[];
     for(const [x,z] of [[-3.55,-4.8],[3.6,-9]])for(let leaf=0;leaf<5;leaf++)fronds.push({x,y:3.15+(leaf%2)*.13,z,s:[1.25,.12,.27],ry:leaf*Math.PI/5,rz:(leaf%2?.11:-.1)});
-    addInstances(chunk,box,colors.dark,fronds);
+    addInstances(chunk,box,palmLeafMat,fronds);
     addInstances(chunk,brickGeo,colors.light,[{x:-2.7,y:1.1,z:-6.1,s:[.5,2.2,.48]},{x:2.7,y:1.1,z:-6.1,s:[.5,2.2,.48]}]);
     if(variant===0)addInstances(chunk,box,colors.mid,[{x:-2.45,y:.16,z:-5.9,s:[.45,.25,4.8]},{x:-2.45,y:.31,z:-5.9,s:[.12,.12,4.8]}]); // dock planks
     if(variant===1)addInstances(chunk,box,colors.light,[{x:-2.72,y:1.55,z:-5.8,s:[.38,3.1,.4]},{x:2.72,y:1.55,z:-5.8,s:[.38,3.1,.4]},{x:-2.72,y:3.15,z:-5.8,s:[.38,.35,.4]},{x:2.72,y:3.15,z:-5.8,s:[.38,.35,.4]}]);
@@ -164,7 +165,8 @@ export function createBiomeScene(THREE,{id='tropical',section=0}={}){
   function addAsteroid(chunk,index,variant=0){
     addInstances(chunk,sphereGeo,rockMat,[{x:-3.8,y:1.3,z:-2,s:[1.2,.9,.8]},{x:3.6,y:3,z:-8,s:[1.3,1.1,1]},{x:-4.4,y:3.7,z:-10,s:[.7,.6,.6]}]);
     const rocks=addInstances(chunk,octaGeo,colors.mid,[{x:-3.6,y:2.5,z:-7,s:[.75,.9,.8]},{x:3.8,y:1.35,z:-3.8,s:[.8,.7,.9]}]);
-    if(rocks)rotating.push({object:rocks,axis:'y',rate:.23,base:index*.4});
+    // Batch origins stay fixed: rotating the whole instance batch would swing
+    // scenery from the shoulders into the player's collision-free corridor.
     const tracers=addInstances(chunk,beamGeo,colors.accent,[{x:-2.5,y:3.1,z:-2.2,s:[.035,.035,3.4]},{x:2.55,y:1.2,z:-9,s:[.03,.03,3.8]}]);
     if(tracers)animated.push({object:tracers,kind:'streak'});
     if(variant===1)addInstances(chunk,box,colors.mid,[{x:-3.3,y:3.8,z:-5,s:[1.2,.12,5]},{x:-3.9,y:3.4,z:-5,s:[.12,.85,.12]},{x:3.3,y:.55,z:-8,s:[1.2,.12,5]}]);
@@ -244,7 +246,7 @@ export function createBiomeScene(THREE,{id='tropical',section=0}={}){
     for(const item of animated){
       if(item.kind==='streak')item.object.userData.flowPhase=(d*flow)%CHUNK_LENGTH;
       else if(item.kind==='pod')item.object.rotation.y=Math.sin((Number(time)||0)*.4)*.035;
-      else if(item.kind==='core')item.object.rotation.y=(Number(time)||0)*.2;
+      else if(item.kind==='core')item.object.rotation.y=0;
     }
     if(stars)stars.position.z=(d%96)*.6;
     // Turn changes only the corridor's distant visual sweep; player controls stay independent.
@@ -254,6 +256,7 @@ export function createBiomeScene(THREE,{id='tropical',section=0}={}){
   let disposed=false;
   function dispose(){
     if(disposed)return;disposed=true;
+    group.traverse(object=>{if(object.isInstancedMesh)object.dispose?.();});
     group.removeFromParent?.();
     for(const item of geometries)item.dispose?.();
     for(const item of materials)item.dispose?.();

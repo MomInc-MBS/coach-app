@@ -217,7 +217,7 @@ function buildDom(host, onAction) {
       turn.textContent=biome?.id==='asteroid'?'HYPERSPACE · NEXT SECTOR':'AUTO TURN · KEEP FACING CAMERA';
       const pickup=hud.querySelector('[data-pickup-toast]');
       pickup.hidden=!run.lastBiomePickup||run.lastBiomePickup.until<=run.time;
-      if(!pickup.hidden)pickup.textContent=`${run.lastBiomePickup.name} · ${({speed:'SPEED BOOST',magnet:'COIN PULL',shield:'SHIELD',coins:'COIN CACHE',lift:'LIFT + COINS'})[run.lastBiomePickup.benefit]??'ACTIVE'}`;
+      if(!pickup.hidden)pickup.textContent=`${run.lastBiomePickup.name} · ${({speed:'SPEED BOOST',magnet:'COIN PULL',shield:'SHIELD',coins:'COIN CACHE',lift:'LIFT + COINS',rainbow:'6s PROTECTION'})[run.lastBiomePickup.benefit]??'ACTIVE'}`;
       const notice = hud.querySelector('[data-notice]');
       const message = frame.message || pose.prompt || '';
       const bad = !pose.controlValid || frame.paused;
@@ -296,6 +296,7 @@ function buildDom(host, onAction) {
       if (finite(effects.warningLead) > 0) marks.push('SIGNAL: EARLY WARNINGS');
       if (finite(effects.magnetRadius) > 0) marks.push('ORBIT MAGNET: PULL');
       if (run.powerup?.effect?.visualRush) marks.push('AFTERBURN: ACTIVE');
+      if (finite(run.biomeEffects?.rainbowUntil)>run.time)marks.push('RAINBOW MODE: PROTECTED');
       const effectsTarget = hud.querySelector('[data-effects]');
       const effectText = marks.join('  /  ');
       if (effectsTarget.textContent !== effectText) effectsTarget.textContent = effectText;
@@ -456,6 +457,7 @@ function makeScene(THREE, theme, biome=null) {
   }
   const aperture = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.1, 32), new THREE.MeshBasicMaterial({ color: theme.neon.rail, transparent: true, opacity: .7, toneMapped: false, side: THREE.DoubleSide }));
   aperture.position.set(0, 2.1, -4.2); scene.add(aperture);
+  aperture.visible=!biome;
   const exhaust = new THREE.Group();
   const exhaustGeo = new THREE.CylinderGeometry(.045, .15, 1.25, 7).rotateX(Math.PI / 2);
   const exhaustMat = new THREE.MeshBasicMaterial({ color: theme.neon.amber, transparent: true, opacity: .8, toneMapped: false });
@@ -545,7 +547,7 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
     width = Math.max(1, Math.round(rect.width || host.clientWidth || innerWidth));
     height = Math.max(1, Math.round(rect.height || host.clientHeight || innerHeight));
     if (renderer) {
-      renderer.setPixelRatio(Math.min(1.25, window.devicePixelRatio || 1));
+      renderer.setPixelRatio(run.biome?.id==='castle'?.66:Math.min(1.25, window.devicePixelRatio || 1));
       renderer.setSize(width, height, false);
       if (view) { view.camera.aspect = width / height; view.camera.updateProjectionMatrix(); }
     }
@@ -582,6 +584,7 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
     renderer.toneMappingExposure = 1.08;
     setSize();
     view = makeScene(THREE, run.biome?biomeTheme(run.biome.id):themeFor(0),run.biome);
+    setSize();
   } catch (error) { showFallback(error); }
   const onContextLost = event => { event.preventDefault(); showFallback('graphics context lost'); onAction('pause', { reason: 'graphics-lost' }); };
   ui.canvas.addEventListener('webglcontextlost', onContextLost, false);
@@ -597,7 +600,7 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
       const theme = run.biome?biomeTheme(run.biome.id):themeFor(Math.max(0, Math.floor(finite(run.level))));
       if (theme !== latestTheme) {
         latestTheme = theme; ui.setTheme(theme);
-        if (view && view.theme.name !== theme.name) { releaseScene(view); view = makeScene(THREE, theme,run.biome); }
+        if (view && view.theme.name !== theme.name) { releaseScene(view); view = makeScene(THREE, theme,run.biome);setSize(); }
       }
       const speed = Math.max(.05, finite(run.speed, 1));
       const selected = frame.profile?.selectedCosmetic;
@@ -660,6 +663,8 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
         const turnWave=turn?.active&&!mediaReduce?.matches?Math.sin(Math.PI*turn.progress):0;
         const hyperspace=run.biome?.id==='asteroid'&&turnWave>0;
         const boosted=finite(run.biomeEffects?.speedUntil)>run.time;
+        const rainbowMode=finite(run.biomeEffects?.rainbowUntil)>run.time;
+        ui.root.classList.toggle('is-rainbow-mode',rainbowMode);
         camera.fov=76+(hyperspace?turnWave*13:boosted&&!mediaReduce?.matches?4:0);camera.updateProjectionMatrix();
         // Scenery bends; player hit geometry and camera facing remain aligned.
         view.biomeScene?.update({distance:run.distance,time:run.time,section:run.biome?.section??0,speed,boost:boosted,turn:mediaReduce?.matches?null:turn});
@@ -701,12 +706,13 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
         view.hemi.intensity = mediaReduce?.matches ? .9 : 1.15;
         view.fill.color.set(theme.neon.rail);
         view.fill.position.set(camera.position.x, camera.position.y, -21);
-        const visualRush = boosted||hyperspace||(Boolean(run.powerup?.effect?.visualRush) && finite(run.time) < finite(run.powerup.until));
+        const visualRush = rainbowMode||boosted||hyperspace||(Boolean(run.powerup?.effect?.visualRush) && finite(run.time) < finite(run.powerup.until));
+        if(rainbowMode){view.mats.rush.color.setHSL((run.time*.08)%1,.85,.65);view.exhaustMat.color.copy(view.mats.rush.color);}else view.mats.rush.color.set(theme.neon.warm);
         view.rush.visible = visualRush;
         view.rush.position.set(camera.position.x, camera.position.y, 0);
         view.rush.scale.z=hyperspace?5:1;
         view.mats.rush.opacity = mediaReduce?.matches ? .32 : .25 + .12 * (0.5 + 0.5 * Math.sin(finite(run.time) * 9));
-        view.exhaust.visible = Boolean(run.vehicle || run.powerup||boosted||finite(run.biomeEffects?.liftUntil)>run.time);
+        view.exhaust.visible = Boolean(run.vehicle || run.powerup||boosted||rainbowMode||finite(run.biomeEffects?.liftUntil)>run.time);
         view.exhaust.scale.setScalar(visualRush ? 1.35 : 1);
         view.exhaust.position.set(camera.position.x, camera.position.y - .22, -.35);
         renderer.render(view.scene, camera);
@@ -730,5 +736,5 @@ export function mountFlightView({ host, run, onAction = () => {}, sound = () => 
     if (stylesheet && !document.querySelector('.plank-flight-host .plank-flight')) stylesheet.remove();
     return released;
   };
-  return { render, stop };
+  return { render, stop,get stats(){return renderer?{render:{...renderer.info.render},memory:{...renderer.info.memory}}:null;} };
 }

@@ -7,9 +7,9 @@ export const BIOMES=Object.freeze([
  {id:'tropical',name:'MYR5 Crate Coast',sections:['Palm Crate Pier','Mango Quarry','Sunset Cargo Run'],pickups:[
   pickup('pineapple-boost','Pineapple Turbo','speed','pineapple'),pickup('coconut-shield','Coconut Guard','shield','coconut'),pickup('tiki-magnet','Cargo Tiki','magnet','tiki')]},
  {id:'castle',name:'MOM Inc. Ember Bureau',sections:['Morale Drawbridge','Lava Compliance Hall','Executive Furnace'],pickups:[
-  pickup('morale-star','Morale Dividend','coins','star'),pickup('ember-ward','Compliance Ward','shield','crest'),pickup('spring-seal','Approved Uplift','lift','spring')]},
+  pickup('morale-star','Morale Dividend','coins','star'),pickup('ember-ward','Compliance Ward','shield','crest'),pickup('spring-seal','Furnace Turbo','speed','cell')]},
  {id:'rainbow',name:'MYR5 Prism Skyway',sections:['Spectrum Causeway','Cloud Ribbon','Prism Summit'],pickups:[
-  pickup('spectrum-boost','Spectrum Turbo','speed','crystal'),pickup('prism-magnet','Prism Collector','magnet','prism'),pickup('cloud-lift','Cloud Cushion','lift','cloud')]},
+  pickup('spectrum-boost','Spectrum Turbo','speed','crystal'),pickup('prism-magnet','Prism Collector','magnet','prism'),pickup('rainbow-mode','Rainbow Mode','rainbow','star')]},
  {id:'loopway',name:'MYR5 Ring Meadow',sections:['Green Ring Sprint','Loopway Orchard','Hilltop Gold Run'],pickups:[
   pickup('golden-ring','Meadow Dividend','coins','ring'),pickup('meadow-spring','Meadow Lift','lift','spring'),pickup('pollen-magnet','Pollen Collector','magnet','flower')]},
  {id:'laboratory',name:'MOM Inc. Lift Laboratory',sections:['Jetpack Intake','Unlicensed Innovation','Salary Escape Tunnel'],pickups:[

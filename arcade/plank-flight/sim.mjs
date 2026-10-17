@@ -140,7 +140,7 @@ export function createFlight({seed=1,runId,loadout=[],upgrades={},vehicle=null,c
     eventTokens:0, eventRewardProgress:0, eventRewardTarget:3, eventRewardClaimed:false, cleanGates:0, impactBuffer:effects.impactBuffer, lastCashDashCoinAt:-Infinity, crashEventEmitted:false, finishEventEmitted:false,
     paced:Boolean(paced),paceSchedule:paced?createPaceSchedule(normalizedSeed):null,paceOrigin:0,nextPaceIndex:0,pace:null,observedRestSeconds:0,observedControlSeconds:0,
     biomes:Boolean(biomes&&paced),biomeIndex:0,biomeStartedAt:0,paceTimeOrigin:0,portalRest:false,
-    biome:biomes&&paced?biomeAt():null,biomeEffects:{speedUntil:0,magnetUntil:0,liftUntil:0},lastBiomePickup:null,
+    biome:biomes&&paced?biomeAt():null,biomeEffects:{speedUntil:0,magnetUntil:0,liftUntil:0,rainbowUntil:0},lastBiomePickup:null,
   };
   if(run.paced){run.speed=PACED_FLIGHT_TUNING.speed;updatePace(run);}
   return run;
@@ -392,6 +392,7 @@ function collect(run, object) {
       if(effect==='magnet')run.biomeEffects.magnetUntil=run.time+8;
       if(effect==='shield')run.shield=Math.min(run.effects.maxShield,run.shield+1);
       if(effect==='lift')run.biomeEffects.liftUntil=run.time+8;
+      if(effect==='rainbow')run.biomeEffects.rainbowUntil=run.time+6;
       if(effect==='coins'||effect==='lift'){
         const amount=effect==='coins'?12:6;run.coins+=amount;updateMissions(run,'coins',amount);
         emit(run,'coin',{id:`${run.runId}:coin:${object.id}`,entityId:object.id,amount,origin:'biome'});
@@ -467,6 +468,7 @@ function currentVehicle(run) { return vehicleById(run.vehicle); }
 
 function hazardActive(run,object) {
   if (!object.active || object.type!=='zapper' && object.type!=='laser' && object.type!=='missile') return false;
+  if(run.biomes&&run.biomeEffects.rainbowUntil>0)return false;
   // Expiration is resolved after contacts for this bounded 1/60 s step, then
   // grants a clear exit. Never remove protection before an already-overlapping hit.
   if (run.powerup?.family==='cash-dash') return false;
@@ -484,6 +486,7 @@ function overlapAt(run,object,x,y) {
 }
 
 function takeHit(run, object) {
+  if(run.biomes&&run.biomeEffects.rainbowUntil>0)return;
   object.active=false;
   const group=object.patternId && run.gateGroups.get(object.patternId);
   if (group) group.hit=true;
@@ -608,6 +611,7 @@ function resolveContacts(run,from,to) {
 
 function expireProtection(run) {
   let exit=false;
+  if(run.biomes&&run.biomeEffects.rainbowUntil>0&&run.time>=run.biomeEffects.rainbowUntil){run.biomeEffects.rainbowUntil=0;exit=true;}
   if(run.vehicle&&run.vehicleUntil>0&&run.time>=run.vehicleUntil) {
     const old=run.vehicle;run.vehicle=null;run.vehicleUntil=0;run.vehicleHealth=0;exit=true;
     emit(run,'vehicle',{entityId:`${run.runId}:vehicle-expiry:${run.simTick}`,kind:old,action:'expired',origin:'timer'});
@@ -774,7 +778,7 @@ export function commandFlight(run, command, payload={}) {
       run.biomeIndex++;run.biomeStartedAt=run.time;run.paceTimeOrigin=run.time;run.paceOrigin=run.distance;
       run.paceSchedule=createPaceSchedule((run.seed+Math.imul(run.biomeIndex,0x9e3779b9))>>>0);run.nextPaceIndex=0;
       run.portalRest=false;run.phase='paused';run.accumulator=0;run.x=0;run.y=.04;run.vx=0;run.vy=0;
-      run.biomeEffects={speedUntil:0,magnetUntil:0,liftUntil:0};run.lastBiomePickup=null;
+      run.biomeEffects={speedUntil:0,magnetUntil:0,liftUntil:0,rainbowUntil:0};run.lastBiomePickup=null;
       run.vehicleControl=null;run.foldPreview=null;run.biome=biomeAt(run.biomeIndex);run.warnedGroups.clear();
       updatePace(run);ensureCourse(run);
       emit(run,'course',{kind:'biome-continue',biome:run.biome.id,origin:'biome'});return true;
