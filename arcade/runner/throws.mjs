@@ -41,16 +41,16 @@ export function createStriker(){
   };
 }
 // Three view: the coach at the far end, junk meshes, explode bursts and cut halves. pos(o) -> world Vector3.
-export function mountThrowsView(THREE,scene){
+export function mountThrowsView(THREE,scene,{showCoach=true}={}){
   const root=new THREE.Group();scene.add(root);
   const geo=new THREE.DodecahedronGeometry(1,0),junk=new THREE.BoxGeometry(1.4,.8,.9),bit=new THREE.BoxGeometry(.08,.08,.08);
   const mats=Object.fromEntries(Object.entries(TYPES).map(([k,[main,,light]])=>[k,new THREE.MeshStandardMaterial({color:main,emissive:light,emissiveIntensity:.35,roughness:.8,flatShading:true})]));
-  const meshes=new Map(),fx=[],holder=new THREE.Group();root.add(holder);let coach=null;
+  const meshes=new Map(),fx=[],holder=new THREE.Group();root.add(holder);holder.visible=showCoach;let coach=null;
   // The 3D clay coach from the site, stood up with the eyes toward the runner (as coach-3d coachElement does);
   // a purple clay capsule until (or if never) the GLB loads.
   const fallback=new THREE.Mesh(new THREE.CapsuleGeometry(.35,.9,4,8),new THREE.MeshStandardMaterial({color:'#8e5b99',roughness:.9,emissive:'#3a1a4a'}));holder.add(fallback);
   const key=new THREE.PointLight('#f3dcff',8,7,1.4);key.position.set(0,.4,1.4);holder.add(key);
-  import('./coach-3d.mjs').then(m=>m.loadCoach(THREE)).then(c=>{coach=c;const pivot=new THREE.Group(),stand=new THREE.Group();pivot.rotation.x=Math.PI/2;pivot.add(c.group);stand.rotation.set(0,0,Math.PI/2);stand.add(pivot);stand.scale.setScalar(1.7);holder.add(stand);fallback.visible=false;}).catch(()=>{});
+  if(showCoach)import('./coach-3d.mjs').then(m=>m.loadCoach(THREE)).then(c=>{coach=c;const pivot=new THREE.Group(),stand=new THREE.Group();pivot.rotation.x=Math.PI/2;pivot.add(c.group);stand.rotation.set(0,0,Math.PI/2);stand.add(pivot);stand.scale.setScalar(1.7);holder.add(stand);fallback.visible=false;}).catch(()=>{});
   const make=o=>{const m=new THREE.Mesh(o.type==='satellite-junk'?junk:geo,mats[o.type]);m.scale.setScalar(o.r);meshes.set(o.id,m);root.add(m);return m;};
   return {
     hit(o,pos){const m=meshes.get(o.id);if(!m)return;meshes.delete(o.id);

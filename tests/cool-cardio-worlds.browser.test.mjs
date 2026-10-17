@@ -69,14 +69,16 @@ test('Sakura Cool Cardio: actual app motion, gated portals, replay save and roof
   await set({bob:.025,crouch:.2});await page.waitForFunction(()=>window.myr5Runner.active.run.slideTime>0,null,{timeout:5000});
   await page.waitForTimeout(250);s=await run();assert.ok(s.duck>.8,'sliding '+JSON.stringify(s));await shot('5-crouch-slide');
   await set({bob:.025});await page.waitForTimeout(1200);
-  // Two actual arms-up gestures unlock the next two worlds, never grounded portal contact.
-  for(const expected of [1,2]){
+  // Two600m legs per biome: first portal mirrors the current area; second unlocks the next.
+  for(const [expected,leg] of [[0,1],[1,0],[1,1],[2,0]]){
     await set({bob:.025});await page.waitForTimeout(1100);
     await page.evaluate(()=>{const r=window.myr5Runner.active.worldRun;r.distance=600;r.phase='portal';r.jump=0;});
     await page.waitForTimeout(350);assert.equal(await page.evaluate(()=>window.myr5Runner.active.worldRun.phase),'portal');
     await set({bob:.025,up:true});await page.waitForFunction(()=>window.myr5Runner.active.worldRun.phase==='wormhole',null,{timeout:4000});
     assert.equal(await page.locator('.runner-vortex').isVisible(),true);
-    await page.waitForFunction(w=>window.myr5Runner.active.worldRun.world===w,expected,{timeout:5000});
+    await page.waitForFunction(({expected,leg})=>{const r=window.myr5Runner.active.worldRun;return r.phase==='run'&&r.world===expected&&r.leg===leg;},{expected,leg},{timeout:5000});
+    assert.equal(await page.evaluate(()=>window.myr5Runner.active.worldRun.mirrored),leg===1);
+    assert.match(await page.locator('.runner-hud small').textContent(),new RegExp('Pass '+(leg+1)+'/2'));
     assert.equal(await page.evaluate(()=>window.myr5Runner.active.worldRun.unlocked),expected);
     await set({bob:.025});
   }

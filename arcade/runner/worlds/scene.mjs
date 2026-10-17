@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {Pipeline} from './sakura/post.js';
 import {createSurfaceTexture} from './textures.mjs';
-import {METRO_BUSES,courseCoins,coursePickups,courseHazards,jumpHeight} from './course.mjs';
+import {courseBuses,courseCoins,coursePickups,courseHazards,jumpHeight} from './course.mjs';
 import {powerModel} from './power-art.mjs';
 
 // The same depth-ink/grade/FXAA pipeline used by Little Boyfriend; one renderer for runner and coach.
@@ -26,7 +26,7 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
   const sphere=(x,y,z,r,c,p)=>mesh(new T.SphereGeometry(r,10,7),c,x,y,z,p);
   const cylinder=(x,y,z,r,h,c,p,kind)=>mesh(new T.CylinderGeometry(r,r,h,12),c,x,y,z,p,kind);
   function branch(a,b,r,c,p,kind='wood'){const av=new T.Vector3(...a),bv=new T.Vector3(...b),m=cylinder(...av.clone().add(bv).multiplyScalar(.5).toArray(),r,av.distanceTo(bv),c,p,kind);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),bv.sub(av).normalize());return m;}
-  let segments=[],coins=[],obstacles=[],pickups=[],portal,coach,powerRig,world=-1,loop=-1;let routeVehicles=[],vfx={},coinInstances,coinStamps;const coinTransform=new T.Object3D();
+  let segments=[],coins=[],obstacles=[],pickups=[],portal,coach,powerRig,pursuer,handShadow,exitTunnel,burst,world=-1,loop=-1,leg=-1;let previousRun=null,lastRunTime=0,arrivalSerial=0,arrivalAt=-100,eventSerial=0,burstAt=-100,burstEvent=null;let routeVehicles=[],vfx={},coinInstances,coinStamps;const coinTransform=new T.Object3D();
   const extras=[];
   const palettes=[{sky:0x8f80b1,fog:0xc2accc,ground:0x4d365d,wall:0x80668e,trim:0xe5ba65},{sky:0xb9d6ba,fog:0xc4d4b4,ground:0x9b9675,wall:0xb6a47f,trim:0xd6c893},{sky:0xa5bcdc,fog:0xcfc9de,ground:0x777485,wall:0xf0c7bc,trim:0xe6b65f}];
   function disposeWorld(){for(const resource of extras.splice(0))resource.dispose();root.clear();geos.splice(0).forEach(g=>g.dispose());coins=[];obstacles=[];pickups=[];segments=[];routeVehicles=[];vfx={};}
@@ -82,8 +82,35 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
     });
     for(const b of batches.values()){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(b.position,3));g.setAttribute('normal',new T.Float32BufferAttribute(b.normal,3));g.setAttribute('uv',new T.Float32BufferAttribute(b.uv,2));g.setIndex(b.index);geos.push(g);for(const o of b.objects)o.removeFromParent();group.add(new T.Mesh(g,b.material));}
   }
-  function build(index,round=0){
-    world=index;loop=round;disposeWorld();surface=['metal','stone','plaster'][index];const p=palettes[index];const sky=document.createElement('canvas');sky.width=4;sky.height=256;const sc=sky.getContext('2d'),sg=sc.createLinearGradient(0,0,0,256);sg.addColorStop(0,['#8272a5','#91b7ab','#91adcb'][index]);sg.addColorStop(.6,['#c4a7c3','#d2d8ad','#d8c7cf'][index]);sg.addColorStop(1,'#f7dbc2');sc.fillStyle=sg;sc.fillRect(0,0,4,256);const skyMap=new T.CanvasTexture(sky);skyMap.colorSpace=T.SRGBColorSpace;extras.push(skyMap);scene.background=skyMap;scene.fog=new T.Fog(p.fog,35,155);
+  function buildPursuer(index){
+    pursuer=new T.Group();pursuer.name=['armie-shadow','temple-monkey','metro-cop'][index];root.add(pursuer);pursuer.userData.limbs=[];
+    const ink=0x252235;
+    if(index===0){
+      const art=document.createElement('canvas');art.width=512;art.height=768;const c=art.getContext('2d');c.fillStyle='#171222c4';c.strokeStyle=c.fillStyle;c.lineCap='round';
+      // Five distinct splayed fingers, palm and forearm. The long shadow reaches forward from behind.
+      c.beginPath();c.ellipse(256,425,106,143,0,0,Math.PI*2);c.fill();
+      for(const [x,y,w] of [[84,253,37],[160,118,31],[245,71,32],[330,116,30],[408,210,29]]){c.lineWidth=w*2;c.beginPath();c.moveTo(256+(x-256)*.45,389);c.lineTo(x,y);c.stroke();}
+      c.beginPath();c.moveTo(193,480);c.lineTo(181,768);c.lineTo(331,768);c.lineTo(317,480);c.fill();
+      const texture=new T.CanvasTexture(art),material=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:T.DoubleSide});extras.push(texture,material);handShadow=new T.Mesh(new T.PlaneGeometry(7,13),material);geos.push(handShadow.geometry);handShadow.rotation.x=-Math.PI/2;handShadow.position.set(0,.065,-3);pursuer.add(handShadow);
+    }else{
+      const torso=new T.Group();pursuer.add(torso);
+      if(index===1){
+        const body=sphere(0,1.7,0,.9,ink,torso);body.scale.set(1,1.3,.7);sphere(0,2.9,0,.7,ink,torso);
+        for(const side of [-1,1]){sphere(side*.73,2.9,0,.34,ink,torso);sphere(side*.29,3.02,-.61,.18,0xffe5a6,torso);sphere(side*.29,3.02,-.77,.075,0xce6796,torso);}
+        const mouth=sphere(0,2.62,-.58,.4,0xc67e88,torso);mouth.scale.set(1,.65,.5);
+        for(const side of [-1,1])mesh(new T.ConeGeometry(.09,.28,4),0xffe7c0,side*.19,2.67,-.8,torso,'stone').rotation.z=Math.PI;
+        const tail=mesh(new T.TorusGeometry(.9,.11,5,18,Math.PI*1.7),ink,.85,1.7,.4,torso);tail.rotation.y=.7;
+      }else{
+        box(0,1.85,0,1.15,1.45,.62,ink,torso,'metal');sphere(0,2.95,0,.43,ink,torso);
+        cylinder(0,3.28,0,.52,.22,ink,torso,'metal');box(0,3.2,-.4,1.12,.12,.42,ink,torso,'metal');box(-.3,2.1,-.33,.2,.25,.04,0xffd269,torso,'gold');box(0,1.25,0,1.3,.16,.7,0x454054,torso,'metal');
+      }
+      batchStatic(torso);
+      for(const side of [-1,1])for(const arm of [true,false]){const g=new T.Group();pursuer.add(g);g.position.set(side*(arm?(index===1?.76:.67):.36),arm?2.25:1.15,0);const length=arm?(index===1?1.65:1.05):1.1;branch([0,0,0],[side*(arm?.22:.1),-length,.12],arm?.18:.22,ink,g,'metal');sphere(side*(arm?.22:.1),-length,.12,.23,ink,g);if(index===2&&arm&&side===1)branch([.2,-.7,0],[.2,-1.55,0],.08,ink,g,'metal');batchStatic(g);g.userData={side,arm};pursuer.userData.limbs.push(g);}
+      pursuer.rotation.y=0;
+    }
+  }
+  function build(index,round=0,routeLeg=0){
+    world=index;loop=round;leg=routeLeg;disposeWorld();surface=['metal','stone','plaster'][index];const p=palettes[index];const sky=document.createElement('canvas');sky.width=4;sky.height=256;const sc=sky.getContext('2d'),sg=sc.createLinearGradient(0,0,0,256);sg.addColorStop(0,['#8272a5','#91b7ab','#91adcb'][index]);sg.addColorStop(.6,['#c4a7c3','#d2d8ad','#d8c7cf'][index]);sg.addColorStop(1,'#f7dbc2');sc.fillStyle=sg;sc.fillRect(0,0,4,256);const skyMap=new T.CanvasTexture(sky);skyMap.colorSpace=T.SRGBColorSpace;extras.push(skyMap);scene.background=skyMap;scene.fog=new T.Fog(p.fog,35,155);
     // Three different spatial languages: cylindrical foundry, open ravine ruins, asymmetric rail yard.
     if(index===1){box(0,-9,-65,200,.5,220,0x365f60,root,'moss');}
     else if(index===2)box(0,-.55,-65,200,.7,220,0x8b8295,root,'ballast');
@@ -152,15 +179,15 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
         if(s%3===0){branch([-5,0,-6],[-5,7,-6],.14,0x62526e,g,'metal');branch([5,0,-6],[5,7,-6],.14,0x62526e,g,'metal');box(0,7,-6,10,.2,.2,0x62526e,g,'metal');}
       }
     }
-    if(index===2)for(const b of METRO_BUSES){const g=new T.Group();root.add(g);g.userData.route=b;routeVehicles.push(g);g.position.set(b.lane*2.8,0,-(b.rampEnd+b.roofEnd)/2);buildBus(b,g);}
-    for(const item of courseCoins(index)){
+    if(index===2)for(const b of courseBuses(index,routeLeg)){const g=new T.Group();root.add(g);g.userData.route=b;routeVehicles.push(g);g.position.set(b.lane*2.8,0,-(b.rampEnd+b.roofEnd)/2);buildBus(b,g);}
+    for(const item of courseCoins(index,routeLeg)){
       const c=mesh(new T.CylinderGeometry(.22,.22,.075,16),0xffd269,item.lane*2.8,item.height,-item.distance);c.rotation.x=Math.PI/2;c.userData=item;coins.push(c);
       const stamp=mesh(new T.TorusGeometry(.13,.025,4,12),0xf6e5aa,0,.045,0,c,'gold');stamp.rotation.x=Math.PI/2;
     }
     if(coins.length){
       coinInstances=new T.InstancedMesh(coins[0].geometry,coins[0].material,coins.length);coinStamps=new T.InstancedMesh(coins[0].children[0].geometry,coins[0].children[0].material,coins.length);coinInstances.frustumCulled=coinStamps.frustumCulled=false;root.add(coinInstances,coinStamps);for(const c of coins)c.removeFromParent();
     }
-    for(const [i,item] of courseHazards(index,round).entries()){
+    for(const [i,item] of courseHazards(index,round,routeLeg).entries()){
       const g=new T.Group();root.add(g);g.position.set(item.lane*2.8,item.elevation||0,-item.distance);g.userData=item;
       if(index===0){
         if(item.type==='slide'){const rotor=cylinder(0,1.5,0,.45,2.6,p.trim,g,'gold');rotor.rotation.z=Math.PI/2;branch([-1.1,0,0],[-1.1,1.5,0],.09,0x80668e,g,'metal');}
@@ -175,14 +202,14 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
       batchStatic(g);obstacles.push(g);
     }
     const labels={headstart:'HEAD START',magnet:'MAGNET',shield:'SHIELD',boost:'DASH',superJump:'JUMP SHOES',recovery:'WINGS',phase:'PHASE',doubleCoins:'COIN x2',coinTier:'COIN x3',jetpack:'JETPACK',board:'BOARD',scoreBoost:'SCORE x2',pogo:'POGO'};
-    for(const item of coursePickups(index)){
+    for(const item of coursePickups(index,routeLeg)){
       const m=new T.Group();root.add(m);m.position.set(item.lane*2.8,item.height,-item.distance);m.userData=item;pickups.push(m);
       powerModel(T,item.kind,{mesh,box,cylinder,sphere},m);
       const halo=mesh(new T.TorusGeometry(.62,.035,5,24),0xfff1b8,0,0,-.1,m,'gold');halo.rotation.x=.2;
       const art=document.createElement('canvas');art.width=256;art.height=64;const ctx=art.getContext('2d');ctx.fillStyle='#30213ee8';ctx.fillRect(0,0,256,64);ctx.fillStyle='#fff0c2';ctx.font='bold 26px sans-serif';ctx.textAlign='center';ctx.fillText(labels[item.kind],128,42);
-      const texture=new T.CanvasTexture(art);texture.colorSpace=T.SRGBColorSpace;const material=new T.SpriteMaterial({map:texture,depthTest:false});extras.push(texture,material);const badge=new T.Sprite(material);badge.scale.set(1.65,.41,1);badge.position.y=.9;m.add(badge);
+      const texture=new T.CanvasTexture(art);texture.colorSpace=T.SRGBColorSpace;const material=new T.SpriteMaterial({map:texture,depthTest:false});extras.push(texture,material);const badge=new T.Sprite(material);badge.scale.set(1.65,.41,1);badge.position.y=.9;m.add(badge);batchStatic(m);
     }
-    for(const g of segments)batchStatic(g);for(const g of routeVehicles)batchStatic(g);
+    for(const g of segments){g.scale.x=routeLeg===1?-1:1;batchStatic(g);}for(const g of routeVehicles)batchStatic(g);
     powerRig=new T.Group();root.add(powerRig);
     for(const id of ['shield','board','superJump','magnet','boost','phase','jetpack','recovery']){const group=new T.Group();powerRig.add(group);vfx[id]=group;}
     for(const id of ['shield','phase','recovery']){const r=mesh(new T.TorusGeometry(.95,.025,5,40),id==='phase'?0xc39afa:0xffd269,0,0,-1.2,vfx[id],'gold');r.scale.y=.8;}
@@ -199,20 +226,49 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
     const disk=mesh(new T.CircleGeometry(2.6,60),0x6a3d99,0,0,-.1,portal);disk.material=new T.MeshBasicMaterial({color:0x8651d5,transparent:true,opacity:.78,side:T.DoubleSide});extras.push(disk.material);
     for(let i=0;i<12;i++){const a=i/12*Math.PI*2;mesh(new T.OctahedronGeometry(.13),0xffe6b6,Math.cos(a)*3.2,Math.sin(a)*3.2,0,portal);}
     coach=new T.Group();root.add(coach);coach.visible=false;
-    // Production supplies the existing Coach Armie asset; there is no substitute character.
-    if(coachFactory){const target=coach;coachFactory(T).then(model=>{if(target.parent!==root){model.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();const mm=Array.isArray(o.material)?o.material:[o.material];mm.forEach(m=>{m.map?.dispose();m.dispose();});}});return;}target.add(model.group);model.group.scale.setScalar(3);model.group.rotation.z=-Math.PI/2;model.group.position.y=1.8;target.userData.tick=model.tick;model.group.traverse(o=>{if(o.isMesh){geos.push(o.geometry);const mm=Array.isArray(o.material)?o.material:[o.material];mm.forEach(m=>{extras.push(m);if(m.map)extras.push(m.map);});}});}).catch(()=>{});}
+    // Foundry Armie is exclusively a projected shadow, never a visible hand model.
+    buildPursuer(index);
+    exitTunnel=new T.Group();exitTunnel.name='exit-tunnel';root.add(exitTunnel);exitTunnel.position.set(0,2.7,10);box(0,-2.82,7,8.6,.2,24,p.ground,exitTunnel,surface);
+    for(let q=0;q<5;q++){const r=mesh(new T.TorusGeometry(3-q*.17,.075,5,32),q%2?0xf1c4ff:0xb17aee,0,0,q*2.2,exitTunnel,'gold');r.rotation.z=q*.3;}
+    burst=new T.Group();burst.name='course-event-burst';root.add(burst);burst.visible=false;
+    const shardGeo=new T.OctahedronGeometry(.16),shardMat=new T.MeshBasicMaterial({color:0xffcf82});geos.push(shardGeo);extras.push(shardMat);
+    const shards=new T.InstancedMesh(shardGeo,shardMat,24);shards.frustumCulled=false;burst.add(shards);burst.userData.shards=shards;
+    const burstRing=mesh(new T.TorusGeometry(.65,.055,5,24),0x8fffd4,0,.7,0,burst,'gold');burst.userData.ring=burstRing;
+    burst.userData.labels={};
+    for(const [key,label] of Object.entries({hit:'IMPACT!',punch:'SMASH!',dodge:'CLEAN DODGE'})){
+      const art=document.createElement('canvas');art.width=512;art.height=96;const c=art.getContext('2d');c.font='900 54px sans-serif';c.textAlign='center';c.lineWidth=9;c.strokeStyle='#271d3c';c.strokeText(label,256,68);c.fillStyle=key==='dodge'?'#a2ffdb':'#ffdd8c';c.fillText(label,256,68);
+      const texture=new T.CanvasTexture(art);texture.colorSpace=T.SRGBColorSpace;const material=new T.SpriteMaterial({map:texture,transparent:true,depthTest:false});extras.push(texture,material);const badge=new T.Sprite(material);badge.scale.set(3.8,.72,1);badge.position.y=2.1;burst.add(badge);burst.userData.labels[key]=badge;
+    }
 
   }
   let coachMode=false;
   function render(run,time,active){
-    if(world!==run.world||loop!==(run.loop||0))build(run.world,run.loop||0);const d=run.distance;
-    for(let i=0;i<segments.length;i++)segments[i].position.z=-i*18+(d%18);
+    if(previousRun!==run||(run.time||0)<lastRunTime){previousRun=run;eventSerial=0;arrivalSerial=run.arrivalSerial||0;arrivalAt=-100;burstAt=-100;burstEvent=null;}lastRunTime=run.time||0;
+    if(world!==run.world||loop!==(run.loop||0)||leg!==(run.leg||0))build(run.world,run.loop||0,run.leg||0);const d=run.distance;
+    for(let i=0;i<segments.length;i++){segments[i].position.z=-i*18+(d%18);segments[i].visible=segments[i].position.z>-145;}
     const quiet=matchMedia('(prefers-reduced-motion:reduce)').matches;
     const flight=run.powers?.jetpack>0;
     camera.position.lerp(new T.Vector3(coachMode?0:run.lane*2.8,coachMode?2.7:1.8+(run.elevation||0)+(flight?3:jumpHeight(run))-(run.slide>0?.85:0),coachMode?6:3),.18);
     camera.lookAt(coachMode?0:camera.position.x*.7,coachMode?1.5:camera.position.y-.08,coachMode?-3:-40);
     if(!quiet&&active&&!coachMode)camera.rotation.z=Math.sin(time*9)*.008;
-    coach.visible=coachMode;coach.position.set(0,0,-2);coach.rotation.y=Math.sin(time*.5)*.25;coach.userData.tick?.(time*1000,{pressure:.3});
+    coach.visible=false;
+    if((run.arrivalSerial||0)!==arrivalSerial){arrivalSerial=run.arrivalSerial||0;arrivalAt=time;}
+    const arrivalAge=time-arrivalAt,lookback=active&&!coachMode&&arrivalAge<2.1;
+    // A short view back through the exit tunnel, then a gentle forward recovery. Controls stay live.
+    if(lookback&&!quiet){const back=arrivalAge<1.25?1:Math.max(0,1-(arrivalAge-1.25)/.85);camera.rotation.set(0,-Math.PI*back,0);}
+    exitTunnel.visible=lookback;exitTunnel.position.z=8+d*.2;
+    pursuer.visible=!coachMode;pursuer.position.set(Math.sin(time*4)*.16,quiet?0:Math.abs(Math.sin(time*8))*.12,lookback?exitTunnel.position.z+5:8);
+    if(world===0){const bumps=run.bumpCount??run.stumbles??0,size=1+bumps*.14;handShadow.scale.set(size,size,1);pursuer.position.z=1.5-bumps*.35;handShadow.position.x=run.lane*.7;handShadow.position.z=lookback?exitTunnel.position.z+7-pursuer.position.z:-3;}
+    else for(const limb of pursuer.userData.limbs)limb.rotation.x=quiet?0:Math.sin(time*9+(limb.userData.side>0?0:Math.PI)+(limb.userData.arm?Math.PI:0))*(limb.userData.arm?.9:.7);
+    const events=(run.events||[run.lastEvent]).filter(Boolean);
+    for(const event of events){if((event.serial||run.eventSerial||0)<=eventSerial)continue;eventSerial=event.serial||run.eventSerial; if(event.world!==world||(event.leg||0)!==leg)continue;burstEvent=event;burstAt=time;}
+    const age=time-burstAt;burst.visible=!coachMode&&!!burstEvent&&age<.7;
+    if(burst.visible){const dodge=burstEvent.type==='dodge';burst.position.set((burstEvent.lane||0)*2.8,burstEvent.elevation||0,Math.min(-2,d-burstEvent.distance-3));
+      for(const [key,badge] of Object.entries(burst.userData.labels)){badge.visible=key===burstEvent.type;badge.material.opacity=Math.max(0,1-age/.7);badge.position.y=2+age;}
+      const shards=burst.userData.shards;shards.visible=!dodge;shards.material.color.setHex(burstEvent.type==='punch'?0xffd269:0xf3a18d);
+      for(let i=0;i<24;i++){const a=i*2.39996,v=2+(i%5)*.7;coinTransform.position.set(Math.cos(a)*age*v,.8+Math.sin(i*1.7)*age*v+age*2-age*age*4,Math.sin(a)*age*v);coinTransform.rotation.set(age*i,age*(i%3),a);coinTransform.scale.setScalar(Math.max(0,1-age/.7));coinTransform.updateMatrix();shards.setMatrixAt(i,coinTransform.matrix);}shards.instanceMatrix.needsUpdate=true;
+      const r=burst.userData.ring;r.visible=dodge;r.material.color.setHex(0x8fffd4);r.scale.setScalar(1+age*2.5);
+    }
     portal.visible=run.distance>470&&!coachMode;portal.position.z=-Math.max(3,600-d);portal.rotation.z=quiet?0:time*.2;
     portal.children[0].scale.setScalar(1+Math.sin(time*3)*.025);
     for(const g of routeVehicles)g.position.z=d-(g.userData.route.rampEnd+g.userData.route.roofEnd)/2;
@@ -224,7 +280,7 @@ export function createWorldScene(canvas,{beforeRender=()=>{},coachFactory=null}=
       coinTransform.rotation.set(Math.PI,time*2,0);coinTransform.position.z+=.045;coinTransform.updateMatrix();coinStamps.setMatrixAt(i,coinTransform.matrix);
     }
     if(coinInstances){coinInstances.instanceMatrix.needsUpdate=true;coinStamps.instanceMatrix.needsUpdate=true;}
-    for(const o of obstacles){o.position.z=d-o.userData.distance;o.visible=!coachMode&&o.position.z<4&&o.position.z>-160;}
+    for(const o of obstacles){o.position.z=d-o.userData.distance;o.visible=!coachMode&&!run.destroyed?.[o.userData.id]&&o.position.z<4&&o.position.z>-160;}
     for(const p of pickups){p.position.z=d-p.userData.distance;p.rotation.y=quiet?0:Math.sin(time)*.3;p.position.y=p.userData.height+(quiet?0:Math.sin(time*2)*.12);p.visible=!coachMode&&!run.collected[p.userData.id]&&p.position.z<4&&p.position.z>-160;}
     beforeRender(scene,camera);pipeline.render();
   }

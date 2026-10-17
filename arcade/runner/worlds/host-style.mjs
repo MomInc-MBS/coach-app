@@ -8,9 +8,7 @@ const CSS=`#cameraWorkout.runner-on>video{inset:auto;right:6px;bottom:max(6px,en
 #cameraWorkout .runner-flash{position:absolute;inset:0;background:radial-gradient(ellipse at center,#ff001840 20%,#ff0018ee);opacity:0}
 #cameraWorkout .runner-flash.on{animation:runner-flash .9s ease-out}
 @keyframes runner-flash{from{opacity:1}to{opacity:0}}
-#cameraWorkout .runner-chaser{position:absolute;left:50%;bottom:0;width:0;height:0;transition:transform .25s linear;transform:translateY(calc((1 - var(--chase,0)) * 70vh))}
-#cameraWorkout .runner-chaser .ar-coach-hand{position:absolute;left:0;top:0;transform:translate(-50%,-40vh) rotate(-90deg);filter:drop-shadow(0 0 18px #000);transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
-#cameraWorkout .runner-chaser.caught .ar-coach-hand{transform:translate(-50%,-55vh) rotate(-90deg) scale(2)}
+#cameraWorkout .runner-chaser{display:none}
 #cameraWorkout .runner-say{position:absolute;z-index:4;top:calc(max(24px,env(safe-area-inset-top)) + 110px);left:8px;right:8px;display:flex;justify-content:center;pointer-events:none}
 #cameraWorkout .runner-say[hidden]{display:none}
 #cameraWorkout .runner-say canvas{max-width:100%;height:auto!important;filter:drop-shadow(0 4px 6px #000a)}

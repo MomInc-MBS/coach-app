@@ -16,7 +16,7 @@ test('bus side cannot teleport a grounded runner onto its roof; jump shoes permi
 });
 test('every world-specific power is actually collectible on its authored route',()=>{
   for(let world=0;world<3;world++)for(const kind of POWER_KITS[world]){
-    const p=coursePickups(world).find(p=>p.kind===kind),r=createWorldRun();r.world=world;r.lane=p.lane;r.distance=p.distance-.1;r.elevation=surfaceAt(world,r.distance,r.lane).height;
+    const leg=kind==='headstart'?1:0,p=coursePickups(world,leg).find(p=>p.kind===kind),r=createWorldRun();r.world=world;r.leg=leg;r.lane=p.lane;r.distance=p.distance-.1;r.elevation=surfaceAt(world,r.distance,r.lane).height;
     advance(r,.05);assert.equal(r.lastPickup,kind);assert.equal(r.collected[p.id],true);
     if(kind==='headstart')assert.ok(r.distance>=150);else if(kind==='pogo')assert.ok(r.jump>0);else assert.ok(r.powers[kind]>0);
   }

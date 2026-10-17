@@ -211,3 +211,15 @@ test('floaty jump: long hang time clears platforms; speed is the one constant',(
   assert.ok(air>=1.1,'hang above platform height for '+air.toFixed(2)+' s');assert.ok(Math.abs(peak-R.JUMP.peak)<.01);
   assert.equal(R.runSpeed(run),R.RUN.speed);
 });
+
+test('Cool Cardio private tuning responds to left/right lean quickly without repeating or changing exercise tuning',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs'),{POSE_TUNING}=await import('../arcade/runner/pose-input.mjs');
+ assert.equal(POSE_TUNING.lean.in,.3);assert.equal(POSE_TUNING.smooth,.1);
+ for(const fps of [30,10])for(const hips of [true,false]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});feed(input,seq(0,2,{...RUNNING,hips},fps));
+  assert.deepEqual(feed(input,seq(2,2.3,{...RUNNING,hips,lean:-1},fps)),['left']);
+  assert.deepEqual(feed(input,seq(2.3,3,{...RUNNING,hips,lean:-1},fps)),[],'held lean never repeats');
+  feed(input,seq(3,3.6,{...RUNNING,hips},fps));
+  assert.deepEqual(feed(input,seq(3.6,3.9,{...RUNNING,hips,lean:1},fps)),['right']);
+ }
+});
