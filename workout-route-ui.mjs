@@ -1,3 +1,4 @@
+import {workoutSymbol} from './workout-symbols.mjs';
 import {EXERCISES,GROUP_EXERCISES} from './exercise-library.mjs';
 import {workoutEligibility,readPerformanceProgress} from './performance-progress.mjs';
 import {workoutLevel,workoutKind} from './workout-levels.mjs';
@@ -22,11 +23,13 @@ export function mountWorkoutRoute({mode,busy,pending,onNext}){
  const suggestion=()=>pending()?null:nextPerformanceChallenge(mode());
  function render(){
   const next=suggestion(),level=workoutLevel(mode()),waiting=pending();
-  card.querySelector('[data-next]').textContent=waiting?'Saving your performance…':next?.allowed?`${next.difficulty} · ${next.name}`:next?.reason||'Choose an exercise to see its milestones.';
+  card.querySelector('[data-next]').textContent=waiting?'Saving your performance…':next?.allowed?`${next.difficulty} · ${workoutSymbol(next.mode)}`:next?.reason||'Choose an exercise to see its milestones.';
+  card.querySelector('[data-next]').setAttribute('aria-label',waiting?'Saving your performance…':next?.allowed?`${next.difficulty}: ${next.name}`:card.querySelector('[data-next]').textContent);
+  card.querySelector('[data-next]').title=next?.name??'';
   card.querySelector('[data-rounds]').textContent=level?level.unlock:'';
   const button=card.querySelector('[data-follow]');button.disabled=busy()||!next?.allowed;
   card.querySelector('[data-path]').replaceChildren(...DIFFICULTIES.map((d,i)=>{const li=document.createElement('li');li.textContent=`${d[0].toUpperCase()+d.slice(1)} · weapon tiers ${i*5+1}–${i*5+5}`;return li;}));
-  if(!rest.hidden){rest.querySelector('[data-line]').textContent='Recover first. Tap the rest boss for daily pack rewards.';rest.querySelector('[data-next]').textContent=next?.allowed?`${next.difficulty} · ${next.name}`:next?.reason||'Performance saved';rest.querySelector('[data-rounds]').textContent=next?.allowed?next.line:'';}
+  if(!rest.hidden){rest.querySelector('[data-line]').textContent='Recover first. Tap the rest boss for daily pack rewards.';rest.querySelector('[data-next]').textContent=next?.allowed?`${next.difficulty} · ${workoutSymbol(next.mode)}`:next?.reason||'Performance saved';rest.querySelector('[data-next]').setAttribute('aria-label',next?.allowed?`${next.difficulty}: ${next.name}`:rest.querySelector('[data-next]').textContent);rest.querySelector('[data-next]').title=next?.name??'';rest.querySelector('[data-rounds]').textContent=next?.allowed?next.line:'';}
  }
  card.querySelector('[data-follow]').onclick=()=>{const next=suggestion();if(next?.allowed&&!busy())onNext(next);};
  for(const event of ['myr5:account-progress','myr5:account-cleared','myr5:movement-configured','myr5:performance-progress'])window.addEventListener(event,render);

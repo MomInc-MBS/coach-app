@@ -1,3 +1,4 @@
+import {paintWorkoutSymbol} from '../workout-symbols.mjs';
 import {captureRestBossContext,hasRestBossDefeat,readRestBossRewards,recordRestBossDefeatExclusive} from '../rest-boss-rewards.mjs';
 import {initRestArena} from './rest-arena.mjs';
 import {abilityFor} from './weapon-evolution.mjs';
@@ -129,7 +130,11 @@ export function initPod({voice,movements,onStop,onNext,workouts}){
   document.body.dataset.screen='rest';$('homeScreen').hidden=true;$('restScreen').hidden=false;
   $('restEyebrow').textContent=result?'SET COMPLETE':'REST PRACTICE';$('restHeading').textContent='Rest';
   if(result)route.showResult();else route.hideResult();
-  $('setReceipt').textContent=result?`${result.name} · ${Math.round(result.value)} ${['hold','sprint','gentle'].includes(result.kind)||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps'}`:'Practice';
+  if(result){
+   const symbol=document.createElement('span');symbol.setAttribute('role','img');paintWorkoutSymbol(symbol,result.mode,result.name);
+   const unit=['hold','sprint','gentle'].includes(result.kind)||movements[result.mode].kind==='pace'?'seconds':movements[result.mode].kind==='steps'?'steps':movements[result.mode].kind==='jumps'?'jumps':'reps';
+   $('setReceipt').replaceChildren(symbol,document.createTextNode(` · ${Math.round(result.value)} ${unit}`));
+  }else $('setReceipt').textContent='Practice';
   $('earnedXp').textContent=result?.earned?`+${result.xp} XP`:'NO XP';$('damageTotal').textContent=Math.round(flow.damage)+' DAMAGE';paintHealth();
   syncCombat();
   $('restFeedback').textContent='Every third tap: team strike';hand.enter();arena.start();startSlice();restCalled=false;lastSpoken=-Infinity;paintGuest();updateProgress();moveCoach();

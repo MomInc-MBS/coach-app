@@ -17,7 +17,7 @@ test('field manual explains performance unlocks and daily cosmetics without old 
  const hub=readFileSync(new URL('../coach-hub.mjs',import.meta.url),'utf8');assert(hub.includes("from './progression-guide.mjs'"));assert(hub.includes('for(const [label,text] of items)'),'weapon tab renders its explanatory paragraphs too');
 });
 test('every stable exercise ID shows the same level its performance uses, with holds separated',()=>{
- for(const e of Object.values(EXERCISES)){const l=workoutLevel(e.id);assert.equal(l.difficulty,exerciseDifficulty(e.id));assert(l.unlock);assert(l.xp);assert(workoutChoices(e.group,l.kind).some(x=>x.id===e.id));if(e.kind==='hold')assert.equal(workoutKind(e.id),'hold');}
+ for(const e of Object.values(EXERCISES)){const l=workoutLevel(e.id);assert.equal(l.difficulty,exerciseDifficulty(e.id));assert(l.unlock);assert(l.xp);if(e.id==='plank-flight')assert(e.endless,'dedicated flight entry is outside the movement library');else assert(workoutChoices(e.group,l.kind).some(x=>x.id===e.id));if(e.kind==='hold')assert.equal(workoutKind(e.id),'hold');}
  for(const e of workoutChoices('legs','hold'))assert.equal(e.kind,'hold');
  for(const e of workoutChoices('legs','reps'))assert.equal(e.kind,'reps');
 });

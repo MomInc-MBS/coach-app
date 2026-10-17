@@ -1,7 +1,9 @@
+import {workoutSymbol} from './workout-symbols.mjs';
 // Daily-circuit display (VISUAL-CHANGES-HANDOFF.md §9): a visible meter, outside camera-only
 // mode, that advances after every step. Mirrors workout-route-ui.mjs's structure/anchors so it
 // sits alongside the existing 10-family ladder without touching it.
 import {CIRCUIT_STEPS} from './circuit.mjs';
+const STEP_SYMBOL={pushups:workoutSymbol('chest'),squats:workoutSymbol('legs'),situps:workoutSymbol('core'),meditation:workoutSymbol('meditation'),food:'\u25c9'};
 const utcDay=now=>Math.floor(now/86400000);
 const LABEL={pushups:'Push-ups',squats:'Squats',situps:'Sit-ups',meditation:'Meditation',food:'Food photo'};
 // Exact `default` lines from plan/muse/voice-lines.csv (one variant per step -- only one voice
@@ -38,13 +40,14 @@ export function mountCircuitUI({voice,onNext,busy,pending,cached}){
  function render(){
   const p=data(),today=p?.today;
   for(const meter of [card.querySelector('meter'),rest.querySelector('meter')])meter.value=today?doneCount(today):0;
-  const status=today?`${doneCount(today)} of ${CIRCUIT_STEPS.length} circuit steps today`+(nextStep(today)?` · Next: ${LABEL[nextStep(today).key]}`:' · Circuit complete today'):'Connecting your daily circuit…';
-  card.querySelector('[data-circuit-status]').textContent=status;rest.querySelector('[data-circuit-status]').textContent=status;
+  const status=today?`${doneCount(today)} of ${CIRCUIT_STEPS.length} circuit steps today`+(nextStep(today)?` · Next: ${STEP_SYMBOL[nextStep(today).key]}`:' · Circuit complete today'):'Connecting your daily circuit…';
+  const spoken=today?`${doneCount(today)} of ${CIRCUIT_STEPS.length} circuit steps today`+(nextStep(today)?` · Next: ${LABEL[nextStep(today).key]}`:' · Circuit complete today'):status;
+  for(const node of [card.querySelector('[data-circuit-status]'),rest.querySelector('[data-circuit-status]')]){node.textContent=status;node.setAttribute('aria-label',spoken);}
   goals.querySelector('[data-goals-status]').textContent=today?`${doneCount(today)}/${CIRCUIT_STEPS.length}`:'';
-  card.querySelector('[data-circuit-steps]').replaceChildren(...CIRCUIT_STEPS.map(step=>{const li=document.createElement('li');li.textContent=`${today?.stepDone?.[step.key]?'✓ ':''}${LABEL[step.key]}`;if(today&&!today.stepDone[step.key]&&step===nextStep(today))li.setAttribute('aria-current','step');return li;}));
+  card.querySelector('[data-circuit-steps]').replaceChildren(...CIRCUIT_STEPS.map(step=>{const li=document.createElement('li');li.setAttribute('aria-label',LABEL[step.key]);li.title=LABEL[step.key];li.textContent=`${today?.stepDone?.[step.key]?'✓ ':''}${STEP_SYMBOL[step.key]}`;if(today&&!today.stepDone[step.key]&&step===nextStep(today))li.setAttribute('aria-current','step');return li;}));
   const button=card.querySelector('[data-circuit-next]'),next=today?nextStep(today):null;
   button.hidden=!next;
-  if(next){button.textContent='Start '+LABEL[next.key]+' →';button.disabled=busy()||pending();}
+  if(next){button.setAttribute('aria-label','Start '+LABEL[next.key]);button.title=LABEL[next.key];button.textContent='Start '+STEP_SYMBOL[next.key]+' →';button.disabled=busy()||pending();}
  }
  card.querySelector('[data-circuit-next]').onclick=()=>{
   const p=data(),today=p?.today,next=today?nextStep(today):null;if(!next||busy()||pending())return;

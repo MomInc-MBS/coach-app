@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 
 const root=resolve('.');
 const mime={'.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.jpg':'image/jpeg'};
-test('one achievements page: constellation on top, all 250 levels below, CRT section menu inside the game screen',async()=>{
+test('one achievements page: flight starts at level 1 and climbs to the constellation, with the CRT section menu inside the game screen',async()=>{
  const runtime=(await build({entryPoints:['battle-pass-page.mjs'],bundle:true,format:'esm',target:'es2022',write:false})).outputFiles[0].text;
  const missing=[];
  const server=createServer(async(req,res)=>{
@@ -54,8 +54,10 @@ test('one achievements page: constellation on top, all 250 levels below, CRT sec
   const geometry=await page.evaluate(()=>{const d=document.getElementById('battlePassPanel'),v=d.querySelector('.pass-map-viewport'),a=d.querySelector('[data-chapter="1"]');return{dialog:d.getBoundingClientRect().height,viewport:v.getBoundingClientRect().height,outerScroll:d.scrollHeight-d.clientHeight,scroll:v.scrollTop,areaTop:a.getBoundingClientRect().top,viewTop:v.getBoundingClientRect().top,viewBottom:v.getBoundingClientRect().bottom};});
   assert.ok(geometry.viewport>=350,JSON.stringify(geometry));
   assert.equal(geometry.outerScroll,0);
-  const start=await page.evaluate(()=>{const v=document.querySelector('.pass-map-viewport').getBoundingClientRect(),s=document.querySelector('.ach-embed .ach-stage').getBoundingClientRect();return {stageBottom:s.bottom,viewTop:v.top,viewBottom:v.bottom};});
-  assert.ok(start.stageBottom>start.viewTop&&start.stageBottom<start.viewBottom,'opens with the ship under the last coach: '+JSON.stringify(start));
+  const start=await page.evaluate(()=>{const el=document.querySelector('.pass-map-viewport'),v=el.getBoundingClientRect(),one=document.querySelector('.pass-level[data-level="1"]').getBoundingClientRect();return {scroll:el.scrollTop,max:el.scrollHeight-el.clientHeight,rowTop:one.top,rowBottom:one.bottom,viewTop:v.top,viewBottom:v.bottom};});
+  assert.equal(start.scroll,start.max,'opens at the bottom of the ascending flight: '+JSON.stringify(start));
+  assert.ok(start.rowTop>start.viewTop&&start.rowBottom<start.viewBottom,'level 1 is visible at launch: '+JSON.stringify(start));
+  assert.ok(start.rowTop>(start.viewTop+start.viewBottom)/2,'level 1 starts in the lower half, ready to fly upward: '+JSON.stringify(start));
   await page.locator('.pass-hud .pass-crt-switch').last().click();
   assert.match(await page.locator('#battlePassOpen').innerText(),/SYSTEM 02/);
   assert.equal(await page.locator('.pass-crt-chart .pass-crt-dot').count(),10);
@@ -65,7 +67,7 @@ test('one achievements page: constellation on top, all 250 levels below, CRT sec
   for(let i=0;i<30;i++)await page.locator('.pass-hud .pass-crt-switch').last().click({force:true}).catch(()=>{});
   assert.match(await page.locator('#battlePassOpen').innerText(),/COACH CONSTELLATION/);
   await page.locator('#battlePassOpen').click();
-  assert.equal(await page.locator('.pass-map-viewport').evaluate(el=>el.scrollTop),0);
+  assert.equal(await page.locator('.pass-map-viewport').evaluate(el=>el.scrollTop),0,'the bottom menu still hyper-jumps to the coach constellation');
   const openSpace=await page.locator('.pass-level[data-level="1"]').evaluate(el=>({background:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderStyle}));
   assert.equal(openSpace.background,'rgba(0, 0, 0, 0)');
   assert.equal(openSpace.border,'none');

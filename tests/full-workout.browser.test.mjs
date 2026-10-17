@@ -7,7 +7,7 @@ import {resolve,extname,sep} from 'node:path';
 import {chromium} from 'playwright';
 import {completeCoach} from './onboarding-fixture.mjs';
 
-// R-1017 FULL WORKOUT: dropdown on the pod, persisted checkboxes, locks greyed, a circuit that runs the real camera start per
+// R-1017 FULL WORKOUT: switchboard wiring, persisted controls, locks greyed, a circuit that runs the real camera start per
 // exercise. Only MediaPipe is scripted; a finished set is signalled with the same myr5:set-complete event pod.mjs fires.
 const FAKE_VISION=`
 const pt=()=>({x:.5,y:.2,z:0,visibility:1});
@@ -28,13 +28,13 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
  let browser;try{
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
   const context=await browser.newContext({viewport:{width:412,height:915},deviceScaleFactor:2.6,permissions:['camera'],serviceWorkers:'block'});
-  const page=await context.newPage();await context.addInitScript(guideSeen);await context.addInitScript(()=>{try{localStorage.setItem('myr5.tiltPermission','granted');}catch{}}); // tilt already allowed on this phone
+  const page=await context.newPage();page.on('pageerror',error=>console.error('Workout page error:',error.message));await context.addInitScript(guideSeen);await context.addInitScript(()=>{try{localStorage.setItem('myr5.tiltPermission','granted');}catch{}}); // tilt already allowed on this phone
   await page.route('**/vendor/mediapipe/0.10.14/vision_bundle.mjs',route=>route.fulfill({contentType:'text/javascript',body:FAKE_VISION}));
   await page.goto(base+'/__test__');
   // Two chosen paths (quads + martial-arts): legs, stances and boxing are open, the rest stay locked.
   await page.evaluate(async([intake,paths])=>{const [{openLocalCoach},{chooseWorkoutPaths}]=await Promise.all([import('/local-coach-runtime.mjs'),import('/chosen-styles.mjs')]);const repo=await openLocalCoach();await repo.forOwner(repo.guestOwnerId).saveSetup(intake,{startDay:'2026-09-21'});repo.close();chooseWorkoutPaths(paths);},[completeCoach(),['quads','martial-arts']]);
   await page.goto(base+'/pose.html#pod');
-  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
+  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning).catch(async error=>{await page.screenshot({path:resolve(SHOTS,'startup-failure.png')});console.error('Startup state:',await page.evaluate(()=>({url:location.href,phase:window.myr5TestState?.phase,text:document.body.innerText.slice(0,1600)})));throw error;});
 
   await page.evaluate(()=>document.querySelector('.app-update-banner')?.remove());
   await page.locator('#podFullWorkout>summary').click();
@@ -42,26 +42,46 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   const box=async sel=>{const b=await page.locator(sel).boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2};};
   const sock=id=>box(`[data-socket="${id}"]`),plug=id=>box(`[data-plug="${id}"]`);
   await page.waitForTimeout(1200);
-  assert.equal(await page.locator('[data-fw-status]').textContent(),'0 sections','nothing is plugged in yet');
-  assert.equal(await page.locator('.fw-row input:not([disabled])').count(),0,'unplugged rows are dead');
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'0 sections','switches are off');
+  assert.equal(await page.locator('.fw-switches').count(),await page.locator('.fw-style').count(),'every section has a visible switch bank');
+  assert.ok(await page.locator('.fw-row input:not([disabled])').count()>0,'unpowered unlocked switches can be preset');
+  assert.equal(await page.locator('.fw-row.fw-locked input:not([disabled])').count(),0,'locked exercises stay locked');
   await shot('power-1-all-unplugged.png');
 
-  // Drag the Legs plug toward its socket, screenshot mid-drag, then drop it in.
-  await page.locator('.fw-style[data-style="legs"]>summary').click();
-  let p=await plug('legs'),s=await sock('legs');
-  await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move((p.x+s.x)/2,(p.y+s.y)/2,{steps:8});await page.waitForTimeout(300);
-  await shot('power-2-mid-drag.png');
-  s=await sock('legs');await page.mouse.move(s.x,s.y,{steps:8});await page.mouse.up();
-  await page.waitForFunction(()=>document.querySelector('.fw-style[data-style="legs"]').dataset.power==='on',null,{timeout:5000});
-  assert.equal(await page.locator('[data-plug="legs"]').getAttribute('aria-pressed'),'true');
-  // Boxing: tap its plug to auto-plug it. Unplugged sections stay dead.
-  await page.locator('[data-plug="boxing"]').focus();await page.keyboard.press('Enter'); // keyboard path
-  await page.waitForFunction(()=>document.querySelector('.fw-style[data-style="boxing"]').dataset.power==='on',null,{timeout:5000});
-  assert.equal(await page.locator('.fw-style[data-style="stances"] input:not([disabled])').count(),0,'unplugged stances stay dead');
-  await page.locator('.fw-style[data-style="boxing"]>summary').click();
+  const drag=async(cable,socket)=>{
+   await page.evaluate(()=>document.querySelector('.fw-menu').scrollTop=0);await page.waitForTimeout(100);
+   await page.locator(`[data-plug="${cable}"]`).evaluate(el=>el.scrollIntoView({block:'center'}));
+   const p=await plug(cable);await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move(p.x+10,p.y,{steps:3});
+   await shot('power-2-mid-drag.png');
+   const target=socket==='bay'?page.locator('.fw-bay'):page.locator(`[data-socket="${socket}"]`);
+   await target.scrollIntoViewIfNeeded();const b=await target.boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await page.mouse.up();await page.waitForTimeout(300);
+  };
+  const cables=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('myr5-full-workout-v1')||'{}').cables||{});
+  await page.locator('.fw-style[data-style="legs"] input[data-k="1"]').check({force:true});
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'0 sections','preset before power does not energize a section');
+  // Hips cable can serve an unlocked Legs socket, independently from the section switch.
+  await drag('hips','legs');
+  assert.equal((await cables()).hips,'legs','any cable can route to an unlocked socket');
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'1 section','wiring powers the preset');
+  await page.locator('.fw-style[data-style="legs"] input[data-k="1"]').check({force:true});
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'1 section','preset can be set before power');
+  // An occupied socket takes the new cable; the old cable can then be connected elsewhere.
+  await drag('boxing','legs');
+  assert.equal((await cables()).boxing,'legs','occupied socket accepts another cable');
+  assert.equal(Object.values(await cables()).filter(socket=>socket==='legs').length,1,'occupied socket holds only one cable');
+  await drag('hips','boxing');
+  assert.equal((await cables()).hips,'boxing','cross-socket replacement works');
+  // Drop the cable in the open bay to unplug it.
+  await drag('hips','bay');
+  assert.ok(!(await cables()).hips,'cable can be unplugged');
+  // Restore the runner's two selected sections using each section's own cable and switch.
+  await drag('hips','legs');await drag('boxing','boxing');
+  await page.locator('.fw-style[data-style="legs"] input[data-k="1"]').check({force:true});
+  await page.locator('.fw-style[data-style="boxing"] input[data-k="1"]').check({force:true});
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'2 sections');
 
   // Level ladder in Legs: flip 3 (cascade 1..3), then 7, then back down.
-  const ladder=()=>page.evaluate(()=>[...document.querySelectorAll('.fw-style[data-style="legs"] input')].map(i=>i.checked?1:0).join(''));
+  const ladder=()=>page.evaluate(()=>[...document.querySelectorAll('.fw-style[data-style="legs"] .fw-switches input')].map(i=>i.checked?1:0).join(''));
   await page.locator('.fw-style[data-style="legs"] input[data-k="3"]').check({force:true});
   assert.equal(await ladder(),'11100000','flipping 3 engages 1..3');await page.waitForTimeout(500);await shot('ladder-1-at-3.png');
   await page.locator('.fw-style[data-style="legs"] input[data-k="7"]').check({force:true});
@@ -74,23 +94,19 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   await page.waitForTimeout(500);await shot('power-3-two-rows-powered.png');
 
   // The cord channel is a gutter right of the labels, and the hub stays put while the board scrolls.
-  assert.ok(await page.evaluate(()=>{const sec=document.querySelector('.fw-style[data-style="legs"]').getBoundingClientRect(),sk=document.querySelector('[data-socket="legs"]').getBoundingClientRect();return sk.left>=sec.right-2;}),'sockets sit in the gutter, outside the rows');
-  await page.evaluate(()=>{document.querySelector('.fw-menu').scrollTop=500;});await page.waitForTimeout(300);
-  assert.ok(await page.evaluate(()=>{const m=document.querySelector('.fw-menu').getBoundingClientRect(),h=document.querySelector('.fw-hub').getBoundingClientRect();return h.top>=m.top&&h.bottom<=m.bottom;}),'hub is sticky at the top of the board');
-  await page.screenshot({path:resolve(SHOTS,'power-3b-scrolled-hub-sticky.png')});
+  assert.ok(await page.evaluate(()=>{const y=[...document.querySelectorAll('[data-anchor]')].map(e=>e.getBoundingClientRect().top);return y.length>1&&Math.max(...y)-Math.min(...y)<4;}),'all cable anchors form a row across the top');
   // Tilt: stub the orientation event; the loose cables swing toward the new down.
-  await page.locator('.fw-style[data-style="legs"]>summary').click();await page.locator('.fw-style[data-style="boxing"]>summary').click();
   await page.evaluate(()=>{document.querySelector('.fw-menu').scrollTop=0;});
   const tilt=g=>page.evaluate(gamma=>{clearInterval(window.__tilt);window.__tilt=setInterval(()=>window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta:45,gamma,alpha:0})),30);},g); // a phone streams readings
-  const dropX=()=>page.evaluate(()=>{const xs=[...document.querySelectorAll('.fw-plug:not([aria-pressed=true])')].map(p=>p.getBoundingClientRect().x);return xs.reduce((t,x)=>t+x,0)/xs.length;});
+  const dropX=()=>page.evaluate(()=>{const state=JSON.parse(localStorage.getItem('myr5-full-workout-v1')||'{}'),wired=new Set(Object.keys(state.cables||{}));const xs=[...document.querySelectorAll('[data-plug]')].filter(p=>!wired.has(p.dataset.plug)).map(p=>p.getBoundingClientRect().x);return xs.reduce((t,x)=>t+x,0)/xs.length;});
   const rest=await dropX();await tilt(40);await page.waitForTimeout(1800);const right=await dropX();await shot('power-4-tilt-right.png');
   await tilt(-40);await page.waitForTimeout(2200);const left=await dropX();await shot('power-5-tilt-left.png');
   assert.ok(right>rest+8&&left<rest-8,`loose plug swings with tilt: ${left} ${rest} ${right}`);
   await tilt(0);await page.evaluate(()=>clearInterval(window.__tilt));
 
-  // Locked section: capped plug with the unlock hint.
-  await page.locator('[data-plug="hips"]').focus();await page.keyboard.press('Enter');
-  assert.equal(await page.locator('.fw-style[data-style="hips"]').evaluate(d=>d.open),true,'capped plug opens the section to show why');
+  // Locked exercises remain guarded regardless of cable routing.
+  await page.locator('.fw-style[data-style="hips"]').scrollIntoViewIfNeeded();
+  assert.equal(await page.locator('[data-socket="hips"]').getAttribute('data-locked'),'true','locked socket exposes the exercise lock');
   assert.ok((await page.locator('.fw-style[data-style="hips"] .fw-hint').textContent()).length>5);
   await page.locator('.fw-style[data-style="hips"]').scrollIntoViewIfNeeded();await shot('power-6-locked-row.png');
   assert.equal(await page.locator('.fw-row.fw-locked input:not([disabled])').count(),0,'locked rows are disabled');
@@ -98,7 +114,8 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
   await page.locator('#podFullWorkout>summary').click({force:true});
   assert.equal(await page.locator('[data-fw-status]').textContent(),'2 sections','plugs and levels persisted');
-  assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.fw-style[data-style="legs"] input')].map(i=>i.checked?1:0).join('')),'11000000');
+  assert.equal(await ladder(),'11000000');
+  assert.deepEqual(await cables(),{hips:'legs',boxing:'boxing'},'cross-socket mapping persisted across reload');
 
   await page.evaluate(()=>document.querySelector('.app-update-banner')?.remove());
   await page.locator('[data-fw-start]').click();
@@ -122,6 +139,14 @@ test('full workout: dropdown, locks, persistence, circuit blocks, break and summ
   await page.locator('#fullWorkoutHud[data-mode=summary]').waitFor();
   assert.match(await page.locator('#fullWorkoutHud').textContent(),/2 of 2 exercises/);
   await page.screenshot({path:resolve(SHOTS,'circuit-4-summary.png')});
+  // Older releases stored only powered sections and levels; migrate powered sections to identity wiring.
+  await page.evaluate(()=>localStorage.setItem('myr5-full-workout-v1',JSON.stringify({powered:['legs'],levels:{legs:2}})));
+  await page.reload();
+  await page.waitForFunction(()=>window.myr5TestState?.phase==='idle'&&window.myr5WorkoutOwner&&!window.myr5WorkoutOwner.snapshot().transitioning);
+  await page.locator('#podFullWorkout>summary').click({force:true});
+  assert.equal(await page.locator('[data-fw-status]').textContent(),'1 section','legacy powered section restores');
+  await page.locator('.fw-style[data-style="legs"] input[data-k="3"]').check({force:true});
+  assert.deepEqual(await cables(),{legs:'legs'},'legacy powered section saves identity wiring');
   await context.close();
  }finally{await browser?.close();server.close();}
 });

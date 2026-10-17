@@ -162,8 +162,8 @@ export function mountBattlePass(){
   const row=chapter===chapterForLevel(rank.level)?route.querySelector('[aria-current="step"]'):route.querySelector(`[data-level="${chapter*10+1}"]`);
   return row?sectionScrollTop(contentY(row)+row.offsetHeight/2,viewport.clientHeight,viewport.scrollHeight):viewport.scrollTop;
  }
- // On open the ship rests just under the golden coach (the last one); flying up scrolls the constellation.
- const coachStart=()=>board?sectionScrollTop(board.root.offsetTop+board.stage.offsetHeight*.85,viewport.clientHeight,viewport.scrollHeight,FLIGHT_TUNING.coachLine):0;
+ // Start at level 1 at the bottom; scrolling upward then carries the ship through ascending levels to the coach.
+ const flightStart=()=>Math.max(0,viewport.scrollHeight-viewport.clientHeight);
  let jump=0;
  const endJump=()=>{if(jump)cancelAnimationFrame(jump);jump=0;scene.setWarp(0);delete dialog.dataset.hyper;};
  // Hyper-speed: the page rushes to the section (eased), the scene streaks at the scroll speed. Reduced motion: a cut.
@@ -205,7 +205,7 @@ export function mountBattlePass(){
   if(!dialog.open){scene.resetScore?.();dialog.showModal();window.dispatchEvent(new CustomEvent('myr5:music-scene',{detail:{scene:'battlepass'}}));}
   if(!board){board=embedAchievements(dialog,shell);viewport.prepend(board.root);}
   buildMap();board.open();hasPreviewSelection=false;previewChapter=chapterForLevel(rank.level);renderPreview();
-  requestAnimationFrame(()=>{if(dialog.open)viewport.scrollTop=coachStart();});
+  requestAnimationFrame(()=>{if(dialog.open)viewport.scrollTop=flightStart();});
   scene.start();return dialog;
  };
  window.myr5Menus={...window.myr5Menus,battlePass:open,achievements:open};
