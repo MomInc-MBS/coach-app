@@ -247,7 +247,7 @@ function buildDom(host, onAction) {
       pacePanel.hidden = !hasPace;
       if (hasPace) {
         const isRest = value => /rest|recover/i.test(String(value ?? ''));
-        const cue = (kind, label) => isRest(kind) || isRest(label) ? 'CHEST DOWN · REST' : String(label || title(kind) || 'Steady plank').toLocaleUpperCase();
+        const cue = (kind, label) => isRest(kind) || isRest(label) ? 'REST · CHEST DOWN' : String(label || title(kind) || 'Steady plank').toLocaleUpperCase();
         const resting = isRest(pace.kind) || isRest(pace.label);
         const currentCue = cue(pace.kind, pace.label);
         const nextCue = cue(pace.nextKind, pace.nextLabel || 'Continue');
