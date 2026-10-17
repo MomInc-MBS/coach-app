@@ -381,6 +381,7 @@ async function loop(run){
       const p=result.landmarks[0]?.slice(0,27);
       if(p){draw.drawConnectors(p,api.PoseLandmarker.POSE_CONNECTIONS.filter(b=>b.start<=26&&b.end<=26),{color:'#bc89ff',lineWidth:3});draw.drawLandmarks(p.filter(q=>q.visibility>=.45),{color:'#aaffd9',radius:3});draw.drawLandmarks(p.filter(q=>q.visibility<.45),{color:'#ffad66',radius:3});}
       session.flightAllowed=session.mode==='plank-flight'&&plankFlight?.creditAllowed===true;
+      session.flightPortalRest=session.mode==='plank-flight'&&plankFlight?.run?.phase==='portal';
       state.motion=session.update(p,now,v.videoWidth/v.videoHeight,result.worldLandmarks?.[0]);
       // The room coach gets every landmark (ankles for kicks) and walks in once the set is counting.
       const poseDetail={points:result.landmarks[0]||null,world:result.worldLandmarks?.[0]||null,width:v.videoWidth,height:v.videoHeight,mirrored:state.camera==='user',now,frameMs:frameTime(now),mask:readMask(result),counting:state.motion.count>0||state.motion.totalHold>0||state.motion.active>0,flightPose:state.motion.flightPose??null};

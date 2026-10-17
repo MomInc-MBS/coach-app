@@ -153,6 +153,24 @@ test('normal runtime uses paced flight and keeps flying during real recovery evi
  });
 });
 
+test('normal runtime portal requires explicit continue and a fresh countdown before credit returns',async()=>{
+ await runtimeHarness(async({runtime,step})=>{
+  assert.equal(runtime.run.biomes,true);
+  for(let i=0;i<33;i++){runtime.pose({flightPose:accepted});step(100);}
+  runtime.run.phase='portal';runtime.run.portalRest=true;
+  runtime.run.biome.portal=true;runtime.run.biome.elapsed=90;runtime.run.biome.remaining=0;
+  const distance=runtime.run.distance,time=runtime.run.time;
+  runtime.action('continue-biome');assert.equal(runtime.run.phase,'portal');
+  for(let i=0;i<40;i++){runtime.pose({flightPose:{...accepted,controlValid:false,exerciseEligible:false}});step(100);assert.equal(runtime.creditAllowed,false);}
+  assert.equal(runtime.run.phase,'portal');assert.equal(runtime.run.distance,distance);assert.equal(runtime.run.time,time);
+  runtime.action('continue-biome');assert.equal(runtime.run.phase,'paused');assert.equal(runtime.run.biome.id,'castle');
+  for(let i=0;i<10;i++){step(100);assert.equal(runtime.creditAllowed,false);}
+  for(let i=0;i<29;i++){runtime.pose({flightPose:accepted});step(100);assert.equal(runtime.creditAllowed,false);}
+  for(let i=0;i<4;i++){runtime.pose({flightPose:accepted});step(100);}
+  assert.equal(runtime.run.phase,'flying');assert.equal(runtime.creditAllowed,true);
+ });
+});
+
 test('runtime stop drains accepted reward events before closing its database',async()=>{
  await runtimeHarness(async({runtime,step,flush,original})=>{
   runtime.run.events.push({type:'coin',id:'accepted-before-stop',amount:7});step(1);runtime.stop();await flush();

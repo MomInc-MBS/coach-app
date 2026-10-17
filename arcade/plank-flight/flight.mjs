@@ -9,7 +9,7 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
   let profile=blank(),wallet=null,dead=false,last=0,lastPose=-Infinity,pose=null,countdownUntil=0,raf=0,manualPause=false,error='',pendingCoins=0,renderFailed=false,lastRetry=0,saving=0;
   let saveQueue=Promise.resolve(),walletReady;
   const outbox=new Map(),finalizations=new Map();
-  const run=createFlight({seed:Date.now()>>>0,runId:identity(),paced:true});
+  const run=createFlight({seed:Date.now()>>>0,runId:identity(),paced:true,biomes:true});
   const current=()=>!dead&&owner()===ownerId;
   const say=message=>{error=message;};
   async function flush(w){
@@ -33,7 +33,7 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
     }else if(['hit','crash'].includes(event.type))sound('jelly');else if(['vehicle','powerup'].includes(event.type))sound('lever');
   }}
   function finish(){countdownUntil=0;commandFlight(run,'finish');drain();finalizations.set(run.runId,run.distance);pending();}
-  function restart(){if(run.phase!=='finalized')finish();const next=createFlight({seed:(Date.now()>>>0),runId:identity(),loadout:profile.loadout??[],paced:true});for(const key of Object.keys(run))delete run[key];Object.assign(run,next);manualPause=false;countdownUntil=0;}
+  function restart(){if(run.phase!=='finalized')finish();const next=createFlight({seed:(Date.now()>>>0),runId:identity(),loadout:profile.loadout??[],paced:true,biomes:true});for(const key of Object.keys(run))delete run[key];Object.assign(run,next);manualPause=false;countdownUntil=0;}
   function action(name,payload={}){
     if(dead)return;
     if(name==='render-error'){renderFailed=true;manualPause=true;commandFlight(run,'pause');say('Flight graphics could not start. End this flight and try again.');return;}
@@ -41,11 +41,12 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
     if(name==='equip'){if(run.phase==='flying'){say('Pause before changing your gadgets.');return;}pending(w=>w.equip(payload.id,SHOP_ITEMS));return;}
     if(name==='spin'){if(run.phase!=='finalized'){say('End the flight to open your token reward.');return;}const rid=run.runId;pending(w=>w.spin(rid));return;}
     if(name==='retry-save'){pending();return;}
+    if(name==='continue-biome'){if(!current()||renderFailed||!commandFlight(run,'continue-biome'))return;manualPause=false;countdownUntil=0;error='';return;}
     if(name==='finish'){finish();return;}
     if(name==='exit'){finish();void saveQueue.then(()=>{if(!current())return;if(outbox.size||finalizations.size){say('Coins are waiting to save. Try End workout again to retry.');return;}onExit();});return;}
     if(name==='new-run'||name==='restart'){restart();return;}
     if(name==='recalibrate'){error='';manualPause=false;countdownUntil=0;commandFlight(run,'pause');pose=null;onRecalibrate();return;}
-    if(name==='pause'){manualPause=true;countdownUntil=0;commandFlight(run,'pause');return;}
+    if(name==='pause'){if(run.phase==='portal')return;manualPause=true;countdownUntil=0;commandFlight(run,'pause');return;}
     if(['start','resume','revive'].includes(name)){
       if(name==='start'&&!renderFailed&&current()&&(!pose?.controlValid||!pose?.calibrated)){error='';manualPause=false;countdownUntil=0;return;}
       if(renderFailed||!current()||!pose?.controlValid||!pose?.calibrated){say('Complete the position check first.');return;}
@@ -69,7 +70,7 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
       commandFlight(run,cmd);countdownUntil=0;}
     advanceFlight(run,dt,{height01:pose?.height01??.5,steer:pose?.steer??0,resting:pose?.resting===true,valid:!!(valid&&!manualPause&&!countdownUntil)});drain();
     if((outbox.size||finalizations.size)&&!saving&&now-lastRetry>5000){lastRetry=now;pending();}
-    const message=error||(countdownUntil?`Ready in ${Math.ceil((countdownUntil-now)/1000)}`:(!pose?.controlValid?pose?.reason:null)||pose?.prompt||pose?.reason||'Keep your hands down. Follow the position check.');
+    const message=error||(run.phase==='portal'?'Safe portal bay. Relax your hands and shake your arms out; exercise credit is paused.':countdownUntil?`Ready in ${Math.ceil((countdownUntil-now)/1000)}`:(!pose?.controlValid?pose?.reason:null)||pose?.prompt||pose?.reason||'Keep your hands down. Follow the position check.');
     const shopItems=SHOP_ITEMS.map(item=>item.kind==='upgrade'?{...item,currentLevel:profile.upgrades?.[item.id]??0,price:item.price*((profile.upgrades?.[item.id]??0)+1)}:item);
     try{view.render({pose,message,paused:run.phase!=='flying',profile,loadout:profile.loadout,inventory:profile,shopItems,coinsBanked:profile.balance,pendingCoins});}catch{action('render-error');}
   }
@@ -77,5 +78,5 @@ export function mountPlankFlight({host,ownerId,owner=()=>ownerId,onExit=()=>{},o
   return {run,action,get poseResult(){return pose},get creditAllowed(){return current()&&!renderFailed&&!manualPause&&!countdownUntil&&!document.hidden&&!pose?.resting&&pose?.posture!=='rest'&&run.phase==='flying'&&performance.now()-lastPose<=PLANK_TUNING.freshnessMs;},
     pose(detail){pose=detail?.flightPose??detail?.motion?.flightPose??null;lastPose=performance.now();if(!pose?.controlValid&&run.phase==='flying'){commandFlight(run,'pause');countdownUntil=0;}},
     stop(){if(dead)return;finish();dead=true;cancelAnimationFrame(raf);view.stop();void saveQueue.finally(()=>{wallet?.close();wallet=null;});},
-    get settled(){return saveQueue;}};
+    get renderStats(){return view.stats??null;},get settled(){return saveQueue;}};
 }

@@ -350,3 +350,16 @@ test('interpolating observed bottom, mixed and high-side poses stays valid in bo
   }
  }
 });
+
+test('explicit portal shake-out preserves anchors but returns no controls or exercise credit',()=>{
+ const d=driver();d.calibrate();d.settle(stages.mid);
+ let now=d.time();
+ for(let i=0;i<80;i++){
+  const p=d.input.update({now:now+=100,width:640,height:640,portalRest:true});
+  assert.equal(p.calibrated,true);assert.equal(p.controlValid,false);assert.equal(p.exerciseEligible,false);
+ }
+ const back=d.input.update(frame({...stages.mid,now:now+=100}));
+ assert.equal(back.calibrated,true);assert.equal(back.controlValid,true);assert.equal(back.exerciseEligible,false,'fresh posture dwell required');
+ const moved=frame({...stages.mid,now:now+=100});for(const i of [15,16])moved.points[i].x+=.1;
+ assert.equal(d.input.update(moved).calibrated,false,'return still validates original hand baseline');
+});
