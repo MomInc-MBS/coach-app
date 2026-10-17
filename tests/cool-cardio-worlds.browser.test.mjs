@@ -60,7 +60,28 @@ test('Sakura Cool Cardio: actual app motion, gated portals, replay save and roof
   await set({bob:.025});await page.waitForTimeout(900);
   await set({bob:.025,lean:-1});await page.waitForFunction(l=>window.myr5Runner.active.run.lane<l,s.lane,{timeout:5000});
   s=await run();assert.equal(s.lane,lane0,'lean left -> back '+JSON.stringify(s));await page.waitForTimeout(250);await shot('3-lean-left');
+  // Rapid reversals do not need a sampled upright frame between the two leans.
+  for(const lean of [1,-1,1,-1]){
+    const previous=await page.evaluate(()=>window.myr5Runner.active.run.lane);
+    await set({bob:.025,lean});
+    await page.waitForFunction(l=>window.myr5Runner.active.run.lane===l,previous+lean,{timeout:1500});
+  }
+  const heldLane=await page.evaluate(()=>window.myr5Runner.active.run.lane);
+  await page.waitForTimeout(350);assert.equal(await page.evaluate(()=>window.myr5Runner.active.run.lane),heldLane,'a held lean moves once');
+  // Two right leans with only a brief upright rearm can cross both lanes.
+  await set({bob:.025});await page.waitForTimeout(140);
+  await set({bob:.025,lean:-1});await page.waitForFunction(()=>window.myr5Runner.active.run.lane===0,null,{timeout:1500});
+  await set({bob:.025,lean:1});await page.waitForFunction(()=>window.myr5Runner.active.run.lane===1,null,{timeout:1500});
+  await set({bob:.025});await page.waitForTimeout(140);
+  await set({bob:.025,lean:1});await page.waitForFunction(()=>window.myr5Runner.active.run.lane===2,null,{timeout:1500});
+  await set({bob:.025,lean:-1});await page.waitForFunction(()=>window.myr5Runner.active.run.lane===1,null,{timeout:1500});
   await set({bob:.025});await page.waitForTimeout(900);
+  if(process.env.CARDIO_INPUT_ONLY){
+    await page.getByRole('button',{name:'Stop workout',exact:true}).click();
+    await page.waitForFunction(()=>window.myr5TestState.phase==='idle');
+    assert.equal(await page.locator('.runner-layer').count(),0);
+    await context.close();return;
+  }
   // Arms + shoulders up: floaty jump (shot mid-hang).
   await set({bob:.025,up:true});await page.waitForFunction(()=>window.myr5Runner.active.run.jumpTime>0,null,{timeout:5000});
   await page.waitForTimeout(500);s=await run();assert.ok(s.height>.9,'mid-hang height '+JSON.stringify(s));await shot('4-jump-floaty');

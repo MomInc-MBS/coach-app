@@ -223,3 +223,62 @@ test('Cool Cardio private tuning responds to left/right lean quickly without rep
   assert.deepEqual(feed(input,seq(3.6,3.9,{...RUNNING,hips,lean:1},fps)),['right']);
  }
 });
+
+test('Cool Cardio rapid lean reversals register every edge without requiring a sampled neutral frame',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs');
+ for(const fps of [30,10,2])for(const hips of [true,false]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});feed(input,seq(0,3,{...RUNNING,hips},fps));
+  const period=fps===2?.5:.2,actions=[];
+  for(let edge=0;edge<5;edge++)actions.push(...feed(input,seq(3+edge*period,3+(edge+1)*period,{...RUNNING,hips,lean:edge%2?1:-1},fps)));
+  assert.deepEqual(actions,['left','right','left','right','left'],`${fps}Hz hips=${hips}`);
+ }
+});
+test('Cool Cardio same-side flicks rearm on a brief neutral sample and held/jittered lean never repeats',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs');
+ for(const fps of [30,10,2]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});feed(input,seq(0,3,RUNNING,fps));
+  const period=fps===2?.5:.2;let t=3;const actions=[];
+  for(let i=0;i<3;i++){actions.push(...feed(input,seq(t,t+period,{...RUNNING,lean:-1},fps)));t+=period;actions.push(...feed(input,[[t,tread({t,...RUNNING})]]));t+=1/fps;}
+  assert.deepEqual(actions,['left','left','left'],`${fps}Hz neutral/relean`);
+  assert.deepEqual(feed(input,seq(t,t+2,{...RUNNING,lean:-1},fps)),['left'],'one new edge after final neutral');
+  assert.deepEqual(feed(input,seq(t+2,t+4,{...RUNNING,lean:-1},fps)),[],'held lean stays one lane');
+  assert.deepEqual(feed(input,seq(t+4,t+7,now=>({...RUNNING,lean:.04*Math.sin(now*31)}),fps)),[],'neutral jitter never steers');
+ }
+});
+
+test('Cool Cardio side-step and lean identify one gesture while a new opposite or neutral/relean edge remains responsive',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs');
+ const full=(t,lean=0,out=null)=>{const upper=tread({t,...RUNNING,lean}),lower=body({out});for(let i=23;i<33;i++)upper[i]=lower[i];return upper;};
+ for(const fps of [30,10,2]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});feed(input,seq(0,3,RUNNING,fps).map(([t])=>[t,full(t)]));
+  const dt=1/fps,sideFrames=fps===2?1:Math.ceil(.2*fps);let t=3;
+  const side=[];for(let i=0;i<sideFrames;i++,t+=dt)side.push(...feed(input,[[t,full(t,0,-1)]]));assert.deepEqual(side,['right'],`${fps}Hz side step`);
+  const duplicate=[];for(let i=0;i<Math.max(1,Math.ceil(.15*fps));i++,t+=dt)duplicate.push(...feed(input,[[t,full(t,1,-1)]]));assert.deepEqual(duplicate,[],`${fps}Hz same gesture is not two lanes`);
+  const neutral=t;t+=dt;feed(input,[[neutral,full(neutral,0,-1)]]);
+  const relean=[];for(let i=0;i<Math.max(1,Math.ceil(.2*fps));i++,t+=dt)relean.push(...feed(input,[[t,full(t,1,-1)]]));assert.deepEqual(relean,['right'],`${fps}Hz fresh neutral/relean is a new gesture`);
+  const reverse=[];for(let i=0;i<Math.max(1,Math.ceil(.2*fps));i++,t+=dt)reverse.push(...feed(input,[[t,full(t,-1,-1)]]));assert.deepEqual(reverse,['left'],`${fps}Hz immediate opposite remains intentional`);
+ }
+});
+test('Cool Cardio rapid-edge mode leaves jogging, jump and slide behavior and shared defaults intact',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs'),{POSE_TUNING}=await import('../arcade/runner/pose-input.mjs');
+ assert.equal(POSE_TUNING.lean.reverseRearm,undefined);assert.equal(POSE_TUNING.lean.cooldown,.5);
+ for(const fps of [30,10,2]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});assert.deepEqual(feed(input,seq(0,5,RUNNING,fps)),[]);assert.ok(input.jogging);
+  assert.deepEqual(feed(input,seq(5,6,{...RUNNING,up:true},fps)),['jump']);feed(input,seq(6,7,RUNNING,fps));
+  assert.deepEqual(feed(input,seq(7,8,{...RUNNING,crouch:.1},fps)),['slide']);
+ }
+});
+
+test('Cool Cardio rapid edges require raw and filtered lean to agree after a strong offset and one neutral frame',async()=>{
+ const {RUNNER_POSE_TUNING}=await import('../arcade/runner/runner.mjs');
+ // Normalized, visible landmarks can still contain a large hip/shoulder offset
+ // after tracker error. A one-frame neutral must not replay that old direction.
+ const offsetPose=(t,raw)=>{const p=tread({t,...RUNNING}),sx=Math.abs(raw)>1?.2:.5,hx=sx+raw*.24;for(const i of [0,11,12,13,14,15,16])p[i].x+=sx-.5;p[23].x=hx+.07;p[24].x=hx-.07;for(const q of p)if(q.visibility)assert.ok(q.x>=0&&q.x<=1&&q.y>=0&&q.y<=1);return p;};
+ for(const [fps,strong] of [[60,2.4],[120,2]]){
+  const input=createPoseInput({Session:MovementSession,tuning:RUNNER_POSE_TUNING});feed(input,seq(0,3,RUNNING,fps));
+  assert.deepEqual(feed(input,seq(3,3.3,RUNNING,fps).map(([t])=>[t,offsetPose(t,strong)])),['right']);
+  assert.deepEqual(feed(input,[[3.3,offsetPose(3.3,0)]]),[]);
+  const actions=feed(input,seq(3.3+1/fps,4.3,RUNNING,fps).map(([t])=>[t,offsetPose(t,-.21)]));
+  assert.deepEqual(actions,['left'],`${fps}Hz strong prior lean must not replay right`);
+ }
+});

@@ -7,7 +7,7 @@ import {createThrows,createStriker,mountThrowsView,THROW} from './throws.mjs';
 import {createWorldRun,advance,act,resolveThrowMiss,emitRunEvent,punchCourse,WORLDS} from './worlds/worlds.mjs';
 import {jumpHeight,courseHazards} from './worlds/course.mjs';
 // Private runner tuning: exercise detectors and the app camera retain their original settings.
-export const RUNNER_POSE_TUNING={...POSE_TUNING,smooth:.045,settle:.12,lean:{...POSE_TUNING.lean,in:.2,out:.09,dwell:.05,cooldown:.25}};
+export const RUNNER_POSE_TUNING={...POSE_TUNING,smooth:.045,settle:.12,lean:{...POSE_TUNING.lean,in:.2,out:.09,dwell:.05,cooldown:.06,reverseRearm:true}};
 import {createWorldScene} from './worlds/scene.mjs';
 import {CSS} from './worlds/host-style.mjs';
 const NAMES={magnet:'Coin magnet',shield:'Relic shield',doubleCoins:'Double coins',boost:'Dash aura',jetpack:'Jetpack',superJump:'Jump shoes',board:'Hoverboard',headstart:'Head start',scoreBoost:'Score x2',phase:'Phase aura',pogo:'Pogo launch',recovery:'Recovery wings',coinTier:'Triple-value coins'};
@@ -21,7 +21,7 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
  const hud=el('div','runner-hud'),info=el('div'),title=el('b'),route=el('small'),replay=el('select'),score=el('div'),buffs=el('div','runner-buffs'),say=el('div','runner-say'),stopped=el('div','runner-stopped'),vortex=el('div','runner-vortex');
  replay.setAttribute('aria-label','Replay unlocked area');info.append(title,route,el('br'),replay);hud.append(info,score);say.setAttribute('role','status');say.hidden=true;stopped.setAttribute('role','alert');stopped.hidden=true;stopped.innerHTML='<b>YOU ARE<br>STOPPED</b><span>Jog to keep going</span>';vortex.hidden=true;vortex.innerHTML='<i></i><b>BETWEEN WORLDS</b>';
  host.prepend(layer);host.append(hud,buffs,say,stopped,vortex);host.classList.add('runner-on');
- let disposed=false,raf=0,last=0,lastPose=-Infinity,lastLaneAction=-Infinity,hideTimer=0,caughtAt=0,seenWorld=-1,seenLoop=-1,seenLeg=-1,seenPickup=0,seenEvent=0,lastBuffs='',frameDt=0,frameNow=0,throws,view;
+ let disposed=false,raf=0,last=0,lastPose=-Infinity,hideTimer=0,caughtAt=0,seenWorld=-1,seenLoop=-1,seenLeg=-1,seenPickup=0,seenEvent=0,lastBuffs='',frameDt=0,frameNow=0,throws,view;
  const at=(d,x=0,y=0)=>new THREE.Vector3(x*2.8,(worldRun.elevation||0)+y,-d),posOf=o=>at(o.d,o.x,o.y);
  const maze=createWorldScene(canvas,{beforeRender:(scene,camera)=>{if(view&&throws)view.update(throws,posOf,at(THROW.from+1,0,.9),camera,frameDt,frameNow);}});
  view=mountThrowsView(THREE,maze.scene,{showCoach:false});const strike=createStriker();
@@ -54,7 +54,7 @@ export function mountRunner({host,Session,sound=()=>{},onXp=()=>{},onCaught=()=>
  }
  const onVisibility=()=>{last=0;if(document.hidden)run.jogging=false;};document.addEventListener('visibilitychange',onVisibility);updateReplay();raf=requestAnimationFrame(frame);show('Jog to run. Lean to steer. Arms up to jump.',4000);
  return {run,maze,body,show,throws,get worldRun(){return worldRun},screenOf:screen,
-  pose(detail){const result=body.update(detail),visible=[0,11,12].every(i=>(detail.points?.[i]?.visibility??0)>=.5);run.jogging=visible&&result.jogging;lastPose=performance.now();if(visible&&run.status==='running')for(const a of result.actions){const laneAction=['left','right','moveLeft','moveRight'].includes(a),stamp=Number.isFinite(detail.now)?detail.now:performance.now();if(laneAction){if(stamp-lastLaneAction<250)continue;lastLaneAction=stamp;}act(worldRun,a);}reflect();if(visible&&run.status==='running'&&worldRun.phase==='run')for(const s of strike(detail,{width:host.clientWidth||innerWidth,height:host.clientHeight||innerHeight})){
+  pose(detail){const result=body.update(detail),visible=[0,11,12].every(i=>(detail.points?.[i]?.visibility??0)>=.5);run.jogging=visible&&result.jogging;lastPose=performance.now();if(visible&&run.status==='running')for(const a of result.actions)act(worldRun,a);reflect();if(visible&&run.status==='running'&&worldRun.phase==='run')for(const s of strike(detail,{width:host.clientWidth||innerWidth,height:host.clientHeight||innerHeight})){
     throws.strike(s.a,s.b,s.kind,screen);
     for(const h of courseHazards(worldRun.world,worldRun.loop,worldRun.leg)){
       const d=h.distance-worldRun.distance;if(d<0||d>THROW.reach||worldRun.hazardsSeen[h.id])continue;

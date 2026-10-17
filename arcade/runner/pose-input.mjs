@@ -72,15 +72,15 @@ export function createHeadBob(tuning=POSE_TUNING){
 }
 // Jump / slide / lean from the upper body, with a moving-safe baseline, smoothing, hysteresis, dwell and cooldowns.
 export function createUpperBody(tuning=POSE_TUNING){
-  let last=null,calib=[],base=null,drop=null,shrug=null,lean=null,lastAct=-Infinity,lastKind='';
-  const st={jump:{armed:true,since:null,fired:-Infinity},slide:{armed:true,since:null,fired:-Infinity},lean:{armed:true,since:null,fired:-Infinity,dir:null}};
+  let last=null,calib=[],base=null,drop=null,shrug=null,lean=null,lastAct=-Infinity,lastKind='',leanResetSerial=0;
+  const st={jump:{armed:true,since:null,fired:-Infinity},slide:{armed:true,since:null,fired:-Infinity},lean:{armed:true,since:null,fired:-Infinity,dir:null,firedDir:null}};
   const hold=(s,on,t,dt,T,kind)=>{
     if(!on){s.since=null;return false;}
     if(s.since===null)s.since=t-dt/2;
     if((t-s.since>=T.dwell||dt>=.125)&&t-s.fired>=T.cooldown&&(lastKind===kind||t-lastAct>=tuning.settle)){s.fired=t;s.armed=false;s.since=null;lastAct=t;lastKind=kind;return true;}
     return false;
   };
-  return {get calibrated(){return !!base},get baseline(){return base},
+  return {get leanResetSerial(){return leanResetSerial},get calibrated(){return !!base},get baseline(){return base},
     signals:()=>({drop,shrug,lean}),
     update(points,t,aspect=1){
       const T=tuning,f=upper(points,aspect,T.minVisibility);if(!f)return null;
@@ -101,11 +101,17 @@ export function createUpperBody(tuning=POSE_TUNING){
       // Slide: head and shoulders well below the running baseline.
       if(drop<C.rearm)st.slide.armed=true;
       if(st.slide.armed&&hold(st.slide,!armsUp&&drop>=C.drop,t,dt,C,'slide'))actions.push('slide');
-      // Lean: one lane per lean; come back near upright to rearm.
-      if(Math.abs(lean)<L.out)st.lean.armed=true;
+      // Runner-only edge mode accepts a deliberate reversal even when a slow
+      // tracker skips upright. Neutral uses the current sample so a short reset
+      // is not swallowed by smoothing; raw+filtered gates prevent residual drift
+      // from counting as a second gesture on that neutral frame.
+      const rawLean=offset+tilt,edgeMode=L.reverseRearm===true;
+      if(Math.abs(edgeMode?rawLean:lean)<L.out){if(!st.lean.armed)leanResetSerial++;st.lean.armed=true;}
       const dir=(lean>0)!==L.flip?'right':'left';
       if(st.lean.dir!==dir){st.lean.dir=dir;st.lean.since=null;}
-      if(st.lean.armed&&hold(st.lean,!armsUp&&drop<C.rearm&&Math.abs(lean)>=L.in,t,dt,L,'lean'))actions.push(dir);
+      const leaning=!armsUp&&drop<C.rearm&&Math.abs(lean)>=L.in&&(!edgeMode||(Math.abs(rawLean)>=L.in&&rawLean*lean>0));
+      if(edgeMode&&leaning&&st.lean.firedDir&&st.lean.firedDir!==dir)st.lean.armed=true;
+      if(st.lean.armed&&hold(st.lean,leaning,t,dt,L,'lean')){actions.push(dir);st.lean.firedDir=dir;}
       // Baseline follows slow belt drift only while nothing is held.
       if(!armsUp&&drop<C.rearm&&Math.abs(lean)<L.out){base.head=ema(base.head,head,dt,T.adapt);base.neck=ema(base.neck,neck,dt,T.adapt);}
       return actions;
@@ -114,7 +120,7 @@ export function createUpperBody(tuning=POSE_TUNING){
 // Side-step detector on raw landmarks (ankles 27/28, knees 25/26, hips 23/24, shoulders 11/12).
 export function createSideStep(tuning=POSE_TUNING.side){
   let armed=true,since=null,dir=null,lastFire=-Infinity,last=null,stance=null,calib=[];
-  const d={stance:()=>stance,update(points,t,aspect=1){
+  const d={get armed(){return armed},stance:()=>stance,update(points,t,aspect=1){
     const T=tuning,p=points;if(!p||p.length<29)return null;
     const ok=i=>p[i]&&Number.isFinite(p[i].x)&&Number.isFinite(p[i].y)&&(p[i].visibility??1)>=T.minVisibility;
     if(![11,12,23,24].every(ok))return null;
@@ -142,7 +148,7 @@ export function createSideStep(tuning=POSE_TUNING.side){
 // jog detector is used now. Running = a head bob or a knee step within jogHold seconds.
 export function createPoseInput({Session,tuning=POSE_TUNING}){
   const jog=new Session('jogging'),bob=createHeadBob(tuning),body=createUpperBody(tuning),side=createSideStep(tuning.side);
-  let lastStep=-Infinity,lastCount=0,lastLane=-Infinity,jogging=false;
+  let lastStep=-Infinity,lastCount=0,lastLane=-Infinity,lastLaneSource='',lastLaneDir=null,lastSideLeanReset=0,jogging=false;
   return {get jogging(){return jogging},get calibrated(){return body.calibrated},body,
     update({points,world=null,width=1,height=1,now}){
       const actions=[];if(!points||!Number.isFinite(now))return {jogging,actions};
@@ -151,9 +157,19 @@ export function createPoseInput({Session,tuning=POSE_TUNING}){
       if(s.count>lastCount){lastCount=s.count;lastStep=t;}
       if(bob.update(points,t,aspect))lastStep=t;
       jogging=t-lastStep<=tuning.jogHold;
-      for(const a of body.update(points,t,aspect)||[]){if(a==='left'||a==='right')lastLane=t;actions.push(a);}
-      // A one-leg side step is the old lane control; skip it if a lean just moved the lane.
-      const dir=side.update(points,t,aspect);if(dir&&t-lastLane>=tuning.side.cooldown){lastLane=t;actions.push(dir);}
+      const dir=side.update(points,t,aspect);
+      let leaned=false;
+      for(const a of body.update(points,t,aspect)||[]){
+        if(a==='left'||a==='right'){
+          // The side-step and torso detectors may describe the same gesture on
+          // adjacent samples. Suppress that duplicate, while an opposite lean
+          // or a freshly rearmed lean remains a new, intentional edge.
+          if(tuning.lean.reverseRearm&&lastLaneSource==='side'&&a===lastLaneDir&&body.leanResetSerial===lastSideLeanReset&&!side.armed)continue;
+          lastLane=t;lastLaneSource='lean';lastLaneDir=a;leaned=true;
+        }
+        actions.push(a);
+      }
+      if(dir&&!leaned&&t-lastLane>=tuning.side.cooldown){lastLane=t;lastLaneSource='side';lastLaneDir=dir;lastSideLeanReset=body.leanResetSerial;actions.push(dir);}
       return {jogging,actions};
     }};
 }
