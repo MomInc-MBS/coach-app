@@ -77,6 +77,10 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const measure=()=>{
    body=menu.querySelector('.fw-body');if(!body)return false;const b=body.getBoundingClientRect(),c=e=>{const r=e.getBoundingClientRect();return {x:r.left+r.width/2-b.left,y:r.top+r.height/2-b.top};};
+   // Keep the animated SVG backing surface as small as the scrollport, even on long circuits.
+   // Its viewBox retains body coordinates so ropes and socket hit testing stay aligned.
+   const svg=body.querySelector('.fw-wires'),y=menu.getBoundingClientRect().top+menu.clientTop-b.top,h=menu.clientHeight;
+   svg.style.top=`${y}px`;svg.style.height=`${h}px`;svg.setAttribute('viewBox',`0 ${y} ${b.width} ${h}`);
    pos={anchor:{},sock:{},b,bayBottom:body.querySelector('.fw-bay').getBoundingClientRect().bottom-b.top-6};
    for(const s of styles){pos.anchor[s.id]=c(body.querySelector(`[data-anchor="${s.id}"]`));const e=body.querySelector(`[data-socket="${s.id}"]`);pos.sock[s.id]=e&&e.offsetParent?c(e):null;}return true;};
   const rebind=()=>{plugs={};paths={};for(const s of styles){plugs[s.id]=menu.querySelector(`[data-plug="${s.id}"]`);paths[s.id]=menu.querySelector(`[data-w="${s.id}"]`);}
@@ -123,9 +127,9 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
    detent('lever');const sec=menu.querySelector(`.fw-style[data-style="${id}"]`),sock=menu.querySelector(`[data-socket="${id}"]`);
    paintPower(id);sec?.classList.add('fw-pulse');sock?.classList.add('fw-spark');setTimeout(()=>{sec?.classList.remove('fw-pulse');sock?.classList.remove('fw-spark');},1300);}
   return {R,rebind,
-   open(){if(unsub)return;measure();unsub=subscribePhoneMotion(g=>{tilt={gx:g.gx,gy:g.gy};tiltAt=performance.now();});if(reduced())settle();else if(!raf)loop();},
+   open(){if(unsub)return;settle();unsub=subscribePhoneMotion(g=>{tilt={gx:g.gx,gy:g.gy};tiltAt=performance.now();});if(!reduced()&&!raf)loop();},
    close(){unsub?.();unsub=null;tilt=null;cancelAnimationFrame(raf);raf=0;},
-   resettle(){if(details.open&&reduced())settle();},
+   resettle(){if(!details.open)return;if(reduced())settle();else{measure();if(!raf)loop();}},
    dragStart(id,e){const c=R[id];if(!c)return;c.drag={cx:e.clientX,cy:e.clientY,sx:e.clientX,sy:e.clientY,moved:false};if(reduced())settle();},
    dragMove(id,e){const d=R[id]?.drag;if(!d)return;d.cx=e.clientX;d.cy=e.clientY;if(Math.hypot(d.cx-d.sx,d.cy-d.sy)>6)d.moved=true;if(reduced())settle();},
    dragEnd(id){const c=R[id],d=c?.drag;if(!d)return null;measure();const end={x:d.cx-pos.b.left,y:d.cy-pos.b.top};c.drag=null;c.pin={...end};const nearest=Object.entries(pos.sock).filter(([,p])=>p).sort((a,b)=>dist(end,a[1])-dist(end,b[1]))[0];return {moved:d.moved,socket:nearest&&dist(end,nearest[1])<32?nearest[0]:null};}};
@@ -160,6 +164,7 @@ export function mountFullWorkout({canUse,reason,select,start,leaveRest,voice,sto
   st.levels[id]=tapLevel(lvl(id),k,cap(id));save();detent('switch');paintLadder(id,k);
  });
  menu.addEventListener('toggle',()=>rig.resettle(),true);
+ menu.addEventListener('scroll',()=>rig.resettle(),{passive:true});
  details.addEventListener('keydown',event=>{if(event.key==='Escape'&&details.open){details.open=false;details.querySelector('summary').focus();}});
  document.addEventListener('pointerdown',event=>{if(details.open&&!details.contains(event.target))details.open=false;});
  const goals=document.getElementById('podGoals');
