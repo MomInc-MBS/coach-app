@@ -10,9 +10,10 @@ export const PLANK_TUNING = Object.freeze({
   maxDepthDrift: .25, maxLeanCoupling: .35, wristDrift: .22,
   minScaleRatio: .72, maxScaleRatio: 1.32, smoothingMs: 80, deadband: .08,
   postureDwellMs: 350, maxHeightLeak: .14, maxSteerLeak: .22,
+  minRestRange: .18, minArmHeight: -.20, restEnterFraction: .18, restExitFraction: .30, maxBottomDrift: .12,
 });
 const UPPER = [11, 12, 13, 14, 15, 16], LOWER = [23, 24, 25, 26];
-const STAGES = ['high', 'low', 'left', 'right', 'mid', 'mixed-left', 'mixed-right'];
+const STAGES = ['high', 'low', 'left', 'right', 'mid', 'mixed-left', 'mixed-right', 'bottom'];
 const PROMPTS = {
   high: 'Face the camera with both hands in view. Hold your comfortable high plank.',
   low: 'Lower into a comfortable push-up. Hold briefly; keep your shoulders centered.',
@@ -21,7 +22,8 @@ const PROMPTS = {
   mid: 'Return to the middle. Hold halfway between your high and low positions.',
   'mixed-left': 'At that comfortable middle height, lean gently toward your LEFT arm.',
   'mixed-right': 'At middle height, lean gently toward your RIGHT arm.',
-  ready: 'Rise to fly up; lower to fly down. Lean left or right with both hands down.',
+  bottom: 'Center yourself and rest your chest fully on the floor. Keep both shoulders, elbows and hands visible; hold briefly.',
+  ready: 'Rest down to fly low. Return to your measured middle to fly in the middle; rise to fly high. Lean with both hands down.',
 };
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const dot = (a, b) => a.x * b.x + a.y * b.y;
@@ -52,7 +54,9 @@ function geometry(detail, T) {
     return {reason: 'Face the camera squarely; show space between both hands.'};
   const t = {x: wrists.x / wristSpan, y: wrists.y / wristSpan}, n = {x: -t.y, y: t.x};
   const armHeight = -dot(sub(s, w), n) / shoulderSpan;
-  if (armHeight < .08 || armHeight > 2.5) return {reason: 'Show your shoulders above both hands.'};
+  // A frontal resting chest can project at, or just below, the hand line.
+  // Visibility and learned separation, not an assumed image height, admit rest.
+  if (armHeight < T.minArmHeight || armHeight > 2.5) return {reason: 'Keep your shoulders and both hands in the calibrated camera view.'};
   return {s, w, t, n, shoulderSpan, wristSpan, clear, pt, confidence: Math.min(...UPPER.map(i => p[i].visibility))};
 }
 
@@ -87,18 +91,24 @@ function proneEvidence(detail, g) {
 
 export function createPlankInput(options = {}) {
   const T = {...PLANK_TUNING, ...(options.tuning ?? {})};
-  let index, samples, anchors, reference, model, lastTime, identity, filtered, postureSince;
-  function clearCalibration() { index = 0; samples = []; anchors = {}; reference = null; model = null; filtered = null; postureSince = null; }
+  let index, samples, anchors, reference, model, lastTime, identity, filtered, postureSince, resting;
+  function clearCalibration() { index = 0; samples = []; anchors = {}; reference = null; model = null; filtered = null; postureSince = null; resting = false; }
   function reset() { clearCalibration(); lastTime = null; identity = null; }
   reset();
   const stage = () => STAGES[index] ?? 'ready';
-  const result = (now, extra = {}) => ({height01: .5, steer: 0, controlValid: false, exerciseEligible: false,
+  const result = (now, extra = {}) => ({height01: .5, steer: 0, controlValid: false, exerciseEligible: false, resting: false, posture: 'unknown',
     confidence: 0, reason: '', stage: stage(), prompt: PROMPTS[stage()], calibrated: index === STAGES.length,
     calibrationProgress: index / STAGES.length, leanSide: 'both', supportHint: 'unknown', timestamp: now, ...extra});
-  function invalid(now, reason) { samples = []; filtered = null; postureSince = null; return result(now, {reason}); }
+  function invalid(now, reason) { samples = []; filtered = null; postureSince = null; resting = false; return result(now, {reason}); }
   function coordinates(f) {
     const depth = (f.h - anchors.high.h - model.coupling * (f.l - anchors.high.l)) / model.denominator;
-    const lateral = f.l - anchors.high.l - depth * model.depthL;
+    // Below the verified middle anchor, interpolate to the separately
+    // observed resting center instead of extrapolating active depth/lean drift.
+    const restFraction = anchors.bottom && 1 - depth < anchors.mid.height
+      ? (anchors.mid.height - (1 - depth)) / (anchors.mid.height - anchors.bottom.height) : 0;
+    const center = restFraction ? anchors.mid.l + restFraction * (anchors.bottom.l - anchors.mid.l)
+      : anchors.high.l + depth * model.depthL;
+    const lateral = f.l - center;
     return {height: 1 - depth, steer: lateral / (lateral >= 0 ? model.left : -model.right)};
   }
   function fit() {
@@ -115,6 +125,19 @@ export function createPlankInput(options = {}) {
     model.left = residual(A); model.right = residual(B);
     return model.left >= T.minLeanRange && model.right <= -T.minLeanRange;
   }
+  function leanLimit(height, steer) {
+    // The bottom extends below the old active-low coordinate (zero). Use the
+    // observed joint envelope rather than treating every negative old height as
+    // low-neutral: that would reject a valid bottom-to-middle diagonal, freeze
+    // the pace target there, and make following that target unable to recover.
+    const side = steer >= 0 ? 'left' : 'right', mixed = anchors[`mixed-${side}`];
+    const bottom = anchors.bottom.height, middle = mixed.height;
+    const midLean = Math.abs(mixed.steer);
+    const observed = height <= middle
+      ? midLean * clamp((height - bottom) / (middle - bottom), 0, 1)
+      : midLean + (1 - midLean) * clamp((height - middle) / (1 - middle), 0, 1);
+    return Math.max(.18, observed) + .15;
+  }
   function stageReason(f) {
     const S = stage(), H = anchors.high;
     if (S === 'high') return '';
@@ -130,6 +153,13 @@ export function createPlankInput(options = {}) {
       return '';
     }
     const c = coordinates(f);
+    if (S === 'bottom') {
+      if ((anchors.mid.height - c.height) * Math.abs(model.denominator) < T.minRestRange)
+        return 'Rest fully down, below your measured middle position. Keep your hands still.';
+      if (Math.abs(f.l - anchors.mid.l) > T.maxSteerLeak * Math.min(model.left, -model.right))
+        return 'Center your shoulders between your hands for the resting position.';
+      return '';
+    }
     if (Math.abs(c.height - .5) > .22) return 'Find a comfortable middle height and hold briefly.';
     if (S === 'mid' && Math.abs(c.steer) > T.maxSteerLeak) return 'Center your shoulders at middle height.';
     if (S === 'mixed-left' && (c.steer < .5 || c.steer > 1.25)) return 'At middle height, lean gently toward your LEFT arm.';
@@ -187,23 +217,31 @@ export function createPlankInput(options = {}) {
           reason: this.calibrated ? 'Calibration complete. Hold steady to begin.' : 'Measuring your comfortable range.'});
       }
       const c = coordinates(f);
-      if (c.height < -.22 || c.height > 1.22 || Math.abs(c.steer) > 1.3)
+      if (c.height < anchors.bottom.height - T.maxBottomDrift / Math.abs(model.denominator)) {
+        clearCalibration(); return invalid(now, 'Your resting baseline changed. Settle your hands and recalibrate.');
+      }
+      if (c.height > 1.22 || Math.abs(c.steer) > 1.3)
         return invalid(now, 'Return within your calibrated comfortable range.');
-      // Only high/mid side lean and low-neutral were observed. Never fabricate
-      // calibration evidence for a deep push-up combined with an extreme lean.
-      if (Math.abs(c.steer) > Math.max(.18, clamp(c.height * 2, 0, 1)) + .15)
+      // Interpolate within observed bottom/mixed/high combinations; do not
+      // extrapolate a full side lean into the unobserved deep-rest corner.
+      if (Math.abs(c.steer) > leanLimit(c.height, c.steer))
         return invalid(now, 'Ease toward the middle before lowering further.');
-      const raw = {height01: clamp(c.height, 0, 1), steer: clamp(-c.steer, -1, 1)}; // image-right = player-left
+      const restFraction = (c.height - anchors.bottom.height) / (anchors.mid.height - anchors.bottom.height);
+      resting = restFraction <= (resting ? T.restExitFraction : T.restEnterFraction);
+      const mappedHeight = c.height >= anchors.mid.height
+        ? .5 + .5 * (c.height - anchors.mid.height) / (1 - anchors.mid.height) : .5 * restFraction;
+      const raw = {height01: clamp(mappedHeight, 0, 1), steer: clamp(-c.steer, -1, 1)}; // image-right = player-left
       if (Math.abs(raw.steer) <= T.deadband) raw.steer = 0;
       const alpha = filtered ? 1 - Math.exp(-dt / T.smoothingMs) : 1;
       filtered = filtered ? {height01: filtered.height01 + (raw.height01 - filtered.height01) * alpha,
         steer: filtered.steer + (raw.steer - filtered.steer) * alpha} : raw;
-      const posture = proneEvidence(detail, g);
-      if (!posture) postureSince = null; else postureSince ??= now;
-      const exerciseEligible = posture && now - postureSince >= T.postureDwellMs;
-      return result(now, {...filtered, controlValid: true, exerciseEligible, confidence: g.confidence,
+      const prone = proneEvidence(detail, g);
+      if (!prone || resting) postureSince = null; else postureSince ??= now;
+      const exerciseEligible = !resting && prone && now - postureSince >= T.postureDwellMs;
+      return result(now, {...filtered, controlValid: true, exerciseEligible, resting,
+        posture: resting ? 'rest' : prone ? 'active' : 'unknown', confidence: g.confidence,
         leanSide: filtered.steer < -T.deadband ? 'left' : filtered.steer > T.deadband ? 'right' : 'both',
-        reason: exerciseEligible ? '' : posture ? 'Hold steady while posture tracking settles.' : 'Control rehearsal only: show your hips and knees in a clear front-facing plank.'});
+        reason: resting ? 'Resting position estimated. Flight continues; exercise credit is paused.' : exerciseEligible ? '' : prone ? 'Hold steady while posture tracking settles.' : 'Control rehearsal only: show your hips and knees in a clear front-facing plank.'});
     },
   };
 }

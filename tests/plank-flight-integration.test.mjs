@@ -16,7 +16,7 @@ const hook=registerHooks({load(url,ctx,next){return url===viewUrl
 const {mountPlankFlight}=await import('../arcade/plank-flight/flight.mjs');
 hook.deregister();
 
-const CALIBRATION=[{y:.38},{y:.60},{y:.38,lean:.065},{y:.38,lean:-.065},{y:.49},{y:.49,lean:.055},{y:.49,lean:-.055}];
+const CALIBRATION=[{y:.38},{y:.60},{y:.38,lean:.065},{y:.38,lean:-.065},{y:.49},{y:.49,lean:.055},{y:.49,lean:-.055},{y:.78}];
 function pose({y=.38,lean=0,hips=true}={}){
  const points=Array.from({length:33},()=>({x:.5,y:.5,visibility:.99}));
  const world=Array.from({length:33},()=>({x:0,y:0,z:0}));
@@ -124,6 +124,13 @@ test('a stale exit save cannot finish another workout or owner session',async()=
  await runtimeHarness(async h=>{h.runtime.action('exit');await h.flush();assert.equal(h.exits,1);});
 });
 
+test('calibrated chest-down recovery preserves earned workout time without adding hold credit',()=>{
+ const p=pipeline();p.calibrate();p.feed({y:.49},30);const earned=p.workout.activeSeconds;
+ const rest=p.feed({y:.78},45);assert.equal(rest.flightPose.resting,true);assert.equal(rest.flightPose.controlValid,true);
+ assert.equal(rest.flightPose.exerciseEligible,false);close(p.workout.activeSeconds,earned);assert.equal(p.session.hold,0);
+ p.feed({y:.49},20);assert.ok(p.workout.activeSeconds>earned+1);
+});
+
 test('runtime freshness, hidden tab and manual pause independently prohibit workout credit',async()=>{
  await runtimeHarness(async({runtime,step})=>{
   const fresh=()=>runtime.pose({flightPose:accepted});fresh();step(1);
@@ -133,6 +140,16 @@ test('runtime freshness, hidden tab and manual pause independently prohibit work
   runtime.action('pause');for(let i=0;i<40;i++){fresh();step(100);}assert.equal(runtime.creditAllowed,false);assert.equal(runtime.run.phase,'paused');
   runtime.action('resume');for(let i=0;i<31;i++){fresh();step(100);}assert.equal(runtime.creditAllowed,true);
   step(PLANK_TUNING.freshnessMs+1);assert.equal(runtime.creditAllowed,false);assert.equal(runtime.run.phase,'paused');
+ });
+});
+
+test('normal runtime uses paced flight and keeps flying during real recovery evidence without workout permission',async()=>{
+ await runtimeHarness(async({runtime,step})=>{
+  assert.equal(runtime.run.paced,true);const rest={...accepted,height01:0,resting:true,posture:'rest',exerciseEligible:false};
+  for(let i=0;i<33;i++){runtime.pose({flightPose:rest});step(100);}
+  assert.equal(runtime.run.phase,'flying');const distance=runtime.run.distance;
+  for(let i=0;i<10;i++){runtime.pose({flightPose:rest});step(100);}
+  assert.equal(runtime.run.phase,'flying');assert.ok(runtime.run.distance>distance+14);assert.equal(runtime.creditAllowed,false);
  });
 });
 

@@ -96,6 +96,11 @@ function buildDom(host, onAction) {
       <div class="pf-stat pf-protection"><span>Shield</span><strong data-shield>Ready</strong></div>
       <div class="pf-stat"><span>Rank stars</span><strong data-stars>0</strong></div>
     </div>
+    <section class="pf-pace" data-pace hidden aria-label="Posture timing" aria-live="polite" aria-atomic="true">
+      <div class="pf-pace-current"><span class="pf-pace-eyebrow">NOW</span><strong data-pace-current></strong><small data-pace-credit></small></div>
+      <div class="pf-pace-time"><strong data-pace-remaining>0</strong><span>SEC</span></div>
+      <div class="pf-pace-next"><span class="pf-pace-eyebrow">NEXT</span><strong data-pace-next></strong></div>
+    </section>
     <div class="pf-live-mission" data-mission hidden></div>
     <div class="pf-fold-preview" data-fold-preview hidden role="status" aria-live="polite" aria-atomic="true"><i aria-hidden="true"></i><span>Next spot</span></div>
     <div class="pf-notice" data-notice aria-hidden="true" hidden></div>
@@ -206,6 +211,23 @@ function buildDom(host, onAction) {
         const totals=panel.querySelectorAll('.pf-result-grid strong');
         if(totals[2])totals[2].textContent=String(Math.floor(finite(frame.profile?.stars)));
         if(totals[3])totals[3].textContent=`${Math.floor(finite(frame.profile?.bestDistance))} m`;
+      }
+      const pace = run.pace;
+      const pacePanel = hud.querySelector('[data-pace]');
+      const hasPace = pose.calibrated && ['flying','paused'].includes(run.phase) && pace && typeof pace === 'object' && (pace.kind || pace.label || Number.isFinite(+pace.remaining));
+      pacePanel.hidden = !hasPace;
+      if (hasPace) {
+        const isRest = value => /rest|recover/i.test(String(value ?? ''));
+        const cue = (kind, label) => isRest(kind) || isRest(label) ? 'CHEST DOWN · REST' : String(label || title(kind) || 'Steady plank').toLocaleUpperCase();
+        const resting = isRest(pace.kind) || isRest(pace.label);
+        const currentCue = cue(pace.kind, pace.label);
+        const nextCue = cue(pace.nextKind, pace.nextLabel || 'Continue');
+        pacePanel.querySelector('[data-pace-current]').textContent = currentCue;
+        pacePanel.querySelector('[data-pace-next]').textContent = nextCue;
+        pacePanel.querySelector('[data-pace-remaining]').textContent = String(Math.max(0, Math.ceil(finite(pace.remaining))));
+        pacePanel.querySelector('[data-pace-credit]').textContent = frame.paused ? 'Paused · posture timer stopped' : resting ? (pose.resting ? 'Recovery · workout credit paused · flight continues' : 'Lower fully to rest · flight continues') : pose.resting ? 'Resting · rise when ready' : (pace.transitioning ? 'Changing posture' : 'Hold a comfortable position');
+        pacePanel.classList.toggle('is-rest', resting);
+        pacePanel.classList.toggle('is-transitioning', !!pace.transitioning);
       }
       const promptTarget = panel.querySelector('[data-prompt-text]');
       const promptText = frame.message || pose.prompt || (panelName === 'pause' ? 'Your flight and exercise progress are paused together.' : 'Bring your shoulders, elbows and wrists into view. Keep a comfortable plank and follow the simple prompts.');
